@@ -2096,7 +2096,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>M5 Agentic Studio v9.0 — Agile SDLC Factory, Graphify &amp; MCP Hub</title>
+<title>M5 Agent Studio</title>
 <style>
   :root {
     color-scheme: dark;
@@ -2433,57 +2433,325 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .starter-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 11px 13px; cursor: pointer; transition: border-color 0.15s, background 0.15s; text-align: left; }
   .starter-card:hover { border-color: var(--cyan); background: var(--bg-hover); }
 </style>
+<style id="m5-redesign-system">
+
+/* M5 Agent Studio visual system — appended as a compatibility layer over legacy styles.
+   Keep selectors and behavior hooks in the original markup until the regression inventory is complete. */
+:root {
+  color-scheme: dark;
+  --bg: #151719;
+  --bg-elev: #1b1e21;
+  --bg-card: #202428;
+  --bg-hover: #292e33;
+  --bg-code: #111315;
+  --border: #34393e;
+  --border-hi: #525a62;
+  --text: #e9eaec;
+  --text-dim: #b0b5ba;
+  --text-faint: #969da4;
+  --accent: #5969d8;
+  --accent-hi: #a8b2ff;
+  --cyan: #70b7c9;
+  --emerald: #72b598;
+  --amber: #d2aa66;
+  --rose: #dc7d83;
+  --purple: #a99acb;
+  --ring: #a8b4ff;
+  --ease-out: cubic-bezier(.2,.8,.2,1);
+  --sans: Inter, "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --header-height: 56px;
+}
+body[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f7f7f5;
+  --bg-elev: #ffffff;
+  --bg-card: #ffffff;
+  --bg-hover: #eff0ed;
+  --bg-code: #f1f2ef;
+  --border: #d9dcd8;
+  --border-hi: #b7bcb7;
+  --text: #202326;
+  --text-dim: #555c62;
+  --text-faint: #687077;
+  --accent: #5969d8;
+  --accent-hi: #4858c8;
+  --cyan: #276e82;
+  --emerald: #286e50;
+  --amber: #80580e;
+  --rose: #a4313a;
+  --purple: #68508c;
+  --ring: #4858c8;
+}
+html, body { background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+body { font-family: var(--sans); }
+.topbar {
+  height: var(--header-height); min-height: var(--header-height); padding: 0 20px; gap: 18px;
+  background: var(--bg-elev); border-bottom: 1px solid var(--border); backdrop-filter: none;
+}
+.brand { gap: 10px; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+.brand-chip { width: 28px; height: 28px; border-radius: 7px; background: var(--accent); box-shadow: none; font-weight: 650; }
+.ver-badge { display: none; }
+.status-pill { background: transparent; border-color: var(--border); color: var(--text-dim); font-size: 12px; font-weight: 500; }
+.status-pill .dot { box-shadow: none; width: 6px; height: 6px; }
+.mode-tabs {
+  position: fixed; left: 0; top: var(--header-height); bottom: 0; z-index: 19;
+  width: 200px; padding: 12px; display: flex; flex-direction: column; align-items: stretch;
+  background: var(--bg-elev); border-right: 1px solid var(--border); gap: 4px;
+  overflow-x: hidden; overflow-y: auto; border-radius: 0;
+}
+.mode-tab { width: 100%; justify-content: flex-start; }
+#mainLayout { padding-left: 200px; }
+.mode-tab {
+  border-radius: 6px; padding: 6px 10px; min-height: 36px; font-size: 13px; font-weight: 500;
+  color: var(--text-dim); transition: background 140ms ease, color 140ms ease;
+}
+.mode-tab:hover { color: var(--text); background: var(--bg-hover); }
+.mode-tab.active { background: var(--bg-hover); color: var(--text); border-color: transparent; box-shadow: inset 3px 0 0 var(--accent); }
+.svg-ico { width: 16px; height: 16px; stroke-width: 1.75; }
+.btn {
+  background: var(--bg-elev); color: var(--text); border: 1px solid var(--border);
+  min-height: 36px; border-radius: 7px; padding: 7px 11px; font-size: 13px; font-weight: 500;
+  box-shadow: none; transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+.btn:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--border-hi); }
+.btn-primary, .btn-primary:hover:not(:disabled) { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: none; }
+.btn-cyan, .btn-amber, .btn-purple { background: var(--bg-elev); color: var(--text); border-color: var(--border); }
+.btn-cyan:hover:not(:disabled), .btn-amber:hover:not(:disabled), .btn-purple:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--border-hi); }
+.btn-emerald { background: var(--bg-elev); color: var(--text); border-color: var(--emerald); }
+.btn-emerald:hover:not(:disabled) { background: var(--bg-hover); }
+.btn-danger { background: var(--bg-elev); color: var(--text); border-color: var(--rose); }
+.btn-danger:hover:not(:disabled) { background: var(--bg-hover); }
+.btn-xs { min-height: 32px; padding: 5px 9px; font-size: 12px; border-radius: 6px; }
+.kbd { font-size: 11px; border-color: var(--border); background: var(--bg-code); color: var(--text-dim); }
+.layout { height: calc(100dvh - var(--header-height)); grid-template-columns: minmax(0, 1fr) 320px; }
+.workspace { min-width: 0; }
+.skills-strip { background: var(--bg-elev); border-bottom: 1px solid var(--border); padding: 7px 16px; gap: 7px; }
+.skills-strip .field-lbl { color: var(--text-dim) !important; font-size: 12px; }
+  .skills-strip > span[aria-hidden="true"] { color: var(--border-hi) !important; }
+  #contextModal .field-lbl, #mcpModal .field-lbl, #pane-hall .field-lbl { color: var(--text-dim) !important; }
+  #contextModal strong[style*="color:"] { color: var(--text) !important; }
+.skills-strip > div:last-child { gap: 6px !important; }
+.skill-pill { background: var(--bg); border-color: var(--border); color: var(--text-dim); font-size: 12px; }
+.skill-pill.active { background: var(--bg-hover); color: var(--text); border-color: var(--accent); }
+.field-lbl { color: var(--text-dim) !important; font-size: 12px !important; line-height: 1.35; font-weight: 600; letter-spacing: 0 !important; text-transform: none !important; }
+input, select, textarea {
+  color: var(--text); background-color: var(--bg); border-color: var(--border); border-radius: 6px;
+  font-family: var(--sans); font-size: 13px;
+}
+input::placeholder, textarea::placeholder { color: var(--text-faint); opacity: 1; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible,
+summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.m-card, .config-strip, .prompt-box, .stage-output-card, .step-card, .starter-card,
+.model-row, .msg, .h-step-card, .h-tool-card, .code-wrap, .diff-box {
+  background-color: var(--bg-card); border-color: var(--border); box-shadow: none;
+}
+.m-card { border-radius: 8px; padding: 13px; }
+.config-strip, .prompt-box { border-radius: 8px; padding: 14px 16px; }
+.step-card, .starter-card { border-radius: 7px; }
+.mode-tab, .btn, .chip, .step-card, .starter-card, .chronicle-item { -webkit-tap-highlight-color: transparent; }
+.hall-sidebar, .harness-sidebar, .monitor-rail { background: var(--bg-elev); }
+.hall-header, .harness-bar, .chat-header-bar, .hall-composer, .chat-composer { background: var(--bg-elev); }
+.hall-header, .harness-bar, .chat-header-bar { border-color: var(--border); }
+.hall-main, .harness-main { background: var(--bg); }
+.chronicle-item.active { background: var(--bg-card); border-color: var(--border-hi); box-shadow: inset -2px 0 0 var(--accent); }
+.agent-chip, .agent-chip.human, .agent-chip.architect, .agent-chip.coder, .agent-chip.critic, .agent-chip.judge, .agent-chip.external {
+  color: var(--text-dim); background: var(--bg-card); border-color: var(--border);
+}
+.badge { color: var(--text-dim); background: var(--bg-hover); border-color: var(--border); font: 500 12px/1.3 var(--sans); }
+.badge.green, .badge.indigo, .badge.cyan, .badge.purple, .badge.amber { color: var(--text); background: var(--bg-hover); border-color: var(--border); }
+.kpi { background: var(--bg-code); border-color: var(--border); border-radius: 8px; }
+.kpi-lbl, .m-head, .step-num, .step-meta, .chronicle-meta, .msg-meta { font-size: 12px; }
+.kpi-lbl { text-transform: none; letter-spacing: 0; }
+.c-table { font-size: 12px; }
+.kpi-lbl { text-transform: none; letter-spacing: 0; }
+.kpi-val { color: var(--text); }
+.md h1, .md h2, .md h3, .md h4 { color: var(--text); }
+.md-table th { background: var(--bg-hover); color: var(--text); border-color: var(--border); }
+.md-table td { color: var(--text-dim); }
+.md code.inline, .code-bar { color: var(--text); background: var(--bg-hover); }
+.code-wrap pre, .diff-box { color: var(--text); }
+.msg.user, .h-turn-user { background: var(--bg-card); border-color: var(--accent); }
+.h-step-card { border-left-color: var(--border-hi); }
+.h-tool-card { background: var(--bg-elev); }
+.h-tool-card.wait { background: var(--bg-card); border-color: var(--amber); }
+.diff-add { color: var(--emerald); background: var(--bg-card); }
+.diff-del { color: var(--rose); background: var(--bg-card); }
+.diff-hdr { color: var(--text-dim); }
+.toast { background: var(--bg-elev); color: var(--text); border-color: var(--border); box-shadow: 0 8px 24px rgba(0,0,0,.18); font-size: 13px; }
+.toast.ok { border-left-color: var(--emerald); }
+.toast.warn { border-left-color: var(--amber); }
+.toast.err { border-left-color: var(--rose); }
+.modal-backdrop { background: rgba(10,12,14,.58); backdrop-filter: blur(2px); }
+.modal { background: var(--bg-elev); border-color: var(--border); border-radius: 10px; box-shadow: 0 18px 50px rgba(0,0,0,.22); }
+.cmd-item { font-size: 13px; }
+.cmd-item:hover, .cmd-item.selected { background: var(--bg-hover); border-color: var(--border); }
+/* Normalize legacy panels and preserve distinct meaning through text/status, not decoration. */
+.summon-bar, .stage-output-head, .code-bar { background: var(--bg-elev); }
+.conclusion-banner { background: var(--bg-card); border-color: var(--amber); }
+.voice-card.human, .voice-card.architect, .voice-card.coder, .voice-card.critic, .voice-card.judge, .voice-card.external {
+  background: var(--bg-card); border-color: var(--border); border-left: 2px solid var(--border-hi);
+}
+.voice-card { border-radius: 8px; }
+.step-card.running { border-color: var(--accent); background: var(--bg-card); }
+.model-row.loaded { border-color: var(--border); background: var(--bg-card); }
+details.think-box { background: var(--bg-card); border-color: var(--border); border-radius: 7px; }
+details.think-box summary { color: var(--text); font-size: 12px; }
+details.think-box pre { border-color: var(--border); font-size: 12px; }
+.modal .field-lbl { color: var(--text-dim) !important; }
+.modal strong[style*="color:"] { color: var(--text) !important; }
+/* Long-running setup surfaces use an app-sized workspace overlay, not a cramped prompt. */
+#contextModal .modal, #mcpModal .modal, #providersModal .modal, #skillsModal .modal,
+#sdlcModal .modal, #externalHarnessModal .modal {
+  width: min(1120px, 96vw); max-width: 1120px !important; height: min(900px, 94dvh); max-height: 94dvh;
+}
+#contextModal .modal > div:first-child, #mcpModal .modal > div:first-child,
+#providersModal .modal > div:first-child, #skillsModal .modal > div:first-child,
+#sdlcModal .modal > div:first-child, #externalHarnessModal .modal > div:first-child { flex-shrink: 0; }
+
+#harnessInfoBanner { background: var(--bg-elev) !important; }
+#pane-council h3, #pane-debate h3 { color: var(--text) !important; }
+
+:root:not([data-theme="light"]) .status-pill.demo { background: var(--bg-elev); color: var(--text); border-color: var(--border); }
+body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b; border-color: #e0c98c; }
+
+@media (max-width: 1100px) {
+  :root { --header-height: 96px; }
+  .topbar { height: var(--header-height); min-height: var(--header-height); padding: 7px 14px; gap: 4px 12px; flex-wrap: wrap; align-content: center; }
+  .brand { order: 1; }
+  .top-actions { order: 2; margin-left: auto; }
+  .mode-tabs {
+    position: static; order: 3; flex: 0 0 100%; width: 100%; height: auto; padding: 0;
+    flex-direction: row; align-items: center; overflow-x: auto; overflow-y: hidden;
+    background: transparent; border: 0;
+  }
+  .mode-tab { width: auto; }
+  .mode-tab.active { box-shadow: inset 0 -2px 0 var(--accent); }
+  #mainLayout { padding-left: 0; }
+  .mode-tab { flex: 0 0 auto; }
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .monitor-rail {
+    display: none; position: fixed; z-index: 35; top: var(--header-height); right: 0; bottom: 0;
+    width: min(360px, 92vw); max-height: calc(100dvh - var(--header-height));
+    border-left: 1px solid var(--border); box-shadow: -14px 0 40px rgba(0,0,0,.22);
+  }
+  .layout.rail-mobile-open .monitor-rail { display: flex; }
+  .layout.rail-collapsed .monitor-rail { display: none; }
+}
+@media (max-width: 880px) {
+  .harness-shell { grid-template-columns: 1fr; grid-template-rows: minmax(132px, 22vh) minmax(0, 1fr); }
+  .harness-sidebar { display: flex; min-height: 0; border-right: 0; border-bottom: 1px solid var(--border); }
+  .harness-sidebar > div:first-child { padding: 7px !important; gap: 6px !important; flex-direction: row !important; align-items: center; flex-wrap: wrap; }
+  .harness-sidebar > div:first-child > button { width: auto !important; }
+  .harness-sidebar > div:first-child > div { flex: 1 1 180px; }
+  .harness-sidebar > div:first-child > div input { min-width: 0; }
+  .harness-chronicles, .harness-sidebar .hall-chronicles { display: flex; flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 5px 7px; gap: 6px; }
+  .harness-sidebar .chronicle-item { flex: 0 0 190px; }
+  .hall-shell { grid-template-columns: 1fr; grid-template-rows: minmax(104px, 18vh) minmax(0, 1fr); }
+  .hall-sidebar { display: flex; min-height: 0; border-right: 0; border-bottom: 1px solid var(--border); }
+  .hall-side-head { padding: 7px; gap: 6px; flex-direction: row; align-items: center; }
+  .hall-side-head > button { width: auto !important; }
+  .hall-side-head > div { margin-left: auto; }
+  .hall-sidebar .hall-chronicles { flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 5px 7px; gap: 6px; }
+  .hall-sidebar .chronicle-item { flex: 0 0 190px; }
+  .hall-main, .harness-main { min-height: 0; }
+  #pane-hall [style*="grid-template-columns:repeat(4"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .stepper { grid-template-columns: repeat(5, minmax(112px, 1fr)); overflow-x: auto; }
+}
+@media (max-width: 600px) {
+  :root { --header-height: 102px; }
+  .topbar { padding: 6px 10px; gap: 2px 8px; }
+  .brand { font-size: 13px; gap: 7px; }
+  .brand-chip { width: 25px; height: 25px; font-size: 10px; }
+  .status-pill { padding: 2px 6px; font-size: 11px; }
+  .top-actions { gap: 4px; }
+  .top-actions .btn { min-height: 32px; padding: 5px 8px; font-size: 12px; }
+  .top-actions > .btn:first-child > span:not(.kbd) { display: none; }
+  .mode-tabs { gap: 1px; }
+  .mode-tab { min-height: 34px; padding: 5px 8px; font-size: 12px; gap: 4px; }
+  .mode-tab .svg-ico { width: 14px; height: 14px; }
+  .skills-strip { padding: 6px 10px; }
+  .skills-strip > div:last-child { flex: 1 1 100%; margin-left: 0 !important; }
+  .scroll-body, .hall-stream, .chat-messages { padding-left: 12px; padding-right: 12px; }
+  .hall-header { padding: 8px 12px; }
+  .hall-header > div:last-child { width: 100%; }
+  .hall-header > div:last-child .btn { flex: 1; justify-content: center; }
+  .hall-composer, .chat-composer { padding: 8px 12px; }
+  .harness-stream { padding-left: 10px; padding-right: 10px; }
+  .role-grid { grid-template-columns: 1fr 1fr; }
+  .debate-grid { grid-template-columns: minmax(0, 1fr); }
+  #mcpModal [style*="grid-template-columns"], #contextModal [style*="grid-template-columns"],
+  #providersModal [style*="grid-template-columns"], #sdlcModal [style*="grid-template-columns"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  #contextModal #cgStatsSummary { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .modal-backdrop { padding: 8px; }
+  .modal { max-height: 94dvh; border-radius: 9px; }
+  #contextModal, #mcpModal, #providersModal, #skillsModal, #sdlcModal, #externalHarnessModal { padding: 0; }
+  #contextModal .modal, #mcpModal .modal, #providersModal .modal, #skillsModal .modal,
+  #sdlcModal .modal, #externalHarnessModal .modal {
+    width: 100vw; max-width: 100vw !important; height: 100dvh; max-height: 100dvh; border-radius: 0;
+  }
+}
+@media (max-width: 390px) {
+  :root { --header-height: 108px; }
+  .topbar { padding: 5px 8px; }
+  .brand { gap: 4px; }
+  .mode-tab { padding: 5px 6px; }
+  .mode-tab .svg-ico { display: none; }
+  .harness-shell { grid-template-rows: minmax(150px, 24vh) minmax(0, 1fr); }
+  .hall-shell { grid-template-rows: minmax(118px, 20vh) minmax(0, 1fr); }
+  .stepper { grid-template-columns: repeat(5, minmax(104px, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+</style>
 </head>
 <body>
 
 <header class="topbar">
   <div class="brand">
     <div class="brand-chip" aria-hidden="true">M5</div>
-    <span>Agentic Studio</span>
-    <span class="ver-badge">v9.0</span>
+    <span>Agent Studio</span>
+    <span class="ver-badge" aria-label="Version 9.0">v9.0</span>
     <span id="connPill" class="status-pill" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="connText">Connecting...</span></span>
   </div>
 
   <nav class="mode-tabs" aria-label="Studio Modes">
-    <button class="mode-tab active" data-tab="harness" onclick="switchTab('harness')" title="Autonomous Agentic Harness (Alt+1)">
+    <button class="mode-tab active" aria-current="page" data-tab="harness" onclick="switchTab('harness')" title="Agent harness (Alt+1)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
       <span>Harness</span>
     </button>
-    <button class="mode-tab" data-tab="hall" onclick="switchTab('hall')" title="Interactive Council Hall (Alt+2)">
+    <button class="mode-tab" data-tab="hall" onclick="switchTab('hall')" title="Council sessions (Alt+2)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <span>Council Hall</span>
+      <span>Council</span>
     </button>
-    <button class="mode-tab" data-tab="council" onclick="switchTab('council')" title="Automated 4-Stage Pipeline (Alt+3)">
+    <button class="mode-tab" data-tab="council" onclick="switchTab('council')" title="Four-stage pipeline (Alt+3)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-      <span>4-Stage</span>
+      <span>Pipeline</span>
     </button>
-    <button class="mode-tab" data-tab="debate" onclick="switchTab('debate')" title="Multi-Model Debate & Compare (Alt+4)">
+    <button class="mode-tab" data-tab="debate" onclick="switchTab('debate')" title="Compare model responses (Alt+4)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      <span>Debate</span>
+      <span>Compare</span>
     </button>
-    <button class="mode-tab" data-tab="chat" onclick="switchTab('chat')" title="Direct Model Chat (Alt+5)">
+    <button class="mode-tab" data-tab="chat" onclick="switchTab('chat')" title="Model chat (Alt+5)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
       <span>Chat</span>
     </button>
   </nav>
 
   <div class="top-actions">
-    <button class="btn" onclick="openCommandPalette()" aria-label="Open Command Palette (Cmd+K)" title="Quick Actions & Navigation (⌘K / Ctrl+K)">
+    <button class="btn" onclick="openCommandPalette()" aria-label="Open Command Palette (Cmd+K)" title="Search actions and navigate (⌘K / Ctrl+K)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <span>Actions</span>
+      <span>Search</span>
       <span class="kbd">⌘K</span>
     </button>
-    <button class="btn btn-emerald" onclick="openContextModal()" title="OpenContext Wiki + Graphify AST Graph + Ponytail Debt Ledger">
-      <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-      <span>Graph &amp; Wiki (<span id="ocDocsCountBadge">1</span>)</span>
-    </button>
-    <button id="monitorToggleBtn" class="btn" onclick="toggleMonitorRail()" aria-expanded="true" title="Toggle M5 24GB Telemetry Rail">
-      <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      <span>Telemetry</span>
-    </button>
-    <button class="btn btn-danger" onclick="unloadAllModels()" title="Unload Local oMLX Models & Free M5 Unified RAM">
-      <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
-      <span>Free RAM</span>
+    <button class="btn" id="themeToggleBtn" type="button" onclick="toggleTheme()" aria-pressed="false" aria-label="Switch to light theme" title="Switch to light theme">
+      <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+      <span id="themeToggleLabel">Light</span>
     </button>
   </div>
 </header>
@@ -2496,7 +2764,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   <div class="modal" style="max-width:580px;" role="dialog" aria-modal="true" aria-label="Command Palette">
     <div style="padding:12px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:9px;">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true" style="color:var(--cyan);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="cmdSearchInput" placeholder="Type a command (MCP, Cloud, Graphify Path, Ponytail Debt, Compact, Free RAM)..." style="flex:1; border:none; background:transparent; font-size:13.8px; outline:none;" oninput="renderCommandPaletteList(this.value)" />
+      <input type="text" id="cmdSearchInput" placeholder="Search actions, tools, and settings…" style="flex:1; border:none; background:transparent; font-size:13.8px; outline:none;" oninput="renderCommandPaletteList(this.value)" />
       <span class="kbd">ESC</span>
     </div>
     <div id="cmdPaletteList" class="cmd-list"></div>
@@ -2505,16 +2773,16 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
 
 <!-- ================= CONTEXT ENGINEERING & CODEGRAPH SUITE MODAL (v7.0) ================= -->
 <div id="contextModal" class="modal-backdrop" onclick="if(event.target===this)closeContextModal()">
-  <div class="modal" style="max-width:900px;" role="dialog" aria-label="Context Engineering & CodeGraph Suite">
+  <div class="modal" style="max-width:900px;" role="dialog" aria-modal="true" aria-label="Knowledge and code tools">
     <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:10px;">
       <div>
-        <strong style="font-size:15px;">M5 Context Engineering Suite — OpenContext + CodeGraph + Context-Mode + GSD</strong>
-        <div style="font-size:11.6px; color:var(--text-dim);">Zero-RAM SQLite FTS5 BM25 Memory (`oc://doc/&lt;id&gt;`), AST Blast-Radius CodeGraph, 98% KV-Cache Compression &amp; Spec Waves.</div>
+        <strong style="font-size:15px;">Knowledge & code tools</strong>
+        <div style="font-size:11.6px; color:var(--text-dim);">Search project knowledge, explore code relationships, or plan multi-step work.</div>
       </div>
       <div style="display:flex; gap:6px;">
-        <button class="btn btn-xs btn-cyan" onclick="switchCtxTab('oc')" id="ctxTabBtn-oc">1. OpenContext Vault</button>
-        <button class="btn btn-xs" onclick="switchCtxTab('cg')" id="ctxTabBtn-cg">2. AST CodeGraph</button>
-        <button class="btn btn-xs" onclick="switchCtxTab('gsd')" id="ctxTabBtn-gsd">3. Context-Mode &amp; GSD</button>
+        <button class="btn btn-xs btn-cyan" onclick="switchCtxTab('oc')" id="ctxTabBtn-oc">Knowledge</button>
+        <button class="btn btn-xs" onclick="switchCtxTab('cg')" id="ctxTabBtn-cg">Code graph</button>
+        <button class="btn btn-xs" onclick="switchCtxTab('gsd')" id="ctxTabBtn-gsd">Planning</button>
         <button class="btn btn-xs" onclick="closeContextModal()">Close</button>
       </div>
     </div>
@@ -2524,8 +2792,8 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
       <div id="ctxPane-oc" style="display:flex; flex-direction:column; gap:12px;">
         <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <strong style="font-size:13px; color:#6ee7b7;">Save Persistent Knowledge Document (`0xranx/OpenContext` • `oc://doc/&lt;id&gt;`)</strong>
-            <span class="mono" style="font-size:11px; color:var(--text-faint);">Pinned docs auto-inject into Harness prompts!</span>
+            <strong style="font-size:13px; color:#6ee7b7;">Save a knowledge document</strong>
+            <span class="mono" style="font-size:11px; color:var(--text-faint);">Pinned documents are included in Harness context.</span>
           </div>
           <input type="hidden" id="ocDocId" value="" />
           <div style="display:grid; grid-template-columns:1.5fr 1fr auto; gap:8px; align-items:end; margin-bottom:8px;">
@@ -2564,7 +2832,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
       <div id="ctxPane-cg" style="display:none; flex-direction:column; gap:12px;">
         <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-            <strong style="font-size:13px; color:#67e8f9;">Zero-RAM AST CodeGraph + Graphify v8 Path Tracer + Ponytail Debt Ledger</strong>
+            <strong style="font-size:13px; color:#67e8f9;">Explore code relationships and path queries</strong>
             <button class="btn btn-cyan btn-xs" onclick="refreshCodeGraphOverview()">Scan Workspace Graph</button>
           </div>
           <div style="display:grid; grid-template-columns:1.3fr 1.1fr 1.3fr auto; gap:8px; align-items:end;">
@@ -2585,22 +2853,22 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
           </div>
         </div>
         <div id="cgStatsSummary" style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px;"></div>
-        <pre id="cgReportOutput" style="background:var(--bg-code); border:1px solid var(--border); border-radius:9px; padding:11px; font-family:var(--mono); font-size:11.4px; max-height:300px; overflow:auto; white-space:pre-wrap; color:#e2e8f0;">Click "Scan Workspace Graph" or "Run Query" to inspect God Nodes, shortest paths, callers, and complexity hotspots.</pre>
+        <pre id="cgReportOutput" style="background:var(--bg-code); border:1px solid var(--border); border-radius:9px; padding:11px; font-family:var(--mono); font-size:11.4px; max-height:300px; overflow:auto; white-space:pre-wrap; color:#e2e8f0;">Choose Scan workspace or Run query to inspect symbols, callers, paths, and complexity.</pre>
       </div>
 
       <!-- SUB-PANE 3: CONTEXT-MODE & GSD SPEC ENGINE -->
       <div id="ctxPane-gsd" style="display:none; flex-direction:column; gap:10px; font-size:12.4px; color:var(--text-dim);">
         <div class="model-row loaded">
-          <strong style="color:#a7f3d0;">1. `mksglu/context-mode` — SQLite FTS5 Tool Sandbox &amp; Compaction (`0 MB` Extra Daemon RAM)</strong>
-          <p style="margin-top:4px;">Every Harness or MCP tool response exceeding <code>3,200 chars</code> is automatically chunked into SQLite <code>FTS5 (porter unicode61 + bm25)</code> and replaced with a ~1.4 KB structured digest + Vault ID (saving <strong>95–98%</strong> of M5 KV-cache memory!). Agents query exact slices via <code>ctx_search</code> or analyze raw files via <code>ctx_execute_python</code> ("Think in Code"). Click <strong>Compact</strong> in the Harness bar anytime to fold long trajectories into a <code>&lt;=2 KB &lt;session_guide&gt;</code>.</p>
+          <strong style="color:#a7f3d0;">Context compaction and searchable tool results</strong>
+          <p style="margin-top:4px;">Large tool results can be stored and searched instead of filling the active context. Use <code>ctx_search</code> to retrieve relevant sections or <code>ctx_execute_python</code> to analyze files. Use <strong>Compact</strong> in Harness to summarize a long session.</p>
         </div>
         <div class="model-row loaded">
-          <strong style="color:#fde68a;">2. `open-gsd/gsd-core` — 3-Wave Fresh-Context Spec Loop &amp; Secret Guard</strong>
-          <p style="margin-top:4px;">Prevents <strong>Context Rot</strong> on 27B/19B local models by executing complex features across <strong>3 isolated fresh-context waves</strong> bridged purely by <code>.planning/PLAN.md</code>, <code>.planning/STATE.md</code>, and <code>.planning/VERIFICATION.md</code> (auto-added to <code>.git/info/exclude</code>), with automatic sequential <code>oMLX</code> model unloading between Lead &amp; Verifier! Also enforces <code>gsd-secret-read-guard</code> blocking <code>.env</code>, <code>.secrets</code>, <code>*.pem</code>, and <code>*.key</code>.</p>
+          <strong style="color:#fde68a;">Plan, implement, and verify in separate waves</strong>
+          <p style="margin-top:4px;">The workflow separates planning, implementation, and verification into three waves. It records progress in planning files, unloads local models between lead and verifier stages, and blocks reads of common secret files.</p>
         </div>
         <div class="model-row">
-          <strong style="color:#67e8f9;">3. Optional External Stdio MCP Presets (Pre-Registered in MCP Hub)</strong>
-          <p style="margin-top:4px;">Want to run the upstream CLIs (`npx -y context-mode`, `npx -y @aicontextlab/cli mcp`, or `codegraph start stdio` with <code>CODEGRAPH_ANALYZERS=0</code> for 24GB M5 safety)? Open <strong>MCP</strong> in the top bar — all three are pre-wired as 1-click presets!</p>
+          <strong style="color:#67e8f9;">Optional local MCP tools</strong>
+          <p style="margin-top:4px;">Optional command-line MCP servers can be added from the MCP tools panel. Presets are available for Context Mode, CodeGraph, and related local tools.</p>
         </div>
       </div>
     </div>
@@ -2609,11 +2877,11 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
 
 <!-- ================= CLOUD + CUSTOM MCP TOOLS HUB MODAL (v6.0) ================= -->
 <div id="mcpModal" class="modal-backdrop" onclick="if(event.target===this)closeMcpModal()">
-  <div class="modal" style="max-width:860px;" role="dialog" aria-label="MCP Tools Hub (Cloud + Custom)">
+  <div class="modal" style="max-width:860px;" role="dialog" aria-label="MCP tools">
     <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
       <div>
-        <strong style="font-size:15px;">MCP Tools Hub — Cloud Remote HTTP + Custom Stdio/HTTP</strong>
-        <div style="font-size:11.8px; color:var(--text-dim);">Auto-negotiates MCP <code>2026-07-28</code> Stateless + <code>2025</code> Session HTTP &amp; On-Demand <code>stdio</code> (0 MB idle RAM on 24GB M5!).</div>
+        <strong style="font-size:15px;">MCP tools</strong>
+        <div style="font-size:11.8px; color:var(--text-dim);">Connect remote or local tools, review approval policy, and test calls.</div>
       </div>
       <div style="display:flex; gap:6px;">
         <button class="btn btn-xs" onclick="loadMcpServers()">Refresh</button>
@@ -2624,10 +2892,10 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
     <div style="padding:15px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:14px;">
       <!-- 1. Presets & Add/Edit Form -->
       <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
-        <label class="field-lbl" style="color:#67e8f9;">1A. Cloud Remote MCP Presets (Zero-Install URLs — 0 MB Local RAM)</label>
+        <label class="field-lbl" style="color:#67e8f9;">Remote server presets</label>
         <div id="mcpCloudPresetChips" style="display:flex; gap:6px; flex-wrap:wrap; margin:5px 0 10px;"></div>
 
-        <label class="field-lbl" style="color:#fde68a;">1B. Custom &amp; Local MCP Templates (Custom HTTP, Python/uv, npx, uvx, Docker)</label>
+        <label class="field-lbl" style="color:#fde68a;">Local and custom server templates</label>
         <div id="mcpCustomPresetChips" style="display:flex; gap:6px; flex-wrap:wrap; margin:5px 0 12px;"></div>
 
         <div style="display:grid; grid-template-columns:1fr 1.4fr 1fr 1.2fr; gap:8px; margin-bottom:8px;">
@@ -2707,7 +2975,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
 
       <!-- 4. Live MCP Tool Playground -->
       <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
-        <label class="field-lbl" style="color:var(--emerald);">Live MCP Tool Playground (Test Any Cloud or Custom Tool Immediately)</label>
+        <label class="field-lbl" style="color:var(--emerald);">Test an MCP tool call</label>
         <div style="display:grid; grid-template-columns:1fr 1.2fr 1.8fr auto; gap:7px; align-items:end; margin-top:6px;">
           <div><label class="field-lbl">Server</label><select id="mcpPlayServer" style="width:100%;" onchange="populateMcpPlayTools()"></select></div>
           <div><label class="field-lbl">Tool Name</label><select id="mcpPlayTool" style="width:100%;"></select></div>
@@ -2725,8 +2993,8 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   <div class="modal" role="dialog" aria-label="Official DeepSeek Harness & OpenHarness Bridge">
     <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
       <div>
-        <strong style="font-size:15px;">Official `deepseek-harness` (`dsh`) &amp; `openharness` (`hn`) Bridge</strong>
-        <div style="font-size:11.8px; color:var(--text-dim);">Route external agent runtimes through your M5 Studio Gateway (`http://127.0.0.1:3000/v1`) with OpenAI tool-call normalization &amp; Cloud/M5 failover!</div>
+        <strong style="font-size:15px;">External harness integrations</strong>
+        <div style="font-size:11.8px; color:var(--text-dim);">Connect external agent runtimes to the local Studio gateway. Review the examples below for supported configuration formats.</div>
       </div>
       <button class="btn btn-xs" onclick="closeExternalHarnessModal()">Close</button>
     </div>
@@ -2764,7 +3032,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   <div class="modal" style="max-width:860px;" role="dialog" aria-label="Harness Git Diff">
     <div style="padding:13px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:10px;">
       <div>
-        <strong style="font-size:14.8px;">Harness Workspace / Worktree Git Diff</strong>
+        <strong style="font-size:14.8px;">Review workspace changes</strong>
         <div id="harnessDiffMeta" class="mono" style="font-size:11.3px; color:var(--text-dim);"></div>
       </div>
       <div style="display:flex; gap:7px; align-items:center;">
@@ -2785,8 +3053,8 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   <div class="modal" role="dialog" aria-label="Cloud Providers & OmniRoute Router">
     <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
       <div>
-        <strong style="font-size:15px;">Cloud Providers &amp; OmniRoute Fallback Router</strong>
-        <div style="font-size:11.8px; color:var(--text-dim);">Mix 0-GB Cloud APIs + Free Tiers + Local M5 oMLX (`http://127.0.0.1:3000/v1` unified OpenAI gateway)</div>
+        <strong style="font-size:15px;">Model providers and routing</strong>
+        <div style="font-size:11.8px; color:var(--text-dim);">Configure cloud, local, and fallback model providers.</div>
       </div>
       <button class="btn btn-xs" onclick="closeProvidersModal()">Close</button>
     </div>
@@ -2857,8 +3125,8 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   <div class="modal" role="dialog" aria-label="Agent Skills Manager">
     <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
       <div>
-        <strong style="font-size:15px;">Agent Skills (`SKILL.md`) &amp; MCP Bridge</strong>
-        <div style="font-size:12px; color:var(--text-dim);">Auto-discovers `.agents/skills`, `.claude/skills`, `.cursor/skills` in Project &amp; Home (`~`)</div>
+        <strong style="font-size:15px;">Agent skills</strong>
+        <div style="font-size:12px; color:var(--text-dim);">Discover, install, and enable skills for this workspace.</div>
       </div>
       <div style="display:flex; gap:6px;">
         <button class="btn btn-xs" onclick="loadSkills()">Rescan</button>
@@ -2887,8 +3155,8 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   <div class="modal" style="max-width:940px;" role="dialog" aria-modal="true" aria-label="Autonomous Agile SDLC Product Factory">
     <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:10px;">
       <div>
-        <strong style="font-size:15px;">Autonomous Agile SDLC Product Factory (`MetaGPT SOP` + `CrewAI Flow` + `Default-FAIL Backlog`)</strong>
-        <div style="font-size:11.6px; color:var(--text-dim);">Research &amp; Online Inspiration &rarr; PRD &rarr; Architecture &rarr; Chunked Sprint Stories (`backlog.json`) &rarr; Fresh-Context Workers &rarr; Independent QA &rarr; Feedback Loop.</div>
+        <strong style="font-size:15px;">Plan and deliver a product</strong>
+        <div style="font-size:11.6px; color:var(--text-dim);">Research, planning, implementation, verification, and feedback in one guided workflow.</div>
       </div>
       <div style="display:flex; gap:6px; align-items:center;">
         <span id="sdlcProgressBadge" class="badge green">0 / 0 Passed</span>
@@ -2901,8 +3169,8 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
       <!-- 1. Broad-Context Product / App / Game Kickoff -->
       <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <strong style="font-size:13px; color:#6ee7b7;">1. Broad-Scope Product / E-Commerce / Game Kickoff</strong>
-          <span class="mono" style="font-size:11px; color:var(--text-faint);">Auto-fetches GitHub + Web + MCP + `ui-ux-pro-max` inspiration before design!</span>
+          <strong style="font-size:13px; color:#6ee7b7;">Start with a product brief</strong>
+          <span class="mono" style="font-size:11px; color:var(--text-faint);">Optional research sources can inform the initial plan.</span>
         </div>
         <textarea id="sdlcVisionInput" rows="3" style="width:100%;" placeholder="e.g. Build a modern full-stack E-Commerce storefront with live search, filterable catalog, slide-over cart drawer, promo codes, SQLite order persistence, and unit/E2E tests — OR an end-to-end HTML5 Canvas survival roguelike game with wave progression, upgrades, spatial audio, and 60fps loop."></textarea>
         <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px;">
@@ -2917,7 +3185,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
           <div style="display:flex; gap:7px; flex-wrap:wrap;">
             <button class="btn btn-cyan btn-xs" onclick="startSdlcRun('plan_only')" title="Run Phases 1-4 (Research + PRD + Architecture + backlog.json) for review before coding">1. Research &amp; Plan Backlog Only</button>
             <button class="btn btn-amber btn-xs" onclick="startSdlcRun('run_sprints')" title="Execute remaining passes:false stories in .sdlc/backlog.json">Resume Pending Sprints</button>
-            <button class="btn btn-primary btn-xs" onclick="startSdlcRun('full')" title="Run Research -> PRD -> Architecture -> Sprint Backlog -> Fresh-Context Execution + Independent QA">Run Full Autonomous SDLC</button>
+            <button class="btn btn-primary btn-xs" onclick="startSdlcRun('full')" title="Run Research -> PRD -> Architecture -> Sprint Backlog -> Fresh-Context Execution + Independent QA">Run full workflow</button>
           </div>
         </div>
       </div>
@@ -2948,7 +3216,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
       <!-- 3. Closed-Loop Dissatisfaction Router -> Research & Online Inspiration Team -->
       <div style="background:var(--bg-card); border:1px solid rgba(245,158,11,0.4); border-radius:10px; padding:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <strong style="font-size:13px; color:#fde68a;">3. Not Satisfied? Route Feedback &rarr; Research Team + Online Inspiration + Re-Sprint</strong>
+          <strong style="font-size:13px; color:#fde68a;">3. Review results and provide feedback</strong>
           <label class="chk-lbl"><input type="checkbox" id="sdlcFeedbackAutoImpl" checked /> Auto-implement delta stories</label>
         </div>
         <div style="display:grid; grid-template-columns:1.6fr 1fr auto; gap:8px; align-items:end;">
@@ -2957,7 +3225,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
             <input type="text" id="sdlcFeedbackInput" style="width:100%;" placeholder="e.g. Checkout feels clunky — research 1-page Stripe/Shopify cart drawers & add instant validation" />
           </div>
           <div>
-            <label class="field-lbl" for="sdlcInspirationQuery">Online Inspiration Search Query (Optional)</label>
+            <label class="field-lbl" for="sdlcInspirationQuery">Research query (optional)</label>
             <input type="text" id="sdlcInspirationQuery" style="width:100%; font-family:var(--mono); font-size:11.4px;" placeholder="e.g. modern ecommerce slide-over cart ux" />
           </div>
           <button class="btn btn-amber" onclick="submitSdlcFeedback()">Research &amp; Iterate</button>
@@ -3002,10 +3270,17 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
       <span class="field-lbl" style="margin:0; color:#fde68a;">MCP:</span>
       <div id="activeMcpPills" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;"></div>
       <div style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap;">
-        <button class="btn btn-xs btn-amber" onclick="openMcpModal()">MCP (<span id="mcpToolsCountBadge">0</span>)</button>
-        <button class="btn btn-xs btn-cyan" onclick="openProvidersModal()">Cloud / Router (<span id="providersCountBadge">0</span>)</button>
-        <button class="btn btn-xs btn-purple" onclick="openSkillsModal()">Skills (<span id="skillsCountBadge">0</span>)</button>
-        <button class="btn btn-xs" onclick="openExternalHarnessModal()" title="Official deepseek-harness (dsh) & openharness configs">dsh / hn</button>
+        <button class="btn btn-xs" onclick="openMcpModal()">MCP tools (<span id="mcpToolsCountBadge">0</span>)</button>
+        <button class="btn btn-xs" onclick="openProvidersModal()">Providers (<span id="providersCountBadge">0</span>)</button>
+        <button class="btn btn-xs" onclick="openSkillsModal()">Skills (<span id="skillsCountBadge">0</span>)</button>
+        <button class="btn btn-xs" onclick="openExternalHarnessModal()" title="External harness configurations">External harness</button>
+        <button class="btn btn-xs" onclick="openContextModal()" title="Knowledge, code graph, and planning tools">Context tools (<span id="ocDocsCountBadge">1</span>)</button>
+        <button id="monitorToggleBtn" class="btn btn-xs" onclick="toggleMonitorRail()" aria-controls="monitorRail" aria-expanded="true" title="Toggle telemetry and model monitor">
+          <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Telemetry</span>
+        </button>
+        <button class="btn btn-xs btn-danger" onclick="unloadAllModels()" title="Unload local models to free memory">
+          <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg><span>Unload models</span>
+        </button>
       </div>
     </div>
 
@@ -3014,7 +3289,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
       <div class="harness-shell">
         <aside class="harness-sidebar">
           <div style="padding:11px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
-            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="startFreshHarnessDraft()">+ New Agentic Harness</button>
+            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="startFreshHarnessDraft()">+ New session</button>
             <div>
               <label class="field-lbl">Workspace Folder</label>
               <input type="text" id="harnessWorkspaceInput" style="width:100%; font-family:var(--mono); font-size:11.2px;" placeholder="/path/to/repo" />
@@ -3086,7 +3361,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
 
           <!-- Harness Active Worktree / Session Strip -->
           <div id="harnessInfoBanner" style="padding:6px 16px; background:rgba(6,182,212,0.06); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:11.6px; color:var(--text-dim); flex-wrap:wrap;">
-            <span id="harnessActiveLabel">New Harness Draft — choose workspace, policy, &amp; model, then describe an engineering task below.</span>
+            <span id="harnessActiveLabel">New session — choose a workspace and model, then describe the task.</span>
             <div style="display:flex; gap:6px; align-items:center;">
               <span id="harnessCtxSavingsBadge" class="badge green" style="display:none;" title="Context-Mode SQLite FTS5 KV-Cache Compression Savings">Ctx Saved 0%</span>
               <span id="harnessActiveStatusBadge" class="badge cyan">READY</span>
@@ -3100,7 +3375,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
           <div class="hall-composer">
             <textarea id="harnessPromptInput" rows="2" style="flex:1; resize:none;" placeholder="Describe an engineering task, 3-Wave Spec, or click Agile SDLC Factory for broad e-com / game builds..."></textarea>
             <button id="harnessSdlcBtn" class="btn btn-emerald" onclick="openSdlcModal()" title="MetaGPT SOP + CrewAI Flow + Default-FAIL Sprint Backlog + Research/Feedback Loop for big apps & games">Agile SDLC Factory</button>
-            <button id="harnessGsdBtn" class="btn btn-amber" onclick="runGsdWaveTurn()" title="open-gsd/gsd-core: Run 3 Fresh-Context Waves (Wave 1 PLAN.md -> Wave 2 Execute -> Wave 3 Verify) for zero context rot!">GSD 3-Wave</button>
+            <button id="harnessGsdBtn" class="btn btn-amber" onclick="runGsdWaveTurn()" title="open-gsd/gsd-core: Run planning, implementation, and verification in separate waves.">Plan, build, verify</button>
             <button id="harnessRunBtn" class="btn btn-primary" onclick="runHarnessTurn()">Run Turn</button>
           </div>
         </div>
@@ -3130,8 +3405,8 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
               <div id="hallRoster" class="avatar-stack" style="margin-top:5px;"></div>
             </div>
             <div style="display:flex; gap:7px; align-items:center;">
-              <button id="hallFullRoundBtn" class="btn btn-amber" onclick="runHallFullRound()" title="Sequentially summon Seat 1 -> Seat 2 -> Seat 3 -> Seat 4 across your 4 Council LLMs">Convene 4-LLM Round</button>
-              <button id="hallConcludeBtn" class="btn" onclick="summonConclusion()" title="Convene remaining voices if needed, then pin Lead Arbiter Final Verdict">Convene &amp; Pin Verdict</button>
+              <button id="hallFullRoundBtn" class="btn btn-amber" onclick="runHallFullRound()" title="Sequentially summon Seat 1 -> Seat 2 -> Seat 3 -> Seat 4 across your 4 Council LLMs">Run full round</button>
+              <button id="hallConcludeBtn" class="btn" onclick="summonConclusion()" title="Convene remaining voices if needed, then pin Lead Arbiter Final Verdict">Finish and pin summary</button>
             </div>
           </div>
 
@@ -3157,15 +3432,15 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
               <option value="low">Reasoning: Low</option>
               <option value="medium">Reasoning: Medium</option>
             </select>
-            <button id="hallSummonBtn" class="btn btn-xs" onclick="summonSingleAgent()" title="Summon only this single selected voice">Summon 1 Voice</button>
+            <button id="hallSummonBtn" class="btn btn-xs" onclick="summonSingleAgent()" title="Summon only this single selected voice">Ask one model</button>
             <button id="hallStopBtn" class="btn btn-danger btn-xs" style="display:none;" onclick="stopActiveStream()">Stop</button>
           </div>
 
           <div id="hallStream" class="hall-stream">
             <div style="margin:auto; text-align:center; max-width:540px; color:var(--text-dim);">
-              <h3 style="color:#fff; margin-bottom:6px;">Hybrid Local M5 + Cloud Council Hall</h3>
+              <h3 style="color:#fff; margin-bottom:6px;">Choose local and cloud models</h3>
               <p style="font-size:13px; margin-bottom:14px;">
-                Mix <strong>private local M5 models (`oMLX`)</strong> with <strong>Cloud APIs (`Claude`, `Gemini`, `Groq`, `OpenRouter`, `OmniRoute`)</strong> in the same council room. Cloud voices consume <strong>0 GB</strong> of your 24GB Unified Memory!
+                Assign local or cloud models to each council role. Local-model memory use is available in the telemetry panel.
               </p>
               <div style="display:flex; gap:8px; justify-content:center;">
                 <button class="btn btn-primary" onclick="openSpawnModal()">+ Spawn Council Session</button>
@@ -3179,7 +3454,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
           <div class="hall-composer">
             <textarea id="hallHumanInput" rows="2" style="flex:1; resize:none;" placeholder="Ask a question or steer the Council as Human Operative (Enter = Post &amp; Convene all 4 LLMs)..."></textarea>
             <button class="btn" style="height:38px;" onclick="postHumanHallMessage(false)" title="Append note without summoning AI voices">Post Only</button>
-            <button class="btn btn-primary" style="height:38px;" onclick="postHumanHallMessage(true)" title="Post message and run all 4 Council LLMs (Thesis -> Analyst -> Red-Team Critic -> Arbiter)">Post &amp; Convene 4 LLMs</button>
+            <button class="btn btn-primary" style="height:38px;" onclick="postHumanHallMessage(true)" title="Post message and run all 4 Council LLMs (Thesis -> Analyst -> Red-Team Critic -> Arbiter)">Send and run round</button>
           </div>
         </div>
       </div>
@@ -3217,7 +3492,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
             </div>
             <div style="display:flex; gap:8px;">
               <button id="councilStopBtn" class="btn btn-danger" style="display:none;" onclick="stopActiveStream()">Stop</button>
-              <button id="councilRunBtn" class="btn btn-primary" onclick="runCouncil()">Run 4-Stage Pipeline</button>
+              <button id="councilRunBtn" class="btn btn-primary" onclick="runCouncil()">Run pipeline</button>
             </div>
           </div>
         </div>
@@ -3255,7 +3530,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
       <div class="scroll-body">
         <div class="config-strip" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
           <div style="flex:1; min-width:260px;">
-            <span class="field-lbl">Compare Local M5 vs Cloud Models Head-to-Head</span>
+            <span class="field-lbl">Compare model responses</span>
             <div id="debateModelChecks" style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;"></div>
           </div>
           <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
@@ -3266,7 +3541,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
         <div class="prompt-box">
           <textarea id="debatePrompt">Compare SQLite WAL vs DuckDB vs embedded Postgres for a local macOS telemetry &amp; vector hybrid store handling 500 writes/sec.</textarea>
           <div class="prompt-footer">
-            <span style="font-size:12px; color:var(--text-faint);">Pit Cloud models directly against your local M5 models.</span>
+            <span style="font-size:12px; color:var(--text-faint);">Select the models to compare; responses appear side by side.</span>
             <div style="display:flex; gap:8px;">
               <button id="debateStopBtn" class="btn btn-danger" style="display:none;" onclick="stopActiveStream()">Stop</button>
               <button id="debateRunBtn" class="btn btn-primary" onclick="runDebate()">Start Compare</button>
@@ -3318,7 +3593,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   </main>
 
   <!-- ================= RIGHT MONITORING RAIL ================= -->
-  <aside class="monitor-rail">
+  <aside id="monitorRail" class="monitor-rail">
     <div class="m-card">
       <div class="m-head"><span>M5 Unified Memory (24 GB)</span><span class="badge green">OK</span></div>
       <div style="display:flex; justify-content:space-between; font-size:11.6px; margin-bottom:2px;">
@@ -3390,33 +3665,42 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   }
 
   const CMD_PALETTE_ITEMS = [
-    { label: "Launch Autonomous Agile SDLC Product Factory (Big Apps / E-Com / Games)", hint: "SDLC", run: () => { switchTab("harness"); openSdlcModal(); } },
-    { label: "Switch to Autonomous Agent Harness", hint: "Alt+1", run: () => switchTab("harness") },
-    { label: "Switch to Interactive Council Hall", hint: "Alt+2", run: () => switchTab("hall") },
-    { label: "Switch to Auto 4-Stage Pipeline", hint: "Alt+3", run: () => switchTab("council") },
-    { label: "Switch to Multi-Model Debate", hint: "Alt+4", run: () => switchTab("debate") },
-    { label: "Switch to Direct Model Chat", hint: "Alt+5", run: () => switchTab("chat") },
-    { label: "OpenContext Wiki Vault & Hygiene Lint", hint: "Memory", run: () => { openContextModal(); switchCtxTab("oc"); } },
-    { label: "Graphify AST CodeGraph & Shortest Path Tracer", hint: "Graph", run: () => { openContextModal(); switchCtxTab("cg"); } },
-    { label: "Ponytail Shortcut Debt & Rationale Ledger", hint: "Debt", run: () => { openContextModal(); switchCtxTab("cg"); document.getElementById("cgModeSelect").value = "debt"; runCodeGraphPlayground(); } },
-    { label: "Configure MCP Tools Hub (Cloud + Custom Stdio)", hint: "MCP", run: () => openMcpModal() },
-    { label: "Configure Cloud Providers & OmniRoute Combos", hint: "Cloud", run: () => openProvidersModal() },
-    { label: "Manage Installed Agent Skills", hint: "Skills", run: () => openSkillsModal() },
-    { label: "Compact Active Harness Session (Context-Mode <=2KB)", hint: "KV Cache", run: () => compactActiveHarness() },
+    { label: "Plan and deliver a product", hint: "SDLC", run: () => { switchTab("harness"); openSdlcModal(); } },
+    { label: "Open Harness", hint: "Alt+1", run: () => switchTab("harness") },
+    { label: "Open Council", hint: "Alt+2", run: () => switchTab("hall") },
+    { label: "Open Pipeline", hint: "Alt+3", run: () => switchTab("council") },
+    { label: "Open Compare", hint: "Alt+4", run: () => switchTab("debate") },
+    { label: "Open Chat", hint: "Alt+5", run: () => switchTab("chat") },
+    { label: "Search knowledge", hint: "Memory", run: () => { openContextModal(); switchCtxTab("oc"); } },
+    { label: "Explore code graph", hint: "Graph", run: () => { openContextModal(); switchCtxTab("cg"); } },
+    { label: "Review code-debt report", hint: "Debt", run: () => { openContextModal(); switchCtxTab("cg"); document.getElementById("cgModeSelect").value = "debt"; runCodeGraphPlayground(); } },
+    { label: "Configure MCP tools", hint: "MCP", run: () => openMcpModal() },
+    { label: "Configure model providers", hint: "Cloud", run: () => openProvidersModal() },
+    { label: "Manage agent skills", hint: "Skills", run: () => openSkillsModal() },
+    { label: "Compact active Harness session", hint: "KV Cache", run: () => compactActiveHarness() },
     { label: "Inspect Harness Git Status & Unified Diff", hint: "Worktree", run: () => openHarnessDiffModal() },
-    { label: "Free M5 24GB Unified Memory (Unload Local oMLX)", hint: "RAM", run: () => unloadAllModels() },
-    { label: "Toggle Right Telemetry Rail", hint: "Monitor", run: () => toggleMonitorRail() },
+    { label: "Unload local models", hint: "RAM", run: () => unloadAllModels() },
+    { label: "Toggle telemetry", hint: "Monitor", run: () => toggleMonitorRail() },
+    { label: "Toggle appearance", hint: "Theme", run: () => toggleTheme() },
   ];
 
+  let commandPaletteReturnFocus = null;
+  let commandPaletteIndex = 0;
   function openCommandPalette() {
     const m = document.getElementById("cmdPaletteModal");
+    commandPaletteReturnFocus = document.activeElement;
     m.classList.add("open");
     const inp = document.getElementById("cmdSearchInput");
     inp.value = "";
     renderCommandPaletteList("");
     setTimeout(() => inp.focus(), 20);
   }
-  function closeCommandPalette() { document.getElementById("cmdPaletteModal").classList.remove("open"); }
+  function closeCommandPalette() {
+    document.getElementById("cmdPaletteModal").classList.remove("open");
+    const target = commandPaletteReturnFocus;
+    commandPaletteReturnFocus = null;
+    if (target && target.isConnected && typeof target.focus === "function") target.focus();
+  }
 
   function renderCommandPaletteList(q) {
     const ql = (q || "").trim().toLowerCase();
@@ -3426,8 +3710,11 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
       box.innerHTML = `<div style="padding:12px; font-size:12px; color:var(--text-faint);">No matching commands.</div>`;
       return;
     }
+    commandPaletteIndex = 0;
+    box.setAttribute("role", "listbox");
+    box.setAttribute("aria-label", "Actions and destinations");
     box.innerHTML = list.map((it, idx) => `
-      <button class="cmd-item ${idx === 0 ? 'selected' : ''}" onclick="runPaletteIndex(${CMD_PALETTE_ITEMS.indexOf(it)})">
+      <button class="cmd-item ${idx === 0 ? 'selected' : ''}" role="option" aria-selected="${idx === 0 ? 'true' : 'false'}" onclick="runPaletteIndex(${CMD_PALETTE_ITEMS.indexOf(it)})">
         <span>${escapeHtml(it.label)}</span>
         <span class="kbd">${escapeHtml(it.hint)}</span>
       </button>`).join("");
@@ -3444,8 +3731,31 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
       if (open) closeCommandPalette(); else openCommandPalette();
       return;
     }
+    const palette = document.getElementById("cmdPaletteModal");
+    if (palette && palette.classList.contains("open") && ["ArrowDown", "ArrowUp", "Enter"].includes(e.key)) {
+      const options = [...document.querySelectorAll("#cmdPaletteList .cmd-item")];
+      if (options.length) {
+        e.preventDefault();
+        if (e.key === "Enter") options[commandPaletteIndex].click();
+        else {
+          commandPaletteIndex = (commandPaletteIndex + (e.key === "ArrowDown" ? 1 : -1) + options.length) % options.length;
+          options.forEach((option, index) => {
+            const selected = index === commandPaletteIndex;
+            option.classList.toggle("selected", selected);
+            option.setAttribute("aria-selected", selected ? "true" : "false");
+          });
+        }
+      }
+      return;
+    }
     if (e.key === "Escape") {
+      const paletteOpen = palette && palette.classList.contains("open");
       document.querySelectorAll(".modal-backdrop.open").forEach(m => m.classList.remove("open"));
+      if (paletteOpen) {
+        const target = commandPaletteReturnFocus;
+        commandPaletteReturnFocus = null;
+        if (target && target.isConnected && typeof target.focus === "function") target.focus();
+      }
       return;
     }
     if (e.altKey && ["1","2","3","4","5"].includes(e.key)) {
@@ -3541,22 +3851,50 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
     return `<div class="md">${html}</div>`;
   }
 
+  function applyTheme(theme) {
+    const chosen = theme === "light" ? "light" : "dark";
+    document.body.dataset.theme = chosen;
+    const button = document.getElementById("themeToggleBtn");
+    const label = document.getElementById("themeToggleLabel");
+    if (button) {
+      const next = chosen === "dark" ? "light" : "dark";
+      button.setAttribute("aria-pressed", chosen === "light" ? "true" : "false");
+      button.setAttribute("aria-label", `Switch to ${next} theme`);
+      button.title = `Switch to ${next} theme`;
+    }
+    if (label) label.textContent = chosen === "dark" ? "Light" : "Dark";
+  }
+  function toggleTheme() {
+    const next = document.body.dataset.theme === "light" ? "dark" : "light";
+    applyTheme(next);
+    try { localStorage.setItem("m5_theme", next); } catch (_) {}
+  }
+
   function copyCodeBlock(btn) { navigator.clipboard.writeText(btn.closest(".code-wrap").querySelector("code").innerText); const p = btn.textContent; btn.textContent = "Copied!"; setTimeout(() => (btn.textContent = p), 1200); }
   function copyStageMarkdown(s, btn) { navigator.clipboard.writeText(stageBuffers[s].c || stageBuffers[s].r || ""); const p = btn.textContent; btn.textContent = "Copied!"; setTimeout(() => (btn.textContent = p), 1200); }
   function switchTab(tab) {
     document.querySelectorAll(".mode-tab").forEach(b => {
       const on = b.dataset.tab === tab;
       b.classList.toggle("active", on);
-      b.setAttribute("aria-selected", on ? "true" : "false");
+      if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
     });
     document.querySelectorAll(".pane").forEach(p => p.classList.toggle("active", p.id === `pane-${tab}`));
     if (tab === "hall") refreshHallSessions();
     if (tab === "harness") loadHarnessSessions();
   }
   function toggleMonitorRail() {
-    const collapsed = document.getElementById("mainLayout").classList.toggle("rail-collapsed");
+    const layout = document.getElementById("mainLayout");
     const btn = document.getElementById("monitorToggleBtn");
-    if (btn) btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    const narrow = window.matchMedia("(max-width: 1100px)").matches;
+    let expanded;
+    if (narrow) {
+      layout.classList.remove("rail-collapsed");
+      expanded = layout.classList.toggle("rail-mobile-open");
+    } else {
+      layout.classList.remove("rail-mobile-open");
+      expanded = !layout.classList.toggle("rail-collapsed");
+    }
+    if (btn) btn.setAttribute("aria-expanded", expanded ? "true" : "false");
   }
   function setCouncilPreset(txt) { document.getElementById("councilPrompt").value = txt; }
   function stopActiveStream() { if (activeAbort) { activeAbort.abort(); activeAbort = null; } }
@@ -4303,7 +4641,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   function renderHarnessStarter() {
     document.getElementById("harnessStream").innerHTML = `
       <div style="max-width:820px; margin:20px auto; text-align:center;">
-        <div style="font-size:16px; font-weight:700; margin-bottom:5px;">M5 Context-Engineered Agentic Harness v7.0</div>
+        <div style="font-size:16px; font-weight:700; margin-bottom:5px;">Start an engineering task</div>
         <div style="font-size:12.4px; color:var(--text-dim);">
           Unifies <code>deepseek-harness</code> + <code>openharness</code> worktrees + <code>open-gsd/gsd-core</code> 3-Wave Spec Loop +
           <code>0xranx/OpenContext</code> FTS5 Memory + <code>codegraph-rust</code> Zero-RAM AST Graph + <code>mksglu/context-mode</code> 98% KV-Cache Sandbox!
@@ -4359,7 +4697,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   function renderHarnessSidebar() {
     const box = document.getElementById("harnessSessionsList");
     if (!harnessSessions.length) {
-      box.innerHTML = `<div style="padding:12px; font-size:11.8px; color:var(--text-faint);">No harness runs yet. Start one on the right!</div>`;
+      box.innerHTML = `<div style="padding:12px; font-size:11.8px; color:var(--text-faint);">No sessions yet. Start a new session to begin.</div>`;
       return;
     }
     box.innerHTML = harnessSessions.map(s => {
@@ -5462,6 +5800,34 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
     });
   }
 
+  const initialNarrow = window.matchMedia("(max-width: 1100px)").matches;
+  if (initialNarrow) {
+    const monitorButton = document.getElementById("monitorToggleBtn");
+    if (monitorButton) monitorButton.setAttribute("aria-expanded", "false");
+  }
+  window.addEventListener("resize", () => {
+    const narrow = window.matchMedia("(max-width: 1100px)").matches;
+    const layout = document.getElementById("mainLayout");
+    const monitorButton = document.getElementById("monitorToggleBtn");
+    if (!layout || !monitorButton) return;
+    if (narrow) {
+      layout.classList.remove("rail-mobile-open");
+      layout.classList.remove("rail-collapsed");
+      monitorButton.setAttribute("aria-expanded", "false");
+    } else {
+      layout.classList.remove("rail-mobile-open");
+      layout.classList.remove("rail-collapsed");
+      monitorButton.setAttribute("aria-expanded", "true");
+    }
+  });
+  try {
+    const themePreference = window.matchMedia("(prefers-color-scheme: light)");
+    const savedTheme = localStorage.getItem("m5_theme");
+    applyTheme(savedTheme || (themePreference.matches ? "light" : "dark"));
+    themePreference.addEventListener("change", event => {
+      if (!localStorage.getItem("m5_theme")) applyTheme(event.matches ? "light" : "dark");
+    });
+  } catch (_) { applyTheme("dark"); }
   loadOpenContextDocs();
   loadProviders();
   loadSkills();

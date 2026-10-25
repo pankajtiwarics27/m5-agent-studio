@@ -1,233 +1,105 @@
-# Design System Master File
+# M5 Agent Studio — Interface Design System
 
-> **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
-> If that file exists, its rules **override** this Master file.
-> If not, strictly follow the rules below.
+**Status:** Active visual system for `static/index.html`.
+**Purpose:** A calm, high-clarity developer workbench. This file is the source of truth for visual tokens and interaction styling; it does not redefine application behavior or backend contracts.
 
----
+## Product principles
 
-**Project:** M5 Agentic Studio
-**Generated:** 2026-10-25 09:08:40
-**Category:** Developer Tool / IDE
-**Design Dials:** Variance 6/10 (Balanced / Modern) | Motion 5/10 (Standard) | Density 8/10 (Dense / Dashboard)
+1. **Task first:** make the current workflow, status, and next action obvious before exposing implementation detail.
+2. **Neutral by default:** use surfaces and typography for hierarchy. Reserve color for focus, selection, and meaningful status.
+3. **Consistent shell, distinct workflows:** navigation, headers, controls, and states behave consistently across Harness, Council, Pipeline, Compare, and Chat.
+4. **Progressive disclosure, not feature removal:** specialist options may be grouped, but every existing action remains reachable by visible navigation or the command palette.
+5. **Local-first reliability:** core layout and typography work without a network connection or external font/CDN request.
+6. **Safety is part of design:** approvals, credential handling, diff review, and worktree application stay explicit and inspectable.
 
----
+## Design foundations
 
-## Global Rules
+### Themes and semantic color
 
-### Color Palette
+Provide a readable neutral dark theme and a soft neutral light theme. Default dark is charcoal, not OLED black. Persist explicit theme choice in local storage. Never apply accent colors as glow, gradient, or category decoration.
 
-| Role | Hex | CSS Variable |
-|------|-----|--------------|
-| Primary | `#1E293B` | `--color-primary` |
-| On Primary | `#FFFFFF` | `--color-on-primary` |
-| Secondary | `#334155` | `--color-secondary` |
-| On Secondary | `#FFFFFF` | `--color-on-secondary` |
-| Accent/CTA | `#22C55E` | `--color-accent` |
-| On Accent/CTA | `#0F172A` | `--color-on-accent` |
-| Background | `#0F172A` | `--color-background` |
-| Foreground | `#F8FAFC` | `--color-foreground` |
-| Card | `#1B2336` | `--color-card` |
-| Card Foreground | `#F8FAFC` | `--color-card-foreground` |
-| Muted | `#272F42` | `--color-muted` |
-| Muted Foreground | `#94A3B8` | `--color-muted-foreground` |
-| Border | `#475569` | `--color-border` |
-| Destructive | `#EF4444` | `--color-destructive` |
-| On Destructive | `#000000` | `--color-on-destructive` |
-| Ring | `#FFFFFF` | `--color-ring` |
+| Semantic token | Dark | Light | Usage |
+|---|---|---|---|
+| Canvas | `#151719` | `#F7F7F5` | App background |
+| Raised surface | `#1B1E21` | `#FFFFFF` | Header, sidebar, controls |
+| Card surface | `#202428` | `#FFFFFF` | Meaningful grouped content |
+| Hover surface | `#292E33` | `#EFF0ED` | Hover and selected neutral surface |
+| Code surface | `#111315` | `#F1F2EF` | Code/log panels |
+| Border | `#34393E` | `#D9DCD8` | Dividers and control edges |
+| Strong border | `#525A62` | `#B7BCB7` | Emphasis and separators |
+| Primary text | `#E9EAEC` | `#202326` | Body and headings |
+| Secondary text | `#B0B5BA` | `#555C62` | Explanatory copy |
+| Muted text | `#969DA4` | `#687077` | Metadata (minimum 12px) |
+| Accent | `#5969D8` | `#5969D8` | Primary action, selected marker, focus |
 
-**Color Notes:** Code dark + run green
+Status semantic colors: muted green for success, amber for warning/pending approval, red for destructive/error, and neutral gray for idle/unknown. Every status also has a text label or accessible name; hue alone must not convey state. Validate text contrast to WCAG 2.2 AA (4.5:1 normal text, 3:1 large text) and test UI boundaries/focus rings in both themes before release. The token values are implementation starting points, not a substitute for measured contrast checks.
+
+CSS should reference semantic custom properties, not introduce new one-off hex values. Color-mix may be used for subtle state backgrounds only with a tested solid fallback where required by supported browser versions.
 
 ### Typography
 
-- **Heading Font:** JetBrains Mono
-- **Body Font:** IBM Plex Sans
-- **Mood:** code, developer, technical, precise, functional, hacker
-- **Google Fonts:** [JetBrains Mono + IBM Plex Sans](https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap)
+- UI/body stack: `Inter, "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif`.
+- Code/data stack: `"JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace`.
+- No required external font fetch. If custom fonts are added, vendor or package locally and validate licensing, coverage, and offline startup.
+- Body 14px default, 1.45–1.6 line-height; form fields 13–14px; secondary metadata at least 12px; section titles 18–20px; page titles 22–26px.
+- Use 400/500/600 weights. Use monospace only for source, paths, identifiers, and diagnostic values. Use tabular figures for counters.
+- Sentence case for form labels and section names. Avoid tiny all-caps labels and bold-everywhere styling.
 
-**CSS Import:**
-```css
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-```
+### Spacing, sizing, and layout
 
-### Spacing Variables
+- 4px spacing grid; common values: 4, 8, 12, 16, 24, 32, 40px.
+- Desktop content gutters 20–24px; tablet 16px; mobile 12–16px.
+- Inputs/buttons 36–40px high; touch targets at least 44px where practical. Compact secondary controls must remain comfortably operable.
+- Use one surface per meaningful group. Prefer whitespace and alignment over nested borders/cards.
+- Shared application shell: fixed global header, persistent mode navigation on wide screens, central workspace, optional monitor/inspector rail. At narrow widths, retain navigation and rail access via the horizontal mode row and reachable monitor drawer.
+- Reflow at content-driven breakpoints; test 1280, 1024, 768, 390, and 320 CSS px and 200% zoom.
 
-*Density: 8/10 — Dense / Dashboard*
+## Component rules
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--space-xs` | `2px` / `0.125rem` | Tight gaps |
-| `--space-sm` | `4px` / `0.25rem` | Icon gaps, inline spacing |
-| `--space-md` | `8px` / `0.5rem` | Standard padding |
-| `--space-lg` | `12px` / `0.75rem` | Section padding |
-| `--space-xl` | `16px` / `1rem` | Large gaps |
-| `--space-2xl` | `24px` / `1.5rem` | Section margins |
-| `--space-3xl` | `32px` / `2rem` | Hero padding |
+### Navigation and palette
 
-### Shadow Depths
+- All five workflows stay visible and named: Harness, Council, Pipeline, Compare, Chat.
+- Active state uses a stable background/marker and text; hover and keyboard focus are separate states.
+- Keep Alt+1…Alt+5 and Cmd/Ctrl+K. Palette supports mouse and keyboard, groups navigation/actions/tools, exposes shortcuts, and returns focus to its trigger.
 
-| Level | Value | Usage |
-|-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
-| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
+### Buttons and fields
 
----
+- One primary action in a local context; neutral secondary; quiet tertiary; explicit destructive action.
+- Do not use module-specific button hues. Green/amber/red are reserved for genuinely meaningful statuses and decisions.
+- Fields have persistent labels, concise help, adjacent validation, visible focus, and distinguishable disabled/loading/error states. Secret values stay masked.
+- Icon-only controls need an accessible name and tooltip on both pointer hover and keyboard focus.
 
-## Component Specs
+### Cards, status, logs, and output
 
-### Buttons
+- Cards use a restrained surface, consistent 7–9px radius, simple border, no decorative glow, and no hover lift/scale.
+- Status tokens cover idle, queued, running, awaiting approval, success, failed, cancelled, disconnected, and stale. Pair status icon and text with color.
+- Preserve code/log whitespace, copy affordances, file/model labels, and horizontal scrolling. Do not reduce code type to fit a pane.
+- Keep loading, empty, error, and complete states explicit. A toast is never the only notice for a consequential error or pending approval.
 
-```css
-/* Primary Button */
-.btn-primary {
-  background: #22C55E;
-  color: #0F172A;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
+### Dialogs, drawers, and focus
 
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
+- Modal dialogs are for short interruptions/confirmations; drawers are for contextual inspection; long configuration remains a roomy, structured surface.
+- Dialogs/drawers require title/description, contained scrolling, visible close control, focus management, Escape handling, and focus return.
+- Do not hide a required control on small screens. Reflow or provide a persistent drawer/sheet entry point.
 
-/* Secondary Button */
-.btn-secondary {
-  background: transparent;
-  color: #F8FAFC;
-  border: 2px solid #1E293B;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-```
+### Icons and motion
 
-### Cards
+- Use one bundled outline SVG icon family, 16px standard/18px navigation, consistent 1.75–2px stroke. Do not use emoji as interface icons.
+- Short interaction transitions: 120–180ms ease-out; meaningful panel transitions at most 240ms. No animated dashboard choreography, pulsing glows, bounce, or parallax.
+- Streaming must preserve scroll intent and not cause repeated layout jumps. Honor `prefers-reduced-motion` for all motion.
 
-```css
-.card {
-  background: #0F172A;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow-md);
-  transition: all 200ms ease;
-  cursor: pointer;
-}
+## Behavioral compatibility rules
 
-.card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
-}
-```
+- Styling work does not change routes, API calls, provider/MCP security, approval policy, persistence, local hosting, or model behavior.
+- Keep existing pane IDs, selectors, handlers, keyboard shortcuts, event-stream behavior, and status announcements during visual migration.
+- If a later component extraction needs a DOM/handler change, maintain an explicit compatibility map and regression test every affected action in the same change.
+- Relocated tools must have a visible route and a palette entry; no feature may become palette-only.
 
-### Inputs
+## Release checklist
 
-```css
-.input {
-  padding: 12px 16px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 200ms ease;
-}
-
-.input:focus {
-  border-color: #1E293B;
-  outline: none;
-  box-shadow: 0 0 0 3px #1E293B20;
-}
-```
-
-### Modals
-
-```css
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-}
-
-.modal {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: var(--shadow-xl);
-  max-width: 500px;
-  width: 90%;
-}
-```
-
----
-
-## Style Guidelines
-
-**Style:** Dark Mode (OLED)
-
-**Keywords:** Dark theme, low light, high contrast, deep black, midnight blue, eye-friendly, OLED, night mode, power efficient
-
-**Best For:** Night-mode apps, coding platforms, entertainment, eye-strain prevention, OLED devices, low-light
-
-**Key Effects:** Minimal glow (text-shadow: 0 0 10px), dark-to-light transitions, low white emission, high readability, visible focus
-
-### Page Pattern
-
-**Pattern Name:** FAQ/Documentation Landing
-
-- **Conversion Strategy:** Reduce support tickets. Track search analytics. Show related articles. Contact escalation path.
-- **CTA Placement:** Search bar prominent + Contact CTA for unresolved questions
-- **Section Order:** Hero with search bar > Popular categories > FAQ accordion > Contact/support CTA
-
----
-
-## Motion
-
-**Stagger List** (Standard) — Trigger: load or scroll | Duration: 300-450ms | Easing: `back.out(1.4)`
-
-```js
-gsap.from('.grid-item', { opacity: 0, scale: 0.92, y: 16, duration: 0.4, stagger: { each: 0.06, from: 'start', grid: 'auto' }, ease: 'back.out(1.4)' });
-```
-
-**Framework notes:** grid: 'auto' lets GSAP infer rows/columns from a CSS grid layout for a natural wave stagger; Use matchMedia('(prefers-reduced-motion: reduce)') to skip non-essential motion and render the final state immediately
-
-- ✅ Combine with from: 'center' for a bento-grid layout to draw the eye inward first
-- ❌ Don't use back.out on dense data tables; the overshoot reads as sloppy on informational UI
-- ⚡ Group DOM writes; avoid interleaving layout reads (getBoundingClientRect) between staggered tweens
-
----
-
-## Anti-Patterns (Do NOT Use)
-
-- ❌ Light mode default
-- ❌ Slow performance
-
-### Additional Forbidden Patterns
-
-- ❌ **Emojis as icons** — Use SVG icons (Heroicons, Lucide, Simple Icons)
-- ❌ **Missing cursor:pointer** — All clickable elements must have cursor:pointer
-- ❌ **Layout-shifting hovers** — Avoid scale transforms that shift layout
-- ❌ **Low contrast text** — Maintain 4.5:1 minimum contrast ratio
-- ❌ **Instant state changes** — Always use transitions (150-300ms)
-- ❌ **Invisible focus states** — Focus states must be visible for a11y
-
----
-
-## Pre-Delivery Checklist
-
-Before delivering any UI code, verify:
-
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] `cursor-pointer` on all clickable elements
-- [ ] Hover states with smooth transitions (150-300ms)
-- [ ] Light mode: text contrast 4.5:1 minimum
-- [ ] Focus states visible for keyboard navigation
-- [ ] `prefers-reduced-motion` respected
-- [ ] Responsive: 375px, 768px, 1024px, 1440px
-- [ ] No content hidden behind fixed navbars
-- [ ] No horizontal scroll on mobile
+- [ ] Both themes work offline, are legible, and persist preference.
+- [ ] Contrast and focus reviewed on normal, hover, selected, disabled, warning, error, and modal states.
+- [ ] 5 modes and every tool/configuration action remain discoverable and operable.
+- [ ] Keyboard, screen-reader labels/live status, reduced motion, 200% zoom, and narrow-width access pass.
+- [ ] No gradient/glow decoration, tiny default labels, or unexplained acronym-heavy screen titles remain.
+- [ ] Frontend syntax, deterministic standalone build, repository tests, route matrix, and manual workflow regression suite pass.
