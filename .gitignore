@@ -1,0 +1,39 @@
+cat <<'EOF' > .gitignore
+# Local SQLite WAL + FTS5 State (contains local history, Cloud API keys & MCP tokens!)
+studio_history.db
+studio_history.db-wal
+studio_history.db-shm
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Secrets & Credentials
+.env
+.env.*
+!.env.example
+.secrets
+.secrets.*
+*.pem
+*.key
+*.p12
+
+# Local Agent Harness Sessions, Worktrees & Ephemeral Planning/SDLC Logs
+.harnesses/
+.planning/
+.sdlc/
+contexts/
+
+# Python / uv / macOS caches
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+.DS_Store
