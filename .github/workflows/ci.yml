@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install project and test dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Compile source
+        run: python -m compileall -q app.py scripts tests
+      - name: Check frontend JavaScript syntax
+        run: python scripts/check_frontend_syntax.py
+      - name: Run tests
+        run: pytest
+      - name: Smoke-test local loopback startup and auth
+        run: |
+          python scripts/smoke_local.py
+          python scripts/smoke_local.py --standalone
+      - name: Verify generated artifacts are reproducible
+        run: |
+          python scripts/build_studio.py
+          python scripts/generate_route_matrix.py
+          git diff --exit-code -- studio.py docs/route-security-matrix.md

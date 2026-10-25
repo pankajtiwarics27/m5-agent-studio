@@ -2413,6 +2413,24 @@
     stream.scrollTop = stream.scrollHeight;
   }
 
+  function appendWorkflowApprovalCard(target, d) {
+    const statusBadge = document.getElementById("harnessActiveStatusBadge");
+    if (statusBadge) { statusBadge.className = "badge amber"; statusBadge.textContent = "WAITING APPROVAL"; }
+    const card = document.createElement("div");
+    card.id = `apr-card-${d.approval_id}`;
+    card.className = "h-tool-card wait";
+    card.innerHTML = `<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;"><strong style="color:#fde68a;">${UI_ICONS.warn} Approval required: <code>${escapeHtml(d.tool)}</code></strong><span class="badge amber">Standard Policy</span></div><pre style="padding:7px 9px;background:#06090e;border-radius:6px;font-family:var(--mono);font-size:11.6px;color:#fff;overflow-x:auto;margin-bottom:8px;">${escapeHtml(formatToolArgsSummary(d.tool, d.args))}</pre><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;"><button class="btn btn-emerald btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}','approve')">${UI_ICONS.check} Approve &amp; Run</button><button class="btn btn-danger btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}','reject')">${UI_ICONS.close} Reject</button><input type="text" id="apr-note-${escapeHtml(d.approval_id)}" placeholder="Optional rejection guidance" style="flex:1;min-width:160px;font-size:11.5px;padding:4px 8px;" /></div>`;
+    target.appendChild(card);
+    target.scrollTop = target.scrollHeight;
+  }
+
+  function updateWorkflowApprovalCard(d) {
+    const statusBadge = document.getElementById("harnessActiveStatusBadge");
+    if (statusBadge) { statusBadge.className = "badge green"; statusBadge.textContent = "WORKFLOW RUNNING"; }
+    const card = document.getElementById(`apr-card-${d.approval_id}`);
+    if (card) card.innerHTML = `<div class="mono" style="font-size:11.3px;color:${d.decision === 'approve' ? '#6ee7b7' : '#fda4af'};">${d.decision === 'approve' ? UI_ICONS.check + ' Approved — executing...' : UI_ICONS.close + ' Rejected'}</div>`;
+  }
+
   async function resolveHarnessApproval(approvalId, decision) {
     const noteEl = document.getElementById(`apr-note-${approvalId}`);
     const note = noteEl ? noteEl.value.trim() : "";
@@ -3008,6 +3026,11 @@
           if (b) { b.className = "badge green"; b.textContent = `Saved ${d.artifact}`; }
         }
       },
+      approval_required(d) {
+        const st = ensureWaveStep(d.step, "Approval Required");
+        appendWorkflowApprovalCard(st.el.querySelector(`#gsd-tools-${d.step}`), d);
+      },
+      approval_resolved(d) { updateWorkflowApprovalCard(d); },
       tool_result(d) {
         const st = ensureWaveStep(d.step, "");
         const wrap = document.createElement("div");
@@ -3274,6 +3297,8 @@
       sdlc_backlog_ready(d) {
         showToast(`Agile Sprint Backlog ready: ${d.stories ? d.stories.length : 0} stories with Acceptance Criteria`, "ok");
       },
+      approval_required(d) { appendWorkflowApprovalCard(stream, d); },
+      approval_resolved(d) { updateWorkflowApprovalCard(d); },
       sdlc_story_done(d) {
         const card = document.createElement("div");
         card.style.cssText = `font-family:var(--mono); font-size:11.3px; color:${d.passes ? '#a7f3d0' : '#fde68a'}; padding:4px 8px;`;

@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "m5-agent-studio"
+version = "9.0.1"
+description = "Local-first hybrid AI studio and agent harness"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.32,<1",
+  "httpx>=0.28,<0.29",
+  "httpcore>=1.0,<2",
+  "keyring>=25,<27",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+pythonpath = ["."]
+
+[tool.setuptools]
+py-modules = ["app"]

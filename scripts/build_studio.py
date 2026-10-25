@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""Deterministically build the portable single-file Studio from app.py + static/index.html."""
+from __future__ import annotations
+
+import pathlib
+import py_compile
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+APP = ROOT / "app.py"
+HTML = ROOT / "static" / "index.html"
+OUT = ROOT / "studio.py"
+
+AUTH_HELPER = '''<script>(function(){const nativeFetch=window.fetch.bind(window);let promptLock=null;window.fetch=async function(input,init={}){const url=typeof input==='string'?input:input.url;const same=new URL(url,location.href).origin===location.origin;const send=async(token)=>{const headers=new Headers(input instanceof Request?input.headers:undefined);new Headers(init.headers||{}).forEach((v,k)=>headers.set(k,v));if(token&&same)headers.set('Authorization','Bearer '+token);return nativeFetch(input,{...init,headers});};let token=sessionStorage.getItem('m5_api_token')||'';let r=await send(token);if(r.status!==401||!same||!url.includes('/api/')&&!url.includes('/v1/'))return r;if(!promptLock)promptLock=new Promise(resolve=>{const v=window.prompt('Studio API token (saved for this browser session):');if(v)sessionStorage.setItem('m5_api_token',v);resolve(v||'');});token=await promptLock;promptLock=null;if(!token)return r;r=await send(token);return r;};})();</script>'''
+
+
+def build() -> None:
+    app_text = APP.read_text(encoding="utf-8")
+    html_text = HTML.read_text(encoding="utf-8")
+    if '\"\"\"' in html_text:
+        raise SystemExit('static/index.html contains triple double quotes; cannot safely embed as a raw literal')
+    if html_text.endswith("\\"):
+        raise SystemExit("static/index.html ends with a backslash; cannot safely embed as a raw literal")
+
+    start_marker = '@app.get("/", response_class=HTMLResponse)\nasync def index() -> HTMLResponse:'
+    start = app_text.find(start_marker)
+    if start < 0:
+        raise SystemExit("Could not find canonical index route in app.py")
+    end = app_text.find("\n\n# =============================================================================", start)
+    if end < 0:
+        raise SystemExit("Could not find end of canonical index route in app.py")
+
+    replacement = (
+        'EMBEDDED_HTML = r"""' + html_text + '"""\n\n\n'
+        '@app.get("/", response_class=HTMLResponse)\n'
+        'async def index() -> HTMLResponse:\n'
+        '    ext = BASE_DIR / "static" / "index.html"\n'
+        '    html = EMBEDDED_HTML\n'
+        '    if os.environ.get("STUDIO_EXTERNAL_STATIC") == "1" and ext.is_file():\n'
+        '        html = ext.read_text(encoding="utf-8")\n'
+        '    if STUDIO_API_TOKEN and not STUDIO_AUTH_DISABLED:\n'
+        f'        html = html.replace("</head>", {AUTH_HELPER!r} + "</head>", 1)\n'
+        '    return HTMLResponse(html, headers={"Cache-Control": "no-store"})'
+    )
+    out_text = app_text[:start] + replacement + app_text[end:]
+    OUT.write_text(out_text, encoding="utf-8")
+    py_compile.compile(str(APP), doraise=True)
+    py_compile.compile(str(OUT), doraise=True)
+    print(f"Built {OUT.name}: {OUT.stat().st_size:,} bytes")
+
+
+if __name__ == "__main__":
+    build()

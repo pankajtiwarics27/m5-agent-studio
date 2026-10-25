@@ -1,4 +1,4 @@
-# M5 Agentic Studio (`v9.0`)
+# M5 Agentic Studio (`v9.0.1`)
 
 > **Zero-Bloat Hybrid AI Studio, Autonomous Coding Harness, Universal MCP Hub & Context-Engineering Engine** purpose-built for **Apple Silicon (M5 MacBook Air • 24GB Unified Memory • 1TB SSD)** running concurrently alongside **OrbStack Docker** and desktop apps.
 
@@ -8,24 +8,29 @@
 
 Most multi-agent coding stacks assume either unlimited cloud token budgets or a 64–128 GB workstation—spawning Electron/Next.js frontends, vector databases, LSP daemons, and multiple resident LLMs that immediately trigger macOS swap thrashing or Metal OOM crashes on a **24GB Unified Memory** laptop.
 
-**M5 Agentic Studio (`v8.0`)** solves this from first principles:
+**M5 Agentic Studio (`v9.0.1`) is a local-first hybrid AI workbench** with a FastAPI backend, vanilla HTML/CSS/JS UI, and a standalone generated script. It provides:
 
-1. **~35 MB Runtime Footprint, Zero Node/Build Bloat**: Pure Python `FastAPI` + `httpx` + `SQLite WAL/FTS5` backend (`app.py`, `6,318` lines) + zero-dependency Vanilla JS/CSS OLED frontend (`static/index.html`, `3,052` lines), compiled into a single portable PEP 723 executable (`studio.py`, `491,956` bytes) runnable anywhere via `uv run studio.py`.
-2. **Sequential Multi-Model Intelligence on 24GB RAM**: Pairs with `oMLX 0.7.2` (`:8000`) using explicit Metal wired-memory ceilings (`20.8 GB`), paged SSD KV caching (`30 GB`), chunked prefill, and sequential `/v1/models/{id}/unload` handoffs so **Architect**, **Fast Coder**, **Critic**, and **Judge** models collaborate without ever colliding in RAM.
-3. **Zero-RAM Context Engineering (Anti-Context-Rot)**: Replaces heavy vector DBs and LSP servers with **SQLite FTS5 (`porter unicode61 + bm25`)**, **Caveman Smart Digesters (`-89%` to `-98.2%` KV reduction)**, **Pure-Python AST + Graphify v8 CodeGraph (`0 MB` daemon RAM)**, **OpenContext + LLM-Wiki persistent memory (`oc://doc/<id>`)**, and **GSD 3-Wave Fresh-Context Spec Loops (`.planning/`)**.
-4. **Efficiency Without Quality Loss**: Enforces **Ponytail v5's 6-Rung Senior Dev Ladder** (`-53%` LoC, `-45%` output tokens, `98%` test rate on risky logic) + **ASD-STE100 Technical Brevity**, while routing cloud bursts (`DeepSeek-V4.1-Flash`, Claude, Gemini, Groq, OpenRouter, OmniRoute) at `0 GB` local RAM.
+1. **Local/cloud model routing** via a common chat interface and OpenAI-compatible `/v1` routes, with optional sequential fallback chains.
+2. **Agent workflows** including direct chat, multi-model Council/Debate, a tool-using coding harness, GSD planning, and a backlog-based SDLC flow.
+3. **Context features** built on SQLite/FTS5, persistent OpenContext documents, output compaction, and heuristic CodeGraph analysis.
+4. **MCP and skills integrations** with configurable HTTP/stdio servers and repository-provided skills.
+5. **M5-oriented telemetry and model controls** for an oMLX/OrbStack setup. Telemetry is simulated when the local backend is unavailable; consult the explicit `demo_mode` and `telemetry_source` fields rather than treating demo values as measurements.
 
+The project prioritizes a small dependency footprint. Performance and quality vary with hardware, model/provider, configuration, and workload; benchmark statements should be treated as environment-specific unless accompanied by reproducible test data.
+
+> **Remediation status:** this working tree is not an enterprise-readiness or security-completion claim. The opt-in container runner still needs live-runtime/platform validation; the shared executor and workflow approvals need end-to-end review, and several roadmap items remain outstanding. See [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) before deployment.
 ---
 
 ## 2. Quick Start (Humans & External Coding Agents)
 
 ### A. Launch the Standalone Single-File Studio (Recommended on macOS)
-Requires Python `3.11+` and [`uv`](https://docs.astral.sh/uv/) (dependencies `fastapi`, `uvicorn`, `httpx` auto-resolve via inline PEP 723 script metadata):
+Requires Python `3.11+` and [`uv`](https://docs.astral.sh/uv/) (dependencies `fastapi`, `uvicorn`, `httpx`, and `keyring` auto-resolve via inline PEP 723 script metadata):
 
 ```bash
 chmod +x studio.py
 uv run studio.py
-# Opens Web UI:            http://127.0.0.1:3000
+# Opens Web UI:            http://127.0.0.1:3000 (browser prompts for local API token on first API call)
+# Token file:              ~/.config/m5-agent-studio/api-token
 # OpenAI Gateway (/v1):    http://127.0.0.1:3000/v1
 ```
 
@@ -37,6 +42,8 @@ uv run app.py
 # Or with plain Python if fastapi/uvicorn/httpx are already installed:
 STUDIO_HOST=127.0.0.1 STUDIO_PORT=3000 python3 app.py
 ```
+
+By default, SQLite history is stored beside the source/standalone script at `studio_history.db`; set `STUDIO_DB_PATH` to an explicit user-writable location if the project directory is read-only. The local token path is independently configurable with `STUDIO_API_TOKEN_FILE`.
 
 ### C. Expose Studio as an MCP `stdio` Server (Claude Code, Codex, Cursor, `dsh`, `hn`)
 Any external MCP-capable agent can summon your local M5 Council, query CodeGraph shortest paths, or read/write OpenContext memory:
@@ -52,12 +59,15 @@ Any external MCP-capable agent can summon your local M5 Council, query CodeGraph
 }
 ```
 
+This configuration asks the external client to launch Studio's stdio server, which is disabled by default. Set `STUDIO_ALLOW_MCP_STDIO=1` in that process environment only if you trust the client and accept that it runs with the Studio user's OS privileges; it is not sandboxed.
+
 ### D. Point Any OpenAI-Compatible CLI (`dsh`, `aider`, Cursor, Continue) at Studio's `:3000/v1` Gateway
 Studio exposes a unified `/v1/models` and `/v1/chat/completions` router across local `oMLX`, configured Cloud providers (`provider::model`), and failover `combo/<alias>` routes:
 
 ```bash
 export OPENAI_BASE_URL="http://127.0.0.1:3000/v1"
-export OPENAI_API_KEY="local-m5-studio"
+# Default loopback auth persists a random token here; if configured via env, use that exact value instead.
+export OPENAI_API_KEY="${STUDIO_API_TOKEN:-$(cat ~/.config/m5-agent-studio/api-token)}"
 ```
 
 ### E. (Optional) Launch External `OmniRoute` Upstream Gateway (`:20128`) & Pair with Studio
@@ -81,6 +91,48 @@ npx -y omniroute@latest --no-open
 
 ---
 
+## Security and Safe Defaults (v9.0.1)
+
+- The server binds to loopback by default. Unless explicitly disabled on loopback, the first startup creates a random local bearer token at `~/.config/m5-agent-studio/api-token` with restrictive file/directory permissions. `/api/*` and `/v1/*` require it; the browser prompts for it and stores it in session storage. Set `STUDIO_API_TOKEN` explicitly for managed deployments, or configure `STUDIO_API_TOKEN_FILE` for the generated local token path. Non-loopback binds require an explicit high-entropy `STUDIO_API_TOKEN` (at least 32 characters). Set `STUDIO_ALLOWED_HOSTS` and, behind a TLS reverse proxy, `STUDIO_ALLOWED_ORIGINS` explicitly. Expensive workflow endpoints have a per-client-IP sliding-window limit, and request bodies are capped by `STUDIO_MAX_REQUEST_BYTES`.
+- Provider API keys and MCP tokens/credential-like headers and environment variables are stored in the OS credential store. Legacy plaintext values are migrated during startup; startup fails rather than silently keeping credentials in SQLite if the credential store cannot accept the migration. Conversation/history databases are still local files and may contain sensitive prompts, code, and tool output; protect and retain them accordingly.
+- Private-network or HTTP provider/MCP URLs are rejected by default. Prefer `STUDIO_PRIVATE_URL_HOSTS` for explicit per-host exceptions (comma-separated hostnames); `STUDIO_ALLOW_PRIVATE_URLS=1` remains a broader compatibility opt-in and should not be used on public/shared deployments. Requests are resolved/validated immediately before I/O, the transport connects to the exact validated IP while preserving the original HTTP Host/TLS SNI, and redirects are not followed. The transport bypasses ambient proxy variables so requests cannot evade pinning via an implicit proxy; proxy-required environments need an explicit reviewed proxy integration.
+- Skills install from GitHub over HTTPS using a copy-only path; downloaded `scripts/search.py` is not executed unless `STUDIO_ALLOW_SKILL_CODE=1`. Skill text itself is untrusted prompt input.
+- Code execution is disabled by default. Set `STUDIO_EXECUTION_MODE=sandbox` to run shell/Python/test commands in a Docker/Podman container (`--network=none`, read-only root, dropped capabilities, no-new-privileges, resource limits, and only the session workspace mounted). Configure and pre-pull a trusted `STUDIO_SANDBOX_IMAGE`; no image is pulled automatically. The host workspace mount is writable by design. A preflight refuses the filesystem root/home directory, known secret-bearing filenames, credentialed Git remote URLs, unreadable trees, and workspaces over its 100,000-entry scan budget; this is filename-based defense-in-depth, not a guarantee that arbitrary secrets embedded in source/config files are detected. `STUDIO_EXECUTION_MODE=host` is allowed only with `STUDIO_ALLOW_HOST_EXECUTION=1` and runs with the Studio user's privileges; do not use it for untrusted agents. MCP stdio remains off by default; `STUDIO_ALLOW_MCP_STDIO=1` runs configured commands with host privileges and is not sandboxed.
+- Harness tool attempts are recorded in a local SQLite audit table before execution and finalized afterward. The log records tool/session/policy, explicit-approval flag, success, timing, and SHA-256 digests of arguments/output—not raw arguments or output. Review it at authenticated `/api/harness/audit`; a DB write failure blocks tool execution. This is a local integrity aid, not tamper-proof or a substitute for backups.
+- Harness worktree creation now fails closed if a requested Git worktree cannot be created. A worktree is version-control isolation, not an OS sandbox.
+- `GET /healthz` is a minimal unauthenticated liveness endpoint. Do not treat it as a readiness check for the LLM/provider stack.
+
+To enable the optional no-network code runner, install Docker or Podman, pre-pull a trusted image, then launch Studio with `STUDIO_EXECUTION_MODE=sandbox` (for example, `docker pull python:3.12-slim` followed by `STUDIO_EXECUTION_MODE=sandbox uv run studio.py`). This base image has Python and a shell; add project-specific tools/dependencies in your own trusted image. The container image is never downloaded by Studio.
+
+To exercise the real container boundary locally (not run in default CI):
+
+```bash
+docker pull python:3.12-slim
+STUDIO_EXECUTION_MODE=sandbox STUDIO_SANDBOX_IMAGE=python:3.12-slim STUDIO_SANDBOX_INTEGRATION=1 pytest -q tests/test_live_sandbox.py
+```
+
+This opt-in test verifies that the mounted workspace is writable, the container root is read-only, and a public network connection fails. It is not a container escape test or security certification.
+
+### Local readiness checks, keyring, and database recovery
+
+After installing dependencies, run the disposable local server smoke test for both launch paths:
+
+```bash
+python3 scripts/smoke_local.py
+python3 scripts/smoke_local.py --standalone
+```
+
+These launch a loopback-only instance with a temporary database and token, then check health, auth, Origin rejection, DB isolation, and cleanup. When Node is installed, they also simulate the UI token prompt/retry/session reuse and verify the bearer token is never sent cross-origin; this is not a full browser test. To verify the actual OS credential store (this writes and then deletes a random disposable item): `python3 scripts/check_keyring.py`. Run it under the same OS account that will run Studio; keyring behavior is platform/session dependent.
+
+Back up local history before upgrades, and stop Studio before restoring:
+
+```bash
+python3 scripts/db_maintenance.py backup --database "${STUDIO_DB_PATH:-./studio_history.db}"
+python3 scripts/db_maintenance.py restore --database "${STUDIO_DB_PATH:-./studio_history.db}" --input /path/to/backup.sqlite3 --force
+```
+
+The utility uses SQLite's backup API, validates integrity/schema, writes owner-only backup files, refuses plaintext credentials, and creates a pre-restore safety backup. Restoring on a different machine does not migrate OS-keyring entries: re-enter credentials there. Backups still contain conversation, code, and tool-output history; store them accordingly.
+
 ## 3. System Architecture
 
 ```text
@@ -91,7 +143,7 @@ npx -y omniroute@latest --no-open
 └──────────────────────────────────────────┬─────────────────────────────────────────────┘
                                            │ HTTP / Real-Time SSE (`Cache-Control: no-store`)
 ┌──────────────────────────────────────────▼─────────────────────────────────────────────┐
-│  FastAPI Single-Process Core (`app.py` / standalone `studio.py` • ~35 MB RAM)          │
+│  FastAPI Single-Process Core (`app.py` / standalone `studio.py`; runtime varies)        │
 │                                                                                        │
 │  ┌─────────────────────────────┐  ┌──────────────────────────┐  ┌────────────────────┐ │
 │  │ Autonomous Harness Engine   │  │ Zero-RAM Context Suite   │  │ Universal Router   │ │
@@ -115,13 +167,13 @@ npx -y omniroute@latest --no-open
 
 ---
 
-## 4. Verified M5 MacBook Air (24GB RAM) Local LLM Stack & `oMLX 0.7.2` Configuration
+## 4. Author-Reported M5 MacBook Air (24GB RAM) Local LLM Stack & `oMLX 0.7.2` Configuration
 
-All local model selections and memory limits were benchmarked end-to-end with OrbStack and desktop apps active:
+The following model names, settings, and throughput figures are inherited project notes and have **not** been independently reproduced or validated in this remediation. Results depend on exact hardware, software, model files, and workload; do not treat them as verified benchmarks or operational guidance without testing on your system.
 
-### Verified 4-Stage Council Models & Measured M5 Throughput
+### Reported 4-Stage Council Models & Throughput (Unverified)
 
-| Stage / Role | Local Model (`oMLX 0.7.2`) | Quantization / Architecture | Measured Decode Speed | Why Selected for 24GB M5 |
+| Stage / Role | Local Model (`oMLX 0.7.2`) | Quantization / Architecture | Reported Decode Speed (unverified) | Why Selected for 24GB M5 (author-reported) |
 | :--- | :--- | :--- | :--- | :--- |
 | **[1/4] Architect** | `Qwen3.8-27B-MLX-oQ4e-mtp` | Dense 27B (`oQ4e` + MTP speculative) | **`17.13 tok/s`** | Deep architectural planning & multi-file invariant reasoning |
 | **[2/4] Fast Coder** | `Qwen3.6-35B-A3B-REAP-19B-4bit` | MoE REAP-pruned 19B (`3B` active, 4-bit) | **`42.17 tok/s`** | Fast code synthesis (~11 GB footprint; **keep `mtp_enabled: false`**) |
@@ -145,15 +197,15 @@ All local model selections and memory limits were benchmarked end-to-end with Or
 
 ---
 
-## 5. How We Built It: Version Evolution & Research Provenance (`v1.0` → `v8.0`)
+## 5. Project History & Research Notes (`v1.0` → `v8.0`)
 
-Every feature in `m5-agent-studio` was added only after live repository inspection and empirical verification:
+This historical table records project claims and intended inspirations; it is not an audit trail or independent verification. Numeric performance, compatibility, and quality claims below are unverified in this remediation unless a reproducible test is linked. The current implementation limitations are listed in [`SECURITY.md`](SECURITY.md) and [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md).
 
-| Version | Milestone | Upstream inspirations & Verified Decisions |
+| Version | Milestone | Project notes (not independently verified) |
 | :--- | :--- | :--- |
 | **v1.0–v3.0** | **Local M5 AI Studio, Skills & Council Hall** | Built FastAPI + SSE UI for Direct Chat, Auto 4-Stage Council, Debate, M5 24GB RAM + `oMLX` + OrbStack telemetry, zero-Node Git skill installer, persistent Council Hall chronicles, and `--mcp` stdio bridge. |
-| **v4.0** | **Hybrid Cloud Router & OmniRoute Gateway** | Added encrypted-at-rest local provider store (`chmod 0600`), 1-click presets (`OpenRouter`, `Anthropic`, `Gemini`, `Groq`, `Cerebras`, `DeepSeek`, `OmniRoute`), ordered `combo/<alias>` failover chains, and `/v1/chat/completions` OpenAI gateway. |
-| **v5.0** | **Autonomous Coding Harness** | Synthesized `deepseek-harness` (`dsh`) + `openharness` (`hn`): isolated `git worktree` sandboxes (`.harnesses/wt-<id>`), `plan` / `standard` / `autonomous` approval policies, sub-agent Critic delegation, unified diff viewer, and 1-click worktree apply. |
+| **v4.0** | **Hybrid Cloud Router & OmniRoute Gateway** | Added OS-keychain-backed provider credentials (SQLite stores references, not secret values), 1-click presets (`OpenRouter`, `Anthropic`, `Gemini`, `Groq`, `Cerebras`, `DeepSeek`, `OmniRoute`), ordered `combo/<alias>` failover chains, and `/v1/chat/completions` OpenAI gateway. |
+| **v5.0** | **Autonomous Coding Harness** | Synthesized `deepseek-harness` (`dsh`) + `openharness` (`hn`): separate Git worktrees (`.harnesses/wt-<id>`; not OS sandboxes), `plan` / `standard` / `autonomous` approval policies, sub-agent Critic delegation, unified diff viewer, and 1-click worktree apply. |
 | **v6.0** | **Universal Cloud + Custom MCP Hub** | Full JSON-RPC 2.0 MCP client auto-negotiating **`2026-07-28` Stateless Streamable HTTP** with fallback to **`2025` Stateful Session HTTP (`Mcp-Session-Id`)**, plus **on-demand `stdio` spawning (`0 MB` idle RAM)** and `mcp__<alias>__<tool>` namespacing. |
 | **v7.0** | **Context Engineering & Zero-RAM CodeGraph** | Integrated 4 repos at `0 MB` extra daemon RAM:<br>• **`mksglu/context-mode`**: Auto-sandboxes tool outputs `> 3,200 chars` into SQLite `FTS5` + `ctx_search` + `ctx_execute_python` + `<= 2 KB` `<session_guide>` compaction.<br>• **`0xranx/OpenContext`**: Persistent `oc://doc/<id>` Markdown vault (`architecture`/`decisions`/`preferences`/`postmortems`) with pinned prompt injection.<br>• **`Jakedismo/codegraph-rust`**: Pure-Python AST + multi-lang graph (`architecture`, `context`, `impact`, `quality`) replacing heavy SurrealDB/LSP daemons.<br>• **`open-gsd/gsd-core`**: 3-Wave Fresh-Context Spec Loop (`PLAN.md` → `0`-history Execute → `VERIFICATION.md`) + `gsd-secret-read-guard`. |
 | **v8.0–v8.2** | **`ui-ux-pro-max` Overhaul, 6-Repo Efficiency Audit & Qwen XML / Multi-LLM Council** | Applied `ui-ux-pro-max` (`MASTER.md`, zero emoji structural icons, `⌘K` Command Palette, WCAG AAA `#a3b5d1`, non-blocking Toasts); integrated `ponytail` v5 (`-53%` LoC, `98%` risky-logic test rate), `graphify` v8 (`codegraph_path` + God Nodes), `caveman` Read-Less Smart Digesters (`-98.2%` JSON / `-89.2%` pytest) + `Blocks` + ASD-STE100, `llmwiki` `oc_lint`, `colibri` `:8001` preset, `deepseek-v4.1-flash` preset, `Qwen3.8` `<function=...>` XML tool parser in Direct Chat, and 4-Seat Multi-LLM Council Hall defaults. |
@@ -179,46 +231,16 @@ m5-agent-studio/
         └── ui-ux-pro-max/                         # Installed local agent skill (SKILL.md + BM25 search engine)
 ```
 
-### Recompiling `studio.py` After Editing `app.py` or `static/index.html`
-> **Important for Humans & LLMs**: `app.py` reads `static/index.html` from disk, whereas `studio.py` embeds `static/index.html` inside `EMBEDDED_HTML = r"""..."""` so `studio.py` can be copied anywhere as a single file. Whenever you edit `app.py` or `static/index.html`, recompile `studio.py` with:
+### Rebuilding the standalone artifact
+
+`app.py` and `static/index.html` are canonical. Regenerate the portable standalone file after changing either:
 
 ```bash
-python3 - <<'PY'
-import os, pathlib, py_compile
-
-root = pathlib.Path("/home/user/m5-agent-studio")  # or pathlib.Path(".")
-app_txt = (root / "app.py").read_text(encoding="utf-8")
-html_txt = (root / "static" / "index.html").read_text(encoding="utf-8")
-
-assert '"""' not in html_txt, "Triple double-quotes are not allowed inside static/index.html"
-assert not html_txt.endswith("\\"), "Trailing backslash breaks raw string literal"
-
-target_old = """@app.get("/", response_class=HTMLResponse)
-async def index() -> HTMLResponse:
-    ext = BASE_DIR / "static" / "index.html"
-    return HTMLResponse(ext.read_text(encoding="utf-8"), headers={"Cache-Control": "no-store"})"""
-
-assert target_old in app_txt, "index() route signature changed in app.py"
-
-embedded_block = (
-    'EMBEDDED_HTML = r"""' + html_txt + '"""\n\n\n'
-    '@app.get("/", response_class=HTMLResponse)\n'
-    'async def index() -> HTMLResponse:\n'
-    '    ext = BASE_DIR / "static" / "index.html"\n'
-    '    if os.environ.get("STUDIO_EXTERNAL_STATIC") == "1" and ext.exists():\n'
-    '        return HTMLResponse(ext.read_text(encoding="utf-8"), headers={"Cache-Control": "no-store"})\n'
-    '    return HTMLResponse(EMBEDDED_HTML, headers={"Cache-Control": "no-store"})'
-)
-
-out = root / "studio.py"
-out.write_text(app_txt.replace(target_old, embedded_block, 1), encoding="utf-8")
-os.chmod(out, 0o755)
-py_compile.compile(str(root / "app.py"), doraise=True)
-py_compile.compile(str(out), doraise=True)
-print(f"Rebuilt studio.py ({out.stat().st_size:,} bytes) successfully.")
-PY
+python3 scripts/build_studio.py
+python3 -m py_compile app.py studio.py
 ```
 
+The build script embeds the current UI, preserves the PEP 723 dependency metadata, and verifies that both Python entry points compile. CI checks that a fresh build produces no diff in `studio.py`.
 ---
 
 ## 7. Complete Tool, Database & API Reference (Machine-Readable Context for LLMs)
@@ -281,6 +303,22 @@ Agents inside **Agent Harness** (`POST /api/harness/run`) and **GSD 3-Wave Spec 
 | `STUDIO_PORT` | `3000` | HTTP + `/v1` OpenAI Gateway port |
 | `STUDIO_WORKSPACE` | Current working directory | Default root directory for Harness, CodeGraph & file attachments |
 | `STUDIO_EXTERNAL_STATIC` | unset (`0`) | Set to `1` in `studio.py` to live-reload `static/index.html` instead of `EMBEDDED_HTML` |
+| `STUDIO_API_TOKEN` | auto-generated on loopback; required remote | High-entropy bearer token; protects `/api/*` and `/v1/*` |
+| `STUDIO_API_TOKEN_FILE` | `~/.config/m5-agent-studio/api-token` | Private file path for the generated loopback token |
+| `STUDIO_AUTH_DISABLED` | `0` | Explicitly disable bearer auth on loopback only; startup refuses this with non-loopback binds |
+| `STUDIO_ENABLE_API_DOCS` | `0` | Expose public FastAPI `/docs` and `/openapi.json` routes; keep off on exposed deployments |
+| `STUDIO_MAX_REQUEST_BYTES` | `8388608` | Maximum request body size; valid range is 1 KiB through 100 MiB |
+| `STUDIO_EXPENSIVE_REQUESTS_PER_MINUTE` | `30` | Per-client-IP sliding-window limit on chat, harness, GSD/SDLC, and `/v1/chat/completions`; range 1–600 |
+| `STUDIO_ALLOWED_HOSTS` | `localhost,127.0.0.1,[::1]` | Comma-separated Host header allowlist; add LAN/proxy hostnames explicitly |
+| `STUDIO_ALLOWED_ORIGINS` | empty | Comma-separated browser origins trusted behind a TLS reverse proxy |
+| `STUDIO_PRIVATE_URL_HOSTS` | empty | Comma-separated per-host exceptions for trusted private HTTP/HTTPS provider or MCP destinations |
+| `STUDIO_ALLOW_PRIVATE_URLS` | `0` | Broad compatibility opt-in for private/HTTP destinations; less safe than the per-host allowlist |
+| `STUDIO_EXECUTION_MODE` | `disabled` | `disabled`, `sandbox` (Docker/Podman; no network), or `host` (requires `STUDIO_ALLOW_HOST_EXECUTION=1`) |
+| `STUDIO_SANDBOX_RUNTIME` | `docker` | Container CLI executable, typically `docker` or `podman` |
+| `STUDIO_SANDBOX_IMAGE` | `python:3.12-slim` | Trusted image that must already exist locally; configure required tools/dependencies in a custom image and pin by digest for controlled deployments |
+| `STUDIO_ALLOW_HOST_EXECUTION` | `0` | Required opt-in for `STUDIO_EXECUTION_MODE=host`; runs unsandboxed as Studio user |
+| `STUDIO_ALLOW_MCP_STDIO` | `0` | Opt in to configured local MCP command execution as the Studio user |
+| `STUDIO_ALLOW_SKILL_CODE` | `0` | Opt in to executing a selected skill's `scripts/search.py`; skill Markdown is still treated as untrusted prompt input |
 
 ### F. Key HTTP & SSE API Endpoints
 - **Telemetry & Local `oMLX` Control**: `GET /api/telemetry`, `POST /api/models/{model_id}/load`, `POST /api/models/{model_id}/unload`, `POST /api/models/unload-all`, `POST /api/cache/clear-ssd`.
