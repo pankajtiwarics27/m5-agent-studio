@@ -53,7 +53,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, AsyncIterator, Literal
+from typing import Any, AsyncIterator, Literal, Protocol
 from urllib.parse import parse_qsl, quote, unquote, urlsplit
 
 import httpcore
@@ -2442,6 +2442,50 @@ async def api_delete_combo(alias: str) -> JSONResponse:
 # =============================================================================
 
 
+class ProviderAdapterError(RuntimeError):
+    """Safe, provider-neutral failure from an adapter; upstream bodies are never echoed."""
+
+    def __init__(self, provider_alias: str, category: Literal["http_error", "stream_error", "transport_error"], status_code: int | None = None) -> None:
+        safe_alias = provider_alias if re.fullmatch(r"[A-Za-z0-9_-]{1,64}", provider_alias) else "provider"
+        self.provider_alias = safe_alias
+        self.category = category
+        self.status_code = status_code
+        if status_code is not None:
+            message = f"[{safe_alias}] HTTP {status_code}: upstream request failed."
+        elif category == "stream_error":
+            message = f"[{safe_alias}] provider stream returned an error."
+        else:
+            message = f"[{safe_alias}] provider transport failed."
+        super().__init__(message)
+
+
+class ProviderAdapter(Protocol):
+    """Wire-specific implementation of Studio's normalized provider stream contract."""
+
+    def stream(
+        self,
+        client: httpx.AsyncClient,
+        provider: dict[str, Any],
+        remote_model: str,
+        messages: list[dict[str, str]],
+        temperature: float,
+        max_tokens: int,
+        reasoning_mode: str,
+    ) -> AsyncIterator[dict[str, Any]]: ...
+
+
+async def _normalize_provider_errors(
+    stream: AsyncIterator[dict[str, Any]], provider_alias: str
+) -> AsyncIterator[dict[str, Any]]:
+    try:
+        async for item in stream:
+            yield item
+    except ProviderAdapterError:
+        raise
+    except httpx.HTTPError:
+        raise ProviderAdapterError(provider_alias, "transport_error") from None
+
+
 async def _stream_cloud_openai(
     client: httpx.AsyncClient,
     provider: dict[str, Any],
@@ -2475,8 +2519,7 @@ async def _stream_cloud_openai(
     async with client.stream("POST", f"{provider['base_url']}/chat/completions", headers=headers, json=body) as resp:
         _reject_redirect_response(resp, f"{provider['base_url']}/chat/completions")
         if resp.status_code >= 400:
-            err = (await resp.aread()).decode(errors="ignore")
-            raise RuntimeError(f"[{provider['alias']}] HTTP {resp.status_code}: {err[:400]}")
+            raise ProviderAdapterError(str(provider.get("alias") or "provider"), "http_error", resp.status_code)
 
         async for raw_line in resp.aiter_lines():
             if not raw_line or not raw_line.startswith("data:"):
@@ -2490,7 +2533,7 @@ async def _stream_cloud_openai(
                 continue
 
             if pkt.get("error"):
-                raise RuntimeError(f"[{provider['alias']}] {pkt['error']}")
+                raise ProviderAdapterError(str(provider.get("alias") or "provider"), "stream_error")
 
             for ch in pkt.get("choices") or []:
                 if ch.get("finish_reason"):
@@ -2589,13 +2632,14 @@ async def _stream_cloud_anthropic(
     first_tok_at: float | None = None
     out_tokens = 0
     reason_tokens = 0
+    finish_reason = "stop"
+    provider_alias = str(provider.get("alias") or "anthropic")
 
     await _validate_outbound_url(provider["base_url"], allow_private=(provider.get("alias") == "omniroute" and provider["base_url"] == PROVIDER_PRESETS["omniroute"]["base_url"]))
     async with client.stream("POST", f"{provider['base_url']}/messages", headers=headers, json=body) as resp:
         _reject_redirect_response(resp, f"{provider['base_url']}/messages")
         if resp.status_code >= 400:
-            err = (await resp.aread()).decode(errors="ignore")
-            raise RuntimeError(f"[anthropic] HTTP {resp.status_code}: {err[:400]}")
+            raise ProviderAdapterError(provider_alias, "http_error", resp.status_code)
 
         async for raw_line in resp.aiter_lines():
             if not raw_line.startswith("data:"):
@@ -2623,11 +2667,20 @@ async def _stream_cloud_anthropic(
                     out_tokens += 1
                     yield {"type": "content", "text": delta["text"]}
             elif ptype == "message_delta":
+                delta = pkt.get("delta") or {}
+                stop_reason = delta.get("stop_reason")
+                if isinstance(stop_reason, str):
+                    finish_reason = {
+                        "end_turn": "stop",
+                        "stop_sequence": "stop",
+                        "max_tokens": "length",
+                        "tool_use": "tool_calls",
+                    }.get(stop_reason, finish_reason)
                 u = pkt.get("usage") or {}
                 if u.get("output_tokens"):
                     out_tokens = int(u["output_tokens"])
             elif ptype == "error":
-                raise RuntimeError(f"[anthropic] {pkt.get('error')}")
+                raise ProviderAdapterError(provider_alias, "stream_error")
 
     elapsed = max(0.01, time.perf_counter() - t_start)
     ttft = round((first_tok_at - t_start), 2) if first_tok_at else 0.0
@@ -2640,9 +2693,54 @@ async def _stream_cloud_anthropic(
         "completion_tokens": out_tokens,
         "reasoning_tokens": reason_tokens,
         "cached_tokens": 0,
-        "finish_reason": "stop",
+        "finish_reason": finish_reason,
         "elapsed_s": round(elapsed, 2),
     }
+
+
+class OpenAICompatibleProviderAdapter:
+    """Adapter for OpenAI-compatible chat-completion SSE endpoints."""
+
+    async def stream(
+        self,
+        client: httpx.AsyncClient,
+        provider: dict[str, Any],
+        remote_model: str,
+        messages: list[dict[str, str]],
+        temperature: float,
+        max_tokens: int,
+        reasoning_mode: str,
+    ) -> AsyncIterator[dict[str, Any]]:
+        del reasoning_mode  # The current OpenAI-compatible wire request does not map this option.
+        stream = _stream_cloud_openai(client, provider, remote_model, messages, temperature, max_tokens)
+        async for item in _normalize_provider_errors(stream, str(provider.get("alias") or "provider")):
+            yield item
+
+
+class AnthropicProviderAdapter:
+    """Adapter for Anthropic's native Messages SSE endpoint."""
+
+    async def stream(
+        self,
+        client: httpx.AsyncClient,
+        provider: dict[str, Any],
+        remote_model: str,
+        messages: list[dict[str, str]],
+        temperature: float,
+        max_tokens: int,
+        reasoning_mode: str,
+    ) -> AsyncIterator[dict[str, Any]]:
+        stream = _stream_cloud_anthropic(
+            client, provider, remote_model, messages, temperature, max_tokens, reasoning_mode
+        )
+        async for item in _normalize_provider_errors(stream, str(provider.get("alias") or "anthropic")):
+            yield item
+
+
+PROVIDER_ADAPTERS: dict[str, ProviderAdapter] = {
+    "openai": OpenAICompatibleProviderAdapter(),
+    "anthropic": AnthropicProviderAdapter(),
+}
 
 
 async def _stream_omlx_completion(
@@ -2834,12 +2932,14 @@ async def stream_any_model(
         raise RuntimeError("All combo fallback targets failed: " + " | ".join(errors))
 
     if kind == "cloud" and meta is not None:
-        if meta["wire"] == "anthropic":
-            async for item in _stream_cloud_anthropic(client, meta, rem_model, messages, temperature, max_tokens, reasoning_mode):
-                yield item
-        else:
-            async for item in _stream_cloud_openai(client, meta, rem_model, messages, temperature, max_tokens):
-                yield item
+        wire = str(meta.get("wire") or "")
+        adapter = PROVIDER_ADAPTERS.get(wire)
+        if adapter is None:
+            raise RuntimeError(f"Unsupported provider wire: {wire or '(empty)'}")
+        async for item in adapter.stream(
+            client, meta, rem_model, messages, temperature, max_tokens, reasoning_mode
+        ):
+            yield item
         return
 
     async for item in _stream_omlx_completion(client, rem_model, messages, temperature, max_tokens, reasoning_mode):
