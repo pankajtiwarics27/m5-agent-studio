@@ -8,6 +8,7 @@ import py_compile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = ROOT / "app.py"
 HTML = ROOT / "static" / "index.html"
+ORCHESTRATOR = ROOT / "workflow_orchestration.py"
 OUT = ROOT / "studio.py"
 
 AUTH_HELPER = '''<script>(function(){const nativeFetch=window.fetch.bind(window);let promptLock=null;window.fetch=async function(input,init={}){const url=typeof input==='string'?input:input.url;const same=new URL(url,location.href).origin===location.origin;const send=async(token)=>{const headers=new Headers(input instanceof Request?input.headers:undefined);new Headers(init.headers||{}).forEach((v,k)=>headers.set(k,v));if(token&&same)headers.set('Authorization','Bearer '+token);return nativeFetch(input,{...init,headers});};let token=sessionStorage.getItem('m5_api_token')||'';let r=await send(token);if(r.status!==401||!same||!url.includes('/api/')&&!url.includes('/v1/'))return r;if(!promptLock)promptLock=new Promise(resolve=>{const v=window.prompt('Studio API token (saved for this browser session):');if(v)sessionStorage.setItem('m5_api_token',v);resolve(v||'');});token=await promptLock;promptLock=null;if(!token)return r;r=await send(token);return r;};})();</script>'''
@@ -16,6 +17,7 @@ AUTH_HELPER = '''<script>(function(){const nativeFetch=window.fetch.bind(window)
 def build() -> None:
     app_text = APP.read_text(encoding="utf-8")
     html_text = HTML.read_text(encoding="utf-8")
+    orchestrator_text = ORCHESTRATOR.read_text(encoding="utf-8").replace("from __future__ import annotations\n\n", "", 1)
     if '\"\"\"' in html_text:
         raise SystemExit('static/index.html contains triple double quotes; cannot safely embed as a raw literal')
     if html_text.endswith("\\"):
@@ -42,6 +44,17 @@ def build() -> None:
         '    return HTMLResponse(html, headers={"Cache-Control": "no-store"})'
     )
     out_text = app_text[:start] + replacement + app_text[end:]
+    import_line = "from workflow_orchestration import WorkflowOrchestrator, WorkflowStage\n"
+    if import_line not in out_text:
+        raise SystemExit("Could not find workflow orchestration import in app.py")
+    out_text = out_text.replace(import_line, "", 1)
+    main_marker = "\nif __name__ == \"__main__\":"
+    main_start = out_text.find(main_marker)
+    if main_start < 0:
+        raise SystemExit("Could not find app.py main entrypoint")
+    # Keep studio.py executable as a single-file artifact while the canonical
+    # source remains split into typed modules.
+    out_text = out_text[:main_start] + "\n\n" + orchestrator_text.rstrip() + out_text[main_start:]
     OUT.write_text(out_text, encoding="utf-8")
     py_compile.compile(str(APP), doraise=True)
     py_compile.compile(str(OUT), doraise=True)

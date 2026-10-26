@@ -6713,6 +6713,41 @@ async def stream_any_model(
         yield item
 
 
+def _workflow_orchestrator(client: httpx.AsyncClient, workflow: str) -> WorkflowOrchestrator:
+    """Bind application-owned provider, storage telemetry, and model cleanup seams."""
+
+    async def stream_model(
+        model: str,
+        messages: list[dict[str, str]],
+        temperature: float,
+        max_tokens: int,
+        reasoning_mode: str,
+    ) -> AsyncIterator[dict[str, Any]]:
+        async for item in stream_any_model(client, model, messages, temperature, max_tokens, reasoning_mode):
+            yield item
+
+    def record_usage(_workflow: str, model: str, usage: Mapping[str, Any]) -> None:
+        record_perf(
+            workflow,
+            model,
+            usage.get("decode_tps"),
+            usage.get("prefill_tps"),
+            usage.get("ttft"),
+            usage.get("completion_tokens", 0),
+            usage.get("cached_tokens", 0),
+        )
+
+    async def unload_model(model: str) -> None:
+        await _unload_omlx_model(client, parse_model_route(model)[2])
+
+    return WorkflowOrchestrator(
+        stream_model=stream_model,
+        record_usage=record_usage,
+        is_local_model=is_local_omlx_model,
+        unload_model=unload_model,
+    )
+
+
 # =============================================================================
 # Unified OpenAI-Compatible Gateway (`/v1/models` & `/v1/chat/completions`)
 # Point Cursor, Cline, OpenCode, or Continue at `http://127.0.0.1:3000/v1`!
@@ -7413,55 +7448,35 @@ async def api_council_stream(request: Request) -> StreamingResponse:
 
     async def event_gen() -> AsyncIterator[str]:
         t_council = time.perf_counter()
-        ctx: dict[str, str] = {}
         stage_records: list[dict[str, Any]] = []
         try:
             skill_block, skill_summaries = await build_skills_context(skill_ids, task)
             if skill_summaries:
                 yield _sse("skills_applied", {"skills": skill_summaries})
 
-            stages_cfg = [
-                {"stage": 1, "key": "architect", "title": "1. Architect / Strategist", "model": architect_model, "max_tokens": 2400, "reasoning": reasoning_mode, "system": AGENT_ROLES["architect"]["system"] + skill_block, "build_prompt": lambda c: task},
-                {"stage": 2, "key": "coder", "title": "2. Builder / Deep Analyst", "model": coder_model, "max_tokens": 4096, "reasoning": "off", "system": AGENT_ROLES["coder"]["system"] + skill_block, "build_prompt": lambda c: f"Matter / Task:\n{task}\n\nSeat 1 (Architect / Strategist) Output:\n{c['architect']}"},
-                {"stage": 3, "key": "critic", "title": "3. Adversarial Red-Team Critic", "model": critic_model, "max_tokens": 2400, "reasoning": "off", "system": AGENT_ROLES["critic"]["system"], "build_prompt": lambda c: f"Matter / Task:\n{task}\n\nSeat 1 Thesis/Spec:\n{c['architect']}\n\nSeat 2 Build/Analysis:\n{c['coder']}"},
-                {"stage": 4, "key": "judge", "title": "4. Lead Arbiter Synthesis", "model": judge_model, "max_tokens": 6144, "reasoning": reasoning_mode, "system": AGENT_ROLES["judge"]["system"] + skill_block, "build_prompt": lambda c: f"Matter / Task:\n{task}\n\nSeat 1 Thesis/Spec:\n{c['architect']}\n\nSeat 2 Build/Analysis:\n{c['coder']}\n\nSeat 3 Adversarial Critique:\n{c['critic']}"},
+            stages_cfg: list[WorkflowStage] = [
+                WorkflowStage(1, "architect", "1. Architect / Strategist", architect_model, AGENT_ROLES["architect"]["system"] + skill_block, lambda _c: task, 2400, reasoning_mode),
+                WorkflowStage(2, "coder", "2. Builder / Deep Analyst", coder_model, AGENT_ROLES["coder"]["system"] + skill_block, lambda c: f"Matter / Task:\n{task}\n\nSeat 1 (Architect / Strategist) Output:\n{c['architect']}", 4096),
+                WorkflowStage(3, "critic", "3. Adversarial Red-Team Critic", critic_model, AGENT_ROLES["critic"]["system"], lambda c: f"Matter / Task:\n{task}\n\nSeat 1 Thesis/Spec:\n{c['architect']}\n\nSeat 2 Build/Analysis:\n{c['coder']}", 2400),
+                WorkflowStage(4, "judge", "4. Lead Arbiter Synthesis", judge_model, AGENT_ROLES["judge"]["system"] + skill_block, lambda c: f"Matter / Task:\n{task}\n\nSeat 1 Thesis/Spec:\n{c['architect']}\n\nSeat 2 Build/Analysis:\n{c['coder']}\n\nSeat 3 Adversarial Critique:\n{c['critic']}", 6144, reasoning_mode),
             ]
 
-            for idx, sc in enumerate(stages_cfg):
-                if await request.is_disconnected():
+            orchestrator = _workflow_orchestrator(client, "council")
+            async for event in orchestrator.run_stages(
+                stages_cfg,
+                workflow="council",
+                auto_unload=auto_unload,
+                is_disconnected=request.is_disconnected,
+            ):
+                if event.kind == "disconnected":
                     return
-                st_num, model = sc["stage"], sc["model"]
-                yield _sse("stage_start", {"stage": st_num, "key": sc["key"], "title": sc["title"], "model": model})
-                buf, rbuf, usage_info = [], [], {}
-                messages = [{"role": "system", "content": sc["system"]}, {"role": "user", "content": sc["build_prompt"](ctx)}]
-
-                async for item in stream_any_model(client, model, messages, temperature=0.0, max_tokens=sc["max_tokens"], reasoning_mode=sc["reasoning"]):
-                    if await request.is_disconnected():
-                        return
-                    if item["type"] == "content":
-                        buf.append(item["text"]); yield _sse("token", {"stage": st_num, "kind": "content", "text": item["text"]})
-                    elif item["type"] == "reasoning":
-                        rbuf.append(item["text"]); yield _sse("token", {"stage": st_num, "kind": "reasoning", "text": item["text"]})
-                    elif item["type"] == "usage":
-                        usage_info = item
-                        record_perf("council", model, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"])
-
-                if not "".join(buf).strip() and rbuf and is_local_omlx_model(model):
-                    async for item in stream_any_model(client, model, messages, temperature=0.0, max_tokens=4096, reasoning_mode="off"):
-                        if item["type"] == "content":
-                            buf.append(item["text"]); yield _sse("token", {"stage": st_num, "kind": "content", "text": item["text"]})
-                        elif item["type"] == "usage":
-                            usage_info = item
-
-                ctx[sc["key"]] = "".join(buf) or "".join(rbuf)
-                stage_records.append({"stage": st_num, "key": sc["key"], "title": sc["title"], "model": model, "content": "".join(buf), "reasoning": "".join(rbuf), "usage": usage_info})
-                yield _sse("stage_done", {"stage": st_num, "model": model, "usage": usage_info})
-
-                next_model = stages_cfg[idx + 1]["model"] if idx + 1 < len(stages_cfg) else None
-                # Only unload local M5 oMLX models — cloud voices use 0 GB local RAM!
-                if auto_unload and is_local_omlx_model(model) and (next_model != model):
-                    yield _sse("unloading", {"stage": st_num, "model": model})
-                    await _unload_omlx_model(client, parse_model_route(model)[2])
+                if event.kind in ("stage_start", "token", "unloading"):
+                    yield _sse(event.kind, event.data)
+                elif event.kind == "stage_done" and event.result is not None:
+                    result = event.result
+                    stage = next(item for item in stages_cfg if item.stage_id == result.stage_id)
+                    stage_records.append({"stage": result.stage_id, "key": stage.key, "title": stage.title, "model": result.model, "content": result.content, "reasoning": result.reasoning, "usage": result.usage})
+                    yield _sse("stage_done", event.data)
 
             total_elapsed = round(time.perf_counter() - t_council, 2)
             run_id = save_run("council", task[:100], {"task": task, "total_elapsed_s": total_elapsed, "stages": stage_records})
@@ -7492,45 +7507,60 @@ async def api_debate_stream(request: Request) -> StreamingResponse:
             if skill_summaries:
                 yield _sse("skills_applied", {"skills": skill_summaries})
 
-            for idx, model in enumerate(models):
-                if await request.is_disconnected():
+            stages_cfg: list[WorkflowStage] = [
+                WorkflowStage(
+                    idx,
+                    f"panel-{idx}",
+                    f"Opinion {idx + 1}",
+                    model,
+                    "Give a sharp, high-signal engineering answer with concrete code or architectural trade-offs." + skill_block,
+                    lambda _c, prompt=prompt: prompt,
+                    2400,
+                )
+                for idx, model in enumerate(models)
+            ]
+            if include_synthesis and len(models) >= 2:
+                stages_cfg.append(
+                    WorkflowStage(
+                        "synthesis",
+                        "synthesis",
+                        "Synthesis",
+                        judge_model,
+                        "You are the Arbiter comparing independent model responses. Identify consensus, resolve disagreements, and deliver the single best synthesized solution." + skill_block,
+                        lambda c: f"Question:\n{prompt}\n\n" + "\n\n".join(
+                            f"=== Opinion {idx + 1} ({models[idx]}) ===\n{c.get(f'panel-{idx}', '')}"
+                            for idx in range(len(models))
+                        ),
+                        3200,
+                    )
+                )
+
+            orchestrator = _workflow_orchestrator(client, "debate")
+            async for event in orchestrator.run_stages(
+                stages_cfg,
+                workflow="debate",
+                auto_unload=auto_unload,
+                is_disconnected=request.is_disconnected,
+            ):
+                if event.kind == "disconnected":
                     return
-                yield _sse("panel_start", {"slot": idx, "model": model})
-                buf, usage_info = [], {}
-                messages = [{"role": "system", "content": "Give a sharp, high-signal engineering answer with concrete code or architectural trade-offs." + skill_block}, {"role": "user", "content": prompt}]
-                async for item in stream_any_model(client, model, messages, temperature=0.0, max_tokens=2400, reasoning_mode="off"):
-                    if await request.is_disconnected():
-                        return
-                    if item["type"] == "content":
-                        buf.append(item["text"]); yield _sse("token", {"slot": idx, "kind": "content", "text": item["text"]})
-                    elif item["type"] == "usage":
-                        usage_info = item
-                        record_perf("debate", model, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"])
-
-                opinions.append({"slot": idx, "model": model, "content": "".join(buf), "usage": usage_info})
-                yield _sse("panel_done", {"slot": idx, "model": model, "usage": usage_info})
-
-                next_m = models[idx + 1] if idx + 1 < len(models) else (judge_model if include_synthesis else None)
-                if auto_unload and is_local_omlx_model(model) and next_m != model:
-                    await _unload_omlx_model(client, parse_model_route(model)[2])
-
-            if include_synthesis and len(opinions) >= 2:
-                yield _sse("synthesis_start", {"model": judge_model})
-                joined = "\n\n".join(f"=== Opinion {o['slot']+1} ({o['model']}) ===\n{o['content']}" for o in opinions)
-                sbuf, s_usage = [], {}
-                s_msgs = [{"role": "system", "content": "You are the Arbiter comparing independent model responses. Identify consensus, resolve disagreements, and deliver the single best synthesized solution." + skill_block}, {"role": "user", "content": f"Question:\n{prompt}\n\n{joined}"}]
-                async for item in stream_any_model(client, judge_model, s_msgs, temperature=0.0, max_tokens=3200, reasoning_mode="off"):
-                    if await request.is_disconnected():
-                        return
-                    if item["type"] == "content":
-                        sbuf.append(item["text"]); yield _sse("token", {"slot": "synthesis", "kind": "content", "text": item["text"]})
-                    elif item["type"] == "usage":
-                        s_usage = item
-                        record_perf("debate", judge_model, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"])
-                synthesis_record = {"model": judge_model, "content": "".join(sbuf), "usage": s_usage}
-                yield _sse("synthesis_done", {"model": judge_model, "usage": s_usage})
-                if auto_unload and is_local_omlx_model(judge_model):
-                    await _unload_omlx_model(client, parse_model_route(judge_model)[2])
+                if event.kind == "token":
+                    slot: int | str = "synthesis" if event.data["stage"] == "synthesis" else int(event.data["stage"])
+                    yield _sse("token", {"slot": slot, "kind": event.data["kind"], "text": event.data["text"]})
+                elif event.kind == "stage_start":
+                    if event.data["stage"] == "synthesis":
+                        yield _sse("synthesis_start", {"model": event.data["model"]})
+                    else:
+                        yield _sse("panel_start", {"slot": int(event.data["stage"]), "model": event.data["model"]})
+                elif event.kind == "stage_done" and event.result is not None:
+                    result = event.result
+                    if result.stage_id == "synthesis":
+                        synthesis_record = {"model": result.model, "content": result.content, "usage": result.usage}
+                        yield _sse("synthesis_done", {"model": result.model, "usage": result.usage})
+                    else:
+                        slot = int(result.stage_id)
+                        opinions.append({"slot": slot, "model": result.model, "content": result.content, "usage": result.usage})
+                        yield _sse("panel_done", {"slot": slot, "model": result.model, "usage": result.usage})
 
             total_elapsed = round(time.perf_counter() - t0, 2)
             run_id = save_run("debate", prompt[:100], {"prompt": prompt, "opinions": opinions, "synthesis": synthesis_record, "total_elapsed_s": total_elapsed})
@@ -12671,6 +12701,228 @@ def run_mcp_stdio_server(default_agent_name: str = "ExternalAgent") -> None:
             sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": req_id, "result": {"content": [{"type": "text", "text": f"Error: {exc}"}], "isError": True}}) + "\n"); sys.stdout.flush()
 
 
+
+"""Provider-neutral orchestration primitives for streamed Studio workflows.
+
+The orchestration layer coordinates stages, but it does not perform I/O itself.
+Model streaming, persistence/observability, local-model cleanup, and request
+disconnect checks are injected by the application. This keeps provider and
+storage boundaries explicit and makes the workflow behavior testable offline.
+"""
+
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
+from dataclasses import dataclass
+from typing import Any, Literal, Protocol
+
+
+Message = dict[str, str]
+ModelEvent = Mapping[str, Any]
+StageId = int | str
+
+
+class ModelStreamer(Protocol):
+    """Stream normalized provider events for one model invocation."""
+
+    def __call__(
+        self,
+        model: str,
+        messages: list[Message],
+        temperature: float,
+        max_tokens: int,
+        reasoning_mode: str,
+    ) -> AsyncIterator[ModelEvent]: ...
+
+
+class UsageRecorder(Protocol):
+    """Record one normalized usage event without knowing the storage backend."""
+
+    def __call__(self, workflow: str, model: str, usage: Mapping[str, Any]) -> None: ...
+
+
+class DisconnectChecker(Protocol):
+    def __call__(self) -> Awaitable[bool]: ...
+
+
+class LocalModelPredicate(Protocol):
+    def __call__(self, model: str) -> bool: ...
+
+
+class ModelUnloader(Protocol):
+    def __call__(self, model: str) -> Awaitable[None]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class WorkflowStage:
+    """A provider-independent stage in a sequential workflow."""
+
+    stage_id: StageId
+    key: str
+    title: str
+    model: str
+    system: str
+    prompt: Callable[[Mapping[str, str]], str]
+    max_tokens: int
+    reasoning_mode: str = "off"
+    temperature: float = 0.0
+
+
+@dataclass(frozen=True, slots=True)
+class StageResult:
+    stage_id: StageId
+    key: str
+    model: str
+    content: str
+    reasoning: str
+    usage: dict[str, Any]
+
+
+WorkflowEventKind = Literal["stage_start", "token", "stage_done", "unloading", "disconnected"]
+
+
+@dataclass(frozen=True, slots=True)
+class WorkflowEvent:
+    """Internal event with a stable public payload and optional typed result."""
+
+    kind: WorkflowEventKind
+    data: dict[str, Any]
+    result: StageResult | None = None
+
+
+class WorkflowOrchestrator:
+    """Run sequential model stages while preserving application-owned boundaries."""
+
+    def __init__(
+        self,
+        *,
+        stream_model: ModelStreamer,
+        record_usage: UsageRecorder,
+        is_local_model: LocalModelPredicate,
+        unload_model: ModelUnloader,
+        unload_target: Callable[[str], str] | None = None,
+    ) -> None:
+        self._stream_model = stream_model
+        self._record_usage = record_usage
+        self._is_local_model = is_local_model
+        self._unload_model = unload_model
+        self._unload_target = unload_target or (lambda model: model)
+
+    async def run_stages(
+        self,
+        stages: Sequence[WorkflowStage],
+        *,
+        workflow: str,
+        auto_unload: bool,
+        is_disconnected: DisconnectChecker | None = None,
+    ) -> AsyncIterator[WorkflowEvent]:
+        """Run stages in order and yield normalized orchestration events.
+
+        A provider exception is intentionally allowed to propagate. The caller
+        owns its existing error-to-SSE/API contract and can decide whether a
+        partially completed workflow is persisted. No stage is started after a
+        disconnect has been observed.
+        """
+        context: dict[str, str] = {}
+        for index, stage in enumerate(stages):
+            if is_disconnected is not None and await is_disconnected():
+                yield WorkflowEvent("disconnected", {"stage": stage.stage_id})
+                return
+
+            yield WorkflowEvent(
+                "stage_start",
+                {
+                    "stage": stage.stage_id,
+                    "key": stage.key,
+                    "title": stage.title,
+                    "model": stage.model,
+                },
+            )
+            messages: list[Message] = [
+                {"role": "system", "content": stage.system},
+                {"role": "user", "content": stage.prompt(context)},
+            ]
+            result: StageResult | None = None
+            async for event in self._run_stage(
+                stage, messages, workflow=workflow, is_disconnected=is_disconnected
+            ):
+                yield event
+                if event.kind == "disconnected":
+                    return
+                if event.kind == "stage_done":
+                    result = event.result
+            if result is None:
+                return
+            context[stage.key] = result.content or result.reasoning
+
+            next_model = stages[index + 1].model if index + 1 < len(stages) else None
+            if auto_unload and self._is_local_model(stage.model) and next_model != stage.model:
+                yield WorkflowEvent("unloading", {"stage": stage.stage_id, "model": stage.model})
+                await self._unload_model(self._unload_target(stage.model))
+
+    async def _run_stage(
+        self,
+        stage: WorkflowStage,
+        messages: list[Message],
+        *,
+        workflow: str,
+        is_disconnected: DisconnectChecker | None,
+    ) -> AsyncIterator[WorkflowEvent]:
+        content: list[str] = []
+        reasoning: list[str] = []
+        usage: dict[str, Any] = {}
+        disconnected = False
+
+        async def stream_once(
+            reasoning_mode: str,
+            max_tokens: int,
+            *,
+            record_usage: bool,
+        ) -> AsyncIterator[WorkflowEvent]:
+            nonlocal disconnected, usage
+            async for item in self._stream_model(
+                stage.model,
+                messages,
+                stage.temperature,
+                max_tokens,
+                reasoning_mode,
+            ):
+                if is_disconnected is not None and await is_disconnected():
+                    disconnected = True
+                    yield WorkflowEvent("disconnected", {"stage": stage.stage_id})
+                    return
+                event_type = item.get("type")
+                if event_type == "content":
+                    text = str(item.get("text") or "")
+                    content.append(text)
+                    yield WorkflowEvent("token", {"stage": stage.stage_id, "kind": "content", "text": text})
+                elif event_type == "reasoning":
+                    text = str(item.get("text") or "")
+                    reasoning.append(text)
+                    yield WorkflowEvent("token", {"stage": stage.stage_id, "kind": "reasoning", "text": text})
+                elif event_type == "usage":
+                    usage = dict(item)
+                    if record_usage:
+                        self._record_usage(workflow, stage.model, usage)
+
+        async for event in stream_once(stage.reasoning_mode, stage.max_tokens, record_usage=True):
+            yield event
+        if disconnected:
+            return
+
+        # Preserve the existing local-model recovery path: a reasoning-only
+        # response gets one content retry with thinking disabled.
+        if not "".join(content).strip() and reasoning and self._is_local_model(stage.model):
+            content.clear()
+            async for event in stream_once("off", 4096, record_usage=False):
+                yield event
+                if disconnected:
+                    return
+
+        result = StageResult(stage.stage_id, stage.key, stage.model, "".join(content), "".join(reasoning), usage)
+        yield WorkflowEvent(
+            "stage_done",
+            {"stage": stage.stage_id, "model": stage.model, "usage": usage},
+            result,
+        )
 if __name__ == "__main__":
     if "--mcp" in sys.argv:
         agent_arg = "ExternalAgent"
