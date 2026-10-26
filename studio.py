@@ -50,8 +50,10 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
+from dataclasses import dataclass, field
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Literal
 from urllib.parse import parse_qsl, quote, unquote, urlsplit
 
 import httpcore
@@ -62,32 +64,260 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 STUDIO_VERSION = "9.0.1"
-OMLX_BASE = os.environ.get("OMLX_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
-STUDIO_HOST = os.environ.get("STUDIO_HOST", "127.0.0.1")
-STUDIO_PORT = int(os.environ.get("STUDIO_PORT", "3000"))
-STUDIO_API_TOKEN = os.environ.get("STUDIO_API_TOKEN", "").strip()
-STUDIO_AUTH_DISABLED = os.environ.get("STUDIO_AUTH_DISABLED", "0").strip().lower() in ("1", "true", "yes")
-STUDIO_API_TOKEN_FILE = Path(os.environ.get("STUDIO_API_TOKEN_FILE", str(Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "m5-agent-studio" / "api-token"))).expanduser()
-STUDIO_ENABLE_API_DOCS = os.environ.get("STUDIO_ENABLE_API_DOCS", "0").strip().lower() in ("1", "true", "yes")
-STUDIO_MAX_REQUEST_BYTES = int(os.environ.get("STUDIO_MAX_REQUEST_BYTES", str(8 * 1024 * 1024)))
-STUDIO_EXPENSIVE_REQUESTS_PER_MINUTE = int(os.environ.get("STUDIO_EXPENSIVE_REQUESTS_PER_MINUTE", "30"))
-STUDIO_ALLOW_PRIVATE_URLS = os.environ.get("STUDIO_ALLOW_PRIVATE_URLS", "0").strip().lower() in ("1", "true", "yes")
-STUDIO_PRIVATE_URL_HOSTS = {h.strip().lower().strip("[]").rstrip(".") for h in os.environ.get("STUDIO_PRIVATE_URL_HOSTS", "").split(",") if h.strip()}
-STUDIO_ALLOW_HOST_EXECUTION = os.environ.get("STUDIO_ALLOW_HOST_EXECUTION", "0").strip().lower() in ("1", "true", "yes")
-STUDIO_EXECUTION_MODE = os.environ.get("STUDIO_EXECUTION_MODE", "host" if STUDIO_ALLOW_HOST_EXECUTION else "disabled").strip().lower()
-STUDIO_SANDBOX_RUNTIME = os.environ.get("STUDIO_SANDBOX_RUNTIME", "docker").strip() or "docker"
-STUDIO_SANDBOX_IMAGE = os.environ.get("STUDIO_SANDBOX_IMAGE", "python:3.12-slim").strip()
-STUDIO_ALLOW_MCP_STDIO = os.environ.get("STUDIO_ALLOW_MCP_STDIO", "0").strip().lower() in ("1", "true", "yes")
-STUDIO_ALLOW_SKILL_CODE = os.environ.get("STUDIO_ALLOW_SKILL_CODE", "0").strip().lower() in ("1", "true", "yes")
-STUDIO_ALLOWED_HOSTS = {
-    h.strip().lower() for h in os.environ.get("STUDIO_ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]").split(",") if h.strip()
-}
-STUDIO_ALLOWED_ORIGINS = {
-    o.strip().rstrip("/") for o in os.environ.get("STUDIO_ALLOWED_ORIGINS", "").split(",") if o.strip()
-}
-WORKSPACE_ROOT = Path(os.environ.get("STUDIO_WORKSPACE", str(Path.cwd()))).resolve()
+_TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+_FALSE_VALUES = frozenset({"0", "false", "no", "off"})
+
+
+class ConfigurationError(ValueError):
+    """An invalid environment setting, with the setting name in the message."""
+
+
+@dataclass(frozen=True, slots=True)
+class StudioSettings:
+    """Typed snapshot of process-start configuration; external credentials stay separate."""
+
+    omlx_base_url: str
+    host: str
+    port: int
+    api_token: str = field(repr=False)
+    auth_disabled: bool
+    api_token_file: Path
+    enable_api_docs: bool
+    external_static: bool
+    max_request_bytes: int
+    expensive_requests_per_minute: int
+    allow_private_urls: bool
+    private_url_hosts: frozenset[str]
+    allow_host_execution: bool
+    execution_mode: Literal["disabled", "sandbox", "host"]
+    sandbox_runtime: str
+    sandbox_image: str
+    allow_mcp_stdio: bool
+    allow_skill_code: bool
+    allowed_hosts: frozenset[str]
+    allowed_origins: frozenset[str]
+    workspace_root: Path
+    database_path: Path
+
+
+def _config_bool(env: Mapping[str, str], name: str, default: bool) -> bool:
+    raw = env.get(name)
+    if raw is None or not raw.strip():
+        return default
+    value = raw.strip().casefold()
+    if value in _TRUE_VALUES:
+        return True
+    if value in _FALSE_VALUES:
+        return False
+    accepted = ", ".join(sorted(_TRUE_VALUES | _FALSE_VALUES))
+    raise ConfigurationError(f"{name} must be a boolean (accepted values: {accepted}); received an invalid value.")
+
+
+def _config_int(env: Mapping[str, str], name: str, default: int, minimum: int, maximum: int) -> int:
+    raw = env.get(name)
+    if raw is None:
+        value = default
+    else:
+        try:
+            value = int(raw.strip(), 10)
+        except ValueError:
+            raise ConfigurationError(f"{name} must be an integer between {minimum} and {maximum}.") from None
+    if not minimum <= value <= maximum:
+        raise ConfigurationError(f"{name} must be between {minimum} and {maximum}; received {value}.")
+    return value
+
+
+def _expand_config_path(raw: str, home: Path) -> Path:
+    if raw == "~":
+        return home
+    if raw.startswith(("~/", "~\\")):
+        return home / raw[2:]
+    return Path(raw).expanduser()
+
+
+def _config_path(env: Mapping[str, str], name: str, default: Path, *, home: Path) -> Path:
+    raw = env.get(name)
+    if raw is None:
+        return default
+    if not raw.strip():
+        raise ConfigurationError(f"{name} must be a non-empty filesystem path.")
+    if "\x00" in raw:
+        raise ConfigurationError(f"{name} must not contain a NUL character.")
+    return _expand_config_path(raw, home)
+
+
+def _config_list(env: Mapping[str, str], name: str, default: str = "") -> frozenset[str]:
+    raw = env.get(name, default)
+    return frozenset(item.strip() for item in raw.split(",") if item.strip())
+
+
+def _config_loopback(host: str) -> bool:
+    normalized = host.strip().lower().strip("[]")
+    if normalized == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(normalized).is_loopback
+    except ValueError:
+        return False
+
+
+def _config_omlx_url(env: Mapping[str, str]) -> str:
+    raw = env.get("OMLX_BASE_URL", "http://127.0.0.1:8000").strip().rstrip("/")
+    try:
+        parts = urlsplit(raw)
+        # Accessing .port also checks for a malformed port value.
+        _ = parts.port
+    except ValueError:
+        raise ConfigurationError("OMLX_BASE_URL must be an absolute HTTP(S) URL with a valid port.") from None
+    if (
+        parts.scheme not in {"http", "https"}
+        or not parts.hostname
+        or parts.username is not None
+        or parts.password is not None
+        or parts.query
+        or parts.fragment
+    ):
+        raise ConfigurationError("OMLX_BASE_URL must be an absolute HTTP(S) URL without credentials, query, or fragment.")
+    return raw
+
+
+def _config_origins(env: Mapping[str, str]) -> frozenset[str]:
+    origins = _config_list(env, "STUDIO_ALLOWED_ORIGINS")
+    for origin in origins:
+        try:
+            parts = urlsplit(origin)
+            _ = parts.port
+        except ValueError:
+            raise ConfigurationError("STUDIO_ALLOWED_ORIGINS contains an invalid origin or port.") from None
+        if (
+            parts.scheme not in {"http", "https"}
+            or not parts.hostname
+            or parts.username is not None
+            or parts.password is not None
+            or parts.path not in {"", "/"}
+            or parts.query
+            or parts.fragment
+        ):
+            raise ConfigurationError("STUDIO_ALLOWED_ORIGINS entries must be HTTP(S) origins without credentials, paths, query, or fragment.")
+    return frozenset(origin.rstrip("/") for origin in origins)
+
+
+def load_settings(
+    environ: Mapping[str, str] | None = None,
+    *,
+    base_dir: Path | None = None,
+    cwd: Path | None = None,
+    home: Path | None = None,
+) -> StudioSettings:
+    """Parse environment over code defaults and reject invalid or unsafe combinations."""
+    env = os.environ if environ is None else environ
+    app_dir = Path(__file__).resolve().parent if base_dir is None else base_dir
+    current_dir = Path.cwd() if cwd is None else cwd
+    home_dir = Path.home() if home is None else home
+
+    host = env.get("STUDIO_HOST", "127.0.0.1").strip()
+    if not host or any(character.isspace() for character in host) or "/" in host:
+        raise ConfigurationError("STUDIO_HOST must be a non-empty bind hostname or IP address.")
+    port = _config_int(env, "STUDIO_PORT", 3000, 1, 65535)
+    api_token = env.get("STUDIO_API_TOKEN", "").strip()
+    if any(character.isspace() for character in api_token):
+        raise ConfigurationError("STUDIO_API_TOKEN must not contain whitespace.")
+    if api_token and len(api_token) < 32:
+        raise ConfigurationError("STUDIO_API_TOKEN must contain at least 32 characters; generate one with `python3 -c 'import secrets; print(secrets.token_urlsafe(48))'`.")
+
+    auth_disabled = _config_bool(env, "STUDIO_AUTH_DISABLED", False)
+    loopback = _config_loopback(host)
+    if auth_disabled and not loopback:
+        raise ConfigurationError("STUDIO_AUTH_DISABLED=1 is permitted only with a loopback STUDIO_HOST.")
+    if not loopback and not api_token:
+        raise ConfigurationError("A non-loopback STUDIO_HOST requires STUDIO_API_TOKEN with at least 32 characters.")
+
+    allow_host_execution = _config_bool(env, "STUDIO_ALLOW_HOST_EXECUTION", False)
+    raw_mode = env.get("STUDIO_EXECUTION_MODE")
+    mode = (raw_mode.strip().casefold() if raw_mode is not None else ("host" if allow_host_execution else "disabled"))
+    if mode not in {"disabled", "sandbox", "host"}:
+        raise ConfigurationError("STUDIO_EXECUTION_MODE must be one of: disabled, sandbox, host.")
+    if mode == "host" and not allow_host_execution:
+        raise ConfigurationError("STUDIO_EXECUTION_MODE=host requires STUDIO_ALLOW_HOST_EXECUTION=1; host execution is unsandboxed.")
+
+    sandbox_image = env.get("STUDIO_SANDBOX_IMAGE", "python:3.12-slim").strip()
+    if not sandbox_image or sandbox_image.startswith("-"):
+        raise ConfigurationError("STUDIO_SANDBOX_IMAGE must be a configured, trusted image name or digest.")
+    allowed_hosts = frozenset(item.lower() for item in _config_list(env, "STUDIO_ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]"))
+    if not allowed_hosts:
+        raise ConfigurationError("STUDIO_ALLOWED_HOSTS must contain at least one allowed Host value.")
+    if any(any(character.isspace() for character in item) for item in allowed_hosts):
+        raise ConfigurationError("STUDIO_ALLOWED_HOSTS entries must not contain whitespace.")
+    private_hosts = frozenset(
+        host_name.strip().lower().strip("[]").rstrip(".")
+        for host_name in env.get("STUDIO_PRIVATE_URL_HOSTS", "").split(",")
+        if host_name.strip()
+    )
+    if any(any(character.isspace() for character in item) or "/" in item for item in private_hosts):
+        raise ConfigurationError("STUDIO_PRIVATE_URL_HOSTS entries must be hostnames or IP addresses, not URLs.")
+
+    xdg_home = env.get("XDG_CONFIG_HOME", "").strip()
+    token_file_default = Path(xdg_home) if xdg_home else home_dir / ".config"
+    token_file_default = token_file_default / "m5-agent-studio" / "api-token"
+    token_file = _config_path(env, "STUDIO_API_TOKEN_FILE", token_file_default, home=home_dir)
+    db_path = _config_path(env, "STUDIO_DB_PATH", app_dir / "studio_history.db", home=home_dir)
+    raw_workspace = env.get("STUDIO_WORKSPACE")
+    workspace_path = _expand_config_path(raw_workspace, home_dir) if raw_workspace and raw_workspace.strip() else current_dir
+    if not workspace_path.is_absolute():
+        workspace_path = current_dir / workspace_path
+
+    runtime = env.get("STUDIO_SANDBOX_RUNTIME", "docker").strip() or "docker"
+    return StudioSettings(
+        omlx_base_url=_config_omlx_url(env),
+        host=host,
+        port=port,
+        api_token=api_token,
+        auth_disabled=auth_disabled,
+        api_token_file=token_file,
+        enable_api_docs=_config_bool(env, "STUDIO_ENABLE_API_DOCS", False),
+        external_static=_config_bool(env, "STUDIO_EXTERNAL_STATIC", False),
+        max_request_bytes=_config_int(env, "STUDIO_MAX_REQUEST_BYTES", 8 * 1024 * 1024, 1024, 100 * 1024 * 1024),
+        expensive_requests_per_minute=_config_int(env, "STUDIO_EXPENSIVE_REQUESTS_PER_MINUTE", 30, 1, 600),
+        allow_private_urls=_config_bool(env, "STUDIO_ALLOW_PRIVATE_URLS", False),
+        private_url_hosts=private_hosts,
+        allow_host_execution=allow_host_execution,
+        execution_mode=mode,  # type: ignore[arg-type]
+        sandbox_runtime=runtime,
+        sandbox_image=sandbox_image,
+        allow_mcp_stdio=_config_bool(env, "STUDIO_ALLOW_MCP_STDIO", False),
+        allow_skill_code=_config_bool(env, "STUDIO_ALLOW_SKILL_CODE", False),
+        allowed_hosts=allowed_hosts,
+        allowed_origins=_config_origins(env),
+        workspace_root=workspace_path.resolve(),
+        database_path=db_path,
+    )
+
+
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = Path(os.environ.get("STUDIO_DB_PATH", str(BASE_DIR / "studio_history.db"))).expanduser()
+SETTINGS = load_settings(os.environ, base_dir=BASE_DIR)
+# Keep the established module-level names as typed compatibility aliases for the standalone build and callers.
+OMLX_BASE = SETTINGS.omlx_base_url
+STUDIO_HOST = SETTINGS.host
+STUDIO_PORT = SETTINGS.port
+STUDIO_API_TOKEN = SETTINGS.api_token
+STUDIO_AUTH_DISABLED = SETTINGS.auth_disabled
+STUDIO_API_TOKEN_FILE = SETTINGS.api_token_file
+STUDIO_ENABLE_API_DOCS = SETTINGS.enable_api_docs
+STUDIO_EXTERNAL_STATIC = SETTINGS.external_static
+STUDIO_MAX_REQUEST_BYTES = SETTINGS.max_request_bytes
+STUDIO_EXPENSIVE_REQUESTS_PER_MINUTE = SETTINGS.expensive_requests_per_minute
+STUDIO_ALLOW_PRIVATE_URLS = SETTINGS.allow_private_urls
+STUDIO_PRIVATE_URL_HOSTS = set(SETTINGS.private_url_hosts)
+STUDIO_ALLOW_HOST_EXECUTION = SETTINGS.allow_host_execution
+STUDIO_EXECUTION_MODE = SETTINGS.execution_mode
+STUDIO_SANDBOX_RUNTIME = SETTINGS.sandbox_runtime
+STUDIO_SANDBOX_IMAGE = SETTINGS.sandbox_image
+STUDIO_ALLOW_MCP_STDIO = SETTINGS.allow_mcp_stdio
+STUDIO_ALLOW_SKILL_CODE = SETTINGS.allow_skill_code
+STUDIO_ALLOWED_HOSTS = set(SETTINGS.allowed_hosts)
+STUDIO_ALLOWED_ORIGINS = set(SETTINGS.allowed_origins)
+WORKSPACE_ROOT = SETTINGS.workspace_root
+DB_PATH = SETTINGS.database_path
 KEYRING_SERVICE = "m5-agent-studio"
 KEYRING_REF_PREFIX = "keyring:v1:"
 
@@ -5846,7 +6076,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 async def index() -> HTMLResponse:
     ext = BASE_DIR / "static" / "index.html"
     html = EMBEDDED_HTML
-    if os.environ.get("STUDIO_EXTERNAL_STATIC") == "1" and ext.is_file():
+    if SETTINGS.external_static and ext.is_file():
         html = ext.read_text(encoding="utf-8")
     if STUDIO_API_TOKEN and not STUDIO_AUTH_DISABLED:
         html = html.replace("</head>", "<script>(function(){const nativeFetch=window.fetch.bind(window);let promptLock=null;window.fetch=async function(input,init={}){const url=typeof input==='string'?input:input.url;const same=new URL(url,location.href).origin===location.origin;const send=async(token)=>{const headers=new Headers(input instanceof Request?input.headers:undefined);new Headers(init.headers||{}).forEach((v,k)=>headers.set(k,v));if(token&&same)headers.set('Authorization','Bearer '+token);return nativeFetch(input,{...init,headers});};let token=sessionStorage.getItem('m5_api_token')||'';let r=await send(token);if(r.status!==401||!same||!url.includes('/api/')&&!url.includes('/v1/'))return r;if(!promptLock)promptLock=new Promise(resolve=>{const v=window.prompt('Studio API token (saved for this browser session):');if(v)sessionStorage.setItem('m5_api_token',v);resolve(v||'');});token=await promptLock;promptLock=null;if(!token)return r;r=await send(token);return r;};})();</script>" + "</head>", 1)

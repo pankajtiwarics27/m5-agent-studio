@@ -35,7 +35,7 @@ def build() -> None:
         'async def index() -> HTMLResponse:\n'
         '    ext = BASE_DIR / "static" / "index.html"\n'
         '    html = EMBEDDED_HTML\n'
-        '    if os.environ.get("STUDIO_EXTERNAL_STATIC") == "1" and ext.is_file():\n'
+        '    if SETTINGS.external_static and ext.is_file():\n'
         '        html = ext.read_text(encoding="utf-8")\n'
         '    if STUDIO_API_TOKEN and not STUDIO_AUTH_DISABLED:\n'
         f'        html = html.replace("</head>", {AUTH_HELPER!r} + "</head>", 1)\n'
