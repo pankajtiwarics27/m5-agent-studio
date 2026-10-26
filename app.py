@@ -51,7 +51,7 @@ import uuid
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from pathlib import Path
 from typing import Any, AsyncIterator, Literal, Protocol
 from urllib.parse import parse_qsl, quote, unquote, urlsplit
@@ -4474,7 +4474,7 @@ def _format_mcp_tool_output(res: dict[str, Any]) -> tuple[bool, str]:
     return (not is_err), joined
 
 
-async def execute_mcp_tool_call(
+async def _execute_mcp_tool_call_inner(
     client: httpx.AsyncClient,
     alias: str,
     remote_tool: str,
@@ -4602,7 +4602,8 @@ async def api_import_mcp_json(request: Request) -> JSONResponse:
         raise HTTPException(status_code=400, detail=f"Invalid JSON: {exc}") from exc
     if not isinstance(parsed, dict):
         raise HTTPException(status_code=400, detail="Expected a JSON object.")
-    entries = parsed.get("mcpServers") if isinstance(parsed.get("mcpServers"), dict) else parsed
+    mcp_servers = parsed.get("mcpServers")
+    entries = mcp_servers if isinstance(mcp_servers, dict) else parsed
     imported = []
     for key, cfg in entries.items():
         if not isinstance(cfg, dict):
@@ -4715,8 +4716,18 @@ async def api_call_mcp_server_tool(alias: str, request: Request) -> JSONResponse
             raise HTTPException(status_code=400, detail=f"Arguments must be valid JSON: {exc}") from exc
     if not tool_name:
         raise HTTPException(status_code=400, detail="`tool` name is required.")
+    if not isinstance(args, dict):
+        raise HTTPException(status_code=400, detail="`arguments` must be a JSON object.")
     try:
-        res = await execute_mcp_tool_call(request.app.state.http, alias, tool_name, args)
+        res = await execute_mcp_tool_call(
+            request.app.state.http,
+            alias,
+            tool_name,
+            args,
+            policy="standard",
+            approved=True,  # This authenticated, explicit playground action is one-call user approval.
+            session_id="manual-mcp-playground",
+        )
         return JSONResponse(res)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -5828,13 +5839,18 @@ def _create_pending_tool_approval(session_id: str, step: int, tool: str, args: d
 
 def _abandon_pending_tool_approval(pending: dict[str, Any], note: str = "Workflow ended before approval was resolved.") -> None:
     approval_id = pending.get("approval_id")
-    slot = _PENDING_APPROVALS.pop(approval_id, None)
+    if not isinstance(approval_id, str):
+        return
+    slot = _PENDING_APPROVALS.get(approval_id)
     if not slot:
         return
+    session_id = pending.get("session_id") or slot.get("session_id")
+    _PENDING_APPROVALS.pop(approval_id, None)
     slot["decision"] = "reject"
     slot["note"] = note
     slot["event"].set()
-    session_id = pending.get("session_id") or slot.get("session_id")
+    if not isinstance(session_id, str):
+        return
     _update_harness_session_state(session_id, status="running")
     _append_harness_event(session_id, "approval/decision", {"step": pending.get("step", 0), "approval_id": approval_id, "decision": "reject", "note": note})
 
@@ -5874,10 +5890,123 @@ BLOCKED_SHELL_PATTERNS = [
 
 HARNESS_POLICIES = {"standard", "autonomous", "plan"}
 
+BUILTIN_TOOL_NAMES = frozenset(
+    {
+        "list_files",
+        "grep_search",
+        "read_file",
+        "write_file",
+        "edit_file",
+        "run_bash",
+        "delegate_subagent",
+        "codegraph_architecture",
+        "codegraph_context",
+        "codegraph_impact",
+        "codegraph_path",
+        "codegraph_quality",
+        "ctx_run_block",
+        "oc_lint",
+        "ctx_execute_python",
+        "ctx_search",
+        "oc_search",
+        "oc_read",
+        "oc_save_doc",
+    }
+)
+PLAN_DENIED_TOOLS = frozenset({"write_file", "edit_file", "run_bash", "ctx_execute_python", "oc_save_doc"})
+MCP_BRIDGE_TOOL_NAMES = frozenset(
+    {
+        "start_council",
+        "get_current_session_data",
+        "send_response",
+        "summon_omlx_agent",
+        "close_council",
+        "create_harness_worktree",
+        "get_harness_diff",
+        "oc_search",
+        "oc_save_doc",
+        "oc_lint",
+        "codegraph_query",
+    }
+)
+MCP_BRIDGE_AUTH_TOOL_NAMES = frozenset(f"mcp_bridge__{name}" for name in MCP_BRIDGE_TOOL_NAMES)
+MCP_BRIDGE_APPROVAL_TOOLS = frozenset(
+    f"mcp_bridge__{name}"
+    for name in {"start_council", "send_response", "summon_omlx_agent", "close_council", "create_harness_worktree", "oc_save_doc"}
+)
+
+
+@dataclass(frozen=True, slots=True)
+class ToolAuthorization:
+    allowed: bool
+    requires_approval: bool = False
+    reason: str = ""
+
 
 def _effective_harness_policy(requested: Any, session: dict[str, Any]) -> str:
     candidate = requested or session.get("policy") or "standard"
     return str(candidate) if candidate in HARNESS_POLICIES else "standard"
+
+
+def authorize_tool_invocation(
+    tool_name: str,
+    args: dict[str, Any],
+    policy: str,
+    *,
+    approved: bool = False,
+) -> ToolAuthorization:
+    """Single deny-by-default policy decision for built-in and MCP tool execution."""
+    effective_policy = _effective_harness_policy(policy, {})
+    if tool_name.startswith("mcp_bridge__"):
+        if tool_name not in MCP_BRIDGE_AUTH_TOOL_NAMES:
+            return ToolAuthorization(False, reason="Inbound MCP bridge tool is not registered.")
+        requires_approval = tool_name in MCP_BRIDGE_APPROVAL_TOOLS
+        if effective_policy == "plan" and requires_approval:
+            return ToolAuthorization(False, requires_approval, "State-changing MCP bridge tools are disabled by plan policy.")
+        if requires_approval and not approved:
+            return ToolAuthorization(False, True, "MCP bridge tool requires explicit one-call approval.")
+        return ToolAuthorization(True, requires_approval)
+
+    mcp_target = parse_mcp_namespaced_tool(tool_name)
+    if tool_name.startswith("mcp__"):
+        if mcp_target is None:
+            return ToolAuthorization(False, reason="Malformed MCP tool name.")
+        if effective_policy == "plan":
+            return ToolAuthorization(False, reason="External MCP tools are disabled by plan policy.")
+        alias, remote_tool = mcp_target
+        try:
+            server = get_mcp_server(alias, include_secret=False)
+        except KeyError:
+            return ToolAuthorization(False, reason="MCP server is not configured.")
+        if not server.get("enabled"):
+            return ToolAuthorization(False, reason="MCP server is disabled.")
+        known_tools = {
+            str(tool.get("name"))
+            for tool in (server.get("tools") or [])
+            if isinstance(tool, dict) and tool.get("name")
+        }
+        enabled_tools = set(server.get("enabled_tools") or known_tools)
+        if remote_tool not in known_tools or remote_tool not in enabled_tools:
+            return ToolAuthorization(False, reason="MCP tool is not in the enabled-tool allowlist.")
+        requires_approval = mcp_tool_needs_approval(alias, effective_policy)
+        if requires_approval and not approved:
+            return ToolAuthorization(False, True, "MCP tool requires explicit approval.")
+        return ToolAuthorization(True, requires_approval)
+
+    if tool_name not in BUILTIN_TOOL_NAMES:
+        return ToolAuthorization(False, reason="Tool is not registered.")
+
+    executing_block = tool_name == "ctx_run_block" and str(args.get("block") or "") in ("test-summary", "first-error")
+    requires_approval = tool_requires_approval(tool_name, args, effective_policy)
+    if effective_policy == "plan" and (tool_name in PLAN_DENIED_TOOLS or executing_block):
+        return ToolAuthorization(False, requires_approval, "Tool is not permitted by read-only plan policy.")
+    if tool_name in ("run_bash", "ctx_execute_python") or executing_block:
+        if _execution_mode() == "disabled":
+            return ToolAuthorization(False, requires_approval, "Code execution is disabled.")
+
+    if requires_approval and not approved:
+        return ToolAuthorization(False, True, "Tool requires explicit approval.")
+    return ToolAuthorization(True, requires_approval)
 
 
 HARNESS_SYSTEM_PROMPT_TEMPLATE = """You are an autonomous Principal Software Engineer running inside HARNESS_AGENT_RUNTIME_V7 on Apple Silicon (24GB M5 Context-Engineered Harness).
@@ -6734,8 +6863,8 @@ async def _execute_harness_tool_inner(
         if tool_name == "ctx_search":
             q_str = str(args.get("query") or "")
             d_id = str(args.get("doc_id") or "")
-            hits = search_ctx_vault(sess["id"], query=q_str, doc_id=d_id, limit=int(args.get("limit") or 6))
-            return {"ok": True, "output": hits, "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
+            ctx_hits = search_ctx_vault(sess["id"], query=q_str, doc_id=d_id, limit=int(args.get("limit") or 6))
+            return {"ok": True, "output": ctx_hits, "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
 
         if tool_name == "oc_search":
             docs = search_opencontext_docs(str(args.get("query") or ""), limit=8)
@@ -6775,7 +6904,7 @@ async def _execute_harness_tool_inner(
             mcp_alias, mcp_remote_tool = mcp_parsed
             if policy == "standard" and mcp_tool_needs_approval(mcp_alias, policy) and not approved:
                 return {"ok": False, "output": f"Denied: MCP tool `{mcp_alias}::{mcp_remote_tool}` requires explicit approval in standard policy.", "diff": "", "elapsed_ms": 1}
-            return await execute_mcp_tool_call(client, mcp_alias, mcp_remote_tool, args, cwd=root)
+            return await _execute_mcp_tool_call_inner(client, mcp_alias, mcp_remote_tool, args, cwd=root)
 
         return {"ok": False, "output": f"Unknown tool `{tool_name}`.", "diff": "", "elapsed_ms": 1}
     except Exception as exc:
@@ -6792,18 +6921,107 @@ def _audit_tool_start(session_id: str, tool_name: str, policy: str, approved: bo
             (time.time(), str(session_id)[:128], str(tool_name)[:200], str(policy)[:40], int(approved), args_digest),
         )
         conn.commit()
-        return int(cur.lastrowid)
+        if cur.lastrowid is None:
+            raise RuntimeError("SQLite did not return a tool-audit event ID.")
+        return cur.lastrowid
 
 
-def _audit_tool_finish(event_id: int, result: dict[str, Any], elapsed_ms: int) -> None:
+def _audit_tool_finish(event_id: int, result: dict[str, Any], elapsed_ms: int, *, status: str = "completed") -> None:
     material = str(result.get("output") or "") + "\n" + str(result.get("diff") or "")
     output_digest = hashlib.sha256(material.encode("utf-8", errors="replace")).hexdigest()
     with STORAGE.connect(DB_PATH, timeout=5.0) as conn:
         conn.execute(
-            "UPDATE tool_audit_events SET status='completed', ok=?, elapsed_ms=?, output_sha256=? WHERE id=?",
-            (int(bool(result.get("ok"))), max(0, int(elapsed_ms)), output_digest, event_id),
+            "UPDATE tool_audit_events SET status=?, ok=?, elapsed_ms=?, output_sha256=? WHERE id=?",
+            (status, int(bool(result.get("ok"))), max(0, int(elapsed_ms)), output_digest, event_id),
         )
         conn.commit()
+
+
+async def _run_authorized_tool(
+    tool_name: str,
+    args: dict[str, Any],
+    policy: str,
+    *,
+    approved: bool,
+    session_id: str,
+    executor: Callable[[], Awaitable[dict[str, Any]]],
+    denial_as_exception: bool = False,
+    additional_denial: str | None = None,
+) -> dict[str, Any]:
+    """Authorize, durably audit, and then execute exactly one tool attempt."""
+    effective_policy = _effective_harness_policy(policy, {})
+    try:
+        decision = authorize_tool_invocation(tool_name, args, effective_policy, approved=approved)
+    except Exception:
+        # Policy evaluation errors are not permission to execute.
+        decision = ToolAuthorization(False, reason="Authorization policy evaluation failed; invocation denied.")
+    if additional_denial:
+        decision = ToolAuthorization(False, reason=additional_denial)
+    explicit_approval = bool(approved and decision.requires_approval)
+    event_id = _audit_tool_start(session_id, tool_name, effective_policy, explicit_approval, args)
+    started = time.perf_counter()
+
+    if not decision.allowed:
+        result: dict[str, Any] = {
+            "ok": False,
+            "output": f"Denied: {decision.reason}",
+            "diff": "",
+            "elapsed_ms": 1,
+        }
+        try:
+            _audit_tool_finish(event_id, result, 1, status="denied")
+        except Exception:
+            result["audit_warning"] = "Denial could not be finalized in the local audit log."
+        if denial_as_exception:
+            raise PermissionError(result["output"])
+        return result
+
+    try:
+        result = await executor()
+    except Exception as exc:
+        failure: dict[str, Any] = {
+            "ok": False,
+            "output": f"Tool `{tool_name}` failed: {exc}",
+            "diff": "",
+            "elapsed_ms": round((time.perf_counter() - started) * 1000),
+        }
+        try:
+            _audit_tool_finish(event_id, failure, failure["elapsed_ms"], status="failed")
+        except Exception:
+            pass  # The durable started row still proves that execution was attempted.
+        raise
+
+    elapsed = int(result.get("elapsed_ms") or round((time.perf_counter() - started) * 1000))
+    try:
+        _audit_tool_finish(event_id, result, elapsed)
+    except Exception:
+        # The durable `started` event still records the action attempt; don't erase its outcome in memory.
+        result = {**result, "audit_warning": "Tool result could not be finalized in the local audit log."}
+    return result
+
+
+async def execute_mcp_tool_call(
+    client: httpx.AsyncClient,
+    alias: str,
+    remote_tool: str,
+    arguments: dict[str, Any],
+    cwd: Path | None = None,
+    *,
+    policy: str = "standard",
+    approved: bool = False,
+    session_id: str = "mcp-direct",
+) -> dict[str, Any]:
+    """Policy-checked and audited MCP entry point; direct denial preserves PermissionError behavior."""
+    tool_name = f"mcp__{alias}__{remote_tool}"
+    return await _run_authorized_tool(
+        tool_name,
+        arguments,
+        policy,
+        approved=approved,
+        session_id=session_id,
+        executor=lambda: _execute_mcp_tool_call_inner(client, alias, remote_tool, arguments, cwd=cwd),
+        denial_as_exception=True,
+    )
 
 
 async def _execute_harness_tool(
@@ -6813,20 +7031,19 @@ async def _execute_harness_tool(
     args: dict[str, Any],
     *,
     approved: bool = False,
+    policy_denial: str | None = None,
 ) -> dict[str, Any]:
-    """Audit a tool attempt before execution; raw arguments and output are never stored."""
-    policy = str(sess.get("policy") or "standard")
-    explicit_approval = bool(approved and tool_requires_approval(tool_name, args, policy))
-    event_id = _audit_tool_start(str(sess.get("id") or "unknown"), tool_name, policy, explicit_approval, args)
-    started = time.perf_counter()
-    result = await _execute_harness_tool_inner(client, sess, tool_name, args, approved=approved)
-    elapsed = int(result.get("elapsed_ms") or round((time.perf_counter() - started) * 1000))
-    try:
-        _audit_tool_finish(event_id, result, elapsed)
-    except Exception:
-        # The durable `started` event still records the action attempt; don't erase its outcome in memory.
-        result = {**result, "audit_warning": "Tool result could not be finalized in the local audit log."}
-    return result
+    """Central policy and audit boundary for harness and Direct Chat tool calls."""
+    policy = _effective_harness_policy(sess.get("policy"), {})
+    return await _run_authorized_tool(
+        tool_name,
+        args,
+        policy,
+        approved=approved,
+        session_id=str(sess.get("id") or "unknown"),
+        executor=lambda: _execute_harness_tool_inner(client, sess, tool_name, args, approved=approved),
+        additional_denial=policy_denial,
+    )
 
 
 def _compute_git_diff(target_dir: Path) -> dict[str, Any]:
@@ -7306,16 +7523,12 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         reject_note = decision["note"]
                         yield _sse("approval_resolved", {"step": step_idx, **decision})
 
+                    res_obj = await _execute_harness_tool(client, sess_live, t_name, t_args, approved=approved)
+                    if not approved and reject_note:
+                        res_obj["output"] += f" User rejection note: {reject_note}"
                     if not approved:
-                        res_obj = {
-                            "ok": False,
-                            "output": f"User rejected `{t_name}` execution." + (f" Reason: {reject_note}" if reject_note else " Adjust plan without running this command."),
-                            "diff": "",
-                            "elapsed_ms": 0,
-                        }
                         sandbox_meta: dict[str, Any] = {"sandboxed": False}
                     else:
-                        res_obj = await _execute_harness_tool(client, sess_live, t_name, t_args, approved=approved)
                         compressed_out, sandbox_meta = sandbox_tool_output_if_large(
                             session_id,
                             t_name,
@@ -7555,10 +7768,9 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                                 _abandon_pending_tool_approval(pending)
                             approved, reject_note = decision["approved"], decision["note"]
                             yield _sse("approval_resolved", {"step": global_step, **decision})
-                        if approved:
-                            res_obj = await _execute_harness_tool(client, sess_exec, t_name, t_args, approved=True)
-                        else:
-                            res_obj = {"ok": False, "output": f"User rejected `{t_name}` execution. {reject_note}", "diff": "", "elapsed_ms": 0}
+                        res_obj = await _execute_harness_tool(client, sess_exec, t_name, t_args, approved=approved)
+                        if not approved and reject_note:
+                            res_obj["output"] += f" User rejection note: {reject_note}"
                         comp_out, sb_meta = sandbox_tool_output_if_large(session_id, t_name, res_obj["output"], context_mode_enabled=True)
                         res_obj["output"] = comp_out
                         _append_harness_event(
@@ -8046,9 +8258,17 @@ async def _run_sdlc_sprints_stream(
                 fb_blocks: list[str] = []
                 for tc_i, tc in enumerate(t_calls[:6]):
                     tn, ta = tc["name"], tc["arguments"]
+                    res_obj: dict[str, Any]
                     # Hard guard: prevent coding worker from self-editing `.sdlc/backlog.json`
                     if tn in ("write_file", "edit_file") and "backlog.json" in str(ta.get("path") or ""):
-                        res_obj = {"ok": False, "output": "Blocked by Default-FAIL Contract: Coding worker cannot edit `.sdlc/backlog.json`.", "diff": "", "elapsed_ms": 1}
+                        res_obj = await _execute_harness_tool(
+                            client,
+                            sess_live,
+                            tn,
+                            ta,
+                            approved=False,
+                            policy_denial="Blocked by Default-FAIL Contract: Coding worker cannot edit `.sdlc/backlog.json`.",
+                        )
                         sb_meta: dict[str, Any] = {"sandboxed": False}
                     else:
                         approved = not tool_requires_approval(tn, ta, policy)
@@ -8062,10 +8282,9 @@ async def _run_sdlc_sprints_stream(
                                 _abandon_pending_tool_approval(pending)
                             approved, reject_note = decision["approved"], decision["note"]
                             yield _sse("approval_resolved", {"step": cur_step, **decision})
-                        if approved:
-                            res_obj = await _execute_harness_tool(client, sess_live, tn, ta, approved=True)
-                        else:
-                            res_obj = {"ok": False, "output": f"User rejected `{tn}` execution. {reject_note}", "diff": "", "elapsed_ms": 0}
+                        res_obj = await _execute_harness_tool(client, sess_live, tn, ta, approved=approved)
+                        if not approved and reject_note:
+                            res_obj["output"] += f" User rejection note: {reject_note}"
                         comp_out, sb_meta = sandbox_tool_output_if_large(session_id, tn, res_obj["output"], context_mode_enabled=context_mode)
                         res_obj["output"] = comp_out
                     _append_harness_event(session_id, "tool/result", {"step": cur_step, "tool": tn, "args": ta, "ok": res_obj["ok"], "output": res_obj["output"], "diff": res_obj.get("diff", ""), "elapsed_ms": res_obj.get("elapsed_ms", 0), "sandbox": sb_meta})
@@ -8092,10 +8311,14 @@ async def _run_sdlc_sprints_stream(
                         _abandon_pending_tool_approval(pending)
                     approved = decision["approved"]
                     yield _sse("approval_resolved", {"step": verification_step, **decision})
-                if approved:
-                    vres = await _execute_harness_tool(client, sess_live, "run_bash", verification_args, approved=True)
-                else:
-                    vres = {"ok": False, "output": "Verification command was not approved; story cannot pass."}
+                vres = await _execute_harness_tool(
+                    client,
+                    sess_live,
+                    "run_bash",
+                    verification_args,
+                    approved=approved,
+                    policy_denial=None if approved else "Verification command was not approved; story cannot pass.",
+                )
                 verification_ok = bool(vres.get("ok"))
                 v_out_txt = f"[ok={verification_ok}]\n{vres.get('output', '')[:1500]}"
 
@@ -8565,6 +8788,82 @@ async def _mcp_summon_model(session_id: str, model: str, role_key: str) -> str:
     return f"### {author_label}\n\n{text}"
 
 
+async def _dispatch_mcp_stdio_tool(tname: str, args: dict[str, Any], default_agent_name: str) -> dict[str, Any]:
+    """Execute one explicitly registered inbound MCP bridge tool after central authorization."""
+    t0 = time.perf_counter()
+    if not isinstance(args, dict):
+        raise ValueError("MCP tool arguments must be a JSON object.")
+    who = args.get("agent_name") or default_agent_name
+    if tname == "start_council":
+        session = create_hall_session(args["request"], created_by=who)
+        text = f"Started Council Hall session `{session['id']}`.\nTitle: {session['title']}"
+    elif tname == "get_current_session_data":
+        text = json.dumps(get_hall_session(args["session_id"], after_id=int(args.get("cursor") or 0)), indent=2)
+    elif tname == "send_response":
+        message = append_hall_message(args["session_id"], author=who, role_key="external", content=args["content"])
+        text = f"Recorded message #{message['id']} from {who}."
+    elif tname == "summon_omlx_agent":
+        text = await _mcp_summon_model(
+            args["session_id"],
+            args.get("model") or "Gemma-4-21B-REAP-4bit",
+            args.get("role") or "critic",
+        )
+    elif tname == "close_council":
+        session = close_hall_session_db(args["session_id"], author=who, conclusion=args["conclusion"])
+        text = f"Closed session `{session['id']}`."
+    elif tname == "create_harness_worktree":
+        session = create_harness_session_db(
+            title=args["title"],
+            workspace_dir=args.get("workspace_dir") or str(WORKSPACE_ROOT),
+            use_worktree=bool(args.get("use_worktree", True)),
+            policy=args.get("policy") or "autonomous",
+            lead_model="Qwen3.8-27B-MLX-oQ4e-mtp",
+            critic_model="Gemma-4-21B-REAP-4bit",
+        )
+        text = json.dumps(session, indent=2)
+    elif tname == "get_harness_diff":
+        session = get_harness_session_db(args["session_id"])
+        text = json.dumps(_compute_git_diff(Path(session["worktree_dir"])), indent=2)
+    elif tname == "oc_search":
+        text = json.dumps(search_opencontext_docs(args.get("query") or ""), indent=2)
+    elif tname == "oc_save_doc":
+        text = json.dumps(
+            upsert_opencontext_doc(
+                title=args["title"],
+                content=args["content"],
+                folder=args.get("folder") or "decisions",
+                pinned=bool(args.get("pinned", False)),
+            ),
+            indent=2,
+        )
+    elif tname == "oc_lint":
+        text = json.dumps(lint_opencontext_vault(), indent=2)
+    elif tname == "codegraph_query":
+        workspace = Path(args.get("workspace_dir") or str(WORKSPACE_ROOT)).expanduser().resolve()
+        text = run_codegraph_tool(workspace, mode=args.get("mode") or "context", query=args.get("query") or "")
+    else:
+        raise ValueError(f"Unknown tool: {tname}")
+    return {"ok": True, "output": text, "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
+
+
+async def _execute_mcp_stdio_tool(
+    tname: str,
+    args: dict[str, Any],
+    default_agent_name: str,
+    *,
+    additional_denial: str | None = None,
+) -> dict[str, Any]:
+    return await _run_authorized_tool(
+        f"mcp_bridge__{tname}",
+        args,
+        "standard",
+        approved=True,  # An inbound tools/call request is an explicit one-call request on the opted-in stdio bridge.
+        session_id="mcp-stdio-bridge",
+        executor=lambda: _dispatch_mcp_stdio_tool(tname, args, default_agent_name),
+        additional_denial=additional_denial,
+    )
+
+
 def run_mcp_stdio_server(default_agent_name: str = "ExternalAgent") -> None:
     init_db()
     tools = [
@@ -8580,6 +8879,8 @@ def run_mcp_stdio_server(default_agent_name: str = "ExternalAgent") -> None:
         {"name": "oc_lint", "description": "Run deterministic LLM-Wiki hygiene check (`lucasastorian/llmwiki`) on OpenContext vault (`oc://doc/<id>` broken citations, orphans, stale notes).", "inputSchema": {"type": "object", "properties": {}}},
         {"name": "codegraph_query", "description": "Query the zero-RAM AST + Graphify v8 CodeGraph (`architecture` | `path` | `context` | `impact` | `quality` | `debt`) for a workspace.", "inputSchema": {"type": "object", "properties": {"mode": {"type": "string", "enum": ["architecture", "path", "context", "impact", "quality", "debt"], "default": "context"}, "query": {"type": "string"}, "workspace_dir": {"type": "string"}}, "required": ["mode"]}},
     ]
+    if {str(tool.get("name")) for tool in tools} != MCP_BRIDGE_TOOL_NAMES:
+        raise RuntimeError("Inbound MCP tool registry is inconsistent with the central authorization allowlist.")
     for raw_line in sys.stdin:
         line = raw_line.strip()
         if not line:
@@ -8598,54 +8899,20 @@ def run_mcp_stdio_server(default_agent_name: str = "ExternalAgent") -> None:
             elif method == "tools/list":
                 res = {"tools": tools}
             elif method == "tools/call":
-                tname, args = params.get("name"), params.get("arguments") or {}
-                who = args.get("agent_name") or default_agent_name
-                if tname == "start_council":
-                    s = create_hall_session(args["request"], created_by=who)
-                    txt = f"Started Council Hall session `{s['id']}`.\nTitle: {s['title']}"
-                elif tname == "get_current_session_data":
-                    txt = json.dumps(get_hall_session(args["session_id"], after_id=int(args.get("cursor") or 0)), indent=2)
-                elif tname == "send_response":
-                    m = append_hall_message(args["session_id"], author=who, role_key="external", content=args["content"])
-                    txt = f"Recorded message #{m['id']} from {who}."
-                elif tname == "summon_omlx_agent":
-                    txt = asyncio.run(_mcp_summon_model(args["session_id"], args.get("model") or "Gemma-4-21B-REAP-4bit", args.get("role") or "critic"))
-                elif tname == "close_council":
-                    s = close_hall_session_db(args["session_id"], author=who, conclusion=args["conclusion"])
-                    txt = f"Closed session `{s['id']}`."
-                elif tname == "create_harness_worktree":
-                    hs = create_harness_session_db(
-                        title=args["title"],
-                        workspace_dir=args.get("workspace_dir") or str(WORKSPACE_ROOT),
-                        use_worktree=bool(args.get("use_worktree", True)),
-                        policy=args.get("policy") or "autonomous",
-                        lead_model="Qwen3.8-27B-MLX-oQ4e-mtp",
-                        critic_model="Gemma-4-21B-REAP-4bit",
+                call_params = params if isinstance(params, dict) else {}
+                tname = str(call_params.get("name") or "")
+                raw_args = call_params.get("arguments") or {}
+                args = raw_args if isinstance(raw_args, dict) else {}
+                bridge_result = asyncio.run(
+                    _execute_mcp_stdio_tool(
+                        tname,
+                        args,
+                        default_agent_name,
+                        additional_denial=(None if isinstance(raw_args, dict) else "MCP tool arguments must be a JSON object."),
                     )
-                    txt = json.dumps(hs, indent=2)
-                elif tname == "get_harness_diff":
-                    hs = get_harness_session_db(args["session_id"])
-                    txt = json.dumps(_compute_git_diff(Path(hs["worktree_dir"])), indent=2)
-                elif tname == "oc_search":
-                    txt = json.dumps(search_opencontext_docs(args.get("query") or ""), indent=2)
-                elif tname == "oc_save_doc":
-                    txt = json.dumps(
-                        upsert_opencontext_doc(
-                            title=args["title"],
-                            content=args["content"],
-                            folder=args.get("folder") or "decisions",
-                            pinned=bool(args.get("pinned", False)),
-                        ),
-                        indent=2,
-                    )
-                elif tname == "oc_lint":
-                    txt = json.dumps(lint_opencontext_vault(), indent=2)
-                elif tname == "codegraph_query":
-                    ws = Path(args.get("workspace_dir") or str(WORKSPACE_ROOT)).expanduser().resolve()
-                    txt = run_codegraph_tool(ws, mode=args.get("mode") or "context", query=args.get("query") or "")
-                else:
-                    raise ValueError(f"Unknown tool: {tname}")
-                res = {"content": [{"type": "text", "text": txt}], "isError": False}
+                )
+                text = str(bridge_result.get("output") or "")
+                res = {"content": [{"type": "text", "text": text}], "isError": not bool(bridge_result.get("ok"))}
             else:
                 res = {}
             sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": req_id, "result": res}) + "\n"); sys.stdout.flush()
