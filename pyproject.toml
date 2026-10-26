@@ -26,4 +26,4 @@ addopts = "-ra --strict-markers"
 pythonpath = ["."]
 
 [tool.setuptools]
-py-modules = ["app", "workflow_orchestration"]
+py-modules = ["app", "workflow_orchestration", "hardware_capabilities"]
