@@ -25,6 +25,15 @@ class MaintenanceError(RuntimeError):
     pass
 
 
+def _default_database_path() -> Path:
+    raw = os.environ.get("STUDIO_DB_PATH")
+    if raw is None:
+        return DEFAULT_DB
+    if not raw.strip() or "\x00" in raw:
+        raise MaintenanceError("STUDIO_DB_PATH must be a non-empty filesystem path.")
+    return Path(raw).expanduser()
+
+
 def _sensitive_name(name: object) -> bool:
     normalized = str(name or "").lower().replace("_", "-")
     return any(part in normalized for part in SENSITIVE_PARTS)
@@ -163,14 +172,16 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     backup = sub.add_parser("backup", help="Create a private, integrity-checked backup")
-    backup.add_argument("--database", type=Path, default=DEFAULT_DB)
+    backup.add_argument("--database", type=Path)
     backup.add_argument("--output", type=Path)
     restore = sub.add_parser("restore", help="Restore a backup while Studio is stopped")
-    restore.add_argument("--database", type=Path, default=DEFAULT_DB)
+    restore.add_argument("--database", type=Path)
     restore.add_argument("--input", type=Path, required=True)
     restore.add_argument("--force", action="store_true", help="Replace existing database after creating a safety backup")
     args = parser.parse_args(argv)
     try:
+        if args.database is None:
+            args.database = _default_database_path()
         if args.command == "backup":
             output = backup_database(args.database, args.output or _default_backup_path(args.database))
             print(f"Backup created and validated: {output}")

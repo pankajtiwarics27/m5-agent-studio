@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from scripts import db_maintenance
 from scripts.db_maintenance import MaintenanceError, backup_database, restore_database
 
 
@@ -14,6 +15,53 @@ def make_database(path: Path, version: int = 1) -> None:
         conn.execute("CREATE TABLE IF NOT EXISTS runs (id INTEGER PRIMARY KEY, title TEXT NOT NULL)")
         conn.execute("INSERT INTO runs(title) VALUES ('preserved')")
         conn.execute(f"PRAGMA user_version = {version}")
+
+
+def test_database_maintenance_cli_argument_overrides_environment_default(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    environment_default = tmp_path / "from-environment.db"
+    explicit_database = tmp_path / "explicit.db"
+    output = tmp_path / "backup.db"
+    selected: dict[str, Path] = {}
+
+    def fake_backup(source: Path, destination: Path) -> Path:
+        selected["source"] = source
+        selected["destination"] = destination
+        return destination
+
+    monkeypatch.setenv("STUDIO_DB_PATH", str(environment_default))
+    monkeypatch.setattr(db_maintenance, "backup_database", fake_backup)
+    assert db_maintenance.main(["backup", "--database", str(explicit_database), "--output", str(output)]) == 0
+    assert selected == {"source": explicit_database, "destination": output}
+
+
+def test_explicit_database_path_takes_precedence_over_invalid_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    explicit_database = tmp_path / "explicit.db"
+    output = tmp_path / "backup.db"
+    monkeypatch.setenv("STUDIO_DB_PATH", "")
+    monkeypatch.setattr(db_maintenance, "backup_database", lambda source, destination: destination)
+    assert db_maintenance.main(["backup", "--database", str(explicit_database), "--output", str(output)]) == 0
+
+
+def test_database_maintenance_uses_environment_default_without_cli_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    environment_default = tmp_path / "from-environment.db"
+    output = tmp_path / "backup.db"
+    selected: dict[str, Path] = {}
+
+    def fake_backup(source: Path, destination: Path) -> Path:
+        selected["source"] = source
+        selected["destination"] = destination
+        return destination
+
+    monkeypatch.setenv("STUDIO_DB_PATH", str(environment_default))
+    monkeypatch.setattr(db_maintenance, "backup_database", fake_backup)
+    assert db_maintenance.main(["backup", "--output", str(output)]) == 0
+    assert selected == {"source": environment_default, "destination": output}
+
+
+def test_database_maintenance_rejects_empty_environment_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    monkeypatch.setenv("STUDIO_DB_PATH", "")
+    assert db_maintenance.main(["backup", "--output", str(tmp_path / "backup.db")]) == 2
+    assert "STUDIO_DB_PATH must be a non-empty filesystem path" in capsys.readouterr().err
 
 
 def test_backup_is_consistent_private_and_non_overwriting(tmp_path: Path) -> None:

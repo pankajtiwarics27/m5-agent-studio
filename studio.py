@@ -322,6 +322,22 @@ KEYRING_SERVICE = "m5-agent-studio"
 KEYRING_REF_PREFIX = "keyring:v1:"
 
 
+class Storage(Protocol):
+    """Narrow storage seam for application database connections."""
+
+    def connect(self, database: Path, *, timeout: float = 5.0) -> sqlite3.Connection: ...
+
+
+class SQLiteStorage:
+    """Current SQLite/FTS5 storage implementation; keeps path selection injectable."""
+
+    def connect(self, database: Path, *, timeout: float = 5.0) -> sqlite3.Connection:
+        return sqlite3.connect(database, timeout=timeout)
+
+
+STORAGE: Storage = SQLiteStorage()
+
+
 def _minimal_execution_env(extra: dict[str, Any] | None = None) -> dict[str, str]:
     """Build a deliberately small child-process environment; never inherit API-key env by default."""
     keep = {"SYSTEMROOT", "WINDIR", "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL", "TERM"}
@@ -592,7 +608,7 @@ def _mask_mapping(values: dict[str, Any]) -> dict[str, str]:
 
 def _migrate_legacy_secrets() -> None:
     """One-time idempotent migration of credential-bearing SQLite fields to OS keyring."""
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         providers = conn.execute("SELECT alias, api_key FROM cloud_providers WHERE api_key != ''").fetchall()
         for alias, raw in providers:
             if not _is_keyring_ref(raw):
@@ -1010,7 +1026,7 @@ def _apply_schema_migrations(conn: sqlite3.Connection) -> None:
 
 
 def init_db() -> None:
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         db_version = int(conn.execute("PRAGMA user_version").fetchone()[0])
         if db_version > SCHEMA_VERSION:
             raise RuntimeError(f"Database schema version {db_version} is newer than supported version {SCHEMA_VERSION}.")
@@ -1205,7 +1221,7 @@ def init_db() -> None:
 def _seed_env_providers_and_default_combo() -> None:
     """Auto-register any cloud provider whose API key is already exported in macOS env."""
     now = time.time()
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         for alias, preset in PROVIDER_PRESETS.items():
             env_k = preset.get("env_key") or ""
             env_val = os.environ.get(env_k, "").strip() if env_k else ""
@@ -1245,7 +1261,7 @@ def _seed_env_providers_and_default_combo() -> None:
 def _seed_default_opencontext() -> None:
     """Seed initial M5 architectural memory note into OpenContext vault if empty."""
     now = time.time()
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         cnt = conn.execute("SELECT COUNT(*) FROM opencontext_docs").fetchone()[0]
         if cnt == 0:
             doc_id = "oc-m5-core"
@@ -1277,7 +1293,7 @@ def _mask_key(k: str) -> str:
 
 
 def list_cloud_providers(include_secret: bool = False) -> list[dict[str, Any]]:
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute("SELECT * FROM cloud_providers ORDER BY alias ASC").fetchall()
     out = []
@@ -1315,7 +1331,7 @@ def upsert_cloud_provider(
     private_host_exception = (urlsplit(base_url).hostname or "").lower().rstrip(".") in STUDIO_PRIVATE_URL_HOSTS
     _validate_url_syntax(base_url, allow_private=(STUDIO_ALLOW_PRIVATE_URLS or is_builtin_local or private_host_exception))
     now = time.time()
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         prev = conn.execute("SELECT api_key FROM cloud_providers WHERE alias = ?", (clean_alias,)).fetchone()
         # Preserve an existing key when the masked UI field is left blank.
@@ -1358,13 +1374,13 @@ def upsert_cloud_provider(
 
 def delete_cloud_provider(alias: str) -> None:
     _keyring_delete(f"cloud:{alias}:api-key")
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.execute("DELETE FROM cloud_providers WHERE alias = ?", (alias,))
         conn.commit()
 
 
 def list_model_combos() -> list[dict[str, Any]]:
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute("SELECT * FROM model_combos ORDER BY alias ASC").fetchall()
     out = []
@@ -1381,7 +1397,7 @@ def upsert_model_combo(alias: str, name: str, targets: list[str]) -> dict[str, A
     clean_targets = [t.strip() for t in targets if t.strip()]
     if not clean_alias or not clean_targets:
         raise ValueError("Combo requires an alias and at least 1 target model")
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.execute(
             """
             INSERT INTO model_combos (alias, name, targets_json, updated_at)
@@ -1398,7 +1414,7 @@ def upsert_model_combo(alias: str, name: str, targets: list[str]) -> dict[str, A
 
 
 def delete_model_combo(alias: str) -> None:
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.execute("DELETE FROM model_combos WHERE alias = ?", (alias,))
         conn.commit()
 
@@ -1459,7 +1475,7 @@ def record_perf(
     if not decode_tps and not completion_tokens:
         return
     try:
-        with sqlite3.connect(DB_PATH) as conn:
+        with STORAGE.connect(DB_PATH) as conn:
             conn.execute(
                 """
                 INSERT INTO perf_samples
@@ -1479,7 +1495,7 @@ def record_perf(
 
 def save_run(mode: str, title: str, payload: dict[str, Any]) -> int:
     try:
-        with sqlite3.connect(DB_PATH) as conn:
+        with STORAGE.connect(DB_PATH) as conn:
             cur = conn.execute(
                 "INSERT INTO runs (created_at, mode, title, payload_json) VALUES (?, ?, ?, ?)",
                 (time.time(), mode, title[:160], json.dumps(payload)),
@@ -1503,7 +1519,7 @@ def create_hall_session(
     sid = f"ch-{uuid.uuid4().hex[:8]}"
     clean_title = (title or request_text.splitlines()[0] or "Council Session").strip()[:100]
     cfiles = context_files or []
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.execute(
             """
             INSERT INTO hall_sessions (id, title, request_text, created_by, status, context_files_json, created_at, updated_at)
@@ -1532,7 +1548,7 @@ def append_hall_message(
     usage: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     now = time.time()
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         cur = conn.execute(
             """
             INSERT INTO hall_messages (session_id, author, role_key, model, content, reasoning, usage_json, created_at)
@@ -1551,7 +1567,7 @@ def append_hall_message(
 
 def close_hall_session_db(session_id: str, author: str, conclusion: str) -> dict[str, Any]:
     now = time.time()
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.execute(
             """
             UPDATE hall_sessions
@@ -1565,7 +1581,7 @@ def close_hall_session_db(session_id: str, author: str, conclusion: str) -> dict
 
 
 def list_hall_sessions(status: str = "all") -> list[dict[str, Any]]:
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         q = """
             SELECT s.*,
@@ -1588,7 +1604,7 @@ def list_hall_sessions(status: str = "all") -> list[dict[str, Any]]:
 
 
 def get_hall_session(session_id: str, after_id: int = 0) -> dict[str, Any]:
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         srow = conn.execute("SELECT * FROM hall_sessions WHERE id = ?", (session_id,)).fetchone()
         if not srow:
@@ -7137,7 +7153,7 @@ async def api_telemetry(request: Request) -> JSONResponse:
 
 def _recent_perf_summary() -> dict[str, Any]:
     try:
-        with sqlite3.connect(DB_PATH) as conn:
+        with STORAGE.connect(DB_PATH) as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute("SELECT created_at, mode, model, decode_tps, prefill_tps, ttft, completion_tokens FROM perf_samples ORDER BY id DESC LIMIT 24").fetchall()
             samples = [dict(r) for r in reversed(rows)]
@@ -7741,7 +7757,7 @@ def _clean_mcp_alias(raw: str) -> str:
 
 
 def list_mcp_servers(include_secret: bool = False) -> list[dict[str, Any]]:
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute("SELECT * FROM mcp_servers ORDER BY category ASC, alias ASC").fetchall()
     out: list[dict[str, Any]] = []
@@ -7873,7 +7889,7 @@ def upsert_mcp_server(payload: dict[str, Any]) -> dict[str, Any]:
     headers = _secure_mapping("mcp-header", alias, headers)
     merged_env = _secure_mapping("mcp-env", alias, merged_env)
     _MCP_HTTP_SESSIONS.pop(alias, None)
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.execute(
             """
             INSERT INTO mcp_servers
@@ -8166,7 +8182,7 @@ async def sync_mcp_server_tools(client: httpx.AsyncClient, alias: str) -> dict[s
                     }
                 )
         now = time.time()
-        with sqlite3.connect(DB_PATH) as conn:
+        with STORAGE.connect(DB_PATH) as conn:
             conn.execute(
                 "UPDATE mcp_servers SET tools_json = ?, last_sync_at = ?, last_error = '', updated_at = ? WHERE alias = ?",
                 (json.dumps(cleaned_tools), now, now, srv["alias"]),
@@ -8176,7 +8192,7 @@ async def sync_mcp_server_tools(client: httpx.AsyncClient, alias: str) -> dict[s
         updated["sync_elapsed_ms"] = round((time.perf_counter() - t0) * 1000)
         return updated
     except Exception as exc:
-        with sqlite3.connect(DB_PATH) as conn:
+        with STORAGE.connect(DB_PATH) as conn:
             conn.execute(
                 "UPDATE mcp_servers SET last_error = ?, updated_at = ? WHERE alias = ?",
                 (str(exc)[:300], time.time(), srv["alias"]),
@@ -8420,7 +8436,7 @@ async def api_delete_mcp_server(alias: str) -> JSONResponse:
             _keyring_delete(f"mcp-env:{clean}:{k}")
     except KeyError:
         pass
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.execute("DELETE FROM mcp_servers WHERE alias = ?", (clean,))
         conn.commit()
     return JSONResponse({"status": "deleted", "servers": list_mcp_servers(include_secret=False)})
@@ -8512,7 +8528,7 @@ def _sanitize_fts5_query(raw_query: str) -> str:
 
 
 def list_opencontext_docs(folder: str = "") -> list[dict[str, Any]]:
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         if folder:
             rows = conn.execute(
@@ -8534,7 +8550,7 @@ def list_opencontext_docs(folder: str = "") -> list[dict[str, Any]]:
 
 def get_opencontext_doc(doc_id_or_uri: str) -> dict[str, Any]:
     clean_id = (doc_id_or_uri or "").strip().replace("oc://doc/", "").strip("/")
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         row = conn.execute("SELECT * FROM opencontext_docs WHERE id = ?", (clean_id,)).fetchone()
     if not row:
@@ -8560,7 +8576,7 @@ def upsert_opencontext_doc(
     did = (doc_id or "").strip().replace("oc://doc/", "") or f"oc-{uuid.uuid4().hex[:8]}"
     desc = (description or content.splitlines()[0] if content else "").strip()[:240]
     now = time.time()
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.execute(
             """
             INSERT INTO opencontext_docs (id, folder, title, description, content, pinned, updated_at)
@@ -8582,7 +8598,7 @@ def upsert_opencontext_doc(
 
 def delete_opencontext_doc(doc_id: str) -> None:
     clean_id = (doc_id or "").strip().replace("oc://doc/", "")
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.execute("DELETE FROM opencontext_docs WHERE id = ?", (clean_id,))
         conn.execute("DELETE FROM opencontext_fts WHERE doc_id = ?", (clean_id,))
         conn.commit()
@@ -8592,7 +8608,7 @@ def search_opencontext_docs(query: str, limit: int = 8) -> list[dict[str, Any]]:
     fts_q = _sanitize_fts5_query(query)
     if not fts_q:
         return list_opencontext_docs()[:limit]
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
             """
@@ -9300,7 +9316,7 @@ def build_efficiency_mode_prompt(efficiency_mode: str = "ponytail") -> str:
 
 
 def get_ctx_session_metrics(session_id: str) -> dict[str, Any]:
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         row = conn.execute(
             "SELECT raw_bytes, sent_bytes, compactions FROM ctx_session_metrics WHERE session_id = ?",
             (session_id,),
@@ -9321,7 +9337,7 @@ def get_ctx_session_metrics(session_id: str) -> dict[str, Any]:
 
 def _record_ctx_bytes(session_id: str, raw_b: int, sent_b: int, compaction_inc: int = 0) -> dict[str, Any]:
     now = time.time()
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.execute(
             """
             INSERT INTO ctx_session_metrics (session_id, raw_bytes, sent_bytes, compactions, updated_at)
@@ -9372,7 +9388,7 @@ def sandbox_tool_output_if_large(
         chunks.append("\n".join(cur))
 
     now = time.time()
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         for c_idx, ch in enumerate(chunks):
             conn.execute(
                 "INSERT INTO ctx_vault_chunks (session_id, doc_id, source_tool, chunk_idx, content, created_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -9415,7 +9431,7 @@ def sandbox_tool_output_if_large(
 
 def search_ctx_vault(session_id: str, query: str, doc_id: str = "", limit: int = 6) -> str:
     fts_q = _sanitize_fts5_query(query)
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         if fts_q and doc_id:
             rows = conn.execute(
@@ -9494,7 +9510,7 @@ def compact_harness_session_messages(session_id: str, worktree_dir: Path) -> dic
     # Archive middle messages into FTS5 vault so nothing is ever permanently lost!
     middle_blob = "\n\n".join(f"[{m['role']}]\n{m.get('content', '')}" for m in messages[1:-3])
     doc_id = f"compact-{uuid.uuid4().hex[:6]}"
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.execute(
             "INSERT INTO ctx_vault_chunks (session_id, doc_id, source_tool, chunk_idx, content, created_at) VALUES (?, ?, 'session_compact', 0, ?, ?)",
             (session_id, doc_id, middle_blob[:25000], time.time()),
@@ -9864,7 +9880,7 @@ def create_harness_session_db(
 
     now = time.time()
     clean_title = (title or ws_path.name or "Agentic Harness").strip()[:120]
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.execute(
             """
             INSERT INTO harness_sessions
@@ -9894,7 +9910,7 @@ def create_harness_session_db(
 def _set_harness_session_policy(session_id: str, policy: str) -> dict[str, Any]:
     if policy not in HARNESS_POLICIES:
         policy = "standard"
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         cur = conn.execute("UPDATE harness_sessions SET policy = ?, updated_at = ? WHERE id = ?", (policy, time.time(), session_id))
         if cur.rowcount != 1:
             raise KeyError(f"Harness session `{session_id}` not found.")
@@ -9903,7 +9919,7 @@ def _set_harness_session_policy(session_id: str, policy: str) -> dict[str, Any]:
 
 
 def list_harness_sessions_db(limit: int = 40) -> list[dict[str, Any]]:
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
             "SELECT * FROM harness_sessions ORDER BY updated_at DESC LIMIT ?", (limit,)
@@ -9912,7 +9928,7 @@ def list_harness_sessions_db(limit: int = 40) -> list[dict[str, Any]]:
 
 
 def get_harness_session_db(session_id: str, include_events: bool = False) -> dict[str, Any]:
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         row = conn.execute("SELECT * FROM harness_sessions WHERE id = ?", (session_id,)).fetchone()
     if not row:
@@ -9927,7 +9943,7 @@ def get_harness_session_db(session_id: str, include_events: bool = False) -> dic
 
 def _update_harness_session_state(session_id: str, status: str | None = None, step_inc: int = 0, title: str | None = None) -> None:
     now = time.time()
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         if status and title:
             conn.execute(
                 "UPDATE harness_sessions SET status = ?, title = ?, step_count = step_count + ?, updated_at = ? WHERE id = ?",
@@ -10520,7 +10536,7 @@ async def _execute_harness_tool_inner(
 def _audit_tool_start(session_id: str, tool_name: str, policy: str, approved: bool, args: dict[str, Any]) -> int:
     canonical_args = json.dumps(args, sort_keys=True, ensure_ascii=False, default=str, separators=(",", ":"))
     args_digest = hashlib.sha256(canonical_args.encode("utf-8", errors="replace")).hexdigest()
-    with sqlite3.connect(DB_PATH, timeout=5.0) as conn:
+    with STORAGE.connect(DB_PATH, timeout=5.0) as conn:
         cur = conn.execute(
             "INSERT INTO tool_audit_events(created_at, session_id, tool_name, policy, explicit_approval, args_sha256, status) "
             "VALUES (?, ?, ?, ?, ?, ?, 'started')",
@@ -10533,7 +10549,7 @@ def _audit_tool_start(session_id: str, tool_name: str, policy: str, approved: bo
 def _audit_tool_finish(event_id: int, result: dict[str, Any], elapsed_ms: int) -> None:
     material = str(result.get("output") or "") + "\n" + str(result.get("diff") or "")
     output_digest = hashlib.sha256(material.encode("utf-8", errors="replace")).hexdigest()
-    with sqlite3.connect(DB_PATH, timeout=5.0) as conn:
+    with STORAGE.connect(DB_PATH, timeout=5.0) as conn:
         conn.execute(
             "UPDATE tool_audit_events SET status='completed', ok=?, elapsed_ms=?, output_sha256=? WHERE id=?",
             (int(bool(result.get("ok"))), max(0, int(elapsed_ms)), output_digest, event_id),
@@ -10714,7 +10730,7 @@ async def api_harness_audit(request: Request) -> JSONResponse:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="limit must be an integer") from exc
     session_id = request.query_params.get("session_id", "")[:128]
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         if session_id:
             rows = conn.execute(
@@ -10776,7 +10792,7 @@ async def api_patch_harness_session(session_id: str, request: Request) -> JSONRe
     pol = body.get("policy") if body.get("policy") in HARNESS_POLICIES else sess["policy"]
     lead = body.get("lead_model") or sess["lead_model"]
     critic = body.get("critic_model") or sess["critic_model"]
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.execute(
             "UPDATE harness_sessions SET policy = ?, lead_model = ?, critic_model = ?, updated_at = ? WHERE id = ?",
             (pol, lead, critic, time.time(), session_id),
@@ -10793,7 +10809,7 @@ async def api_delete_harness_session(session_id: str) -> JSONResponse:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     _HARNESS_ABORT_FLAGS.add(session_id)
     _remove_harness_worktree(Path(sess["workspace_dir"]), Path(sess["worktree_dir"]), sess.get("branch_name") or "")
-    with sqlite3.connect(DB_PATH) as conn:
+    with STORAGE.connect(DB_PATH) as conn:
         conn.execute("DELETE FROM harness_sessions WHERE id = ?", (session_id,))
         conn.commit()
     for suffix in (".jsonl", ".messages.json"):
@@ -10893,7 +10909,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
             pol_u = body.get("policy") if body.get("policy") in HARNESS_POLICIES else sess["policy"]
             lead_u = body.get("lead_model") or sess["lead_model"]
             crit_u = body.get("critic_model") or sess["critic_model"]
-            with sqlite3.connect(DB_PATH) as conn:
+            with STORAGE.connect(DB_PATH) as conn:
                 conn.execute(
                     "UPDATE harness_sessions SET policy = ?, lead_model = ?, critic_model = ?, updated_at = ? WHERE id = ?",
                     (pol_u, lead_u, crit_u, time.time(), session_id),
