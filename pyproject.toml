@@ -26,4 +26,4 @@ addopts = "-ra --strict-markers"
 pythonpath = ["."]
 
 [tool.setuptools]
-py-modules = ["app", "workflow_orchestration", "hardware_capabilities", "macos_hardware_profiler", "model_registry", "resource_admission", "capability_negotiation", "local_runtime_lifecycle", "local_provider_adapters"]
+py-modules = ["app", "workflow_orchestration", "hardware_capabilities", "macos_hardware_profiler", "model_registry", "resource_admission", "capability_negotiation", "local_runtime_lifecycle", "local_provider_adapters", "routing_policy"]
