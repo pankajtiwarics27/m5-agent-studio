@@ -46,4 +46,8 @@ The SQLite history database, OpenContext documents, harness JSONL events, messag
 5. SDLC acceptance now fails closed on verification and critic verdict, but evidence quality still relies partly on model review; do not equate it with a formal test attestation.
 6. No security audit, external penetration test, or formal compliance certification has been performed.
 
-Report vulnerabilities privately to the repository maintainer. Do not submit live credentials, personal data, or exploit payloads in public issues.
+## Reporting a vulnerability
+
+Please report suspected vulnerabilities privately to a repository maintainer through a private contact channel. Do not open a public issue or discussion, or publish exploit details, live credentials, private prompts, or personal data. This repository does not publish a dedicated security email address; if you do not have a private maintainer contact route, ask a maintainer to arrange one without disclosing sensitive details publicly. Do not assume GitHub private vulnerability reporting is enabled. Share only the minimum information needed for initial triage.
+
+Please state the affected version or commit, impact, and safe reproduction details when possible. Maintainers will coordinate any fix and disclosure timing with the reporter; no response-time guarantee is currently published.
