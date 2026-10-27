@@ -2757,7 +2757,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const card = document.createElement("div");
     card.id = `apr-card-${d.approval_id}`;
     card.className = "h-tool-card wait";
-    card.innerHTML = `<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;"><strong style="color:#fde68a;">${UI_ICONS.warn} Approval required: <code>${escapeHtml(d.tool)}</code></strong><span class="badge amber">Standard Policy</span></div><pre style="padding:7px 9px;background:#06090e;border-radius:6px;font-family:var(--mono);font-size:11.6px;color:#fff;overflow-x:auto;margin-bottom:8px;">${escapeHtml(formatToolArgsSummary(d.tool, d.args))}</pre><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;"><button class="btn btn-emerald btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}','approve')">${UI_ICONS.check} Approve &amp; Run</button><button class="btn btn-danger btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}','reject')">${UI_ICONS.close} Reject</button><input type="text" id="apr-note-${escapeHtml(d.approval_id)}" placeholder="Optional rejection guidance" style="flex:1;min-width:160px;font-size:11.5px;padding:4px 8px;" /></div>`;
+    card.innerHTML = `<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;"><strong style="color:#fde68a;">${UI_ICONS.warn} Approval required: <code>${escapeHtml(d.tool)}</code></strong><span class="badge amber">Standard Policy</span></div><pre style="padding:7px 9px;background:#06090e;border-radius:6px;font-family:var(--mono);font-size:11.6px;color:#fff;overflow-x:auto;margin-bottom:8px;">${escapeHtml(formatToolArgsSummary(d.tool, d.args))}</pre><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;"><button class="btn btn-emerald btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}','approve','${escapeHtml(d.session_id||'')}')">${UI_ICONS.check} Approve &amp; Run</button><button class="btn btn-danger btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}','reject','${escapeHtml(d.session_id||'')}')">${UI_ICONS.close} Reject</button><input type="text" id="apr-note-${escapeHtml(d.approval_id)}" placeholder="Optional rejection guidance" style="flex:1;min-width:160px;font-size:11.5px;padding:4px 8px;" /></div>`;
     target.appendChild(card);
     target.scrollTop = target.scrollHeight;
   }
@@ -2769,16 +2769,25 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (card) card.innerHTML = `<div class="mono" style="font-size:11.3px;color:${d.decision === 'approve' ? '#6ee7b7' : '#fda4af'};">${d.decision === 'approve' ? UI_ICONS.check + ' Approved — executing...' : UI_ICONS.close + ' Rejected'}</div>`;
   }
 
-  async function resolveHarnessApproval(approvalId, decision) {
+  async function resolveHarnessApproval(approvalId, decision, sessionId) {
     const noteEl = document.getElementById(`apr-note-${approvalId}`);
     const note = noteEl ? noteEl.value.trim() : "";
     const card = document.getElementById(`apr-card-${approvalId}`);
     if (card) card.querySelectorAll("button").forEach(b => (b.disabled = true));
-    await fetch("/api/harness/approve", {
+    const session = (typeof sessionId === "string" && sessionId) ? sessionId : activeHarnessId;
+    const body = JSON.stringify({ approval_id: approvalId, decision, note, session_id: session || "" });
+    const res = await fetch("/api/harness/approve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ approval_id: approvalId, decision, note }),
+      body,
     });
+    if (!res.ok) {
+      let msg = "Approval failed";
+      try { msg = (await res.json()).detail || msg; } catch (_) {}
+      if (card) card.querySelectorAll("button").forEach(b => (b.disabled = false));
+      showToast(msg, "error");
+      return;
+    }
   }
 
   async function abortHarnessRun() {
@@ -2911,8 +2920,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           </div>
           <pre style="padding:7px 9px; background:#06090e; border-radius:6px; font-family:var(--mono); font-size:11.6px; color:#fff; overflow-x:auto; margin-bottom:8px;">${escapeHtml(formatToolArgsSummary(d.tool, d.args))}</pre>
           <div style="display:flex; gap:7px; align-items:center; flex-wrap:wrap;">
-            <button class="btn btn-emerald btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}', 'approve')">${UI_ICONS.check} Approve &amp; Run</button>
-            <button class="btn btn-danger btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}', 'reject')">${UI_ICONS.close} Reject</button>
+            <button class="btn btn-emerald btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}', 'approve', '${escapeHtml(d.session_id||'')}')">${UI_ICONS.check} Approve &amp; Run</button>
+            <button class="btn btn-danger btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}', 'reject', '${escapeHtml(d.session_id||'')}')">${UI_ICONS.close} Reject</button>
             <input type="text" id="apr-note-${escapeHtml(d.approval_id)}" placeholder="Optional guidance if rejecting..." style="flex:1; min-width:160px; font-size:11.5px; padding:4px 8px;" />
           </div>`;
         toolsBox.appendChild(aprDiv);
