@@ -515,3 +515,158 @@ def test_state_changing_cross_origin_request_is_rejected(tmp_path: Path, monkeyp
     with TestClient(studio.app) as client:
         response = client.post("/api/combos", headers={"Origin": "https://evil.example"}, json={"alias": "x", "targets": ["m"]})
     assert response.status_code == 403
+
+
+# =============================================================================
+# AS-027: Remote tool approvals and policy enforcement
+# Sensitive remote actions require scoped authenticated approval and replay
+# protection: an approval decision can only be made by the same session that
+# created the pending request, and a resolved approval id can never be
+# re-submitted.
+# =============================================================================
+
+
+@pytest.fixture
+def approval_auth(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, memory_keyring: MemoryKeyring) -> None:
+    """Authenticate a TestClient against the harness approval endpoint."""
+    monkeypatch.setattr(studio, "DB_PATH", tmp_path / "approve.db")
+    studio.init_db()
+    monkeypatch.setattr(studio, "STUDIO_API_TOKEN", "t" * 40)
+    monkeypatch.setattr(studio, "STUDIO_AUTH_DISABLED", False)
+    monkeypatch.setattr(studio, "STUDIO_ALLOWED_HOSTS", {"testserver"})
+    monkeypatch.setattr(studio, "STUDIO_ALLOWED_ORIGINS", {"http://testserver", "https://testserver"})
+
+
+@pytest.fixture
+def isolated_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, memory_keyring: MemoryKeyring, approval_auth) -> Path:
+    """Fresh initialized isolated DB path for session-creating approval tests."""
+    db = tmp_path / "state" / "studio.db"
+    db.parent.mkdir()
+    monkeypatch.setattr(studio, "DB_PATH", db)
+    studio.init_db()
+    return db
+
+
+def _approve_headers(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_approve_endpoint_rejects_cross_session_submission(tmp_path: Path, approval_auth, memory_keyring: MemoryKeyring) -> None:
+    session_a = studio.create_harness_session_db("scope-a", str(tmp_path), False, "standard", "local", "critic")
+    pending_a = studio._create_pending_tool_approval(session_a["id"], 1, "run_bash", {"command": "echo a"})
+    session_b = studio.create_harness_session_db("scope-b", str(tmp_path), False, "standard", "local", "critic")
+    token = "t" * 40
+    with TestClient(studio.app) as client:
+        # Cross-session decision is rejected with a distinct 403 (scoped).
+        response = client.post(
+            "/api/harness/approve",
+            headers=_approve_headers(token),
+            json={"approval_id": pending_a["approval_id"], "decision": "approve", "session_id": session_b["id"]},
+        )
+        assert response.status_code == 403
+        assert "scoped" in response.json()["detail"]
+        # The pending request for session A is still intact.
+        assert pending_a["approval_id"] in studio._PENDING_APPROVALS
+        # Same-session submission succeeds.
+        response = client.post(
+            "/api/harness/approve",
+            headers=_approve_headers(token),
+            json={"approval_id": pending_a["approval_id"], "decision": "approve", "session_id": session_a["id"]},
+        )
+        assert response.status_code == 200
+        assert response.json()["decision"] == "approve"
+        assert studio._PENDING_APPROVALS.get(pending_a["approval_id"]) is None
+
+
+def test_approve_endpoint_rejects_replay_of_resolved_id(tmp_path: Path, approval_auth, memory_keyring: MemoryKeyring) -> None:
+    session = studio.create_harness_session_db("replay", str(tmp_path), False, "standard", "local", "critic")
+    pending = studio._create_pending_tool_approval(session["id"], 1, "run_bash", {"command": "echo"})
+    token = "t" * 40
+    with TestClient(studio.app) as client:
+        first = client.post(
+            "/api/harness/approve",
+            headers=_approve_headers(token),
+            json={"approval_id": pending["approval_id"], "decision": "approve", "session_id": session["id"]},
+        )
+        assert first.status_code == 200
+        # Replay of the same id now fails closed with a 409.
+        replayed = client.post(
+            "/api/harness/approve",
+            headers=_approve_headers(token),
+            json={"approval_id": pending["approval_id"], "decision": "reject", "session_id": session["id"]},
+        )
+        assert replayed.status_code == 409
+        assert "replay" in replayed.json()["detail"].lower() or "already resolved" in replayed.json()["detail"].lower()
+
+
+def test_approve_endpoint_requires_authentication(tmp_path: Path, approval_auth, memory_keyring: MemoryKeyring) -> None:
+    session = studio.create_harness_session_db("unauth", str(tmp_path), False, "standard", "local", "critic")
+    pending = studio._create_pending_tool_approval(session["id"], 1, "run_bash", {"command": "echo"})
+    with TestClient(studio.app) as client:
+        # No bearer token (or wrong one) is rejected at the auth boundary.
+        no_auth = client.post("/api/harness/approve", json={"approval_id": pending["approval_id"], "decision": "approve", "session_id": session["id"]})
+        assert no_auth.status_code == 401
+        bad_auth = client.post("/api/harness/approve", headers=_approve_headers("wrong" + "x" * 33), json={"approval_id": pending["approval_id"], "decision": "approve", "session_id": session["id"]})
+        assert bad_auth.status_code == 401
+        # The pending request remains intact for a valid authenticated call.
+        assert pending["approval_id"] in studio._PENDING_APPROVALS
+
+
+def test_approve_endpoint_unknown_id_is_not_found(tmp_path: Path, approval_auth, memory_keyring: MemoryKeyring) -> None:
+    session = studio.create_harness_session_db("unknown", str(tmp_path), False, "standard", "local", "critic")
+    token = "t" * 40
+    with TestClient(studio.app) as client:
+        response = client.post(
+            "/api/harness/approve",
+            headers=_approve_headers(token),
+            json={"approval_id": "apr-does-not-exist", "decision": "approve", "session_id": session["id"]},
+        )
+        assert response.status_code == 404
+
+
+def test_abort_resolves_pending_approvals_and_tombstones_replay(tmp_path: Path, approval_auth, memory_keyring: MemoryKeyring) -> None:
+    session = studio.create_harness_session_db("abort", str(tmp_path), False, "standard", "local", "critic")
+    pending = studio._create_pending_tool_approval(session["id"], 1, "run_bash", {"command": "echo"})
+    token = "t" * 40
+    with TestClient(studio.app) as client:
+        aborted = client.post(f"/api/harness/abort/{session['id']}", headers=_approve_headers(token))
+        assert aborted.status_code == 200
+        # The approval is resolved (slot consumed) and tombstoned as a replay.
+        assert studio._PENDING_APPROVALS.get(pending["approval_id"]) is None
+        assert studio._is_replayed_approval(pending["approval_id"])
+        # A late replay of the aborted id now fails closed.
+        replayed = client.post(
+            "/api/harness/approve",
+            headers=_approve_headers(token),
+            json={"approval_id": pending["approval_id"], "decision": "approve", "session_id": session["id"]},
+        )
+        assert replayed.status_code == 409
+
+
+def test_approval_timeout_remembers_replay_tombstone(tmp_path: Path, isolated_app: Path, memory_keyring: MemoryKeyring) -> None:
+    import asyncio
+
+    session = studio.create_harness_session_db("timeout", str(tmp_path), False, "standard", "local", "critic")
+    pending = studio._create_pending_tool_approval(session["id"], 1, "run_bash", {"command": "echo"})
+    result = asyncio.run(studio._await_tool_approval(pending, timeout=0.01))
+    assert result["approved"] is False
+    assert "timed out" in result["note"].lower()
+    # A timed-out approval is remembered: re-submission fails closed.
+    assert studio._is_replayed_approval(pending["approval_id"])
+    assert pending["approval_id"] not in studio._PENDING_APPROVALS
+
+
+def test_approval_decision_leaves_durable_audit_and_event_log(tmp_path: Path, isolated_app: Path, memory_keyring: MemoryKeyring) -> None:
+    import asyncio
+
+    session = studio.create_harness_session_db("audit", str(tmp_path), False, "standard", "local", "critic")
+    pending = studio._create_pending_tool_approval(session["id"], 1, "run_bash", {"command": "echo"})
+    slot = studio._PENDING_APPROVALS[pending["approval_id"]]
+    slot["decision"] = "approve"
+    slot["event"].set()
+    result = asyncio.run(studio._await_tool_approval(pending))
+    assert result["approved"] is True
+    events = studio._read_harness_events(session["id"])
+    decision_events = [e for e in events if e.get("type") == "approval/decision" and e.get("approval_id") == pending["approval_id"]]
+    assert decision_events, "approval/decision event was not recorded"
+    assert any(e.get("decision") == "approve" for e in decision_events)

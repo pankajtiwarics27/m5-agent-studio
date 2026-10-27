@@ -5855,6 +5855,9 @@ def compact_harness_session_messages(session_id: str, worktree_dir: Path) -> dic
 
 HARNESS_STORE_DIR = BASE_DIR / ".harnesses" / "sessions"
 _PENDING_APPROVALS: dict[str, dict[str, Any]] = {}
+_RESOLVED_APPROVALS: dict[str, str] = {}
+_RESOLVED_APPROVALS_TS: dict[str, float] = {}
+_APPROVAL_RESOLVED_TTL_SEC = 900.0
 _HARNESS_ABORT_FLAGS: set[str] = set()
 
 
@@ -5868,6 +5871,74 @@ def _create_pending_tool_approval(session_id: str, step: int, tool: str, args: d
     return {"approval_id": approval_id, "event": event, "tool": tool, "args": args, "step": step, "session_id": session_id}
 
 
+def _resolve_pending_tool_approval(
+    approval_id: str,
+    decision: str,
+    *,
+    note: str = "",
+    session_id: str | None = None,
+    remember: bool = True,
+) -> None:
+    """Finalize a pending approval exactly once and retain a bounded replay tombstone.
+
+    A resolved approval id may never be re-decided: the in-memory slot is
+    consumed atomically and, when `remember` is set, a short-lived tombstone
+    records the final decision so replayed submissions fail closed with a
+    distinct outcome instead of a generic 404.
+
+    If the slot has already been consumed out-of-band (e.g. the wait side
+    popped it after a timeout), the final decision is still recorded as a
+    tombstone when `remember` is set.
+    """
+    slot = _PENDING_APPROVALS.get(approval_id)
+    if slot is None:
+        if remember:
+            _record_replay_tombstone(approval_id, decision)
+        return
+    # Respect decisions made directly on the slot (e.g. an owner's test or
+    # out-of-band resolution): mirror them instead of overwriting.
+    effective_decision = slot.get("decision", "pending")
+    if effective_decision != "pending" and effective_decision in ("approve", "reject"):
+        decision = effective_decision
+    _PENDING_APPROVALS.pop(approval_id, None)
+    slot["decision"] = decision
+    slot["note"] = slot.get("note") or note
+    slot["event"].set()
+    if remember:
+        _record_replay_tombstone(approval_id, decision)
+    scoping_session = session_id or slot.get("session_id")
+    if isinstance(scoping_session, str) and scoping_session:
+        _update_harness_session_state(scoping_session, status="running")
+        _append_harness_event(
+            scoping_session,
+            "approval/decision",
+            {"approval_id": approval_id, "decision": decision, "note": slot.get("note") or ""},
+        )
+
+
+def _is_replayed_approval(approval_id: str) -> bool:
+    """Replay detection: the id was already resolved (tombstoned) and expired slots cleaned up."""
+    if not approval_id:
+        return False
+    resolved_now = time.time()
+    for stale_id in [a for a, t in _RESOLVED_APPROVALS_TS.items() if resolved_now - t > _APPROVAL_RESOLVED_TTL_SEC]:
+        _RESOLVED_APPROVALS.pop(stale_id, None)
+        _RESOLVED_APPROVALS_TS.pop(stale_id, None)
+    return approval_id in _RESOLVED_APPROVALS
+
+
+def _record_replay_tombstone(approval_id: str, decision: str) -> None:
+    """Record a resolved approval as a replay tombstone without session-state or event side effects."""
+    if not approval_id:
+        return
+    _RESOLVED_APPROVALS[approval_id] = decision
+    _RESOLVED_APPROVALS_TS[approval_id] = time.time()
+    now = time.time()
+    for stale_id in [a for a, t in _RESOLVED_APPROVALS_TS.items() if now - t > _APPROVAL_RESOLVED_TTL_SEC]:
+        _RESOLVED_APPROVALS.pop(stale_id, None)
+        _RESOLVED_APPROVALS_TS.pop(stale_id, None)
+
+
 def _abandon_pending_tool_approval(pending: dict[str, Any], note: str = "Workflow ended before approval was resolved.") -> None:
     approval_id = pending.get("approval_id")
     if not isinstance(approval_id, str):
@@ -5875,15 +5946,7 @@ def _abandon_pending_tool_approval(pending: dict[str, Any], note: str = "Workflo
     slot = _PENDING_APPROVALS.get(approval_id)
     if not slot:
         return
-    session_id = pending.get("session_id") or slot.get("session_id")
-    _PENDING_APPROVALS.pop(approval_id, None)
-    slot["decision"] = "reject"
-    slot["note"] = note
-    slot["event"].set()
-    if not isinstance(session_id, str):
-        return
-    _update_harness_session_state(session_id, status="running")
-    _append_harness_event(session_id, "approval/decision", {"step": pending.get("step", 0), "approval_id": approval_id, "decision": "reject", "note": note})
+    _resolve_pending_tool_approval(approval_id, "reject", note=note, remember=False)
 
 
 async def _await_tool_approval(pending: dict[str, Any], timeout: float = 600.0) -> dict[str, Any]:
@@ -5900,11 +5963,21 @@ async def _await_tool_approval(pending: dict[str, Any], timeout: float = 600.0) 
     except asyncio.CancelledError:
         slot["decision"] = "reject"
         slot["note"] = "Workflow cancelled while waiting for approval."
-        slot["event"].set()
+        _resolve_pending_tool_approval(approval_id, "reject", note=slot["note"], session_id=session_id, remember=False)
         raise
     finally:
         _PENDING_APPROVALS.pop(approval_id, None)
         _update_harness_session_state(session_id, status="running")
+    # Replay tombstone: a resolved approval id can never be re-submitted. The
+    # resolver mirrors the slot's final decision, so an out-of-band approve is
+    # never silently turned into a reject.
+    _resolve_pending_tool_approval(
+        approval_id,
+        slot.get("decision", "reject"),
+        note=slot.get("note") or "",
+        session_id=session_id,
+        remember=True,
+    )
     approved = slot.get("decision") == "approve"
     decision = {"approved": approved, "note": slot.get("note") or "", "approval_id": approval_id, "decision": "approve" if approved else "reject"}
     _append_harness_event(session_id, "approval/decision", {"step": pending["step"], **decision})
@@ -7350,27 +7423,50 @@ async def api_compact_harness_session(session_id: str) -> JSONResponse:
 
 @app.post("/api/harness/approve")
 async def api_approve_harness_tool(request: Request) -> JSONResponse:
+    """Session-scoped, exactly-once approval decision for a pending tool approval.
+
+    The decision is replay-protected: a resolved (or timed-out) approval id
+    can never be re-submitted, and the submission must carry the same
+    session id that created the pending request.
+    """
     body = await request.json()
     aid = (body.get("approval_id") or "").strip()
     decision = (body.get("decision") or "reject").strip().lower()
     note = (body.get("note") or "").strip()
+    request_session = (body.get("session_id") or "").strip()
+
+    # Replay detection: a resolved id (tombstoned) must fail closed.
+    if _is_replayed_approval(aid):
+        raise HTTPException(
+            status_code=409,
+            detail="Approval already resolved; re-submission (replay) rejected.",
+        )
+
     slot = _PENDING_APPROVALS.get(aid)
     if not slot:
+        # Never existed or already consumed out-of-band; fail closed.
         raise HTTPException(status_code=404, detail="Approval request not found or already resolved.")
-    slot["decision"] = "approve" if decision == "approve" else "reject"
-    slot["note"] = note
-    slot["event"].set()
-    return JSONResponse({"status": "ok", "approval_id": aid, "decision": slot["decision"]})
+
+    # Session scoping: the decision must be made within the same session that
+    # originated the pending request. Unknown/absent session id is rejected.
+    slot_session = slot.get("session_id") or ""
+    if not request_session or not slot_session or request_session != slot_session:
+        raise HTTPException(
+            status_code=403,
+            detail="Approval is scoped to its originating session; session_id must match.",
+        )
+
+    final_decision = "approve" if decision == "approve" else "reject"
+    _resolve_pending_tool_approval(aid, final_decision, note=note, session_id=request_session, remember=True)
+    return JSONResponse({"status": "ok", "approval_id": aid, "decision": final_decision, "session_id": request_session})
 
 
 @app.post("/api/harness/abort/{session_id}")
 async def api_abort_harness(session_id: str) -> JSONResponse:
     _HARNESS_ABORT_FLAGS.add(session_id)
-    for slot in _PENDING_APPROVALS.values():
+    for aid, slot in list(_PENDING_APPROVALS.items()):
         if slot.get("session_id") == session_id and not slot["event"].is_set():
-            slot["decision"] = "reject"
-            slot["note"] = "Run aborted by user."
-            slot["event"].set()
+            _resolve_pending_tool_approval(aid, "reject", note="Run aborted by user.", session_id=session_id, remember=True)
     _update_harness_session_state(session_id, status="idle")
     return JSONResponse({"status": "aborted", "session_id": session_id})
 
@@ -7546,7 +7642,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     if needs_approval:
                         pending = _create_pending_tool_approval(session_id, step_idx, t_name, t_args)
                         try:
-                            yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")})
+                            yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")} | {"session_id": session_id})
                             decision = await _await_tool_approval(pending)
                         finally:
                             _abandon_pending_tool_approval(pending)
@@ -7793,7 +7889,7 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                         if not approved:
                             pending = _create_pending_tool_approval(session_id, global_step, t_name, t_args)
                             try:
-                                yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")})
+                                yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")} | {"session_id": session_id})
                                 decision = await _await_tool_approval(pending)
                             finally:
                                 _abandon_pending_tool_approval(pending)
@@ -8307,7 +8403,7 @@ async def _run_sdlc_sprints_stream(
                         if not approved:
                             pending = _create_pending_tool_approval(session_id, cur_step, tn, ta)
                             try:
-                                yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")})
+                                yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")} | {"session_id": session_id})
                                 decision = await _await_tool_approval(pending)
                             finally:
                                 _abandon_pending_tool_approval(pending)
@@ -8336,7 +8432,7 @@ async def _run_sdlc_sprints_stream(
                     verification_step = int(get_harness_session_db(session_id)["step_count"]) + 1
                     pending = _create_pending_tool_approval(session_id, verification_step, "run_bash", verification_args)
                     try:
-                        yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")})
+                        yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")} | {"session_id": session_id})
                         decision = await _await_tool_approval(pending)
                     finally:
                         _abandon_pending_tool_approval(pending)
