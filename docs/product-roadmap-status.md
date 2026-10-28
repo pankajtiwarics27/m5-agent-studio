@@ -8,10 +8,10 @@ Generated from [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](../product/A
 
 | Status | Count |
 |---|---|
-| ✅ Verified | 35 |
+| ✅ Verified | 36 |
 | 🟩 Completed | 4 |
 | 🚧 In progress | 1 |
-| ⬚ Planned | 23 |
+| ⬚ Planned | 22 |
 | **Total** | **63** |
 
 ### Status vocabulary
@@ -36,7 +36,7 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 | AS-005 | P1 | Architecture decision record process (deps: AS-003) | ✅ Verified | Commit AS-005; docs/adr/ (process README + template + ADR-0001); scripts/validate_adrs.py; tests/test_adr_process.py. |
 | AS-006 | P0 | Threat model and security inventory (deps: AS-003) | ✅ Verified | Commit AS-006; docs/threat-model.md; scripts/validate_threat_model.py; tests/test_threat_model.py. |
 
-### M1 — Modular foundation (7/8 done)
+### M1 — Modular foundation (8/8 done)
 
 Exit gate: All listed P0 stories verified; test evidence linked and dependencies closed.
 
@@ -47,7 +47,7 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 | AS-009 | P1 | Storage abstraction and schema migrations (deps: AS-007) | ✅ Verified | Commit AS-009; storage abstraction + versioned schema_migrations (docs/storage-migrations.md); tests/test_storage_contracts.py; scripts/db_maintenance.py backup/restore covered by tests/test_db_maintenance.py. |
 | AS-010 | P0 | Central tool authorization policy (deps: AS-006, AS-007) | ✅ Verified | Commit AS-010; central tool authorization + audit broker with hashed-only records and fail-closed audit writes; tests/test_audit_log.py and tests/test_security_and_quality.py. |
 | AS-011 | P1 | Extract workflow orchestration module (deps: AS-008, AS-009) | ✅ Verified | Commit AS-011; workflow_orchestration.py extracted from app.py; tests/test_workflow_orchestration.py. |
-| AS-012 | P1 | Extract MCP and context boundaries (deps: AS-008, AS-010) | ⬚ Planned | — |
+| AS-012 | P1 | Extract MCP and context boundaries (deps: AS-008, AS-010) | ✅ Verified | MCP wire protocol extracted to mcp_client.py (JSON/SSE payload parsing, header assembly incl. Bearer defaulting, stateless 2026-07-28 and stateful 2025-06-18 bodies, adaptive negotiation state machine with /sse→/mcp 405 retry, initialize+Mcp-Session-Id handshake, notifications/initialized, SessionStore cache) with the transport injected as a post() callable; URL validation and redirect rejection remain in the app adapter (_ValidatingMcpPost) covering every retry. OpenContext store extracted to context_store.py (CRUD, FTS5 search, query sanitization, vault lint) with explicit StorageLike+db_path injection. Moved verbatim (identical SQL, error messages, negotiation order incl. parse-before-401); app routes keep identical names/paths. tests/test_mcp_client.py (15) pins the state machine against a scripted fake transport (fast-path headers/_meta, SSE, 405 retry, handshake + session cache reuse, unauthorized, RPC errors, transport exceptions) plus an httpx.MockTransport integration test through the app adapter; tests/test_context_store.py (13) covers CRUD/FTS/lint contracts, a fake storage double, and the /api/opencontext route lifecycle. Suite 315 passed; ruff+mypy (25 files) clean; generators bit-for-bit; standalone studio.py smoke-tested (healthz, auth 401, opencontext CRUD+lint through inlined modules). Dependencies AS-008/AS-010 verified; CI green. |
 | AS-013 | P1 | API and provider contract tests (deps: AS-008, AS-011) | ✅ Verified | Commit AS-013; fake OpenAI-compatible, oMLX-compatible and MCP HTTP stream contract tests: tests/test_api_provider_contracts.py, tests/test_local_integration_contracts.py, plus tests/test_pinned_transport.py and tests/test_redirect_safety.py. |
 | AS-014 | P1 | Deterministic standalone build (deps: AS-011, AS-012) | ✅ Verified | Delivered under the AS-001 reproducibility work (no separate commit): scripts/build_studio.py embeds the UI into a deterministic PEP 723 standalone; scripts/smoke_local.py --standalone exercises it; CI regenerates studio.py byte-identically on every run. |
 
