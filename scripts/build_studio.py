@@ -52,6 +52,11 @@ def build() -> None:
     if privacy_import not in out_text:
         raise SystemExit("Could not find history privacy import in app.py")
     out_text = out_text.replace(privacy_import, "", 1)
+    for module_name in ("context_store", "mcp_client"):
+        module_import = f"import {module_name}\n"
+        if module_import not in out_text:
+            raise SystemExit(f"Could not find {module_name} import in app.py")
+        out_text = out_text.replace(module_import, "", 1)
     privacy_text = (ROOT / "history_privacy.py").read_text(encoding="utf-8")
     # A mid-file "from __future__ import annotations" is a syntax error; the
     # standalone already declares it at the top of the file.
@@ -65,8 +70,20 @@ def build() -> None:
     # Keep studio.py executable as a single-file artifact while the canonical
     # source remains split into typed modules. Extracted modules are inlined
     # (history_privacy first: the orchestrator and app may not need it, but
-    # init_db and the history routes do).
-    out_text = out_text[:main_start] + "\n\n" + privacy_text.rstrip() + "\n\n" + orchestrator_text.rstrip() + out_text[main_start:]
+    # init_db and the history routes do). The mcp_client/context_store wire and
+    # memory boundaries are inlined before the orchestrator and re-aliased so
+    # qualified references from the application keep resolving.
+    boundary_texts = []
+    for module_name in ("mcp_client", "context_store"):
+        module_text = (ROOT / f"{module_name}.py").read_text(encoding="utf-8").replace(future_line, "", 1)
+        boundary_texts.append(module_text.rstrip())
+    boundary_block = "\n\n".join(boundary_texts)
+    boundary_block += (
+        "\n\n\n# Single-file build: re-alias the extracted modules to this file so qualified\n"
+        "# references (mcp_client.*, context_store.*) resolve to the inlined definitions.\n"
+        + "\n".join(f"{name} = sys.modules[__name__]" for name in ("mcp_client", "context_store"))
+    )
+    out_text = out_text[:main_start] + "\n\n" + privacy_text.rstrip() + "\n\n" + boundary_block + "\n\n" + orchestrator_text.rstrip() + out_text[main_start:]
     OUT.write_text(out_text, encoding="utf-8")
     py_compile.compile(str(APP), doraise=True)
     py_compile.compile(str(OUT), doraise=True)

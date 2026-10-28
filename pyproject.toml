@@ -40,6 +40,7 @@ python_version = "3.11"
 # the roadmap dashboard are covered by their own validation.
 files = [
   "capability_negotiation.py",
+  "context_store.py",
   "execution_budget.py",
   "failure_injection.py",
   "hardware_capabilities.py",
@@ -48,6 +49,7 @@ files = [
   "local_provider_adapters.py",
   "local_runtime_lifecycle.py",
   "macos_hardware_profiler.py",
+  "mcp_client.py",
   "model_diagnostics.py",
   "model_registry.py",
   "model_switching.py",
@@ -69,4 +71,4 @@ warn_unused_ignores = true
 check_untyped_defs = true
 
 [tool.setuptools]
-py-modules = ["app", "history_privacy", "workflow_orchestration", "hardware_capabilities", "macos_hardware_profiler", "model_registry", "resource_admission", "capability_negotiation", "local_runtime_lifecycle", "local_provider_adapters", "routing_policy", "model_diagnostics", "hardware_validation", "private_network_gateway", "sandbox_boundary", "session_trust", "workflow_state", "workflow_checkpoints", "side_effect_ledger", "execution_budget", "workflow_tracing", "failure_injection", "model_switching", "provider_switching"]
+py-modules = ["app", "context_store", "history_privacy", "mcp_client", "workflow_orchestration", "hardware_capabilities", "macos_hardware_profiler", "model_registry", "resource_admission", "capability_negotiation", "local_runtime_lifecycle", "local_provider_adapters", "routing_policy", "model_diagnostics", "hardware_validation", "private_network_gateway", "sandbox_boundary", "session_trust", "workflow_state", "workflow_checkpoints", "side_effect_ledger", "execution_budget", "workflow_tracing", "failure_injection", "model_switching", "provider_switching"]
