@@ -213,6 +213,22 @@ pre-restore safety copy. Cross-machine restore intentionally requires
 re-entering credentials in that machine's keyring. Backups contain history —
 store them accordingly.
 
+### Exporting and pruning local history
+
+History is exportable and prunable without leaving the machine:
+
+```bash
+python3 scripts/db_maintenance.py export     --database "${STUDIO_DB_PATH:-./studio_history.db}" --output /path/history.json
+python3 scripts/db_maintenance.py retention  --database "${STUDIO_DB_PATH:-./studio_history.db}" --days 30
+# Or over the authenticated API: GET /api/history/export, POST /api/history/retention/run
+```
+
+Exports are JSON bundles with best-effort secret redaction (replacement count
+reported) and never include credential/configuration tables or the audit
+trail. Retention deletes conversation/telemetry artifacts older than N days —
+never OpenContext documents, the audit trail, or credentials. Details and
+guarantees: [`docs/history-privacy.md`](docs/history-privacy.md).
+
 ## 5. System architecture
 
 ```text
@@ -348,6 +364,7 @@ loop** (`POST /api/harness/gsd-wave`) emit `<tool_call>` blocks:
 | `STUDIO_ENABLE_API_DOCS` | `0` | Expose public FastAPI `/docs` and `/openapi.json`; keep off on exposed deployments |
 | `STUDIO_MAX_REQUEST_BYTES` | `8388608` | Maximum request body size (1 KiB – 100 MiB) |
 | `STUDIO_EXPENSIVE_REQUESTS_PER_MINUTE` | `30` | Per-client-IP sliding-window limit on chat, harness, GSD/SDLC, `/v1/chat/completions` (1–600) |
+| `STUDIO_HISTORY_RETENTION_DAYS` | `0` (disabled) | Delete conversation/telemetry/context-vault history older than N days (1–3650) at startup, via `POST /api/history/retention/run`, or `scripts/db_maintenance.py retention`. Never touches OpenContext docs, the audit trail, or credentials. See [docs/history-privacy.md](docs/history-privacy.md) |
 | `STUDIO_ALLOWED_HOSTS` | `localhost,127.0.0.1,[::1]` | Comma-separated `Host` header allowlist; add LAN/proxy hostnames explicitly |
 | `STUDIO_ALLOWED_ORIGINS` | empty | Comma-separated browser origins trusted behind a TLS reverse proxy |
 | `STUDIO_PRIVATE_URL_HOSTS` | empty | Per-host exceptions for trusted private HTTP/HTTPS provider or MCP destinations |

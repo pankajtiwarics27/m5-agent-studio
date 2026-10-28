@@ -62,6 +62,7 @@ import keyring
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from history_privacy import HistoryPrivacyError, apply_retention, export_history
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
 
 STUDIO_VERSION = "9.0.1"
@@ -99,6 +100,7 @@ class StudioSettings:
     allowed_origins: frozenset[str]
     workspace_root: Path
     database_path: Path
+    history_retention_days: int
 
 
 def _config_bool(env: Mapping[str, str], name: str, default: bool) -> bool:
@@ -291,6 +293,7 @@ def load_settings(
         allowed_origins=_config_origins(env),
         workspace_root=workspace_path.resolve(),
         database_path=db_path,
+        history_retention_days=_config_int(env, "STUDIO_HISTORY_RETENTION_DAYS", 0, 0, 3650),
     )
 
 
@@ -319,6 +322,7 @@ STUDIO_ALLOWED_HOSTS = set(SETTINGS.allowed_hosts)
 STUDIO_ALLOWED_ORIGINS = set(SETTINGS.allowed_origins)
 WORKSPACE_ROOT = SETTINGS.workspace_root
 DB_PATH = SETTINGS.database_path
+STUDIO_HISTORY_RETENTION_DAYS = SETTINGS.history_retention_days
 KEYRING_SERVICE = "m5-agent-studio"
 KEYRING_REF_PREFIX = "keyring:v1:"
 
@@ -1215,6 +1219,15 @@ def init_db() -> None:
     _migrate_legacy_secrets()
     _seed_env_providers_and_default_combo()
     _seed_default_opencontext()
+    if STUDIO_HISTORY_RETENTION_DAYS > 0:
+        try:
+            with sqlite3.connect(DB_PATH) as retention_conn:
+                pruned = apply_retention(retention_conn, max_age_days=STUDIO_HISTORY_RETENTION_DAYS, now=time.time())
+            if pruned:
+                print(f"History retention pruned {sum(pruned.values())} row(s): {sorted(pruned.items())}", file=sys.stderr)
+        except (sqlite3.Error, HistoryPrivacyError) as exc:
+            # Retention failure keeps data in place: that is the safe default.
+            print(f"History retention did not run (data left intact): {exc}", file=sys.stderr)
 
 
 def _seed_env_providers_and_default_combo() -> None:
@@ -3538,6 +3551,34 @@ async def api_clear_ssd_cache(request: Request) -> JSONResponse:
         return JSONResponse({"status": "ok", "total_deleted": 46, "demo": True})
     r = await client.post(f"{OMLX_BASE}/admin/api/ssd-cache/clear", timeout=20.0)
     return JSONResponse(r.json())
+
+
+@app.get("/api/history/export")
+async def api_history_export() -> JSONResponse:
+    """Download the local history bundle (redacted) as a JSON attachment."""
+    with sqlite3.connect(DB_PATH) as conn:
+        bundle = export_history(conn)
+    return JSONResponse(
+        bundle,
+        headers={
+            "Content-Disposition": 'attachment; filename="studio-history-export.json"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@app.post("/api/history/retention/run")
+async def api_history_retention_run() -> JSONResponse:
+    """Apply the configured retention policy immediately and report per-table counts."""
+    days = STUDIO_HISTORY_RETENTION_DAYS
+    if days <= 0:
+        return JSONResponse(
+            {"status": "disabled", "detail": "Retention is disabled; set STUDIO_HISTORY_RETENTION_DAYS (1-3650) to enable."},
+            status_code=400,
+        )
+    with sqlite3.connect(DB_PATH) as conn:
+        pruned = apply_retention(conn, max_age_days=days, now=time.time())
+    return JSONResponse({"status": "ok", "max_age_days": days, "deleted": pruned, "deleted_total": sum(pruned.values())})
 
 
 def _sse(event: str, data: dict[str, Any]) -> str:
