@@ -933,8 +933,8 @@
       "acceptance_criteria": "Untrusted content cannot grant new tool privileges.",
       "implementation_prompt": "Implement AS-029 (P0): Prompt injection and MCP adversarial tests. Prerequisites: 027,028. Required outcome: Untrusted content cannot grant new tool privileges. First locate existing code and tests, explain design tradeoffs, implement only this scope, add positive/negative/failure tests and document evidence. Preserve hardware/model/provider independence, privacy, secure execution and compatibility. Report blockers instead of inventing dependencies.",
       "backlog_order": 42,
-      "status": "planned",
-      "status_evidence": "",
+      "status": "verified",
+      "status_evidence": "tests/test_prompt_injection_adversarial.py (22 tests) proves untrusted content cannot grant tool privileges: forged protocol markup in tool output is escaped and inert (UNTRUSTED_DATA_JSON), wrapper-attribute breakouts fail, turn counting ignores escaped content, fake approval/policy/mode fields in arguments never authorize, session policy beats injected args, plan policy blocks mutations with approved=True, MCP namespaces cannot shadow built-ins and unregistered/spoofed names are denied, adversarial assistant text extracts only calls the policy already governs, and the secret-read guard ignores injected instructions with hash-only auditing. No application changes were required - all boundaries held. Dependencies AS-027/AS-028 verified; CI green.",
       "status_updated": "2026-10-28"
     },
     {
