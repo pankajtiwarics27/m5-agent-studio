@@ -629,8 +629,8 @@
       "acceptance_criteria": "New model installed by supported runtime without app code changes.",
       "implementation_prompt": "Implement AS-053 (P1): Discover and install models. Prerequisites: 017,020. Required outcome: New model installed by supported runtime without app code changes. First locate existing code and tests, explain design tradeoffs, implement only this scope, add positive/negative/failure tests and document evidence. Preserve hardware/model/provider independence, privacy, secure execution and compatibility. Report blockers instead of inventing dependencies.",
       "backlog_order": 26,
-      "status": "planned",
-      "status_evidence": "",
+      "status": "verified",
+      "status_evidence": "Commit AS-053; cross-runtime model discovery catalog and runtime-owned install contracts (docs/model-discovery-install.md); tests/test_model_discovery.py (12 tests) include the acceptance proof that a model installed by the runtime (fake CLI via subprocess, runtime data only) appears on re-discovery without app code changes.",
       "status_updated": "2026-10-28"
     },
     {
