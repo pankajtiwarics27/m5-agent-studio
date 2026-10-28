@@ -365,8 +365,8 @@
       "acceptance_criteria": "Boundaries have mocks and integration tests.",
       "implementation_prompt": "Implement AS-012 (P1): Extract MCP and context boundaries. Prerequisites: 008,010. Required outcome: Boundaries have mocks and integration tests. First locate existing code and tests, explain design tradeoffs, implement only this scope, add positive/negative/failure tests and document evidence. Preserve hardware/model/provider independence, privacy, secure execution and compatibility. Report blockers instead of inventing dependencies.",
       "backlog_order": 12,
-      "status": "planned",
-      "status_evidence": "",
+      "status": "verified",
+      "status_evidence": "MCP wire protocol extracted to mcp_client.py (JSON/SSE payload parsing, header assembly incl. Bearer defaulting, stateless 2026-07-28 and stateful 2025-06-18 bodies, adaptive negotiation state machine with /sse→/mcp 405 retry, initialize+Mcp-Session-Id handshake, notifications/initialized, SessionStore cache) with the transport injected as a post() callable; URL validation and redirect rejection remain in the app adapter (_ValidatingMcpPost) covering every retry. OpenContext store extracted to context_store.py (CRUD, FTS5 search, query sanitization, vault lint) with explicit StorageLike+db_path injection. Moved verbatim (identical SQL, error messages, negotiation order incl. parse-before-401); app routes keep identical names/paths. tests/test_mcp_client.py (15) pins the state machine against a scripted fake transport (fast-path headers/_meta, SSE, 405 retry, handshake + session cache reuse, unauthorized, RPC errors, transport exceptions) plus an httpx.MockTransport integration test through the app adapter; tests/test_context_store.py (13) covers CRUD/FTS/lint contracts, a fake storage double, and the /api/opencontext route lifecycle. Suite 315 passed; ruff+mypy (25 files) clean; generators bit-for-bit; standalone studio.py smoke-tested (healthz, auth 401, opencontext CRUD+lint through inlined modules). Dependencies AS-008/AS-010 verified; CI green.",
       "status_updated": "2026-10-28"
     },
     {
