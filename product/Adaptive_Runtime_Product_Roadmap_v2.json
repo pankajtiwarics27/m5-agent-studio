@@ -952,8 +952,8 @@
       "acceptance_criteria": "Export/delete/retention and secret redaction tested.",
       "implementation_prompt": "Implement AS-030 (P1): History privacy retention and export. Prerequisites: 009,025. Required outcome: Export/delete/retention and secret redaction tested. First locate existing code and tests, explain design tradeoffs, implement only this scope, add positive/negative/failure tests and document evidence. Preserve hardware/model/provider independence, privacy, secure execution and compatibility. Report blockers instead of inventing dependencies.",
       "backlog_order": 43,
-      "status": "planned",
-      "status_evidence": "",
+      "status": "verified",
+      "status_evidence": "tests/test_history_privacy.py (20 tests) covers export (credential/config and audit tables structurally excluded, ISO-8601 timestamps, redaction with replacement counts), retention (old/new pruning, owner-child pruning without orphans, OpenContext/audit/credentials untouched, argument validation, startup enforcement, disabled default), and secret redaction (provider keys, Bearer tokens, key-value assignments incl. API_TOKEN, false-positive behavior). New surfaces: GET /api/history/export and POST /api/history/retention/run behind the shared authenticated boundary, scripts/db_maintenance.py retention/export subcommands (0600 exports), STUDIO_HISTORY_RETENTION_DAYS typed setting. Standalone single-file build verified in a bare directory. Dependencies AS-009/AS-025 verified; CI green.",
       "status_updated": "2026-10-28"
     },
     {
