@@ -8,10 +8,10 @@ Generated from [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](../product/A
 
 | Status | Count |
 |---|---|
-| ✅ Verified | 34 |
+| ✅ Verified | 35 |
 | 🟩 Completed | 4 |
 | 🚧 In progress | 0 |
-| ⬚ Planned | 25 |
+| ⬚ Planned | 24 |
 | **Total** | **63** |
 
 ### Status vocabulary
@@ -80,7 +80,7 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 | AS-062 | P1 | Adaptive model recommendation engine (deps: AS-051, AS-060, AS-058) | ⬚ Planned | — |
 | AS-063 | P2 | Community benchmark import with provenance (deps: AS-060, AS-042) | ⬚ Planned | — |
 
-### M3 — Secure hybrid access (6/8 done)
+### M3 — Secure hybrid access (7/8 done)
 
 Exit gate: All listed P0 stories verified; test evidence linked and dependencies closed.
 
@@ -92,7 +92,7 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 | AS-027 | P0 | Remote tool approvals and policy enforcement (deps: AS-010, AS-025) | ✅ Verified | Merged via PR #6; session-scoped authenticated approvals with bounded TTL replay tombstones (403 scope mismatch, 409 replay), exactly-once slot consumption, UI/SSE session_id propagation; tests in tests/test_security_and_quality.py (7 tests); documented in docs/tool-authorization.md. |
 | AS-028 | P0 | Sandbox and filesystem boundary hardening (deps: AS-010) | 🟩 Completed | Commit AS-028; sandbox boundary hardening with tests (tests/test_sandbox_boundary.py, tests/test_pinned_transport.py, tests/test_redirect_safety.py); preflight refuses roots/secret filenames/credentialed remotes. Outstanding: live container-runtime validation is opt-in and skipped without Docker/Podman. |
 | AS-029 | P0 | Prompt injection and MCP adversarial tests (deps: AS-027, AS-028) | ✅ Verified | tests/test_prompt_injection_adversarial.py (22 tests) proves untrusted content cannot grant tool privileges: forged protocol markup in tool output is escaped and inert (UNTRUSTED_DATA_JSON), wrapper-attribute breakouts fail, turn counting ignores escaped content, fake approval/policy/mode fields in arguments never authorize, session policy beats injected args, plan policy blocks mutations with approved=True, MCP namespaces cannot shadow built-ins and unregistered/spoofed names are denied, adversarial assistant text extracts only calls the policy already governs, and the secret-read guard ignores injected instructions with hash-only auditing. No application changes were required - all boundaries held. Dependencies AS-027/AS-028 verified; CI green. |
-| AS-030 | P1 | History privacy retention and export (deps: AS-009, AS-025) | ⬚ Planned | — |
+| AS-030 | P1 | History privacy retention and export (deps: AS-009, AS-025) | ✅ Verified | tests/test_history_privacy.py (20 tests) covers export (credential/config and audit tables structurally excluded, ISO-8601 timestamps, redaction with replacement counts), retention (old/new pruning, owner-child pruning without orphans, OpenContext/audit/credentials untouched, argument validation, startup enforcement, disabled default), and secret redaction (provider keys, Bearer tokens, key-value assignments incl. API_TOKEN, false-positive behavior). New surfaces: GET /api/history/export and POST /api/history/retention/run behind the shared authenticated boundary, scripts/db_maintenance.py retention/export subcommands (0600 exports), STUDIO_HISTORY_RETENTION_DAYS typed setting. Standalone single-file build verified in a bare directory. Dependencies AS-009/AS-025 verified; CI green. |
 | AS-031 | P0 | Independent security review (deps: AS-024, AS-025, AS-026, AS-027, AS-028, AS-029, AS-030) | ⬚ Planned | — |
 
 ### M4 — Durable agent execution (6/7 done)
