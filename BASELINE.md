@@ -25,6 +25,8 @@ git checkout --detach 7904892d759bb66b817bb17b6f4f377874bd6e25
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]'
 .venv/bin/python scripts/verify_baseline.py
+.venv/bin/ruff check .
+.venv/bin/mypy
 .venv/bin/python -m compileall -q app.py scripts tests
 .venv/bin/python scripts/check_frontend_syntax.py
 .venv/bin/pytest -q

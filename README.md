@@ -463,6 +463,8 @@ CI regenerates `studio.py`, `docs/route-security-matrix.md`,
 ```bash
 python -m pip install -e '.[dev]'
 python scripts/verify_baseline.py
+ruff check .
+mypy
 git ls-files -z -- '*.py' | xargs -0 -r python -m compileall -q
 python scripts/check_frontend_syntax.py
 python -m pytest -q
