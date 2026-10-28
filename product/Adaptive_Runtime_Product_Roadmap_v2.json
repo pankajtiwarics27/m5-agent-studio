@@ -763,9 +763,9 @@
       "acceptance_criteria": "Persist immutable profile keyed by hardware, OS, model digest, quantization, runtime version and benchmark methodology.",
       "implementation_prompt": "Implement AS-060 (P1): Versioned model performance profiles. Prerequisites: 059,017. Required outcome: Persist immutable profile keyed by hardware, OS, model digest, quantization, runtime version and benchmark methodology. First locate existing code and tests, explain design tradeoffs, implement only this scope, add positive/negative/failure tests and document evidence. Preserve hardware/model/provider independence, privacy, secure execution and compatibility. Report blockers instead of inventing dependencies.",
       "backlog_order": 33,
-      "status": "planned",
-      "status_evidence": "",
-      "status_updated": "2026-10-28"
+      "status": "verified",
+      "status_evidence": "Commit AS-060; performance_profiles.py persists AS-059 ModelPerformanceProfile values in a ProfileVault keyed by exactly the six roadmap components (hardware-snapshot digest, os_id, model digest, quantization, runtime version, benchmark methodology), with keys derived from the profile's own pinned CalibrationInputs so a record can never be filed under a label it does not match (docs/performance-profiles.md). Histories are immutable and versioned: 1-based never-reused versions chained by previous digest, duplicate digests are idempotent no-ops, retention is bounded and counted; every read re-verifies line seals, header counts, the chain, and recomputes each profile via calibrate() - renamed files, consistent per-line tampering and content/key disagreements all fail loudly. tests/test_performance_profiles.py (11 tests) covers the full tamper ladder, AS-017 for_lookup, and validation refusals. No wall-clock or prompt content is stored and the vault contacts no runtime; app-side read/write wiring arrives with the comparison/recommendation stories.",
+      "status_updated": "2026-10-29"
     },
     {
       "id": "AS-061",
