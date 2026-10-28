@@ -129,6 +129,7 @@ def _subsystem(path: str) -> str:
         ("/api/telemetry", "Runtime telemetry"),
         ("/api/models/", "Local model controls"),
         ("/api/cache/", "Local runtime cache control"),
+        ("/api/history/", "History privacy controls"),
         ("/api/mcp/", "MCP configuration and tools"),
         ("/api/opencontext/", "OpenContext memory"),
         ("/api/codegraph/", "Workspace code analysis"),
@@ -159,6 +160,10 @@ def _authorization(path: str) -> str:
         return "Shared API bearer/host/Origin boundary; GitHub HTTPS source validation; installing files is operator-triggered; downloaded code is not executed by default."
     if path.startswith(("/api/models/", "/api/cache/")):
         return "Shared API bearer/host/Origin boundary; this bearer-authenticated request directly invokes local runtime controls, with no separate role/approval layer."
+    if path == "/api/history/export":
+        return "Shared API bearer/host/Origin boundary; returns the local history bundle with best-effort secret redaction applied; credential/configuration and audit tables are excluded by construction; no separate user/tenant role check is implemented."
+    if path == "/api/history/retention/run":
+        return "Shared API bearer/host/Origin boundary; applies the configured retention policy to conversation/telemetry tables on demand; never touches credentials, the tool audit trail, or OpenContext documents; no separate user/tenant role check is implemented."
     if path.startswith(("/api/", "/v1/")):
         return "Shared API bearer/host/Origin boundary; no user/tenant role check is implemented."
     raise InventoryError(f"No authorization mapping for registered endpoint {path!r}")

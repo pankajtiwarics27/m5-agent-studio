@@ -48,13 +48,25 @@ def build() -> None:
     if import_line not in out_text:
         raise SystemExit("Could not find workflow orchestration import in app.py")
     out_text = out_text.replace(import_line, "", 1)
+    privacy_import = "from history_privacy import HistoryPrivacyError, apply_retention, export_history\n"
+    if privacy_import not in out_text:
+        raise SystemExit("Could not find history privacy import in app.py")
+    out_text = out_text.replace(privacy_import, "", 1)
+    privacy_text = (ROOT / "history_privacy.py").read_text(encoding="utf-8")
+    # A mid-file "from __future__ import annotations" is a syntax error; the
+    # standalone already declares it at the top of the file.
+    future_line = "from __future__ import annotations\n"
+    privacy_text = privacy_text.replace(future_line, "", 1)
+    orchestrator_text = orchestrator_text.replace(future_line, "", 1) if orchestrator_text.startswith(future_line) else orchestrator_text
     main_marker = "\nif __name__ == \"__main__\":"
     main_start = out_text.find(main_marker)
     if main_start < 0:
         raise SystemExit("Could not find app.py main entrypoint")
     # Keep studio.py executable as a single-file artifact while the canonical
-    # source remains split into typed modules.
-    out_text = out_text[:main_start] + "\n\n" + orchestrator_text.rstrip() + out_text[main_start:]
+    # source remains split into typed modules. Extracted modules are inlined
+    # (history_privacy first: the orchestrator and app may not need it, but
+    # init_db and the history routes do).
+    out_text = out_text[:main_start] + "\n\n" + privacy_text.rstrip() + "\n\n" + orchestrator_text.rstrip() + out_text[main_start:]
     OUT.write_text(out_text, encoding="utf-8")
     py_compile.compile(str(APP), doraise=True)
     py_compile.compile(str(OUT), doraise=True)

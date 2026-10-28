@@ -15,6 +15,9 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from history_privacy import HistoryPrivacyError, apply_retention, export_history  # noqa: E402
+
 SCHEMA_VERSION = 2
 KEYRING_REF_PREFIX = "keyring:v1:"
 SENSITIVE_PARTS = ("authorization", "cookie", "token", "secret", "password", "api-key", "apikey", "access-key", "accesskey", "private-key", "privatekey", "credential")
@@ -178,6 +181,12 @@ def main(argv: list[str] | None = None) -> int:
     restore.add_argument("--database", type=Path)
     restore.add_argument("--input", type=Path, required=True)
     restore.add_argument("--force", action="store_true", help="Replace existing database after creating a safety backup")
+    retention = sub.add_parser("retention", help="Delete conversation/telemetry history older than N days")
+    retention.add_argument("--database", type=Path)
+    retention.add_argument("--days", type=int, required=True, help="Maximum age in days (>= 1)")
+    export = sub.add_parser("export", help="Write a redacted JSON export of local history")
+    export.add_argument("--database", type=Path)
+    export.add_argument("--output", type=Path, required=True, help="Destination JSON file (created owner-only)")
     args = parser.parse_args(argv)
     try:
         if args.database is None:
@@ -185,13 +194,33 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "backup":
             output = backup_database(args.database, args.output or _default_backup_path(args.database))
             print(f"Backup created and validated: {output}")
-        else:
+        elif args.command == "restore":
             restored, safety = restore_database(args.input, args.database, force=args.force)
             print(f"Database restored and validated: {restored}")
             if safety:
                 print(f"Pre-restore safety backup: {safety}")
+        elif args.command == "retention":
+            now = datetime.now(timezone.utc).timestamp()
+            with sqlite3.connect(args.database) as conn:
+                pruned = apply_retention(conn, max_age_days=args.days, now=now)
+            total = sum(pruned.values())
+            detail = ", ".join(f"{table}={count}" for table, count in sorted(pruned.items())) or "nothing to prune"
+            print(f"Retention applied (max age {args.days}d): deleted {total} row(s) - {detail}")
+        else:
+            with sqlite3.connect(args.database) as conn:
+                bundle = export_history(conn)
+            output: Path = args.output
+            output.parent.mkdir(parents=True, exist_ok=True)
+            descriptor = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                json.dump(bundle, handle, ensure_ascii=False, indent=1)
+                handle.write("\n")
+            print(
+                f"History export written: {output} "
+                f"(redaction replacements: {bundle['redaction']['replacements']}); keep the file protected."
+            )
         return 0
-    except (MaintenanceError, OSError, sqlite3.Error) as exc:
+    except (MaintenanceError, OSError, sqlite3.Error, HistoryPrivacyError) as exc:
         print(f"Database maintenance failed: {exc}", file=sys.stderr)
         return 2
 
