@@ -17,21 +17,22 @@ The project supports Python 3.11 or newer. CI currently exercises Python 3.11, 3
 python -m venv .venv
 # Activate it: source .venv/bin/activate (POSIX) or .venv\Scripts\activate (Windows)
 python -m pip install -e '.[dev]'
-python -m pytest -q
-python -m compileall -q app.py workflow_orchestration.py scripts tests
+python scripts/verify_baseline.py
+git ls-files -z -- '*.py' | xargs -0 -r python -m compileall -q
 python scripts/check_frontend_syntax.py
+python -m pytest -q
 python scripts/smoke_local.py
 python scripts/smoke_local.py --standalone
+python scripts/build_studio.py
+python scripts/generate_route_matrix.py
+python scripts/generate_subsystem_inventory.py
+python scripts/generate_roadmap_status.py
+git diff --exit-code
 python scripts/validate_governance.py
 ```
 
-For generated-file changes, also run the relevant generator and verify reproducibility:
+This is the same sequence CI runs; a pull request is mergeable only when all three Python legs pass it.
 
-```bash
-python scripts/build_studio.py
-python scripts/generate_route_matrix.py
-git diff --check
-```
 
 The live container-runtime test is opt-in and is not required by the ordinary test suite. Do not make tests contact live model, cloud-provider, MCP, or other external services; use mocks, local fakes, temporary paths, and disposable loopback servers. Never run tests against a user's real workspace, credentials, or data.
 
@@ -43,6 +44,52 @@ The live container-runtime test is opt-in and is not required by the ordinary te
 - **Secure execution:** Preserve deny-by-default behavior for code execution, MCP stdio, and skill code. Do not weaken URL validation, authentication, approval, sandboxing, audit, workspace, or secret-handling boundaries without a focused security review and regression tests.
 - **Compatibility:** Preserve existing API, CLI, configuration, and database behavior unless a deliberate migration is documented and tested. Avoid adding runtime dependencies for documentation or governance tasks.
 - **Evidence:** Tests should cover expected behavior, rejection paths, and failures. Report platform limitations honestly; do not turn skipped opt-in checks into claims of verified isolation.
+
+## Commit messages: every commit must be documented
+
+A commit is a message to future maintainers (human or AI). Each commit must let
+a reader understand what changed and why without diffing the tree:
+
+- **Subject** (first line): 8–100 characters, imperative mood, no trailing
+  period. Prefer `AS-XXX: <what changed>` for roadmap story work (e.g.
+  `AS-030: Add history retention and export controls`), or
+  `type: <what changed>` with `feat|fix|docs|refactor|test|chore|ci` otherwise.
+- **Body**: after a blank line, explain what changed, why, and the evidence —
+  tests added, commands run and their results, tradeoffs, compatibility notes,
+  and any blockers. At least a short paragraph; "misc fixes" or an empty body
+  is not acceptable.
+- `python scripts/check_commit_messages.py --base origin/main` enforces this on
+  new commits and runs in CI. Rewrite unpushed work with
+  `git rebase -i origin/main`; do not amend shared history.
+
+## Branches and merges
+
+- One roadmap story per branch, named `as-XXX-short-slug` (for example
+  `as-030-history-retention`). Keep branches rebased on `origin/main` while a
+  pull request is open.
+- Pull requests merge with **rebase** to keep history linear; each merged
+  commit therefore carries its own documented message.
+- **Merged branches are deleted automatically** (repository setting
+  `delete_branch_on_merge`). Do not reuse a merged branch name; start a fresh
+  branch for the next story.
+
+## Keeping the roadmap status honest
+
+Product work is tracked in
+[`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json);
+the readable dashboard at `docs/product-roadmap-status.md` is generated from it
+by `scripts/generate_roadmap_status.py` and verified in CI. When your pull
+request lands a story (or its verification evidence):
+
+1. Update that story's `status` (`planned` / `in_progress` / `completed` /
+   `verified`), `status_evidence`, and `status_updated` in the JSON, plus
+   `status_tracking.last_updated`.
+2. Regenerate the dashboard and commit both files in the same pull request.
+3. State the status change in the pull request description with pointers to the
+   evidence (tests, checks, docs).
+
+A status may only change in the pull request that contains the underlying
+implementation or evidence.
 
 ## Architecture decisions
 

@@ -45,7 +45,7 @@ def validate_governance(root: Path = ROOT) -> list[str]:
         "CODE_OF_CONDUCT.md",
         "Python 3.11",
         "pytest -q",
-        "compileall -q app.py workflow_orchestration.py scripts tests",
+        "git ls-files -z -- '*.py' | xargs -0 -r python -m compileall -q",
         "scripts/smoke_local.py",
         "hardware",
         "provider",
