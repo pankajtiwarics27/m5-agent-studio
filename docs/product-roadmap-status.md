@@ -8,10 +8,10 @@ Generated from [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](../product/A
 
 | Status | Count |
 |---|---|
-| ✅ Verified | 39 |
+| ✅ Verified | 40 |
 | 🟩 Completed | 4 |
 | 🚧 In progress | 1 |
-| ⬚ Planned | 19 |
+| ⬚ Planned | 18 |
 | **Total** | **63** |
 
 ### Status vocabulary
@@ -51,7 +51,7 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 | AS-013 | P1 | API and provider contract tests (deps: AS-008, AS-011) | ✅ Verified | Commit AS-013; fake OpenAI-compatible, oMLX-compatible and MCP HTTP stream contract tests: tests/test_api_provider_contracts.py, tests/test_local_integration_contracts.py, plus tests/test_pinned_transport.py and tests/test_redirect_safety.py. |
 | AS-014 | P1 | Deterministic standalone build (deps: AS-011, AS-012) | ✅ Verified | Delivered under the AS-001 reproducibility work (no separate commit): scripts/build_studio.py embeds the UI into a deterministic PEP 723 standalone; scripts/smoke_local.py --standalone exercises it; CI regenerates studio.py byte-identically on every run. |
 
-### M2 — Adaptive hardware and model portability (16/22 done)
+### M2 — Adaptive hardware and model portability (17/22 done)
 
 Exit gate: All listed P0 stories verified; test evidence linked and dependencies closed.
 
@@ -72,7 +72,7 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 | AS-054 | P0 | Switch providers without workflow rewrite (deps: AS-008, AS-051) | ✅ Verified | Commit AS-054; provider switching contract (docs/provider-switching.md); tests/test_provider_switching.py. |
 | AS-055 | P1 | Context reassembly on model switch (deps: AS-052) | ✅ Verified | Commit AS-055; auditable context reassembly within the target window (docs/context-reassembly.md); tests/test_context_reassembly.py (15 tests) cover tiered drops (tool outputs before turns), mandatory anchors and newest message, output-token reservation at exact boundaries, injected estimators, content-free drop ledgers, and zero extra drops on AS-052 switched contexts. |
 | AS-056 | P1 | Model quality and compatibility comparison (deps: AS-051, AS-052) | ✅ Verified | Commit AS-056; versioned evaluation tasks and reproducible configs with digest-pinned scores and hard-filter-then-rank comparison (docs/model-comparison.md); tests/test_model_comparison.py (15 tests) pin task/config identity digests, median+spread aggregation over repeated runs, tamper-proof derived aggregates, environment-difference disclosure, and refusal of incomparable scores. Benchmark execution is deliberately out of scope (AS-059+); no live-runtime numbers are claimed. |
-| AS-057 | P1 | Model update and rollback lifecycle (deps: AS-053) | ⬚ Planned | — |
+| AS-057 | P1 | Model update and rollback lifecycle (deps: AS-053) | ✅ Verified | Commit AS-057; per-(runtime, model_id) revision ledger with pin/adopt/rollback/quarantine semantics (docs/model-updates.md); tests/test_model_updates.py (14 tests) prove upgrades are pinned against drift, rolled back skipping quarantined history, and invalidated with fallback or refuse-to-serve, plus deterministic bounded event auditing and staleness status for dependent artifacts. No live-runtime claims: applying revisions to reality stays with AS-053 install observations and the runtime itself. |
 | AS-058 | P0 | Routing policy and consent tests (deps: AS-021, AS-051, AS-054) | ✅ Verified | Merged via PR #5; tests/test_routing_consent_policy.py (12 tests) covering deny-by-default fallback, network/billable consent separation, consent-id requirement, and fail-closed malformed inputs. |
 | AS-059 | P1 | Local model calibration benchmarks (deps: AS-017, AS-018, AS-019, AS-020) | ⬚ Planned | — |
 | AS-060 | P1 | Versioned model performance profiles (deps: AS-059, AS-017) | ⬚ Planned | — |
