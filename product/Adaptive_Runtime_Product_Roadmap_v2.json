@@ -666,8 +666,8 @@
       "acceptance_criteria": "Context rebuilt within target context window with auditable truncation.",
       "implementation_prompt": "Implement AS-055 (P1): Context reassembly on model switch. Prerequisites: 052. Required outcome: Context rebuilt within target context window with auditable truncation. First locate existing code and tests, explain design tradeoffs, implement only this scope, add positive/negative/failure tests and document evidence. Preserve hardware/model/provider independence, privacy, secure execution and compatibility. Report blockers instead of inventing dependencies.",
       "backlog_order": 28,
-      "status": "planned",
-      "status_evidence": "",
+      "status": "verified",
+      "status_evidence": "Commit AS-055; auditable context reassembly within the target window (docs/context-reassembly.md); tests/test_context_reassembly.py (15 tests) cover tiered drops (tool outputs before turns), mandatory anchors and newest message, output-token reservation at exact boundaries, injected estimators, content-free drop ledgers, and zero extra drops on AS-052 switched contexts.",
       "status_updated": "2026-10-28"
     },
     {
