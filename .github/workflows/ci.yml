@@ -36,6 +36,8 @@ jobs:
           node-version: 22
       - name: Verify pinned source baseline
         run: python scripts/verify_baseline.py
+      - name: Check commit messages are documented
+        run: python scripts/check_commit_messages.py --base origin/main
       - name: Install project and test dependencies
         run: python -m pip install -e '.[dev]'
       - name: Compile all tracked Python sources
@@ -53,4 +55,5 @@ jobs:
           python scripts/build_studio.py
           python scripts/generate_route_matrix.py
           python scripts/generate_subsystem_inventory.py
+          python scripts/generate_roadmap_status.py --check
           git diff --exit-code -- studio.py docs/route-security-matrix.md docs/subsystem-dependency-inventory.md

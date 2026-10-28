@@ -33,8 +33,16 @@ python3 -m venv .venv
 .venv/bin/python scripts/build_studio.py
 .venv/bin/python scripts/generate_route_matrix.py
 .venv/bin/python scripts/generate_subsystem_inventory.py
+.venv/bin/python scripts/generate_roadmap_status.py --check
 git diff --exit-code -- studio.py docs/route-security-matrix.md docs/subsystem-dependency-inventory.md
 ```
+
+The product roadmap and its per-story status are tracked in
+`product/Adaptive_Runtime_Product_Roadmap_v2.json` with a generated dashboard at
+`docs/product-roadmap-status.md`; `scripts/generate_roadmap_status.py --check`
+fails when the committed dashboard no longer matches the JSON. See
+[`AGENTS.md`](AGENTS.md) for the full agent/contributor workflow and
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for the commit-message policy.
 
 The smoke checks bind disposable servers to loopback and use temporary token/database paths. They do not call a configured LLM/provider or alter user data. The live container test remains explicitly opt-in and is skipped by the default suite.
 
