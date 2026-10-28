@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -670,3 +671,48 @@ def test_approval_decision_leaves_durable_audit_and_event_log(tmp_path: Path, is
     decision_events = [e for e in events if e.get("type") == "approval/decision" and e.get("approval_id") == pending["approval_id"]]
     assert decision_events, "approval/decision event was not recorded"
     assert any(e.get("decision") == "approve" for e in decision_events)
+
+
+def test_worktree_removal_fails_safe_outside_harnesses_layout(tmp_path: Path, monkeypatch) -> None:
+    """AS-031 self-review: destructive cleanup only touches a verified
+    `.harnesses/wt-*` root inside the repo; anything else is left on disk."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".git").mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=str(repo), check=True, capture_output=True)
+    outside = repo / "project" / "nested"
+    outside.mkdir(parents=True)
+    (outside / "keep.txt").write_text("precious", encoding="utf-8")
+    removed: list[str] = []
+    real_run = subprocess.run
+
+    def fake_run(cmd, *args, **kwargs):
+        if cmd[:3] == ["git", "worktree", "remove"]:
+            removed.append(str(cmd[4]))
+            return real_run(["true"], *args, **kwargs)
+        return real_run(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(studio.subprocess, "run", fake_run)
+    # Not a `.harnesses/wt-*` shape: must be skipped entirely.
+    studio._remove_harness_worktree(repo, outside, "harness/abc")
+    assert removed == []
+    assert (outside / "keep.txt").read_text(encoding="utf-8") == "precious"
+
+    # Genuine worktree root inside the repo: cleanup targets exactly that root.
+    genuine = repo / ".harnesses" / "wt-abc123"
+    genuine.mkdir(parents=True)
+    studio._remove_harness_worktree(repo, genuine / "sub" / "dir", "harness/abc")
+    assert removed == [str(genuine.resolve())]
+
+
+def test_worktree_removal_refuses_target_outside_repo(tmp_path: Path) -> None:
+    """A `.harnesses/wt-*` path outside the workspace repo is never deleted."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".git").mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=str(repo), check=True, capture_output=True)
+    elsewhere = tmp_path / "elsewhere" / ".harnesses" / "wt-xyz"
+    elsewhere.mkdir(parents=True)
+    (elsewhere / "data.txt").write_text("keep", encoding="utf-8")
+    studio._remove_harness_worktree(repo, elsewhere, "harness/xyz")
+    assert (elsewhere / "data.txt").exists()

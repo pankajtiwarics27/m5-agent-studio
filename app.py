@@ -6320,12 +6320,18 @@ def _remove_harness_worktree(workspace_dir: Path, worktree_dir: Path, branch_nam
     if not info["is_git"]:
         return
     repo_root = Path(info["root"]).resolve()
-    # Find worktree root (`.harnesses/wt-*`)
-    wt_target = worktree_dir
+    # Find worktree root (`.harnesses/wt-*`). Destructive cleanup runs only on a
+    # verified worktree root inside this repository's `.harnesses/` directory;
+    # anything else fails safe and is left on disk rather than deleted by path.
+    wt_target: Path | None = None
     for parent in [worktree_dir, *worktree_dir.parents]:
         if parent.name.startswith("wt-") and parent.parent.name == ".harnesses":
-            wt_target = parent
+            candidate = parent.resolve()
+            if candidate != repo_root and repo_root in candidate.parents:
+                wt_target = candidate
             break
+    if wt_target is None:
+        return
     try:
         subprocess.run(
             ["git", "worktree", "remove", "--force", str(wt_target)],
