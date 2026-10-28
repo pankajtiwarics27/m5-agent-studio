@@ -452,7 +452,7 @@ limitations: [`SECURITY.md`](SECURITY.md), [`IMPLEMENTATION_STATUS.md`](IMPLEMEN
 ```text
 m5-agent-studio/
 ├── app.py                     # Canonical FastAPI backend source
-├── workflow_*.py, *_policy.py, …  # Extracted contract modules (typed boundaries)
+├── workflow_*.py, mcp_client.py, context_store.py, …  # Extracted typed boundary modules
 ├── static/index.html          # Canonical single-file UI source
 ├── studio.py                  # GENERATED standalone PEP 723 executable — do not hand-edit
 ├── product/                   # Product roadmap JSON (source of truth for story status)

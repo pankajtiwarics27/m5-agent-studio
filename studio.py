@@ -7639,6 +7639,8 @@ async def api_debate_stream(request: Request) -> StreamingResponse:
 # Universal Cloud + Custom MCP Client & Tool Hub (`2026-07-28` + `2025` + `stdio`)
 # =============================================================================
 
+# Alias -> Mcp-Session-Id cache for the 2025 stateful transport. The wire
+# protocol itself lives in mcp_client.py; this dict is its backing store.
 _MCP_HTTP_SESSIONS: dict[str, str] = {}
 
 MCP_SERVER_PRESETS: dict[str, dict[str, Any]] = {
@@ -8009,63 +8011,26 @@ def upsert_mcp_server(payload: dict[str, Any]) -> dict[str, Any]:
     return get_mcp_server(alias, include_secret=False)
 
 
-def _parse_mcp_http_payload(resp: httpx.Response, expected_id: int) -> dict[str, Any]:
-    ctype = (resp.headers.get("content-type") or "").lower()
-    raw_text = resp.text.strip()
-    if "text/event-stream" in ctype or raw_text.startswith("event:") or raw_text.startswith("data:"):
-        chosen: dict[str, Any] | None = None
-        for line in raw_text.splitlines():
-            s = line.strip()
-            if not s.startswith("data:"):
-                continue
-            d_str = s[5:].strip()
-            if not d_str or d_str == "[DONE]":
-                continue
-            try:
-                pkt = json.loads(d_str)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(pkt, dict):
-                if pkt.get("id") == expected_id:
-                    chosen = pkt
-                    break
-                if "result" in pkt or "error" in pkt:
-                    chosen = pkt
-        if chosen is None:
-            raise RuntimeError(f"MCP SSE stream contained no JSON-RPC result: {raw_text[:240]}")
-        obj = chosen
-    else:
-        try:
-            obj = resp.json()
-        except Exception as exc:
-            raise RuntimeError(f"Invalid MCP JSON response (HTTP {resp.status_code}): {raw_text[:240]}") from exc
+class _ValidatingMcpPost:
+    """Application-side transport for ``mcp_client.adaptive_call``.
 
-    if isinstance(obj, dict) and obj.get("error"):
-        err = obj["error"]
-        msg = err.get("message") if isinstance(err, dict) else str(err)
-        code = err.get("code") if isinstance(err, dict) else ""
-        raise RuntimeError(f"MCP RPC error ({code}): {msg}")
-    return (obj.get("result") if isinstance(obj, dict) else None) or {}
+    Validates every outbound URL (including retries the state machine issues),
+    rejects redirect responses, and adapts the httpx response to the
+    transport-agnostic view the wire module consumes. Security policy stays in
+    the application; protocol negotiation lives in ``mcp_client``.
+    """
 
+    def __init__(self, client: httpx.AsyncClient, allow_private: bool) -> None:
+        self._client = client
+        self._allow_private = allow_private
 
-def _build_mcp_http_headers(srv: dict[str, Any], method: str, tool_name: str = "") -> dict[str, str]:
-    headers: dict[str, str] = {
-        "Accept": "application/json, text/event-stream",
-        "Content-Type": "application/json",
-        "Mcp-Method": method,
-    }
-    if tool_name:
-        headers["Mcp-Name"] = tool_name
-    for k, v in (srv.get("headers") or {}).items():
-        headers[str(k)] = str(v)
-    tok = (srv.get("effective_token") or "").strip()
-    ah = (srv.get("auth_header") or "Authorization").strip()
-    if tok and ah.lower() != "none":
-        if ah.lower() == "authorization" and not tok.lower().startswith(("bearer ", "basic ", "token ")):
-            headers["Authorization"] = f"Bearer {tok}"
-        else:
-            headers[ah] = tok
-    return headers
+    async def __call__(
+        self, url: str, headers: Mapping[str, str], json_body: dict[str, Any], timeout: float
+    ) -> mcp_client.TransportResponse:
+        await _validate_outbound_url(url, allow_private=self._allow_private)
+        resp = await self._client.post(url, headers=dict(headers), json=json_body, timeout=timeout)
+        _reject_redirect_response(resp, url)
+        return mcp_client.TransportResponse.from_httpx(resp)
 
 
 async def _mcp_http_rpc(
@@ -8081,96 +8046,23 @@ async def _mcp_http_rpc(
          or cached `2025` `Mcp-Session-Id`.
       2. Automatic Fallback: `2025-06-18` `initialize` + `Mcp-Session-Id` + `notifications/initialized`
          handshake (plus `/sse` -> `/mcp` URL retry on HTTP 405).
+
+    The negotiation state machine is extracted in `mcp_client.adaptive_call`;
+    this adapter supplies the validating transport, presets, and session cache.
     """
-    alias = srv["alias"]
     url = srv["url"]
     builtin_local = any(p.get("url") == url for p in MCP_SERVER_PRESETS.values())
-    await _validate_outbound_url(url, allow_private=(STUDIO_ALLOW_PRIVATE_URLS or builtin_local))
-    tool_name = str((params or {}).get("name") or "") if method == "tools/call" else ""
-    base_headers = _build_mcp_http_headers(srv, method, tool_name=tool_name)
-    cached_sid = _MCP_HTTP_SESSIONS.get(alias)
-
-    req_id = 2
-    if cached_sid:
-        h1 = {**base_headers, "Mcp-Session-Id": cached_sid}
-        body1 = {"jsonrpc": "2.0", "id": req_id, "method": method, "params": params or {}}
-    else:
-        h1 = {**base_headers, "MCP-Protocol-Version": "2026-07-28"}
-        meta_params = {
-            **(params or {}),
-            "_meta": {
-                "io.modelcontextprotocol/protocolVersion": "2026-07-28",
-                "io.modelcontextprotocol/clientInfo": {"name": "m5-studio", "version": STUDIO_VERSION},
-                "io.modelcontextprotocol/clientCapabilities": {},
-            },
-        }
-        body1 = {"jsonrpc": "2.0", "id": req_id, "method": method, "params": meta_params}
-
-    resp1 = await client.post(url, headers=h1, json=body1, timeout=timeout_sec)
-    if resp1.status_code == 405 and url.rstrip("/").endswith("/sse"):
-        url = re.sub(r"/sse/?$", "/mcp", url)
-        await _validate_outbound_url(url, allow_private=(STUDIO_ALLOW_PRIVATE_URLS or builtin_local))
-        resp1 = await client.post(url, headers=h1, json=body1, timeout=timeout_sec)
-    _reject_redirect_response(resp1, url)
-
-    if resp1.status_code == 200:
-        try:
-            return _parse_mcp_http_payload(resp1, req_id)
-        except RuntimeError as rpc_err:
-            err_low = str(rpc_err).lower()
-            if not any(k in err_low for k in ("init", "session", "protocol", "version", "-32600", "-32602")):
-                raise
-
-    if resp1.status_code in (401, 403):
-        raise RuntimeError(f"MCP HTTP {resp1.status_code} Unauthorized at `{url}` — check API token / Authorization header.")
-
-    # Fallback to 2025 Streamable HTTP stateful `initialize` + `Mcp-Session-Id` handshake
-    _MCP_HTTP_SESSIONS.pop(alias, None)
-    init_headers = _build_mcp_http_headers(srv, "initialize")
-    init_body = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "initialize",
-        "params": {
-            "protocolVersion": "2025-06-18",
-            "capabilities": {},
-            "clientInfo": {"name": "m5-studio", "version": STUDIO_VERSION},
-        },
-    }
-    init_resp = await client.post(url, headers=init_headers, json=init_body, timeout=timeout_sec)
-    _reject_redirect_response(init_resp, url)
-    if init_resp.status_code >= 400:
-        raise RuntimeError(f"MCP HTTP {init_resp.status_code} from `{url}`: {init_resp.text[:260]}")
-    _parse_mcp_http_payload(init_resp, 1)
-
-    sid = init_resp.headers.get("mcp-session-id") or init_resp.headers.get("Mcp-Session-Id") or ""
-    req_headers = _build_mcp_http_headers(srv, method, tool_name=tool_name)
-    notif_headers = _build_mcp_http_headers(srv, "notifications/initialized")
-    if sid:
-        _MCP_HTTP_SESSIONS[alias] = sid
-        req_headers["Mcp-Session-Id"] = sid
-        notif_headers["Mcp-Session-Id"] = sid
-
-    try:
-        await client.post(
-            url,
-            headers=notif_headers,
-            json={"jsonrpc": "2.0", "method": "notifications/initialized"},
-            timeout=10.0,
-        )
-    except Exception:
-        pass
-
-    final_resp = await client.post(
-        url,
-        headers=req_headers,
-        json={"jsonrpc": "2.0", "id": 3, "method": method, "params": params or {}},
+    post = _ValidatingMcpPost(client, allow_private=(STUDIO_ALLOW_PRIVATE_URLS or builtin_local))
+    return await mcp_client.adaptive_call(
+        post,
+        url=url,
+        server=srv,
+        method=method,
+        params=params,
         timeout=timeout_sec,
+        sessions=mcp_client.SessionStore(_MCP_HTTP_SESSIONS),
+        client_version=STUDIO_VERSION,
     )
-    _reject_redirect_response(final_resp, url)
-    if final_resp.status_code >= 400:
-        raise RuntimeError(f"MCP HTTP {final_resp.status_code} on `{method}`: {final_resp.text[:260]}")
-    return _parse_mcp_http_payload(final_resp, 3)
 
 
 async def _mcp_stdio_rpc(
@@ -8622,121 +8514,8 @@ def _is_secret_filename(name: str) -> bool:
     return False
 
 
-def _sanitize_fts5_query(raw_query: str) -> str:
-    tokens = re.findall(r"[A-Za-z0-9_]{2,}", raw_query or "")
-    if not tokens:
-        return ""
-    return " OR ".join(f'"{t}"' for t in tokens[:14])
-
-
-# --- 1. `0xranx/OpenContext` Persistent Personal Memory Vault (`oc://doc/<id>`) ---
-
-
-def list_opencontext_docs(folder: str = "") -> list[dict[str, Any]]:
-    with STORAGE.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        if folder:
-            rows = conn.execute(
-                "SELECT * FROM opencontext_docs WHERE folder = ? ORDER BY pinned DESC, updated_at DESC",
-                (folder,),
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT * FROM opencontext_docs ORDER BY pinned DESC, updated_at DESC"
-            ).fetchall()
-    out = []
-    for r in rows:
-        d = dict(r)
-        d["pinned"] = bool(d.get("pinned", 0))
-        d["uri"] = f"oc://doc/{d['id']}"
-        out.append(d)
-    return out
-
-
-def get_opencontext_doc(doc_id_or_uri: str) -> dict[str, Any]:
-    clean_id = (doc_id_or_uri or "").strip().replace("oc://doc/", "").strip("/")
-    with STORAGE.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        row = conn.execute("SELECT * FROM opencontext_docs WHERE id = ?", (clean_id,)).fetchone()
-    if not row:
-        raise KeyError(f"OpenContext doc `{clean_id}` not found.")
-    d = dict(row)
-    d["pinned"] = bool(d.get("pinned", 0))
-    d["uri"] = f"oc://doc/{d['id']}"
-    return d
-
-
-def upsert_opencontext_doc(
-    title: str,
-    content: str,
-    folder: str = "decisions",
-    description: str = "",
-    pinned: bool = False,
-    doc_id: str = "",
-) -> dict[str, Any]:
-    clean_title = (title or "").strip()[:140]
-    if not clean_title:
-        raise ValueError("Document `title` is required.")
-    clean_folder = re.sub(r"[^a-z0-9_/-]+", "-", (folder or "decisions").strip().lower()).strip("-") or "decisions"
-    did = (doc_id or "").strip().replace("oc://doc/", "") or f"oc-{uuid.uuid4().hex[:8]}"
-    desc = (description or content.splitlines()[0] if content else "").strip()[:240]
-    now = time.time()
-    with STORAGE.connect(DB_PATH) as conn:
-        conn.execute(
-            """
-            INSERT INTO opencontext_docs (id, folder, title, description, content, pinned, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-              folder=excluded.folder, title=excluded.title, description=excluded.description,
-              content=excluded.content, pinned=excluded.pinned, updated_at=excluded.updated_at
-            """,
-            (did, clean_folder, clean_title, desc, content, 1 if pinned else 0, now),
-        )
-        conn.execute("DELETE FROM opencontext_fts WHERE doc_id = ?", (did,))
-        conn.execute(
-            "INSERT INTO opencontext_fts (doc_id, folder, title, description, content) VALUES (?, ?, ?, ?, ?)",
-            (did, clean_folder, clean_title, desc, content),
-        )
-        conn.commit()
-    return get_opencontext_doc(did)
-
-
-def delete_opencontext_doc(doc_id: str) -> None:
-    clean_id = (doc_id or "").strip().replace("oc://doc/", "")
-    with STORAGE.connect(DB_PATH) as conn:
-        conn.execute("DELETE FROM opencontext_docs WHERE id = ?", (clean_id,))
-        conn.execute("DELETE FROM opencontext_fts WHERE doc_id = ?", (clean_id,))
-        conn.commit()
-
-
-def search_opencontext_docs(query: str, limit: int = 8) -> list[dict[str, Any]]:
-    fts_q = _sanitize_fts5_query(query)
-    if not fts_q:
-        return list_opencontext_docs()[:limit]
-    with STORAGE.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        rows = conn.execute(
-            """
-            SELECT d.*, bm25(opencontext_fts) AS rank_score
-            FROM opencontext_fts
-            JOIN opencontext_docs d ON d.id = opencontext_fts.doc_id
-            WHERE opencontext_fts MATCH ?
-            ORDER BY rank_score ASC
-            LIMIT ?
-            """,
-            (fts_q, limit),
-        ).fetchall()
-    out = []
-    for r in rows:
-        d = dict(r)
-        d["pinned"] = bool(d.get("pinned", 0))
-        d["uri"] = f"oc://doc/{d['id']}"
-        out.append(d)
-    return out
-
-
 def build_pinned_opencontext_prompt() -> str:
-    pinned = [d for d in list_opencontext_docs() if d["pinned"]]
+    pinned = [d for d in context_store.list_docs(STORAGE, DB_PATH) if d["pinned"]]
     if not pinned:
         return ""
     lines = ["\n### OpenContext Persistent Memory (Pinned Knowledge)"]
@@ -8747,19 +8526,19 @@ def build_pinned_opencontext_prompt() -> str:
 
 @app.get("/api/opencontext/docs")
 async def api_list_opencontext(folder: str = "") -> JSONResponse:
-    return JSONResponse({"docs": list_opencontext_docs(folder=folder)})
+    return JSONResponse({"docs": context_store.list_docs(STORAGE, DB_PATH, folder=folder)})
 
 
 @app.get("/api/opencontext/search")
 async def api_search_opencontext(q: str = "") -> JSONResponse:
-    return JSONResponse({"docs": search_opencontext_docs(q)})
+    return JSONResponse({"docs": context_store.search_docs(STORAGE, DB_PATH, q)})
 
 
 @app.post("/api/opencontext/docs")
 async def api_save_opencontext(request: Request) -> JSONResponse:
     body = await request.json()
     try:
-        doc = upsert_opencontext_doc(
+        doc = context_store.upsert_doc(STORAGE, DB_PATH, 
             title=body.get("title") or "",
             content=body.get("content") or "",
             folder=body.get("folder") or "decisions",
@@ -8767,7 +8546,7 @@ async def api_save_opencontext(request: Request) -> JSONResponse:
             pinned=bool(body.get("pinned", False)),
             doc_id=body.get("id") or "",
         )
-        return JSONResponse({"status": "ok", "doc": doc, "docs": list_opencontext_docs()})
+        return JSONResponse({"status": "ok", "doc": doc, "docs": context_store.list_docs(STORAGE, DB_PATH)})
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -8776,10 +8555,10 @@ async def api_save_opencontext(request: Request) -> JSONResponse:
 async def api_patch_opencontext(doc_id: str, request: Request) -> JSONResponse:
     body = await request.json()
     try:
-        cur = get_opencontext_doc(doc_id)
+        cur = context_store.get_doc(STORAGE, DB_PATH, doc_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    doc = upsert_opencontext_doc(
+    doc = context_store.upsert_doc(STORAGE, DB_PATH, 
         title=body.get("title", cur["title"]),
         content=body.get("content", cur["content"]),
         folder=body.get("folder", cur["folder"]),
@@ -8787,57 +8566,20 @@ async def api_patch_opencontext(doc_id: str, request: Request) -> JSONResponse:
         pinned=bool(body.get("pinned", cur["pinned"])),
         doc_id=cur["id"],
     )
-    return JSONResponse({"status": "ok", "doc": doc, "docs": list_opencontext_docs()})
+    return JSONResponse({"status": "ok", "doc": doc, "docs": context_store.list_docs(STORAGE, DB_PATH)})
 
 
 @app.delete("/api/opencontext/docs/{doc_id}")
 async def api_delete_opencontext(doc_id: str) -> JSONResponse:
-    delete_opencontext_doc(doc_id)
-    return JSONResponse({"status": "deleted", "docs": list_opencontext_docs()})
+    context_store.delete_doc(STORAGE, DB_PATH, doc_id)
+    return JSONResponse({"status": "deleted", "docs": context_store.list_docs(STORAGE, DB_PATH)})
 
 
-def lint_opencontext_vault() -> dict[str, Any]:
-    """
-    `lucasastorian/llmwiki` Deterministic Knowledge Hygiene (`lint`):
-      Checks `oc://doc/<id>` citation resolution, orphan unlinked notes, stale notes (>30d), and empty bodies.
-    """
-    docs = list_opencontext_docs()
-    valid_ids = {d["id"] for d in docs}
-    inbound_refs: dict[str, int] = {d["id"]: 0 for d in docs}
-    dangling_links: list[dict[str, str]] = []
-    stale_docs: list[str] = []
-    thin_docs: list[str] = []
-    now = time.time()
-
-    link_rx = re.compile(r"oc://doc/([A-Za-z0-9_-]+)")
-    for d in docs:
-        body = d.get("content") or ""
-        if len(body.strip()) < 30:
-            thin_docs.append(d["uri"])
-        if now - float(d.get("updated_at") or now) > 30 * 86400:
-            stale_docs.append(d["uri"])
-        for ref_id in link_rx.findall(body):
-            if ref_id not in valid_ids:
-                dangling_links.append({"from": d["uri"], "missing_target": f"oc://doc/{ref_id}"})
-            elif ref_id != d["id"]:
-                inbound_refs[ref_id] = inbound_refs.get(ref_id, 0) + 1
-
-    orphans = [d["uri"] for d in docs if not d["pinned"] and inbound_refs.get(d["id"], 0) == 0 and len(docs) > 1]
-    score = max(0, 100 - len(dangling_links) * 15 - len(thin_docs) * 10 - min(20, len(orphans) * 4))
-    return {
-        "total_docs": len(docs),
-        "pinned_docs": sum(1 for d in docs if d["pinned"]),
-        "health_score": score,
-        "dangling_links": dangling_links,
-        "orphan_docs": orphans,
-        "stale_docs": stale_docs,
-        "thin_docs": thin_docs,
-    }
 
 
 @app.get("/api/opencontext/lint")
 async def api_lint_opencontext() -> JSONResponse:
-    return JSONResponse(lint_opencontext_vault())
+    return JSONResponse(context_store.lint_vault(STORAGE, DB_PATH))
 
 
 # --- 2. `Jakedismo/codegraph-rust` Zero-RAM AST & Multi-Language Knowledge Graph ---
@@ -9535,7 +9277,7 @@ def sandbox_tool_output_if_large(
 
 
 def search_ctx_vault(session_id: str, query: str, doc_id: str = "", limit: int = 6) -> str:
-    fts_q = _sanitize_fts5_query(query)
+    fts_q = context_store.sanitize_fts5_query(query)
     with STORAGE.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         if fts_q and doc_id:
@@ -10755,7 +10497,7 @@ async def _execute_harness_tool_inner(
             return await run_reusable_block(root, blk, tgt)
 
         if tool_name == "oc_lint":
-            rep = lint_opencontext_vault()
+            rep = context_store.lint_vault(STORAGE, DB_PATH)
             return {"ok": True, "output": json.dumps(rep, indent=2), "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
 
         if tool_name == "ctx_execute_python":
@@ -10791,7 +10533,7 @@ async def _execute_harness_tool_inner(
             return {"ok": True, "output": ctx_hits, "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
 
         if tool_name == "oc_search":
-            docs = search_opencontext_docs(str(args.get("query") or ""), limit=8)
+            docs = context_store.search_docs(STORAGE, DB_PATH, str(args.get("query") or ""), limit=8)
             if not docs:
                 return {"ok": True, "output": "No OpenContext documents matched.", "diff": "", "elapsed_ms": 1}
             lines = [f"### OpenContext Knowledge Hits ({len(docs)})"]
@@ -10801,12 +10543,12 @@ async def _execute_harness_tool_inner(
             return {"ok": True, "output": "\n".join(lines), "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
 
         if tool_name == "oc_read":
-            doc = get_opencontext_doc(str(args.get("doc_id") or args.get("uri") or ""))
+            doc = context_store.get_doc(STORAGE, DB_PATH, str(args.get("doc_id") or args.get("uri") or ""))
             txt = f"# {doc['title']} (`{doc['uri']}` • folder: `{doc['folder']}`)\n\n{doc['content']}"
             return {"ok": True, "output": txt, "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
 
         if tool_name == "oc_save_doc":
-            doc = upsert_opencontext_doc(
+            doc = context_store.upsert_doc(STORAGE, DB_PATH, 
                 title=str(args.get("title") or ""),
                 content=str(args.get("content") or ""),
                 folder=str(args.get("folder") or "decisions"),
@@ -12771,10 +12513,10 @@ async def _dispatch_mcp_stdio_tool(tname: str, args: dict[str, Any], default_age
         session = get_harness_session_db(args["session_id"])
         text = json.dumps(_compute_git_diff(Path(session["worktree_dir"])), indent=2)
     elif tname == "oc_search":
-        text = json.dumps(search_opencontext_docs(args.get("query") or ""), indent=2)
+        text = json.dumps(context_store.search_docs(STORAGE, DB_PATH, args.get("query") or ""), indent=2)
     elif tname == "oc_save_doc":
         text = json.dumps(
-            upsert_opencontext_doc(
+            context_store.upsert_doc(STORAGE, DB_PATH, 
                 title=args["title"],
                 content=args["content"],
                 folder=args.get("folder") or "decisions",
@@ -12783,7 +12525,7 @@ async def _dispatch_mcp_stdio_tool(tname: str, args: dict[str, Any], default_age
             indent=2,
         )
     elif tname == "oc_lint":
-        text = json.dumps(lint_opencontext_vault(), indent=2)
+        text = json.dumps(context_store.lint_vault(STORAGE, DB_PATH), indent=2)
     elif tname == "codegraph_query":
         workspace = Path(args.get("workspace_dir") or str(WORKSPACE_ROOT)).expanduser().resolve()
         text = run_codegraph_tool(workspace, mode=args.get("mode") or "context", query=args.get("query") or "")
@@ -13089,6 +12831,454 @@ def apply_retention(conn: sqlite3.Connection, *, max_age_days: int, now: float) 
             deleted["ctx_vault_chunks"] = deleted.get("ctx_vault_chunks", 0) + int(cursor.rowcount)
     conn.commit()
     return deleted
+
+"""MCP wire-protocol boundary: adaptive HTTP transport, parser, and session state.
+
+AS-012 boundary extraction. This module owns everything protocol-level about
+talking to a Streamable-HTTP MCP server:
+
+1. Fast-path: Stateless ``2026-07-28`` (``MCP-Protocol-Version`` + ``_meta`` +
+   ``Mcp-Method`` headers) or a cached ``2025`` ``Mcp-Session-Id``.
+2. Automatic fallback: ``2025-06-18`` ``initialize`` + ``Mcp-Session-Id`` +
+   ``notifications/initialized`` handshake (plus an ``/sse`` -> ``/mcp`` URL
+   retry on HTTP 405).
+
+The transport is injected as a single ``post(url, headers, body, timeout)``
+callable returning a :class:`TransportResponse`, so the negotiation state
+machine can be exercised with scripted mock transports (no sockets, no DNS)
+while the application keeps its own validating, redirect-rejecting transport.
+
+URL validation, redirect rejection, and network I/O stay in the application:
+this module never opens a connection.
+"""
+
+import json
+import re
+from collections.abc import Awaitable, Callable, Mapping
+from dataclasses import dataclass
+from typing import Any
+
+CLIENT_NAME = "m5-studio"
+STATELESS_PROTOCOL_VERSION = "2026-07-28"
+STATEFUL_PROTOCOL_VERSION = "2025-06-18"
+
+
+class McpTransportError(RuntimeError):
+    """Raised for MCP protocol/transport failures (subset of RuntimeError for compatibility)."""
+
+
+@dataclass(frozen=True)
+class TransportResponse:
+    """Transport-agnostic response view; the application adapts its HTTP client to this."""
+
+    status_code: int
+    text: str
+    content_type: str
+    headers: Mapping[str, str]
+
+    @classmethod
+    def from_httpx(cls, resp: Any) -> "TransportResponse":
+        return cls(
+            status_code=int(resp.status_code),
+            text=resp.text,
+            content_type=(resp.headers.get("content-type") or "").lower(),
+            headers={str(k): str(v) for k, v in resp.headers.items()},
+        )
+
+
+Post = Callable[[str, Mapping[str, str], dict[str, Any], float], Awaitable[TransportResponse]]
+
+
+class SessionStore:
+    """Explicit per-alias session-id cache; replaces the previous module global."""
+
+    def __init__(self, backing: dict[str, str] | None = None) -> None:
+        self._sessions: dict[str, str] = backing if backing is not None else {}
+
+    def get(self, alias: str) -> str:
+        return self._sessions.get(alias, "")
+
+    def set(self, alias: str, session_id: str) -> None:
+        self._sessions[alias] = session_id
+
+    def clear(self, alias: str) -> None:
+        self._sessions.pop(alias, None)
+
+
+# ---------------------------------------------------------------------------
+# Pure protocol pieces
+# ---------------------------------------------------------------------------
+
+
+def parse_mcp_payload(text: str, content_type: str, status_code: int, expected_id: int) -> dict[str, Any]:
+    """Parse a JSON or SSE JSON-RPC response body and return its ``result`` object."""
+    ctype = (content_type or "").lower()
+    raw_text = (text or "").strip()
+    if "text/event-stream" in ctype or raw_text.startswith("event:") or raw_text.startswith("data:"):
+        chosen: dict[str, Any] | None = None
+        for line in raw_text.splitlines():
+            s = line.strip()
+            if not s.startswith("data:"):
+                continue
+            d_str = s[5:].strip()
+            if not d_str or d_str == "[DONE]":
+                continue
+            try:
+                pkt = json.loads(d_str)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(pkt, dict):
+                if pkt.get("id") == expected_id:
+                    chosen = pkt
+                    break
+                if "result" in pkt or "error" in pkt:
+                    chosen = pkt
+        if chosen is None:
+            raise McpTransportError(f"MCP SSE stream contained no JSON-RPC result: {raw_text[:240]}")
+        obj = chosen
+    else:
+        try:
+            obj = json.loads(raw_text)
+        except Exception as exc:
+            raise McpTransportError(f"Invalid MCP JSON response (HTTP {status_code}): {raw_text[:240]}") from exc
+
+    if isinstance(obj, dict) and obj.get("error"):
+        err = obj["error"]
+        msg = err.get("message") if isinstance(err, dict) else str(err)
+        code = err.get("code") if isinstance(err, dict) else ""
+        raise McpTransportError(f"MCP RPC error ({code}): {msg}")
+    return (obj.get("result") if isinstance(obj, dict) else None) or {}
+
+
+def build_headers(
+    server: Mapping[str, Any],
+    method: str,
+    tool_name: str = "",
+    client_version: str = "",
+) -> dict[str, str]:
+    headers: dict[str, str] = {
+        "Accept": "application/json, text/event-stream",
+        "Content-Type": "application/json",
+        "Mcp-Method": method,
+    }
+    if tool_name:
+        headers["Mcp-Name"] = tool_name
+    for k, v in (server.get("headers") or {}).items():
+        headers[str(k)] = str(v)
+    tok = (server.get("effective_token") or "").strip()
+    ah = (server.get("auth_header") or "Authorization").strip()
+    if tok and ah.lower() != "none":
+        if ah.lower() == "authorization" and not tok.lower().startswith(("bearer ", "basic ", "token ")):
+            headers["Authorization"] = f"Bearer {tok}"
+        else:
+            headers[ah] = tok
+    return headers
+
+
+def build_stateless_body(method: str, params: Mapping[str, Any] | None, request_id: int, client_version: str) -> dict[str, Any]:
+    meta_params = {
+        **(dict(params) if params else {}),
+        "_meta": {
+            "io.modelcontextprotocol/protocolVersion": STATELESS_PROTOCOL_VERSION,
+            "io.modelcontextprotocol/clientInfo": {"name": CLIENT_NAME, "version": client_version},
+            "io.modelcontextprotocol/clientCapabilities": {},
+        },
+    }
+    return {"jsonrpc": "2.0", "id": request_id, "method": method, "params": meta_params}
+
+
+def build_initialize_body(client_version: str) -> dict[str, Any]:
+    return {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": STATEFUL_PROTOCOL_VERSION,
+            "capabilities": {},
+            "clientInfo": {"name": CLIENT_NAME, "version": client_version},
+        },
+    }
+
+
+def extract_session_id(headers: Mapping[str, str]) -> str:
+    lowered = {str(k).lower(): str(v) for k, v in headers.items()}
+    return lowered.get("mcp-session-id", "")
+
+
+def retry_url_after_405(url: str) -> str | None:
+    """Legacy ``/sse`` endpoints answer 405; retry once against ``/mcp``."""
+    if url.rstrip("/").endswith("/sse"):
+        return re.sub(r"/sse/?$", "/mcp", url)
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Adaptive negotiation state machine
+# ---------------------------------------------------------------------------
+
+
+def _raise_for_auth(resp: TransportResponse, url: str) -> None:
+    if resp.status_code in (401, 403):
+        raise McpTransportError(f"MCP HTTP {resp.status_code} Unauthorized at `{url}` — check API token / Authorization header.")
+
+
+def _looks_like_session_error(detail: str) -> bool:
+    lowered = detail.lower()
+    return any(k in lowered for k in ("init", "session", "protocol", "version", "-32600", "-32602"))
+
+
+async def adaptive_call(
+    post: Post,
+    *,
+    url: str,
+    server: Mapping[str, Any],
+    method: str,
+    params: Mapping[str, Any] | None = None,
+    timeout: float = 25.0,
+    sessions: SessionStore | None = None,
+    client_version: str = "",
+) -> dict[str, Any]:
+    """Execute one MCP RPC through the adaptive stateless/stateful transport.
+
+    ``post`` must apply the application's outbound URL validation and redirect
+    rejection for every request (including retries issued from here).
+    """
+    sessions = sessions or SessionStore()
+    alias = str(server.get("alias") or "")
+    tool_name = str((params or {}).get("name") or "") if method == "tools/call" else ""
+    base_headers = build_headers(server, method, tool_name=tool_name, client_version=client_version)
+    cached_sid = sessions.get(alias)
+
+    req_id = 2
+    if cached_sid:
+        h1 = {**base_headers, "Mcp-Session-Id": cached_sid}
+        body1: dict[str, Any] = {"jsonrpc": "2.0", "id": req_id, "method": method, "params": dict(params) if params else {}}
+    else:
+        h1 = {**base_headers, "MCP-Protocol-Version": STATELESS_PROTOCOL_VERSION}
+        body1 = build_stateless_body(method, params, req_id, client_version)
+
+    resp1 = await post(url, h1, body1, timeout)
+    retry_target = retry_url_after_405(url) if resp1.status_code == 405 else None
+    if retry_target:
+        url = retry_target
+        resp1 = await post(url, h1, body1, timeout)
+
+    if resp1.status_code == 200:
+        try:
+            return parse_mcp_payload(resp1.text, resp1.content_type, resp1.status_code, req_id)
+        except McpTransportError as rpc_err:
+            if not _looks_like_session_error(str(rpc_err)):
+                raise
+    _raise_for_auth(resp1, url)
+
+    # Fallback to the 2025 stateful `initialize` + `Mcp-Session-Id` handshake.
+    sessions.clear(alias)
+    init_headers = build_headers(server, "initialize", client_version=client_version)
+    init_resp = await post(url, init_headers, build_initialize_body(client_version), timeout)
+    if init_resp.status_code >= 400:
+        raise McpTransportError(f"MCP HTTP {init_resp.status_code} from `{url}`: {init_resp.text[:260]}")
+    parse_mcp_payload(init_resp.text, init_resp.content_type, init_resp.status_code, 1)
+
+    sid = extract_session_id(init_resp.headers)
+    req_headers = build_headers(server, method, tool_name=tool_name, client_version=client_version)
+    notif_headers = build_headers(server, "notifications/initialized", client_version=client_version)
+    if sid:
+        sessions.set(alias, sid)
+        req_headers["Mcp-Session-Id"] = sid
+        notif_headers["Mcp-Session-Id"] = sid
+
+    try:
+        await post(url, notif_headers, {"jsonrpc": "2.0", "method": "notifications/initialized"}, 10.0)
+    except Exception:
+        pass
+
+    final_resp = await post(
+        url,
+        req_headers,
+        {"jsonrpc": "2.0", "id": 3, "method": method, "params": dict(params) if params else {}},
+        timeout,
+    )
+    if final_resp.status_code >= 400:
+        raise McpTransportError(f"MCP HTTP {final_resp.status_code} on `{method}`: {final_resp.text[:260]}")
+    return parse_mcp_payload(final_resp.text, final_resp.content_type, final_resp.status_code, 3)
+
+"""OpenContext personal-memory store: CRUD, FTS5 search, and vault linting.
+
+AS-012 boundary extraction. The OpenContext vault (`oc://doc/<id>`) is the
+agent's persistent memory layer: a SQLite table mirrored into an FTS5 index.
+This module owns that boundary and nothing else — every function receives its
+storage handle and database path explicitly, so tests can run against a
+temporary database (or a fake storage double) without touching application
+state. Prompt assembly (`build_pinned_opencontext_prompt`) stays in the
+application: it is presentation, not storage.
+"""
+
+import re
+import sqlite3
+import time
+import uuid
+from pathlib import Path
+from typing import Any, Protocol
+
+
+class StorageLike(Protocol):
+    """Minimal storage seam (structurally compatible with app.SQLiteStorage)."""
+
+    def connect(self, database: Path, *, timeout: float = 5.0) -> sqlite3.Connection: ...
+
+
+def doc_uri(doc_id: str) -> str:
+    return f"oc://doc/{doc_id}"
+
+
+def sanitize_fts5_query(raw_query: str) -> str:
+    """Reduce free text to a safe OR-of-quoted-tokens FTS5 MATCH expression."""
+    tokens = re.findall(r"[A-Za-z0-9_]{2,}", raw_query or "")
+    if not tokens:
+        return ""
+    return " OR ".join(f'"{t}"' for t in tokens[:14])
+
+
+def _row_to_doc(row: sqlite3.Row) -> dict[str, Any]:
+    d = dict(row)
+    d["pinned"] = bool(d.get("pinned", 0))
+    d["uri"] = doc_uri(str(d["id"]))
+    return d
+
+
+def list_docs(storage: StorageLike, db_path: Path, folder: str = "") -> list[dict[str, Any]]:
+    with storage.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        if folder:
+            rows = conn.execute(
+                "SELECT * FROM opencontext_docs WHERE folder = ? ORDER BY pinned DESC, updated_at DESC",
+                (folder,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM opencontext_docs ORDER BY pinned DESC, updated_at DESC"
+            ).fetchall()
+    return [_row_to_doc(r) for r in rows]
+
+
+def get_doc(storage: StorageLike, db_path: Path, doc_id_or_uri: str) -> dict[str, Any]:
+    clean_id = (doc_id_or_uri or "").strip().replace("oc://doc/", "").strip("/")
+    with storage.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("SELECT * FROM opencontext_docs WHERE id = ?", (clean_id,)).fetchone()
+    if not row:
+        raise KeyError(f"OpenContext doc `{clean_id}` not found.")
+    return _row_to_doc(row)
+
+
+def upsert_doc(
+    storage: StorageLike,
+    db_path: Path,
+    title: str,
+    content: str,
+    folder: str = "decisions",
+    description: str = "",
+    pinned: bool = False,
+    doc_id: str = "",
+) -> dict[str, Any]:
+    clean_title = (title or "").strip()[:140]
+    if not clean_title:
+        raise ValueError("Document `title` is required.")
+    clean_folder = re.sub(r"[^a-z0-9_/-]+", "-", (folder or "decisions").strip().lower()).strip("-") or "decisions"
+    did = (doc_id or "").strip().replace("oc://doc/", "") or f"oc-{uuid.uuid4().hex[:8]}"
+    desc = (description or content.splitlines()[0] if content else "").strip()[:240]
+    now = time.time()
+    with storage.connect(db_path) as conn:
+        conn.execute(
+            """
+            INSERT INTO opencontext_docs (id, folder, title, description, content, pinned, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              folder=excluded.folder, title=excluded.title, description=excluded.description,
+              content=excluded.content, pinned=excluded.pinned, updated_at=excluded.updated_at
+            """,
+            (did, clean_folder, clean_title, desc, content, 1 if pinned else 0, now),
+        )
+        conn.execute("DELETE FROM opencontext_fts WHERE doc_id = ?", (did,))
+        conn.execute(
+            "INSERT INTO opencontext_fts (doc_id, folder, title, description, content) VALUES (?, ?, ?, ?, ?)",
+            (did, clean_folder, clean_title, desc, content),
+        )
+        conn.commit()
+    return get_doc(storage, db_path, did)
+
+
+def delete_doc(storage: StorageLike, db_path: Path, doc_id: str) -> None:
+    clean_id = (doc_id or "").strip().replace("oc://doc/", "")
+    with storage.connect(db_path) as conn:
+        conn.execute("DELETE FROM opencontext_docs WHERE id = ?", (clean_id,))
+        conn.execute("DELETE FROM opencontext_fts WHERE doc_id = ?", (clean_id,))
+        conn.commit()
+
+
+def search_docs(storage: StorageLike, db_path: Path, query: str, limit: int = 8) -> list[dict[str, Any]]:
+    fts_q = sanitize_fts5_query(query)
+    if not fts_q:
+        return list_docs(storage, db_path)[:limit]
+    with storage.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT d.*, bm25(opencontext_fts) AS rank_score
+            FROM opencontext_fts
+            JOIN opencontext_docs d ON d.id = opencontext_fts.doc_id
+            WHERE opencontext_fts MATCH ?
+            ORDER BY rank_score ASC
+            LIMIT ?
+            """,
+            (fts_q, limit),
+        ).fetchall()
+    return [_row_to_doc(r) for r in rows]
+
+
+def lint_vault(storage: StorageLike, db_path: Path) -> dict[str, Any]:
+    """
+    Deterministic Knowledge Hygiene (`lint`):
+      Checks `oc://doc/<id>` citation resolution, orphan unlinked notes, stale notes (>30d), and empty bodies.
+    """
+    docs = list_docs(storage, db_path)
+    valid_ids = {d["id"] for d in docs}
+    inbound_refs: dict[str, int] = {d["id"]: 0 for d in docs}
+    dangling_links: list[dict[str, str]] = []
+    stale_docs: list[str] = []
+    thin_docs: list[str] = []
+    now = time.time()
+
+    link_rx = re.compile(r"oc://doc/([A-Za-z0-9_-]+)")
+    for d in docs:
+        body = d.get("content") or ""
+        if len(body.strip()) < 30:
+            thin_docs.append(d["uri"])
+        if now - float(d.get("updated_at") or now) > 30 * 86400:
+            stale_docs.append(d["uri"])
+        for ref_id in link_rx.findall(body):
+            if ref_id not in valid_ids:
+                dangling_links.append({"from": d["uri"], "missing_target": f"oc://doc/{ref_id}"})
+            elif ref_id != d["id"]:
+                inbound_refs[ref_id] = inbound_refs.get(ref_id, 0) + 1
+
+    orphans = [d["uri"] for d in docs if not d["pinned"] and inbound_refs.get(d["id"], 0) == 0 and len(docs) > 1]
+    score = max(0, 100 - len(dangling_links) * 15 - len(thin_docs) * 10 - min(20, len(orphans) * 4))
+    return {
+        "total_docs": len(docs),
+        "pinned_docs": sum(1 for d in docs if d["pinned"]),
+        "health_score": score,
+        "dangling_links": dangling_links,
+        "orphan_docs": orphans,
+        "stale_docs": stale_docs,
+        "thin_docs": thin_docs,
+    }
+
+
+# Single-file build: re-alias the extracted modules to this file so qualified
+# references (mcp_client.*, context_store.*) resolve to the inlined definitions.
+mcp_client = sys.modules[__name__]
+context_store = sys.modules[__name__]
 
 """Provider-neutral orchestration primitives for streamed Studio workflows.
 
