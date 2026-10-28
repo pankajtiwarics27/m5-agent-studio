@@ -8,10 +8,10 @@ Generated from [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](../product/A
 
 | Status | Count |
 |---|---|
-| ✅ Verified | 44 |
+| ✅ Verified | 45 |
 | 🟩 Completed | 4 |
 | 🚧 In progress | 1 |
-| ⬚ Planned | 14 |
+| ⬚ Planned | 13 |
 | **Total** | **63** |
 
 ### Status vocabulary
@@ -95,7 +95,7 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 | AS-030 | P1 | History privacy retention and export (deps: AS-009, AS-025) | ✅ Verified | tests/test_history_privacy.py (20 tests) covers export (credential/config and audit tables structurally excluded, ISO-8601 timestamps, redaction with replacement counts), retention (old/new pruning, owner-child pruning without orphans, OpenContext/audit/credentials untouched, argument validation, startup enforcement, disabled default), and secret redaction (provider keys, Bearer tokens, key-value assignments incl. API_TOKEN, false-positive behavior). New surfaces: GET /api/history/export and POST /api/history/retention/run behind the shared authenticated boundary, scripts/db_maintenance.py retention/export subcommands (0600 exports), STUDIO_HISTORY_RETENTION_DAYS typed setting. Standalone single-file build verified in a bare directory. Dependencies AS-009/AS-025 verified; CI green. |
 | AS-031 | P0 | Independent security review (deps: AS-024, AS-025, AS-026, AS-027, AS-028, AS-029, AS-030) | 🚧 In progress | Preparation complete: docs/security-review-package.md assembles the reviewer package (scope, trust model, 12-item boundary inventory with code anchors, adversarial-test evidence map, CI validation summary, self-review log, accepted limitations, and a reviewer checklist with the release gate). A fresh-eyes self-review pass examined all boundaries: one finding (W-1: destructive worktree cleanup could fall back to an unverified DB-recorded path) was remediated fail-safe with two regression tests; no other findings. The independent review itself remains OPEN by definition: it requires reviewers independent of the code's authors via SECURITY.md private disclosure. Acceptance ('all critical/high findings remediated or release blocked') cannot be claimed until that review completes; AS-046/AS-049/AS-050 stay gated on it. Dependencies AS-024..AS-030 verified; CI green. |
 
-### M4 — Durable agent execution (6/7 done)
+### M4 — Durable agent execution (7/7 done)
 
 Exit gate: All listed P0 stories verified; test evidence linked and dependencies closed.
 
@@ -107,7 +107,7 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 | AS-035 | P1 | Cancellation retries and execution budgets (deps: AS-018, AS-032) | ✅ Verified | Commit AS-035; execution budget guards (docs/execution-budgets.md); tests/test_execution_budget.py. |
 | AS-036 | P1 | Structured traces and diagnostics (deps: AS-032) | ✅ Verified | Commit AS-036; structured workflow traces (docs/workflow-tracing.md); tests/test_workflow_tracing.py. |
 | AS-037 | P0 | Crash and failure injection suite (deps: AS-033, AS-034, AS-035, AS-036) | ✅ Verified | Commit AS-037; failure injection suite (docs/failure-injection-suite.md); tests/test_failure_injection.py. |
-| AS-038 | P1 | Agent workflow quality evaluation (deps: AS-035, AS-036, AS-056) | ⬚ Planned | — |
+| AS-038 | P1 | Agent workflow quality evaluation (deps: AS-035, AS-036, AS-056) | ✅ Verified | AS-038 is implemented in workflow_evaluation.py as a pure, deterministic comparison of caller-supplied single-model and multi-agent runs, pinned to AS-056 task/config digests and matching hardware, environment, and currency contexts. WorkflowRun.from_trace_and_budget() uses only AS-036 terminal trace status and AS-035 elapsed/cost usage; trace detail and timestamps are not exported. docs/workflow-evaluation.md and tests/test_workflow_evaluation.py (6 focused tests) cover exact task-success rates, latency/cost/memory medians and spreads, strategy deltas, context refusals, validation, and output isolation. Local full suite: 423 passed, 1 skipped. Fixtures are synthetic: no live workflow measurements or provider spend are claimed, and execution/UI wiring remains caller-owned. |
 
 ### M5 — Open-source beta (0/7 done)
 

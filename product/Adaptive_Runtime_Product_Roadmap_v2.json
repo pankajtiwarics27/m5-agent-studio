@@ -1110,8 +1110,8 @@
       "acceptance_criteria": "Compare single-model and multi-agent task success, latency, cost and memory.",
       "implementation_prompt": "Implement AS-038 (P1): Agent workflow quality evaluation. Prerequisites: 035,036,056. Required outcome: Compare single-model and multi-agent task success, latency, cost and memory. First locate existing code and tests, explain design tradeoffs, implement only this scope, add positive/negative/failure tests and document evidence. Preserve hardware/model/provider independence, privacy, secure execution and compatibility. Report blockers instead of inventing dependencies.",
       "backlog_order": 51,
-      "status": "planned",
-      "status_evidence": "",
+      "status": "verified",
+      "status_evidence": "AS-038 is implemented in workflow_evaluation.py as a pure, deterministic comparison of caller-supplied single-model and multi-agent runs, pinned to AS-056 task/config digests and matching hardware, environment, and currency contexts. WorkflowRun.from_trace_and_budget() uses only AS-036 terminal trace status and AS-035 elapsed/cost usage; trace detail and timestamps are not exported. docs/workflow-evaluation.md and tests/test_workflow_evaluation.py (6 focused tests) cover exact task-success rates, latency/cost/memory medians and spreads, strategy deltas, context refusals, validation, and output isolation. Local full suite: 423 passed, 1 skipped. Fixtures are synthetic: no live workflow measurements or provider spend are claimed, and execution/UI wiring remains caller-owned.",
       "status_updated": "2026-10-28"
     },
     {
