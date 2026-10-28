@@ -9,9 +9,9 @@ Generated from [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](../product/A
 | Status | Count |
 |---|---|
 | ✅ Verified | 45 |
-| 🟩 Completed | 4 |
+| 🟩 Completed | 5 |
 | 🚧 In progress | 1 |
-| ⬚ Planned | 13 |
+| ⬚ Planned | 12 |
 | **Total** | **63** |
 
 ### Status vocabulary
@@ -123,7 +123,7 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 | AS-044 | P1 | Beta remediation and compatibility matrix (deps: AS-043) | ⬚ Planned | — |
 | AS-045 | P2 | Demonstration and onboarding media (deps: AS-039) | ⬚ Planned | — |
 
-### M6 — Stable release (0/5 done)
+### M6 — Stable release (1/5 done)
 
 Exit gate: All listed P0 stories verified; test evidence linked and dependencies closed.
 
@@ -131,7 +131,7 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 |---|---|---|---|---|
 | AS-046 | P0 | Final security and regression audit (deps: AS-031, AS-044) | ⬚ Planned | — |
 | AS-047 | P0 | Data backup migration and rollback validation (deps: AS-009, AS-044) | ⬚ Planned | — |
-| AS-048 | P1 | Publish reproducible benchmark results (deps: AS-023, AS-038, AS-056, AS-059) | ⬚ Planned | — |
+| AS-048 | P1 | Publish reproducible benchmark results (deps: AS-023, AS-038, AS-056, AS-059) | 🟩 Completed | AS-048 adds benchmark_publication.py and scripts/publish_benchmark_results.py to verify and package caller-supplied AS-059 raw JSONL profiles with the plan, methodology, caveats, calibration/publisher source digests, and canonical bundle digest (docs/benchmark-results.md). The packager refuses tampered profiles, unsafe prompt/error/hardware fields, mismatched sample counts, duplicate builds, and incomparable hardware/OS/methodology contexts; writes are atomic. tests/test_benchmark_publication.py (9 focused tests) covers exact config/sample-plan handling, raw-byte preservation, refusal paths, digest tampering, and the CLI; full local suite: 432 passed, 1 skipped. Status is completed, not verified: no physical target-runtime raw results are checked in. AS-023 still awaits representative runs on physical 16/24/48 GiB machines, and the README performance table remains explicitly unverified. The checked-in config is a template, not a result; no live benchmark values are claimed. |
 | AS-049 | P0 | Release readiness approval (deps: AS-046, AS-047, AS-048) | ⬚ Planned | — |
 | AS-050 | P0 | Publish v1.0 (deps: AS-049) | ⬚ Planned | — |
 
