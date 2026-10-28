@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "methodology": {
+    "schema_version": 1,
+    "name": "m5-agent-studio-calibration",
+    "version": 1,
+    "calibration_schema": 1
+  },
+  "calibration_plan": {
+    "warmup_runs": 1,
+    "warm_repeats": 3,
+    "cold_repeats": 1
+  },
+  "caveats": [
+    "Template only: this file contains no measurements and makes no target-hardware performance claim.",
+    "Replace this caveat list with run-specific hardware, runtime, model, and measurement limitations before publishing.",
+    "AS-059 discards warmup runs; the configured warmup count is declared but not verifiable from saved profile samples."
+  ]
+}
