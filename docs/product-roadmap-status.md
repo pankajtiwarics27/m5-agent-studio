@@ -8,10 +8,10 @@ Generated from [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](../product/A
 
 | Status | Count |
 |---|---|
-| ✅ Verified | 41 |
+| ✅ Verified | 42 |
 | 🟩 Completed | 4 |
 | 🚧 In progress | 1 |
-| ⬚ Planned | 17 |
+| ⬚ Planned | 16 |
 | **Total** | **63** |
 
 ### Status vocabulary
@@ -51,7 +51,7 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 | AS-013 | P1 | API and provider contract tests (deps: AS-008, AS-011) | ✅ Verified | Commit AS-013; fake OpenAI-compatible, oMLX-compatible and MCP HTTP stream contract tests: tests/test_api_provider_contracts.py, tests/test_local_integration_contracts.py, plus tests/test_pinned_transport.py and tests/test_redirect_safety.py. |
 | AS-014 | P1 | Deterministic standalone build (deps: AS-011, AS-012) | ✅ Verified | Delivered under the AS-001 reproducibility work (no separate commit): scripts/build_studio.py embeds the UI into a deterministic PEP 723 standalone; scripts/smoke_local.py --standalone exercises it; CI regenerates studio.py byte-identically on every run. |
 
-### M2 — Adaptive hardware and model portability (18/22 done)
+### M2 — Adaptive hardware and model portability (19/22 done)
 
 Exit gate: All listed P0 stories verified; test evidence linked and dependencies closed.
 
@@ -75,7 +75,7 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 | AS-057 | P1 | Model update and rollback lifecycle (deps: AS-053) | ✅ Verified | Commit AS-057; per-(runtime, model_id) revision ledger with pin/adopt/rollback/quarantine semantics (docs/model-updates.md); tests/test_model_updates.py (14 tests) prove upgrades are pinned against drift, rolled back skipping quarantined history, and invalidated with fallback or refuse-to-serve, plus deterministic bounded event auditing and staleness status for dependent artifacts. No live-runtime claims: applying revisions to reality stays with AS-053 install observations and the runtime itself. |
 | AS-058 | P0 | Routing policy and consent tests (deps: AS-021, AS-051, AS-054) | ✅ Verified | Merged via PR #5; tests/test_routing_consent_policy.py (12 tests) covering deny-by-default fallback, network/billable consent separation, consent-id requirement, and fail-closed malformed inputs. |
 | AS-059 | P1 | Local model calibration benchmarks (deps: AS-017, AS-018, AS-019, AS-020) | ✅ Verified | Commit AS-059; model_calibration.py measures TTFT, prefill tokens/s, decode tokens/s and peak memory from timed probe runs, aggregating warm and cold phases separately with median plus spread over repeats and a failure rate that failed runs feed without polluting metrics (docs/model-calibration.md). Profiles pin the full calibration identity (model digest/revision, quantization, runtime name/version, hardware snapshot, prompt-set digest, context length, temperature, concurrency) via CalibrationInputs.for_model on AS-017 descriptors, and persist as digest-sealed JSONL whose reload recomputes every aggregate, refusing silent tampering. Real timing collection is delegated to a caller-supplied probe (AS-019 lifecycle wiring is app-side and out of this module's I/O-thin scope), so verification covers this story's own measurement, aggregation and reproducibility surface. |
-| AS-060 | P1 | Versioned model performance profiles (deps: AS-059, AS-017) | ⬚ Planned | — |
+| AS-060 | P1 | Versioned model performance profiles (deps: AS-059, AS-017) | ✅ Verified | Commit AS-060; performance_profiles.py persists AS-059 ModelPerformanceProfile values in a ProfileVault keyed by exactly the six roadmap components (hardware-snapshot digest, os_id, model digest, quantization, runtime version, benchmark methodology), with keys derived from the profile's own pinned CalibrationInputs so a record can never be filed under a label it does not match (docs/performance-profiles.md). Histories are immutable and versioned: 1-based never-reused versions chained by previous digest, duplicate digests are idempotent no-ops, retention is bounded and counted; every read re-verifies line seals, header counts, the chain, and recomputes each profile via calibrate() - renamed files, consistent per-line tampering and content/key disagreements all fail loudly. tests/test_performance_profiles.py (11 tests) covers the full tamper ladder, AS-017 for_lookup, and validation refusals. No wall-clock or prompt content is stored and the vault contacts no runtime; app-side read/write wiring arrives with the comparison/recommendation stories. |
 | AS-061 | P1 | Model comparison and benchmark UI (deps: AS-056, AS-060) | ⬚ Planned | — |
 | AS-062 | P1 | Adaptive model recommendation engine (deps: AS-051, AS-060, AS-058) | ⬚ Planned | — |
 | AS-063 | P2 | Community benchmark import with provenance (deps: AS-060, AS-042) | ⬚ Planned | — |
