@@ -43,15 +43,14 @@ def git(*args: str) -> subprocess.CompletedProcess[str]:
 
 
 def commits_in_range(base: str, head: str) -> list[Commit]:
-    log = git("log", "--format=%H%x00%P%x00%B", f"{base}..{head}").stdout
+    record_sep = "\x1e"
+    log = git("log", f"--format=%H%x00%P%x00%B{record_sep}", f"{base}..{head}").stdout
     commits: list[Commit] = []
-    for entry in log.split("\x00"):
+    for entry in log.split(record_sep):
+        entry = entry.lstrip("\n")
         if not entry.strip():
             continue
-        parts = entry.split("\x00", 2)
-        if len(parts) < 3:
-            continue
-        sha, parents, message = parts[0], parts[1], parts[2]
+        sha, parents, message = entry.split("\x00", 2)
         commits.append(Commit(sha, message, len(parents.split())))
     return commits
 

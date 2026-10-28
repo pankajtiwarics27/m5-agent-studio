@@ -1,5 +1,16 @@
 # Roadmap implementation status
 
+> **Where to find what (2026-10-28):** product-story status (AS-001…AS-063,
+> with per-story evidence) now lives in
+> [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json)
+> and its generated dashboard
+> [`docs/product-roadmap-status.md`](docs/product-roadmap-status.md). This
+> document remains the record of **security-remediation depth**: what is
+> implemented versus what still needs target-platform, live-runtime, or
+> independent validation. The GitHub Actions CI workflow now runs on every
+> push and pull request and is green on Python 3.11/3.12/3.13; the
+> "workflow has not been run on GitHub" note below predates that.
+
 This checklist tracks `/home/user/M5_AGENT_STUDIO_REVIEW_AND_ROADMAP.md`. Status reflects code and tests in this working tree, not a release approval or security certification. **The roadmap is not complete.** Do not describe the project as enterprise-ready or safe for untrusted remote users until the open P0/P1 items below are delivered and independently validated.
 
 ## Phase 0 — security boundary
