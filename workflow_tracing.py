@@ -5,7 +5,7 @@ from __future__ import annotations
 import secrets
 import time
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 
 TraceStatus = Literal["running", "completed", "failed", "cancelled"]
 
@@ -45,7 +45,7 @@ def _text(value: str, field: str) -> str:
 class WorkflowTrace:
     """In-memory correlated trace; callers can persist/export its immutable events."""
 
-    def __init__(self, workflow_id: str, *, trace_id: str | None = None, clock: callable = time.time) -> None:
+    def __init__(self, workflow_id: str, *, trace_id: str | None = None, clock: Callable[[], float] = time.time) -> None:
         self.workflow_id = _text(workflow_id, "workflow_id")
         self.trace_id = _text(trace_id or secrets.token_urlsafe(12), "trace_id")
         self._clock = clock

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 MODEL_SCHEMA_VERSION = 1
 ModelTrust = Literal["trusted", "unverified", "blocked"]
@@ -91,9 +91,9 @@ class ModelLimits:
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> ModelLimits:
         return cls(
-            context_tokens=value.get("context_tokens"),
-            max_output_tokens=value.get("max_output_tokens"),
-            memory_bytes=value.get("memory_bytes"),
+            context_tokens=cast(int, value.get("context_tokens")),
+            max_output_tokens=cast("int | None", value.get("max_output_tokens")),
+            memory_bytes=cast("int | None", value.get("memory_bytes")),
         )
 
     def to_mapping(self) -> dict[str, int | None]:
@@ -122,7 +122,7 @@ class ModelProvenance:
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> ModelProvenance:
         return cls(
-            origin=value.get("origin"),
+            origin=cast(str, value.get("origin")),
             locator=value.get("locator"),
             verification=value.get("verification", "unverified"),
         )
@@ -171,11 +171,11 @@ class ModelDescriptor:
     def from_mapping(cls, value: Mapping[str, Any]) -> ModelDescriptor:
         payload = _mapping(value, "model_descriptor")
         return cls(
-            model_id=payload.get("model_id"),
-            digest=payload.get("digest"),
-            source=payload.get("source"),
-            revision=payload.get("revision"),
-            runtime=payload.get("runtime"),
+            model_id=cast(str, payload.get("model_id")),
+            digest=cast(str, payload.get("digest")),
+            source=cast(str, payload.get("source")),
+            revision=cast(str, payload.get("revision")),
+            runtime=cast(str, payload.get("runtime")),
             quantization=payload.get("quantization"),
             capabilities=payload.get("capabilities", ()),
             limits=ModelLimits.from_mapping(_mapping(payload.get("limits"), "limits")),

@@ -14,9 +14,11 @@ import platform
 import re
 import subprocess
 from collections.abc import Mapping, Sequence
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from hardware_capabilities import AcceleratorCapability, HardwareProfile
+
+HardwarePressure = Literal["unknown", "nominal", "warning", "critical"]
 
 
 class CommandRunner(Protocol):
@@ -74,8 +76,9 @@ def _available_from_vm_stat(text: str, physical_memory_bytes: int | None) -> int
 
 def _pressure_and_available(
     pressure_text: str, vm_stat_text: str, physical_memory_bytes: int | None
-) -> tuple[str, int | None]:
+) -> tuple[HardwarePressure, int | None]:
     lowered = pressure_text.lower()
+    pressure: HardwarePressure
     if "critical" in lowered:
         pressure = "critical"
     elif "warning" in lowered or "high pressure" in lowered:

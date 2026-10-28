@@ -124,7 +124,8 @@ class OllamaAdapter(LocalModelAdapter):
             model_id = _text(raw.get("name"))
             if not model_id:
                 raise LocalAdapterError("ollama returned a model without an id")
-            details = raw.get("details") if isinstance(raw.get("details"), Mapping) else {}
+            details_raw = raw.get("details")
+            details = details_raw if isinstance(details_raw, Mapping) else {}
             capabilities = _capabilities(details.get("families"), ("chat", "streaming"))
             descriptors.append(
                 ModelDescriptor(

@@ -40,6 +40,10 @@ jobs:
         run: python scripts/check_commit_messages.py --base origin/main
       - name: Install project and test dependencies
         run: python -m pip install -e '.[dev]'
+      - name: Lint sources (Ruff)
+        run: ruff check .
+      - name: Type-check contract modules (mypy)
+        run: mypy
       - name: Compile all tracked Python sources
         run: git ls-files -z -- '*.py' | xargs -0 -r python -m compileall -q
       - name: Check frontend JavaScript syntax
