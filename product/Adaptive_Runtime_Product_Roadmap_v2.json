@@ -782,9 +782,9 @@
       "acceptance_criteria": "Compare compatible models with quality, latency, memory and cost; mark missing measurements and stale results.",
       "implementation_prompt": "Implement AS-061 (P1): Model comparison and benchmark UI. Prerequisites: 056,060. Required outcome: Compare compatible models with quality, latency, memory and cost; mark missing measurements and stale results. First locate existing code and tests, explain design tradeoffs, implement only this scope, add positive/negative/failure tests and document evidence. Preserve hardware/model/provider independence, privacy, secure execution and compatibility. Report blockers instead of inventing dependencies.",
       "backlog_order": 34,
-      "status": "planned",
-      "status_evidence": "",
-      "status_updated": "2026-10-28"
+      "status": "verified",
+      "status_evidence": "Commit AS-061; comparison_board.py renders the model comparison and benchmark UI contract as a deterministic view-model: one row per candidate with quality, latency, memory and cost cells that are each measured, missing, stale, incomparable or excluded with a bounded reason - zero-count or absent measurements render as missing rather than zeros, superseded/invalidated AS-057 verdicts and scores/profiles pinned to different builds render as stale with the numbers retained for faded display, and profiles measured under different hardware/OS/methodology contexts than the board's anchor render as incomparable rather than mixed (docs/comparison-board.md). Quality composes the AS-056 ComparisonResult (excluded models keep their exact reasons and lose the rank), latency/memory compose AS-060 (ProfileKey, ProfileRecord) pairs with per-cell re-verification of key agreement, and cost is only ever surfaced from caller-supplied CostObservation records because no upstream module owns pricing - the board never fabricates prices. tests/test_comparison_board.py (13 tests) cover the exact-value happy board, every missing/stale/incomparable path, disclosure propagation, validation refusals, and board digest determinism. Board rendering in the studio UI itself is app-side wiring, matching the verified AS-022 precedent of shipping the view-model module separately from the monolith surface.",
+      "status_updated": "2026-10-29"
     },
     {
       "id": "AS-062",
