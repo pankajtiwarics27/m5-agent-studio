@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 HARDWARE_SCHEMA_VERSION = 1
 MemoryPressure = Literal["unknown", "nominal", "warning", "critical"]
@@ -77,7 +77,7 @@ class AcceleratorCapability:
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> AcceleratorCapability:
         return cls(
-            kind=value.get("kind"),
+            kind=cast(str, value.get("kind")),
             vendor=value.get("vendor"),
             name=value.get("name"),
             memory_bytes=value.get("memory_bytes"),
@@ -110,7 +110,7 @@ class RuntimeCapability:
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> RuntimeCapability:
         return cls(
-            name=value.get("name"),
+            name=cast(str, value.get("name")),
             version=value.get("version"),
             capabilities=value.get("capabilities", ()),
         )
@@ -187,8 +187,8 @@ class HardwareProfile:
         )
         runtimes = tuple(RuntimeCapability.from_mapping(_mapping(item, "runtime")) for item in runtimes_raw)
         return cls(
-            operating_system=payload.get("operating_system"),
-            architecture=payload.get("architecture"),
+            operating_system=cast(str, payload.get("operating_system")),
+            architecture=cast(str, payload.get("architecture")),
             accelerators=accelerators,
             physical_memory_bytes=payload.get("physical_memory_bytes"),
             available_memory_bytes=payload.get("available_memory_bytes"),

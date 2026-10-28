@@ -483,13 +483,11 @@ async def _start_code_process(root: Path, command: str, *, python_code: bool = F
 
 async def _execute_limited(root: Path, command: str, *, timeout: float, max_output_bytes: int, python_code: bool = False) -> tuple[int | None, bytes, bool, bool]:
     proc, container_name = await _start_code_process(root, command, python_code=python_code)
-    timed_out = False
     try:
         try:
             output, truncated = await asyncio.wait_for(_communicate_limited(proc, max_output_bytes), timeout=timeout)
             return proc.returncode, output, truncated, False
         except asyncio.TimeoutError:
-            timed_out = True
             try:
                 if proc.pid and hasattr(os, "killpg"):
                     os.killpg(proc.pid, 9)
@@ -1836,13 +1834,19 @@ def parse_skill_install_spec(raw_cmd: str) -> dict[str, Any]:
     while i < len(rest):
         tok = rest[i]
         if tok in ("--skill", "-s") and i + 1 < len(rest):
-            skill_names.append(rest[i + 1]); i += 2; continue
+            skill_names.append(rest[i + 1])
+            i += 2
+            continue
         if tok in ("-g", "--global"):
-            global_flag = True; i += 1; continue
+            global_flag = True
+            i += 1
+            continue
         if tok in ("-y", "--yes", "--copy", "--all"):
-            i += 1; continue
+            i += 1
+            continue
         if tok in ("-a", "--agent") and i + 1 < len(rest):
-            i += 2; continue
+            i += 2
+            continue
         if tok.startswith("-"):
             raise ValueError(f"Unsupported flag: {tok}")
         if repo is None:
@@ -1885,11 +1889,13 @@ async def install_skills_native_git(spec: dict[str, Any]) -> tuple[list[str], st
             if base.is_dir():
                 for child in sorted(base.iterdir()):
                     if (child / "SKILL.md").is_file() and child.resolve() not in seen_paths:
-                        seen_paths.add(child.resolve()); candidate_dirs.append(child)
+                        seen_paths.add(child.resolve())
+                        candidate_dirs.append(child)
         for smd in sorted(tmp_path.rglob("SKILL.md")):
             parent = smd.parent
             if ".git" not in parent.parts and parent.resolve() not in seen_paths:
-                seen_paths.add(parent.resolve()); candidate_dirs.append(parent)
+                seen_paths.add(parent.resolve())
+                candidate_dirs.append(parent)
         installed_ids: list[str] = []
         for sdir in candidate_dirs:
             raw = (sdir / "SKILL.md").read_text(encoding="utf-8", errors="ignore")
@@ -1997,7 +2003,8 @@ async def get_docker_telemetry() -> dict[str, Any]:
         "vm_footprint_bytes": effective_vm_bytes, "vm_footprint_gb": round(effective_vm_bytes / GIB, 2),
         "total_cpu_pct": round(sum(c["cpu_pct"] for c in containers), 1), "containers": containers,
     }
-    _docker_cache["at"] = now; _docker_cache["data"] = result
+    _docker_cache["at"] = now
+    _docker_cache["data"] = result
     return result
 
 
@@ -6320,7 +6327,8 @@ async def _stream_cloud_openai(
                 if r_txt:
                     if first_tok_at is None:
                         first_tok_at = time.perf_counter()
-                    out_tokens += 1; reason_tokens += 1
+                    out_tokens += 1
+                    reason_tokens += 1
                     yield {"type": "reasoning", "text": r_txt}
                 if c_txt:
                     if first_tok_at is None:
@@ -6435,7 +6443,8 @@ async def _stream_cloud_anthropic(
                 if dtype == "thinking_delta" and delta.get("thinking"):
                     if first_tok_at is None:
                         first_tok_at = time.perf_counter()
-                    out_tokens += 1; reason_tokens += 1
+                    out_tokens += 1
+                    reason_tokens += 1
                     yield {"type": "reasoning", "text": delta["thinking"]}
                 elif dtype == "text_delta" and delta.get("text"):
                     if first_tok_at is None:
@@ -6626,7 +6635,8 @@ async def _stream_omlx_completion(
                 if delta.get("reasoning_content"):
                     if first_tok_at is None:
                         first_tok_at = time.perf_counter()
-                    out_tokens += 1; reason_tokens += 1
+                    out_tokens += 1
+                    reason_tokens += 1
                     yield {"type": "reasoning", "text": delta["reasoning_content"]}
                 if delta.get("content"):
                     if first_tok_at is None:
@@ -7083,9 +7093,11 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
                 if await request.is_disconnected():
                     return
                 if item["type"] == "content":
-                    buf.append(item["text"]); yield _sse("token", {"kind": "content", "text": item["text"]})
+                    buf.append(item["text"])
+                    yield _sse("token", {"kind": "content", "text": item["text"]})
                 elif item["type"] == "reasoning":
-                    rbuf.append(item["text"]); yield _sse("token", {"kind": "reasoning", "text": item["text"]})
+                    rbuf.append(item["text"])
+                    yield _sse("token", {"kind": "reasoning", "text": item["text"]})
                 elif item["type"] == "usage":
                     usage_info = item
                     record_perf("hall", model, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"])
@@ -7093,7 +7105,8 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
             if not "".join(buf).strip() and rbuf and is_local_omlx_model(model):
                 async for item in stream_any_model(client, model, messages, temperature=0.0, max_tokens=4096, reasoning_mode="off"):
                     if item["type"] == "content":
-                        buf.append(item["text"]); yield _sse("token", {"kind": "content", "text": item["text"]})
+                        buf.append(item["text"])
+                        yield _sse("token", {"kind": "content", "text": item["text"]})
                     elif item["type"] == "usage":
                         usage_info = item
 
@@ -7126,7 +7139,8 @@ async def api_telemetry(request: Request) -> JSONResponse:
             client.get(f"{OMLX_BASE}/admin/api/stats?scope=session", timeout=3.0),
             client.get(f"{OMLX_BASE}/admin/api/global-settings", timeout=3.0),
         )
-        models_res.raise_for_status(); act_res.raise_for_status()
+        models_res.raise_for_status()
+        act_res.raise_for_status()
     except Exception:
         docker_task.cancel()
         payload = _demo_telemetry_payload()
@@ -7255,7 +7269,8 @@ async def api_load_model(model_id: str, request: Request) -> JSONResponse:
     global _demo_loaded_model, _demo_loaded_at
     client: httpx.AsyncClient = request.app.state.http
     if not await _omlx_is_online(client):
-        _demo_loaded_model = model_id; _demo_loaded_at = time.time()
+        _demo_loaded_model = model_id
+        _demo_loaded_at = time.time()
         return JSONResponse({"status": "ok", "model_id": model_id, "demo": True})
     r = await client.post(f"{OMLX_BASE}/admin/api/models/{model_id}/load", timeout=120.0)
     if r.status_code >= 400:
@@ -9328,7 +9343,7 @@ async def run_reusable_block(root: Path, block_name: str, target: str = "") -> d
         raw = out_b.decode("utf-8", errors="replace")
         lns = raw.splitlines()
         if bname == "first-error":
-            err_idx = next((i for i, l in enumerate(lns) if any(k in l for k in ("Traceback", "FAIL:", "FAILED", "ERROR:", "SyntaxError"))), -1)
+            err_idx = next((i for i, ln in enumerate(lns) if any(k in ln for k in ("Traceback", "FAIL:", "FAILED", "ERROR:", "SyntaxError"))), -1)
             slice_txt = "\n".join(lns[max(0, err_idx - 2) : err_idx + 22]) if err_idx >= 0 else "\n".join(lns[-12:])
             return {"ok": ec == 0, "output": f"[Block `first-error` • exit={ec} • {len(lns)} raw lines -> compact]\n{slice_txt}", "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
         dig = _caveman_smart_digest(raw, lns) or "\n".join(lns[-15:])
@@ -12061,7 +12076,6 @@ async def _run_sdlc_sprints_stream(
       - Only flips `"passes": true` when QA Guardrail returns `PASS` (retries once on `NEEDS_REVISION`).
     """
     stories = _read_sdlc_backlog(sdlc_dir)
-    prd_md = (sdlc_dir / "PRD.md").read_text(encoding="utf-8")[:2600] if (sdlc_dir / "PRD.md").exists() else ""
     arch_md = (sdlc_dir / "ARCHITECTURE.md").read_text(encoding="utf-8")[:2800] if (sdlc_dir / "ARCHITECTURE.md").exists() else ""
     oc_pinned = build_pinned_opencontext_prompt()
     mcp_block = build_active_mcp_tools_prompt()
@@ -12801,9 +12815,11 @@ def run_mcp_stdio_server(default_agent_name: str = "ExternalAgent") -> None:
                 res = {"content": [{"type": "text", "text": text}], "isError": not bool(bridge_result.get("ok"))}
             else:
                 res = {}
-            sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": req_id, "result": res}) + "\n"); sys.stdout.flush()
+            sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": req_id, "result": res}) + "\n")
+            sys.stdout.flush()
         except Exception as exc:
-            sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": req_id, "result": {"content": [{"type": "text", "text": f"Error: {exc}"}], "isError": True}}) + "\n"); sys.stdout.flush()
+            sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": req_id, "result": {"content": [{"type": "text", "text": f"Error: {exc}"}], "isError": True}}) + "\n")
+            sys.stdout.flush()
 
 
 
@@ -13042,5 +13058,5 @@ if __name__ == "__main__":
         print(f"\n  M5 Agentic Harness & Hybrid AI Studio v{STUDIO_VERSION} -> http://{STUDIO_HOST}:{STUDIO_PORT}")
         print(f"  Unified OpenAI Gateway (dsh/IDE/CLI)            -> http://{STUDIO_HOST}:{STUDIO_PORT}/v1")
         print(f"  Local oMLX Backend                              -> {OMLX_BASE}")
-        print(f"  MCP Server Mode (Claude/Codex/OpenHarness)      -> uv run studio.py --mcp\n")
+        print("  MCP Server Mode (Claude/Codex/OpenHarness)      -> uv run studio.py --mcp\n")
         uvicorn.run(app, host=STUDIO_HOST, port=STUDIO_PORT, log_level="warning")

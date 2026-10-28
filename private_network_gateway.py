@@ -85,10 +85,17 @@ class GatewayConfig:
                 network = ipaddress.ip_network(raw_network, strict=False)
             except ValueError as exc:
                 raise GatewayConfigurationError("client_networks must contain valid IP networks.") from exc
-            if not any(
-                network.version == private.version and network.subnet_of(private)
-                for private in PRIVATE_NETWORKS
-            ):
+            if network.version == 4:
+                covered = any(
+                    isinstance(private, ipaddress.IPv4Network) and network.subnet_of(private)
+                    for private in PRIVATE_NETWORKS
+                )
+            else:
+                covered = any(
+                    isinstance(private, ipaddress.IPv6Network) and network.subnet_of(private)
+                    for private in PRIVATE_NETWORKS
+                )
+            if not covered:
                 raise GatewayConfigurationError("client_networks must be private networks.")
             networks.append(str(network))
         object.__setattr__(self, "client_networks", tuple(sorted(set(networks))))

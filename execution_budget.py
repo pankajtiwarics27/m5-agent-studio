@@ -5,6 +5,7 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass
+from typing import Callable
 
 
 class BudgetError(ValueError):
@@ -44,7 +45,7 @@ class BudgetUsage:
 class ExecutionBudget:
     """Thread-safe budget guard with monotonic time and explicit cancellation."""
 
-    def __init__(self, limits: BudgetLimits, *, clock: callable = time.monotonic) -> None:
+    def __init__(self, limits: BudgetLimits, *, clock: Callable[[], float] = time.monotonic) -> None:
         self.limits = limits
         self._clock = clock
         self._started = clock()

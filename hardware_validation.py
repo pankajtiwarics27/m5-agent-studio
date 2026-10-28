@@ -85,8 +85,9 @@ class HardwareValidationMatrix:
                 physical_memory_bytes=memory_gib * GIB,
                 available_memory_bytes=memory_gib * GIB,
             )
+            available_memory = profile.available_memory_bytes
             for task in self.tasks:
-                if task.estimated_memory_bytes > profile.available_memory_bytes:
+                if available_memory is not None and task.estimated_memory_bytes > available_memory:
                     outcomes.append(
                         ValidationOutcome(
                             memory_gib,
