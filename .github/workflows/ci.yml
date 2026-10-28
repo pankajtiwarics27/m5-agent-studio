@@ -21,17 +21,17 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           # The pinned-baseline check verifies Git ancestry (BASELINE.md,
           # scripts/verify_baseline.py), so CI must fetch the full history.
           # The default depth-1 clone is exactly what broke the suite.
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Verify pinned source baseline
