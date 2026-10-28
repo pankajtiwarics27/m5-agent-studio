@@ -8,10 +8,10 @@ Generated from [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](../product/A
 
 | Status | Count |
 |---|---|
-| ✅ Verified | 33 |
+| ✅ Verified | 34 |
 | 🟩 Completed | 4 |
 | 🚧 In progress | 0 |
-| ⬚ Planned | 26 |
+| ⬚ Planned | 25 |
 | **Total** | **63** |
 
 ### Status vocabulary
@@ -80,7 +80,7 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 | AS-062 | P1 | Adaptive model recommendation engine (deps: AS-051, AS-060, AS-058) | ⬚ Planned | — |
 | AS-063 | P2 | Community benchmark import with provenance (deps: AS-060, AS-042) | ⬚ Planned | — |
 
-### M3 — Secure hybrid access (5/8 done)
+### M3 — Secure hybrid access (6/8 done)
 
 Exit gate: All listed P0 stories verified; test evidence linked and dependencies closed.
 
@@ -91,7 +91,7 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 | AS-026 | P0 | Remote origin CSRF and rate-limit protections (deps: AS-024, AS-025) | ✅ Verified | Merged via PR #4; tests/test_remote_protections.py (10 tests) covering host allowlist, cross-origin/CSRF rejection before auth, bearer authorization, per-client POST rate limits with Retry-After, and remote-mode startup guards. |
 | AS-027 | P0 | Remote tool approvals and policy enforcement (deps: AS-010, AS-025) | ✅ Verified | Merged via PR #6; session-scoped authenticated approvals with bounded TTL replay tombstones (403 scope mismatch, 409 replay), exactly-once slot consumption, UI/SSE session_id propagation; tests in tests/test_security_and_quality.py (7 tests); documented in docs/tool-authorization.md. |
 | AS-028 | P0 | Sandbox and filesystem boundary hardening (deps: AS-010) | 🟩 Completed | Commit AS-028; sandbox boundary hardening with tests (tests/test_sandbox_boundary.py, tests/test_pinned_transport.py, tests/test_redirect_safety.py); preflight refuses roots/secret filenames/credentialed remotes. Outstanding: live container-runtime validation is opt-in and skipped without Docker/Podman. |
-| AS-029 | P0 | Prompt injection and MCP adversarial tests (deps: AS-027, AS-028) | ⬚ Planned | — |
+| AS-029 | P0 | Prompt injection and MCP adversarial tests (deps: AS-027, AS-028) | ✅ Verified | tests/test_prompt_injection_adversarial.py (22 tests) proves untrusted content cannot grant tool privileges: forged protocol markup in tool output is escaped and inert (UNTRUSTED_DATA_JSON), wrapper-attribute breakouts fail, turn counting ignores escaped content, fake approval/policy/mode fields in arguments never authorize, session policy beats injected args, plan policy blocks mutations with approved=True, MCP namespaces cannot shadow built-ins and unregistered/spoofed names are denied, adversarial assistant text extracts only calls the policy already governs, and the secret-read guard ignores injected instructions with hash-only auditing. No application changes were required - all boundaries held. Dependencies AS-027/AS-028 verified; CI green. |
 | AS-030 | P1 | History privacy retention and export (deps: AS-009, AS-025) | ⬚ Planned | — |
 | AS-031 | P0 | Independent security review (deps: AS-024, AS-025, AS-026, AS-027, AS-028, AS-029, AS-030) | ⬚ Planned | — |
 
