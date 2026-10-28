@@ -703,8 +703,8 @@
       "acceptance_criteria": "Model upgrade can be pinned, rolled back and invalidated safely.",
       "implementation_prompt": "Implement AS-057 (P1): Model update and rollback lifecycle. Prerequisites: 053. Required outcome: Model upgrade can be pinned, rolled back and invalidated safely. First locate existing code and tests, explain design tradeoffs, implement only this scope, add positive/negative/failure tests and document evidence. Preserve hardware/model/provider independence, privacy, secure execution and compatibility. Report blockers instead of inventing dependencies.",
       "backlog_order": 30,
-      "status": "planned",
-      "status_evidence": "",
+      "status": "verified",
+      "status_evidence": "Commit AS-057; per-(runtime, model_id) revision ledger with pin/adopt/rollback/quarantine semantics (docs/model-updates.md); tests/test_model_updates.py (14 tests) prove upgrades are pinned against drift, rolled back skipping quarantined history, and invalidated with fallback or refuse-to-serve, plus deterministic bounded event auditing and staleness status for dependent artifacts. No live-runtime claims: applying revisions to reality stays with AS-053 install observations and the runtime itself.",
       "status_updated": "2026-10-28"
     },
     {
