@@ -1302,8 +1302,8 @@
       "acceptance_criteria": "Benchmark scripts, raw results, configurations and caveats published.",
       "implementation_prompt": "Implement AS-048 (P1): Publish reproducible benchmark results. Prerequisites: 023,038,056,059. Required outcome: Benchmark scripts, raw results, configurations and caveats published. First locate existing code and tests, explain design tradeoffs, implement only this scope, add positive/negative/failure tests and document evidence. Preserve hardware/model/provider independence, privacy, secure execution and compatibility. Report blockers instead of inventing dependencies.",
       "backlog_order": 61,
-      "status": "planned",
-      "status_evidence": "",
+      "status": "completed",
+      "status_evidence": "AS-048 adds benchmark_publication.py and scripts/publish_benchmark_results.py to verify and package caller-supplied AS-059 raw JSONL profiles with the plan, methodology, caveats, calibration/publisher source digests, and canonical bundle digest (docs/benchmark-results.md). The packager refuses tampered profiles, unsafe prompt/error/hardware fields, mismatched sample counts, duplicate builds, and incomparable hardware/OS/methodology contexts; writes are atomic. tests/test_benchmark_publication.py (9 focused tests) covers exact config/sample-plan handling, raw-byte preservation, refusal paths, digest tampering, and the CLI; full local suite: 432 passed, 1 skipped. Status is completed, not verified: no physical target-runtime raw results are checked in. AS-023 still awaits representative runs on physical 16/24/48 GiB machines, and the README performance table remains explicitly unverified. The checked-in config is a template, not a result; no live benchmark values are claimed.",
       "status_updated": "2026-10-28"
     },
     {
