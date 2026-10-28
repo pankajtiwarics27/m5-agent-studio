@@ -976,8 +976,8 @@
       "acceptance_criteria": "All critical/high findings remediated or release blocked.",
       "implementation_prompt": "Implement AS-031 (P0): Independent security review. Prerequisites: 024-030. Required outcome: All critical/high findings remediated or release blocked. First locate existing code and tests, explain design tradeoffs, implement only this scope, add positive/negative/failure tests and document evidence. Preserve hardware/model/provider independence, privacy, secure execution and compatibility. Report blockers instead of inventing dependencies.",
       "backlog_order": 44,
-      "status": "planned",
-      "status_evidence": "",
+      "status": "in_progress",
+      "status_evidence": "Preparation complete: docs/security-review-package.md assembles the reviewer package (scope, trust model, 12-item boundary inventory with code anchors, adversarial-test evidence map, CI validation summary, self-review log, accepted limitations, and a reviewer checklist with the release gate). A fresh-eyes self-review pass examined all boundaries: one finding (W-1: destructive worktree cleanup could fall back to an unverified DB-recorded path) was remediated fail-safe with two regression tests; no other findings. The independent review itself remains OPEN by definition: it requires reviewers independent of the code's authors via SECURITY.md private disclosure. Acceptance ('all critical/high findings remediated or release blocked') cannot be claimed until that review completes; AS-046/AS-049/AS-050 stay gated on it. Dependencies AS-024..AS-030 verified; CI green.",
       "status_updated": "2026-10-28"
     },
     {

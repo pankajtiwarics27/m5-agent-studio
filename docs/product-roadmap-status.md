@@ -10,8 +10,8 @@ Generated from [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](../product/A
 |---|---|
 | ✅ Verified | 35 |
 | 🟩 Completed | 4 |
-| 🚧 In progress | 0 |
-| ⬚ Planned | 24 |
+| 🚧 In progress | 1 |
+| ⬚ Planned | 23 |
 | **Total** | **63** |
 
 ### Status vocabulary
@@ -93,7 +93,7 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 | AS-028 | P0 | Sandbox and filesystem boundary hardening (deps: AS-010) | 🟩 Completed | Commit AS-028; sandbox boundary hardening with tests (tests/test_sandbox_boundary.py, tests/test_pinned_transport.py, tests/test_redirect_safety.py); preflight refuses roots/secret filenames/credentialed remotes. Outstanding: live container-runtime validation is opt-in and skipped without Docker/Podman. |
 | AS-029 | P0 | Prompt injection and MCP adversarial tests (deps: AS-027, AS-028) | ✅ Verified | tests/test_prompt_injection_adversarial.py (22 tests) proves untrusted content cannot grant tool privileges: forged protocol markup in tool output is escaped and inert (UNTRUSTED_DATA_JSON), wrapper-attribute breakouts fail, turn counting ignores escaped content, fake approval/policy/mode fields in arguments never authorize, session policy beats injected args, plan policy blocks mutations with approved=True, MCP namespaces cannot shadow built-ins and unregistered/spoofed names are denied, adversarial assistant text extracts only calls the policy already governs, and the secret-read guard ignores injected instructions with hash-only auditing. No application changes were required - all boundaries held. Dependencies AS-027/AS-028 verified; CI green. |
 | AS-030 | P1 | History privacy retention and export (deps: AS-009, AS-025) | ✅ Verified | tests/test_history_privacy.py (20 tests) covers export (credential/config and audit tables structurally excluded, ISO-8601 timestamps, redaction with replacement counts), retention (old/new pruning, owner-child pruning without orphans, OpenContext/audit/credentials untouched, argument validation, startup enforcement, disabled default), and secret redaction (provider keys, Bearer tokens, key-value assignments incl. API_TOKEN, false-positive behavior). New surfaces: GET /api/history/export and POST /api/history/retention/run behind the shared authenticated boundary, scripts/db_maintenance.py retention/export subcommands (0600 exports), STUDIO_HISTORY_RETENTION_DAYS typed setting. Standalone single-file build verified in a bare directory. Dependencies AS-009/AS-025 verified; CI green. |
-| AS-031 | P0 | Independent security review (deps: AS-024, AS-025, AS-026, AS-027, AS-028, AS-029, AS-030) | ⬚ Planned | — |
+| AS-031 | P0 | Independent security review (deps: AS-024, AS-025, AS-026, AS-027, AS-028, AS-029, AS-030) | 🚧 In progress | Preparation complete: docs/security-review-package.md assembles the reviewer package (scope, trust model, 12-item boundary inventory with code anchors, adversarial-test evidence map, CI validation summary, self-review log, accepted limitations, and a reviewer checklist with the release gate). A fresh-eyes self-review pass examined all boundaries: one finding (W-1: destructive worktree cleanup could fall back to an unverified DB-recorded path) was remediated fail-safe with two regression tests; no other findings. The independent review itself remains OPEN by definition: it requires reviewers independent of the code's authors via SECURITY.md private disclosure. Acceptance ('all critical/high findings remediated or release blocked') cannot be claimed until that review completes; AS-046/AS-049/AS-050 stay gated on it. Dependencies AS-024..AS-030 verified; CI green. |
 
 ### M4 — Durable agent execution (6/7 done)
 
