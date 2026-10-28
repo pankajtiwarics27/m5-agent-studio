@@ -685,8 +685,8 @@
       "acceptance_criteria": "Evaluation scores include versioned tasks and reproducible configs.",
       "implementation_prompt": "Implement AS-056 (P1): Model quality and compatibility comparison. Prerequisites: 051,052. Required outcome: Evaluation scores include versioned tasks and reproducible configs. First locate existing code and tests, explain design tradeoffs, implement only this scope, add positive/negative/failure tests and document evidence. Preserve hardware/model/provider independence, privacy, secure execution and compatibility. Report blockers instead of inventing dependencies.",
       "backlog_order": 29,
-      "status": "planned",
-      "status_evidence": "",
+      "status": "verified",
+      "status_evidence": "Commit AS-056; versioned evaluation tasks and reproducible configs with digest-pinned scores and hard-filter-then-rank comparison (docs/model-comparison.md); tests/test_model_comparison.py (15 tests) pin task/config identity digests, median+spread aggregation over repeated runs, tamper-proof derived aggregates, environment-difference disclosure, and refusal of incomparable scores. Benchmark execution is deliberately out of scope (AS-059+); no live-runtime numbers are claimed.",
       "status_updated": "2026-10-28"
     },
     {
