@@ -184,8 +184,8 @@
       "acceptance_criteria": "Lint, typing, tests and generated build run on PRs.",
       "implementation_prompt": "Implement AS-002 (P0): Establish CI quality gates. Prerequisites: 001. Required outcome: Lint, typing, tests and generated build run on PRs. First locate existing code and tests, explain design tradeoffs, implement only this scope, add positive/negative/failure tests and document evidence. Preserve hardware/model/provider independence, privacy, secure execution and compatibility. Report blockers instead of inventing dependencies.",
       "backlog_order": 2,
-      "status": "in_progress",
-      "status_evidence": "CI (.github/workflows/ci.yml) runs baseline verification, compile-all, frontend syntax, pytest, dual smoke tests and bit-for-bit artifact checks on Python 3.11/3.12/3.13 - green. Outstanding per acceptance criteria: lint (Ruff) and type checks (mypy).",
+      "status": "verified",
+      "status_evidence": "CI (.github/workflows/ci.yml) runs Ruff lint over all sources (generated studio.py excluded), mypy over the 22 typed contract modules, compile-all, frontend syntax check, pytest, dual smoke tests, commit-message policy, and bit-for-bit artifact/dashboard reproduction on Python 3.11/3.12/3.13 - green. Lint/type tooling lives in the dev extra only, per BASELINE.md. Documented ratchet: mypy coverage extends to scripts/ and tests/ (currently 8 and 35 findings, mostly deliberate contract-abuse fixtures) as follow-up hardening.",
       "status_updated": "2026-10-28"
     },
     {

@@ -79,6 +79,8 @@ python -m venv .venv && . .venv/bin/activate
 python -m pip install -e '.[dev]'
 
 python scripts/verify_baseline.py                       # pinned Git ancestry (needs full history: git fetch --unshallow)
+ruff check .                                            # lint (generated studio.py excluded)
+mypy                                                    # type-check the typed contract modules
 git ls-files -z -- '*.py' | xargs -0 -r python -m compileall -q
 python scripts/check_frontend_syntax.py                 # needs Node.js
 python -m pytest -q
