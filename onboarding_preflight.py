@@ -62,7 +62,11 @@ class PreflightInputs:
     auth_ready: bool
     local_runtime_configured: bool
     providers: tuple[ProviderState, ...] = ()
+    # Combo aliases are routing presets, not models: a seeded combo can exist on a
+    # fresh install while nothing behind it is reachable, so it never counts here.
     combo_count: int = 0
+    local_models_available: int = 0
+    local_probe: Literal["not-run", "ran", "unavailable"] = "not-run"
     execution_mode: ExecutionMode = "disabled"
     sandbox_runtime_available: bool = False
     workspace_writable: bool = False
@@ -74,7 +78,7 @@ class PreflightInputs:
 
     @property
     def known_model_count(self) -> int:
-        return self.usable_provider_models + max(self.combo_count, 0)
+        return self.usable_provider_models + max(self.local_models_available, 0)
 
 
 @dataclass(frozen=True)
@@ -173,6 +177,16 @@ def _model_source_step(inputs: PreflightInputs) -> Step:
             status="ready",
             detail=f"Enabled provider(s) with stored credentials: {aliases}.",
         )
+    if inputs.local_models_available > 0 and inputs.local_probe == "ran":
+        return Step(
+            id="model-source",
+            title="The local runtime is serving models",
+            status="ready",
+            detail=(
+                f"The configured local runtime listed {inputs.local_models_available} model(s) "
+                "when asked; no cloud provider is required."
+            ),
+        )
     disabled = [provider.alias for provider in inputs.providers if not provider.enabled]
     no_key = [provider.alias for provider in inputs.providers if provider.enabled and not provider.has_credential]
     hints: list[str] = []
@@ -216,6 +230,43 @@ def _model_available_step(inputs: PreflightInputs) -> Step:
             ),
             action_label="Fetch models",
             action="open-providers",
+        )
+    if inputs.local_runtime_configured and inputs.local_probe == "ran":
+        return Step(
+            id="model-available",
+            title="The local runtime reported no models",
+            status="action-required",
+            detail=(
+                "The runtime answered but listed no models. Load a model in the runtime, or "
+                "connect a cloud provider."
+            ),
+            action_label="Check again",
+            action="probe-local-models",
+        )
+    if inputs.local_runtime_configured and inputs.local_probe == "unavailable":
+        return Step(
+            id="model-available",
+            title="The local runtime did not answer",
+            status="action-required",
+            detail=(
+                "Studio could not reach the configured local runtime URL. Start it, then "
+                "check again; nothing is contacted until you press the button."
+            ),
+            action_label="Check local models",
+            action="probe-local-models",
+        )
+    if inputs.local_runtime_configured:
+        return Step(
+            id="model-available",
+            title="Confirm which models exist",
+            status="action-required",
+            detail=(
+                "A local runtime URL is configured, but listing models means contacting it. "
+                "Press the button to ask it once, or add a cloud provider instead. Routing "
+                "combos do not count: a preset can exist while its targets are unreachable."
+            ),
+            action_label="Check local models",
+            action="probe-local-models",
         )
     return Step(
         id="model-available",
@@ -320,12 +371,17 @@ def build_report(inputs: PreflightInputs) -> PreflightReport:
     }
     steps = tuple(builders[step_id](inputs) for step_id in STEP_ORDER)
     notes = [
-        "This preflight reads local configuration only; it makes no network calls.",
+        "This preflight reads local configuration only; it makes no network calls unless you "
+        "press Check local models.",
         "Nothing here requires editing a config file or pasting a shell command.",
     ]
-    if inputs.local_runtime_configured and inputs.known_model_count == 0:
+    if inputs.combo_count:
         notes.append(
-            "A local runtime URL is configured. Start the runtime, then reopen this page to "
-            "pick up its models."
+            f"{inputs.combo_count} routing combo(s) are configured. They are presets, so they "
+            "are not counted as available models."
         )
+    if inputs.local_probe == "ran":
+        notes.append(f"The local runtime listed {inputs.local_models_available} model(s) when asked.")
+    elif inputs.local_probe == "unavailable":
+        notes.append("The local runtime URL did not answer the model listing request.")
     return PreflightReport(steps=steps, notes=tuple(notes))

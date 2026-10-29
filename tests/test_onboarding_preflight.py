@@ -10,7 +10,8 @@ import app as studio
 import onboarding_preflight as preflight
 from onboarding_preflight import PreflightInputs, ProviderState, build_report
 
-AUTH = {"Authorization": "Bearer test-token"}
+TOKEN = "onboarding-test-token-0123456789abcdef"
+AUTH = {"Authorization": f"Bearer {TOKEN}"}
 
 
 class MemoryKeyring:
@@ -46,7 +47,7 @@ def isolated_state(
     workspace.mkdir()
     monkeypatch.setattr(studio, "DB_PATH", db)
     monkeypatch.setattr(studio, "WORKSPACE_ROOT", workspace)
-    monkeypatch.setattr(studio, "STUDIO_API_TOKEN", "test-token")
+    monkeypatch.setattr(studio, "STUDIO_API_TOKEN", TOKEN)
     monkeypatch.setattr(studio, "STUDIO_AUTH_DISABLED", False)
     monkeypatch.setattr(studio, "STUDIO_ALLOWED_HOSTS", {"testserver"})
     studio.init_db()
@@ -62,7 +63,7 @@ def _ready_inputs(**overrides: object) -> PreflightInputs:
         "auth_ready": True,
         "local_runtime_configured": True,
         "providers": (ProviderState(alias="openai", enabled=True, has_credential=True, model_count=3),),
-        "combo_count": 1,
+        "combo_count": 0,
         "execution_mode": "disabled",
         "sandbox_runtime_available": False,
         "workspace_writable": True,
@@ -160,15 +161,68 @@ def test_configured_provider_without_models_asks_for_a_fetch_not_a_pass() -> Non
     assert steps["first-task"].status == "action-required"
 
 
-def test_combos_alone_can_satisfy_model_availability() -> None:
+def test_routing_combos_never_count_as_available_models() -> None:
+    """A seeded combo (e.g. the built-in `hybrid-resilient` preset) is not a model.
+
+    Counting it would report a fresh install as ready and then hand the user a
+    first task pointing at targets that do not exist locally.
+    """
     report = build_report(
         _ready_inputs(
             providers=(ProviderState(alias="openai", enabled=True, has_credential=True, model_count=0),),
-            combo_count=1,
+            combo_count=3,
         )
     )
 
-    assert _steps(report)["model-available"].status == "ready"
+    assert _steps(report)["model-available"].status == "action-required"
+    assert not report.ready
+    assert any("routing combo" in note.lower() for note in report.notes)
+
+
+def test_local_runtime_models_require_an_explicit_probe() -> None:
+    unprobed = build_report(
+        _ready_inputs(
+            providers=(),
+            local_runtime_configured=True,
+            local_probe="not-run",
+        )
+    )
+    probed = build_report(
+        _ready_inputs(
+            providers=(),
+            local_runtime_configured=True,
+            local_models_available=4,
+            local_probe="ran",
+        )
+    )
+
+    assert _steps(unprobed)["model-available"].action == "probe-local-models"
+    assert "makes no network calls" in " ".join(unprobed.notes)
+    assert _steps(probed)["model-available"].status == "ready"
+    assert probed.ready is True
+
+
+def test_probe_that_reaches_nothing_says_so_and_stays_actionable() -> None:
+    report = build_report(
+        _ready_inputs(providers=(), local_runtime_configured=True, local_probe="unavailable")
+    )
+
+    step = _steps(report)["model-available"]
+    assert step.status == "action-required"
+    assert step.action == "probe-local-models"
+    assert "did not answer" in step.title or "did not answer" in step.detail
+    assert not report.ready
+
+
+def test_probe_returning_zero_models_is_not_treated_as_ready() -> None:
+    report = build_report(
+        _ready_inputs(providers=(), local_runtime_configured=True, local_models_available=0, local_probe="ran")
+    )
+
+    step = _steps(report)["model-available"]
+    assert step.status == "action-required"
+    assert "no models" in step.title.lower()
+    assert not report.ready
 
 
 def test_missing_workspace_blocks_with_a_workspace_action() -> None:
@@ -234,12 +288,16 @@ def test_report_never_carries_credentials_or_aliases_beyond_names() -> None:
     assert set(ProviderState.__dataclass_fields__) == {"alias", "enabled", "has_credential", "model_count"}
 
 
-def test_local_runtime_hint_appears_only_when_nothing_is_discovered() -> None:
-    empty = build_report(PreflightInputs(auth_ready=True, local_runtime_configured=True, workspace_writable=True))
-    configured = build_report(_ready_inputs())
+def test_notes_describe_the_probe_state_truthfully() -> None:
+    unprobed = build_report(
+        PreflightInputs(auth_ready=True, local_runtime_configured=True, workspace_writable=True)
+    )
+    probed = build_report(_ready_inputs(local_models_available=2, local_probe="ran"))
+    failed = build_report(_ready_inputs(local_probe="unavailable"))
 
-    assert any("local runtime" in note.lower() for note in empty.notes)
-    assert not any("start the runtime" in note.lower() for note in configured.notes)
+    assert any("no network calls" in note.lower() for note in unprobed.notes)
+    assert any("listed 2 model(s)" in note.lower() for note in probed.notes)
+    assert any("did not answer" in note.lower() for note in failed.notes)
 
 
 # ---------------------------------------------------------------------------
@@ -261,8 +319,12 @@ def test_adapter_reads_only_local_state_and_defaults_to_not_ready(
     assert inputs.auth_ready is True
     assert inputs.workspace_writable is True
     assert inputs.providers == ()
+    # init_db seeds a `hybrid-resilient` combo; it must not fake model availability.
+    assert inputs.combo_count >= 1
     report = build_report(inputs)
+    assert report.ready is False
     assert report.next_step is not None and report.next_step.id == "model-source"
+    assert _steps(report)["model-available"].status == "action-required"
 
 
 def test_adapter_reflects_configured_provider_and_models(
@@ -343,3 +405,76 @@ def test_preflight_route_reports_the_blocking_step_for_a_fresh_install(isolated_
     assert plan["ready"] is False
     assert plan["next_step"]["id"] == "model-source"
     assert plan["next_step"]["action"] == "open-providers"
+
+
+def test_probe_route_counts_local_models_and_reports_the_probe(
+    isolated_state: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def fake_validate(_url: str, **_kwargs: object) -> None:
+        return None
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self) -> dict[str, object]:
+            return {"data": [{"id": "echo-small"}, {"id": "echo-large"}]}
+
+    calls: list[str] = []
+
+    async def fake_get(_self: object, url: str, **_kwargs: object) -> FakeResponse:
+        calls.append(url)
+        return FakeResponse()
+
+    monkeypatch.setattr(studio, "_validate_outbound_url", fake_validate)
+    monkeypatch.setattr(studio.httpx.AsyncClient, "get", fake_get)
+
+    with TestClient(studio.app) as client:
+        plan = client.get("/api/onboarding/preflight?probe=local", headers=AUTH).json()["preflight"]
+
+    assert calls and calls[0].endswith("/v1/models")
+    assert plan["local_probe"] == "ran"
+    steps = {step["id"]: step for step in plan["steps"]}
+    assert steps["model-source"]["status"] == "ready"
+    assert steps["model-available"]["status"] == "ready"
+    assert plan["ready"] is True
+
+
+def test_probe_route_reports_an_unreachable_runtime_without_failing(
+    isolated_state: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def fake_validate(_url: str, **_kwargs: object) -> None:
+        return None
+
+    async def failing_get(_self: object, _url: str, **_kwargs: object) -> object:
+        raise RuntimeError("connection refused")
+
+    monkeypatch.setattr(studio, "_validate_outbound_url", fake_validate)
+    monkeypatch.setattr(studio.httpx.AsyncClient, "get", failing_get)
+
+    with TestClient(studio.app) as client:
+        response = client.get("/api/onboarding/preflight?probe=local", headers=AUTH)
+
+    assert response.status_code == 200
+    plan = response.json()["preflight"]
+    assert plan["local_probe"] == "unavailable"
+    assert plan["ready"] is False
+    steps = {step["id"]: step for step in plan["steps"]}
+    assert steps["model-source"]["status"] == "action-required"
+    assert steps["model-available"]["action"] == "probe-local-models"
+
+
+def test_plain_preflight_never_probes_and_ignores_unknown_probe_values(
+    isolated_state: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def explode(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("the default preflight must not make network calls")
+
+    monkeypatch.setattr(studio.httpx.AsyncClient, "get", explode)
+
+    with TestClient(studio.app) as client:
+        plain = client.get("/api/onboarding/preflight", headers=AUTH).json()["preflight"]
+        unknown = client.get("/api/onboarding/preflight?probe=everything", headers=AUTH).json()["preflight"]
+
+    assert plain["local_probe"] == "not-run"
+    assert unknown["local_probe"] == "not-run"
+    assert plain["ready"] is False and unknown["ready"] is False
