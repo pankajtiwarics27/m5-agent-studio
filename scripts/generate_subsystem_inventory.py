@@ -163,7 +163,7 @@ def _authorization(path: str) -> str:
     if path == "/api/history/export":
         return "Shared API bearer/host/Origin boundary; returns the local history bundle with best-effort secret redaction applied; credential/configuration and audit tables are excluded by construction; no separate user/tenant role check is implemented."
     if path == "/api/history/retention/run":
-        return "Shared API bearer/host/Origin boundary; applies the configured retention policy to conversation/telemetry tables on demand; never touches credentials, the tool audit trail, or OpenContext documents; no separate user/tenant role check is implemented."
+        return "Shared API bearer/host/Origin boundary; applies configured retention to aged conversation/telemetry/context-vault rows and FTS copies plus inactive harness sessions/transcripts; never touches credentials, the tool audit trail, or OpenContext documents; no separate user/tenant role check is implemented."
     if path.startswith(("/api/", "/v1/")):
         return "Shared API bearer/host/Origin boundary; no user/tenant role check is implemented."
     raise InventoryError(f"No authorization mapping for registered endpoint {path!r}")

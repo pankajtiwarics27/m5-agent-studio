@@ -225,9 +225,11 @@ python3 scripts/db_maintenance.py retention  --database "${STUDIO_DB_PATH:-./stu
 
 Exports are JSON bundles with best-effort secret redaction (replacement count
 reported) and never include credential/configuration tables or the audit
-trail. Retention deletes conversation/telemetry artifacts older than N days —
-never OpenContext documents, the audit trail, or credentials. Details and
-guarantees: [`docs/history-privacy.md`](docs/history-privacy.md).
+trail. Retention removes aged conversation/telemetry/context-vault rows, their
+searchable FTS5 copies, and inactive harness session transcripts; it preserves
+OpenContext documents, the audit trail, and credentials. Harness JSONL/message
+files are not part of the SQLite export. Details and limits:
+[`docs/history-privacy.md`](docs/history-privacy.md).
 
 ## 5. System architecture
 
@@ -312,8 +314,8 @@ loop** (`POST /api/harness/gsd-wave`) emit `<tool_call>` blocks:
 | # | Tool | Purpose |
 | :--- | :--- | :--- |
 | 1 | `list_files` | List directory entries respecting ignore filters |
-| 2 | `grep_search` | Regex text search guarded by `gsd-secret-read-guard` |
-| 3 | `read_file` | Numbered line-range reader (`gsd-secret-read-guard` enforced) |
+| 2 | `grep_search` | Regex text search; resolved symlinks must remain in the workspace and secret-name checks apply to resolved targets |
+| 3 | `read_file` | Numbered line-range reader with resolved-path confinement and `gsd-secret-read-guard` enforcement |
 | 4 | `write_file` | Create/overwrite files inside the session workspace/worktree |
 | 5 | `edit_file` | Exact snippet replacement (`old_text` → `new_text`) |
 | 6 | `run_bash` | Shell/test commands inside `worktree_dir` with timeout |
@@ -364,7 +366,7 @@ loop** (`POST /api/harness/gsd-wave`) emit `<tool_call>` blocks:
 | `STUDIO_ENABLE_API_DOCS` | `0` | Expose public FastAPI `/docs` and `/openapi.json`; keep off on exposed deployments |
 | `STUDIO_MAX_REQUEST_BYTES` | `8388608` | Maximum request body size (1 KiB – 100 MiB) |
 | `STUDIO_EXPENSIVE_REQUESTS_PER_MINUTE` | `30` | Per-client-IP sliding-window limit on chat, harness, GSD/SDLC, `/v1/chat/completions` (1–600) |
-| `STUDIO_HISTORY_RETENTION_DAYS` | `0` (disabled) | Delete conversation/telemetry/context-vault history older than N days (1–3650) at startup, via `POST /api/history/retention/run`, or `scripts/db_maintenance.py retention`. Never touches OpenContext docs, the audit trail, or credentials. See [docs/history-privacy.md](docs/history-privacy.md) |
+| `STUDIO_HISTORY_RETENTION_DAYS` | `0` (disabled) | Prune aged conversation/telemetry/context-vault rows and FTS copies plus inactive harness session rows/transcripts (1–3650 days) at startup, via `POST /api/history/retention/run`, or `scripts/db_maintenance.py retention`. Preserves OpenContext docs, the audit trail, and credentials. See [docs/history-privacy.md](docs/history-privacy.md) |
 | `STUDIO_ALLOWED_HOSTS` | `localhost,127.0.0.1,[::1]` | Comma-separated `Host` header allowlist; add LAN/proxy hostnames explicitly |
 | `STUDIO_ALLOWED_ORIGINS` | empty | Comma-separated browser origins trusted behind a TLS reverse proxy |
 | `STUDIO_PRIVATE_URL_HOSTS` | empty | Per-host exceptions for trusted private HTTP/HTTPS provider or MCP destinations |
@@ -418,10 +420,12 @@ invariants**:
 9. **Node `< 22` skill-installer fallback**: `npx skills@latest` crashes on
    Node `< 22`; preserve the pure-Python `git clone --depth 1` fallback in
    `/api/skills/install`.
-10. **Preserve `gsd-secret-read-guard` & UI accessibility rules**: block
-    `.env`, `.secrets`, `*.pem`, `*.key` in `read_file`/`grep_search` (allow
-    `.env.example`), keep structural emojis out of `static/index.html` (use
-    `UI_ICONS` inline SVGs), and use `showToast(...)` instead of `alert(...)`.
+10. **Preserve secret-path and UI accessibility rules**: resolve candidates
+    before reading/indexing, reject symlinks that escape the workspace, and
+    block `.env`, `.secrets`, `*.pem`, `*.key`, and other guarded names in
+    resolved read/write/grep paths (allow `.env.example`); keep structural
+    emojis out of `static/index.html` (use `UI_ICONS` inline SVGs), and use
+    `showToast(...)` instead of `alert(...)`.
 11. **Dual tool-call dialect support**: Qwen XML
     (`<tool_call><function=NAME>...`) and JSON (`{"name": ..., "arguments": ...}`)
     dialects — plus tool aliases (`glob_files`, `grep`, `read`, `bash`) — are

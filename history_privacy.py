@@ -11,16 +11,18 @@ implementation. Design boundaries:
 - Redaction is pattern-based defense-in-depth applied on export. It catches
   common credential shapes; it cannot guarantee detection of arbitrary
   secrets embedded in free text. Keep raw databases protected regardless.
-- Retention prunes conversation/telemetry/context artifacts older than the
-  configured age. It deliberately does not touch OpenContext documents (a
-  persistent knowledge vault with its own delete API), the tool audit trail
-  (a security record), or schema bookkeeping.
+- Retention prunes conversation/telemetry/context artifacts and aged harness
+  sessions. Matching FTS5 rows are removed with their source chunks; optional
+  harness-store cleanup removes paired JSONL/message files. It deliberately
+  does not touch OpenContext documents (a persistent knowledge vault with its
+  own delete API), the tool audit trail (a security record), or schema bookkeeping.
 """
 from __future__ import annotations
 
 import re
 import sqlite3
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 REDACTED = "[REDACTED]"
@@ -177,13 +179,60 @@ def export_history(conn: sqlite3.Connection, *, redact: bool = True) -> dict[str
     }
 
 
-def apply_retention(conn: sqlite3.Connection, *, max_age_days: int, now: float) -> dict[str, int]:
-    """Delete history artifacts older than ``max_age_days``; return per-table counts.
+def _prune_harness_files(
+    store_dir: Path | None,
+    session_ids: list[str],
+    *,
+    cutoff: float,
+    protected_ids: set[str],
+) -> tuple[int, int]:
+    """Remove aged canonical transcript files; return (removed, failures)."""
+    if store_dir is None:
+        return 0, 0
+    root = store_dir.resolve()
+    if not root.is_dir():
+        return 0, 0
+    candidates = {sid for sid in session_ids if re.fullmatch(r"hns-[0-9a-f]{8}", sid)}
+    # Retry old orphan files on later retention passes, including files left by
+    # an earlier partial filesystem error after their session row was pruned.
+    for path in root.iterdir():
+        match = re.fullmatch(r"(hns-[0-9a-f]{8})(?:\.jsonl|\.messages\.json)", path.name)
+        if not match or match.group(1) in protected_ids:
+            continue
+        try:
+            if path.lstat().st_mtime < cutoff:
+                candidates.add(match.group(1))
+        except OSError:
+            continue
+    removed = 0
+    failures = 0
+    for session_id in candidates - protected_ids:
+        for suffix in (".jsonl", ".messages.json"):
+            path = root / f"{session_id}{suffix}"
+            if path.parent != root:
+                continue
+            try:
+                if path.is_symlink() or path.is_file():
+                    path.unlink()
+                    removed += 1
+            except OSError:
+                failures += 1
+    return removed, failures
 
-    Council Hall messages and context-vault chunks are pruned with their
-    owning sessions/metrics so no orphaned conversation content survives.
-    OpenContext documents, the tool audit trail, and schema bookkeeping are
-    never pruned here.
+
+def apply_retention(
+    conn: sqlite3.Connection,
+    *,
+    max_age_days: int,
+    now: float,
+    harness_store_dir: Path | None = None,
+) -> dict[str, int]:
+    """Delete old history rows and linked harness transcripts; return deletion counts.
+
+    Council Hall messages and context-vault chunks/FTS rows are pruned with
+    their owning sessions. Harness JSONL and message snapshots are removed when
+    ``harness_store_dir`` is supplied. OpenContext documents, the tool audit
+    trail, and schema bookkeeping are never pruned here.
     """
     if isinstance(max_age_days, bool) or not isinstance(max_age_days, int) or max_age_days < 1:
         raise HistoryPrivacyError("max_age_days must be an integer >= 1 (0 means retention is disabled).")
@@ -192,6 +241,28 @@ def apply_retention(conn: sqlite3.Connection, *, max_age_days: int, now: float) 
     cutoff = now - max_age_days * 86400.0
     present = _existing_tables(conn)
     deleted: dict[str, int] = {}
+    expired_harness_ids: list[str] = []
+    protected_harness_ids: set[str] = set()
+    if "harness_sessions" in present:
+        for row in conn.execute("SELECT id, created_at, updated_at, status FROM harness_sessions").fetchall():
+            session_id = str(row[0])
+            if str(row[3] or "").lower() in {"running", "waiting_approval"}:
+                protected_harness_ids.add(session_id)
+                continue
+            timestamps = [float(value or 0) for value in row[1:3]]
+            if harness_store_dir is not None and re.fullmatch(r"hns-[0-9a-f]{8}", session_id):
+                for suffix in (".jsonl", ".messages.json"):
+                    transcript = harness_store_dir / f"{session_id}{suffix}"
+                    try:
+                        if transcript.is_file() or transcript.is_symlink():
+                            timestamps.append(transcript.lstat().st_mtime)
+                    except OSError:
+                        # An unreadable transcript must not cause its DB session to be pruned.
+                        timestamps.append(float("inf"))
+            if max(timestamps, default=0.0) < cutoff:
+                expired_harness_ids.append(session_id)
+            else:
+                protected_harness_ids.add(session_id)
 
     def _prune(table: str, column: str, label: str) -> int:
         if table not in present:
@@ -203,6 +274,10 @@ def apply_retention(conn: sqlite3.Connection, *, max_age_days: int, now: float) 
         count = _prune(spec.table, spec.timestamp_column, spec.label)
         if count:
             deleted[spec.table] = count
+    if expired_harness_ids and "harness_sessions" in present:
+        cursor = conn.executemany("DELETE FROM harness_sessions WHERE id = ?", [(sid,) for sid in expired_harness_ids])
+        if cursor.rowcount:
+            deleted["harness_sessions"] = int(cursor.rowcount)
     # Children of pruned owners (Hall messages belong to sessions; vault
     # chunks belong to a context session).
     if "hall_messages" in present and "hall_sessions" in present:
@@ -217,5 +292,26 @@ def apply_retention(conn: sqlite3.Connection, *, max_age_days: int, now: float) 
         )
         if cursor.rowcount:
             deleted["ctx_vault_chunks"] = deleted.get("ctx_vault_chunks", 0) + int(cursor.rowcount)
+    if "ctx_vault_fts" in present and "ctx_vault_chunks" in present:
+        cursor = conn.execute(
+            "DELETE FROM ctx_vault_fts WHERE NOT EXISTS ("
+            "SELECT 1 FROM ctx_vault_chunks AS c "
+            "WHERE c.session_id = ctx_vault_fts.session_id "
+            "AND c.doc_id = ctx_vault_fts.doc_id "
+            "AND c.source_tool = ctx_vault_fts.source_tool "
+            "AND c.content = ctx_vault_fts.content)"
+        )
+        if cursor.rowcount:
+            deleted["ctx_vault_fts"] = int(cursor.rowcount)
+    harness_files, harness_file_failures = _prune_harness_files(
+        harness_store_dir,
+        expired_harness_ids,
+        cutoff=cutoff,
+        protected_ids=protected_harness_ids,
+    )
+    if harness_files:
+        deleted["harness_session_files"] = harness_files
+    if harness_file_failures:
+        deleted["harness_session_files_failed"] = harness_file_failures
     conn.commit()
     return deleted

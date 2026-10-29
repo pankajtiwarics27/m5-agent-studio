@@ -5,7 +5,10 @@ harness runs, telemetry samples, context-vault chunks, and OpenContext
 documents in the local SQLite database (`STUDIO_DB_PATH`); nothing is sent
 anywhere unless you invoke a feature that explicitly does so. This document
 describes the controls for getting data out, deleting it, and limiting how
-long it is kept.
+long it is kept. Harness transcript files (`.harnesses/sessions/*.jsonl` and
+`*.messages.json`) can contain raw prompts, tool arguments, and outputs; they
+are local user data too and are included in the retention boundary, but not in
+the SQLite export bundle.
 
 ## Export
 
@@ -39,12 +42,15 @@ keep raw databases protected regardless.
 ## Retention
 
 Set `STUDIO_HISTORY_RETENTION_DAYS` (integer, 1–3650; default `0` = disabled)
-to prune conversation, telemetry, and context-vault artifacts older than the
-configured age:
+to prune conversation, telemetry, context-vault, and harness-session artifacts
+older than the configured age. Harness-session age is based on the newest of
+the database `updated_at` timestamp and associated transcript-file mtimes, so
+an actively updated session is not removed just because it was created long ago:
 
-- On startup, `init_db` applies the policy once and reports what it pruned to
-  stderr. A retention failure leaves data in place (the safe default) and
-  says so.
+- On startup, `init_db` applies the policy and reports deletion counts to
+  stderr. Database errors leave SQL rows intact and are reported; transcript
+  file-unlink failures are counted separately, leave the affected file in
+  place, and are retried on a later retention pass.
 - On demand: `POST /api/history/retention/run` (authenticated) applies the
   policy immediately and returns per-table deletion counts; it returns `400`
   while retention is disabled.
@@ -54,13 +60,18 @@ configured age:
 vault — delete individual documents through the OpenContext API when you want
 them gone), the tool audit trail (a security record), credential/configuration
 tables, and schema bookkeeping. Council Hall messages and context-vault chunks
-are pruned together with their owning sessions so no orphaned conversation
-content survives.
+are pruned with their owning sessions; matching FTS5 rows are removed in the
+same retention pass. Expired harness-session rows and their `.jsonl` event logs
+and `.messages.json` snapshots are also removed. Retention reports separate
+counts for database rows, FTS rows, successfully removed transcript files, and transcript-file unlink failures (`harness_session_files_failed`). This is logical deletion, not forensic erasure: SQLite pages/WAL may retain deleted bytes until SQLite reuses or vacuums them, and filesystem unlink does not guarantee secure overwrite.
 
 ## Deletion
 
 - Retention (above) is time-based bulk deletion.
-- The export bundle documents what exists so you can verify deletions.
+- The SQLite export bundle covers the documented database tables, not the
+  separate harness JSONL/message files or the internal FTS5 indexes; it is not a
+  complete inventory of every on-disk artifact. Use retention's deletion counts
+  and search checks when verifying expiry.
 - Whole-database removal: stop Studio and delete `studio_history.db`
   (or restore from before the data existed with
   `python3 scripts/db_maintenance.py restore`).
@@ -73,7 +84,8 @@ content survives.
 `tests/test_history_privacy.py` covers the credential shapes and their
 false-positive behavior, the export boundary (excluded tables, redaction
 counts, ISO timestamps), retention pruning semantics (old vs. recent,
-children pruned with owners, OpenContext/audit untouched, argument
-validation), the authenticated API paths (401 without token, 400 while
-disabled, redacted payload, cross-origin rejection), and the operator CLI
-including owner-only export files.
+children and FTS rows pruned with owners, harness rows/files removed while
+recent activity is preserved, OpenContext/audit untouched, argument
+validation), the authenticated API paths (401 without token, fail-closed when
+a token is missing, 400 while disabled, redacted payload, cross-origin
+rejection), and the operator CLI including owner-only export files.

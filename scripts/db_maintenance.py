@@ -21,7 +21,9 @@ from history_privacy import HistoryPrivacyError, apply_retention, export_history
 SCHEMA_VERSION = 2
 KEYRING_REF_PREFIX = "keyring:v1:"
 SENSITIVE_PARTS = ("authorization", "cookie", "token", "secret", "password", "api-key", "apikey", "access-key", "accesskey", "private-key", "privatekey", "credential")
-DEFAULT_DB = Path(os.environ.get("STUDIO_DB_PATH", str(Path(__file__).resolve().parents[1] / "studio_history.db"))).expanduser()
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_DB = Path(os.environ.get("STUDIO_DB_PATH", str(PROJECT_ROOT / "studio_history.db"))).expanduser()
+DEFAULT_HARNESS_STORE = PROJECT_ROOT / ".harnesses" / "sessions"
 
 
 class MaintenanceError(RuntimeError):
@@ -202,10 +204,15 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "retention":
             now = datetime.now(timezone.utc).timestamp()
             with sqlite3.connect(args.database) as conn:
-                pruned = apply_retention(conn, max_age_days=args.days, now=now)
-            total = sum(pruned.values())
+                pruned = apply_retention(
+                    conn,
+                    max_age_days=args.days,
+                    now=now,
+                    harness_store_dir=DEFAULT_HARNESS_STORE,
+                )
+            total = sum(count for table, count in pruned.items() if not table.endswith("_failed"))
             detail = ", ".join(f"{table}={count}" for table, count in sorted(pruned.items())) or "nothing to prune"
-            print(f"Retention applied (max age {args.days}d): deleted {total} row(s) - {detail}")
+            print(f"Retention applied (max age {args.days}d): deleted {total} item(s) - {detail}")
         else:
             with sqlite3.connect(args.database) as conn:
                 bundle = export_history(conn)
