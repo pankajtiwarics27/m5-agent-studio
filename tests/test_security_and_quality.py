@@ -114,6 +114,63 @@ def test_resolve_confined_path_rejects_traversal_and_accepts_child(tmp_path: Pat
         studio._resolve_confined_path(root, "../outside")
 
 
+def test_grep_and_workspace_scanners_reject_secret_and_external_symlinks(tmp_path: Path) -> None:
+    import asyncio
+
+    root = tmp_path / "workspace"
+    outside = tmp_path / "outside"
+    root.mkdir()
+    outside.mkdir()
+    marker = "BOUNDARY_PROBE_SECRET_MARKER"
+    secret = root / ".env"
+    secret.write_text(f"OPENAI_API_KEY={marker}\n", encoding="utf-8")
+    private = outside / "private.md"
+    private.write_text(f"{marker} OUTSIDE_BOUNDARY_MARKER\n", encoding="utf-8")
+    private_code = outside / "private.py"
+    private_code.write_text("def outside_secret():\n    pass  # TODO: outside boundary\n", encoding="utf-8")
+    try:
+        (root / "notes.txt").symlink_to(secret)
+        (root / "secret.py").symlink_to(secret)
+        (root / "write-secret").symlink_to(secret)
+        (root / "external.py").symlink_to(private_code)
+        (root / "external.md").symlink_to(private)
+    except OSError as exc:
+        pytest.skip(f"symlink creation unavailable: {exc}")
+
+    session = {"worktree_dir": str(root), "policy": "autonomous"}
+    result = asyncio.run(
+        studio._execute_harness_tool_inner(
+            None, session, "grep_search", {"path": ".", "pattern": "BOUNDARY_PROBE"}
+        )
+    )
+    assert marker not in result["output"]
+    assert "OUTSIDE_BOUNDARY_MARKER" not in result["output"]
+    read_result = asyncio.run(
+        studio._execute_harness_tool_inner(None, session, "read_file", {"path": "notes.txt"})
+    )
+    assert read_result["ok"] is False
+
+    write_result = asyncio.run(
+        studio._execute_harness_tool_inner(
+            None, session, "write_file", {"path": "write-secret", "content": "overwritten"}
+        )
+    )
+    assert write_result["ok"] is False
+    assert marker in secret.read_text(encoding="utf-8")
+
+    listed = asyncio.run(
+        studio._execute_harness_tool_inner(None, session, "list_files", {"path": "."})
+    )
+    assert "external.py" not in listed["output"]
+    assert "external.md" not in listed["output"]
+    assert "notes.txt" not in listed["output"]
+
+    graph = studio.build_workspace_codegraph(root)
+    assert not graph["symbols"]
+    assert graph["files_scanned"] == 0
+    assert studio.scan_shortcut_debt(root) == []
+
+
 def test_child_process_environment_excludes_credential_variables(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "never-pass-this")
     monkeypatch.setenv("CUSTOM_SECRET", "never-pass-this-either")
@@ -673,46 +730,66 @@ def test_approval_decision_leaves_durable_audit_and_event_log(tmp_path: Path, is
     assert any(e.get("decision") == "approve" for e in decision_events)
 
 
-def test_worktree_removal_fails_safe_outside_harnesses_layout(tmp_path: Path, monkeypatch) -> None:
-    """AS-031 self-review: destructive cleanup only touches a verified
-    `.harnesses/wt-*` root inside the repo; anything else is left on disk."""
+def _init_test_git_repo(repo: Path) -> None:
+    repo.mkdir(parents=True)
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "tests@example.invalid"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.name", "Studio Tests"], cwd=repo, check=True)
+    (repo / "README.md").write_text("base\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "initial"], cwd=repo, check=True, capture_output=True)
+
+
+def test_worktree_removal_uses_registered_root_and_removes_branch(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
-    repo.mkdir()
-    (repo / ".git").mkdir()
-    subprocess.run(["git", "init", "-q"], cwd=str(repo), check=True, capture_output=True)
-    outside = repo / "project" / "nested"
-    outside.mkdir(parents=True)
-    (outside / "keep.txt").write_text("precious", encoding="utf-8")
-    removed: list[str] = []
+    _init_test_git_repo(repo)
+    worktree, branch, _ = studio._create_harness_worktree("hns-abc12345", repo)
+    (worktree / "uncommitted.txt").write_text("session work", encoding="utf-8")
+
+    studio._remove_harness_worktree(repo, worktree, branch)
+
+    assert not worktree.exists()
+    branches = subprocess.check_output(["git", "branch", "--list", branch], cwd=repo, text=True)
+    assert not branches.strip()
+
+
+def test_worktree_cleanup_failure_preserves_data_and_nested_paths(tmp_path: Path, monkeypatch) -> None:
+    """Git errors and nested lookalike paths never trigger recursive deletion."""
+    repo = tmp_path / "repo"
+    _init_test_git_repo(repo)
+    worktree, branch, _ = studio._create_harness_worktree("hns-abc12345", repo)
+    marker = worktree / "uncommitted.txt"
+    marker.write_text("precious session work", encoding="utf-8")
+    nested = worktree / "project" / ".harnesses" / "wt-victim"
+    nested.mkdir(parents=True)
+    (nested / "keep.txt").write_text("not a registered worktree", encoding="utf-8")
     real_run = subprocess.run
 
-    def fake_run(cmd, *args, **kwargs):
+    def fail_git_cleanup(cmd, *args, **kwargs):
         if cmd[:3] == ["git", "worktree", "remove"]:
-            removed.append(str(cmd[4]))
-            return real_run(["true"], *args, **kwargs)
+            raise subprocess.TimeoutExpired(cmd, 8.0)
         return real_run(cmd, *args, **kwargs)
 
-    monkeypatch.setattr(studio.subprocess, "run", fake_run)
-    # Not a `.harnesses/wt-*` shape: must be skipped entirely.
-    studio._remove_harness_worktree(repo, outside, "harness/abc")
-    assert removed == []
-    assert (outside / "keep.txt").read_text(encoding="utf-8") == "precious"
+    monkeypatch.setattr(studio.subprocess, "run", fail_git_cleanup)
+    studio._remove_harness_worktree(repo, nested / "child", branch)
 
-    # Genuine worktree root inside the repo: cleanup targets exactly that root.
-    genuine = repo / ".harnesses" / "wt-abc123"
-    genuine.mkdir(parents=True)
-    studio._remove_harness_worktree(repo, genuine / "sub" / "dir", "harness/abc")
-    assert removed == [str(genuine.resolve())]
+    assert marker.read_text(encoding="utf-8") == "precious session work"
+    assert (nested / "keep.txt").read_text(encoding="utf-8") == "not a registered worktree"
+    assert worktree.exists()
+    listed = subprocess.check_output(["git", "worktree", "list", "--porcelain"], cwd=repo, text=True)
+    assert str(worktree.resolve()) in listed
 
 
-def test_worktree_removal_refuses_target_outside_repo(tmp_path: Path) -> None:
-    """A `.harnesses/wt-*` path outside the workspace repo is never deleted."""
+def test_worktree_removal_refuses_nested_repository_lookalike(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
-    repo.mkdir()
-    (repo / ".git").mkdir()
-    subprocess.run(["git", "init", "-q"], cwd=str(repo), check=True, capture_output=True)
-    elsewhere = tmp_path / "elsewhere" / ".harnesses" / "wt-xyz"
-    elsewhere.mkdir(parents=True)
-    (elsewhere / "data.txt").write_text("keep", encoding="utf-8")
-    studio._remove_harness_worktree(repo, elsewhere, "harness/xyz")
-    assert (elsewhere / "data.txt").exists()
+    _init_test_git_repo(repo)
+    worktree, branch, _ = studio._create_harness_worktree("hns-abc12345", repo)
+    nested = repo / "project" / ".harnesses" / "wt-victim"
+    nested.mkdir(parents=True)
+    marker = nested / "data.txt"
+    marker.write_text("keep", encoding="utf-8")
+
+    studio._remove_harness_worktree(repo, nested, branch)
+
+    assert marker.read_text(encoding="utf-8") == "keep"
+    assert worktree.exists()

@@ -9,6 +9,7 @@ semantics, and the authenticated API behavior.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import time
 from pathlib import Path
@@ -18,7 +19,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app as studio
-from history_privacy import REDACTED, HistoryPrivacyError, apply_retention, export_history, redact_json, redact_text
+from history_privacy import REDACTED, HistoryPrivacyError, _prune_harness_files, apply_retention, export_history, redact_json, redact_text
 from scripts.db_maintenance import main as maintenance_main
 
 
@@ -126,6 +127,11 @@ def _seed_history(conn: sqlite3.Connection, *, created_at: float) -> None:
         (f"output containing {secret}", created_at),
     )
     conn.execute(
+        "INSERT INTO ctx_vault_fts (session_id, doc_id, source_tool, content) "
+        "VALUES ('sess-1', 'ctx-1', 'run_bash', ?)",
+        (f"output containing {secret}",),
+    )
+    conn.execute(
         "INSERT INTO ctx_session_metrics (session_id, raw_bytes, sent_bytes, compactions, updated_at) "
         "VALUES ('sess-1', 10, 5, 1, ?)",
         (created_at,),
@@ -177,28 +183,89 @@ def test_export_can_be_requested_without_redaction(isolated_app: Path) -> None:
 def test_retention_prunes_old_rows_and_keeps_recent(isolated_app: Path) -> None:
     db = isolated_app / "history-privacy.db"
     now = time.time()
+    harness_store = isolated_app / "harness-sessions"
+    harness_store.mkdir()
+    old_session = "hns-1234abcd"
+    recent_session = "hns-5678abcd"
+    active_session = "hns-0badcafe"
+    for session_id in (old_session, recent_session, active_session):
+        (harness_store / f"{session_id}.jsonl").write_text("raw transcript", encoding="utf-8")
+        (harness_store / f"{session_id}.messages.json").write_text(json.dumps(["raw prompt"]), encoding="utf-8")
+    old_mtime = now - 90 * 86400
+    for session_id in (old_session, active_session):
+        os.utime(harness_store / f"{session_id}.jsonl", (old_mtime, old_mtime))
+        os.utime(harness_store / f"{session_id}.messages.json", (old_mtime, old_mtime))
     with sqlite3.connect(db) as conn:
         _seed_history(conn, created_at=now - 90 * 86400)
         conn.execute(
             "INSERT INTO runs (created_at, mode, title, payload_json) VALUES (?, 'chat', 'recent', '{}')",
             (now - 86400,),
         )
-        deleted = apply_retention(conn, max_age_days=30, now=now)
+        session_columns = "id, title, workspace_dir, worktree_dir, branch_name, use_worktree, policy, lead_model, critic_model, status, step_count, created_at, updated_at"
+        conn.execute(
+            f"INSERT INTO harness_sessions ({session_columns}) VALUES (?, 'old', '', '', '', 0, 'standard', 'local', 'critic', 'idle', 0, ?, ?)",
+            (old_session, now - 90 * 86400, now - 90 * 86400),
+        )
+        conn.execute(
+            f"INSERT INTO harness_sessions ({session_columns}) VALUES (?, 'recent', '', '', '', 0, 'standard', 'local', 'critic', 'idle', 0, ?, ?)",
+            (recent_session, now - 86400, now - 86400),
+        )
+        conn.execute(
+            f"INSERT INTO harness_sessions ({session_columns}) VALUES (?, 'active', '', '', '', 0, 'standard', 'local', 'critic', 'running', 0, ?, ?)",
+            (active_session, now - 90 * 86400, now - 90 * 86400),
+        )
+        deleted = apply_retention(conn, max_age_days=30, now=now, harness_store_dir=harness_store)
         remaining_runs = conn.execute("SELECT title FROM runs ORDER BY id").fetchall()
         remaining_hall = conn.execute("SELECT COUNT(*) FROM hall_sessions").fetchone()[0]
         remaining_msgs = conn.execute("SELECT COUNT(*) FROM hall_messages").fetchone()[0]
         remaining_chunks = conn.execute("SELECT COUNT(*) FROM ctx_vault_chunks").fetchone()[0]
         remaining_metrics = conn.execute("SELECT COUNT(*) FROM ctx_session_metrics").fetchone()[0]
+        remaining_harness = {row[0] for row in conn.execute("SELECT id FROM harness_sessions")}
+        remaining_fts = conn.execute("SELECT COUNT(*) FROM ctx_vault_fts WHERE ctx_vault_fts MATCH 'secretkeyvalue'").fetchone()[0]
+        remaining_fts_all = conn.execute("SELECT COUNT(*) FROM ctx_vault_fts").fetchone()[0]
+        survivor_ids = {row[0] for row in conn.execute("SELECT id FROM opencontext_docs").fetchall()}
     assert deleted["runs"] == 1
     assert deleted["hall_sessions"] == 1 and deleted["hall_messages"] == 1
     assert deleted["ctx_vault_chunks"] == 1 and deleted["ctx_session_metrics"] == 1
+    assert deleted["harness_sessions"] == 1 and deleted["harness_session_files"] == 2
+    assert deleted["ctx_vault_fts"] == 1
     assert [row[0] for row in remaining_runs] == ["recent"]
-    assert remaining_hall == 0 and remaining_msgs == 0  # children pruned with their session
+    assert remaining_hall == 0 and remaining_msgs == 0
     assert remaining_chunks == 0 and remaining_metrics == 0
-    # OpenContext is a persistent vault: retention never deletes knowledge docs
-    # (the seeded doc survives alongside init_db's default doc).
-    survivor_ids = {row[0] for row in conn.execute("SELECT id FROM opencontext_docs").fetchall()}
+    assert remaining_fts == 0 and remaining_fts_all == 0
+    assert "No FTS5 chunks matched" in studio.search_ctx_vault("sess-1", "secretkeyvalue")
+    assert remaining_harness == {recent_session, active_session}
+    assert not (harness_store / f"{old_session}.jsonl").exists()
+    assert not (harness_store / f"{old_session}.messages.json").exists()
+    assert (harness_store / f"{recent_session}.jsonl").exists()
+    assert (harness_store / f"{recent_session}.messages.json").exists()
+    assert (harness_store / f"{active_session}.jsonl").exists()
+    assert (harness_store / f"{active_session}.messages.json").exists()
+    # OpenContext is a persistent vault: retention never deletes knowledge docs.
     assert "doc-1" in survivor_ids
+
+
+def test_harness_retention_reports_unlink_failures_and_preserves_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = tmp_path / "sessions"
+    store.mkdir()
+    session_id = "hns-cafe1234"
+    transcript = store / f"{session_id}.jsonl"
+    transcript.write_text("sensitive transcript", encoding="utf-8")
+    real_unlink = Path.unlink
+
+    def fail_unlink(path: Path, *args: Any, **kwargs: Any) -> None:
+        if path == transcript:
+            raise PermissionError("simulated permission error")
+        real_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", fail_unlink)
+    removed, failures = _prune_harness_files(
+        store, [session_id], cutoff=time.time() + 1, protected_ids=set()
+    )
+    assert removed == 0 and failures == 1
+    assert transcript.read_text(encoding="utf-8") == "sensitive transcript"
 
 
 def test_retention_validates_arguments(isolated_app: Path) -> None:
@@ -267,6 +334,17 @@ def test_history_export_requires_authentication(isolated_app: Path) -> None:
     assert "runs" in bundle["tables"]
 
 
+def test_protected_api_fails_closed_when_lifespan_did_not_load_token(
+    isolated_app: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(studio, "STUDIO_API_TOKEN", "")
+    monkeypatch.setattr(studio, "STUDIO_AUTH_DISABLED", False)
+    # Do not enter TestClient as a context manager: this deliberately skips ASGI lifespan.
+    response = TestClient(studio.app).get("/api/providers")
+    assert response.status_code == 503
+    assert "Authentication is unavailable" in response.json()["detail"]
+
+
 def test_history_export_redacts_secrets_in_payload(isolated_app: Path) -> None:
     secret = "sk-abc123secretkeyvalue"
     with sqlite3.connect(isolated_app / "history-privacy.db") as conn:
@@ -281,8 +359,22 @@ def test_history_export_redacts_secrets_in_payload(isolated_app: Path) -> None:
 def test_history_retention_run_endpoint(isolated_app: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     now = time.time()
     db = isolated_app / "history-privacy.db"
+    store = isolated_app / "harness-store"
+    store.mkdir()
+    session_id = "hns-a1b2c3d4"
+    for suffix in (".jsonl", ".messages.json"):
+        path = store / f"{session_id}{suffix}"
+        path.write_text("old transcript", encoding="utf-8")
+        os.utime(path, (now - 90 * 86400, now - 90 * 86400))
+    monkeypatch.setattr(studio, "HARNESS_STORE_DIR", store)
     with sqlite3.connect(db) as conn:
         _seed_history(conn, created_at=now - 90 * 86400)
+        conn.execute(
+            "INSERT INTO harness_sessions "
+            "(id, title, workspace_dir, worktree_dir, branch_name, use_worktree, policy, lead_model, critic_model, status, step_count, created_at, updated_at) "
+            "VALUES (?, 'old', '', '', '', 0, 'standard', 'local', 'critic', 'idle', 0, ?, ?)",
+            (session_id, now - 90 * 86400, now - 90 * 86400),
+        )
     with TestClient(studio.app) as client:
         headers = {**_auth(), "Origin": "http://testserver"}
         disabled = client.post("/api/history/retention/run", headers=headers)
@@ -294,8 +386,13 @@ def test_history_retention_run_endpoint(isolated_app: Path, monkeypatch: pytest.
     payload: dict[str, Any] = ok.json()
     assert payload["status"] == "ok" and payload["max_age_days"] == 30
     assert payload["deleted_total"] >= 5
+    assert payload["deleted"]["harness_sessions"] == 1
+    assert payload["deleted"]["harness_session_files"] == 2
+    assert not (store / f"{session_id}.jsonl").exists()
+    assert not (store / f"{session_id}.messages.json").exists()
     with sqlite3.connect(db) as conn:
         assert conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM harness_sessions").fetchone()[0] == 0
         assert conn.execute("SELECT COUNT(*) FROM opencontext_docs WHERE id='doc-1'").fetchone()[0] == 1
 
 

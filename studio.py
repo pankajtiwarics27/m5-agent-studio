@@ -1220,12 +1220,18 @@ def init_db() -> None:
     if STUDIO_HISTORY_RETENTION_DAYS > 0:
         try:
             with sqlite3.connect(DB_PATH) as retention_conn:
-                pruned = apply_retention(retention_conn, max_age_days=STUDIO_HISTORY_RETENTION_DAYS, now=time.time())
+                pruned = apply_retention(
+                    retention_conn,
+                    max_age_days=STUDIO_HISTORY_RETENTION_DAYS,
+                    now=time.time(),
+                    harness_store_dir=HARNESS_STORE_DIR,
+                )
             if pruned:
-                print(f"History retention pruned {sum(pruned.values())} row(s): {sorted(pruned.items())}", file=sys.stderr)
+                deleted_total = sum(count for key, count in pruned.items() if not key.endswith("_failed"))
+                print(f"History retention pruned {deleted_total} item(s): {sorted(pruned.items())}", file=sys.stderr)
         except (sqlite3.Error, HistoryPrivacyError) as exc:
-            # Retention failure keeps data in place: that is the safe default.
-            print(f"History retention did not run (data left intact): {exc}", file=sys.stderr)
+            # Database retention errors leave rows in place; filesystem failures are counted separately.
+            print(f"History retention did not run (database data left intact): {exc}", file=sys.stderr)
 
 
 def _seed_env_providers_and_default_combo() -> None:
@@ -2301,7 +2307,9 @@ async def security_boundary(request: Request, call_next):
             return JSONResponse({"detail": "Cross-origin state-changing request rejected."}, status_code=403)
 
     protected = request.url.path.startswith(("/api/", "/v1/"))
-    if protected and STUDIO_API_TOKEN and not STUDIO_AUTH_DISABLED:
+    if protected and not STUDIO_AUTH_DISABLED:
+        if not STUDIO_API_TOKEN:
+            return JSONResponse({"detail": "Authentication is unavailable; configure a token and restart Studio."}, status_code=503)
         supplied = request.headers.get("authorization", "")
         scheme, _, token = supplied.partition(" ")
         if scheme.lower() != "bearer" or not secrets.compare_digest(token, STUDIO_API_TOKEN):
@@ -7335,8 +7343,14 @@ async def api_history_retention_run() -> JSONResponse:
             status_code=400,
         )
     with sqlite3.connect(DB_PATH) as conn:
-        pruned = apply_retention(conn, max_age_days=days, now=time.time())
-    return JSONResponse({"status": "ok", "max_age_days": days, "deleted": pruned, "deleted_total": sum(pruned.values())})
+        pruned = apply_retention(
+            conn,
+            max_age_days=days,
+            now=time.time(),
+            harness_store_dir=HARNESS_STORE_DIR,
+        )
+    deleted_total = sum(count for key, count in pruned.items() if not key.endswith("_failed"))
+    return JSONResponse({"status": "ok", "max_age_days": days, "deleted": pruned, "deleted_total": deleted_total})
 
 
 def _sse(event: str, data: dict[str, Any]) -> str:
@@ -8624,24 +8638,26 @@ def build_workspace_codegraph(root: Path, sub_path: str = ".", max_files: int = 
     files_scanned = 0
 
     cand_files = [target] if target.is_file() else sorted(target.rglob("*"))
+    root_res = root.resolve()
     for fp in cand_files:
-        if not fp.is_file():
+        resolved_fp = _resolved_workspace_candidate(root_res, fp)
+        if resolved_fp is None or not resolved_fp.is_file():
             continue
-        rel_parts = fp.relative_to(root).parts
-        if any(p in SKIP for p in rel_parts) or _is_secret_filename(fp.name):
+        rel_parts = fp.relative_to(root_res).parts
+        if any(p in SKIP for p in rel_parts) or _is_secret_path(resolved_fp):
             continue
         lang = EXT_LANG.get(fp.suffix.lower())
         if not lang:
             continue
         try:
-            if fp.stat().st_size > 800_000:
+            if resolved_fp.stat().st_size > 800_000:
                 continue
-            src = fp.read_text(encoding="utf-8", errors="replace")
+            src = resolved_fp.read_text(encoding="utf-8", errors="replace")
         except Exception:
             continue
 
         files_scanned += 1
-        rel_s = str(fp.relative_to(root))
+        rel_s = str(fp.relative_to(root_res))
         mod_imports: list[str] = []
         mod_symbols: list[str] = []
 
@@ -8789,19 +8805,21 @@ def scan_shortcut_debt(root: Path, sub_path: str = ".", max_files: int = 250) ->
     items: list[dict[str, Any]] = []
     scanned = 0
     cand_files = [target] if target.is_file() else sorted(target.rglob("*"))
+    root_res = root.resolve()
     for fp in cand_files:
-        if not fp.is_file() or fp.suffix.lower() not in EXTS or _is_secret_filename(fp.name):
+        resolved_fp = _resolved_workspace_candidate(root_res, fp)
+        if resolved_fp is None or not resolved_fp.is_file() or fp.suffix.lower() not in EXTS:
             continue
-        if any(p in SKIP for p in fp.relative_to(root).parts):
+        if _is_secret_path(resolved_fp) or any(p in SKIP for p in fp.relative_to(root_res).parts):
             continue
         try:
-            if fp.stat().st_size > 800_000:
+            if resolved_fp.stat().st_size > 800_000:
                 continue
-            lines = fp.read_text(encoding="utf-8", errors="replace").splitlines()
+            lines = resolved_fp.read_text(encoding="utf-8", errors="replace").splitlines()
         except Exception:
             continue
         scanned += 1
-        rel_s = str(fp.relative_to(root))
+        rel_s = str(fp.relative_to(root_res))
         for lineno, ln in enumerate(lines, 1):
             m = rx.search(ln)
             if m:
@@ -9813,6 +9831,32 @@ def _create_harness_worktree(session_id: str, workspace_dir: Path) -> tuple[Path
     return effective_dir, branch_name, ""
 
 
+def _registered_worktree_branch(repo_root: Path, target: Path) -> str | None:
+    """Return the branch registered for an exact worktree path, or fail closed."""
+    try:
+        listing = subprocess.check_output(
+            ["git", "worktree", "list", "--porcelain"],
+            cwd=str(repo_root), stderr=subprocess.DEVNULL, text=True, timeout=5.0,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    expected_path = target.resolve()
+    current_path: Path | None = None
+    current_branch: str | None = None
+    for line in (*listing.splitlines(), ""):
+        if line.startswith("worktree "):
+            current_path = Path(line.removeprefix("worktree ")).resolve()
+            current_branch = None
+        elif line.startswith("branch "):
+            current_branch = line.removeprefix("branch ")
+        elif not line:
+            if current_path == expected_path:
+                return current_branch
+            current_path = None
+            current_branch = None
+    return None
+
+
 def _remove_harness_worktree(workspace_dir: Path, worktree_dir: Path, branch_name: str) -> None:
     if not branch_name or worktree_dir.resolve() == workspace_dir.resolve():
         return
@@ -9820,29 +9864,44 @@ def _remove_harness_worktree(workspace_dir: Path, worktree_dir: Path, branch_nam
     if not info["is_git"]:
         return
     repo_root = Path(info["root"]).resolve()
-    # Find worktree root (`.harnesses/wt-*`). Destructive cleanup runs only on a
-    # verified worktree root inside this repository's `.harnesses/` directory;
-    # anything else fails safe and is left on disk rather than deleted by path.
+    harness_root = (repo_root / ".harnesses").resolve()
+    if repo_root not in harness_root.parents:
+        return
+
+    # Select only a direct child of this repository's resolved .harnesses root.
+    # This excludes nested project/.harnesses paths and never falls back to an
+    # arbitrary recorded worktree_dir.
     wt_target: Path | None = None
     for parent in [worktree_dir, *worktree_dir.parents]:
-        if parent.name.startswith("wt-") and parent.parent.name == ".harnesses":
-            candidate = parent.resolve()
-            if candidate != repo_root and repo_root in candidate.parents:
-                wt_target = candidate
+        candidate = parent.resolve()
+        if candidate.parent == harness_root and candidate.name.startswith("wt-"):
+            wt_target = candidate
             break
     if wt_target is None:
         return
+
+    registered_branch = _registered_worktree_branch(repo_root, wt_target)
+    if registered_branch != f"refs/heads/{branch_name}":
+        return
     try:
-        subprocess.run(
+        removed = subprocess.run(
             ["git", "worktree", "remove", "--force", str(wt_target)],
             cwd=str(repo_root), capture_output=True, text=True, timeout=8.0,
         )
+    except (OSError, subprocess.SubprocessError):
+        # On timeout/error preserve the worktree and its uncommitted data.
+        return
+    if removed.returncode != 0:
+        return
+    try:
         subprocess.run(
-            ["git", "branch", "-D", branch_name],
-            cwd=str(repo_root), capture_output=True, text=True, timeout=5.0,
+            ["git", "branch", "-D", "--", branch_name],
+            cwd=str(repo_root), capture_output=True, text=True, timeout=5.0, check=True,
         )
-    except Exception:
-        shutil.rmtree(wt_target, ignore_errors=True)
+    except (OSError, subprocess.SubprocessError):
+        # The worktree is already removed; a leftover branch is safer than
+        # broadening cleanup to any other ref or path.
+        return
 
 
 def _append_harness_event(session_id: str, event_type: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -10013,6 +10072,23 @@ def _resolve_confined_path(root: Path, raw_path: str) -> Path:
     if cand != root_res and root_res not in cand.parents:
         raise PermissionError(f"Path '{raw_path}' escapes confined harness root '{root_res}'.")
     return cand
+
+
+def _resolved_workspace_candidate(root: Path, candidate: Path) -> Path | None:
+    """Resolve a discovered file and reject symlinks escaping the workspace."""
+    root_res = root.resolve()
+    try:
+        resolved = candidate.resolve(strict=True)
+    except (OSError, RuntimeError):
+        return None
+    if resolved != root_res and root_res not in resolved.parents:
+        return None
+    return resolved
+
+
+def _is_secret_path(path: Path) -> bool:
+    """Apply secret-name checks to every resolved component, not just an alias."""
+    return any(_is_secret_filename(part) for part in path.parts)
 
 
 def _unified_diff_snippet(rel_path: str, before: str, after: str, max_lines: int = 160) -> str:
@@ -10249,6 +10325,9 @@ async def _execute_harness_tool_inner(
                 return {"ok": False, "output": f"Path not found: {args.get('path')}", "diff": "", "elapsed_ms": 1}
             items: list[str] = []
             for p in sorted(target.rglob("*")):
+                resolved = _resolved_workspace_candidate(root, p)
+                if resolved is None or _is_secret_path(resolved):
+                    continue
                 rel_parts = p.relative_to(root).parts
                 if any(part in SKIP_DIRS for part in rel_parts):
                     continue
@@ -10260,11 +10339,11 @@ async def _execute_harness_tool_inner(
                         or fnmatch.fnmatch(rel_str.lower(), f"*{pat_lower}")
                     ):
                         continue
-                if p.is_dir():
+                if resolved.is_dir():
                     items.append(f"[dir]  {rel_str}/")
                 else:
                     try:
-                        sz = p.stat().st_size
+                        sz = resolved.stat().st_size
                     except OSError:
                         sz = 0
                     items.append(f"[file] {rel_str} ({sz} B)")
@@ -10282,20 +10361,23 @@ async def _execute_harness_tool_inner(
             if sec_err:
                 return {"ok": False, "output": sec_err, "diff": "", "elapsed_ms": 1}
             target = _resolve_confined_path(root, str(args.get("path") or "."))
+            if _is_secret_path(target):
+                return {"ok": False, "output": _check_gsd_secret_guard(str(target)) or "Blocked secret path.", "diff": "", "elapsed_ms": 1}
             max_hits = min(max(int(args.get("max_hits") or 50), 1), 150)
             rx = re.compile(pattern, re.IGNORECASE)
             hits: list[str] = []
             files_iter = [target] if target.is_file() else sorted(target.rglob("*"))
             for fp in files_iter:
-                if not fp.is_file() or _is_secret_filename(fp.name):
+                resolved_fp = _resolved_workspace_candidate(root, fp)
+                if resolved_fp is None or not resolved_fp.is_file() or _is_secret_path(resolved_fp):
                     continue
                 rel_parts = fp.relative_to(root).parts
                 if any(part in SKIP_DIRS for part in rel_parts):
                     continue
                 try:
-                    if fp.stat().st_size > 1_500_000:
+                    if resolved_fp.stat().st_size > 1_500_000:
                         continue
-                    txt = fp.read_text(encoding="utf-8")
+                    txt = resolved_fp.read_text(encoding="utf-8")
                 except Exception:
                     continue
                 rel_s = str(fp.relative_to(root))
@@ -10315,8 +10397,8 @@ async def _execute_harness_tool_inner(
             if sec_err:
                 return {"ok": False, "output": sec_err, "diff": "", "elapsed_ms": 1}
             fp = _resolve_confined_path(root, raw_p)
-            if _is_secret_filename(fp.name):
-                return {"ok": False, "output": _check_gsd_secret_guard(fp.name) or "Blocked secret file.", "diff": "", "elapsed_ms": 1}
+            if _is_secret_path(fp):
+                return {"ok": False, "output": _check_gsd_secret_guard(str(fp)) or "Blocked secret file.", "diff": "", "elapsed_ms": 1}
             if not fp.is_file():
                 return {"ok": False, "output": f"File not found: {args.get('path')}", "diff": "", "elapsed_ms": 1}
             lines = fp.read_text(encoding="utf-8", errors="replace").splitlines()
@@ -10345,6 +10427,8 @@ async def _execute_harness_tool_inner(
             if sec_err:
                 return {"ok": False, "output": sec_err, "diff": "", "elapsed_ms": 1}
             fp = _resolve_confined_path(root, raw_p)
+            if _is_secret_path(fp):
+                return {"ok": False, "output": _check_gsd_secret_guard(str(fp)) or "Blocked secret file.", "diff": "", "elapsed_ms": 1}
             rel_s = str(fp.relative_to(root))
             before = fp.read_text(encoding="utf-8", errors="replace") if fp.is_file() else ""
 
@@ -12624,15 +12708,17 @@ implementation. Design boundaries:
 - Redaction is pattern-based defense-in-depth applied on export. It catches
   common credential shapes; it cannot guarantee detection of arbitrary
   secrets embedded in free text. Keep raw databases protected regardless.
-- Retention prunes conversation/telemetry/context artifacts older than the
-  configured age. It deliberately does not touch OpenContext documents (a
-  persistent knowledge vault with its own delete API), the tool audit trail
-  (a security record), or schema bookkeeping.
+- Retention prunes conversation/telemetry/context artifacts and aged harness
+  sessions. Matching FTS5 rows are removed with their source chunks; optional
+  harness-store cleanup removes paired JSONL/message files. It deliberately
+  does not touch OpenContext documents (a persistent knowledge vault with its
+  own delete API), the tool audit trail (a security record), or schema bookkeeping.
 """
 
 import re
 import sqlite3
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 REDACTED = "[REDACTED]"
@@ -12789,13 +12875,60 @@ def export_history(conn: sqlite3.Connection, *, redact: bool = True) -> dict[str
     }
 
 
-def apply_retention(conn: sqlite3.Connection, *, max_age_days: int, now: float) -> dict[str, int]:
-    """Delete history artifacts older than ``max_age_days``; return per-table counts.
+def _prune_harness_files(
+    store_dir: Path | None,
+    session_ids: list[str],
+    *,
+    cutoff: float,
+    protected_ids: set[str],
+) -> tuple[int, int]:
+    """Remove aged canonical transcript files; return (removed, failures)."""
+    if store_dir is None:
+        return 0, 0
+    root = store_dir.resolve()
+    if not root.is_dir():
+        return 0, 0
+    candidates = {sid for sid in session_ids if re.fullmatch(r"hns-[0-9a-f]{8}", sid)}
+    # Retry old orphan files on later retention passes, including files left by
+    # an earlier partial filesystem error after their session row was pruned.
+    for path in root.iterdir():
+        match = re.fullmatch(r"(hns-[0-9a-f]{8})(?:\.jsonl|\.messages\.json)", path.name)
+        if not match or match.group(1) in protected_ids:
+            continue
+        try:
+            if path.lstat().st_mtime < cutoff:
+                candidates.add(match.group(1))
+        except OSError:
+            continue
+    removed = 0
+    failures = 0
+    for session_id in candidates - protected_ids:
+        for suffix in (".jsonl", ".messages.json"):
+            path = root / f"{session_id}{suffix}"
+            if path.parent != root:
+                continue
+            try:
+                if path.is_symlink() or path.is_file():
+                    path.unlink()
+                    removed += 1
+            except OSError:
+                failures += 1
+    return removed, failures
 
-    Council Hall messages and context-vault chunks are pruned with their
-    owning sessions/metrics so no orphaned conversation content survives.
-    OpenContext documents, the tool audit trail, and schema bookkeeping are
-    never pruned here.
+
+def apply_retention(
+    conn: sqlite3.Connection,
+    *,
+    max_age_days: int,
+    now: float,
+    harness_store_dir: Path | None = None,
+) -> dict[str, int]:
+    """Delete old history rows and linked harness transcripts; return deletion counts.
+
+    Council Hall messages and context-vault chunks/FTS rows are pruned with
+    their owning sessions. Harness JSONL and message snapshots are removed when
+    ``harness_store_dir`` is supplied. OpenContext documents, the tool audit
+    trail, and schema bookkeeping are never pruned here.
     """
     if isinstance(max_age_days, bool) or not isinstance(max_age_days, int) or max_age_days < 1:
         raise HistoryPrivacyError("max_age_days must be an integer >= 1 (0 means retention is disabled).")
@@ -12804,6 +12937,28 @@ def apply_retention(conn: sqlite3.Connection, *, max_age_days: int, now: float) 
     cutoff = now - max_age_days * 86400.0
     present = _existing_tables(conn)
     deleted: dict[str, int] = {}
+    expired_harness_ids: list[str] = []
+    protected_harness_ids: set[str] = set()
+    if "harness_sessions" in present:
+        for row in conn.execute("SELECT id, created_at, updated_at, status FROM harness_sessions").fetchall():
+            session_id = str(row[0])
+            if str(row[3] or "").lower() in {"running", "waiting_approval"}:
+                protected_harness_ids.add(session_id)
+                continue
+            timestamps = [float(value or 0) for value in row[1:3]]
+            if harness_store_dir is not None and re.fullmatch(r"hns-[0-9a-f]{8}", session_id):
+                for suffix in (".jsonl", ".messages.json"):
+                    transcript = harness_store_dir / f"{session_id}{suffix}"
+                    try:
+                        if transcript.is_file() or transcript.is_symlink():
+                            timestamps.append(transcript.lstat().st_mtime)
+                    except OSError:
+                        # An unreadable transcript must not cause its DB session to be pruned.
+                        timestamps.append(float("inf"))
+            if max(timestamps, default=0.0) < cutoff:
+                expired_harness_ids.append(session_id)
+            else:
+                protected_harness_ids.add(session_id)
 
     def _prune(table: str, column: str, label: str) -> int:
         if table not in present:
@@ -12815,6 +12970,10 @@ def apply_retention(conn: sqlite3.Connection, *, max_age_days: int, now: float) 
         count = _prune(spec.table, spec.timestamp_column, spec.label)
         if count:
             deleted[spec.table] = count
+    if expired_harness_ids and "harness_sessions" in present:
+        cursor = conn.executemany("DELETE FROM harness_sessions WHERE id = ?", [(sid,) for sid in expired_harness_ids])
+        if cursor.rowcount:
+            deleted["harness_sessions"] = int(cursor.rowcount)
     # Children of pruned owners (Hall messages belong to sessions; vault
     # chunks belong to a context session).
     if "hall_messages" in present and "hall_sessions" in present:
@@ -12829,6 +12988,27 @@ def apply_retention(conn: sqlite3.Connection, *, max_age_days: int, now: float) 
         )
         if cursor.rowcount:
             deleted["ctx_vault_chunks"] = deleted.get("ctx_vault_chunks", 0) + int(cursor.rowcount)
+    if "ctx_vault_fts" in present and "ctx_vault_chunks" in present:
+        cursor = conn.execute(
+            "DELETE FROM ctx_vault_fts WHERE NOT EXISTS ("
+            "SELECT 1 FROM ctx_vault_chunks AS c "
+            "WHERE c.session_id = ctx_vault_fts.session_id "
+            "AND c.doc_id = ctx_vault_fts.doc_id "
+            "AND c.source_tool = ctx_vault_fts.source_tool "
+            "AND c.content = ctx_vault_fts.content)"
+        )
+        if cursor.rowcount:
+            deleted["ctx_vault_fts"] = int(cursor.rowcount)
+    harness_files, harness_file_failures = _prune_harness_files(
+        harness_store_dir,
+        expired_harness_ids,
+        cutoff=cutoff,
+        protected_ids=protected_harness_ids,
+    )
+    if harness_files:
+        deleted["harness_session_files"] = harness_files
+    if harness_file_failures:
+        deleted["harness_session_files_failed"] = harness_file_failures
     conn.commit()
     return deleted
 

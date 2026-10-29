@@ -40,7 +40,7 @@ approval-gated tool execution is session-scoped and replay-protected.
 | B7 | Execution modes: disabled (default), container sandbox (no network, read-only root, preflight), explicit host opt-in | `_execution_mode`, `_sandbox_workspace_preflight`, container runner (`app.py`) | `tests/test_sandbox_boundary.py`, `tests/test_live_sandbox.py` (opt-in, needs a container runtime) |
 | B8 | Path confinement and secret-file guards | `_resolve_confined_path`, `_is_secret_filename`, `gsd-secret-read-guard` (`app.py`) | `tests/test_security_and_quality.py`, `tests/test_prompt_injection_adversarial.py` |
 | B9 | Prompt-injection boundaries: escaped untrusted tool output, extraction/policy separation | `_format_untrusted_tool_response`, `extract_tool_calls` (`app.py`) | `tests/test_prompt_injection_adversarial.py` |
-| B10 | Destructive-path hygiene: worktree removal only on verified `.harnesses/wt-*` roots | `_remove_harness_worktree` (`app.py`) | `tests/test_security_and_quality.py` (worktree-removal tests) |
+| B10 | Destructive-path hygiene: worktree removal only for a registered direct-child `.harnesses/wt-*` root; failures preserve data | `_remove_harness_worktree` (`app.py`) | `tests/test_security_and_quality.py` (worktree-removal and failure-preservation tests) |
 | B11 | Secrets in OS keyring (SQLite stores references only); migration fails closed | keyring helpers (`app.py`) | `tests/test_security_and_quality.py`, `scripts/check_keyring.py` (target OS) |
 | B12 | History privacy: export excludes credentials/audit; retention excludes them; redaction best-effort | `history_privacy.py`, `/api/history/*` | `tests/test_history_privacy.py` |
 
@@ -58,10 +58,16 @@ Python 3.11/3.12/3.13: baseline ancestry → commit-message policy → dependenc
 
 ## 6. Self-review log (this preparation pass)
 
-Method: fresh-eyes read of B1–B12 sources focused on bypass/destructive paths. Outcome:
+Method: source/test review of B1–B12 plus an adversarial pass against symlinks, retention copies, lifespan-skipped authentication, and cleanup failure paths. The additional pass was performed by an AI agent and is **not** AS-031's independent human review. Findings and remediation status:
 
-- **Finding W-1 (remediated, this branch):** `_remove_harness_worktree` fell back to the raw DB-recorded `worktree_dir` (and a `shutil.rmtree` fallback) when no `.harnesses/wt-*` ancestor was found. Under the single-operator trust model this is not a privilege escalation, but a destructive authenticated path must not act on unverified paths. Fix: cleanup runs **only** on a resolved `.harnesses/wt-*` root inside the workspace repository; otherwise it fails safe and leaves data on disk. Regression tests: `test_worktree_removal_fails_safe_outside_harnesses_layout`, `test_worktree_removal_refuses_target_outside_repo`.
-- **Examined, no findings:** middleware ordering and constant-time token comparison; rate-limit keying (socket address, not spoofable headers); token-file creation (O_EXCL|O_NOFOLLOW, ownership/permission checks, fsync); DNS-pinned transport (fail-closed without pin, redirects rejected, proxy variables bypassed); approval replay tombstones (bounded, exactly-once); path confinement (resolve + parent check); sandbox preflight refusals.
+- **W-1 (previously remediated):** cleanup formerly fell back to a raw DB-recorded path. The follow-up review found that the `shutil.rmtree` exception fallback still risked deleting a selected nested lookalike or uncommitted worktree data. The current implementation requires an exact registered worktree and leaves it intact on Git errors; tests assert data preservation.
+- **F-1 (symlink reads):** workspace grep/index/debt scanners previously followed symlinks outside the workspace and could read a secret through an alias. The current implementation resolves candidates, rejects escaped targets, and applies secret-name checks to resolved paths. Regression tests cover secret and outside-workspace aliases.
+- **F-2 (FTS retention):** deleting context-vault chunks previously left searchable FTS5 copies. Retention now removes FTS entries without a matching surviving chunk; tests assert post-retention searches return no deleted content.
+- **F-3 (harness retention):** retention previously omitted harness session metadata and transcript files. It now prunes expired session rows and paired JSONL/message files; the documentation distinguishes these files from the SQLite export and preserves recent activity.
+- **F-4 (missing-token middleware):** protected routes previously skipped authentication when the token was empty. They now fail closed with 503 unless authentication is explicitly disabled; a no-lifespan test covers this state.
+- **Still examined:** middleware ordering and token-file protections; DNS-pinned transport and redirect rejection; approval replay tombstones; sandbox preflight. These tests do not replace the documented live-runtime, target-OS, browser, proxy, and supply-chain validation.
+
+These fixes do not close AS-031: an independent external review must reproduce and verify them, and release remains blocked until the acceptance gate is satisfied.
 
 ## 7. Known limitations (accepted, documented)
 
