@@ -70,3 +70,8 @@ def test_pipeline_filters_are_keyboard_buttons_with_selection_state():
         assert attributes["type"] == "button"
         assert attributes["aria-pressed"] == ("true" if index == 0 else "false")
     assert 'button.setAttribute("aria-pressed", String(i === n))' in source
+
+
+def test_integrations_strip_can_be_focused_for_scrolling():
+    source = (Path(__file__).resolve().parents[1] / "static/index.html").read_text()
+    assert '<div class="skills-strip" tabindex="0" aria-label="Integrations and telemetry controls">' in source

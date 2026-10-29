@@ -484,6 +484,8 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .hall-sidebar, .harness-sidebar, .monitor-rail { background: var(--bg-elev); }
 .hall-header, .harness-bar, .chat-header-bar, .hall-composer, .chat-composer { background: var(--bg-elev); }
 .hall-header, .harness-bar, .chat-header-bar { border-color: var(--border); }
+.hall-composer { flex-wrap: wrap; }
+.hall-composer textarea { flex: 1 1 200px !important; min-width: 0; }
 .harness-advanced { flex: 1 1 100%; color: var(--text-dim); }
 .harness-advanced summary { cursor: pointer; width: fit-content; padding: 4px 0; font-weight: 600; }
 .harness-advanced-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding-top: 8px; }
@@ -618,7 +620,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   .mode-tabs { gap: 1px; }
   .mode-tab { min-height: 34px; padding: 5px 8px; font-size: 12px; gap: 4px; }
   .mode-tab .svg-ico { width: 14px; height: 14px; }
-  .skills-strip { padding: 6px 10px; }
+  .skills-strip { padding: 6px 10px; max-height: 100px; overflow-y: auto; flex-shrink: 0; }
+  .harness-main, .hall-main { overflow-y: auto; }
+  .harness-main > *, .hall-main > * { flex-shrink: 0; }
+  .harness-stream, .hall-stream { flex: 0 0 auto; min-height: 160px; }
+  .hall-composer { flex-wrap: wrap; }
+  .hall-composer textarea { flex: 1 1 100% !important; min-width: 0; }
+
   .skills-strip > div:last-child { flex: 1 1 100%; margin-left: 0 !important; }
   .scroll-body, .hall-stream, .chat-messages { padding-left: 12px; padding-right: 12px; }
   .hall-header { padding: 8px 12px; }
@@ -1215,7 +1223,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 <div id="mainLayout" class="layout">
   <main class="workspace">
     <!-- UNIFIED INTEGRATIONS & TELEMETRY BAND ("Ponytail Band" Pattern) -->
-    <div class="skills-strip">
+    <div class="skills-strip" tabindex="0" aria-label="Integrations and telemetry controls">
       <span class="field-lbl" style="margin:0;">Skills:</span>
       <div id="activeSkillsPills" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;"></div>
       <span style="color:var(--border-hi); margin:0 2px;" aria-hidden="true">|</span>

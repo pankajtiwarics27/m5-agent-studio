@@ -20,3 +20,8 @@
 ## Pipeline controls
 
 - Stage filters and prompt presets were clickable non-keyboard elements; they are now native buttons. Filter selection has a textual selected indicator and synchronized `aria-pressed`; live stage status remains visible. Model and reasoning labels are explicitly associated with their controls and the task has an accessible name. Preset hover now uses existing neutral tokens instead of fixed white/cyan. Filtering and preset logic remain unchanged.
+
+## Phone workspace overflow
+
+- Headless Chromium at 320 and 390px showed that the stacked Harness and Council workspaces clipped their composers below the viewport. At the existing 600px breakpoint, their main areas now scroll, streams have a usable minimum height, and composer inputs wrap onto their own row. The integrations strip is height-limited and scrollable rather than consuming most of the screen. All controls remain in the DOM; no settings or execution behavior changed. This makes the composer reachable by scrolling, not permanently pinned.
+- At 1280px with the session sidebar and telemetry open, the Harness prompt was only about 64px wide. Composer controls now wrap before the prompt becomes that narrow; the integrations strip can receive keyboard focus for scrolling.
