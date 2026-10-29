@@ -83,7 +83,9 @@ Workflows and memory: [`workflow-checkpoints.md`](workflow-checkpoints.md),
 [`context-reassembly.md`](context-reassembly.md),
 [`failure-injection-suite.md`](failure-injection-suite.md),
 [`comparison-board.md`](comparison-board.md),
-[`benchmark-results.md`](benchmark-results.md).
+[`benchmark-results.md`](benchmark-results.md),
+[`community-benchmarks.md`](community-benchmarks.md) (importing other people's
+measurements without trusting them).
 
 ## Project and process
 
