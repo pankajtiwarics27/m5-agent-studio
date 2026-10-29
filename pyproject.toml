@@ -61,6 +61,7 @@ files = [
   "model_registry.py",
   "model_switching.py",
   "model_updates.py",
+  "onboarding_preflight.py",
   "performance_profiles.py",
   "private_network_gateway.py",
   "provider_switching.py",
@@ -81,4 +82,4 @@ warn_unused_ignores = true
 check_untyped_defs = true
 
 [tool.setuptools]
-py-modules = ["app", "benchmark_publication", "context_store", "history_privacy", "mcp_client", "workflow_orchestration", "hardware_capabilities", "macos_hardware_profiler", "model_registry", "resource_admission", "capability_negotiation", "local_runtime_lifecycle", "local_provider_adapters", "routing_policy", "model_diagnostics", "hardware_validation", "private_network_gateway", "sandbox_boundary", "session_trust", "workflow_state", "workflow_checkpoints", "side_effect_ledger", "execution_budget", "workflow_tracing", "failure_injection", "model_switching", "provider_switching", "model_discovery", "context_reassembly", "model_comparison", "model_updates", "model_calibration", "performance_profiles", "comparison_board", "model_recommendation", "workflow_evaluation"]
+py-modules = ["app", "benchmark_publication", "context_store", "history_privacy", "mcp_client", "onboarding_preflight", "workflow_orchestration", "hardware_capabilities", "macos_hardware_profiler", "model_registry", "resource_admission", "capability_negotiation", "local_runtime_lifecycle", "local_provider_adapters", "routing_policy", "model_diagnostics", "hardware_validation", "private_network_gateway", "sandbox_boundary", "session_trust", "workflow_state", "workflow_checkpoints", "side_effect_ledger", "execution_budget", "workflow_tracing", "failure_injection", "model_switching", "provider_switching", "model_discovery", "context_reassembly", "model_comparison", "model_updates", "model_calibration", "performance_profiles", "comparison_board", "model_recommendation", "workflow_evaluation"]

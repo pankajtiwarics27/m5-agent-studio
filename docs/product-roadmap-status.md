@@ -9,9 +9,9 @@ Generated from [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](../product/A
 | Status | Count |
 |---|---|
 | ✅ Verified | 45 |
-| 🟩 Completed | 6 |
+| 🟩 Completed | 7 |
 | 🚧 In progress | 0 |
-| ⬚ Planned | 12 |
+| ⬚ Planned | 11 |
 | **Total** | **63** |
 
 ### Status vocabulary
@@ -109,13 +109,13 @@ Exit gate: All listed P0 stories verified; test evidence linked and dependencies
 | AS-037 | P0 | Crash and failure injection suite (deps: AS-033, AS-034, AS-035, AS-036) | ✅ Verified | Commit AS-037; failure injection suite (docs/failure-injection-suite.md); tests/test_failure_injection.py. |
 | AS-038 | P1 | Agent workflow quality evaluation (deps: AS-035, AS-036, AS-056) | ✅ Verified | AS-038 is implemented in workflow_evaluation.py as a pure, deterministic comparison of caller-supplied single-model and multi-agent runs, pinned to AS-056 task/config digests and matching hardware, environment, and currency contexts. WorkflowRun.from_trace_and_budget() uses only AS-036 terminal trace status and AS-035 elapsed/cost usage; trace detail and timestamps are not exported. docs/workflow-evaluation.md and tests/test_workflow_evaluation.py (6 focused tests) cover exact task-success rates, latency/cost/memory medians and spreads, strategy deltas, context refusals, validation, and output isolation. Local full suite: 423 passed, 1 skipped. Fixtures are synthetic: no live workflow measurements or provider spend are claimed, and execution/UI wiring remains caller-owned. |
 
-### M5 — Open-source beta (0/7 done)
+### M5 — Open-source beta (1/7 done)
 
 Exit gate: All listed P0 stories verified; test evidence linked and dependencies closed.
 
 | ID | P | Story | Status | Evidence / remaining work |
 |---|---|---|---|---|
-| AS-039 | P1 | Guided onboarding and preflight (deps: AS-022, AS-031, AS-052) | ⬚ Planned | — |
+| AS-039 | P1 | Guided onboarding and preflight (deps: AS-022, AS-031, AS-052) | 🟩 Completed | Implemented as onboarding_preflight.py (pure, offline planner), the bearer-protected GET /api/onboarding/preflight route with a local-only adapter, and a Start tab in static/index.html that renders the steps and composes the guided first prompt into the existing /api/chat/stream path (no second executor, no new tool surface). Six ordered steps (auth, model-source, model-available, workspace, execution, first-task) with statuses ready/optional/action-required/blocked and a single next_step; unknown state degrades to action-required and a provider without a credential or with no models never counts as ready. The report is secret-free (providers reduced to alias/enabled/has_credential/model_count), performs no DNS, keyring, provider, or database writes, and guidance is presented as UI actions rather than shell commands. tests/test_onboarding_preflight.py (23 tests) covers the pure contract, determinism/JSON round-trip, credential and disabled-provider refusals, sandbox capability degradation, adapter isolation with a transport that raises if called, broken-DB fallback, route authentication (401), and secret-free payloads. docs/onboarding-preflight.md documents the steps, tradeoffs, and limits; the route matrix and subsystem inventory were regenerated. Observed in this workspace: 489 passed, 1 skipped (opt-in live container test), plus Ruff, mypy (36 modules), compileall, frontend syntax, both loopback smoke tests, and byte-identical artifact regeneration. Marked completed rather than verified: merge to main, a real-browser walkthrough of the Start tab, and the human end-to-end verification that the maintainer performs after all stories are deferred to the final pass, consistent with AS-031. |
 | AS-040 | P1 | macOS packaging updates and rollback (deps: AS-014, AS-039) | ⬚ Planned | — |
 | AS-041 | P1 | Documentation and migration guide (deps: AS-031, AS-038) | ⬚ Planned | — |
 | AS-042 | P1 | Release signing SBOM and provenance (deps: AS-002, AS-040) | ⬚ Planned | — |
