@@ -27,6 +27,16 @@ actors, boundaries, abuse cases, and evidence requirements, validated by
 Remote exposure is opt-in and requires an explicit high-entropy token;
 approval-gated tool execution is session-scoped and replay-protected.
 
+### Roadmap prerequisites
+
+AS-031 depends on AS-024 through AS-030. In the roadmap snapshot, AS-024–027
+and AS-029–030 are `verified`; AS-028 is `completed`. A user-reported live
+Docker Desktop test for AS-028 passed at `b452441` for writable workspace,
+read-only container root, and no public network. It does not prove kernel or
+host escape resistance, so AS-028 remains `completed`, not `verified`. No
+prerequisite is recorded as failed. This dependency snapshot does not satisfy
+the independent AS-031 review requirement.
+
 ## 3. Boundary inventory (code anchors for reviewers)
 
 | # | Boundary | Where | Contract tests |
