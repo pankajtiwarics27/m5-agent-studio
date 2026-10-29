@@ -289,6 +289,20 @@ files are not part of the SQLite export. Details and limits:
    └─────────────────────────┘       └───────────────────────────┘  └──────────────────┘
 ```
 
+### Importing somebody else's measurements
+
+Community benchmark bundles can be imported, but they arrive **untrusted** and
+stay that way until a matching profile exists in your own local profile vault:
+
+```bash
+python3 scripts/benchmark_import.py validate --contribution contribution.json
+python3 scripts/benchmark_import.py import   --contribution contribution.json --registry ~/.local/share/m5-agent-studio/benchmarks
+python3 scripts/benchmark_import.py list     --registry ~/.local/share/m5-agent-studio/benchmarks
+```
+
+Import verifies schema, license, provenance, and hardware identity, and refuses
+anything it cannot check. Details: [`docs/community-benchmarks.md`](docs/community-benchmarks.md).
+
 ## 6. Author-reported M5 / oMLX configuration notes (unverified)
 
 The models, settings, and throughput figures below are **inherited project

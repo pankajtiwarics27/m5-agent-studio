@@ -8,6 +8,10 @@ collection remains the caller-supplied probe described in
 raw profile JSONL records with their configuration, methodology, caveats, and
 source digests for the calibration and packaging code.
 
+> Receiving side: [`community-benchmarks.md`](community-benchmarks.md) covers
+> importing a published bundle from somebody else, including license, provenance
+> and hardware-identity validation and the untrusted-until-verified rule.
+
 ## Bundle contents and refusal rules
 
 Each profile is re-loaded through `model_calibration.load_profile`, which
