@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+import stat
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -212,9 +213,15 @@ def _prune_harness_files(
             if path.parent != root:
                 continue
             try:
-                if path.is_symlink() or path.is_file():
-                    path.unlink()
-                    removed += 1
+                file_info = path.lstat()
+                if file_info.st_mtime >= cutoff:
+                    continue
+                if not (stat.S_ISREG(file_info.st_mode) or stat.S_ISLNK(file_info.st_mode)):
+                    continue
+                path.unlink()
+                removed += 1
+            except FileNotFoundError:
+                continue
             except OSError:
                 failures += 1
     return removed, failures

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import subprocess
 from pathlib import Path
@@ -169,6 +170,41 @@ def test_grep_and_workspace_scanners_reject_secret_and_external_symlinks(tmp_pat
     assert not graph["symbols"]
     assert graph["files_scanned"] == 0
     assert studio.scan_shortcut_debt(root) == []
+
+
+def test_grep_search_rejects_symlink_swapped_after_enumeration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import asyncio
+
+    root = tmp_path / "workspace"
+    outside = tmp_path / "outside-secret.py"
+    root.mkdir()
+    outside.write_text("RACE_SECRET_MARKER = 'must-not-be-read'\n", encoding="utf-8")
+    victim = root / "victim.py"
+    victim.write_text("ordinary workspace file\n", encoding="utf-8")
+    session = {"worktree_dir": str(root), "policy": "autonomous"}
+    real_open = os.open
+    swapped = False
+
+    def swap_before_open(path, flags, mode=0o777, *, dir_fd=None):
+        nonlocal swapped
+        if path == "victim.py" and dir_fd is not None and not swapped:
+            victim.unlink()
+            victim.symlink_to(outside)
+            swapped = True
+        return real_open(path, flags, mode, dir_fd=dir_fd)
+
+    monkeypatch.setattr(studio.os, "open", swap_before_open)
+    result = asyncio.run(
+        studio._execute_harness_tool_inner(
+            None, session, "grep_search", {"path": ".", "pattern": "RACE_SECRET_MARKER"}
+        )
+    )
+
+    assert swapped
+    assert "victim.py:1:" not in result["output"]
+    assert "must-not-be-read" not in result["output"]
 
 
 def test_child_process_environment_excludes_credential_variables(monkeypatch: pytest.MonkeyPatch) -> None:

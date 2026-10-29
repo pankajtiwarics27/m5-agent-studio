@@ -1685,13 +1685,12 @@ def read_workspace_context_block(rel_paths: list[str], max_chars_per_file: int =
     chunks: list[str] = []
     for rel in rel_paths[:6]:
         try:
-            target = (WORKSPACE_ROOT / rel).resolve()
-            if target != WORKSPACE_ROOT and WORKSPACE_ROOT not in target.parents:
+            root_res, parts = _workspace_relative_parts(WORKSPACE_ROOT, rel)
+            target = root_res.joinpath(*parts)
+            if _is_secret_path(target):
                 continue
-            if not target.is_file():
-                continue
-            txt = target.read_text(encoding="utf-8", errors="ignore")[:max_chars_per_file]
-            chunks.append(f'<workspace_file path="{rel}">\n{txt}\n</workspace_file>')
+            txt, _info = _read_workspace_text(root_res, Path(*parts), errors="ignore")
+            chunks.append(f'<workspace_file path="{rel}">\n{txt[:max_chars_per_file]}\n</workspace_file>')
         except Exception:
             continue
     return ("\n\n### Attached Read-Only Workspace Files:\n" + "\n\n".join(chunks)) if chunks else ""
@@ -4873,35 +4872,38 @@ def build_workspace_codegraph(root: Path, sub_path: str = ".", max_files: int = 
       - Parses TS/JS/Rust/Go via structural patterns
       - Computes reverse `called_by` & `imported_by` blast-radius edges + circular import detection!
     """
-    target = _resolve_confined_path(root, sub_path)
     SKIP = {".git", "node_modules", ".venv", "__pycache__", ".harnesses", ".planning", "dist", "build", "target"}
     EXT_LANG = {".py": "python", ".ts": "typescript", ".tsx": "typescript", ".js": "javascript", ".jsx": "javascript", ".rs": "rust", ".go": "go"}
 
     symbols: list[dict[str, Any]] = []
     modules: dict[str, dict[str, Any]] = {}
     files_scanned = 0
-
-    cand_files = [target] if target.is_file() else sorted(target.rglob("*"))
-    root_res = root.resolve()
-    for fp in cand_files:
-        resolved_fp = _resolved_workspace_candidate(root_res, fp)
-        if resolved_fp is None or not resolved_fp.is_file():
+    try:
+        root_res, target_parts = _workspace_relative_parts(root, sub_path)
+        target_fd, target_info = _open_workspace_entry_fd(root_res, target_parts)
+        os.close(target_fd)
+    except (OSError, PermissionError, RuntimeError, ValueError):
+        return {"files_scanned": 0, "modules": modules, "symbols": symbols, "cycles": [], "god_nodes": []}
+    if stat.S_ISREG(target_info.st_mode):
+        cand_files = [(target_parts, target_info)]
+    elif stat.S_ISDIR(target_info.st_mode):
+        cand_files = _iter_workspace_entries(root_res, target_parts, skip_dirs=SKIP)
+    else:
+        cand_files = []
+    for rel_parts, _entry_info in cand_files:
+        rel_path = Path(*rel_parts)
+        if any(part in SKIP for part in rel_parts) or _is_secret_path(root_res / rel_path):
             continue
-        rel_parts = fp.relative_to(root_res).parts
-        if any(p in SKIP for p in rel_parts) or _is_secret_path(resolved_fp):
-            continue
-        lang = EXT_LANG.get(fp.suffix.lower())
+        lang = EXT_LANG.get(rel_path.suffix.lower())
         if not lang:
             continue
         try:
-            if resolved_fp.stat().st_size > 800_000:
-                continue
-            src = resolved_fp.read_text(encoding="utf-8", errors="replace")
+            src, _file_info = _read_workspace_text(root_res, rel_path, max_bytes=800_000)
         except Exception:
             continue
 
         files_scanned += 1
-        rel_s = str(fp.relative_to(root_res))
+        rel_s = str(rel_path)
         mod_imports: list[str] = []
         mod_symbols: list[str] = []
 
@@ -5042,28 +5044,36 @@ def scan_shortcut_debt(root: Path, sub_path: str = ".", max_files: int = 250) ->
     `DietrichGebert/ponytail` (`/ponytail-debt`) + `Graphify` Rationale Harvester:
       Scans codebase for `shortcut: <limit>, <when to upgrade>`, `# WHY:`, and `# INVARIANT:` markers.
     """
-    target = _resolve_confined_path(root, sub_path)
     SKIP = {".git", "node_modules", ".venv", "__pycache__", ".harnesses", ".planning", "dist", "build", "target"}
     EXTS = {".py", ".ts", ".tsx", ".js", ".jsx", ".rs", ".go", ".md", ".yaml", ".yml"}
     rx = re.compile(r"(?:#|//|/\*|\*|--)\s*(shortcut|WHY|INVARIANT|TODO|FIXME)\s*:\s*(.+)", re.IGNORECASE)
     items: list[dict[str, Any]] = []
     scanned = 0
-    cand_files = [target] if target.is_file() else sorted(target.rglob("*"))
-    root_res = root.resolve()
-    for fp in cand_files:
-        resolved_fp = _resolved_workspace_candidate(root_res, fp)
-        if resolved_fp is None or not resolved_fp.is_file() or fp.suffix.lower() not in EXTS:
+    try:
+        root_res, target_parts = _workspace_relative_parts(root, sub_path)
+        target_fd, target_info = _open_workspace_entry_fd(root_res, target_parts)
+        os.close(target_fd)
+    except (OSError, PermissionError, RuntimeError, ValueError):
+        return items
+    if stat.S_ISREG(target_info.st_mode):
+        cand_files = [(target_parts, target_info)]
+    elif stat.S_ISDIR(target_info.st_mode):
+        cand_files = _iter_workspace_entries(root_res, target_parts, skip_dirs=SKIP)
+    else:
+        cand_files = []
+    for rel_parts, _entry_info in cand_files:
+        rel_path = Path(*rel_parts)
+        if rel_path.suffix.lower() not in EXTS:
             continue
-        if _is_secret_path(resolved_fp) or any(p in SKIP for p in fp.relative_to(root_res).parts):
+        if _is_secret_path(root_res / rel_path) or any(part in SKIP for part in rel_parts):
             continue
         try:
-            if resolved_fp.stat().st_size > 800_000:
-                continue
-            lines = resolved_fp.read_text(encoding="utf-8", errors="replace").splitlines()
+            text, _file_info = _read_workspace_text(root_res, rel_path, max_bytes=800_000)
+            lines = text.splitlines()
         except Exception:
             continue
         scanned += 1
-        rel_s = str(fp.relative_to(root_res))
+        rel_s = str(rel_path)
         for lineno, ln in enumerate(lines, 1):
             m = rx.search(ln)
             if m:
@@ -5363,12 +5373,16 @@ async def run_reusable_block(root: Path, block_name: str, target: str = "") -> d
         sec_err = _check_gsd_secret_guard(target)
         if sec_err:
             return {"ok": False, "output": sec_err, "diff": "", "elapsed_ms": 1}
-        fp = _resolve_confined_path(root, target)
-        if not fp.is_file():
-            return {"ok": False, "output": f"File not found: `{target}`", "diff": "", "elapsed_ms": 1}
-        raw = fp.read_text(encoding="utf-8", errors="replace")
+        try:
+            root_res, parts = _workspace_relative_parts(root, target)
+            fp = root_res.joinpath(*parts)
+            if _is_secret_path(fp):
+                return {"ok": False, "output": _check_gsd_secret_guard(str(fp)) or "Blocked secret path.", "diff": "", "elapsed_ms": 1}
+            raw, _info = _read_workspace_text(root_res, Path(*parts), errors="replace")
+        except (OSError, PermissionError, RuntimeError, ValueError, IsADirectoryError) as exc:
+            return {"ok": False, "output": f"File not found or unsafe: `{target}` ({exc})", "diff": "", "elapsed_ms": 1}
         dig = _caveman_smart_digest(raw, raw.splitlines()) or "\n".join(raw.splitlines()[:25])
-        return {"ok": True, "output": f"[Block `{bname}` on `{fp.relative_to(root)}`]\n{dig}", "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
+        return {"ok": True, "output": f"[Block `{bname}` on `{Path(*parts)}`]\n{dig}", "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
 
     if bname in ("test-summary", "first-error"):
         cmd = target.strip() or "python3 -m unittest discover"
@@ -6318,20 +6332,249 @@ def _resolve_confined_path(root: Path, raw_path: str) -> Path:
     return cand
 
 
-def _resolved_workspace_candidate(root: Path, candidate: Path) -> Path | None:
-    """Resolve a discovered file and reject symlinks escaping the workspace."""
-    root_res = root.resolve()
+def _workspace_relative_parts(root: Path, raw_path: str | Path) -> tuple[Path, tuple[str, ...]]:
+    """Normalize a workspace path lexically without following any workspace symlink."""
+    root_res = root.resolve(strict=True)
+    supplied = Path(raw_path or ".")
+    if supplied.is_absolute():
+        candidate = Path(os.path.abspath(supplied))
+        try:
+            relative = candidate.relative_to(root_res)
+        except ValueError as exc:
+            raise PermissionError(f"Path '{raw_path}' escapes confined harness root '{root_res}'.") from exc
+    else:
+        relative = supplied
+    parts: list[str] = []
+    for part in relative.parts:
+        if part in ("", ".", os.sep):
+            continue
+        if part == "..":
+            if not parts:
+                raise PermissionError(f"Path '{raw_path}' escapes confined harness root '{root_res}'.")
+            parts.pop()
+            continue
+        parts.append(part)
+    return root_res, tuple(parts)
+
+
+_OS_OPEN_SUPPORTS_DIR_FD = os.open in getattr(os, "supports_dir_fd", set())
+
+
+def _open_workspace_root_fd(root: Path) -> int:
+    """Open the canonical workspace root by walking from `/` without symlinks."""
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory = getattr(os, "O_DIRECTORY", 0)
+    if not nofollow or not directory or not _OS_OPEN_SUPPORTS_DIR_FD:
+        raise OSError("This platform cannot safely open workspace paths without following symlinks.")
+    canonical = root.resolve(strict=True)
+    if not canonical.is_absolute():
+        raise OSError("Workspace root must be absolute.")
+    flags = os.O_RDONLY | directory | nofollow | getattr(os, "O_CLOEXEC", 0)
+    current_fd = os.open(os.sep, flags)
     try:
-        resolved = candidate.resolve(strict=True)
-    except (OSError, RuntimeError):
-        return None
-    if resolved != root_res and root_res not in resolved.parents:
-        return None
-    return resolved
+        for part in canonical.parts[1:]:
+            next_fd = os.open(part, flags, dir_fd=current_fd)
+            os.close(current_fd)
+            current_fd = next_fd
+        return current_fd
+    except Exception:
+        os.close(current_fd)
+        raise
+
+
+def _open_workspace_entry_fd(root: Path, relative_parts: tuple[str, ...]) -> tuple[int, os.stat_result]:
+    """Open an entry beneath root using directory descriptors and O_NOFOLLOW.
+
+    Every path component is opened relative to an already-open directory. This
+    avoids the resolve-then-open race for workspace entries and rejects symlink
+    components, including symlinks that are swapped in after enumeration.
+    """
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory = getattr(os, "O_DIRECTORY", 0)
+    if not nofollow or not directory or not _OS_OPEN_SUPPORTS_DIR_FD:
+        raise OSError("This platform cannot safely open workspace paths without following symlinks.")
+    base_flags = os.O_RDONLY | directory | nofollow | getattr(os, "O_CLOEXEC", 0)
+    current_fd = _open_workspace_root_fd(root)
+    final_fd: int | None = None
+    try:
+        for part in relative_parts[:-1]:
+            next_fd = os.open(part, base_flags, dir_fd=current_fd)
+            os.close(current_fd)
+            current_fd = next_fd
+        if relative_parts:
+            flags = os.O_RDONLY | nofollow | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NONBLOCK", 0)
+            final_fd = os.open(relative_parts[-1], flags, dir_fd=current_fd)
+            os.close(current_fd)
+            current_fd = -1
+        else:
+            final_fd = current_fd
+            current_fd = -1
+        info = os.fstat(final_fd)
+        if not (stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode)):
+            raise OSError("Workspace entry is not a regular file or directory.")
+        return final_fd, info
+    except Exception:
+        if final_fd is not None:
+            os.close(final_fd)
+        raise
+    finally:
+        if current_fd >= 0:
+            os.close(current_fd)
+
+
+def _iter_workspace_entries(
+    root: Path,
+    relative_parts: tuple[str, ...],
+    *,
+    skip_dirs: set[str] | frozenset[str] = frozenset(),
+):
+    """Yield non-symlink files/directories under a pinned workspace directory."""
+    try:
+        root_res, _ = _workspace_relative_parts(root, ".")
+        start_fd, start_info = _open_workspace_entry_fd(root_res, relative_parts)
+    except (OSError, PermissionError, RuntimeError, ValueError):
+        return
+    if not stat.S_ISDIR(start_info.st_mode):
+        os.close(start_fd)
+        return
+
+    nofollow = os.O_NOFOLLOW
+    directory = os.O_DIRECTORY
+    dir_flags = os.O_RDONLY | directory | nofollow | getattr(os, "O_CLOEXEC", 0)
+
+    def walk(dir_fd: int, prefix: tuple[str, ...]):
+        try:
+            names = sorted(os.listdir(dir_fd))
+        except OSError:
+            return
+        for name in names:
+            rel_parts = (*prefix, name)
+            try:
+                info = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+            except OSError:
+                continue
+            if stat.S_ISLNK(info.st_mode):
+                continue
+            if stat.S_ISREG(info.st_mode):
+                yield rel_parts, info
+            elif stat.S_ISDIR(info.st_mode):
+                yield rel_parts, info
+                if name in skip_dirs or _is_secret_filename(name):
+                    continue
+                child_fd: int | None = None
+                try:
+                    child_fd = os.open(name, dir_flags, dir_fd=dir_fd)
+                    child_info = os.fstat(child_fd)
+                    if stat.S_ISDIR(child_info.st_mode):
+                        yield from walk(child_fd, rel_parts)
+                except OSError:
+                    continue
+                finally:
+                    if child_fd is not None:
+                        os.close(child_fd)
+
+    try:
+        yield from walk(start_fd, relative_parts)
+    finally:
+        os.close(start_fd)
+
+
+def _read_workspace_text(
+    root: Path,
+    raw_path: str | Path,
+    *,
+    max_bytes: int | None = None,
+    errors: str = "replace",
+) -> tuple[str, os.stat_result]:
+    """Read one regular workspace file from a no-follow, directory-anchored fd."""
+    root_res, parts = _workspace_relative_parts(root, raw_path)
+    fd, info = _open_workspace_entry_fd(root_res, parts)
+    try:
+        if not stat.S_ISREG(info.st_mode):
+            raise IsADirectoryError(str(raw_path))
+        if max_bytes is not None and info.st_size > max_bytes:
+            raise ValueError("Workspace file exceeds the scan size limit.")
+        with os.fdopen(fd, "rb") as stream:
+            fd = -1
+            data = stream.read(max_bytes + 1 if max_bytes is not None else -1)
+        if max_bytes is not None and len(data) > max_bytes:
+            raise ValueError("Workspace file grew beyond the scan size limit while being read.")
+        return data.decode("utf-8", errors=errors), info
+    finally:
+        if fd >= 0:
+            os.close(fd)
+
+
+def _open_workspace_parent_fd(root: Path, relative_parts: tuple[str, ...], *, create: bool) -> tuple[int, str]:
+    """Open a file's parent directory without following symlink components."""
+    if not relative_parts:
+        raise PermissionError("The workspace root cannot be replaced as a file.")
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory = getattr(os, "O_DIRECTORY", 0)
+    if not nofollow or not directory or not _OS_OPEN_SUPPORTS_DIR_FD:
+        raise OSError("This platform cannot safely modify workspace paths without following symlinks.")
+    dir_flags = os.O_RDONLY | directory | nofollow | getattr(os, "O_CLOEXEC", 0)
+    current_fd = _open_workspace_root_fd(root)
+    try:
+        for part in relative_parts[:-1]:
+            try:
+                next_fd = os.open(part, dir_flags, dir_fd=current_fd)
+            except FileNotFoundError:
+                if not create:
+                    raise
+                try:
+                    os.mkdir(part, mode=0o777, dir_fd=current_fd)
+                except FileExistsError:
+                    pass
+                next_fd = os.open(part, dir_flags, dir_fd=current_fd)
+            os.close(current_fd)
+            current_fd = next_fd
+        return current_fd, relative_parts[-1]
+    except Exception:
+        os.close(current_fd)
+        raise
+
+
+def _atomic_write_workspace_text(
+    root: Path,
+    raw_path: str | Path,
+    text: str,
+    *,
+    mode: int | None = None,
+) -> None:
+    """Atomically replace a workspace file through an anchored parent fd."""
+    root_res, parts = _workspace_relative_parts(root, raw_path)
+    parent_fd, leaf = _open_workspace_parent_fd(root_res, parts, create=True)
+    temp_name = f".m5-studio-{uuid.uuid4().hex}.tmp"
+    temp_fd: int | None = None
+    try:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+        temp_fd = os.open(temp_name, flags, mode if mode is not None else 0o666, dir_fd=parent_fd)
+        if mode is not None:
+            os.fchmod(temp_fd, mode)
+        data = text.encode("utf-8")
+        view = memoryview(data)
+        while view:
+            written = os.write(temp_fd, view)
+            if written <= 0:
+                raise OSError("Could not finish writing the workspace file.")
+            view = view[written:]
+        os.close(temp_fd)
+        temp_fd = None
+        os.rename(temp_name, leaf, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+    finally:
+        if temp_fd is not None:
+            os.close(temp_fd)
+        try:
+            os.unlink(temp_name, dir_fd=parent_fd)
+        except FileNotFoundError:
+            pass
+        finally:
+            os.close(parent_fd)
 
 
 def _is_secret_path(path: Path) -> bool:
-    """Apply secret-name checks to every resolved component, not just an alias."""
+    """Apply secret-name checks to every component of a no-follow workspace path."""
     return any(_is_secret_filename(part) for part in path.parts)
 
 
@@ -6560,40 +6803,38 @@ async def _execute_harness_tool_inner(
         if policy == "standard" and mutating_or_executing and not approved:
             return {"ok": False, "output": f"Denied: `{tool_name}` requires an explicit approval in standard policy.", "diff": "", "elapsed_ms": 1}
         if tool_name == "list_files":
-            target = _resolve_confined_path(root, str(args.get("path") or "."))
+            try:
+                root_res, target_parts = _workspace_relative_parts(root, str(args.get("path") or "."))
+                target_fd, target_info = _open_workspace_entry_fd(root_res, target_parts)
+                os.close(target_fd)
+            except (OSError, PermissionError, RuntimeError, ValueError):
+                return {"ok": False, "output": f"Path not found or unsafe: {args.get('path')}", "diff": "", "elapsed_ms": 1}
             raw_pat = str(args.get("pattern") or "*").strip() or "*"
             clean_pat = re.sub(r"^(?:\./|\*\*/|\*/)+", "", raw_pat) or "*"
             pat_lower = clean_pat.lower()
             max_entries = min(max(int(args.get("max_entries") or 100), 1), 300)
-            if not target.exists():
-                return {"ok": False, "output": f"Path not found: {args.get('path')}", "diff": "", "elapsed_ms": 1}
             items: list[str] = []
-            for p in sorted(target.rglob("*")):
-                resolved = _resolved_workspace_candidate(root, p)
-                if resolved is None or _is_secret_path(resolved):
-                    continue
-                rel_parts = p.relative_to(root).parts
-                if any(part in SKIP_DIRS for part in rel_parts):
-                    continue
-                rel_str = str(p.relative_to(root))
-                if clean_pat != "*":
-                    if not (
-                        fnmatch.fnmatch(p.name.lower(), pat_lower)
+            if stat.S_ISDIR(target_info.st_mode) and not any(part in SKIP_DIRS for part in target_parts):
+                for rel_parts, entry_info in _iter_workspace_entries(root_res, target_parts, skip_dirs=SKIP_DIRS):
+                    if any(part in SKIP_DIRS for part in rel_parts):
+                        continue
+                    rel_path = Path(*rel_parts)
+                    if _is_secret_path(root_res / rel_path):
+                        continue
+                    rel_str = str(rel_path)
+                    if clean_pat != "*" and not (
+                        fnmatch.fnmatch(rel_path.name.lower(), pat_lower)
                         or fnmatch.fnmatch(rel_str.lower(), pat_lower)
                         or fnmatch.fnmatch(rel_str.lower(), f"*{pat_lower}")
                     ):
                         continue
-                if resolved.is_dir():
-                    items.append(f"[dir]  {rel_str}/")
-                else:
-                    try:
-                        sz = resolved.stat().st_size
-                    except OSError:
-                        sz = 0
-                    items.append(f"[file] {rel_str} ({sz} B)")
-                if len(items) >= max_entries:
-                    items.append(f"... (truncated at {max_entries} entries)")
-                    break
+                    if stat.S_ISDIR(entry_info.st_mode):
+                        items.append(f"[dir]  {rel_str}/")
+                    else:
+                        items.append(f"[file] {rel_str} ({entry_info.st_size} B)")
+                    if len(items) >= max_entries:
+                        items.append(f"... (truncated at {max_entries} entries)")
+                        break
             out = "\n".join(items) if items else "(empty directory / no matches)"
             return {"ok": True, "output": out, "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
 
@@ -6604,27 +6845,32 @@ async def _execute_harness_tool_inner(
             sec_err = _check_gsd_secret_guard(str(args.get("path") or ""))
             if sec_err:
                 return {"ok": False, "output": sec_err, "diff": "", "elapsed_ms": 1}
-            target = _resolve_confined_path(root, str(args.get("path") or "."))
-            if _is_secret_path(target):
-                return {"ok": False, "output": _check_gsd_secret_guard(str(target)) or "Blocked secret path.", "diff": "", "elapsed_ms": 1}
+            try:
+                root_res, target_parts = _workspace_relative_parts(root, str(args.get("path") or "."))
+                target_fd, target_info = _open_workspace_entry_fd(root_res, target_parts)
+                os.close(target_fd)
+            except (OSError, PermissionError, RuntimeError, ValueError):
+                return {"ok": False, "output": "Search path not found or unsafe.", "diff": "", "elapsed_ms": 1}
+            if _is_secret_path(root_res.joinpath(*target_parts)):
+                return {"ok": False, "output": _check_gsd_secret_guard(str(root_res.joinpath(*target_parts))) or "Blocked secret path.", "diff": "", "elapsed_ms": 1}
             max_hits = min(max(int(args.get("max_hits") or 50), 1), 150)
             rx = re.compile(pattern, re.IGNORECASE)
             hits: list[str] = []
-            files_iter = [target] if target.is_file() else sorted(target.rglob("*"))
-            for fp in files_iter:
-                resolved_fp = _resolved_workspace_candidate(root, fp)
-                if resolved_fp is None or not resolved_fp.is_file() or _is_secret_path(resolved_fp):
-                    continue
-                rel_parts = fp.relative_to(root).parts
-                if any(part in SKIP_DIRS for part in rel_parts):
+            if stat.S_ISREG(target_info.st_mode):
+                files_iter = [(target_parts, target_info)]
+            elif stat.S_ISDIR(target_info.st_mode):
+                files_iter = _iter_workspace_entries(root_res, target_parts, skip_dirs=SKIP_DIRS)
+            else:
+                files_iter = []
+            for rel_parts, _entry_info in files_iter:
+                rel_path = Path(*rel_parts)
+                if any(part in SKIP_DIRS for part in rel_parts) or _is_secret_path(root_res / rel_path):
                     continue
                 try:
-                    if resolved_fp.stat().st_size > 1_500_000:
-                        continue
-                    txt = resolved_fp.read_text(encoding="utf-8")
+                    txt, _file_info = _read_workspace_text(root_res, rel_path, max_bytes=1_500_000, errors="strict")
                 except Exception:
                     continue
-                rel_s = str(fp.relative_to(root))
+                rel_s = str(rel_path)
                 for lineno, line in enumerate(txt.splitlines(), 1):
                     if rx.search(line):
                         hits.append(f"{rel_s}:{lineno}: {line.strip()[:180]}")
@@ -6640,17 +6886,20 @@ async def _execute_harness_tool_inner(
             sec_err = _check_gsd_secret_guard(raw_p)
             if sec_err:
                 return {"ok": False, "output": sec_err, "diff": "", "elapsed_ms": 1}
-            fp = _resolve_confined_path(root, raw_p)
-            if _is_secret_path(fp):
-                return {"ok": False, "output": _check_gsd_secret_guard(str(fp)) or "Blocked secret file.", "diff": "", "elapsed_ms": 1}
-            if not fp.is_file():
-                return {"ok": False, "output": f"File not found: {args.get('path')}", "diff": "", "elapsed_ms": 1}
-            lines = fp.read_text(encoding="utf-8", errors="replace").splitlines()
+            try:
+                root_res, relative_parts = _workspace_relative_parts(root, raw_p)
+                fp = root_res.joinpath(*relative_parts)
+                if _is_secret_path(fp):
+                    return {"ok": False, "output": _check_gsd_secret_guard(str(fp)) or "Blocked secret file.", "diff": "", "elapsed_ms": 1}
+                text, _file_info = _read_workspace_text(root_res, Path(*relative_parts), errors="replace")
+            except (OSError, PermissionError, RuntimeError, ValueError, IsADirectoryError) as exc:
+                return {"ok": False, "output": f"File not found or unsafe: {args.get('path')} ({exc})", "diff": "", "elapsed_ms": 1}
+            lines = text.splitlines()
             total = len(lines)
             s_line = max(1, int(args.get("start_line") or 1))
             e_line = min(total, int(args.get("end_line") or (s_line + 219)))
             snippet = [f"{idx:4d} | {lines[idx - 1]}" for idx in range(s_line, e_line + 1)]
-            header = f"File: {fp.relative_to(root)} (lines {s_line}-{e_line} of {total})"
+            header = f"File: {Path(*relative_parts)} (lines {s_line}-{e_line} of {total})"
             return {
                 "ok": True,
                 "output": header + "\n" + "\n".join(snippet),
@@ -6670,16 +6919,20 @@ async def _execute_harness_tool_inner(
             sec_err = _check_gsd_secret_guard(raw_p)
             if sec_err:
                 return {"ok": False, "output": sec_err, "diff": "", "elapsed_ms": 1}
-            fp = _resolve_confined_path(root, raw_p)
+            root_res, relative_parts = _workspace_relative_parts(root, raw_p)
+            fp = root_res.joinpath(*relative_parts)
             if _is_secret_path(fp):
                 return {"ok": False, "output": _check_gsd_secret_guard(str(fp)) or "Blocked secret file.", "diff": "", "elapsed_ms": 1}
-            rel_s = str(fp.relative_to(root))
-            before = fp.read_text(encoding="utf-8", errors="replace") if fp.is_file() else ""
-
+            rel_s = str(Path(*relative_parts))
             if tool_name == "write_file":
+                try:
+                    before, prior_info = _read_workspace_text(root_res, Path(*relative_parts), errors="replace")
+                    prior_mode = stat.S_IMODE(prior_info.st_mode)
+                except FileNotFoundError:
+                    before = ""
+                    prior_mode = None
                 after = str(args.get("content") if args.get("content") is not None else "")
-                fp.parent.mkdir(parents=True, exist_ok=True)
-                fp.write_text(after, encoding="utf-8")
+                _atomic_write_workspace_text(root_res, Path(*relative_parts), after, mode=prior_mode)
                 diff_txt = _unified_diff_snippet(rel_s, before, after)
                 return {
                     "ok": True,
@@ -6689,7 +6942,9 @@ async def _execute_harness_tool_inner(
                 }
 
             # edit_file
-            if not fp.is_file():
+            try:
+                before, prior_info = _read_workspace_text(root_res, Path(*relative_parts), errors="replace")
+            except FileNotFoundError:
                 return {"ok": False, "output": f"Cannot edit missing file: `{rel_s}`.", "diff": "", "elapsed_ms": 1}
             old_text = str(args.get("old_text") or "")
             new_text = str(args.get("new_text") if args.get("new_text") is not None else "")
@@ -6716,7 +6971,7 @@ async def _execute_harness_tool_inner(
                     }
                 replaced_lines = b_lines[:match_idx] + new_text.splitlines() + b_lines[match_idx + len(o_lines):]
                 after = "\n".join(replaced_lines) + ("\n" if before.endswith("\n") else "")
-            fp.write_text(after, encoding="utf-8")
+            _atomic_write_workspace_text(root_res, Path(*relative_parts), after, mode=stat.S_IMODE(prior_info.st_mode))
             diff_txt = _unified_diff_snippet(rel_s, before, after)
             return {
                 "ok": True,
@@ -6774,9 +7029,12 @@ async def _execute_harness_tool_inner(
             file_blobs: list[str] = []
             for cf in (ctx_files[:6] if isinstance(ctx_files, list) else []):
                 try:
-                    cfp = _resolve_confined_path(root, str(cf))
-                    if cfp.is_file():
-                        file_blobs.append(f"### File: {cfp.relative_to(root)}\n```\n{cfp.read_text(encoding='utf-8', errors='replace')[:8000]}\n```")
+                    root_res, parts = _workspace_relative_parts(root, str(cf))
+                    cfp = root_res.joinpath(*parts)
+                    if _is_secret_path(cfp):
+                        continue
+                    file_text, _info = _read_workspace_text(root_res, Path(*parts), errors="replace")
+                    file_blobs.append(f"### File: {Path(*parts)}\n```\n{file_text[:8000]}\n```")
                 except Exception:
                     continue
             ctx_section = ("\n\n".join(file_blobs)) if file_blobs else "(No context files attached)"

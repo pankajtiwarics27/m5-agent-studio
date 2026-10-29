@@ -245,6 +245,27 @@ def test_retention_prunes_old_rows_and_keeps_recent(isolated_app: Path) -> None:
     assert "doc-1" in survivor_ids
 
 
+def test_orphan_retention_checks_age_of_each_paired_transcript_independently(tmp_path: Path) -> None:
+    store = tmp_path / "sessions"
+    store.mkdir()
+    session_id = "hns-dade1234"
+    old_transcript = store / f"{session_id}.jsonl"
+    newer_snapshot = store / f"{session_id}.messages.json"
+    old_transcript.write_text("old orphan transcript", encoding="utf-8")
+    newer_snapshot.write_text("newer transcript snapshot", encoding="utf-8")
+    cutoff = time.time() - 3600
+    old_mtime = cutoff - 60
+    new_mtime = cutoff + 60
+    os.utime(old_transcript, (old_mtime, old_mtime))
+    os.utime(newer_snapshot, (new_mtime, new_mtime))
+
+    removed, failures = _prune_harness_files(store, [], cutoff=cutoff, protected_ids=set())
+
+    assert removed == 1 and failures == 0
+    assert not old_transcript.exists()
+    assert newer_snapshot.read_text(encoding="utf-8") == "newer transcript snapshot"
+
+
 def test_harness_retention_reports_unlink_failures_and_preserves_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
