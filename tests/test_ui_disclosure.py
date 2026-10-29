@@ -35,3 +35,16 @@ def test_harness_disclosure_keeps_essential_and_stop_controls_visible():
         assert ("details", "harnessAdvanced") not in parser.parents[element]
     assert "open" not in parser.attrs["harnessAdvanced"]
     assert parser.attrs["densityToggleBtn"]["aria-pressed"] == "false"
+
+
+def test_council_disclosure_keeps_round_and_stop_available():
+    parser = Elements()
+    parser.feed((Path(__file__).resolve().parents[1] / "static/index.html").read_text())
+    assert "open" in parser.attrs["hallSeatsSettings"]
+    assert "open" not in parser.attrs["hallSingleSettings"]
+    for element in ("hallSeatArch", "hallSeatCoder", "hallSeatCritic", "hallSeatJudge"):
+        assert ("details", "hallSeatsSettings") in parser.parents[element]
+    for element in ("hallRoleSelect", "hallModelSelect", "hallSummonBtn"):
+        assert ("details", "hallSingleSettings") in parser.parents[element]
+    for element in ("hallReasoningSelect", "hallStopBtn", "hallFullRoundBtn", "hallConcludeBtn", "hallHumanInput"):
+        assert not any(tag == "details" for tag, _ in parser.parents[element])

@@ -487,6 +487,15 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 body[data-density="compact"] .harness-bar { padding-block: 4px; gap: 4px 8px; }
 body[data-density="compact"] .harness-advanced-fields { padding-top: 4px; }
 body[data-density="compact"] .skills-strip { padding-block: 4px; }
+.council-settings { padding: 8px 16px; background: var(--bg-elev); border-bottom: 1px solid var(--border); color: var(--text-dim); }
+.council-settings summary { cursor: pointer; width: fit-content; font-weight: 600; }
+.council-settings-content { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding-top: 8px; }
+.council-settings-content select { max-width: 100%; }
+.council-seat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding-top: 8px; }
+.council-seat-grid select { width: 100%; }
+body[data-density="compact"] .council-settings { padding-block: 4px; }
+@media (max-width: 880px) { .council-seat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 
 .hall-main, .harness-main { background: var(--bg); }
 .chronicle-item.active { background: var(--bg-card); border-color: var(--border-hi); box-shadow: inset -2px 0 0 var(--accent); }
@@ -1354,7 +1363,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       <div class="hall-shell">
         <aside class="hall-sidebar">
           <div class="hall-side-head">
-            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="openSpawnModal()">+ Spawn Council Session</button>
+            <button class="btn" style="width:100%; justify-content:center;" onclick="openSpawnModal()">+ Spawn Council Session</button>
             <div style="display:flex; justify-content:space-between; font-size:10.8px; color:var(--text-faint); text-transform:uppercase; font-weight:700;">
               <span>Session Chronicles</span><span id="chronicleCount">0</span>
             </div>
@@ -1377,40 +1386,48 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             </div>
           </div>
 
-          <!-- 4-Seat Multi-LLM Roster Bar (Ensures Distinct Models Deliberate & Critique!) -->
-          <div style="padding:7px 14px; background:var(--bg-elev); border-bottom:1px solid var(--border); display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px;">
-            <div><label class="field-lbl" style="margin-bottom:2px; color:#a5b4fc;">1. Architect / Thesis</label><select id="hallSeatArch" style="width:100%; font-size:11.3px; padding:4px 6px;"></select></div>
-            <div><label class="field-lbl" style="margin-bottom:2px; color:#67e8f9;">2. Builder / Analyst</label><select id="hallSeatCoder" style="width:100%; font-size:11.3px; padding:4px 6px;"></select></div>
-            <div><label class="field-lbl" style="margin-bottom:2px; color:#6ee7b7;">3. Red-Team Critic</label><select id="hallSeatCritic" style="width:100%; font-size:11.3px; padding:4px 6px;"></select></div>
-            <div><label class="field-lbl" style="margin-bottom:2px; color:#fde68a;">4. Lead Arbiter</label><select id="hallSeatJudge" style="width:100%; font-size:11.3px; padding:4px 6px;"></select></div>
-          </div>
-
+          <details class="council-settings" id="hallSeatsSettings" open>
+            <summary>Council role models</summary>
+            <div class="council-seat-grid">
+              <div><label class="field-lbl" for="hallSeatArch">1. Architect / Thesis</label><select id="hallSeatArch"></select></div>
+              <div><label class="field-lbl" for="hallSeatCoder">2. Builder / Analyst</label><select id="hallSeatCoder"></select></div>
+              <div><label class="field-lbl" for="hallSeatCritic">3. Red-Team Critic</label><select id="hallSeatCritic"></select></div>
+              <div><label class="field-lbl" for="hallSeatJudge">4. Lead Arbiter</label><select id="hallSeatJudge"></select></div>
+            </div>
+          </details>
           <div class="summon-bar">
-            <span class="field-lbl" style="margin:0;">Single Voice:</span>
-            <select id="hallRoleSelect">
-              <option value="architect">1. Architect / Strategist</option>
-              <option value="coder">2. Builder / Deep Analyst</option>
-              <option value="critic">3. Adversarial Critic</option>
-              <option value="judge">4. Lead Arbiter</option>
-            </select>
-            <select id="hallModelSelect" style="max-width:290px;"></select>
+            <label class="field-lbl" for="hallReasoningSelect" style="margin:0;">Round reasoning:</label>
             <select id="hallReasoningSelect">
               <option value="off" selected>Reasoning: Off</option>
               <option value="low">Reasoning: Low</option>
               <option value="medium">Reasoning: Medium</option>
             </select>
-            <button id="hallSummonBtn" class="btn btn-xs" onclick="summonSingleAgent()" title="Summon only this single selected voice">Ask one model</button>
             <button id="hallStopBtn" class="btn btn-danger btn-xs" style="display:none;" onclick="stopActiveStream()">Stop</button>
           </div>
+          <details class="council-settings" id="hallSingleSettings">
+            <summary>Ask one model</summary>
+            <div class="council-settings-content">
+              <div><label class="field-lbl" for="hallRoleSelect">Role</label>
+                <select id="hallRoleSelect">
+                  <option value="architect">1. Architect / Strategist</option>
+                  <option value="coder">2. Builder / Deep Analyst</option>
+                  <option value="critic">3. Adversarial Critic</option>
+                  <option value="judge">4. Lead Arbiter</option>
+                </select>
+              </div>
+              <div><label class="field-lbl" for="hallModelSelect">Model</label><select id="hallModelSelect"></select></div>
+              <button id="hallSummonBtn" class="btn btn-xs" onclick="summonSingleAgent()" title="Summon only this single selected voice">Ask one model</button>
+            </div>
+          </details>
 
           <div id="hallStream" class="hall-stream">
             <div style="margin:auto; text-align:center; max-width:540px; color:var(--text-dim);">
-              <h3 style="color:#fff; margin-bottom:6px;">Choose local and cloud models</h3>
+              <h3 style="color:var(--text); margin-bottom:6px;">Choose local and cloud models</h3>
               <p style="font-size:13px; margin-bottom:14px;">
                 Assign local or cloud models to each council role. Local-model memory use is available in the telemetry panel.
               </p>
               <div style="display:flex; gap:8px; justify-content:center;">
-                <button class="btn btn-primary" onclick="openSpawnModal()">+ Spawn Council Session</button>
+                <button class="btn" onclick="openSpawnModal()">+ Spawn Council Session</button>
                 <button class="btn btn-cyan" onclick="openProvidersModal()">Configure Cloud Providers</button>
               </div>
             </div>
@@ -2266,7 +2283,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const cBanner = document.getElementById("hallConclusionBanner");
     if (s.conclusion_text) {
       cBanner.style.display = "block";
-      cBanner.innerHTML = `<div style="margin-bottom:5px;"><strong style="color:#fde68a;">Pinned Council Conclusion (${escapeHtml(s.conclusion_author || '')})</strong></div>` + renderMarkdown(s.conclusion_text);
+      cBanner.innerHTML = `<div style="margin-bottom:5px;"><strong style="color:var(--text);">Pinned Council Conclusion (${escapeHtml(s.conclusion_author || '')})</strong></div>` + renderMarkdown(s.conclusion_text);
     } else cBanner.style.display = "none";
   }
 
@@ -3877,6 +3894,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   advanced.addEventListener("toggle", () => {
     try { sessionStorage.setItem("m5_harness_advanced", advanced.open ? "open" : "closed"); } catch (_) {}
   });
+
+  for (const id of ["hallSeatsSettings", "hallSingleSettings"]) {
+    const section = document.getElementById(id);
+    try {
+      const saved = sessionStorage.getItem(`m5_${id}`);
+      if (saved !== null) section.open = saved === "open";
+    } catch (_) {}
+    section.addEventListener("toggle", () => {
+      try { sessionStorage.setItem(`m5_${id}`, section.open ? "open" : "closed"); } catch (_) {}
+    });
+  }
 
   const initialNarrow = window.matchMedia("(max-width: 1100px)").matches;
   if (initialNarrow) {
