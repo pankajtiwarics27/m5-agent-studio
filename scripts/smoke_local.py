@@ -34,7 +34,8 @@ def request(url: str, *, token: str = "", origin: str = "", method: str = "GET",
 
 
 def main() -> int:
-    entrypoint = ROOT / ("studio.py" if "--standalone" in sys.argv[1:] else "app.py")
+    standalone = "--standalone" in sys.argv[1:]
+    entrypoint = ROOT / ("studio.py" if standalone else "app.py")
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
@@ -47,12 +48,20 @@ def main() -> int:
         token_file = config_dir / "api-token"
         db_path = data_dir / "studio.db"
         log_path = temp / "server.log"
+        # The standalone artifact must be self-contained: run it from an isolated
+        # directory with no checkout on PYTHONPATH, so a missing inlined module
+        # fails here instead of only on a user's machine.
+        run_dir = temp / "app"
+        run_dir.mkdir()
+        if standalone:
+            shutil.copyfile(entrypoint, run_dir / entrypoint.name)
+            entrypoint = run_dir / entrypoint.name
         env = {
             "PATH": os.environ.get("PATH", os.defpath),
             "HOME": str(temp),
             "TMPDIR": str(temp),
             "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
-            "PYTHONPATH": str(ROOT),
+            "PYTHONPATH": str(run_dir) if standalone else str(ROOT),
             "PYTHONUNBUFFERED": "1",
             "STUDIO_HOST": "127.0.0.1",
             "STUDIO_PORT": str(port),
@@ -65,7 +74,13 @@ def main() -> int:
         }
         url = f"http://127.0.0.1:{port}"
         with log_path.open("wb") as log:
-            proc = subprocess.Popen([sys.executable, str(entrypoint)], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+            proc = subprocess.Popen(
+                [sys.executable, str(entrypoint)],
+                cwd=run_dir if standalone else ROOT,
+                env=env,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+            )
             try:
                 deadline = time.monotonic() + 30
                 healthy = False
