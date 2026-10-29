@@ -119,6 +119,7 @@ def _subsystem(path: str) -> str:
     prefixes = (
         ("/v1/", "OpenAI-compatible gateway"),
         ("/api/providers", "Provider configuration"),
+        ("/api/onboarding/", "Guided onboarding preflight"),
         ("/api/combos", "Model routing configuration"),
         ("/api/chat/", "Inference and agent workflows"),
         ("/api/council/", "Council workflow"),
@@ -292,6 +293,7 @@ def render(source: str | None = None, routes: Iterable[Any] | None = None) -> st
         "| Harness / GSD / SDLC | `harness_sessions`, `tool_audit_events`, local JSONL/message files and Git worktrees | Configured model/provider and MCP calls; local Git; shell/Python via disabled/sandbox/explicit host mode | `/api/harness/*`; shared bearer plus workflow/tool policy and approval checks; worktree apply is a separate authenticated route action |",
         "| OpenContext and context vault | `opencontext_docs`, `opencontext_fts`, `ctx_vault_chunks`, `ctx_vault_fts`, `ctx_session_metrics` | Local SQLite/FTS5 and workspace files | `/api/opencontext/*`, context tools; shared API bearer boundary |",
         "| Telemetry and performance | `perf_samples` and cached in-process telemetry | Local system/container CLI probes and local OMLX admin HTTP endpoints | `/api/telemetry`; shared bearer boundary; telemetry may fall back to demo data when local backend is unavailable |",
+        "| Guided onboarding preflight | Read-only view of settings, `cloud_providers`/`model_combos` rows, workspace permissions, and container-CLI presence | None: deliberately no outbound calls, keyring reads, or DNS resolution | `/api/onboarding/preflight`; shared bearer boundary, local-only snapshot, no secrets in the response |",
         "| CodeGraph and workspace view | Workspace files; no dedicated relational table | Local filesystem analysis only | `/api/codegraph/*`, `/api/workspace/files`; shared API bearer boundary and workspace/path checks |",
         "",
         "## Evidence and limitations",

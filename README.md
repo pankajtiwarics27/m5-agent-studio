@@ -58,6 +58,12 @@ with reproducible test data.
 
 ## 2. Quick start
 
+> **First run:** open the **Start** tab. It checks your local configuration
+> (token, model source, models, workspace, execution mode) and tells you the one
+> next thing to click, then hands you a guided first prompt. It reads local
+> configuration only — no network calls, no config files, no secrets in the
+> response. Details: [`docs/onboarding-preflight.md`](docs/onboarding-preflight.md).
+
 ### A. Standalone single-file studio (recommended on macOS)
 
 Requires Python `3.11+` and [`uv`](https://docs.astral.sh/uv/) (dependencies

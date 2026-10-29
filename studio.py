@@ -62,6 +62,7 @@ import keyring
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+import onboarding_preflight
 
 STUDIO_VERSION = "9.0.1"
 _TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
@@ -2616,6 +2617,25 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .ttl-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 5px; overflow: hidden; }
   .ttl-fill { height: 100%; background: var(--emerald); transition: width 0.5s linear; }
 
+  .onboarding-shell { max-width: 860px; margin: 0 auto; padding: 18px 16px 28px; }
+  .onboarding-lede { font-size: 12.4px; line-height: 1.55; color: var(--text-dim); margin: 8px 0 14px; }
+  .onboarding-steps { display: flex; flex-direction: column; gap: 8px; }
+  .onboarding-step { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card); }
+  .onboarding-step .btn { margin-left: auto; align-self: center; }
+  .onboarding-step.done { border-color: rgba(16, 185, 129, 0.42); }
+  .onboarding-step.pending { border-color: rgba(245, 158, 11, 0.42); }
+  .onboarding-step.blocked { border-color: rgba(239, 68, 68, 0.48); }
+  .onboarding-step.optional { opacity: 0.86; }
+  .onboarding-glyph { font-family: var(--mono); font-size: 13px; width: 18px; text-align: center; color: var(--text-faint); flex: 0 0 auto; }
+  .onboarding-step.done .onboarding-glyph { color: var(--emerald); }
+  .onboarding-step.pending .onboarding-glyph { color: var(--amber); }
+  .onboarding-step.blocked .onboarding-glyph { color: var(--rose); }
+  .onboarding-title { font-size: 12.6px; font-weight: 650; }
+  .onboarding-detail { font-size: 11.8px; line-height: 1.5; color: var(--text-dim); margin-top: 2px; }
+  .onboarding-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .onboarding-note { font-size: 11.6px; line-height: 1.5; color: var(--text-faint); margin-top: 10px; }
+  .badge.red { background: rgba(239, 68, 68, 0.18); color: #fca5a5; border-color: rgba(239, 68, 68, 0.45); }
+
   .config-strip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 11px; padding: 12px 14px; margin-bottom: 12px; }
   .role-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
   @media (max-width: 820px) { .role-grid { grid-template-columns: 1fr 1fr; } }
@@ -2993,6 +3013,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   </div>
 
   <nav class="mode-tabs" aria-label="Studio Modes">
+    <button class="mode-tab" data-tab="start" onclick="switchTab('start')" title="Guided first run (Alt+6)">
+      <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.9 4.9l2.8 2.8"/><path d="M16.3 16.3l2.8 2.8"/><circle cx="12" cy="12" r="4"/></svg>
+      <span>Start</span>
+    </button>
     <button class="mode-tab active" aria-current="page" data-tab="harness" onclick="switchTab('harness')" title="Agent harness (Alt+1)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
       <span>Harness</span>
@@ -3557,6 +3581,29 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </div>
 
     <!-- ================= TAB 0: AUTONOMOUS AGENTIC HARNESS (v5.0) ================= -->
+    <section id="pane-start" class="pane">
+      <div class="onboarding-shell">
+        <div class="m-card">
+          <div class="m-head">
+            <span>Guided first run</span>
+            <span id="onboardingSummary" class="badge green">Checking...</span>
+          </div>
+          <p class="onboarding-lede">
+            Studio checks your local configuration and tells you the one next thing to click.
+            No config files, no shell commands, and no network calls during the check.
+          </p>
+          <div id="onboardingSteps" class="onboarding-steps" role="list"></div>
+          <div class="onboarding-actions">
+            <button class="btn btn-primary" id="onboardingRunBtn" type="button" onclick="startGuidedFirstTask()">Run the first task</button>
+            <button class="btn" type="button" onclick="refreshOnboarding()">Re-check</button>
+            <button class="btn" type="button" onclick="openProvidersModal()">Providers</button>
+          </div>
+          <div id="onboardingFirstTask" class="onboarding-note" hidden></div>
+          <div id="onboardingNotes" class="onboarding-note"></div>
+        </div>
+      </div>
+    </section>
+
     <section id="pane-harness" class="pane active">
       <div class="harness-shell">
         <aside class="harness-sidebar">
@@ -4144,6 +4191,86 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function copyCodeBlock(btn) { navigator.clipboard.writeText(btn.closest(".code-wrap").querySelector("code").innerText); const p = btn.textContent; btn.textContent = "Copied!"; setTimeout(() => (btn.textContent = p), 1200); }
   function copyStageMarkdown(s, btn) { navigator.clipboard.writeText(stageBuffers[s].c || stageBuffers[s].r || ""); const p = btn.textContent; btn.textContent = "Copied!"; setTimeout(() => (btn.textContent = p), 1200); }
+  let onboardingReport = null;
+
+  const ONBOARDING_ACTION_LABELS = {
+    "restart-server": "Restart Studio from your terminal, then reload this page.",
+    "open-providers": "Providers panel opened at the top of the workspace.",
+    "open-chat": "Chat opened. Pick a model in the model selector to continue.",
+    "fix-workspace": "Set a writable workspace folder on the Harness tab.",
+    "review-execution": "Execution mode lives in the server environment (STUDIO_EXECUTION_MODE).",
+    "run-first-task": "Sending the guided prompt to the selected model."
+  };
+
+  function onboardingStepClass(status) {
+    if (status === "ready") return "onboarding-step done";
+    if (status === "optional") return "onboarding-step optional";
+    if (status === "blocked") return "onboarding-step blocked";
+    return "onboarding-step pending";
+  }
+
+  function onboardingStepIcon(status) {
+    if (status === "ready") return "\u2713";
+    if (status === "optional") return "\u25CB";
+    if (status === "blocked") return "!";
+    return "\u2192";
+  }
+
+  async function refreshOnboarding() {
+    const list = document.getElementById("onboardingSteps");
+    const summary = document.getElementById("onboardingSummary");
+    const notes = document.getElementById("onboardingNotes");
+    const runBtn = document.getElementById("onboardingRunBtn");
+    if (!list) return;
+    try {
+      const response = await fetch("/api/onboarding/preflight");
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      onboardingReport = payload.preflight || null;
+      if (!onboardingReport) throw new Error("empty preflight");
+      summary.textContent = onboardingReport.ready ? "Ready" : onboardingReport.summary;
+      summary.className = "badge " + (onboardingReport.ready ? "green" : (onboardingReport.blocked ? "red" : "amber"));
+      list.innerHTML = onboardingReport.steps.map(step => `
+        <div class="${onboardingStepClass(step.status)}" role="listitem">
+          <span class="onboarding-glyph" aria-hidden="true">${onboardingStepIcon(step.status)}</span>
+          <div>
+            <div class="onboarding-title">${step.title}</div>
+            <div class="onboarding-detail">${step.detail}</div>
+          </div>
+          ${step.action_label ? `<button class="btn btn-xs" type="button" onclick="runOnboardingAction('${step.action}')">${step.action_label}</button>` : ""}
+        </div>`).join("");
+      notes.textContent = (onboardingReport.notes || []).join(" ");
+      if (runBtn) runBtn.disabled = !onboardingReport.ready;
+    } catch (error) {
+      summary.textContent = "Check failed";
+      summary.className = "badge red";
+      list.innerHTML = `<div class="onboarding-step blocked" role="listitem"><span class="onboarding-glyph" aria-hidden="true">!</span><div><div class="onboarding-title">Could not read the preflight</div><div class="onboarding-detail">${error.message}. Reload the page or check the server log.</div></div></div>`;
+    }
+  }
+
+  function runOnboardingAction(action) {
+    if (action === "open-providers") { openProvidersModal(); return; }
+    if (action === "open-chat") { switchTab("chat"); return; }
+    if (action === "fix-workspace") { switchTab("harness"); return; }
+    if (action === "run-first-task") { startGuidedFirstTask(); return; }
+    const message = ONBOARDING_ACTION_LABELS[action] || "Follow the guidance for this step.";
+    const box = document.getElementById("onboardingFirstTask");
+    if (box) { box.hidden = false; box.textContent = message; }
+  }
+
+  function startGuidedFirstTask() {
+    const prompt = (onboardingReport && onboardingReport.first_task && onboardingReport.first_task.prompt) ||
+      "Reply with the single word READY.";
+    switchTab("chat");
+    const input = document.getElementById("chatInput");
+    if (!input) return;
+    input.value = prompt;
+    input.dispatchEvent(new Event("input"));
+    try { localStorage.setItem("m5_onboarding_first_task", String(Date.now())); } catch (_) { /* storage may be blocked */ }
+    const box = document.getElementById("onboardingFirstTask");
+    if (box) { box.hidden = false; box.textContent = ONBOARDING_ACTION_LABELS["run-first-task"]; }
+  }
+
   function switchTab(tab) {
     document.querySelectorAll(".mode-tab").forEach(b => {
       const on = b.dataset.tab === tab;
@@ -4153,6 +4280,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     document.querySelectorAll(".pane").forEach(p => p.classList.toggle("active", p.id === `pane-${tab}`));
     if (tab === "hall") refreshHallSessions();
     if (tab === "harness") loadHarnessSessions();
+    if (tab === "start") refreshOnboarding();
   }
   function toggleMonitorRail() {
     const layout = document.getElementById("mainLayout");
@@ -6111,6 +6239,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   } catch (_) { applyTheme("dark"); }
   loadOpenContextDocs();
   loadProviders();
+  refreshOnboarding();
   loadSkills();
   loadMcpServers();
   loadHarnessSessions();
@@ -6132,6 +6261,62 @@ async def index() -> HTMLResponse:
     if STUDIO_API_TOKEN and not STUDIO_AUTH_DISABLED:
         html = html.replace("</head>", "<script>(function(){const nativeFetch=window.fetch.bind(window);let promptLock=null;window.fetch=async function(input,init={}){const url=typeof input==='string'?input:input.url;const same=new URL(url,location.href).origin===location.origin;const send=async(token)=>{const headers=new Headers(input instanceof Request?input.headers:undefined);new Headers(init.headers||{}).forEach((v,k)=>headers.set(k,v));if(token&&same)headers.set('Authorization','Bearer '+token);return nativeFetch(input,{...init,headers});};let token=sessionStorage.getItem('m5_api_token')||'';let r=await send(token);if(r.status!==401||!same||!url.includes('/api/')&&!url.includes('/v1/'))return r;if(!promptLock)promptLock=new Promise(resolve=>{const v=window.prompt('Studio API token (saved for this browser session):');if(v)sessionStorage.setItem('m5_api_token',v);resolve(v||'');});token=await promptLock;promptLock=null;if(!token)return r;r=await send(token);return r;};})();</script>" + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
+# =============================================================================
+# Guided onboarding preflight (AS-039)
+# =============================================================================
+
+
+def onboarding_preflight_inputs() -> onboarding_preflight.PreflightInputs:
+    """Collect a local-only snapshot for the onboarding preflight.
+
+    Deliberately no network, no DNS, no keyring read, and no secret material:
+    providers are reduced to alias/enabled/has_credential/model_count, and the
+    model tally comes from configuration already in SQLite.
+    """
+    try:
+        providers = tuple(
+            onboarding_preflight.ProviderState(
+                alias=str(entry.get("alias", "")),
+                enabled=bool(entry.get("enabled")),
+                has_credential=bool(entry.get("has_key")),
+                model_count=len(entry.get("models") or []),
+            )
+            for entry in list_cloud_providers(include_secret=False)
+        )
+    except Exception:  # A broken/short-lived DB must not fake readiness.
+        providers = ()
+    try:
+        combo_count = len(list_model_combos())
+    except Exception:
+        combo_count = 0
+
+    workspace = WORKSPACE_ROOT
+    writable = workspace.is_dir() and os.access(workspace, os.W_OK)
+    if not workspace.is_dir():
+        workspace_detail = f"Workspace directory is missing: {workspace}."
+    elif not writable:
+        workspace_detail = f"Workspace directory is not writable: {workspace}."
+    else:
+        workspace_detail = f"Workspace directory is writable: {workspace}."
+
+    return onboarding_preflight.PreflightInputs(
+        auth_ready=bool(STUDIO_API_TOKEN) or STUDIO_AUTH_DISABLED,
+        local_runtime_configured=bool(OMLX_BASE),
+        providers=providers,
+        combo_count=combo_count,
+        execution_mode=_execution_mode(),  # type: ignore[arg-type]
+        sandbox_runtime_available=shutil.which(STUDIO_SANDBOX_RUNTIME) is not None,
+        workspace_writable=writable,
+        workspace_detail=workspace_detail,
+    )
+
+
+@app.get("/api/onboarding/preflight")
+async def api_onboarding_preflight() -> JSONResponse:
+    """Return the guided first-run plan; read-only, offline, and secret-free."""
+    return JSONResponse({"status": "ok", "preflight": onboarding_preflight.build_report(onboarding_preflight_inputs()).to_dict()})
+
 
 # =============================================================================
 # Cloud Providers & Combos Management API (OmniRoute-inspired)

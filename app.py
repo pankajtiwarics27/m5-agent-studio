@@ -65,6 +65,7 @@ from fastapi.staticfiles import StaticFiles
 from history_privacy import HistoryPrivacyError, apply_retention, export_history
 import context_store
 import mcp_client
+import onboarding_preflight
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
 
 STUDIO_VERSION = "9.0.1"
@@ -2375,6 +2376,62 @@ async def index() -> HTMLResponse:
         auth_helper = """<script>(function(){const nativeFetch=window.fetch.bind(window);let promptLock=null;window.fetch=async function(input,init={}){const url=typeof input==='string'?input:input.url;const same=new URL(url,location.href).origin===location.origin;const send=async(token)=>{const headers=new Headers(input instanceof Request?input.headers:undefined);new Headers(init.headers||{}).forEach((v,k)=>headers.set(k,v));if(token&&same)headers.set('Authorization','Bearer '+token);return nativeFetch(input,{...init,headers});};let token=sessionStorage.getItem('m5_api_token')||'';let r=await send(token);if(r.status!==401||!same||!url.includes('/api/')&&!url.includes('/v1/'))return r;if(!promptLock)promptLock=new Promise(resolve=>{const v=window.prompt('Studio API token (saved for this browser session):');if(v)sessionStorage.setItem('m5_api_token',v);resolve(v||'');});token=await promptLock;promptLock=null;if(!token)return r;r=await send(token);return r;};})();</script>"""
         html = html.replace("</head>", auth_helper + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
+
+# =============================================================================
+# Guided onboarding preflight (AS-039)
+# =============================================================================
+
+
+def onboarding_preflight_inputs() -> onboarding_preflight.PreflightInputs:
+    """Collect a local-only snapshot for the onboarding preflight.
+
+    Deliberately no network, no DNS, no keyring read, and no secret material:
+    providers are reduced to alias/enabled/has_credential/model_count, and the
+    model tally comes from configuration already in SQLite.
+    """
+    try:
+        providers = tuple(
+            onboarding_preflight.ProviderState(
+                alias=str(entry.get("alias", "")),
+                enabled=bool(entry.get("enabled")),
+                has_credential=bool(entry.get("has_key")),
+                model_count=len(entry.get("models") or []),
+            )
+            for entry in list_cloud_providers(include_secret=False)
+        )
+    except Exception:  # A broken/short-lived DB must not fake readiness.
+        providers = ()
+    try:
+        combo_count = len(list_model_combos())
+    except Exception:
+        combo_count = 0
+
+    workspace = WORKSPACE_ROOT
+    writable = workspace.is_dir() and os.access(workspace, os.W_OK)
+    if not workspace.is_dir():
+        workspace_detail = f"Workspace directory is missing: {workspace}."
+    elif not writable:
+        workspace_detail = f"Workspace directory is not writable: {workspace}."
+    else:
+        workspace_detail = f"Workspace directory is writable: {workspace}."
+
+    return onboarding_preflight.PreflightInputs(
+        auth_ready=bool(STUDIO_API_TOKEN) or STUDIO_AUTH_DISABLED,
+        local_runtime_configured=bool(OMLX_BASE),
+        providers=providers,
+        combo_count=combo_count,
+        execution_mode=_execution_mode(),  # type: ignore[arg-type]
+        sandbox_runtime_available=shutil.which(STUDIO_SANDBOX_RUNTIME) is not None,
+        workspace_writable=writable,
+        workspace_detail=workspace_detail,
+    )
+
+
+@app.get("/api/onboarding/preflight")
+async def api_onboarding_preflight() -> JSONResponse:
+    """Return the guided first-run plan; read-only, offline, and secret-free."""
+    return JSONResponse({"status": "ok", "preflight": onboarding_preflight.build_report(onboarding_preflight_inputs()).to_dict()})
 
 
 # =============================================================================
