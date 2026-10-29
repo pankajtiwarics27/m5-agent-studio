@@ -121,8 +121,9 @@ and the signature block.
 
 | Rule | Why |
 |---|---|
-| AS-031 may be `completed`/`verified` only when the record is `signed` with `decision: accepted` | Prevents an author from closing the story on author evidence |
-| An unsigned record must keep reviewer fields empty, every finding `unrated`/`not-verified`, and every boundary `not-examined` | A pre-filled "review" is indistinguishable from a self-review |
+| Each record state maps to exactly one roadmap status: `unsigned` → `planned`/`in_progress`, `deferred` → `completed`, `signed` → `completed`, or `verified` only with `decision: accepted` | Prevents a story from claiming more than the record supports |
+| A `deferred` record must name the deferral (who verifies, when, and as what) and AS-031 must be `completed`, never `verified` | The deferral records *when* verification happens; it must not be read as a claim that it happened |
+| An unsigned or deferred record must keep reviewer fields empty, every finding `unrated`/`not-verified`, and every boundary `not-examined` | A pre-filled "review" is indistinguishable from a self-review |
 | A signed record must fill identity, independence, a full 40-character commit SHA, and an ISO review date | Ties the judgement to a person and an exact tree |
 | `accepted` is rejected while any critical/high finding is `not-verified`, any boundary control is `inadequate`, or unverified findings have no accepted residual risk | Implements *"all critical/high findings remediated or release blocked"* |
 | A signed record may not retain `_unset_`/`_unassigned_`-style placeholders | Catches a half-completed record |
@@ -133,6 +134,10 @@ resolved dependency versions, and — with `--run-checks` — the exit status of
 every `BASELINE.md` command. It reports failures verbatim and states explicitly
 that the result is author-run evidence, not a review.
 
-Current state: the record is **unsigned** and `decision: pending`, so AS-031 is
-`in_progress`, this package's self-review stands as the only review performed,
-and the release gates downstream of AS-031 remain closed.
+Current state: the record is **deferred** with `decision: pending`. Per the
+maintainer's decision of 2026-10-29, independent human review and human
+verification happen **once, at the end, as final end-to-end testing after all
+remaining stories are complete** — so AS-031 is `completed` and explicitly not
+`verified`. This package's self-review stands as the only review performed;
+every severity in §6 is unassigned, and the AS-046/AS-049/AS-050 gates (including
+v1.0 publication) remain open until the record is signed.

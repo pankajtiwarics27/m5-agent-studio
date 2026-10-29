@@ -43,7 +43,7 @@ Violating any of these is a rejected change, regardless of tests passing:
 | [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json) | **Source of truth for the product plan and per-story status** — 63 stories (`AS-001`…`AS-063`) across 7 milestones, each with priority, dependencies, acceptance criteria, an implementation prompt, and a `status` field (`planned` / `in_progress` / `completed` / `verified`) with `status_evidence`. |
 | [`docs/product-roadmap-status.md`](docs/product-roadmap-status.md) | Human-readable dashboard generated from the JSON. **Generated file — never hand-edit.** |
 | [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) | Security-remediation depth beyond story status (what is validated, what remains). |
-| [`docs/security-review-signoff.md`](docs/security-review-signoff.md) | The AS-031 independent-review record and release gate. Only an independent human reviewer edits it; `scripts/validate_security_signoff.py` fails CI if it is unsigned or pre-filled while AS-031 is closed. |
+| [`docs/security-review-signoff.md`](docs/security-review-signoff.md) | The AS-031 independent-review record and release gate. Only an independent human reviewer signs it; `scripts/validate_security_signoff.py` fails CI if the record and the roadmap story disagree (a deferral requires `completed`, `verified` requires a signed accepted review). |
 | [`docs/adr/`](docs/adr/README.md) | Architecture decision records (the living decision log). |
 | [`BASELINE.md`](BASELINE.md) + `BASELINE_COMMIT` | The pinned source baseline and the reproducibility contract. |
 | [`README.md`](README.md) | Product overview, quick start, full configuration/API reference, and critical invariants. |
@@ -52,11 +52,13 @@ Violating any of these is a rejected change, regardless of tests passing:
 `planned` story whose dependencies are all `completed` or `verified`, respecting
 milestone order. One story per branch, one branch per pull request.
 
-**Never self-close a review gate.** AS-031 stays `in_progress` until
-`docs/security-review-signoff.md` is completed by a reviewer who is independent of
-the implementation. An agent may prepare evidence, remediate findings, and fix
-tooling, but may not fill reviewer severity, independence, or the decision fields,
-and may not mark AS-031 `completed`/`verified` on author-only evidence.
+**Never self-certify a review gate.** Human verification of this repository is
+performed **once, at the end, as final end-to-end testing** after all stories are
+complete (maintainer decision 2026-10-29). AS-031 is therefore `completed`, not
+`verified`. An agent may prepare evidence, remediate findings, and fix tooling,
+but may not fill the reviewer severity, independence, or decision fields, may not
+change the record to `signed`, and may not mark AS-031 `verified` on author-only
+evidence. `verified` is reachable only through a signed `accepted` review.
 
 ## 4. Session start protocol
 

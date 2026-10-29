@@ -2,14 +2,21 @@
 """Validate the AS-031 independent-review sign-off record and its roadmap gate.
 
 The record (`docs/security-review-signoff.md`) is the only place an independent
-reviewer may close AS-031. This validator keeps the record, the roadmap JSON, and
-reality aligned in both directions:
+reviewer may close AS-031. Three states are allowed, and each binds the roadmap
+story to exactly one status so the two can never drift apart:
 
-* an unsigned record cannot coexist with a `completed`/`verified` AS-031;
-* a signed `accepted` record cannot coexist with an `in_progress`/`planned`
-  AS-031 left dangling without its decision recorded;
-* a signed record cannot leave reviewer fields or severities blank, and cannot
-  claim acceptance while a critical/high finding is unverified.
+* ``unsigned`` — no review yet; AS-031 must be ``planned``/``in_progress``.
+* ``deferred`` — implementation is complete but the maintainer has moved human
+  verification to the final end-to-end pass after all stories; the record must
+  name that deferral, AS-031 must be ``completed`` (never ``verified``), and the
+  reviewer fields and judgements must stay blank.
+* ``signed`` — a reviewer has recorded identity, independence, a pinned commit,
+  per-finding severity and verification, and an accept-or-block decision.
+
+A signed record cannot leave reviewer fields or severities blank, and cannot
+claim ``accepted`` while a critical/high finding is unverified. ``verified`` is
+reachable only through a signed ``accepted`` record — a deferral makes no
+security claim, it only records when the claim will be tested.
 
 It performs no network access and never mutates the repository.
 """
@@ -39,17 +46,17 @@ REQUIRED_SECTIONS = (
 )
 BOUNDARIES = tuple(f"B{number}" for number in range(1, 13))
 FINDINGS = ("W-1", "F-1", "F-2", "F-3", "F-4", "F-5", "F-6")
-STATES = {"unsigned", "signed"}
+STATES = {"unsigned", "deferred", "signed"}
 DECISIONS = {"pending", "accepted", "release-blocked"}
 SEVERITIES = {"unrated", "none", "low", "medium", "high", "critical"}
 BLOCKING_SEVERITIES = {"critical", "high"}
 EXAMINED = {"examined", "not-examined"}
 ADEQUACY = {"adequate", "inadequate", "not-assessed"}
 VERIFICATION = {"verified", "not-verified"}
-CLOSED_STATUSES = {"completed", "verified"}
 # Residual-risk rows that record "nothing accepted" rather than a real entry.
 EMPTY_RESIDUAL = {"_none-recorded_", "none", "n/a", "na", "-", "—"}
-RECORD_KEYS = ("state", "reviewer", "reviewer_independence", "commit", "reviewed_on", "decision")
+RECORD_KEYS = ("state", "reviewer", "reviewer_independence", "commit", "reviewed_on", "decision", "deferral")
+REVIEWER_KEYS = ("reviewer", "reviewer_independence", "commit", "reviewed_on")
 PLACEHOLDERS = (
     "_unset_",
     "_unsigned_",
@@ -57,9 +64,12 @@ PLACEHOLDERS = (
     "_to be recorded",
     "_none recorded_",
 )
+DEFERRAL_MIN_CHARS = 20
+DEFERRAL_MARKER = "end-to-end"
 SHA = re.compile(r"^[0-9a-f]{40}$")
 ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 RECORD_BLOCK = re.compile(r"<!--\s*as031-signoff\s*\n(.*?)-->", flags=re.DOTALL)
+ID_PREFIX = re.compile(r"^((?:B|W|F|R)-?\d+)")
 
 
 @dataclass
@@ -72,6 +82,7 @@ class SignoffRecord:
     commit: str = ""
     reviewed_on: str = ""
     decision: str = ""
+    deferral: str = ""
     coverage: dict[str, dict[str, str]] = field(default_factory=dict)
     findings: dict[str, dict[str, str]] = field(default_factory=dict)
     residual_risks: list[tuple[str, str]] = field(default_factory=list)
@@ -103,9 +114,6 @@ def _table_rows(section: str) -> list[list[str]]:
             continue
         rows.append(cells)
     return rows
-
-
-ID_PREFIX = re.compile(r"^((?:B|W|F|R)-?\d+)")
 
 
 def _identifier(cell: str) -> str | None:
@@ -145,6 +153,7 @@ def parse_record(text: str) -> tuple[SignoffRecord, list[str]]:
     record.commit = values.get("commit", "").lower()
     record.reviewed_on = values.get("reviewed_on", "")
     record.decision = values.get("decision", "").lower()
+    record.deferral = values.get("deferral", "")
 
     for heading in REQUIRED_SECTIONS:
         if not _section(text, heading):
@@ -198,6 +207,132 @@ def _roadmap_status(root: Path) -> tuple[str | None, list[str]]:
     return None, [f"roadmap JSON has no {STORY_ID} story"]
 
 
+def _status_policy_errors(state: str, decision: str, status: str | None) -> list[str]:
+    """Return the state ⇄ roadmap-status violations (both directions)."""
+    errors: list[str] = []
+    if status is None:
+        return errors
+
+    allowed = {
+        "unsigned": {"planned", "in_progress"},
+        "deferred": {"completed"},
+        "signed": {"completed", "verified"} if decision == "accepted" else {"planned", "in_progress", "completed"},
+    }.get(state)
+    if allowed is not None and status not in allowed:
+        errors.append(
+            f"{STORY_ID} status '{status}' is inconsistent with a '{state}' sign-off record "
+            f"(decision '{decision or 'unparseable'}'); allowed: {sorted(allowed)}"
+        )
+    if status == "verified" and not (state == "signed" and decision == "accepted"):
+        errors.append(
+            f"{STORY_ID} may only be 'verified' after a signed record with decision 'accepted'; "
+            "a deferral records when verification happens, it does not claim it happened"
+        )
+    if status == "completed" and state == "unsigned":
+        errors.append(
+            f"{STORY_ID} cannot be 'completed' while the sign-off record is unsigned; "
+            "record the deferral in the record first"
+        )
+    return errors
+
+
+def _unreviewed_errors(record: SignoffRecord, label: str) -> list[str]:
+    """Rules shared by records where no reviewer has judged anything yet."""
+    errors: list[str] = []
+    for key in REVIEWER_KEYS:
+        if getattr(record, key):
+            errors.append(f"{label} sign-off record must leave '{key}' empty")
+    if record.decision != "pending":
+        errors.append(f"{label} sign-off record must keep decision 'pending'")
+    unrated = [fid for fid, cells in record.findings.items() if cells["severity"] != "unrated"]
+    if unrated:
+        errors.append(
+            f"{label} sign-off record must not pre-assign reviewer severity: " + ", ".join(sorted(unrated))
+        )
+    verified = [fid for fid, cells in record.findings.items() if cells["verified"] != "not-verified"]
+    if verified:
+        errors.append(
+            f"{label} sign-off record must not pre-assign fix verification: " + ", ".join(sorted(verified))
+        )
+    examined = [bid for bid, cells in record.coverage.items() if cells["examined"] != "not-examined"]
+    if examined:
+        errors.append(
+            f"{label} sign-off record must not pre-mark boundaries as examined: " + ", ".join(sorted(examined))
+        )
+    return errors
+
+
+def _deferral_errors(record: SignoffRecord) -> list[str]:
+    """A deferral is only valid if it says when human verification will happen."""
+    errors: list[str] = []
+    deferral = record.deferral.strip()
+    if len(deferral) < DEFERRAL_MIN_CHARS:
+        errors.append(
+            "deferred sign-off record must describe the deferral (who verifies, when, and as what) "
+            f"in at least {DEFERRAL_MIN_CHARS} characters"
+        )
+        return errors
+    if any(placeholder.lower() in deferral.lower() for placeholder in PLACEHOLDERS):
+        errors.append("deferred sign-off record deferral text still contains a placeholder")
+    if DEFERRAL_MARKER not in deferral.lower():
+        errors.append("deferred sign-off record must name the final end-to-end verification pass")
+    return errors
+
+
+def _signed_errors(record: SignoffRecord) -> list[str]:
+    """A signed record must be complete, dated, and internally consistent."""
+    errors: list[str] = []
+    if not record.reviewer:
+        errors.append("signed sign-off record requires a reviewer identity")
+    if not record.reviewer_independence:
+        errors.append("signed sign-off record requires an independence statement")
+    if not SHA.fullmatch(record.commit):
+        errors.append("signed sign-off record requires the reviewed commit as a full 40-character SHA")
+    if not ISO_DATE.fullmatch(record.reviewed_on):
+        errors.append("signed sign-off record requires reviewed_on as YYYY-MM-DD")
+    else:
+        try:
+            if date.fromisoformat(record.reviewed_on) < date(2026, 1, 1):
+                errors.append("sign-off review date is implausibly early for this repository")
+        except ValueError:
+            errors.append("signed sign-off record reviewed_on is not a real calendar date")
+    if record.decision == "pending":
+        errors.append("signed sign-off record must record a decision of accepted or release-blocked")
+
+    for placeholder in PLACEHOLDERS:
+        if placeholder in record.text:
+            errors.append(f"signed sign-off record still contains placeholder text: {placeholder}")
+
+    unrated = [fid for fid, cells in record.findings.items() if cells["severity"] == "unrated"]
+    if unrated:
+        errors.append("signed sign-off record must rate every finding: " + ", ".join(sorted(unrated)))
+    unverified = [fid for fid, cells in record.findings.items() if cells["verified"] != "verified"]
+    blocking = [
+        fid
+        for fid, cells in record.findings.items()
+        if cells["severity"] in BLOCKING_SEVERITIES and cells["verified"] != "verified"
+    ]
+    if record.decision == "accepted" and blocking:
+        errors.append(
+            "decision 'accepted' is inconsistent with unverified critical/high findings: "
+            + ", ".join(sorted(blocking))
+        )
+
+    for boundary, cells in record.coverage.items():
+        if cells["examined"] != "examined":
+            errors.append(f"signed sign-off record must record {boundary} as examined")
+        if cells["adequate"] == "inadequate" and record.decision == "accepted":
+            errors.append(f"decision 'accepted' is inconsistent with an inadequate control at {boundary}")
+        if cells["residual"] == "yes" and not _accepted_risks(record):
+            errors.append(f"{boundary} notes residual risk but no accepted residual risk is recorded")
+
+    if unverified and record.decision == "accepted" and not _accepted_risks(record):
+        errors.append(
+            "decision 'accepted' leaves unverified findings without a recorded accepted residual risk"
+        )
+    return errors
+
+
 def validate_signoff(root: Path = ROOT) -> list[str]:
     """Return sign-off/gate defects for `root`; never touches the network."""
     try:
@@ -237,96 +372,19 @@ def validate_signoff(root: Path = ROOT) -> list[str]:
 
     status, roadmap_errors = _roadmap_status(root)
     errors.extend(roadmap_errors)
-
-    if status in CLOSED_STATUSES and not (record.state == "signed" and record.decision == "accepted"):
-        errors.append(
-            f"{STORY_ID} is '{status}' but the independent sign-off record is "
-            f"'{record.state or 'unparseable'}'/'{record.decision or 'unparseable'}'; "
-            "a story can only be completed/verified after a signed accepted review"
-        )
+    errors.extend(_status_policy_errors(record.state, record.decision, status))
 
     if record.state == "unsigned":
-        for key in ("reviewer", "reviewer_independence", "commit", "reviewed_on"):
-            if getattr(record, key):
-                errors.append(f"unsigned sign-off record must leave '{key}' empty")
-        if record.decision != "pending":
-            errors.append("unsigned sign-off record must keep decision 'pending'")
-        unrated = [fid for fid, cells in record.findings.items() if cells["severity"] != "unrated"]
-        if unrated:
-            errors.append(
-                "unsigned sign-off record must not pre-assign reviewer severity: "
-                + ", ".join(sorted(unrated))
-            )
-        verified = [fid for fid, cells in record.findings.items() if cells["verified"] != "not-verified"]
-        if verified:
-            errors.append(
-                "unsigned sign-off record must not pre-assign fix verification: "
-                + ", ".join(sorted(verified))
-            )
-        examined = [bid for bid, cells in record.coverage.items() if cells["examined"] != "not-examined"]
-        if examined:
-            errors.append(
-                "unsigned sign-off record must not pre-mark boundaries as examined: "
-                + ", ".join(sorted(examined))
-            )
-        if status in CLOSED_STATUSES:
-            errors.append(f"{STORY_ID} must stay out of {sorted(CLOSED_STATUSES)} while the record is unsigned")
-        return errors
-
-    # Signed record: the fields and judgements must now be complete and coherent.
-    if not record.reviewer:
-        errors.append("signed sign-off record requires a reviewer identity")
-    if not record.reviewer_independence:
-        errors.append("signed sign-off record requires an independence statement")
-    if not SHA.fullmatch(record.commit):
-        errors.append("signed sign-off record requires the reviewed commit as a full 40-character SHA")
-    if not ISO_DATE.fullmatch(record.reviewed_on):
-        errors.append("signed sign-off record requires reviewed_on as YYYY-MM-DD")
-    else:
-        try:
-            if date.fromisoformat(record.reviewed_on) < date(2026, 1, 1):
-                errors.append("sign-off review date is implausibly early for this repository")
-        except ValueError:
-            errors.append("signed sign-off record reviewed_on is not a real calendar date")
-    if record.decision == "pending":
-        errors.append("signed sign-off record must record a decision of accepted or release-blocked")
-
-    for placeholder in PLACEHOLDERS:
-        if record.state == "signed" and placeholder in text:
-            errors.append(f"signed sign-off record still contains placeholder text: {placeholder}")
-
-    unrated = [fid for fid, cells in record.findings.items() if cells["severity"] == "unrated"]
-    if unrated:
-        errors.append("signed sign-off record must rate every finding: " + ", ".join(sorted(unrated)))
-    unverified = [
-        fid
-        for fid, cells in record.findings.items()
-        if cells["verified"] != "verified"
-    ]
-    blocking = [
-        fid
-        for fid, cells in record.findings.items()
-        if cells["severity"] in BLOCKING_SEVERITIES and cells["verified"] != "verified"
-    ]
-    if record.decision == "accepted" and blocking:
-        errors.append(
-            "decision 'accepted' is inconsistent with unverified critical/high findings: "
-            + ", ".join(sorted(blocking))
-        )
-
-    for boundary, cells in record.coverage.items():
-        if cells["examined"] != "examined":
-            errors.append(f"signed sign-off record must record {boundary} as examined")
-        if cells["adequate"] == "inadequate" and record.decision == "accepted":
-            errors.append(f"decision 'accepted' is inconsistent with an inadequate control at {boundary}")
-        if cells["residual"] == "yes" and not _accepted_risks(record):
-            errors.append(f"{boundary} notes residual risk but no accepted residual risk is recorded")
-
-    if unverified and record.decision == "accepted":
-        if not _accepted_risks(record):
-            errors.append(
-                "decision 'accepted' leaves unverified findings without a recorded accepted residual risk"
-            )
+        errors.extend(_unreviewed_errors(record, "unsigned"))
+        if record.deferral:
+            errors.append("unsigned sign-off record must not carry deferral text")
+    elif record.state == "deferred":
+        errors.extend(_unreviewed_errors(record, "deferred"))
+        errors.extend(_deferral_errors(record))
+        if not record.deferral:
+            errors.append("deferred sign-off record requires deferral text")
+    elif record.state == "signed":
+        errors.extend(_signed_errors(record))
     return errors
 
 

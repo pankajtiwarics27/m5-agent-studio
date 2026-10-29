@@ -1,22 +1,30 @@
 # AS-031 independent security review — sign-off record
 
-**Current state: UNSIGNED.** AS-031 ("Independent security review") remains
-`in_progress` in the roadmap. This file is the single place where an
-independent reviewer records identity/independence, scope, the exact reviewed
-commit, per-finding severity, fix verification, residual risks, and the
-accept-or-block decision.
+**Current state: DEFERRED to final end-to-end verification.** The AS-031
+*implementation* is complete on this branch. Per the maintainer's decision of
+2026-10-29, the independent human review is not performed story-by-story: it is
+performed **once, as the final end-to-end verification after all remaining
+stories (AS-039…AS-050, AS-063) are complete**. Roadmap story AS-031 is therefore
+`completed`, not `verified` — `verified` is reserved for a record signed by a
+reviewer who is independent of this work.
+
+This file is the single place where that reviewer records
+identity/independence, scope, the exact reviewed commit, per-finding severity,
+fix verification, residual risks, and the accept-or-block decision. Until then
+this record makes **no security claim**: no finding is rated, no control is
+declared adequate, and no release gate is satisfied.
 
 This record is machine-checked by `scripts/validate_security_signoff.py`
 (run in CI and by `tests/test_security_signoff.py`). The checker enforces, in
 both directions:
 
-- while the record below says `state: unsigned`, roadmap story AS-031 may not be
-  marked `completed` or `verified`;
-- AS-031 may only be `completed`/`verified` when the record says
-  `state: signed` **and** `decision: accepted`;
-- a `signed` record may not leave reviewer fields blank, may not leave any
-  finding `unrated`/`not verified`, and may not say `accepted` while any
-  critical or high severity finding is unverified.
+- `state: unsigned` (no implementation yet) — AS-031 must be `planned`/`in_progress`;
+- `state: deferred` (this state) — AS-031 must be `completed`, never `verified`,
+  and the record must name the deferral; reviewer fields and judgements stay blank;
+- `state: signed` — AS-031 may be `completed`, or `verified` only with
+  `decision: accepted`; the record may not leave reviewer fields blank, may not
+  leave any finding `unrated`/`not verified`, and may not say `accepted` while
+  any critical or high severity finding is unverified.
 
 Author-side remediation evidence lives in
 [`security-review-package.md`](security-review-package.md) (boundary inventory
@@ -25,19 +33,20 @@ B1–B12, adversarial tests, environment evidence) and
 Those documents describe what the **authors** believe; they are not sign-off.
 
 <!-- as031-signoff
-state: unsigned
+state: deferred
 reviewer: ""
 reviewer_independence: ""
 commit: ""
 reviewed_on: ""
 decision: pending
+deferral: "Maintainer decision 2026-10-29: independent human review and human verification run once as the final end-to-end pass after all remaining stories are complete; recorded as completed, not verified, until then."
 -->
 
-A record is only valid once every quoted value above is filled. While the
-record is unsigned these values must stay empty and the reviewer-judgement cells
-in the two tables below must stay at their unassessed tokens; the checker
-rejects a partially pre-filled "review" because that is how a self-review gets
-mistaken for an independent one.
+While the record is deferred these values must stay empty and the
+reviewer-judgement cells in the two tables below must stay at their unassessed
+tokens; the checker rejects a partially pre-filled "review" because that is how
+a self-review gets mistaken for an independent one. The deferral text is the
+only free-text field, and it must name who verifies, when, and as what.
 
 ## 1. Reviewer identity and independence
 
@@ -146,14 +155,30 @@ findings outstanding), `release-blocked` (at least one critical/high finding
 unremediated or unverified, or the reviewer cannot reach the required
 assurance).
 
-**Decision: pending.** No independent reviewer has recorded a decision, so the
-AS-031 acceptance criterion — *"all critical/high findings remediated or release
-blocked"* — is not satisfied, AS-046/AS-049/AS-050 stay gated, and AS-031 stays
-`in_progress`. Unrelated development may continue.
+**Decision: pending — deferred, not waived.** No independent reviewer has
+recorded a decision, and none will be recorded per story. The AS-031 acceptance
+criterion — *"all critical/high findings remediated or release blocked"* — is
+untested author evidence until the final end-to-end pass. Concretely:
+
+| What | Status now |
+|---|---|
+| AS-031 roadmap status | `completed` — implementation and evidence are on the branch |
+| AS-031 correctness/security claim | **not verified** — nothing here is signed |
+| Independent review of B1–B12 | deferred to the final end-to-end verification |
+| Severity of W-1, F-1…F-6 | unassigned; no severity has ever been supplied |
+| M3 milestone exit gate ("all listed P0 stories verified") | formally unmet: AS-031 is `completed`, not `verified` |
+| AS-046 (final security and regression audit) | still a gate; it consumes this record |
+| AS-049 (release-readiness approval) | still a gate |
+| AS-050 (v1.0 publication) | still a gate — must not ship on a deferred record |
+
+The deferral is an ordering decision by the maintainer, not a downgrade of the
+requirement: AS-031 cannot reach `verified`, and v1.0 cannot ship, until §1–§5
+are filled in and the decision below is signed.
 
 | Field | Value |
 |---|---|
 | Decision | pending |
+| Deferred until | final end-to-end verification, after AS-039…AS-050 and AS-063 are complete |
 | Decision date (UTC) | _unset_ |
 | Signature (name + method, e.g. signed commit, PGP, or maintainer on record) | _unset_ |
 | Follow-up owner and date for remediation of blocked findings | _unset_ |
@@ -173,14 +198,19 @@ python scripts/security_review_evidence.py --run-checks --output review-evidence
 python scripts/validate_security_signoff.py   # must pass after you edit this file
 ```
 
-1. Fill the record block, §1, §2, and both tables.
+0. Leave `deferred` in `state: deferred` while the review has not happened; a
+   deferral is valid only while AS-031 is `completed` and the deferral text names
+   the final end-to-end pass.
+1. To perform the review, change `state:` to `signed` and clear the deferral
+   text, then fill the record block, §1, §2, and both tables.
 2. Replace every `unrated` with your severity and `not-verified` with `verified`
    only after you personally reproduce or inspect the fix.
 3. Record residual risks and the decision.
-4. Update AS-031 to `completed`/`verified` in
+4. Promote AS-031 from `completed` to `verified` in
    `product/Adaptive_Runtime_Product_Roadmap_v2.json` **only if** the decision is
    `accepted`, regenerate the dashboard with
    `python scripts/generate_roadmap_status.py`, and send the change as a pull
-   request. The validator fails any other combination.
+   request. The validator fails any other combination, including `verified`
+   against a deferred or release-blocked record.
 5. Report vulnerabilities privately per [SECURITY.md](../SECURITY.md) rather than
    in a public pull request.
