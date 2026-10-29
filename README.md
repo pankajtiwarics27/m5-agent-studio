@@ -494,6 +494,22 @@ CI regenerates `studio.py`, `docs/route-security-matrix.md`,
 `docs/subsystem-dependency-inventory.md`, and
 `docs/product-roadmap-status.md`, then fails on any byte-level drift.
 
+### Versioned install, update, and rollback
+
+`studio.py` is a release artifact, so it can be installed, updated, and rolled
+back by version instead of being overwritten in place:
+
+```bash
+python3 scripts/release.py package  --version 9.0.1              # build + record digest/commit
+python3 scripts/release.py install  --version 9.0.1              # activate under ~/.local/share/m5-agent-studio
+python3 scripts/release.py update   --version 9.0.2              # activate, keeping 9.0.1 as the rollback target
+python3 scripts/release.py rollback                              # swap active and previous (repeatable)
+python3 scripts/release.py verify                                # exit 1 if the active or previous artifact is corrupt
+```
+
+Details and limits (no signing/notarization — that is AS-042):
+[`docs/packaging-rollback.md`](docs/packaging-rollback.md).
+
 ### Verification (same sequence as CI)
 
 ```bash
