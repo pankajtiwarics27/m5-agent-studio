@@ -101,6 +101,7 @@ python scripts/generate_roadmap_status.py
 git diff --exit-code                                    # any output = stale generated file
 python scripts/validate_governance.py
 python scripts/validate_security_signoff.py              # AS-031 record/release-gate consistency
+python scripts/validate_docs.py                         # required docs, sections, links, no placeholders
 python scripts/validate_adrs.py                         # only if you touched docs/adr/
 python scripts/check_commit_messages.py --base origin/main   # only new commits are checked
 ```

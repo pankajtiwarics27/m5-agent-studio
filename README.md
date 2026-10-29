@@ -25,6 +25,13 @@ concurrently with OrbStack Docker and desktop apps.
 
 ## Contents
 
+**Start with the guides:** [Quickstart](docs/quickstart.md) ·
+[Architecture](docs/architecture.md) ·
+[Supported hardware](docs/supported-hardware.md) ·
+[Privacy](docs/privacy.md) ·
+[Migration guide](docs/migration-guide.md) ·
+[All documentation](docs/README.md)
+
 1. [Design philosophy](#1-design-philosophy)
 2. [Quick start](#2-quick-start)
 3. [Security and safe defaults](#3-security-and-safe-defaults)
@@ -57,6 +64,10 @@ workload; treat benchmark statements as environment-specific unless they ship
 with reproducible test data.
 
 ## 2. Quick start
+
+> **Guides:** [Quickstart](docs/quickstart.md) (install → first task),
+> [Architecture](docs/architecture.md), [Supported hardware](docs/supported-hardware.md),
+> [Privacy](docs/privacy.md), [Migration guide](docs/migration-guide.md).
 
 > **First run:** open the **Start** tab. It checks your local configuration
 > (token, model source, models, workspace, execution mode) and tells you the one
