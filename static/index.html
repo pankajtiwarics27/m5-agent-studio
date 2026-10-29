@@ -1833,6 +1833,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     "open-chat": "Chat opened. Pick a model in the model selector to continue.",
     "fix-workspace": "Set a writable workspace folder on the Harness tab.",
     "review-execution": "Execution mode lives in the server environment (STUDIO_EXECUTION_MODE).",
+    "probe-local-models": "Asked the configured local runtime once for its model list.",
     "run-first-task": "Sending the guided prompt to the selected model."
   };
 
@@ -1850,14 +1851,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return "\u2192";
   }
 
-  async function refreshOnboarding() {
+  async function refreshOnboarding(probeLocal) {
     const list = document.getElementById("onboardingSteps");
     const summary = document.getElementById("onboardingSummary");
     const notes = document.getElementById("onboardingNotes");
     const runBtn = document.getElementById("onboardingRunBtn");
     if (!list) return;
     try {
-      const response = await fetch("/api/onboarding/preflight");
+      const url = probeLocal ? "/api/onboarding/preflight?probe=local" : "/api/onboarding/preflight";
+      const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const payload = await response.json();
       onboardingReport = payload.preflight || null;
@@ -1882,7 +1884,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     }
   }
 
-  function runOnboardingAction(action) {
+  async function runOnboardingAction(action) {
+    if (action === "probe-local-models") { await refreshOnboarding(true); return; }
     if (action === "open-providers") { openProvidersModal(); return; }
     if (action === "open-chat") { switchTab("chat"); return; }
     if (action === "fix-workspace") { switchTab("harness"); return; }

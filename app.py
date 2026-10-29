@@ -2383,12 +2383,20 @@ async def index() -> HTMLResponse:
 # =============================================================================
 
 
-def onboarding_preflight_inputs() -> onboarding_preflight.PreflightInputs:
+def onboarding_preflight_inputs(
+    local_model_count: int | None = None,
+    local_probe: str = "not-run",
+) -> onboarding_preflight.PreflightInputs:
     """Collect a local-only snapshot for the onboarding preflight.
 
     Deliberately no network, no DNS, no keyring read, and no secret material:
     providers are reduced to alias/enabled/has_credential/model_count, and the
-    model tally comes from configuration already in SQLite.
+    model tally comes from configuration already in SQLite. Combo aliases are
+    reported but never counted as models, because a seeded preset can exist
+    while nothing behind it is reachable.
+
+    ``local_model_count`` carries the result of an explicit, user-triggered
+    probe of the configured local runtime; ``None`` means no probe was made.
     """
     try:
         providers = tuple(
@@ -2421,6 +2429,8 @@ def onboarding_preflight_inputs() -> onboarding_preflight.PreflightInputs:
         local_runtime_configured=bool(OMLX_BASE),
         providers=providers,
         combo_count=combo_count,
+        local_models_available=max(local_model_count, 0) if local_model_count is not None else 0,
+        local_probe=local_probe,  # type: ignore[arg-type]
         execution_mode=_execution_mode(),  # type: ignore[arg-type]
         sandbox_runtime_available=shutil.which(STUDIO_SANDBOX_RUNTIME) is not None,
         workspace_writable=writable,
@@ -2428,10 +2438,42 @@ def onboarding_preflight_inputs() -> onboarding_preflight.PreflightInputs:
     )
 
 
+async def _onboarding_probe_local_models(client: httpx.AsyncClient) -> int | None:
+    """Ask the configured local runtime how many models it has; None when unreachable.
+
+    This is the only network call onboarding can make, it is user-triggered, it
+    targets the configured loopback runtime only, and it sends no credentials.
+    """
+    try:
+        await _validate_outbound_url(OMLX_BASE, allow_private=True)
+        response = await client.get(f"{OMLX_BASE}/v1/models", timeout=2.5)
+        if response.status_code != 200:
+            return None
+        return len(response.json().get("data", []))
+    except Exception:
+        return None
+
+
 @app.get("/api/onboarding/preflight")
-async def api_onboarding_preflight() -> JSONResponse:
-    """Return the guided first-run plan; read-only, offline, and secret-free."""
-    return JSONResponse({"status": "ok", "preflight": onboarding_preflight.build_report(onboarding_preflight_inputs()).to_dict()})
+async def api_onboarding_preflight(request: Request, probe: str = "") -> JSONResponse:
+    """Return the guided first-run plan.
+
+    Read-only and offline by default. ``?probe=local`` additionally asks the
+    configured local runtime for its model list, because that is the only way to
+    know which local models exist. Any other value is ignored.
+    """
+    if probe == "local":
+        client: httpx.AsyncClient | None = getattr(request.app.state, "http", None)
+        local_models = await _onboarding_probe_local_models(client) if client is not None else None
+        inputs = onboarding_preflight_inputs(
+            local_model_count=local_models,
+            local_probe="ran" if local_models is not None else "unavailable",
+        )
+    else:
+        inputs = onboarding_preflight_inputs()
+    report = onboarding_preflight.build_report(inputs).to_dict()
+    report["local_probe"] = inputs.local_probe
+    return JSONResponse({"status": "ok", "preflight": report})
 
 
 # =============================================================================
