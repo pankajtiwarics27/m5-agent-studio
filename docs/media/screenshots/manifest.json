@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "device_scale_factor": 2
+  },
+  "captured_with": "scripts/capture_screenshots.mjs",
+  "demo_command": "python3 scripts/demo_tour.py --serve",
+  "shots": [
+    {
+      "id": "start",
+      "tab": "start",
+      "title": "Start",
+      "file": "start.png",
+      "purpose": "The preflight checklist a new user sees first: what is ready, what still needs them."
+    },
+    {
+      "id": "harness",
+      "tab": "harness",
+      "title": "Harness",
+      "file": "harness.png",
+      "purpose": "An agent session over a workspace, with the diff, approval, and abort controls."
+    },
+    {
+      "id": "hall",
+      "tab": "hall",
+      "title": "Council",
+      "file": "hall.png",
+      "purpose": "A council session: who was asked, what each participant said, in order."
+    },
+    {
+      "id": "council",
+      "tab": "council",
+      "title": "Pipeline",
+      "file": "pipeline.png",
+      "purpose": "The four-stage pipeline view for a single request."
+    },
+    {
+      "id": "debate",
+      "tab": "debate",
+      "title": "Compare",
+      "file": "compare.png",
+      "purpose": "One prompt against several models, side by side."
+    },
+    {
+      "id": "chat",
+      "tab": "chat",
+      "title": "Chat",
+      "file": "chat.png",
+      "purpose": "A single streaming conversation with the selected model."
+    }
+  ]
+}

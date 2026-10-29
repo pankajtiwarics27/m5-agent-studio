@@ -505,6 +505,15 @@ CI regenerates `studio.py`, `docs/route-security-matrix.md`,
 `docs/subsystem-dependency-inventory.md`, and
 `docs/product-roadmap-status.md`, then fails on any byte-level drift.
 
+### Try it without a provider
+
+```bash
+python3 scripts/demo_tour.py            # ten-step offline tour of the real app
+python3 scripts/demo_tour.py --check    # the committed transcript is checked for drift in CI
+```
+
+Details, screenshots, and privacy notes: [`docs/demo.md`](docs/demo.md).
+
 ### Versioned install, update, and rollback
 
 `studio.py` is a release artifact, so it can be installed, updated, and rolled
