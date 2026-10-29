@@ -33,6 +33,7 @@ python3 -m venv .venv
 .venv/bin/python scripts/smoke_local.py
 .venv/bin/python scripts/smoke_local.py --standalone
 .venv/bin/python scripts/validate_security_signoff.py
+.venv/bin/python scripts/validate_docs.py
 .venv/bin/python scripts/build_studio.py
 .venv/bin/python scripts/generate_route_matrix.py
 .venv/bin/python scripts/generate_subsystem_inventory.py

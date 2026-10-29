@@ -1,0 +1,102 @@
+# Documentation
+
+Start here, then follow the pointer you need. Every page below is validated in
+CI by `scripts/validate_docs.py`: required sections must exist, no page may
+contain placeholder text, and every relative link must resolve.
+
+## Getting started
+
+| Page | Read it when |
+|---|---|
+| [`quickstart.md`](quickstart.md) | Installing, first run, connecting a model, first task, troubleshooting |
+| [`onboarding-preflight.md`](onboarding-preflight.md) | You want to know what the Start tab checks and why |
+| [`../README.md`](../README.md) | You want the full reference: configuration, API, tools, database |
+| [`../BASELINE.md`](../BASELINE.md) | You want the pinned baseline and a clean-checkout reproduction |
+
+## Understanding the system
+
+| Page | Contents |
+|---|---|
+| [`architecture.md`](architecture.md) | Components, request path, storage, generated artifacts, extension seams |
+| [`subsystem-dependency-inventory.md`](subsystem-dependency-inventory.md) | Generated: every endpoint, table, and outbound boundary |
+| [`route-security-matrix.md`](route-security-matrix.md) | Generated: per-route authentication expectations |
+| [`../docs/adr/README.md`](adr/README.md) | Architecture decision records |
+| [`supported-hardware.md`](supported-hardware.md) | Requirements, validated vs expected platforms, capability model |
+
+## Operating it
+
+| Page | Contents |
+|---|---|
+| [`packaging-rollback.md`](packaging-rollback.md) | Versioned install, update, rollback, artifact integrity |
+| [`migration-guide.md`](migration-guide.md) | Upgrading releases, schema migrations, credentials, restore |
+| [`storage-migrations.md`](storage-migrations.md) | Storage seam and schema-migration invariants |
+| [`configuration-contracts.md`](configuration-contracts.md) | Every setting, precedence, and validation rule |
+| [`privacy.md`](privacy.md) | What stays local, what leaves the machine, retention, deletion |
+| [`history-privacy.md`](history-privacy.md) | Export, retention, and redaction specifics |
+
+## Security
+
+| Page | Contents |
+|---|---|
+| [`../SECURITY.md`](../SECURITY.md) | Safe defaults, unsafe opt-ins, disclosure process |
+| [`threat-model.md`](threat-model.md) | Actors, trust boundaries, abuse cases, mitigations |
+| [`security-review-package.md`](security-review-package.md) | The independent-review package and boundary inventory (B1–B12) |
+| [`security-review-signoff.md`](security-review-signoff.md) | Reviewer record and release gate — currently unsigned |
+| [`sandbox-boundary.md`](sandbox-boundary.md) | Sandbox and filesystem boundary hardening |
+
+## Subsystem contracts
+
+Model and provider: [`provider-adapters.md`](provider-adapters.md),
+[`api-provider-contracts.md`](api-provider-contracts.md),
+[`provider-switching.md`](provider-switching.md),
+[`model-discovery-install.md`](model-discovery-install.md),
+[`model-manifest-registry.md`](model-manifest-registry.md),
+[`model-calibration.md`](model-calibration.md),
+[`model-diagnostics.md`](model-diagnostics.md),
+[`model-comparison.md`](model-comparison.md),
+[`model-recommendation.md`](model-recommendation.md),
+[`model-switching.md`](model-switching.md),
+[`model-updates.md`](model-updates.md),
+[`hardware-capability-schema.md`](hardware-capability-schema.md),
+[`hardware-validation.md`](hardware-validation.md),
+[`macos-hardware-profiler.md`](macos-hardware-profiler.md),
+[`performance-profiles.md`](performance-profiles.md),
+[`local-provider-adapters.md`](local-provider-adapters.md),
+[`local-runtime-lifecycle.md`](local-runtime-lifecycle.md).
+
+Execution and policy: [`routing-consent-policy.md`](routing-consent-policy.md),
+[`capability-negotiation.md`](capability-negotiation.md),
+[`resource-admission-scheduler.md`](resource-admission-scheduler.md),
+[`execution-budgets.md`](execution-budgets.md),
+[`tool-authorization.md`](tool-authorization.md),
+[`side-effect-idempotency.md`](side-effect-idempotency.md),
+[`session-device-trust.md`](session-device-trust.md),
+[`private-network-gateway.md`](private-network-gateway.md).
+
+Workflows and memory: [`workflow-checkpoints.md`](workflow-checkpoints.md),
+[`workflow-orchestration.md`](workflow-orchestration.md),
+[`workflow-state-machine.md`](workflow-state-machine.md),
+[`workflow-tracing.md`](workflow-tracing.md),
+[`workflow-evaluation.md`](workflow-evaluation.md),
+[`context-reassembly.md`](context-reassembly.md),
+[`failure-injection-suite.md`](failure-injection-suite.md),
+[`comparison-board.md`](comparison-board.md),
+[`benchmark-results.md`](benchmark-results.md).
+
+## Project and process
+
+[`product-roadmap-status.md`](product-roadmap-status.md) (generated story status)
+· [`../IMPLEMENTATION_STATUS.md`](../IMPLEMENTATION_STATUS.md) (remediation depth)
+· [`../AGENTS.md`](../AGENTS.md) (working rules for humans and agents)
+· [`../CONTRIBUTING.md`](../CONTRIBUTING.md) · [`../CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md)
+· [`../product/Adaptive_Runtime_Product_Roadmap_v2.json`](../product/Adaptive_Runtime_Product_Roadmap_v2.json) (source of truth)
+
+## Keeping this set honest
+
+```bash
+python scripts/validate_docs.py    # required pages, sections, links, no placeholders
+```
+
+Adding a required page means adding it to `REQUIRED_DOCS` in that script and
+linking it here or from `README.md`; otherwise CI fails with "written but not
+published".
