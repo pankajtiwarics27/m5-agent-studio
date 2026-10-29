@@ -62,8 +62,11 @@ them gone), the tool audit trail (a security record), credential/configuration
 tables, and schema bookkeeping. Council Hall messages and context-vault chunks
 are pruned with their owning sessions; matching FTS5 rows are removed in the
 same retention pass. Expired harness-session rows and their `.jsonl` event logs
-and `.messages.json` snapshots are also removed. Retention reports separate
-counts for database rows, FTS rows, successfully removed transcript files, and transcript-file unlink failures (`harness_session_files_failed`). This is logical deletion, not forensic erasure: SQLite pages/WAL may retain deleted bytes until SQLite reuses or vacuums them, and filesystem unlink does not guarantee secure overwrite.
+and `.messages.json` snapshots are also removed. Each transcript file must
+independently be older than the cutoff before it is unlinked; an old orphan
+file does not make a newer paired file eligible for deletion. Retention reports
+separate counts for database rows, FTS rows, successfully removed transcript
+files, and transcript-file unlink failures (`harness_session_files_failed`). This is logical deletion, not forensic erasure: SQLite pages/WAL may retain deleted bytes until SQLite reuses or vacuums them, and filesystem unlink does not guarantee secure overwrite.
 
 ## Deletion
 
