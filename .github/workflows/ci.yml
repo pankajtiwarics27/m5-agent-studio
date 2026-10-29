@@ -43,7 +43,7 @@ jobs:
       - name: Validate published documentation and links
         run: python scripts/validate_docs.py
       - name: Install project and test dependencies
-        run: python -m pip install -e '.[dev]'
+        run: python -m pip install -e '.[dev,supply-chain]'
       - name: Lint sources (Ruff)
         run: ruff check .
       - name: Type-check contract modules (mypy)
@@ -58,6 +58,19 @@ jobs:
         run: |
           python scripts/smoke_local.py
           python scripts/smoke_local.py --standalone
+      - name: Build release evidence (SBOM, scans, provenance)
+        run: >-
+          python scripts/release_supply_chain.py build
+          --output dist/evidence --deterministic --source-commit "$GITHUB_SHA"
+      - name: Verify release evidence matches the artifact
+        run: python scripts/release_supply_chain.py verify --output dist/evidence
+      - name: Upload release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-${{ matrix.python-version }}
+          path: dist/evidence
+          retention-days: 14
+          if-no-files-found: error
       - name: Verify generated artifacts are reproducible
         run: |
           python scripts/build_studio.py

@@ -18,7 +18,7 @@ app.py                     canonical FastAPI backend: routes, middleware,
                            workflow_orchestration, mcp_client, context_store,
                            history_privacy, onboarding_preflight,
                            release_manager, routing_policy, sandbox_boundary,
-                           session_trust, model_*, hardware_*, …
+                           session_trust, supply_chain, model_*, hardware_*, …
 static/index.html          canonical UI: one file, five panes, no build step
 studio.py                  GENERATED standalone (app.py + inlined modules + UI)
 scripts/                   build, generate, validate, smoke, maintenance

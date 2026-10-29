@@ -85,7 +85,7 @@ check. From a clean checkout:
 
 ```bash
 python -m venv .venv && . .venv/bin/activate
-python -m pip install -e '.[dev]'
+python -m pip install -e '.[dev,supply-chain]'   # supply-chain = pip-audit for the release scan
 
 python scripts/verify_baseline.py                       # pinned Git ancestry (needs full history: git fetch --unshallow)
 ruff check .                                            # lint (generated studio.py excluded)
@@ -102,6 +102,8 @@ git diff --exit-code                                    # any output = stale gen
 python scripts/validate_governance.py
 python scripts/validate_security_signoff.py              # AS-031 record/release-gate consistency
 python scripts/validate_docs.py                         # required docs, sections, links, no placeholders
+python scripts/release_supply_chain.py build            # SBOM + provenance + scans (writes dist/evidence)
+python scripts/release_supply_chain.py verify           # evidence still describes the artifact
 python scripts/validate_adrs.py                         # only if you touched docs/adr/
 python scripts/check_commit_messages.py --base origin/main   # only new commits are checked
 ```
