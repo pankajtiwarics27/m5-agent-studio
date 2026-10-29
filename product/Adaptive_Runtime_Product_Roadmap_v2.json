@@ -915,7 +915,7 @@
       "implementation_prompt": "Implement AS-028 (P0): Sandbox and filesystem boundary hardening. Prerequisites: 010. Required outcome: Path traversal, symlinks, sandbox escape and network isolation tested. First locate existing code and tests, explain design tradeoffs, implement only this scope, add positive/negative/failure tests and document evidence. Preserve hardware/model/provider independence, privacy, secure execution and compatibility. Report blockers instead of inventing dependencies.",
       "backlog_order": 41,
       "status": "completed",
-      "status_evidence": "Commit AS-028; sandbox boundary hardening with tests (tests/test_sandbox_boundary.py, tests/test_pinned_transport.py, tests/test_redirect_safety.py); preflight refuses roots/secret filenames/credentialed remotes. Outstanding: live container-runtime validation is opt-in and skipped without Docker/Podman.",
+      "status_evidence": "Commit AS-028; sandbox boundary hardening with tests (tests/test_sandbox_boundary.py, tests/test_pinned_transport.py, tests/test_redirect_safety.py); preflight refuses roots/secret filenames/credentialed remotes. User-reported opt-in tests/test_live_sandbox.py passed on Docker Desktop at b452441 with python:3.12-slim, checking workspace writes, read-only container root, and no public network. This does not prove host-kernel/container escape resistance or validate other runtimes/platforms; keep status completed rather than verified pending the broader security review.",
       "status_updated": "2026-10-28"
     },
     {
@@ -953,7 +953,7 @@
       "implementation_prompt": "Implement AS-030 (P1): History privacy retention and export. Prerequisites: 009,025. Required outcome: Export/delete/retention and secret redaction tested. First locate existing code and tests, explain design tradeoffs, implement only this scope, add positive/negative/failure tests and document evidence. Preserve hardware/model/provider independence, privacy, secure execution and compatibility. Report blockers instead of inventing dependencies.",
       "backlog_order": 43,
       "status": "verified",
-      "status_evidence": "History privacy tests cover redaction/export and retention of database history; AS-031 follow-up additionally verifies that aged context-vault FTS5 copies and inactive harness transcript files are removed, while active/recent sessions remain. A SQLite export is not a complete inventory of filesystem transcripts or FTS indexes. The standalone build and full suite passed on 2026-10-29 (436 passed, one opt-in live sandbox test skipped). Dependencies AS-009/AS-025 verified; external runtime/OS checks remain separate.",
+      "status_evidence": "History privacy tests cover redaction/export and retention; AS-031 follow-up tests verify stale context-vault FTS5 copies and inactive harness transcript files are removed while active/recent sessions remain. A regression verifies an old orphan transcript does not delete its newer paired file. A SQLite export is not a complete inventory of filesystem transcripts or FTS indexes. Full suite at implementation commit b7d841a: 438 passed, 1 opt-in sandbox test skipped on Linux/Python 3.11 and user-reported macOS/Python 3.15. Dependencies AS-009/AS-025 verified; external runtime/OS checks remain separate.",
       "status_updated": "2026-10-29"
     },
     {
