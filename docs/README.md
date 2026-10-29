@@ -9,6 +9,7 @@ contain placeholder text, and every relative link must resolve.
 | Page | Read it when |
 |---|---|
 | [`quickstart.md`](quickstart.md) | Installing, first run, connecting a model, first task, troubleshooting |
+| [`demo.md`](demo.md) | One-command reproducible demo, the committed transcript, and the screenshot set |
 | [`onboarding-preflight.md`](onboarding-preflight.md) | You want to know what the Start tab checks and why |
 | [`../README.md`](../README.md) | You want the full reference: configuration, API, tools, database |
 | [`../BASELINE.md`](../BASELINE.md) | You want the pinned baseline and a clean-checkout reproduction |

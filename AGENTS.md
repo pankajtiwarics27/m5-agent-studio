@@ -104,6 +104,8 @@ python scripts/validate_security_signoff.py              # AS-031 record/release
 python scripts/validate_docs.py                         # required docs, sections, links, no placeholders
 python scripts/release_supply_chain.py build            # SBOM + provenance + scans (writes dist/evidence)
 python scripts/release_supply_chain.py verify           # evidence still describes the artifact
+python scripts/demo_tour.py --check                     # committed demo transcript has not drifted
+python scripts/validate_screenshots.py                  # screenshot manifest vs. captured images
 python scripts/validate_adrs.py                         # only if you touched docs/adr/
 python scripts/check_commit_messages.py --base origin/main   # only new commits are checked
 ```

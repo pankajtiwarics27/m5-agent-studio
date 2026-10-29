@@ -7,6 +7,9 @@ Related: [`onboarding-preflight.md`](onboarding-preflight.md) (the checks behind
 the Start tab), [`../BASELINE.md`](../BASELINE.md) (reproducible setup),
 [`configuration-contracts.md`](configuration-contracts.md) (every setting).
 
+Want a look first? `python3 scripts/demo_tour.py` runs an offline, provider-free
+tour of the same flow in one command — see [`demo.md`](demo.md).
+
 ## Install
 
 Python `>=3.11` is the only hard requirement. Pick one of two shapes.
