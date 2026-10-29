@@ -48,3 +48,14 @@ def test_council_disclosure_keeps_round_and_stop_available():
         assert ("details", "hallSingleSettings") in parser.parents[element]
     for element in ("hallReasoningSelect", "hallStopBtn", "hallFullRoundBtn", "hallConcludeBtn", "hallHumanInput"):
         assert not any(tag == "details" for tag, _ in parser.parents[element])
+
+
+def test_compare_arbiter_dependency_preserves_selector():
+    parser = Elements()
+    source = (Path(__file__).resolve().parents[1] / "static/index.html").read_text()
+    parser.feed(source)
+    assert parser.attrs["d-synth"]["onchange"] == "syncDebateArbiter()"
+    assert ("div", "debateArbiterModel") in parser.parents["d-judge"]
+    assert "hidden" in parser.attrs["debateArbiterHint"]
+    assert 'document.getElementById("debateArbiterModel").hidden = !enabled' in source
+    assert 'judge_model: document.getElementById("d-judge").value' in source

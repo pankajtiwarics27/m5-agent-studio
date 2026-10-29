@@ -12,3 +12,7 @@
 
 - Council role model selectors remain open initially because they determine the models used for a round; users may collapse them after reviewing the choices. The less frequent “Ask one model” controls are disclosed separately. Reasoning affects both individual and full rounds, so it remains visible, as do Stop, round, conclusion and message controls. Each disclosure remembers its state for the browser session without changing model choices.
 - Removed decorative hardcoded colors from role labels and the empty-state heading and conclusion heading, using existing text tokens. New-session buttons are secondary to “Send and run round”. No token additions or execution behavior changes. Role selectors reflow to two columns at the existing 880px breakpoint.
+
+## Compare feature dependency
+
+- The existing Arbiter Verdict checkbox already controls `include_synthesis` in the request. When unchecked, the arbiter model selector is hidden and replaced with an explanation; re-enabling reveals the same selector and value. The request payload and checkbox default are unchanged. This does not create or enable any feature.

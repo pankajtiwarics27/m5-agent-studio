@@ -454,7 +454,8 @@ body { font-family: var(--sans); }
 .layout { height: calc(100dvh - var(--header-height)); grid-template-columns: minmax(0, 1fr) 320px; }
 .workspace { min-width: 0; }
 .skills-strip { background: var(--bg-elev); border-bottom: 1px solid var(--border); padding: 7px 16px; gap: 7px; }
-.skills-strip .field-lbl { color: var(--text-dim) !important; font-size: 12px; }
+.skills-strip .field-lbl[hidden] { display: none; }
+.field-lbl { color: var(--text-dim) !important; font-size: 12px; }
   .skills-strip > span[aria-hidden="true"] { color: var(--border-hi) !important; }
   #contextModal .field-lbl, #mcpModal .field-lbl, #pane-hall .field-lbl { color: var(--text-dim) !important; }
   #contextModal strong[style*="color:"] { color: var(--text) !important; }
@@ -1518,8 +1519,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <div id="debateModelChecks" style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;"></div>
           </div>
           <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-            <label class="chk-lbl"><input type="checkbox" id="d-synth" checked /> Arbiter Verdict</label>
-            <div><label class="field-lbl">Arbiter Model</label><select id="d-judge"></select></div>
+            <label class="chk-lbl"><input type="checkbox" id="d-synth" checked onchange="syncDebateArbiter()" /> Arbiter Verdict</label>
+            <div id="debateArbiterModel"><label class="field-lbl" for="d-judge">Arbiter Model</label><select id="d-judge"></select></div>
+            <span id="debateArbiterHint" class="field-lbl" hidden>Enable Arbiter Verdict to choose an arbiter model.</span>
           </div>
         </div>
         <div class="prompt-box">
@@ -2615,6 +2617,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       error(d) { showToast("Council error: " + d.message, "err"); }
     }, () => { document.getElementById("councilRunBtn").disabled = false; document.getElementById("councilStopBtn").style.display = "none"; });
   }
+
+  function syncDebateArbiter() {
+    const enabled = document.getElementById("d-synth").checked;
+    document.getElementById("debateArbiterModel").hidden = !enabled;
+    document.getElementById("debateArbiterHint").hidden = enabled;
+  }
+  syncDebateArbiter();
 
   let debateSlots = {}, debateSynth = { m: "", c: "", u: null };
   function renderDebate() {
