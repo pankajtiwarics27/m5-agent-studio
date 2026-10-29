@@ -518,13 +518,30 @@ python3 scripts/release.py rollback                              # swap active a
 python3 scripts/release.py verify                                # exit 1 if the active or previous artifact is corrupt
 ```
 
-Details and limits (no signing/notarization — that is AS-042):
-[`docs/packaging-rollback.md`](docs/packaging-rollback.md).
+Details and limits: [`docs/packaging-rollback.md`](docs/packaging-rollback.md).
+
+### Release evidence: SBOM, scans, provenance, signing
+
+```bash
+python -m pip install -e '.[dev,supply-chain]'                   # pip-audit for the dependency scan
+python3 scripts/release_supply_chain.py build  --version 9.0.1 --output dist/evidence
+python3 scripts/release_supply_chain.py verify --version 9.0.1 --output dist/evidence
+python3 scripts/release_supply_chain.py gate   --version 9.0.1 --output dist/evidence
+```
+
+`build` writes a CycloneDX SBOM, an in-toto/SLSA provenance statement, the scan
+records, and — only when a signer is configured — a detached signature. `verify`
+re-checks the evidence against the artifact; `gate` is the release decision.
+
+Signing requires an external tool and a real key; neither exists in this
+repository, so the default signer fails closed with `SigningError` and the gate
+stays closed. A scan that cannot run is recorded as `unavailable`, which also
+keeps the gate closed. Details: [`docs/release-provenance.md`](docs/release-provenance.md).
 
 ### Verification (same sequence as CI)
 
 ```bash
-python -m pip install -e '.[dev]'
+python -m pip install -e '.[dev,supply-chain]'
 python scripts/verify_baseline.py
 ruff check .
 mypy

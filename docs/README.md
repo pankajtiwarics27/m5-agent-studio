@@ -28,6 +28,7 @@ contain placeholder text, and every relative link must resolve.
 | Page | Contents |
 |---|---|
 | [`packaging-rollback.md`](packaging-rollback.md) | Versioned install, update, rollback, artifact integrity |
+| [`release-provenance.md`](release-provenance.md) | SBOM, provenance, scans, and the signing hook (unprovisioned) |
 | [`migration-guide.md`](migration-guide.md) | Upgrading releases, schema migrations, credentials, restore |
 | [`storage-migrations.md`](storage-migrations.md) | Storage seam and schema-migration invariants |
 | [`configuration-contracts.md`](configuration-contracts.md) | Every setting, precedence, and validation rule |

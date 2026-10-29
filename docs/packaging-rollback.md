@@ -32,8 +32,10 @@ the same smoke tests run on Linux CI and on a macOS host.
 
 `manifest.json` is written by `package` from the real bytes on disk
 (`build_manifest` never guesses a digest) and carries the source commit, so an
-installed release can be tied back to a Git revision. Signing, notarization,
-SBOM, and provenance attestations are AS-042 and are **not** claimed here.
+installed release can be tied back to a Git revision. SBOM, provenance, scans,
+and the signing hook are covered by [`release-provenance.md`](release-provenance.md);
+no artifact produced here is signed or notarized yet, and nothing on this page
+claims otherwise.
 
 ## 3. Operations
 
