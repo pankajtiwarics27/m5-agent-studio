@@ -7,6 +7,7 @@
 - `static/index.html`: Harness advanced settings disclosure, compact/comfortable density preference, less competing primary emphasis, token-based primary text and targeted shell/banner color cleanup.
 - `static/index.html`: Council role-model and single-model disclosures, labeled controls and targeted color cleanup.
 - `static/index.html`: Compare arbiter model appears only when its verdict feature is enabled, preserving its selection.
+- `static/index.html`: Pipeline filters and presets are keyboard-operable, selection is announced, and fields have accessible labels.
 - `studio.py`: regenerated standalone artifact.
 - `tests/test_ui_disclosure.py`: structural regression checks for essential controls and disclosure.
 
@@ -20,4 +21,5 @@ This is a first increment, not a complete implementation of the requested app-wi
 - After the increment: Ruff and mypy passed; frontend syntax and standalone build passed; pytest passed (710 passed, 1 skipped, one dependency deprecation warning) after fetching the missing Git history. The skipped live sandbox test requires explicit opt-in.
 - Council increment: Ruff, mypy, frontend syntax and build passed; pytest passed (711 passed, 1 skipped).
 - Compare increment: Ruff, mypy, frontend syntax and build passed; pytest passed (712 passed, 1 skipped).
+- Pipeline increment: Ruff, mypy, frontend syntax and build passed; pytest passed (713 passed, 1 skipped).
 - Invoking `node scripts/test_ui_auth_helper.js` without its required injected HTML input failed; the full pytest suite passed its existing auth coverage. No manual browser, responsive, keyboard, or visual theme verification was performed in this environment; contrast measurements are limited to the pairs recorded in the audit and decisions.

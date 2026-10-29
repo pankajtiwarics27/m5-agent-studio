@@ -16,3 +16,7 @@
 ## Compare feature dependency
 
 - The existing Arbiter Verdict checkbox already controls `include_synthesis` in the request. When unchecked, the arbiter model selector is hidden and replaced with an explanation; re-enabling reveals the same selector and value. The request payload and checkbox default are unchanged. This does not create or enable any feature.
+
+## Pipeline controls
+
+- Stage filters and prompt presets were clickable non-keyboard elements; they are now native buttons. Filter selection has a textual selected indicator and synchronized `aria-pressed`; live stage status remains visible. Model and reasoning labels are explicitly associated with their controls and the task has an accessible name. Preset hover now uses existing neutral tokens instead of fixed white/cyan. Filtering and preset logic remain unchanged.

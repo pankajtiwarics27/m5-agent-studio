@@ -284,11 +284,13 @@
   .chip:hover, .chip.active { color: #fff; border-color: var(--cyan); background: rgba(6,182,212,0.14); }
 
   .stepper { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 13px; }
-  .step-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+  .step-card { text-align: left; font-family: inherit; color: var(--text); background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; cursor: pointer; }
   .step-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .step-card.running { border-color: var(--cyan); background: rgba(6, 182, 212, 0.08); }
   .step-card.done { border-color: rgba(16, 185, 129, 0.5); }
   .step-num { font-family: var(--mono); font-size: 10px; color: var(--text-faint); font-weight: 700; }
+  .step-num, .step-title { display: block; }
+  .step-card.selected .step-title::after { content: " (selected)"; font-size: 12px; font-weight: 400; }
   .step-title { font-weight: 650; font-size: 12.4px; margin: 2px 0; }
   .step-meta { font-family: var(--mono); font-size: 10.6px; color: var(--text-dim); display: flex; justify-content: space-between; }
 
@@ -539,6 +541,7 @@ body[data-density="compact"] .council-settings { padding-block: 4px; }
 }
 .voice-card { border-radius: 8px; }
 .step-card.running { border-color: var(--accent); background: var(--bg-card); }
+.chip:hover, .chip.active { color: var(--text); border-color: var(--border-hi); background: var(--bg-hover); }
 .model-row.loaded { border-color: var(--border); background: var(--bg-card); }
 details.think-box { background: var(--bg-card); border-color: var(--border); border-radius: 7px; }
 details.think-box summary { color: var(--text); font-size: 12px; }
@@ -1450,15 +1453,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       <div id="councilScroll" class="scroll-body">
         <div class="config-strip">
           <div class="role-grid">
-            <div><label class="field-lbl">1. Architect (Local or Cloud)</label><select id="c-arch"></select></div>
-            <div><label class="field-lbl">2. Fast Coder (Local or Cloud)</label><select id="c-coder"></select></div>
-            <div><label class="field-lbl">3. Critic (Local or Cloud)</label><select id="c-critic"></select></div>
-            <div><label class="field-lbl">4. Judge (Local or Cloud)</label><select id="c-judge"></select></div>
+            <div><label class="field-lbl" for="c-arch">1. Architect (Local or Cloud)</label><select id="c-arch"></select></div>
+            <div><label class="field-lbl" for="c-coder">2. Fast Coder (Local or Cloud)</label><select id="c-coder"></select></div>
+            <div><label class="field-lbl" for="c-critic">3. Critic (Local or Cloud)</label><select id="c-critic"></select></div>
+            <div><label class="field-lbl" for="c-judge">4. Judge (Local or Cloud)</label><select id="c-judge"></select></div>
           </div>
           <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap; justify-content:space-between;">
             <label class="chk-lbl"><input type="checkbox" id="c-unload" checked /> Auto-unload local M5 models between stages (Cloud voices skip unload automatically)</label>
             <div style="display:flex; align-items:center; gap:8px;">
-              <label class="field-lbl" style="margin:0;">Reasoning:</label>
+              <label class="field-lbl" for="c-reasoning" style="margin:0;">Reasoning:</label>
               <select id="c-reasoning" style="padding:4px 8px; font-size:12px;">
                 <option value="off" selected>Off — Direct Fast (~29 tok/s)</option>
                 <option value="low">Low — Bounded (900t cap)</option>
@@ -1469,11 +1472,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         </div>
 
         <div class="prompt-box">
-          <textarea id="councilPrompt">Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks, with graceful cancellation and unit tests.</textarea>
+          <textarea id="councilPrompt" aria-label="Pipeline task">Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks, with graceful cancellation and unit tests.</textarea>
           <div class="prompt-footer">
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
-              <span class="chip" onclick="setCouncilPreset('Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks.')">Token Bucket</span>
-              <span class="chip" onclick="setCouncilPreset('Design an event-sourced Portfolio Rebalancer Actor in Python with integer atomic units, deterministic MarketSnapshot replay, and stale-price circuit breakers.')">Portfolio Actor</span>
+              <button type="button" class="chip" onclick="setCouncilPreset('Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks.')">Token Bucket</button>
+              <button type="button" class="chip" onclick="setCouncilPreset('Design an event-sourced Portfolio Rebalancer Actor in Python with integer atomic units, deterministic MarketSnapshot replay, and stale-price circuit breakers.')">Portfolio Actor</button>
             </div>
             <div style="display:flex; gap:8px;">
               <button id="councilStopBtn" class="btn btn-danger" style="display:none;" onclick="stopActiveStream()">Stop</button>
@@ -1485,26 +1488,26 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div id="skillsAppliedNotice" style="display:none; margin-bottom:12px;"></div>
 
         <div class="stepper">
-          <div class="step-card selected" id="step-card-0" onclick="selectStageFilter(0)">
-            <div class="step-num">VIEW</div><div class="step-title">All Stages</div>
-            <div class="step-meta"><span id="councilTotalStatus">Ready</span><span id="councilTotalTime"></span></div>
-          </div>
-          <div class="step-card" id="step-card-1" onclick="selectStageFilter(1)">
-            <div class="step-num">1 • ARCHITECT</div><div class="step-title">Spec</div>
-            <div class="step-meta"><span id="st-state-1">Idle</span><span id="st-tps-1"></span></div>
-          </div>
-          <div class="step-card" id="step-card-2" onclick="selectStageFilter(2)">
-            <div class="step-num">2 • CODER</div><div class="step-title">Draft</div>
-            <div class="step-meta"><span id="st-state-2">Idle</span><span id="st-tps-2"></span></div>
-          </div>
-          <div class="step-card" id="step-card-3" onclick="selectStageFilter(3)">
-            <div class="step-num">3 • CRITIC</div><div class="step-title">Audit</div>
-            <div class="step-meta"><span id="st-state-3">Idle</span><span id="st-tps-3"></span></div>
-          </div>
-          <div class="step-card" id="step-card-4" onclick="selectStageFilter(4)">
-            <div class="step-num">4 • JUDGE</div><div class="step-title">Final</div>
-            <div class="step-meta"><span id="st-state-4">Idle</span><span id="st-tps-4"></span></div>
-          </div>
+          <button type="button" class="step-card selected" id="step-card-0" aria-pressed="true" onclick="selectStageFilter(0)">
+            <span class="step-num">VIEW</span><span class="step-title">All Stages</span>
+            <span class="step-meta"><span id="councilTotalStatus">Ready</span><span id="councilTotalTime"></span></span>
+          </button>
+          <button type="button" class="step-card" id="step-card-1" aria-pressed="false" onclick="selectStageFilter(1)">
+            <span class="step-num">1 • ARCHITECT</span><span class="step-title">Spec</span>
+            <span class="step-meta"><span id="st-state-1">Idle</span><span id="st-tps-1"></span></span>
+          </button>
+          <button type="button" class="step-card" id="step-card-2" aria-pressed="false" onclick="selectStageFilter(2)">
+            <span class="step-num">2 • CODER</span><span class="step-title">Draft</span>
+            <span class="step-meta"><span id="st-state-2">Idle</span><span id="st-tps-2"></span></span>
+          </button>
+          <button type="button" class="step-card" id="step-card-3" aria-pressed="false" onclick="selectStageFilter(3)">
+            <span class="step-num">3 • CRITIC</span><span class="step-title">Audit</span>
+            <span class="step-meta"><span id="st-state-3">Idle</span><span id="st-tps-3"></span></span>
+          </button>
+          <button type="button" class="step-card" id="step-card-4" aria-pressed="false" onclick="selectStageFilter(4)">
+            <span class="step-num">4 • JUDGE</span><span class="step-title">Final</span>
+            <span class="step-meta"><span id="st-state-4">Idle</span><span id="st-tps-4"></span></span>
+          </button>
         </div>
         <div id="councilStagesContainer"></div>
       </div>
@@ -2571,7 +2574,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
   function selectStageFilter(n) {
     stageFilter = n;
-    for (let i = 0; i <= 4; i++) document.getElementById(`step-card-${i}`).classList.toggle("selected", i === n);
+    for (let i = 0; i <= 4; i++) {
+      const button = document.getElementById(`step-card-${i}`);
+      button.classList.toggle("selected", i === n);
+      button.setAttribute("aria-pressed", String(i === n));
+    }
     for (let k = 1; k <= 4; k++) { const c = document.getElementById(`stage-dom-${k}`); if (c) c.style.display = (n === 0 || n === k) ? "block" : "none"; }
   }
   function scheduleStageUpdate() {

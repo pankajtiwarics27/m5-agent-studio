@@ -59,3 +59,14 @@ def test_compare_arbiter_dependency_preserves_selector():
     assert "hidden" in parser.attrs["debateArbiterHint"]
     assert 'document.getElementById("debateArbiterModel").hidden = !enabled' in source
     assert 'judge_model: document.getElementById("d-judge").value' in source
+
+
+def test_pipeline_filters_are_keyboard_buttons_with_selection_state():
+    parser = Elements()
+    source = (Path(__file__).resolve().parents[1] / "static/index.html").read_text()
+    parser.feed(source)
+    for index in range(5):
+        attributes = parser.attrs[f"step-card-{index}"]
+        assert attributes["type"] == "button"
+        assert attributes["aria-pressed"] == ("true" if index == 0 else "false")
+    assert 'button.setAttribute("aria-pressed", String(i === n))' in source
