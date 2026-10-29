@@ -24,7 +24,8 @@ PINNED_SHA = "b7d841a2a94842d62662e1c57206a531dd2247f7"
 
 SIGNED_REPLACEMENTS: tuple[tuple[str, str], ...] = (
     ("| _none recorded_ | _unsigned_ | _unsigned_ | _unsigned_ |", "| none | n/a | n/a | n/a |"),
-    ("state: unsigned", "state: signed"),
+    ("state: deferred", "state: signed"),
+    ('deferral: "Maintainer decision 2026-10-29: independent human review and human verification run once as the final end-to-end pass after all remaining stories are complete; recorded as completed, not verified, until then."', 'deferral: ""'),
     ('reviewer: ""', 'reviewer: "Dana Reviewer (independent)"'),
     ('reviewer_independence: ""', 'reviewer_independence: "No authorship of app.py or the remediation commits; external engagement."'),
     ('commit: ""', f'commit: "{PINNED_SHA}"'),
@@ -82,33 +83,120 @@ def _rewrite_row(text: str, prefix: str, columns: dict[int, str]) -> str:
     raise AssertionError(f"table row starting with {prefix!r} not found")
 
 
-def test_repository_signoff_record_is_consistent_and_story_stays_open() -> None:
+def test_repository_signoff_record_is_consistent_and_story_never_verified() -> None:
     assert validate_signoff(ROOT) == []
     record, errors = parse_record((ROOT / SIGNOFF).read_text(encoding="utf-8"))
     assert errors == []
-    assert record.state == "unsigned"
+    assert record.state == "deferred"
     assert record.decision == "pending"
+    assert record.deferral and "end-to-end" in record.deferral
     assert set(record.coverage) == {f"B{number}" for number in range(1, 13)}
     assert {"W-1", "F-1", "F-2", "F-3", "F-4", "F-5", "F-6"} <= set(record.findings)
 
     roadmap = json.loads((ROOT / ROADMAP).read_text(encoding="utf-8"))
     story = next(story for story in roadmap["stories"] if story["id"] == "AS-031")
-    assert story["status"] == "in_progress"
+    assert story["status"] == "completed"
 
 
 def test_missing_signoff_record_is_reported(tmp_path: Path) -> None:
     assert any("missing or unreadable sign-off record" in error for error in validate_signoff(tmp_path))
 
 
-def test_unsigned_record_blocks_roadmap_closure(tmp_path: Path) -> None:
+def _unsigned_document(label: str | None = None) -> str:
+    """Return the record as it looked before any implementation (state: unsigned)."""
+    text = (ROOT / SIGNOFF).read_text(encoding="utf-8")
+    text = text.replace("state: deferred", "state: unsigned")
+    lines = [
+        'deferral: ""' if line.startswith("deferral: ") else line for line in text.splitlines()
+    ]
+    return "\n".join(lines) + "\n"
+
+
+@pytest.mark.parametrize("status", ["completed", "verified"])
+def test_unsigned_record_blocks_roadmap_closure(tmp_path: Path, status: str) -> None:
+    _copy_repository_package(tmp_path)
+    _write_signoff(tmp_path, _unsigned_document())
+    _set_story_status(tmp_path, "in_progress")
+    assert validate_signoff(tmp_path) == []
+
+    _set_story_status(tmp_path, status)
+
+    errors = validate_signoff(tmp_path)
+    assert any(f"status '{status}' is inconsistent with a 'unsigned'" in error for error in errors)
+
+
+def test_deferred_record_rejects_verified_status(tmp_path: Path) -> None:
     _copy_repository_package(tmp_path)
     assert validate_signoff(tmp_path) == []
 
     _set_story_status(tmp_path, "verified")
 
     errors = validate_signoff(tmp_path)
-    assert any("AS-031 is 'verified'" in error for error in errors)
-    assert any("must stay out of" in error for error in errors)
+    assert any("status 'verified' is inconsistent with a 'deferred'" in error for error in errors)
+    assert any("may only be 'verified' after a signed record" in error for error in errors)
+
+
+@pytest.mark.parametrize("status", ["planned", "in_progress"])
+def test_deferred_record_rejects_unfinished_status(tmp_path: Path, status: str) -> None:
+    _copy_repository_package(tmp_path)
+    _set_story_status(tmp_path, status)
+
+    errors = validate_signoff(tmp_path)
+    assert any(f"status '{status}' is inconsistent with a 'deferred'" in error for error in errors)
+
+
+@pytest.mark.parametrize(
+    "deferral",
+    [
+        'deferral: ""',
+        'deferral: "later"',
+        'deferral: "Maintainer decision: human verification happens later after everything."',
+        'deferral: "Maintainer decision 2026-10-29: _unset_ end-to-end pass."',
+    ],
+    ids=["empty", "too-short", "unnamed-pass", "placeholder"],
+)
+def test_deferred_record_requires_a_complete_deferral_statement(tmp_path: Path, deferral: str) -> None:
+    _copy_repository_package(tmp_path)
+    text = (ROOT / SIGNOFF).read_text(encoding="utf-8")
+    start = text.index("deferral: ")
+    end = text.index("\n", start)
+    _write_signoff(tmp_path, text[:start] + deferral + text[end:])
+
+    errors = validate_signoff(tmp_path)
+    assert any("deferral" in error or "end-to-end" in error for error in errors)
+
+
+def test_deferred_record_rejects_reviewer_judgement(tmp_path: Path) -> None:
+    _copy_repository_package(tmp_path)
+    text = _rewrite_row(
+        (ROOT / SIGNOFF).read_text(encoding="utf-8"), "F-2 ", {5: "high", 6: "verified"}
+    ).replace('reviewer: ""', 'reviewer: "Someone"')
+    _write_signoff(tmp_path, text)
+
+    errors = validate_signoff(tmp_path)
+    assert any("deferred sign-off record must leave 'reviewer' empty" in error for error in errors)
+    assert any("must not pre-assign reviewer severity: F-2" in error for error in errors)
+    assert any("must not pre-assign fix verification: F-2" in error for error in errors)
+
+
+def test_signed_record_requires_clearing_the_deferral(tmp_path: Path) -> None:
+    _copy_repository_package(tmp_path)
+    text = _signed_document()
+    assert 'deferral: ""' in text
+    _write_signoff(tmp_path, text)
+
+    assert validate_signoff(tmp_path) == []
+
+
+def test_missing_deferral_key_is_reported(tmp_path: Path) -> None:
+    _copy_repository_package(tmp_path)
+    text = "\n".join(
+        line for line in (ROOT / SIGNOFF).read_text(encoding="utf-8").splitlines() if not line.startswith("deferral: ")
+    )
+    _write_signoff(tmp_path, text)
+
+    errors = validate_signoff(tmp_path)
+    assert any("missing key: deferral" in error for error in errors)
 
 
 @pytest.mark.parametrize("status", ["completed", "verified"])

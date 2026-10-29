@@ -171,12 +171,15 @@ docker run -d --name omniroute --restart unless-stopped --stop-timeout 40 \
   session-scoped and replay-protected (AS-027).
 - **Worktrees are not sandboxes.** Harness Git worktrees fail closed when they
   cannot be created; they provide version-control isolation only.
-- **Independent review is pending.** No external penetration test, security
-  audit, or compliance certification has been performed. AS-031 tracks the
-  independent review of the local trust boundary; its outcome (severity per
+- **Independent review is deferred, not waived.** No external penetration test,
+  security audit, or compliance certification has been performed. AS-031's
+  independent review of the local trust boundary is scheduled as the **final
+  end-to-end verification after all remaining roadmap stories are complete**, so
+  its roadmap status is `completed`, not `verified`. The outcome (severity per
   finding, accepted residual risks, accept/block decision) is recorded only in
   [`docs/security-review-signoff.md`](docs/security-review-signoff.md), which is
-  currently unsigned. Treat the controls above as author-verified, not reviewed.
+  currently `deferred` with `decision: pending`. Treat the controls above as
+  author-verified, not reviewed, and do not ship v1.0 before that record is signed.
 - **`GET /healthz`** is a minimal unauthenticated liveness endpoint, not a
   readiness check for the LLM/provider stack.
 
