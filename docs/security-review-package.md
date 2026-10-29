@@ -38,7 +38,7 @@ approval-gated tool execution is session-scoped and replay-protected.
 | B5 | Central tool authorization (deny-by-default, registered tools only) + audit with hashed-only records and fail-closed writes | `authorize_tool_invocation`, `_run_authorized_tool`, `_audit_tool_*` (`app.py`) | `tests/test_audit_log.py`, `tests/test_security_and_quality.py` |
 | B6 | Session-scoped, replay-protected approvals (403 scope / 409 replay; bounded TTL tombstones) | approval slots + `api_approve_harness_tool` (`app.py`) | `tests/test_security_and_quality.py` (AS-027 section) |
 | B7 | Execution modes: disabled (default), container sandbox (no network, read-only root, preflight), explicit host opt-in | `_execution_mode`, `_sandbox_workspace_preflight`, container runner (`app.py`) | `tests/test_sandbox_boundary.py`, `tests/test_live_sandbox.py` (opt-in, needs a container runtime) |
-| B8 | Path confinement and secret-file guards | `_resolve_confined_path`, `_is_secret_filename`, `gsd-secret-read-guard` (`app.py`) | `tests/test_security_and_quality.py`, `tests/test_prompt_injection_adversarial.py` |
+| B8 | Path confinement and secret-file guards, including descriptor-relative no-follow reads and atomic writes | `_workspace_relative_parts`, `_open_workspace_entry_fd`, `_iter_workspace_entries`, `_atomic_write_workspace_text`, `_is_secret_filename`, `gsd-secret-read-guard` (`app.py`) | `tests/test_security_and_quality.py` (including `test_grep_search_rejects_symlink_swapped_after_enumeration`), `tests/test_prompt_injection_adversarial.py` |
 | B9 | Prompt-injection boundaries: escaped untrusted tool output, extraction/policy separation | `_format_untrusted_tool_response`, `extract_tool_calls` (`app.py`) | `tests/test_prompt_injection_adversarial.py` |
 | B10 | Destructive-path hygiene: worktree removal only for a registered direct-child `.harnesses/wt-*` root; failures preserve data | `_remove_harness_worktree` (`app.py`) | `tests/test_security_and_quality.py` (worktree-removal and failure-preservation tests) |
 | B11 | Secrets in OS keyring (SQLite stores references only); migration fails closed | keyring helpers (`app.py`) | `tests/test_security_and_quality.py`, `scripts/check_keyring.py` (target OS) |
@@ -65,24 +65,33 @@ Method: source/test review of B1–B12 plus an adversarial pass against symlinks
 - **F-2 (FTS and transcript retention):** deleting context-vault chunks previously left searchable FTS5 copies; retention now removes FTS entries without a matching surviving chunk. A follow-up found that an old orphan transcript could cause its newer paired file to be removed. Orphan cleanup now checks each file's own `lstat` mtime before unlinking; a regression test verifies the old half is removed while the newer half remains.
 - **F-3 (harness retention):** retention prunes expired session rows and paired JSONL/message files; documentation distinguishes these files from the SQLite export and preserves recent activity.
 - **F-4 (missing-token middleware):** protected routes previously skipped authentication when the token was empty. They now fail closed with 503 unless authentication is explicitly disabled; a no-lifespan test covers this state.
-- **Still examined:** middleware ordering and token-file protections; DNS-pinned transport and redirect rejection; approval replay tombstones; sandbox preflight. These tests do not replace the documented live-runtime, target-OS, browser, proxy, and supply-chain validation.
+- **Still examined by automated/source checks:** middleware ordering and token-file protections; DNS-pinned transport and redirect rejection; approval replay tombstones; sandbox preflight. This evidence does not replace independent human review.
 
-These fixes do not close AS-031: an independent external review must reproduce and verify them, and release remains blocked until the acceptance gate is satisfied.
+### Additional environment evidence (user-reported)
 
-## 7. Known limitations (accepted, documented)
+- At current commit `b7d841a2a94842d62662e1c57206a531dd2247f7`, macOS/Python 3.15: the symlink-swap and per-file transcript-age regressions both passed; full pytest reported 438 passed, 1 skipped.
+- At the same commit, Linux/Python 3.11 in the agent workspace: 438 passed, 1 opt-in sandbox test skipped; Ruff, mypy, compileall, frontend syntax, both smoke checks, artifact generation/checks, and `git diff --check` passed.
+- At `b452441`, the user reported a successful macOS Keychain disposable round-trip and one passing Docker Desktop live sandbox test with `python:3.12-slim`. The container test checked workspace write access, read-only container root, and public-network denial; it does not prove host-kernel escape resistance and was not rerun on `b7d841a`.
+- A real-browser screenshot at loopback showed the Studio page rendered at `b452441`; no real-browser approval acceptance/rejection/disconnect exercise is evidenced.
+
+These results are test and environment evidence, **not independent human security sign-off**. No independent reviewer report tied to `b7d841a` has been supplied. The follow-up F-1/F-2 reports did not include severity ratings. AS-031 is not closed until an independent reviewer records scope, exact commit, findings/severity, verification of fixes, residual risks, and an explicit accept/block decision. Any critical/high issue must be remediated and re-verified or release must remain blocked. This release gate does not block unrelated development.
+
+## 7. Known limitations and separate validation
 
 1. Redaction and the sandbox preflight are best-effort defense-in-depth, not guarantees (`docs/history-privacy.md`, README security section).
-2. OS keyring behavior requires validation under the target desktop account (`scripts/check_keyring.py`); CI environments correctly fail closed.
-3. The live container boundary test is opt-in and requires Docker/Podman; CI does not exercise it.
-4. Real-browser approval UX is simulated in Node during smoke tests, not exercised in a full browser.
-5. Remote exposure behind a reverse proxy requires explicit `STUDIO_ALLOWED_HOSTS`/`STUDIO_ALLOWED_ORIGINS`; proxy/IP behavior beyond that is unvalidated.
-6. The audit log is a local integrity aid, not tamper-proof.
+2. The user-reported Keychain check passed on one macOS desktop account at `b452441`; this is not a platform/account matrix or independent review evidence.
+3. The opt-in live Docker Desktop boundary test passed at `b452441`, but was not rerun at `b7d841a`; it does not prove kernel escape resistance. Other runtimes/platforms remain unvalidated.
+4. The real-browser evidence confirms page rendering only. Full token-prompt and approval accept/reject/disconnect UX remains untested in a browser (the smoke test injects the auth helper in Node).
+5. Remote exposure behind a reverse proxy requires explicit `STUDIO_ALLOWED_HOSTS`/`STUDIO_ALLOWED_ORIGINS`; proxy/IP behavior has not been validated.
+6. No live provider/MCP actions or dependency supply-chain audit are evidenced. Treat these as separate deployment/release-readiness tasks where applicable.
+7. The audit log is a local integrity aid, not tamper-proof. Same-account in-place file modification and hard links remain outside the symlink-specific boundary.
 
 ## 8. Reviewer checklist
 
-1. Reproduce from a clean checkout (commands in `BASELINE.md`; full history needed: `git fetch --unshallow`).
-2. Review `docs/threat-model.md` against the boundary inventory in §3; confirm each threat has either a control + test or an explicit accepted limitation in §7.
-3. Attempt bypasses on the running server (loopback + a remote-mode bind with `STUDIO_API_TOKEN`): auth/Origin/Host/rate/size ordering, token handling, `/api/history/export` contents, approval replay, MCP allowlists.
-4. Exercise the container sandbox with an untrusted workload (network escape, root writes) — requires a local container runtime.
-5. Audit dependency supply chain (e.g., `pip-audit`, review `pyproject.toml` ranges).
-6. Report findings via `SECURITY.md` (private disclosure). **Release gate:** all critical/high findings remediated and re-verified, or release blocked (roadmap AS-031 → AS-046/AS-049/AS-050 chain).
+1. Review exact commit `b7d841a2a94842d62662e1c57206a531dd2247f7` from a clean checkout; commands are in `BASELINE.md` (fetch full history for baseline verification).
+2. Confirm independence from the authors and review `docs/threat-model.md` against B1–B12; check every threat has a control/test or an explicit residual limitation.
+3. Verify the original remediation set and follow-ups, including the symlink-swap test and independent age check for each orphan transcript file. Assign severity to every new finding and re-verify any fix.
+4. Attempt relevant bypasses on a local server: auth/Origin/Host/rate/size ordering, token handling, `/api/history/export`, approval replay, MCP allowlists, and safe workspace path behavior.
+5. Consider the live-container result and its limits; do not infer host-kernel escape resistance from the current test.
+6. Record reviewer identity/independence, scope, exact commit, commands and manual probes, findings with severity/reproduction, residual risks, and explicit accept/block decision. Report vulnerabilities privately via `SECURITY.md`.
+7. **Release gate:** all critical/high findings remediated and re-verified, or release blocked (roadmap AS-031 → AS-046/AS-049/AS-050 chain). Unrelated development may continue while this release gate is pending.
