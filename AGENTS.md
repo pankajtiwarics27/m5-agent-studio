@@ -43,6 +43,7 @@ Violating any of these is a rejected change, regardless of tests passing:
 | [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json) | **Source of truth for the product plan and per-story status** — 63 stories (`AS-001`…`AS-063`) across 7 milestones, each with priority, dependencies, acceptance criteria, an implementation prompt, and a `status` field (`planned` / `in_progress` / `completed` / `verified`) with `status_evidence`. |
 | [`docs/product-roadmap-status.md`](docs/product-roadmap-status.md) | Human-readable dashboard generated from the JSON. **Generated file — never hand-edit.** |
 | [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) | Security-remediation depth beyond story status (what is validated, what remains). |
+| [`docs/security-review-signoff.md`](docs/security-review-signoff.md) | The AS-031 independent-review record and release gate. Only an independent human reviewer edits it; `scripts/validate_security_signoff.py` fails CI if it is unsigned or pre-filled while AS-031 is closed. |
 | [`docs/adr/`](docs/adr/README.md) | Architecture decision records (the living decision log). |
 | [`BASELINE.md`](BASELINE.md) + `BASELINE_COMMIT` | The pinned source baseline and the reproducibility contract. |
 | [`README.md`](README.md) | Product overview, quick start, full configuration/API reference, and critical invariants. |
@@ -50,6 +51,12 @@ Violating any of these is a rejected change, regardless of tests passing:
 **How to pick work:** choose the highest-priority (`P0` before `P1` before `P2`)
 `planned` story whose dependencies are all `completed` or `verified`, respecting
 milestone order. One story per branch, one branch per pull request.
+
+**Never self-close a review gate.** AS-031 stays `in_progress` until
+`docs/security-review-signoff.md` is completed by a reviewer who is independent of
+the implementation. An agent may prepare evidence, remediate findings, and fix
+tooling, but may not fill reviewer severity, independence, or the decision fields,
+and may not mark AS-031 `completed`/`verified` on author-only evidence.
 
 ## 4. Session start protocol
 
@@ -91,6 +98,7 @@ python scripts/generate_subsystem_inventory.py
 python scripts/generate_roadmap_status.py
 git diff --exit-code                                    # any output = stale generated file
 python scripts/validate_governance.py
+python scripts/validate_security_signoff.py              # AS-031 record/release-gate consistency
 python scripts/validate_adrs.py                         # only if you touched docs/adr/
 python scripts/check_commit_messages.py --base origin/main   # only new commits are checked
 ```

@@ -105,3 +105,34 @@ These results are test and environment evidence, **not independent human securit
 5. Consider the live-container result and its limits; do not infer host-kernel escape resistance from the current test.
 6. Record reviewer identity/independence, scope, exact commit, commands and manual probes, findings with severity/reproduction, residual risks, and explicit accept/block decision. Report vulnerabilities privately via `SECURITY.md`.
 7. **Release gate:** all critical/high findings remediated and re-verified, or release blocked (roadmap AS-031 → AS-046/AS-049/AS-050 chain). Unrelated development may continue while this release gate is pending.
+8. Record the outcome in [`security-review-signoff.md`](security-review-signoff.md) and run `python scripts/validate_security_signoff.py`; CI fails on an unsigned record that coexists with a closed AS-031, or a signed `accepted` record with an unverified critical/high finding.
+
+## 9. Sign-off record and automated gate
+
+The reviewer decision lives in [`security-review-signoff.md`](security-review-signoff.md),
+not in this package. That record carries a machine-readable block
+(`state` / `reviewer` / `reviewer_independence` / `commit` / `reviewed_on` /
+`decision`), a B1–B12 coverage table, a W-1/F-1…F-6 finding register with
+reviewer severity and fix-verification columns, an accepted-residual-risk table,
+and the signature block.
+
+`scripts/validate_security_signoff.py` (run in CI, and by
+`tests/test_security_signoff.py`) enforces:
+
+| Rule | Why |
+|---|---|
+| AS-031 may be `completed`/`verified` only when the record is `signed` with `decision: accepted` | Prevents an author from closing the story on author evidence |
+| An unsigned record must keep reviewer fields empty, every finding `unrated`/`not-verified`, and every boundary `not-examined` | A pre-filled "review" is indistinguishable from a self-review |
+| A signed record must fill identity, independence, a full 40-character commit SHA, and an ISO review date | Ties the judgement to a person and an exact tree |
+| `accepted` is rejected while any critical/high finding is `not-verified`, any boundary control is `inadequate`, or unverified findings have no accepted residual risk | Implements *"all critical/high findings remediated or release blocked"* |
+| A signed record may not retain `_unset_`/`_unassigned_`-style placeholders | Catches a half-completed record |
+
+`scripts/security_review_evidence.py` produces the bundle a reviewer pins in
+§2 of the record: commit, branch, dirty/shallow state, interpreter/platform,
+resolved dependency versions, and — with `--run-checks` — the exit status of
+every `BASELINE.md` command. It reports failures verbatim and states explicitly
+that the result is author-run evidence, not a review.
+
+Current state: the record is **unsigned** and `decision: pending`, so AS-031 is
+`in_progress`, this package's self-review stands as the only review performed,
+and the release gates downstream of AS-031 remain closed.
