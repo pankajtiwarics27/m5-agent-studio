@@ -93,7 +93,19 @@ measurements without trusting them).
 · [`../IMPLEMENTATION_STATUS.md`](../IMPLEMENTATION_STATUS.md) (remediation depth)
 · [`../AGENTS.md`](../AGENTS.md) (working rules for humans and agents)
 · [`../CONTRIBUTING.md`](../CONTRIBUTING.md) · [`../CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md)
-· [`../product/Adaptive_Runtime_Product_Roadmap_v2.json`](../product/Adaptive_Runtime_Product_Roadmap_v2.json) (source of truth)
+· [`../product/Adaptive_Runtime_Product_Roadmap_v2.json`](../product/Adaptive_Runtime_Product_Roadmap_v2.json) (AS program story ledger)
+· [`../product/M5_2_0_Autonomous_Roadmap.json`](../product/M5_2_0_Autonomous_Roadmap.json) (M5 2.0 autonomous-program ledger)
+
+## M5 2.0 ground-truth evidence (2026-10-30)
+
+[`m5-2-0-roadmap-reconciliation.md`](m5-2-0-roadmap-reconciliation.md) (how
+the two roadmaps map to each other) ·
+[`m5-2-0-integration-audit.md`](m5-2-0-integration-audit.md) (verified call
+paths, bypass inventory, module integration status) ·
+[`m5-2-0-baseline-evidence.md`](m5-2-0-baseline-evidence.md) (commands, exit
+codes, blocked measurements) ·
+[`../M5_2_0_AGENT_PROMPT.md`](../M5_2_0_AGENT_PROMPT.md) (parallel-agent
+prompt and the multi-agent claim/review/merge protocol).
 
 ## Keeping this set honest
 
