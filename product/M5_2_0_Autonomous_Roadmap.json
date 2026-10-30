@@ -123,10 +123,10 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "M5-P1-03",
     "last_completed_story": "M5-P1-02",
-    "last_checkpoint": "2026-10-30T13:17:57Z",
-    "last_session_id": "arena/d67875b4-m5-agent-studio",
+    "last_checkpoint": "2026-10-30T13:27:21Z",
+    "last_session_id": "arena/9d2ba5b8-m5-agent-studio",
     "next_recommended_story": "M5-P1-03",
     "open_risks": [
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
@@ -1115,13 +1115,13 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P1-03: Durable intent/result ledger integration. Objective: Record intent before side effect and result/reconciliation afterward. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Integrate side_effect_ledger.py or replace only if justified; Use stable action and attempt identities; Separate never-started, in-flight, committed and uncertain; Implement action-type replay classification. Acceptance: Intent committed before every consequential action; Missing result never treated as failed; Non-idempotent uncertain writes are not retried blindly. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-30T13:27:21Z",
+        "updated_at": "2026-10-30T13:27:21Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/9d2ba5b8-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -1129,7 +1129,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "next_action": "Inspect side_effect_ledger.py, mcp_client.py, runtime_persistence.py, execution_spine.py, and app.py; wire durable intent/result ledger with stable action/attempt identities, 4-state separation (never_started, in_flight, committed, uncertain), and action-type replay classification.",
         "readme_updated": false
       }
     },
