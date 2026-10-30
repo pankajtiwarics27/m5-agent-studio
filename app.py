@@ -59,7 +59,7 @@ from urllib.parse import parse_qsl, quote, unquote, urlsplit
 import httpcore
 import httpx
 import keyring
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from history_privacy import HistoryPrivacyError, apply_retention, export_history
@@ -1308,6 +1308,10 @@ def _ensure_base_tables(conn: sqlite3.Connection) -> None:
     )
 
 
+_PROCESS_BOOT_ID = uuid.uuid4().hex[:10]
+DEFAULT_WORKER_LEASE_TTL_S = 60.0
+
+
 def init_db() -> None:
     runtime_persistence.upgrade_database(
         STORAGE,
@@ -1315,9 +1319,27 @@ def init_db() -> None:
         base_ddl=_ensure_base_tables,
         target_version=SCHEMA_VERSION,
     )
-    side_effect_ledger.DurableActionLedger(STORAGE, DB_PATH).reconcile_missing_results(
+    _rp_store = runtime_persistence.RuntimePersistenceStore(STORAGE, DB_PATH)
+    _rp_store.expire_stale_leases()
+    _rp_store.fence_foreign_boot_leases(
+        worker_prefix="wrk-",
+        current_boot_prefix=f"wrk-{_PROCESS_BOOT_ID}-",
+    )
+    _startup_ledger = side_effect_ledger.DurableActionLedger(STORAGE, DB_PATH)
+    _swept_startup = _startup_ledger.reconcile_missing_results(
         error_code="missing_result_on_startup"
     )
+    _affected_tasks = {r.task_id for r in _swept_startup if r.task_id}
+    for _tid in sorted(_affected_tasks):
+        if _startup_ledger.list_unresolved_consequential_actions(_tid):
+            _t = _rp_store.get_task(_tid)
+            if _t is not None and _t.state not in {"blocked", "cancelled"}:
+                _rp_store.record_transition(
+                    _tid,
+                    to_state="blocked",
+                    reason="unresolved_effects_on_startup",
+                    allow_inactive_epoch=True,
+                )
     _migrate_legacy_secrets()
     _seed_env_providers_and_default_combo()
     _seed_default_opencontext()
@@ -1339,6 +1361,14 @@ def init_db() -> None:
         except (sqlite3.Error, HistoryPrivacyError) as exc:
             # Database retention errors leave rows in place; filesystem failures are counted separately.
             print(f"History retention did not run (database data left intact): {exc}", file=sys.stderr)
+
+
+def simulate_process_restart() -> str:
+    """Rotate process boot nonce and run startup lease/intent recovery (`init_db()`)."""
+    global _PROCESS_BOOT_ID
+    _PROCESS_BOOT_ID = uuid.uuid4().hex[:10]
+    init_db()
+    return _PROCESS_BOOT_ID
 
 
 def _seed_env_providers_and_default_combo() -> None:
@@ -6970,6 +7000,15 @@ def create_harness_session_db(
             (sid, clean_title, ws_str, wt_str, branch_name, wt_flag, pol, lead_model, critic_model, now, now),
         ),
     )
+    runtime_persistence.RuntimePersistenceStore(STORAGE, DB_PATH).ensure_task(
+        sid,
+        session_id=sid,
+        title=clean_title,
+        state="pending",
+        workspace_dir=wt_str,
+        policy=pol,
+        now=now,
+    )
     _append_harness_event(
         sid,
         "session/init",
@@ -8089,6 +8128,7 @@ class _AppIntentLedger:
             session_id=request.session_id,
             task_id=request.task_id,
             epoch=request.epoch,
+            worker_id=request.worker_id,
         )
         return execution_spine.IntentBeginDecision(
             proceed=outcome.proceed,
@@ -8117,12 +8157,103 @@ class _AppIntentLedger:
         return rec.status
 
 
-class _AppTaskContextResolver:
-    """Authoritative task-lifecycle and lease-epoch resolver (M5-P1-02).
+def get_worker_lease_coordinator(
+    workspace_root: Path | None = None,
+) -> side_effect_ledger.WorkerLeaseCoordinator:
+    """Return the authoritative M5-P1-04 worker lease & pre-takeover reconciliation coordinator."""
+    return side_effect_ledger.WorkerLeaseCoordinator(
+        runtime_persistence.RuntimePersistenceStore(STORAGE, DB_PATH),
+        get_durable_action_ledger(workspace_root),
+    )
 
-    Enforces live session abort flags (``_HARNESS_ABORT_FLAGS``) as well as
-    durable ``runtime_tasks`` state and ``runtime_task_epochs`` lease-epoch
-    validation via ``runtime_persistence.RuntimePersistenceStore``.
+
+def _acquire_turn_lease_or_409(
+    sess: Mapping[str, Any],
+    *,
+    lease_ttl_s: float | None = None,
+) -> tuple[side_effect_ledger.WorkerLeaseCoordinator, side_effect_ledger.LeaseClaimOutcome, str]:
+    """Claim a single-owner monotonic worker lease for a turn or raise HTTP 409 on conflict/hold."""
+    sid = str(sess["id"])
+    wt_raw = str(sess.get("worktree_dir") or "").strip()
+    wt_root = Path(wt_raw).resolve() if wt_raw else None
+    coord = get_worker_lease_coordinator(wt_root)
+    worker_id = f"wrk-{_PROCESS_BOOT_ID}-{uuid.uuid4().hex[:8]}"
+    ttl = float(DEFAULT_WORKER_LEASE_TTL_S if lease_ttl_s is None else lease_ttl_s)
+    try:
+        claim = coord.acquire_or_takeover(
+            sid,
+            worker_id,
+            session_id=sid,
+            title=str(sess.get("title") or ""),
+            workspace_dir=wt_raw,
+            policy=str(sess.get("policy") or "standard"),
+            lease_ttl_s=ttl,
+        )
+    except (
+        runtime_persistence.LeaseOwnershipConflictError,
+        side_effect_ledger.UnresolvedEffectsHoldError,
+    ) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return coord, claim, worker_id
+
+
+def _bind_lease_to_session(
+    sess: Mapping[str, Any],
+    *,
+    task_id: str,
+    epoch: int,
+    worker_id: str,
+) -> dict[str, Any]:
+    """Bind authoritative ``(task_id, epoch, worker_id)`` onto a turn's session dict."""
+    return {
+        **dict(sess),
+        "task_id": task_id,
+        "epoch": epoch,
+        "worker_id": worker_id,
+    }
+
+
+async def _await_tool_approval_with_lease(
+    pending: dict[str, Any],
+    *,
+    coord: side_effect_ledger.WorkerLeaseCoordinator,
+    task_id: str,
+    epoch: int,
+    worker_id: str,
+    lease_ttl_s: float | None = None,
+) -> dict[str, Any]:
+    """Await human approval while renewing the worker lease so waiting does not drop ownership."""
+    ttl = float(DEFAULT_WORKER_LEASE_TTL_S if lease_ttl_s is None else lease_ttl_s)
+    coord.heartbeat(task_id, epoch, worker_id, lease_ttl_s=ttl)
+    interval = max(0.25, min(15.0, ttl / 3.0))
+
+    async def _keepalive() -> None:
+        while True:
+            await asyncio.sleep(interval)
+            try:
+                coord.heartbeat(task_id, epoch, worker_id, lease_ttl_s=ttl)
+            except Exception:
+                return
+
+    hb_task = asyncio.create_task(_keepalive())
+    try:
+        decision = await _await_tool_approval(pending)
+    finally:
+        hb_task.cancel()
+        try:
+            await hb_task
+        except asyncio.CancelledError:
+            pass
+    coord.heartbeat(task_id, epoch, worker_id, lease_ttl_s=ttl)
+    return decision
+
+
+class _AppTaskContextResolver:
+    """Authoritative task-lifecycle and lease-epoch resolver (M5-P1-02 / M5-P1-04).
+
+    Enforces live session abort flags (``_HARNESS_ABORT_FLAGS``), durable
+    ``runtime_tasks`` state, ``runtime_task_epochs`` worker-lease ownership &
+    TTL expiry, and unresolved side-effect holds.
     """
 
     def resolve_task_context(
@@ -8139,13 +8270,23 @@ class _AppTaskContextResolver:
         clean_task_id = str(request.task_id).strip()
         if not clean_task_id or not DB_PATH.exists():
             return None
+        now_ts = time.time()
         store = runtime_persistence.RuntimePersistenceStore(STORAGE, DB_PATH)
         task = store.get_task(clean_task_id)
         if task is None:
             return None
         lookup_epoch = request.epoch if request.epoch is not None else (task.current_epoch if task.current_epoch > 0 else None)
         epoch_rec = store.get_epoch(clean_task_id, lookup_epoch) if (lookup_epoch is not None and lookup_epoch > 0) else None
-        lease_expired = bool(epoch_rec is not None and epoch_rec.lease_expires_at <= time.time())
+        lease_expired = bool(epoch_rec is not None and epoch_rec.lease_expires_at <= now_ts)
+        if lease_expired and epoch_rec is not None and epoch_rec.status == "active":
+            store.expire_stale_leases(task_id=clean_task_id, now=now_ts)
+            epoch_rec = store.get_epoch(clean_task_id, epoch_rec.epoch)
+        unresolved = side_effect_ledger.DurableActionLedger(
+            STORAGE, DB_PATH
+        ).list_unresolved_consequential_actions(
+            clean_task_id,
+            before_epoch=(task.current_epoch if task.current_epoch > 0 else None),
+        )
         return execution_spine.TaskAdmissionSnapshot(
             task_id=task.task_id,
             state=task.state,
@@ -8153,6 +8294,7 @@ class _AppTaskContextResolver:
             epoch_status=epoch_rec.status if epoch_rec is not None else None,
             epoch_worker_id=epoch_rec.worker_id if epoch_rec is not None else None,
             lease_expired=lease_expired,
+            unresolved_effect_ids=tuple(r.action_id for r in unresolved),
         )
 
 
@@ -8561,6 +8703,11 @@ async def api_delete_harness_session(session_id: str) -> JSONResponse:
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     _HARNESS_ABORT_FLAGS.add(session_id)
+    get_worker_lease_coordinator(Path(sess["worktree_dir"]).resolve()).fence_and_halt(
+        session_id,
+        target_state="cancelled",
+        reason="session_deleted",
+    )
     _remove_harness_worktree(Path(sess["workspace_dir"]), Path(sess["worktree_dir"]), sess.get("branch_name") or "")
     runtime_persistence.run_write_transaction(
         STORAGE,
@@ -8652,6 +8799,16 @@ async def api_abort_harness(session_id: str) -> JSONResponse:
     for aid, slot in list(_PENDING_APPROVALS.items()):
         if slot.get("session_id") == session_id and not slot["event"].is_set():
             _resolve_pending_tool_approval(aid, "reject", note="Run aborted by user.", session_id=session_id, remember=True)
+    try:
+        sess_ab = get_harness_session_db(session_id)
+        wt_ab = Path(sess_ab["worktree_dir"]).resolve() if sess_ab.get("worktree_dir") else None
+    except KeyError:
+        wt_ab = None
+    get_worker_lease_coordinator(wt_ab).fence_and_halt(
+        session_id,
+        target_state="paused",
+        reason="aborted_by_operator",
+    )
     _update_harness_session_state(session_id, status="idle")
     return JSONResponse({"status": "aborted", "session_id": session_id})
 
@@ -8698,52 +8855,84 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
             )
             sess = get_harness_session_db(session_id)
 
+    coord, claim, worker_id = _acquire_turn_lease_or_409(sess)
+    lease_epoch = claim.epoch_record.epoch
+    lease_released = False
+    lease_final_state = "paused"
+
+    def _release_turn_lease() -> None:
+        nonlocal lease_released
+        if not lease_released:
+            lease_released = True
+            coord.release(
+                session_id,
+                lease_epoch,
+                worker_id,
+                next_state=lease_final_state,
+                reason=f"turn_{lease_final_state}",
+            )
+
     _HARNESS_ABORT_FLAGS.discard(session_id)
     client: httpx.AsyncClient = request.app.state.http
 
     async def event_gen() -> AsyncIterator[str]:
+        nonlocal lease_released, lease_final_state
         t_turn = time.perf_counter()
-        if is_local_omlx_model(sess["lead_model"]):
-            await _unload_other_omlx_models(client, parse_model_route(sess["lead_model"])[2])
-        skill_block_raw, _ = await build_skills_context(skill_ids, prompt)
-        mcp_tools_block = build_active_mcp_tools_prompt()
-        oc_pinned_block = build_pinned_opencontext_prompt()
-        eff_block = build_efficiency_mode_prompt(efficiency_mode)
-        extra_blocks = (eff_block or "") + (oc_pinned_block or "") + (skill_block_raw or "") + (mcp_tools_block or "")
-        sys_prompt = HARNESS_SYSTEM_PROMPT_TEMPLATE.format(
-            worktree_dir=sess["worktree_dir"],
-            policy=sess["policy"],
-            critic_model=sess["critic_model"],
-            skills_block=extra_blocks,
-        )
-
-        messages = _load_harness_messages(session_id)
-        if not messages:
-            messages = [{"role": "system", "content": sys_prompt}]
-        else:
-            messages[0] = {"role": "system", "content": sys_prompt}
-            if context_mode and sum(len(m.get("content") or "") for m in messages) > CTX_AUTO_COMPACT_CHARS:
-                comp_res = compact_harness_session_messages(session_id, Path(sess["worktree_dir"]))
-                if comp_res.get("compacted"):
-                    messages = _load_harness_messages(session_id)
-                    messages[0] = {"role": "system", "content": sys_prompt}
-                    yield _sse("context_compacted", comp_res)
-
-        messages.append({"role": "user", "content": prompt})
-        _save_harness_messages(session_id, messages)
-
-        new_title = prompt[:90] if sess["step_count"] == 0 else None
-        _update_harness_session_state(session_id, status="running", title=new_title)
-        ev_turn = _append_harness_event(session_id, "turn/start", {"prompt": prompt, "lead_model": sess["lead_model"], "policy": sess["policy"]})
-        yield _sse("turn_start", {"session": get_harness_session_db(session_id), "event": ev_turn})
-
-        steps_run = 0
         try:
+            if is_local_omlx_model(sess["lead_model"]):
+                await _unload_other_omlx_models(client, parse_model_route(sess["lead_model"])[2])
+            skill_block_raw, _ = await build_skills_context(skill_ids, prompt)
+            mcp_tools_block = build_active_mcp_tools_prompt()
+            oc_pinned_block = build_pinned_opencontext_prompt()
+            eff_block = build_efficiency_mode_prompt(efficiency_mode)
+            extra_blocks = (eff_block or "") + (oc_pinned_block or "") + (skill_block_raw or "") + (mcp_tools_block or "")
+            sys_prompt = HARNESS_SYSTEM_PROMPT_TEMPLATE.format(
+                worktree_dir=sess["worktree_dir"],
+                policy=sess["policy"],
+                critic_model=sess["critic_model"],
+                skills_block=extra_blocks,
+            )
+
+            messages = _load_harness_messages(session_id)
+            if not messages:
+                messages = [{"role": "system", "content": sys_prompt}]
+            else:
+                messages[0] = {"role": "system", "content": sys_prompt}
+                if context_mode and sum(len(m.get("content") or "") for m in messages) > CTX_AUTO_COMPACT_CHARS:
+                    comp_res = compact_harness_session_messages(session_id, Path(sess["worktree_dir"]))
+                    if comp_res.get("compacted"):
+                        messages = _load_harness_messages(session_id)
+                        messages[0] = {"role": "system", "content": sys_prompt}
+                        yield _sse("context_compacted", comp_res)
+
+            messages.append({"role": "user", "content": prompt})
+            _save_harness_messages(session_id, messages)
+
+            new_title = prompt[:90] if sess["step_count"] == 0 else None
+            _update_harness_session_state(session_id, status="running", title=new_title)
+            ev_turn = _append_harness_event(
+                session_id,
+                "turn/start",
+                {
+                    "prompt": prompt,
+                    "lead_model": sess["lead_model"],
+                    "policy": sess["policy"],
+                    "epoch": lease_epoch,
+                    "worker_id": worker_id,
+                },
+            )
+            yield _sse("turn_start", {"session": get_harness_session_db(session_id), "event": ev_turn, "epoch": lease_epoch})
+
+            steps_run = 0
+            aborted_flag = False
             for step_idx in range(1, max_steps + 1):
                 if session_id in _HARNESS_ABORT_FLAGS:
+                    aborted_flag = True
                     _append_harness_event(session_id, "turn/aborted", {"step": step_idx})
                     yield _sse("aborted", {"step": step_idx})
                     break
+
+                coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
 
                 if context_mode and step_idx > 1 and sum(len(m.get("content") or "") for m in messages) > CTX_AUTO_COMPACT_CHARS:
                     comp_res = compact_harness_session_messages(session_id, Path(sess["worktree_dir"]))
@@ -8753,7 +8942,12 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         yield _sse("context_compacted", comp_res)
 
                 steps_run = step_idx
-                sess_live = get_harness_session_db(session_id)
+                sess_live = _bind_lease_to_session(
+                    get_harness_session_db(session_id),
+                    task_id=session_id,
+                    epoch=lease_epoch,
+                    worker_id=worker_id,
+                )
                 lead_model = sess_live["lead_model"]
                 policy = sess_live["policy"]
 
@@ -8843,7 +9037,13 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         pending = _create_pending_tool_approval(session_id, step_idx, t_name, t_args)
                         try:
                             yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")} | {"session_id": session_id})
-                            decision = await _await_tool_approval(pending)
+                            decision = await _await_tool_approval_with_lease(
+                                pending,
+                                coord=coord,
+                                task_id=session_id,
+                                epoch=lease_epoch,
+                                worker_id=worker_id,
+                            )
                         finally:
                             _abandon_pending_tool_approval(pending)
                         approved = bool(decision["approved"])
@@ -8852,6 +9052,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         reject_note = decision["note"]
                         yield _sse("approval_resolved", {"step": step_idx, **decision})
 
+                    coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
                     res_obj = await _execute_harness_tool(
                         client,
                         sess_live,
@@ -8914,7 +9115,17 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                 yield _sse("max_steps_reached", {"max_steps": max_steps})
 
             elapsed_turn = round(time.perf_counter() - t_turn, 2)
-            _update_harness_session_state(session_id, status="completed")
+            lease_final_state = "paused" if aborted_flag else "completed"
+            lease_released = True
+            did_release = coord.release(
+                session_id,
+                lease_epoch,
+                worker_id,
+                next_state=lease_final_state,
+                reason=f"turn_{lease_final_state}",
+            )
+            if did_release and not aborted_flag:
+                _update_harness_session_state(session_id, status="completed")
             diff_summary = _compute_git_diff(Path(sess["worktree_dir"]))
             _append_harness_event(
                 session_id,
@@ -8931,11 +9142,25 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                 },
             )
         except Exception as exc:
-            _update_harness_session_state(session_id, status="error")
+            lease_final_state = "failed"
+            lease_released = True
+            did_release_err = coord.release(
+                session_id,
+                lease_epoch,
+                worker_id,
+                next_state="failed",
+                reason="turn_failed",
+            )
+            if did_release_err:
+                _update_harness_session_state(session_id, status="error")
             _append_harness_event(session_id, "turn/error", {"message": str(exc)})
             yield _sse("error", {"message": str(exc)})
+        finally:
+            _release_turn_lease()
 
-    return StreamingResponse(event_gen(), media_type="text/event-stream")
+    bg = BackgroundTasks()
+    bg.add_task(_release_turn_lease)
+    return StreamingResponse(event_gen(), media_type="text/event-stream", background=bg)
 
 
 @app.post("/api/harness/gsd-wave")
@@ -8974,10 +9199,28 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
         if body.get("policy") in HARNESS_POLICIES:
             sess = _set_harness_session_policy(session_id, body["policy"])
 
+    coord, claim, worker_id = _acquire_turn_lease_or_409(sess)
+    lease_epoch = claim.epoch_record.epoch
+    lease_released = False
+    lease_final_state = "paused"
+
+    def _release_gsd_lease() -> None:
+        nonlocal lease_released
+        if not lease_released:
+            lease_released = True
+            coord.release(
+                session_id,
+                lease_epoch,
+                worker_id,
+                next_state=lease_final_state,
+                reason=f"gsd_{lease_final_state}",
+            )
+
     _HARNESS_ABORT_FLAGS.discard(session_id)
     client: httpx.AsyncClient = request.app.state.http
 
     async def gsd_gen() -> AsyncIterator[str]:
+        nonlocal lease_released, lease_final_state
         t0 = time.perf_counter()
         wt_dir = Path(sess["worktree_dir"]).resolve()
         planning_dir = wt_dir / ".planning"
@@ -8991,10 +9234,21 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
         policy = sess["policy"]
 
         _update_harness_session_state(session_id, status="running", title=f"[GSD] {prompt[:75]}" if sess["step_count"] == 0 else None)
-        ev_start = _append_harness_event(session_id, "turn/start", {"prompt": f"[GSD 3-Wave Spec Loop] {prompt}", "lead_model": lead_model, "policy": policy})
-        yield _sse("turn_start", {"session": get_harness_session_db(session_id), "event": ev_start, "gsd_mode": True})
+        ev_start = _append_harness_event(
+            session_id,
+            "turn/start",
+            {
+                "prompt": f"[GSD 3-Wave Spec Loop] {prompt}",
+                "lead_model": lead_model,
+                "policy": policy,
+                "epoch": lease_epoch,
+                "worker_id": worker_id,
+            },
+        )
+        yield _sse("turn_start", {"session": get_harness_session_db(session_id), "event": ev_start, "gsd_mode": True, "epoch": lease_epoch})
 
         try:
+            coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
             # --- WAVE 1: SPEC & PLAN (Fresh Context #1) ---
             yield _sse("gsd_wave_start", {"wave": 1, "name": "SPEC & PLAN", "model": lead_model, "artifact": ".planning/PLAN.md"})
             _append_harness_event(session_id, "gsd/wave", {"wave": 1, "name": "SPEC & PLAN", "model": lead_model})
@@ -9060,10 +9314,16 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                         ),
                     },
                 ]
-                sess_exec = {**sess, "policy": policy, "status": "running"}
+                sess_exec = _bind_lease_to_session(
+                    {**sess, "policy": policy, "status": "running"},
+                    task_id=session_id,
+                    epoch=lease_epoch,
+                    worker_id=worker_id,
+                )
                 for w2_step in range(1, max_exec_steps + 1):
                     if session_id in _HARNESS_ABORT_FLAGS:
                         break
+                    coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
                     global_step = 1 + w2_step
                     yield _sse("step_start", {"step": global_step, "max_steps": max_exec_steps + 2, "model": lead_model, "wave": 2})
                     cbuf: list[str] = []
@@ -9107,13 +9367,20 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                             pending = _create_pending_tool_approval(session_id, global_step, t_name, t_args)
                             try:
                                 yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")} | {"session_id": session_id})
-                                decision = await _await_tool_approval(pending)
+                                decision = await _await_tool_approval_with_lease(
+                                    pending,
+                                    coord=coord,
+                                    task_id=session_id,
+                                    epoch=lease_epoch,
+                                    worker_id=worker_id,
+                                )
                             finally:
                                 _abandon_pending_tool_approval(pending)
                             approved, reject_note = bool(decision["approved"]), decision["note"]
                             grant_source = "operator_approval" if approved else "none"
                             approval_id = str(pending["approval_id"]) if approved else None
                             yield _sse("approval_resolved", {"step": global_step, **decision})
+                        coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
                         res_obj = await _execute_harness_tool(
                             client,
                             sess_exec,
@@ -9204,15 +9471,32 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                 yield _sse("gsd_wave_done", {"wave": 3, "artifact": ".planning/VERIFICATION.md", "chars": len(ver_md)})
 
             elapsed_s = round(time.perf_counter() - t0, 2)
+            aborted_gsd = session_id in _HARNESS_ABORT_FLAGS
+            lease_final_state = "paused" if aborted_gsd else "completed"
+            lease_released = True
+            coord.release(
+                session_id,
+                lease_epoch,
+                worker_id,
+                next_state=lease_final_state,
+                reason=f"gsd_{lease_final_state}",
+            )
             diff_final = _compute_git_diff(wt_dir)
             _append_harness_event(session_id, "turn/end", {"steps": get_harness_session_db(session_id)["step_count"], "elapsed_s": elapsed_s, "git_status": diff_final.get("status", "")})
             yield _sse("turn_done", {"session": get_harness_session_db(session_id), "elapsed_s": elapsed_s, "git_status": diff_final.get("status", ""), "gsd_mode": True})
         except Exception as exc:
-            _update_harness_session_state(session_id, status="error")
+            lease_final_state = "failed"
+            lease_released = True
+            if coord.release(session_id, lease_epoch, worker_id, next_state="failed", reason="gsd_failed"):
+                _update_harness_session_state(session_id, status="error")
             _append_harness_event(session_id, "turn/error", {"message": str(exc)})
             yield _sse("error", {"message": str(exc)})
+        finally:
+            _release_gsd_lease()
 
-    return StreamingResponse(gsd_gen(), media_type="text/event-stream")
+    bg_gsd = BackgroundTasks()
+    bg_gsd.add_task(_release_gsd_lease)
+    return StreamingResponse(gsd_gen(), media_type="text/event-stream", background=bg_gsd)
 
 
 # =============================================================================
@@ -9554,6 +9838,10 @@ async def _run_sdlc_sprints_stream(
     eff_block: str,
     max_stories: int = 5,
     max_steps_per_story: int = 6,
+    *,
+    coord: side_effect_ledger.WorkerLeaseCoordinator | None = None,
+    lease_epoch: int | None = None,
+    worker_id: str | None = None,
 ) -> AsyncIterator[str]:
     """
     CrewAI `Flow` (`@router` + `Guardrail`) + Anthropic Fresh-Context Sprint Worker Loop:
@@ -9623,9 +9911,18 @@ async def _run_sdlc_sprints_stream(
             # Use the effective workflow policy at the last execution boundary, even for an existing session.
             sess_live["policy"] = policy
             sess_live["status"] = "running"
+            if lease_epoch is not None and worker_id is not None:
+                sess_live = _bind_lease_to_session(
+                    sess_live,
+                    task_id=session_id,
+                    epoch=lease_epoch,
+                    worker_id=worker_id,
+                )
             for st_i in range(1, max_steps_per_story + 1):
                 if session_id in _HARNESS_ABORT_FLAGS:
                     break
+                if coord is not None and lease_epoch is not None and worker_id is not None:
+                    coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
                 cur_step = get_harness_session_db(session_id)["step_count"] + 1
                 yield _sse("step_start", {"step": cur_step, "max_steps": max_steps_per_story, "model": lead_model})
                 c_buf: list[str] = []
@@ -9839,10 +10136,28 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
         if body.get("policy") in HARNESS_POLICIES:
             sess = _set_harness_session_policy(session_id, body["policy"])
 
+    coord, claim, worker_id = _acquire_turn_lease_or_409(sess)
+    lease_epoch = claim.epoch_record.epoch
+    lease_released = False
+    lease_final_state = "paused"
+
+    def _release_sdlc_lease() -> None:
+        nonlocal lease_released
+        if not lease_released:
+            lease_released = True
+            coord.release(
+                session_id,
+                lease_epoch,
+                worker_id,
+                next_state=lease_final_state,
+                reason=f"sdlc_{lease_final_state}",
+            )
+
     _HARNESS_ABORT_FLAGS.discard(session_id)
     client: httpx.AsyncClient = request.app.state.http
 
     async def sdlc_gen() -> AsyncIterator[str]:
+        nonlocal lease_released, lease_final_state
         t0 = time.perf_counter()
         wt_dir = Path(sess["worktree_dir"]).resolve()
         sdlc_dir = _ensure_sdlc_dir(wt_dir)
@@ -9853,6 +10168,7 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
         eff_block = build_efficiency_mode_prompt(efficiency_mode)
 
         try:
+            coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
             _update_harness_session_state(session_id, status="running")
             yield _sse("turn_init", {"session": get_harness_session_db(session_id), "sdlc_mode": mode})
             skill_block, _ = await build_skills_context(skill_ids, prompt or sess["title"])
@@ -9992,10 +10308,17 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                         eff_block=eff_block,
                         max_stories=max_stories,
                         max_steps_per_story=max_steps,
+                        coord=coord,
+                        lease_epoch=lease_epoch,
+                        worker_id=worker_id,
                     ):
                         yield ev_chunk
 
-            _update_harness_session_state(session_id, status="completed")
+            aborted_sdlc = session_id in _HARNESS_ABORT_FLAGS
+            lease_final_state = "paused" if aborted_sdlc else "completed"
+            lease_released = True
+            if coord.release(session_id, lease_epoch, worker_id, next_state=lease_final_state, reason=f"sdlc_{lease_final_state}") and not aborted_sdlc:
+                _update_harness_session_state(session_id, status="completed")
             elapsed_s = round(time.perf_counter() - t0, 2)
             diff_final = _compute_git_diff(wt_dir)
             stories_final = _read_sdlc_backlog(sdlc_dir)
@@ -10013,11 +10336,18 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                 },
             )
         except Exception as exc:
-            _update_harness_session_state(session_id, status="error")
+            lease_final_state = "failed"
+            lease_released = True
+            if coord.release(session_id, lease_epoch, worker_id, next_state="failed", reason="sdlc_failed"):
+                _update_harness_session_state(session_id, status="error")
             _append_harness_event(session_id, "turn/error", {"message": str(exc)})
             yield _sse("error", {"message": str(exc)})
+        finally:
+            _release_sdlc_lease()
 
-    return StreamingResponse(sdlc_gen(), media_type="text/event-stream")
+    bg_sdlc = BackgroundTasks()
+    bg_sdlc.add_task(_release_sdlc_lease)
+    return StreamingResponse(sdlc_gen(), media_type="text/event-stream", background=bg_sdlc)
 
 
 @app.post("/api/harness/sdlc/feedback")
@@ -10042,10 +10372,28 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
         raise HTTPException(status_code=400, detail="Both `session_id` and `feedback` are required.")
 
     sess = get_harness_session_db(session_id)
+    coord_fb, claim_fb, worker_id_fb = _acquire_turn_lease_or_409(sess)
+    lease_epoch_fb = claim_fb.epoch_record.epoch
+    lease_released_fb = False
+    lease_final_state_fb = "paused"
+
+    def _release_fb_lease() -> None:
+        nonlocal lease_released_fb
+        if not lease_released_fb:
+            lease_released_fb = True
+            coord_fb.release(
+                session_id,
+                lease_epoch_fb,
+                worker_id_fb,
+                next_state=lease_final_state_fb,
+                reason=f"sdlc_feedback_{lease_final_state_fb}",
+            )
+
     _HARNESS_ABORT_FLAGS.discard(session_id)
     client: httpx.AsyncClient = request.app.state.http
 
     async def fb_gen() -> AsyncIterator[str]:
+        nonlocal lease_released_fb, lease_final_state_fb
         t0 = time.perf_counter()
         wt_dir = Path(sess["worktree_dir"]).resolve()
         sdlc_dir = _ensure_sdlc_dir(wt_dir)
@@ -10055,6 +10403,7 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
         eff_block = build_efficiency_mode_prompt(efficiency_mode)
 
         try:
+            coord_fb.heartbeat(session_id, lease_epoch_fb, worker_id_fb, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
             _update_harness_session_state(session_id, status="running")
             yield _sse("turn_init", {"session": sess, "sdlc_mode": "feedback"})
             _append_harness_event(session_id, "turn/start", {"prompt": f"[SDLC User Feedback -> Research Team] {feedback}", "model": critic_model, "policy": policy})
@@ -10148,10 +10497,17 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
                     eff_block=eff_block,
                     max_stories=max(sum(1 for s in merged_stories if not s.get("passes")), len(new_stories)),
                     max_steps_per_story=max_steps,
+                    coord=coord_fb,
+                    lease_epoch=lease_epoch_fb,
+                    worker_id=worker_id_fb,
                 ):
                     yield ev_chunk
 
-            _update_harness_session_state(session_id, status="completed")
+            aborted_fb = session_id in _HARNESS_ABORT_FLAGS
+            lease_final_state_fb = "paused" if aborted_fb else "completed"
+            lease_released_fb = True
+            if coord_fb.release(session_id, lease_epoch_fb, worker_id_fb, next_state=lease_final_state_fb, reason=f"sdlc_feedback_{lease_final_state_fb}") and not aborted_fb:
+                _update_harness_session_state(session_id, status="completed")
             elapsed_s = round(time.perf_counter() - t0, 2)
             diff_final = _compute_git_diff(wt_dir)
             stories_final = _read_sdlc_backlog(sdlc_dir)
@@ -10169,11 +10525,18 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
                 },
             )
         except Exception as exc:
-            _update_harness_session_state(session_id, status="error")
+            lease_final_state_fb = "failed"
+            lease_released_fb = True
+            if coord_fb.release(session_id, lease_epoch_fb, worker_id_fb, next_state="failed", reason="sdlc_feedback_failed"):
+                _update_harness_session_state(session_id, status="error")
             _append_harness_event(session_id, "turn/error", {"message": str(exc)})
             yield _sse("error", {"message": str(exc)})
+        finally:
+            _release_fb_lease()
 
-    return StreamingResponse(fb_gen(), media_type="text/event-stream")
+    bg_fb = BackgroundTasks()
+    bg_fb.add_task(_release_fb_lease)
+    return StreamingResponse(fb_gen(), media_type="text/event-stream", background=bg_fb)
 
 
 # =============================================================================

@@ -170,7 +170,7 @@
       ],
       "status": "in_progress",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
-      "progress_percent": 43
+      "progress_percent": 57
     },
     {
       "id": "P2",
@@ -309,8 +309,8 @@
           "Authority consolidation completed 2026-10-30 on user/owner confirmation; AS roadmap retained unmodified as historical source and AS-status ledger (no history deleted)"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. Authority consolidation awaits owner confirmation.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. Authority consolidation awaits owner confirmation.",
         "readme_updated": true
       }
     },
@@ -364,14 +364,14 @@
           "docs/README.md"
         ],
         "evidence": [
-          "docs/m5-2-0-integration-audit.md §1: all 9 reported claims verified/refuted with line evidence (claims 1 and 6 refuted; 2,3,4,5,7,8,9 confirmed)",
-          "§2: FastAPI route -> tool/subprocess/SQLite/MCP traces with function and line references",
-          "§3.1: all 17 direct subprocess entry points in app.py enumerated with gates; §3.2: all consequential SQLite/FS write entry points enumerated",
-          "§4: 42-module code-exists/integrated/tested/qualified table (5 integrated, 37 unit-tested-but-unintegrated)"
+          "docs/m5-2-0-integration-audit.md \u00a71: all 9 reported claims verified/refuted with line evidence (claims 1 and 6 refuted; 2,3,4,5,7,8,9 confirmed)",
+          "\u00a72: FastAPI route -> tool/subprocess/SQLite/MCP traces with function and line references",
+          "\u00a73.1: all 17 direct subprocess entry points in app.py enumerated with gates; \u00a73.2: all consequential SQLite/FS write entry points enumerated",
+          "\u00a74: 42-module code-exists/integrated/tested/qualified table (5 integrated, 37 unit-tested-but-unintegrated)"
         ],
         "test_results": [
           {
-            "command": "grep/sed call-path audit (commands listed in audit doc §6)",
+            "command": "grep/sed call-path audit (commands listed in audit doc \u00a76)",
             "exit_code": 0,
             "result": "evidence captured inline"
           }
@@ -382,8 +382,8 @@
           "Skill-code subprocess paths classified as containment targets for M5-P0-03 (app.py:1831 flag-gated but sandbox-bypassing; app.py:8645 ungated)"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. Containment work continues in M5-P0-03.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. Containment work continues in M5-P0-03.",
         "readme_updated": true
       }
     },
@@ -633,7 +633,7 @@
           "docs/README.md"
         ],
         "evidence": [
-          "docs/m5-2-0-baseline-evidence.md §2: full command log with exit codes",
+          "docs/m5-2-0-baseline-evidence.md \u00a72: full command log with exit codes",
           "pytest: 717 passed, 1 skipped (opt-in live container test), 1 warning, 19.13s",
           "ruff/mypy/compileall/frontend-syntax/smoke_local x2/governance/security-signoff/docs/generators-no-drift/demo-tour/screenshots/adrs: all exit 0",
           "pip_audit exit 1: 21 advisories in venv bootstrap packages pip 23.0.1 + setuptools 66.1.1 only; runtime dependencies clean (recorded undiluted)",
@@ -667,12 +667,12 @@
           }
         ],
         "decisions": [
-          "verify_baseline.py initially failed on the shallow checkout; git fetch --unshallow (documented prerequisite) fixed it — both outcomes recorded",
-          "Blocked measurements (peak unified memory/swap, oMLX coding task, FTS5 load latency, live isolation) listed in evidence doc §4 and never promoted to claims"
+          "verify_baseline.py initially failed on the shallow checkout; git fetch --unshallow (documented prerequisite) fixed it \u2014 both outcomes recorded",
+          "Blocked measurements (peak unified memory/swap, oMLX coding task, FTS5 load latency, live isolation) listed in evidence doc \u00a74 and never promoted to claims"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. Target-hardware telemetry moves to M5-P4-01 / M5-P0-04 on real hardware.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. Target-hardware telemetry moves to M5-P4-01 / M5-P0-04 on real hardware.",
         "readme_updated": true
       }
     },
@@ -860,8 +860,8 @@
           "Old marketing-forward README content replaced per draft mandate; deep reference material (env vars, API, invariants) preserved in README reference section and docs/ links so validate_docs publication checks stay green"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. README maintenance rule: refresh with verified behavior after every subsequent story.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. README maintenance rule: refresh with verified behavior after every subsequent story.",
         "readme_updated": true
       }
     },
@@ -1217,22 +1217,66 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P1-04: Worker leases, fencing and ownership recovery. Objective: Enforce single current owner with durable epochs and safe takeover. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Implement transactional claim and monotonic epoch; Validate epoch at action admission; Reconcile in-flight effects before replacement execution; Test stale worker, restart, sleep/wake. Acceptance: Stale owner cannot admit consequential action; Lease expiry does not release unresolved effects; Crash restart cannot duplicate action. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-10-30T13:58:00Z",
+        "updated_at": "2026-10-30T14:25:15Z",
+        "completed_at": "2026-10-30T14:25:15Z",
+        "owner_session": "arena/ce16bb41-m5-agent-studio",
+        "commit_sha": "01ef43e283dbd6708b822fb91f8750e449cc8f4d",
+        "changed_files": [
+          "runtime_persistence.py",
+          "side_effect_ledger.py",
+          "execution_spine.py",
+          "app.py",
+          "studio.py",
+          "docs/subsystem-dependency-inventory.md",
+          "README.md",
+          "tests/test_worker_leases_and_fencing.py",
+          "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "AC1 (Stale owner cannot admit consequential action): runtime_persistence.RuntimePersistenceStore.acquire_worker_lease enforces single-owner leases inside BEGIN IMMEDIATE (raising LeaseOwnershipConflictError against unexpired active owners and incrementing current_epoch monotonically), execution_spine._validate_task_state_and_epoch rejects missing/stale/fenced/expired epochs and missing/mismatched worker_id across every consequential surface, and side_effect_ledger.DurableActionLedger.begin re-verifies (current_epoch, status=='active', lease_expires_at > now, worker_id) atomically inside BEGIN IMMEDIATE to close any TOCTOU window after snapshot reads; verified across write_file, edit_file, run_bash, oc_save_doc, mcp__*, heartbeats, state transitions, and late finally releases in tests/test_worker_leases_and_fencing.py.",
+          "AC2 (Lease expiry does not release unresolved effects): runtime_persistence.RuntimePersistenceStore.expire_stale_leases transitions elapsed active epochs to status='expired' without clearing or modifying in_flight/uncertain rows in runtime_actions; side_effect_ledger.WorkerLeaseCoordinator.acquire_or_takeover sweeps orphaned in_flight rows to uncertain, probes reconcilable writes outside SQLite write locks, and when any consequential action remains uncertain holds runtime_tasks.state='blocked' and raises UnresolvedEffectsHoldError (HTTP 409 on live turn routes), with defense-in-depth unresolved_effect_ids checks at admission and inside BEGIN IMMEDIATE.",
+          "AC3 (Crash restart cannot duplicate action): app.py stamps worker IDs with a per-process boot nonce (_PROCESS_BOOT_ID), fences prior-boot active leases (prior_process_restart) and sweeps interrupted in_flight actions to uncertain (missing_result_on_startup) during init_db(), holds tasks with interrupted mid-flight mutations in state='blocked', and blocks duplicate execution of already-committed actions (CommittedActionReplayError / already_committed=True) across crash/restart and host sleep/wake recovery in tests/test_worker_leases_and_fencing.py."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/pytest -q tests/test_worker_leases_and_fencing.py tests/test_action_admission_gate.py tests/test_durable_intent_ledger.py tests/test_runtime_persistence.py",
+            "exit_code": 0,
+            "result": "45 passed (10 in test_worker_leases_and_fencing.py + 10 in test_action_admission_gate.py + 10 in test_durable_intent_ledger.py + 15 in test_runtime_persistence.py)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "792 passed, 1 skipped (10 new M5-P1-04 tests; zero regressions)"
+          },
+          {
+            "command": ".venv/bin/mypy && .venv/bin/mypy --strict runtime_persistence.py side_effect_ledger.py execution_spine.py mcp_client.py && .venv/bin/ruff check .",
+            "exit_code": 0,
+            "result": "mypy clean across 42 source files and --strict on all 4 core runtime modules; ruff clean"
+          },
+          {
+            "command": ".venv/bin/python scripts/smoke_local.py && .venv/bin/python scripts/smoke_local.py --standalone && .venv/bin/python scripts/isolation_smoke.py",
+            "exit_code": 0,
+            "result": "both app.py and standalone studio.py pass loopback auth/security smoke; isolation_smoke.py 0 checks failed"
+          },
+          {
+            "command": "scripts/build_studio.py --check + generate_subsystem_inventory.py + generate_route_matrix.py + demo_tour.py --check + validate_docs.py + validate_adrs.py + validate_governance.py + validate_threat_model.py + validate_security_signoff.py + verify_baseline.py",
+            "exit_code": 0,
+            "result": "all artifact reproducibility, inventory, demo transcript, documentation, ADR, governance, threat-model, security-signoff, and baseline checks pass"
+          }
+        ],
+        "decisions": [
+          "Preserved low-level RuntimePersistenceStore.claim_epoch force-supersede semantics for existing contract tests while enforcing strict single-owner non-steal lease semantics in acquire_worker_lease and WorkerLeaseCoordinator.acquire_or_takeover.",
+          "Ordered acquire_or_takeover so acquire_worker_lease executes before reconcile_task_effects, protecting live unexpired owners' in-flight actions from concurrent callers while ensuring expired/superseded workers are durably fenced before pre-takeover reconciliation begins.",
+          "Added atomic BEGIN IMMEDIATE epoch/status/TTL/worker_id and unresolved-effect re-verification inside DurableActionLedger.begin to eliminate TOCTOU windows between TaskAdmissionSnapshot resolution and intent persistence."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
-        "readme_updated": false
+        "handoff_note": "M5-P1-04 complete: single-owner worker leases, monotonic durable epochs, atomic admission + BEGIN IMMEDIATE fencing, pre-takeover reconciliation with unresolved-effect holds, host sleep/wake fencing, and crash-restart recovery are active across harness, GSD wave, and SDLC turn routes and standalone studio.py. Ready for M5-P1-05 (Root task state machine, checkpoints, pause/resume/cancel, and execution budgets).",
+        "next_action": "Claim and implement M5-P1-05 on a fresh branch after M5-P1-04 merges.",
+        "readme_updated": true
       }
     },
     {
