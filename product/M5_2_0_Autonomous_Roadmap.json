@@ -125,8 +125,8 @@
   "session_state": {
     "active_story": "M5-P1-01",
     "last_completed_story": "M5-P0-06",
-    "last_checkpoint": "2026-10-30T11:35:14Z",
-    "last_session_id": "arena/7d57e70a-m5-agent-studio",
+    "last_checkpoint": "2026-10-30T11:59:57Z",
+    "last_session_id": "arena/3e6ea3e5-m5-agent-studio",
     "next_recommended_story": "M5-P1-01",
     "open_risks": [
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
@@ -168,7 +168,7 @@
         "M5-P1-06",
         "M5-P1-07"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
       "progress_percent": 0
     },
@@ -901,13 +901,13 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P1-01: SQLite schema migration and persistence discipline. Objective: Durably represent tasks, transitions, actions and epochs while preserving existing data. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Inspect current SQLite migrations/WAL/FTS5; Add additive versioned migrations with backup and rollback protection; Bound busy retries and keep transactions short; Test old database migration and interrupted migration. Acceptance: Existing data survives migration; No write transaction spans tool/inference; Busy, disk-full and corruption paths fail closed. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-30T11:59:57Z",
+        "updated_at": "2026-10-30T11:59:57Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/3e6ea3e5-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -915,7 +915,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "next_action": "Inspect SQLite schema/migrations/WAL/FTS5 and scripts/db_maintenance.py; add additive versioned migrations for tasks/transitions/actions/epochs with backup/rollback protection, bounded busy retries, short transactions, and fail-closed error handling.",
         "readme_updated": false
       }
     },
