@@ -124,10 +124,10 @@
   },
   "session_state": {
     "active_story": null,
-    "last_completed_story": "M5-P2-03",
-    "last_checkpoint": "2026-10-30T18:50:00Z",
-    "last_session_id": "arena/e2ce9b9e-m5-agent-studio",
-    "next_recommended_story": "M5-P2-04",
+    "last_completed_story": "M5-P2-04",
+    "last_checkpoint": "2026-10-30T20:05:00Z",
+    "last_session_id": "arena/e2bde3ff-m5-agent-studio",
+    "next_recommended_story": "M5-P2-05",
     "open_risks": [
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
       "24 GB Apple Silicon memory/swap and oMLX task measurements blocked in Linux evidence environment (M5-P4-01 to measure on target hardware)",
@@ -187,7 +187,7 @@
       ],
       "status": "in_progress",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
-      "progress_percent": 40
+      "progress_percent": 80
     },
     {
       "id": "P3",
@@ -1956,22 +1956,62 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P2-04: Verification evidence and baseline-aware tests. Objective: Accept coding completion only with applicable test evidence. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Record source revision, test identity, environment and acceptance coverage; Capture pre-existing failures where feasible; Select staged targeted then broader checks; Classify flaky/environmental/introduced failures. Acceptance: Test result tied to source revision; Pre-existing failure not misattributed; No success claim on sandbox denial. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-10-30T18:56:00Z",
+        "updated_at": "2026-10-30T20:05:00Z",
+        "completed_at": "2026-10-30T20:05:00Z",
+        "owner_session": "arena/e2bde3ff-m5-agent-studio",
+        "commit_sha": "21b5a05",
+        "changed_files": [
+          "verification_evidence.py",
+          "workflow_state.py",
+          "app.py",
+          "pyproject.toml",
+          "scripts/build_studio.py",
+          "studio.py",
+          "tests/test_verification_evidence.py",
+          "docs/verification-evidence.md",
+          "docs/adr/0008-verification-evidence-and-baseline-classification.md",
+          "docs/README.md",
+          "docs/subsystem-dependency-inventory.md",
+          "README.md",
+          "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "Task 1 (record source revision, test identity, environment and acceptance coverage): verification_evidence.py defines SourceRevision (git HEAD + bounded dirty paths + per-file SHA-256 -> canonical digest), environment_snapshot, TestEvidence (command, exit code, output_sha256 covering command+exit+bounded output+both revision digests, 500-char excerpt, denial marker, classified failures, revision_changed) and build_test_evidence. TaskVerificationReport gained source_revision, revision, environment, test_evidence, staged_test_evidence, acceptance_coverage, failure_classification and denied, all serialized in to_dict. Acceptance coverage is computed from the observed transcript by evaluate_acceptance_coverage.",
+          "Task 2 (capture pre-existing failures where feasible): TaskVerificationSpec.pre_existing_failures (normalized, deduped, <=300 chars, <=200 entries, NUL rejected) plus allow_pre_existing_failures (default false) and require_revision_stability (default true); parsed from the /api/harness/run verification contract by _parse_task_verification_spec. verify_task_completion passes the recorded list to classify_test_output, which labels each failure pre_existing / environmental / introduced. Baseline knowledge stays caller-supplied on purpose: this story records and honours it rather than re-running a baseline (a stash/checkout/run would mutate user work, the failure class P2-01/P2-03 exist to prevent) - see ADR-0008 Alternatives.",
+          "Task 3 (staged targeted then broader checks): TaskVerificationSpec.targeted_test_command runs first against the same revision files; denial, timeout, start failure or revision drift stop immediately, a non-zero exit fails as verification_targeted_test_failed and the broader command is not executed (pinned by test_targeted_stage_runs_first_and_blocks_the_broader_stage, which asserts the broader command's side-effect file is absent). Both stages emit their own EvidenceRef (targeted_test_verification / test_verification).",
+          "Task 4 (classify flaky/environmental/introduced): classify_test_output is the classifier: environment markers (module/command not found, ENOSPC, DNS) -> environmental -> verification_test_environment_blocked; baseline match -> pre_existing -> verification_test_failed_pre_existing (tolerated only with the explicit opt-in and only when every failure is pre-existing); anything else -> introduced -> verification_test_failed_introduced; non-zero exit with no parseable failure line -> one introduced record, never a clean run. Flaky reruns are deliberately not implemented: a run is classified from its own transcript rather than re-run until green.",
+          "AC1 (test result tied to source revision): the revision is captured before and after the authoritative command, output_sha256 covers both digests, and require_revision_stability rejects drift with workspace_changed_during_verification. Pinned by test_verified_report_records_revision_environment_and_test_identity, test_workspace_change_during_verification_is_rejected, test_revision_stability_can_be_disabled_explicitly, test_test_tool_artifacts_do_not_count_as_a_revision_change and test_source_revision_digest_is_stable_and_content_bound. Environment (interpreter/platform/cwd/execution_surface) is recorded in the same report.",
+          "AC2 (pre-existing failure not misattributed): the same failure is pre_existing when recorded in the baseline and introduced when not; only pre-existing-only runs may be tolerated, and only with allow_pre_existing_failures=True. Pinned by test_pre_existing_failure_is_classified_and_only_verifies_when_allowed (strict rejection, then explicit tolerance, both asserting the classification) and test_introduced_failure_is_not_blamed_on_the_baseline.",
+          "AC3 (no success claim on sandbox denial): detect_denial scans for runtime refusal markers and forces classification denied / passed False; completion fails as verification_test_denied even at exit code 0, for the targeted stage as well. Pinned by test_denied_execution_never_produces_a_success_claim, test_denied_targeted_stage_never_claims_success and test_run_verification_command_reports_a_denied_run.",
+          "Integration: pyproject.toml mypy files += verification_evidence.py (mypy clean over 46 modules); scripts/build_studio.py INLINED_MODULES inserts verification_evidence before workflow_state; app.py imports it and exposes a read-only verification_evidence preview (schema version, environment, revision digest, required/missing files) on GET /api/harness/sessions/{session_id}/task; studio.py rebuilt to 1,533,660 bytes and the standalone-bundle tests pass.",
+          "Regression found and fixed during this story: verification_evidence defined SCHEMA_VERSION, which shadowed app.SCHEMA_VERSION in the flattened studio.py namespace and made init_db migrate only to v1, so every standalone-bundle test failed on the missing runtime_task_epochs table. The constant is now EVIDENCE_SCHEMA_VERSION and the module no longer defines __all__."
+        ],
+        "test_results": [
+          "python -m pytest -q -> 912 passed, 1 skipped in 47.12s (skip: tests/test_live_sandbox.py needs explicit live container-runtime opt-in); exit 0",
+          "python -m pytest -q tests/test_verification_evidence.py -> 31 passed; exit 0",
+          "ruff check . -> All checks passed!; exit 0",
+          "mypy -> Success: no issues found in 46 source files; exit 0",
+          "python scripts/verify_baseline.py -> Baseline verified: 7904892d759bb66b817bb17b6f4f377874bd6e25; exit 0",
+          "python scripts/validate_docs.py -> Documentation validation passed (5 required pages, 84 files scanned); exit 0",
+          "python scripts/validate_adrs.py -> ADR validation passed (process, template, and numbered records); exit 0",
+          "python scripts/validate_governance.py, scripts/validate_security_signoff.py, scripts/check_frontend_syntax.py -> exit 0",
+          "python scripts/build_studio.py -> Built studio.py: 1,533,660 bytes; generate_route_matrix.py / generate_subsystem_inventory.py / generate_roadmap_status.py -> git diff --exit-code clean; exit 0"
+        ],
+        "decisions": [
+          "Fail closed on revision drift by default (require_revision_stability=true) rather than recording the drift and passing: a result that spans two revisions cannot be tied to either.",
+          "Classify pre-existing failures honestly but require an explicit allow_pre_existing_failures opt-in to tolerate them; the opt-in only applies when every failure is pre-existing.",
+          "Declared acceptance coverage fails closed when a named test id was not observed passing; coverage is transcript-derived, never taken from the model's summary.",
+          "Test-tool artifacts (caches, coverage files) are filtered out of the dirty-path digest so a passing run cannot look like a source change.",
+          "Baseline knowledge stays caller-supplied; no automatic stash/checkout baseline run, because mutating the user's workspace for verification is the failure class earlier stories forbid."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
-        "readme_updated": false
+        "handoff_note": "M5-P2-04 complete at commit 21b5a05. Remaining honest limits are documented in docs/verification-evidence.md (Limits): transcript parsing is pytest/unittest-shaped, pre_existing_failures is caller-supplied rather than measured by a baseline run, revision capture is bounded (100 dirty paths, 8 MiB per file), and the environment snapshot is not a hermetic package digest. M5-P2-05 (bounded recovery and stagnation detection) is now ready.",
+        "next_action": "Done. Next ready story: M5-P2-05 (Bounded recovery and stagnation detection); claim it via the coordination protocol before coding.",
+        "readme_updated": true
       }
     },
     {

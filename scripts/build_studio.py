@@ -19,6 +19,7 @@ INLINED_MODULES = (
     "side_effect_ledger",
     "execution_budget",
     "workflow_checkpoints",
+    "verification_evidence",
     "workflow_state",
     "mcp_client",
     "context_store",
