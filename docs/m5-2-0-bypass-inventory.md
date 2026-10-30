@@ -1,14 +1,14 @@
 # M5 2.0 execution-spine bypass inventory (maintained)
 
-**Maintained inventory for stories `M5-P0-06`, `M5-P1-01`, and `M5-P1-02`**
-("Known bypass inventory maintained" -> "Wire authoritative action admission
-gate"). Source of the initial entry-point enumeration:
+**Maintained inventory for stories `M5-P0-06`, `M5-P1-01`, `M5-P1-02`, and `M5-P1-03`**
+("Known bypass inventory maintained" -> "Durable intent/result ledger
+integration"). Source of the initial entry-point enumeration:
 [`m5-2-0-integration-audit.md`](m5-2-0-integration-audit.md) §3 (audit commit
 `1e2e0bd`). This file records, for every consequential entry point, whether it
 crosses the extracted execution-spine boundaries (ADR-0002: `Policy`,
-`ActionLedger`, `DurableActionBoundary`, `ActiveAdmissionScope`) — and what it
+`ActionLedger`, `IntentLedger`, `DurableActionBoundary`, `ActiveAdmissionScope`) — and what it
 does instead. **No complete-coverage claim is made**: entries marked `outside`
-are real gaps assigned to later stories (`M5-P1-03`–`M5-P1-05`,
+are real gaps assigned to later stories (`M5-P1-04`, `M5-P1-05`,
 `M5-P2-01`–`M5-P2-03`). Update this file in the same change that moves any
 entry point across (or adds one).
 
@@ -49,15 +49,15 @@ Status legend:
 | Entry point | Status | Notes / owning story |
 |---|---|---|
 | `tool_audit_events` insert/finalize (`_audit_tool_start`/`_audit_tool_finish`) | **through-boundary** | Behind `execution_spine.ActionLedger` (`M5-P0-06`) and executed via `runtime_persistence.run_write_transaction` (`M5-P1-01`) |
-| Schema v3 spine store (`runtime_persistence.RuntimePersistenceStore`: `runtime_tasks`, `runtime_task_epochs`, `runtime_task_transitions`, `runtime_actions`) | **gated** | Durable task/epoch/transition/action store landed (`M5-P1-01`, ADR-0003); `runtime_tasks` state and `runtime_task_epochs` lease-epoch fencing are enforced at admission by `_AppTaskContextResolver` -> `DurableActionBoundary` (`M5-P1-02`); durable action replay ledger, worker lease lifecycle, and full task-loop migration assigned `M5-P1-03`–`M5-P1-05` |
-| Schema/seed writers (`_apply_schema_migrations`, `init_db`, seeding, `_migrate_legacy_secrets`, `api_history_retention_run`) | **gated** | Routed through `runtime_persistence.upgrade_database` / `run_write_transaction` with `0600` pre-upgrade snapshot, rollback/restore protection, keyring I/O outside write locks, and zero raw `sqlite3.connect` bypasses (`M5-P1-01`) |
+| Schema v3 spine store (`runtime_persistence.RuntimePersistenceStore`: `runtime_tasks`, `runtime_task_epochs`, `runtime_task_transitions`, `runtime_actions`) | **gated** | Durable task/epoch/transition/action store landed (`M5-P1-01`, ADR-0003); `runtime_tasks` state and `runtime_task_epochs` lease-epoch fencing are enforced at admission (`M5-P1-02`), and `runtime_actions` intent/result/replay tracking is enforced across all boundary-routed actions (`M5-P1-03`); worker lease lifecycle and full task-loop migration assigned `M5-P1-04`–`M5-P1-05` |
+| Schema/seed writers (`_apply_schema_migrations`, `init_db`, seeding, `_migrate_legacy_secrets`, `api_history_retention_run`) | **gated** | Routed through `runtime_persistence.upgrade_database` / `run_write_transaction` with `0600` pre-upgrade snapshot, rollback/restore protection, startup missing-result sweep (`in_flight -> uncertain`, `M5-P1-03`), keyring I/O outside write locks, and zero raw `sqlite3.connect` bypasses (`M5-P1-01`) |
 | Provider/combo CRUD (`upsert_cloud_provider`, `delete_cloud_provider`, `upsert_model_combo`, `delete_model_combo`) | **gated** | Routed through `runtime_persistence.run_write_transaction` with keyring I/O outside DB write locks (`M5-P1-01`); configuration changes are operator API actions, not tool-boundary actions |
-| Hall session writers (`create_hall_session`, `append_hall_message`, `close_hall_session_db`) | **gated** | Routed through `runtime_persistence.run_write_transaction` (`M5-P1-01`); inbound `--mcp` bridge Hall mutations also cross `DurableActionBoundary` (`M5-P1-02`) |
+| Hall session writers (`create_hall_session`, `append_hall_message`, `close_hall_session_db`) | **gated** | Routed through `runtime_persistence.run_write_transaction` (`M5-P1-01`); inbound `--mcp` bridge Hall mutations also cross `DurableActionBoundary` (`M5-P1-02` + `M5-P1-03`) |
 | MCP server registry writers (`upsert_mcp_server`, `sync_mcp_server_tools`, `delete_mcp_server`) | **gated** | Routed through `runtime_persistence.run_write_transaction` (`M5-P1-01`) |
 | Harness session create/update/delete SQLite writers + `.harnesses/*.jsonl` sidecars | **outside** | SQLite writes execute via `runtime_persistence.run_write_transaction` (`M5-P1-01`) and tool admission checks live abort/task/epoch state (`M5-P1-02`), but `.harnesses/*.jsonl` / `.messages.json` sidecar files remain non-transactional and full turn lifecycle migration onto `runtime_tasks` is assigned `M5-P1-05` |
-| Context vault/FTS writes (`ctx_vault_chunks`, `ctx_vault_fts`, `ctx_session_metrics`, `context_store.upsert_doc`/`delete_doc`) | **gated** | Routed through `runtime_persistence.run_write_transaction` (`M5-P1-01`); tool-triggered `oc_save_doc` (both harness and `--mcp` bridge) crosses `DurableActionBoundary` and enforces `require_active_admission` (`M5-P1-02`) |
-| SDLC backlog file writes (`_write_sdlc_backlog`), `write_file` tool, `_apply_worktree_to_main` file sync | **outside** | Filesystem effects; `write_file`'s tool call crosses admission and blocks direct executor bypass (`M5-P1-02`), while idempotent action replay (`M5-P1-03`) and filesystem staging/rollback (`M5-P2-02`/`M5-P2-03`) remain follow-up work |
-| `side_effect_ledger.py` (durable idempotency) | **outside** | Module exists, unit-tested, **not integrated** into runtime dispatch yet; SQLite `runtime_actions` table is ready (`M5-P1-01`), runtime integration assigned `M5-P1-03` |
+| Context vault/FTS writes (`ctx_vault_chunks`, `ctx_vault_fts`, `ctx_session_metrics`, `context_store.upsert_doc`/`delete_doc`) | **gated** | Routed through `runtime_persistence.run_write_transaction` (`M5-P1-01`); tool-triggered `oc_save_doc` (both harness and `--mcp` bridge) crosses `DurableActionBoundary` and `DurableActionLedger` (`M5-P1-02` + `M5-P1-03`) |
+| SDLC backlog file writes (`_write_sdlc_backlog`), `write_file` tool, `_apply_worktree_to_main` file sync | **outside** | Filesystem effects; `write_file`'s tool call crosses admission (`M5-P1-02`) and durable intent/reconciliation (`M5-P1-03`), while `_write_sdlc_backlog`, `_apply_worktree_to_main`, and filesystem staging/rollback (`M5-P2-02`/`M5-P2-03`) remain follow-up work |
+| `side_effect_ledger.py` (`DurableActionLedger` over `runtime_actions`) | **through-boundary** | Integrated into `_run_authorized_tool` -> `DurableActionBoundary` (`M5-P1-03`) and inlined into standalone `studio.py`: commits durable `in_flight` intent before side effects, tracks stable `action_id` + monotonic `attempt`, separates `never_started` / `in_flight` / `committed` / `uncertain`, reconciles missing results to `uncertain` (never `failed`), and blocks blind replay of `non_idempotent` or unverified `uncertain` writes |
 
 ## 4. Rule
 

@@ -14,7 +14,14 @@ OUT = ROOT / "studio.py"
 # Every sibling module app.py imports by name must be inlined here, or the
 # standalone artifact only works from a checkout where the sibling is importable.
 # A smoke check that runs from the repo root cannot catch that.
-INLINED_MODULES = ("runtime_persistence", "mcp_client", "context_store", "onboarding_preflight", "execution_spine")
+INLINED_MODULES = (
+    "runtime_persistence",
+    "side_effect_ledger",
+    "mcp_client",
+    "context_store",
+    "onboarding_preflight",
+    "execution_spine",
+)
 
 AUTH_HELPER = '''<script>(function(){const nativeFetch=window.fetch.bind(window);let promptLock=null;window.fetch=async function(input,init={}){const url=typeof input==='string'?input:input.url;const same=new URL(url,location.href).origin===location.origin;const send=async(token)=>{const headers=new Headers(input instanceof Request?input.headers:undefined);new Headers(init.headers||{}).forEach((v,k)=>headers.set(k,v));if(token&&same)headers.set('Authorization','Bearer '+token);return nativeFetch(input,{...init,headers});};let token=sessionStorage.getItem('m5_api_token')||'';let r=await send(token);if(r.status!==401||!same||!url.includes('/api/')&&!url.includes('/v1/'))return r;if(!promptLock)promptLock=new Promise(resolve=>{const v=window.prompt('Studio API token (saved for this browser session):');if(v)sessionStorage.setItem('m5_api_token',v);resolve(v||'');});token=await promptLock;promptLock=null;if(!token)return r;r=await send(token);return r;};})();</script>'''
 
@@ -83,13 +90,8 @@ def build() -> None:
         module_text = (ROOT / f"{module_name}.py").read_text(encoding="utf-8").replace(future_line, "", 1)
         for sibling in INLINED_MODULES:
             module_text = module_text.replace(f"import {sibling}\n", "")
-        boundary_texts.append(module_text.rstrip())
+        boundary_texts.append(f"{module_text.rstrip()}\n\n{module_name} = sys.modules[__name__]")
     boundary_block = "\n\n".join(boundary_texts)
-    boundary_block += (
-        "\n\n\n# Single-file build: re-alias the extracted modules to this file so qualified\n"
-        "# references (mcp_client.*, context_store.*) resolve to the inlined definitions.\n"
-        + "\n".join(f"{name} = sys.modules[__name__]" for name in INLINED_MODULES)
-    )
     out_text = out_text[:main_start] + "\n\n" + privacy_text.rstrip() + "\n\n" + boundary_block + "\n\n" + orchestrator_text.rstrip() + out_text[main_start:]
     OUT.write_text(out_text, encoding="utf-8")
     py_compile.compile(str(APP), doraise=True)

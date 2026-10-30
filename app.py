@@ -68,6 +68,7 @@ import execution_spine
 import mcp_client
 import onboarding_preflight
 import runtime_persistence
+import side_effect_ledger
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
 
 STUDIO_VERSION = "9.0.1"
@@ -587,7 +588,16 @@ async def _execute_skill_script_inner(
             skill_root, command, timeout=timeout, max_output_bytes=64_000,
         )
         elapsed_ms = round((time.perf_counter() - t0) * 1000)
-        if timed_out or exit_code != 0:
+        if timed_out:
+            return {
+                "ok": False,
+                "uncertain": True,
+                "error_code": "skill_script_timeout",
+                "output": "",
+                "diff": "",
+                "elapsed_ms": elapsed_ms,
+            }
+        if exit_code != 0:
             return {"ok": False, "output": "", "diff": "", "elapsed_ms": elapsed_ms}
         return {
             "ok": True,
@@ -605,7 +615,14 @@ async def _execute_skill_script_inner(
     except asyncio.TimeoutError:
         proc.kill()
         await proc.wait()
-        return {"ok": False, "output": "", "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
+        return {
+            "ok": False,
+            "uncertain": True,
+            "error_code": "skill_script_timeout",
+            "output": "",
+            "diff": "",
+            "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+        }
     elapsed_ms = round((time.perf_counter() - t0) * 1000)
     if proc.returncode != 0:
         return {"ok": False, "output": "", "diff": "", "elapsed_ms": elapsed_ms}
@@ -628,6 +645,7 @@ async def _run_skill_script(
     task_id: str | None = None,
     epoch: int | None = None,
     worker_id: str | None = None,
+    action_id: str | None = None,
 ) -> str:
     """Execute a repository skill script through the authoritative admission boundary.
 
@@ -651,6 +669,8 @@ async def _run_skill_script(
         task_id=task_id,
         epoch=epoch,
         worker_id=worker_id,
+        action_id=action_id,
+        workspace_root=cwd,
     )
     return str(res.get("output") or "")
 
@@ -1294,6 +1314,9 @@ def init_db() -> None:
         DB_PATH,
         base_ddl=_ensure_base_tables,
         target_version=SCHEMA_VERSION,
+    )
+    side_effect_ledger.DurableActionLedger(STORAGE, DB_PATH).reconcile_missing_results(
+        error_code="missing_result_on_startup"
     )
     _migrate_legacy_secrets()
     _seed_env_providers_and_default_combo()
@@ -4184,7 +4207,7 @@ async def api_chat_stream(request: Request) -> StreamingResponse:
 
                 messages.append({"role": "assistant", "content": raw_step_text})
                 tool_resp_blocks: list[str] = []
-                for tc in tool_calls[:6]:
+                for tc_idx, tc in enumerate(tool_calls[:6]):
                     t_name, t_args = tc["name"], tc["arguments"]
                     res_obj = await _execute_harness_tool(
                         client,
@@ -4193,6 +4216,8 @@ async def api_chat_stream(request: Request) -> StreamingResponse:
                         t_args,
                         approved=False,
                         grant_source="none",
+                        step_id=step_idx,
+                        call_index=tc_idx,
                     )
                     compressed_out, _ = sandbox_tool_output_if_large(
                         chat_sess_id, t_name, res_obj["output"], context_mode_enabled=True
@@ -4790,6 +4815,7 @@ async def _mcp_http_rpc(
     method: str,
     params: dict[str, Any] | None = None,
     timeout_sec: float = 25.0,
+    action_id: str = "",
 ) -> dict[str, Any]:
     """
     Universal Adaptive HTTP MCP Transport:
@@ -4804,16 +4830,34 @@ async def _mcp_http_rpc(
     url = srv["url"]
     builtin_local = any(p.get("url") == url for p in MCP_SERVER_PRESETS.values())
     post = _ValidatingMcpPost(client, allow_private=(STUDIO_ALLOW_PRIVATE_URLS or builtin_local))
-    return await mcp_client.adaptive_call(
-        post,
-        url=url,
-        server=srv,
-        method=method,
-        params=params,
-        timeout=timeout_sec,
-        sessions=mcp_client.SessionStore(_MCP_HTTP_SESSIONS),
-        client_version=STUDIO_VERSION,
-    )
+    active_scope = execution_spine.current_admission_scope()
+    effective_action_id = action_id or (active_scope.action_id if active_scope is not None else "")
+    try:
+        return await mcp_client.adaptive_call(
+            post,
+            url=url,
+            server=srv,
+            method=method,
+            params=params,
+            timeout=timeout_sec,
+            sessions=mcp_client.SessionStore(_MCP_HTTP_SESSIONS),
+            client_version=STUDIO_VERSION,
+            action_id=effective_action_id,
+        )
+    except (
+        httpx.ReadTimeout,
+        httpx.WriteTimeout,
+        httpx.PoolTimeout,
+        httpx.RemoteProtocolError,
+        httpcore.ReadTimeout,
+        httpcore.WriteTimeout,
+        httpcore.RemoteProtocolError,
+    ) as exc:
+        if method == "tools/call":
+            raise mcp_client.McpAmbiguousOutcomeError(
+                f"MCP HTTP transport dropped or timed out during `tools/call`: {exc}"
+            ) from exc
+        raise
 
 
 async def _mcp_stdio_rpc(
@@ -4842,14 +4886,17 @@ async def _mcp_stdio_rpc(
     )
     assert proc.stdin is not None and proc.stdout is not None
 
-    async def read_rpc_id(target_id: int) -> dict[str, Any]:
+    async def read_rpc_id(target_id: int, *, post_dispatch_tool_call: bool = False) -> dict[str, Any]:
         while True:
             raw_line = await proc.stdout.readline()
             if not raw_line:
                 err_txt = ""
                 if proc.stderr:
                     err_txt = (await proc.stderr.read()).decode("utf-8", errors="replace")[:350]
-                raise RuntimeError(f"Stdio MCP `{cmd}` exited before replying to id={target_id}. {err_txt}".strip())
+                msg = f"Stdio MCP `{cmd}` exited before replying to id={target_id}. {err_txt}".strip()
+                if post_dispatch_tool_call:
+                    raise mcp_client.McpAmbiguousOutcomeError(msg)
+                raise RuntimeError(msg)
             line = raw_line.decode("utf-8", errors="replace").strip()
             if not line or not line.startswith("{"):
                 continue
@@ -4881,7 +4928,17 @@ async def _mcp_stdio_rpc(
         req_msg = {"jsonrpc": "2.0", "id": 2, "method": method, "params": params or {}}
         proc.stdin.write((json.dumps(notif_msg) + "\n" + json.dumps(req_msg) + "\n").encode("utf-8"))
         await proc.stdin.drain()
-        res = await asyncio.wait_for(read_rpc_id(2), timeout=timeout_sec)
+        try:
+            res = await asyncio.wait_for(
+                read_rpc_id(2, post_dispatch_tool_call=(method == "tools/call")),
+                timeout=timeout_sec,
+            )
+        except asyncio.TimeoutError as timeout_exc:
+            if method == "tools/call":
+                raise mcp_client.McpAmbiguousOutcomeError(
+                    f"Stdio MCP `{cmd}` timed out after dispatching `tools/call`."
+                ) from timeout_exc
+            raise
         return res
     finally:
         try:
@@ -5220,6 +5277,7 @@ async def api_call_mcp_server_tool(alias: str, request: Request) -> JSONResponse
         raise HTTPException(status_code=400, detail="`tool` name is required.")
     if not isinstance(args, dict):
         raise HTTPException(status_code=400, detail="`arguments` must be a JSON object.")
+    raw_action_id = (request.headers.get("Idempotency-Key") or str(body.get("action_id") or "")).strip()
     try:
         res = await execute_mcp_tool_call(
             request.app.state.http,
@@ -5230,8 +5288,11 @@ async def api_call_mcp_server_tool(alias: str, request: Request) -> JSONResponse
             approved=True,  # This authenticated, explicit playground action is one-call user approval.
             session_id="manual-mcp-playground",
             grant_source="operator_one_call",
+            action_id=(raw_action_id or None),
         )
         return JSONResponse(res)
+    except side_effect_ledger.DuplicateSideEffect as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -5912,7 +5973,14 @@ async def run_reusable_block(root: Path, block_name: str, target: str = "") -> d
         except (PermissionError, RuntimeError, ValueError, OSError) as exc:
             return {"ok": False, "output": str(exc), "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
         if timed_out:
-            return {"ok": False, "output": f"Block `{bname}` timed out after 45s.", "diff": "", "elapsed_ms": 45000}
+            return {
+                "ok": False,
+                "uncertain": True,
+                "error_code": "block_timeout",
+                "output": f"Block `{bname}` timed out after 45s.",
+                "diff": "",
+                "elapsed_ms": 45000,
+            }
         ec = int(ec if ec is not None else 1)
         raw = out_b.decode("utf-8", errors="replace")
         lns = raw.splitlines()
@@ -7676,6 +7744,8 @@ async def _execute_harness_tool_inner(
             if timed_out:
                 return {
                     "ok": False,
+                    "uncertain": True,
+                    "error_code": "command_timeout",
                     "output": f"Command timed out after {timeout_sec}s: `{cmd}`",
                     "diff": "",
                     "elapsed_ms": round((time.perf_counter() - t0) * 1000),
@@ -7779,7 +7849,14 @@ async def _execute_harness_tool_inner(
             except (PermissionError, RuntimeError, ValueError, OSError) as exc:
                 return {"ok": False, "output": str(exc), "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
             if timed_out:
-                return {"ok": False, "output": "`ctx_execute_python` timed out after 20s.", "diff": "", "elapsed_ms": 20000}
+                return {
+                    "ok": False,
+                    "uncertain": True,
+                    "error_code": "python_timeout",
+                    "output": "`ctx_execute_python` timed out after 20s.",
+                    "diff": "",
+                    "elapsed_ms": 20000,
+                }
             ec = int(ec if ec is not None else 1)
             out_txt = out_b.decode("utf-8", errors="replace").strip() or "(no stdout)"
             return {
@@ -7836,8 +7913,19 @@ async def _execute_harness_tool_inner(
             return await _execute_mcp_tool_call_inner(client, mcp_alias, mcp_remote_tool, args, cwd=root)
 
         return {"ok": False, "output": f"Unknown tool `{tool_name}`.", "diff": "", "elapsed_ms": 1}
+    except execution_spine.DirectExecutorBypassError:
+        raise
     except Exception as exc:
-        return {"ok": False, "output": f"Tool `{tool_name}` error: {exc}", "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
+        err_payload: dict[str, Any] = {
+            "ok": False,
+            "output": f"Tool `{tool_name}` error: {exc}",
+            "diff": "",
+            "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+        }
+        if side_effect_ledger.is_ambiguous_exception(exc):
+            err_payload["uncertain"] = True
+            err_payload["error_code"] = type(exc).__name__
+        return err_payload
 
 
 def _audit_tool_start(session_id: str, tool_name: str, policy: str, approved: bool, args: dict[str, Any]) -> int:
@@ -7912,6 +8000,123 @@ class _AppActionLedger:
         _audit_tool_finish(event_id, result, elapsed_ms, status=status)
 
 
+def _reconcile_app_action(
+    workspace_root: Path,
+    _record: runtime_persistence.ActionRecord,
+    tool_name: str,
+    args: Mapping[str, Any],
+) -> side_effect_ledger.ReconciliationVerdict:
+    """Safely probe target state for ``reconcilable`` uncertain actions before replay."""
+    if tool_name == "write_file":
+        raw_p = str(args.get("path") or "")
+        if not raw_p or _check_gsd_secret_guard(raw_p):
+            return "unresolved"
+        try:
+            root_res, relative_parts = _workspace_relative_parts(workspace_root, raw_p)
+            fp = root_res.joinpath(*relative_parts)
+            if _is_secret_path(fp):
+                return "unresolved"
+            current_text, _info = _read_workspace_text(root_res, Path(*relative_parts), errors="strict")
+        except Exception:
+            return "unresolved"
+        target_content = str(args.get("content") if args.get("content") is not None else "")
+        if current_text == target_content:
+            return "verified_committed"
+        return "unresolved"
+
+    if tool_name in ("oc_save_doc", "mcp_bridge__oc_save_doc"):
+        raw_doc_id = str(args.get("doc_id") or "").strip()
+        if not raw_doc_id:
+            return "unresolved"
+        try:
+            doc = context_store.get_doc(STORAGE, DB_PATH, raw_doc_id)
+        except KeyError:
+            return "verified_not_applied"
+        except Exception:
+            return "unresolved"
+        expected_title = str(args.get("title") or "").strip()
+        expected_content = str(args.get("content") or "")
+        expected_folder = str(args.get("folder") or "decisions").strip() or "decisions"
+        expected_pinned = bool(args.get("pinned", False))
+        if (
+            str(doc.get("title") or "") == expected_title
+            and str(doc.get("content") or "") == expected_content
+            and str(doc.get("folder") or "") == expected_folder
+            and bool(doc.get("pinned", False)) == expected_pinned
+        ):
+            return "verified_committed"
+        return "unresolved"
+
+    return "unresolved"
+
+
+def get_durable_action_ledger(workspace_root: Path | None = None) -> side_effect_ledger.DurableActionLedger:
+    """Return an authoritative ``DurableActionLedger`` bound to ``STORAGE`` and ``DB_PATH``."""
+    target_root = workspace_root or WORKSPACE_ROOT
+    return side_effect_ledger.DurableActionLedger(
+        STORAGE,
+        DB_PATH,
+        reconciler=lambda rec, tname, a: _reconcile_app_action(target_root, rec, tname, a),
+    )
+
+
+class _AppIntentLedger:
+    """M5-P1-03 adapter connecting ``side_effect_ledger.DurableActionLedger`` to ``execution_spine.IntentLedger``."""
+
+    def __init__(self, workspace_root: Path | None = None) -> None:
+        self._ledger = get_durable_action_ledger(workspace_root)
+
+    def begin(
+        self,
+        request: execution_spine.ActionRequest,
+        *,
+        effective_policy: str,
+        action_class: execution_spine.ActionClass,
+        allowed: bool,
+        explicit_approval: bool,
+    ) -> execution_spine.IntentBeginDecision:
+        outcome = self._ledger.begin(
+            action_id=request.action_id,
+            step_id=request.step_id,
+            call_index=request.call_index,
+            tool_name=request.tool_name,
+            args=request.args,
+            policy=effective_policy,
+            action_class=action_class,
+            replay_policy=request.replay_policy,
+            allowed=allowed,
+            explicit_approval=explicit_approval,
+            session_id=request.session_id,
+            task_id=request.task_id,
+            epoch=request.epoch,
+        )
+        return execution_spine.IntentBeginDecision(
+            proceed=outcome.proceed,
+            action_id=outcome.action_id,
+            attempt=outcome.attempt,
+            attempt_id=outcome.attempt_id,
+            status=outcome.status,
+            replay_policy=outcome.replay_policy,
+            replay_blocked=outcome.replay_blocked,
+            already_committed=outcome.already_committed,
+            reconciled=outcome.reconciled,
+            reason=outcome.reason,
+            error=outcome.error,
+        )
+
+    def mark_never_started(self, action_id: str, *, error_code: str) -> str:
+        rec = self._ledger.mark_never_started(action_id, error_code=error_code)
+        return rec.status
+
+    def complete(self, action_id: str, result: Mapping[str, Any], elapsed_ms: int) -> str:
+        rec = self._ledger.complete(action_id, result, elapsed_ms)
+        return rec.status
+
+    def record_exception(self, action_id: str, exc: BaseException, elapsed_ms: int) -> str:
+        rec = self._ledger.record_exception(action_id, exc, elapsed_ms)
+        return rec.status
+
+
 class _AppTaskContextResolver:
     """Authoritative task-lifecycle and lease-epoch resolver (M5-P1-02).
 
@@ -7968,19 +8173,26 @@ async def _run_authorized_tool(
     task_state: str | None = None,
     epoch: int | None = None,
     worker_id: str | None = None,
+    action_id: str | None = None,
+    step_id: str | int | None = None,
+    call_index: int | None = None,
+    replay_policy: str | None = None,
+    workspace_root: Path | None = None,
 ) -> dict[str, Any]:
-    """Authorize, durably audit, and then execute exactly one tool attempt.
+    """Authorize, durably record intent, execute once inside scoped admission, and record outcome.
 
     Thin adapter over the extracted execution-spine boundary
     (``execution_spine.DurableActionBoundary``; see ADR-0002): action-class
     separation, grant provenance, task-state/epoch fencing, policy evaluation,
-    durable intent/outcome auditing, and scoped anti-bypass admission tokens
-    are enforced there."""
+    durable ``runtime_actions`` intent/result ledger + ``tool_audit_events``
+    auditing, replay safety, and scoped anti-bypass admission tokens are
+    enforced there."""
     boundary = execution_spine.DurableActionBoundary(
         _AppToolPolicy(),
         _AppActionLedger(),
         pre_execute_guard=lambda: runtime_persistence.assert_no_active_write_transaction("tool_execution"),
         task_context_resolver=_AppTaskContextResolver(),
+        intent_ledger=_AppIntentLedger(workspace_root=workspace_root),
     )
     return await boundary.admit_and_execute(
         execution_spine.ActionRequest(
@@ -7998,6 +8210,10 @@ async def _run_authorized_tool(
             task_state=task_state,
             epoch=epoch,
             worker_id=worker_id,
+            action_id=action_id,
+            step_id=step_id,
+            call_index=call_index,
+            replay_policy=replay_policy,
         ),
         executor,
     )
@@ -8019,6 +8235,9 @@ async def execute_mcp_tool_call(
     task_state: str | None = None,
     epoch: int | None = None,
     worker_id: str | None = None,
+    action_id: str | None = None,
+    step_id: str | int | None = None,
+    call_index: int | None = None,
 ) -> dict[str, Any]:
     """Policy-checked and audited MCP entry point; direct denial preserves PermissionError behavior."""
     tool_name = f"mcp__{alias}__{remote_tool}"
@@ -8041,6 +8260,10 @@ async def execute_mcp_tool_call(
         task_state=task_state,
         epoch=epoch,
         worker_id=worker_id,
+        action_id=action_id,
+        step_id=step_id,
+        call_index=call_index,
+        workspace_root=cwd,
     )
 
 
@@ -8058,6 +8281,10 @@ async def _execute_harness_tool(
     task_state: str | None = None,
     epoch: int | None = None,
     worker_id: str | None = None,
+    action_id: str | None = None,
+    step_id: str | int | None = None,
+    call_index: int | None = None,
+    replay_policy: str | None = None,
 ) -> dict[str, Any]:
     """Central policy and audit boundary for harness and Direct Chat tool calls."""
     policy = _effective_harness_policy(sess.get("policy"), {})
@@ -8075,6 +8302,7 @@ async def _execute_harness_tool(
         if grant_source != "unspecified"
         else ("operator_approval" if approved else "policy")
     )
+    sess_root = Path(sess["worktree_dir"]) if sess.get("worktree_dir") else WORKSPACE_ROOT
     return await _run_authorized_tool(
         tool_name,
         args,
@@ -8089,6 +8317,11 @@ async def _execute_harness_tool(
         task_state=resolved_task_state,
         epoch=resolved_epoch,
         worker_id=resolved_worker_id,
+        action_id=action_id,
+        step_id=step_id,
+        call_index=call_index,
+        replay_policy=replay_policy,
+        workspace_root=sess_root,
     )
 
 
@@ -8627,6 +8860,8 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         approved=approved,
                         grant_source=grant_source,
                         approval_id=approval_id,
+                        step_id=step_idx,
+                        call_index=tc_idx,
                     )
                     if needs_approval and not approved and reject_note:
                         res_obj["output"] += f" User rejection note: {reject_note}"
@@ -8887,6 +9122,8 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                             approved=approved,
                             grant_source=grant_source,
                             approval_id=approval_id,
+                            step_id=global_step,
+                            call_index=tc_i,
                         )
                         if needs_approval and not approved and reject_note:
                             res_obj["output"] += f" User rejection note: {reject_note}"
@@ -9423,6 +9660,8 @@ async def _run_sdlc_sprints_stream(
                             approved=False,
                             policy_denial="Blocked by Default-FAIL Contract: Coding worker cannot edit `.sdlc/backlog.json`.",
                             grant_source="none",
+                            step_id=cur_step,
+                            call_index=tc_i,
                         )
                         sb_meta: dict[str, Any] = {"sandboxed": False}
                     else:
@@ -9450,6 +9689,8 @@ async def _run_sdlc_sprints_stream(
                             approved=approved,
                             grant_source=grant_source,
                             approval_id=approval_id,
+                            step_id=cur_step,
+                            call_index=tc_i,
                         )
                         if needs_approval and not approved and reject_note:
                             res_obj["output"] += f" User rejection note: {reject_note}"

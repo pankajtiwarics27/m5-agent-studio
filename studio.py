@@ -580,7 +580,16 @@ async def _execute_skill_script_inner(
             skill_root, command, timeout=timeout, max_output_bytes=64_000,
         )
         elapsed_ms = round((time.perf_counter() - t0) * 1000)
-        if timed_out or exit_code != 0:
+        if timed_out:
+            return {
+                "ok": False,
+                "uncertain": True,
+                "error_code": "skill_script_timeout",
+                "output": "",
+                "diff": "",
+                "elapsed_ms": elapsed_ms,
+            }
+        if exit_code != 0:
             return {"ok": False, "output": "", "diff": "", "elapsed_ms": elapsed_ms}
         return {
             "ok": True,
@@ -598,7 +607,14 @@ async def _execute_skill_script_inner(
     except asyncio.TimeoutError:
         proc.kill()
         await proc.wait()
-        return {"ok": False, "output": "", "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
+        return {
+            "ok": False,
+            "uncertain": True,
+            "error_code": "skill_script_timeout",
+            "output": "",
+            "diff": "",
+            "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+        }
     elapsed_ms = round((time.perf_counter() - t0) * 1000)
     if proc.returncode != 0:
         return {"ok": False, "output": "", "diff": "", "elapsed_ms": elapsed_ms}
@@ -621,6 +637,7 @@ async def _run_skill_script(
     task_id: str | None = None,
     epoch: int | None = None,
     worker_id: str | None = None,
+    action_id: str | None = None,
 ) -> str:
     """Execute a repository skill script through the authoritative admission boundary.
 
@@ -644,6 +661,8 @@ async def _run_skill_script(
         task_id=task_id,
         epoch=epoch,
         worker_id=worker_id,
+        action_id=action_id,
+        workspace_root=cwd,
     )
     return str(res.get("output") or "")
 
@@ -1287,6 +1306,9 @@ def init_db() -> None:
         DB_PATH,
         base_ddl=_ensure_base_tables,
         target_version=SCHEMA_VERSION,
+    )
+    side_effect_ledger.DurableActionLedger(STORAGE, DB_PATH).reconcile_missing_results(
+        error_code="missing_result_on_startup"
     )
     _migrate_legacy_secrets()
     _seed_env_providers_and_default_combo()
@@ -8408,7 +8430,7 @@ async def api_chat_stream(request: Request) -> StreamingResponse:
 
                 messages.append({"role": "assistant", "content": raw_step_text})
                 tool_resp_blocks: list[str] = []
-                for tc in tool_calls[:6]:
+                for tc_idx, tc in enumerate(tool_calls[:6]):
                     t_name, t_args = tc["name"], tc["arguments"]
                     res_obj = await _execute_harness_tool(
                         client,
@@ -8417,6 +8439,8 @@ async def api_chat_stream(request: Request) -> StreamingResponse:
                         t_args,
                         approved=False,
                         grant_source="none",
+                        step_id=step_idx,
+                        call_index=tc_idx,
                     )
                     compressed_out, _ = sandbox_tool_output_if_large(
                         chat_sess_id, t_name, res_obj["output"], context_mode_enabled=True
@@ -9014,6 +9038,7 @@ async def _mcp_http_rpc(
     method: str,
     params: dict[str, Any] | None = None,
     timeout_sec: float = 25.0,
+    action_id: str = "",
 ) -> dict[str, Any]:
     """
     Universal Adaptive HTTP MCP Transport:
@@ -9028,16 +9053,34 @@ async def _mcp_http_rpc(
     url = srv["url"]
     builtin_local = any(p.get("url") == url for p in MCP_SERVER_PRESETS.values())
     post = _ValidatingMcpPost(client, allow_private=(STUDIO_ALLOW_PRIVATE_URLS or builtin_local))
-    return await mcp_client.adaptive_call(
-        post,
-        url=url,
-        server=srv,
-        method=method,
-        params=params,
-        timeout=timeout_sec,
-        sessions=mcp_client.SessionStore(_MCP_HTTP_SESSIONS),
-        client_version=STUDIO_VERSION,
-    )
+    active_scope = execution_spine.current_admission_scope()
+    effective_action_id = action_id or (active_scope.action_id if active_scope is not None else "")
+    try:
+        return await mcp_client.adaptive_call(
+            post,
+            url=url,
+            server=srv,
+            method=method,
+            params=params,
+            timeout=timeout_sec,
+            sessions=mcp_client.SessionStore(_MCP_HTTP_SESSIONS),
+            client_version=STUDIO_VERSION,
+            action_id=effective_action_id,
+        )
+    except (
+        httpx.ReadTimeout,
+        httpx.WriteTimeout,
+        httpx.PoolTimeout,
+        httpx.RemoteProtocolError,
+        httpcore.ReadTimeout,
+        httpcore.WriteTimeout,
+        httpcore.RemoteProtocolError,
+    ) as exc:
+        if method == "tools/call":
+            raise mcp_client.McpAmbiguousOutcomeError(
+                f"MCP HTTP transport dropped or timed out during `tools/call`: {exc}"
+            ) from exc
+        raise
 
 
 async def _mcp_stdio_rpc(
@@ -9066,14 +9109,17 @@ async def _mcp_stdio_rpc(
     )
     assert proc.stdin is not None and proc.stdout is not None
 
-    async def read_rpc_id(target_id: int) -> dict[str, Any]:
+    async def read_rpc_id(target_id: int, *, post_dispatch_tool_call: bool = False) -> dict[str, Any]:
         while True:
             raw_line = await proc.stdout.readline()
             if not raw_line:
                 err_txt = ""
                 if proc.stderr:
                     err_txt = (await proc.stderr.read()).decode("utf-8", errors="replace")[:350]
-                raise RuntimeError(f"Stdio MCP `{cmd}` exited before replying to id={target_id}. {err_txt}".strip())
+                msg = f"Stdio MCP `{cmd}` exited before replying to id={target_id}. {err_txt}".strip()
+                if post_dispatch_tool_call:
+                    raise mcp_client.McpAmbiguousOutcomeError(msg)
+                raise RuntimeError(msg)
             line = raw_line.decode("utf-8", errors="replace").strip()
             if not line or not line.startswith("{"):
                 continue
@@ -9105,7 +9151,17 @@ async def _mcp_stdio_rpc(
         req_msg = {"jsonrpc": "2.0", "id": 2, "method": method, "params": params or {}}
         proc.stdin.write((json.dumps(notif_msg) + "\n" + json.dumps(req_msg) + "\n").encode("utf-8"))
         await proc.stdin.drain()
-        res = await asyncio.wait_for(read_rpc_id(2), timeout=timeout_sec)
+        try:
+            res = await asyncio.wait_for(
+                read_rpc_id(2, post_dispatch_tool_call=(method == "tools/call")),
+                timeout=timeout_sec,
+            )
+        except asyncio.TimeoutError as timeout_exc:
+            if method == "tools/call":
+                raise mcp_client.McpAmbiguousOutcomeError(
+                    f"Stdio MCP `{cmd}` timed out after dispatching `tools/call`."
+                ) from timeout_exc
+            raise
         return res
     finally:
         try:
@@ -9444,6 +9500,7 @@ async def api_call_mcp_server_tool(alias: str, request: Request) -> JSONResponse
         raise HTTPException(status_code=400, detail="`tool` name is required.")
     if not isinstance(args, dict):
         raise HTTPException(status_code=400, detail="`arguments` must be a JSON object.")
+    raw_action_id = (request.headers.get("Idempotency-Key") or str(body.get("action_id") or "")).strip()
     try:
         res = await execute_mcp_tool_call(
             request.app.state.http,
@@ -9454,8 +9511,11 @@ async def api_call_mcp_server_tool(alias: str, request: Request) -> JSONResponse
             approved=True,  # This authenticated, explicit playground action is one-call user approval.
             session_id="manual-mcp-playground",
             grant_source="operator_one_call",
+            action_id=(raw_action_id or None),
         )
         return JSONResponse(res)
+    except side_effect_ledger.DuplicateSideEffect as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -10136,7 +10196,14 @@ async def run_reusable_block(root: Path, block_name: str, target: str = "") -> d
         except (PermissionError, RuntimeError, ValueError, OSError) as exc:
             return {"ok": False, "output": str(exc), "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
         if timed_out:
-            return {"ok": False, "output": f"Block `{bname}` timed out after 45s.", "diff": "", "elapsed_ms": 45000}
+            return {
+                "ok": False,
+                "uncertain": True,
+                "error_code": "block_timeout",
+                "output": f"Block `{bname}` timed out after 45s.",
+                "diff": "",
+                "elapsed_ms": 45000,
+            }
         ec = int(ec if ec is not None else 1)
         raw = out_b.decode("utf-8", errors="replace")
         lns = raw.splitlines()
@@ -11900,6 +11967,8 @@ async def _execute_harness_tool_inner(
             if timed_out:
                 return {
                     "ok": False,
+                    "uncertain": True,
+                    "error_code": "command_timeout",
                     "output": f"Command timed out after {timeout_sec}s: `{cmd}`",
                     "diff": "",
                     "elapsed_ms": round((time.perf_counter() - t0) * 1000),
@@ -12003,7 +12072,14 @@ async def _execute_harness_tool_inner(
             except (PermissionError, RuntimeError, ValueError, OSError) as exc:
                 return {"ok": False, "output": str(exc), "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
             if timed_out:
-                return {"ok": False, "output": "`ctx_execute_python` timed out after 20s.", "diff": "", "elapsed_ms": 20000}
+                return {
+                    "ok": False,
+                    "uncertain": True,
+                    "error_code": "python_timeout",
+                    "output": "`ctx_execute_python` timed out after 20s.",
+                    "diff": "",
+                    "elapsed_ms": 20000,
+                }
             ec = int(ec if ec is not None else 1)
             out_txt = out_b.decode("utf-8", errors="replace").strip() or "(no stdout)"
             return {
@@ -12060,8 +12136,19 @@ async def _execute_harness_tool_inner(
             return await _execute_mcp_tool_call_inner(client, mcp_alias, mcp_remote_tool, args, cwd=root)
 
         return {"ok": False, "output": f"Unknown tool `{tool_name}`.", "diff": "", "elapsed_ms": 1}
+    except execution_spine.DirectExecutorBypassError:
+        raise
     except Exception as exc:
-        return {"ok": False, "output": f"Tool `{tool_name}` error: {exc}", "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
+        err_payload: dict[str, Any] = {
+            "ok": False,
+            "output": f"Tool `{tool_name}` error: {exc}",
+            "diff": "",
+            "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+        }
+        if side_effect_ledger.is_ambiguous_exception(exc):
+            err_payload["uncertain"] = True
+            err_payload["error_code"] = type(exc).__name__
+        return err_payload
 
 
 def _audit_tool_start(session_id: str, tool_name: str, policy: str, approved: bool, args: dict[str, Any]) -> int:
@@ -12136,6 +12223,123 @@ class _AppActionLedger:
         _audit_tool_finish(event_id, result, elapsed_ms, status=status)
 
 
+def _reconcile_app_action(
+    workspace_root: Path,
+    _record: runtime_persistence.ActionRecord,
+    tool_name: str,
+    args: Mapping[str, Any],
+) -> side_effect_ledger.ReconciliationVerdict:
+    """Safely probe target state for ``reconcilable`` uncertain actions before replay."""
+    if tool_name == "write_file":
+        raw_p = str(args.get("path") or "")
+        if not raw_p or _check_gsd_secret_guard(raw_p):
+            return "unresolved"
+        try:
+            root_res, relative_parts = _workspace_relative_parts(workspace_root, raw_p)
+            fp = root_res.joinpath(*relative_parts)
+            if _is_secret_path(fp):
+                return "unresolved"
+            current_text, _info = _read_workspace_text(root_res, Path(*relative_parts), errors="strict")
+        except Exception:
+            return "unresolved"
+        target_content = str(args.get("content") if args.get("content") is not None else "")
+        if current_text == target_content:
+            return "verified_committed"
+        return "unresolved"
+
+    if tool_name in ("oc_save_doc", "mcp_bridge__oc_save_doc"):
+        raw_doc_id = str(args.get("doc_id") or "").strip()
+        if not raw_doc_id:
+            return "unresolved"
+        try:
+            doc = context_store.get_doc(STORAGE, DB_PATH, raw_doc_id)
+        except KeyError:
+            return "verified_not_applied"
+        except Exception:
+            return "unresolved"
+        expected_title = str(args.get("title") or "").strip()
+        expected_content = str(args.get("content") or "")
+        expected_folder = str(args.get("folder") or "decisions").strip() or "decisions"
+        expected_pinned = bool(args.get("pinned", False))
+        if (
+            str(doc.get("title") or "") == expected_title
+            and str(doc.get("content") or "") == expected_content
+            and str(doc.get("folder") or "") == expected_folder
+            and bool(doc.get("pinned", False)) == expected_pinned
+        ):
+            return "verified_committed"
+        return "unresolved"
+
+    return "unresolved"
+
+
+def get_durable_action_ledger(workspace_root: Path | None = None) -> side_effect_ledger.DurableActionLedger:
+    """Return an authoritative ``DurableActionLedger`` bound to ``STORAGE`` and ``DB_PATH``."""
+    target_root = workspace_root or WORKSPACE_ROOT
+    return side_effect_ledger.DurableActionLedger(
+        STORAGE,
+        DB_PATH,
+        reconciler=lambda rec, tname, a: _reconcile_app_action(target_root, rec, tname, a),
+    )
+
+
+class _AppIntentLedger:
+    """M5-P1-03 adapter connecting ``side_effect_ledger.DurableActionLedger`` to ``execution_spine.IntentLedger``."""
+
+    def __init__(self, workspace_root: Path | None = None) -> None:
+        self._ledger = get_durable_action_ledger(workspace_root)
+
+    def begin(
+        self,
+        request: execution_spine.ActionRequest,
+        *,
+        effective_policy: str,
+        action_class: execution_spine.ActionClass,
+        allowed: bool,
+        explicit_approval: bool,
+    ) -> execution_spine.IntentBeginDecision:
+        outcome = self._ledger.begin(
+            action_id=request.action_id,
+            step_id=request.step_id,
+            call_index=request.call_index,
+            tool_name=request.tool_name,
+            args=request.args,
+            policy=effective_policy,
+            action_class=action_class,
+            replay_policy=request.replay_policy,
+            allowed=allowed,
+            explicit_approval=explicit_approval,
+            session_id=request.session_id,
+            task_id=request.task_id,
+            epoch=request.epoch,
+        )
+        return execution_spine.IntentBeginDecision(
+            proceed=outcome.proceed,
+            action_id=outcome.action_id,
+            attempt=outcome.attempt,
+            attempt_id=outcome.attempt_id,
+            status=outcome.status,
+            replay_policy=outcome.replay_policy,
+            replay_blocked=outcome.replay_blocked,
+            already_committed=outcome.already_committed,
+            reconciled=outcome.reconciled,
+            reason=outcome.reason,
+            error=outcome.error,
+        )
+
+    def mark_never_started(self, action_id: str, *, error_code: str) -> str:
+        rec = self._ledger.mark_never_started(action_id, error_code=error_code)
+        return rec.status
+
+    def complete(self, action_id: str, result: Mapping[str, Any], elapsed_ms: int) -> str:
+        rec = self._ledger.complete(action_id, result, elapsed_ms)
+        return rec.status
+
+    def record_exception(self, action_id: str, exc: BaseException, elapsed_ms: int) -> str:
+        rec = self._ledger.record_exception(action_id, exc, elapsed_ms)
+        return rec.status
+
+
 class _AppTaskContextResolver:
     """Authoritative task-lifecycle and lease-epoch resolver (M5-P1-02).
 
@@ -12192,19 +12396,26 @@ async def _run_authorized_tool(
     task_state: str | None = None,
     epoch: int | None = None,
     worker_id: str | None = None,
+    action_id: str | None = None,
+    step_id: str | int | None = None,
+    call_index: int | None = None,
+    replay_policy: str | None = None,
+    workspace_root: Path | None = None,
 ) -> dict[str, Any]:
-    """Authorize, durably audit, and then execute exactly one tool attempt.
+    """Authorize, durably record intent, execute once inside scoped admission, and record outcome.
 
     Thin adapter over the extracted execution-spine boundary
     (``execution_spine.DurableActionBoundary``; see ADR-0002): action-class
     separation, grant provenance, task-state/epoch fencing, policy evaluation,
-    durable intent/outcome auditing, and scoped anti-bypass admission tokens
-    are enforced there."""
+    durable ``runtime_actions`` intent/result ledger + ``tool_audit_events``
+    auditing, replay safety, and scoped anti-bypass admission tokens are
+    enforced there."""
     boundary = execution_spine.DurableActionBoundary(
         _AppToolPolicy(),
         _AppActionLedger(),
         pre_execute_guard=lambda: runtime_persistence.assert_no_active_write_transaction("tool_execution"),
         task_context_resolver=_AppTaskContextResolver(),
+        intent_ledger=_AppIntentLedger(workspace_root=workspace_root),
     )
     return await boundary.admit_and_execute(
         execution_spine.ActionRequest(
@@ -12222,6 +12433,10 @@ async def _run_authorized_tool(
             task_state=task_state,
             epoch=epoch,
             worker_id=worker_id,
+            action_id=action_id,
+            step_id=step_id,
+            call_index=call_index,
+            replay_policy=replay_policy,
         ),
         executor,
     )
@@ -12243,6 +12458,9 @@ async def execute_mcp_tool_call(
     task_state: str | None = None,
     epoch: int | None = None,
     worker_id: str | None = None,
+    action_id: str | None = None,
+    step_id: str | int | None = None,
+    call_index: int | None = None,
 ) -> dict[str, Any]:
     """Policy-checked and audited MCP entry point; direct denial preserves PermissionError behavior."""
     tool_name = f"mcp__{alias}__{remote_tool}"
@@ -12265,6 +12483,10 @@ async def execute_mcp_tool_call(
         task_state=task_state,
         epoch=epoch,
         worker_id=worker_id,
+        action_id=action_id,
+        step_id=step_id,
+        call_index=call_index,
+        workspace_root=cwd,
     )
 
 
@@ -12282,6 +12504,10 @@ async def _execute_harness_tool(
     task_state: str | None = None,
     epoch: int | None = None,
     worker_id: str | None = None,
+    action_id: str | None = None,
+    step_id: str | int | None = None,
+    call_index: int | None = None,
+    replay_policy: str | None = None,
 ) -> dict[str, Any]:
     """Central policy and audit boundary for harness and Direct Chat tool calls."""
     policy = _effective_harness_policy(sess.get("policy"), {})
@@ -12299,6 +12525,7 @@ async def _execute_harness_tool(
         if grant_source != "unspecified"
         else ("operator_approval" if approved else "policy")
     )
+    sess_root = Path(sess["worktree_dir"]) if sess.get("worktree_dir") else WORKSPACE_ROOT
     return await _run_authorized_tool(
         tool_name,
         args,
@@ -12313,6 +12540,11 @@ async def _execute_harness_tool(
         task_state=resolved_task_state,
         epoch=resolved_epoch,
         worker_id=resolved_worker_id,
+        action_id=action_id,
+        step_id=step_id,
+        call_index=call_index,
+        replay_policy=replay_policy,
+        workspace_root=sess_root,
     )
 
 
@@ -12851,6 +13083,8 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         approved=approved,
                         grant_source=grant_source,
                         approval_id=approval_id,
+                        step_id=step_idx,
+                        call_index=tc_idx,
                     )
                     if needs_approval and not approved and reject_note:
                         res_obj["output"] += f" User rejection note: {reject_note}"
@@ -13111,6 +13345,8 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                             approved=approved,
                             grant_source=grant_source,
                             approval_id=approval_id,
+                            step_id=global_step,
+                            call_index=tc_i,
                         )
                         if needs_approval and not approved and reject_note:
                             res_obj["output"] += f" User rejection note: {reject_note}"
@@ -13647,6 +13883,8 @@ async def _run_sdlc_sprints_stream(
                             approved=False,
                             policy_denial="Blocked by Default-FAIL Contract: Coding worker cannot edit `.sdlc/backlog.json`.",
                             grant_source="none",
+                            step_id=cur_step,
+                            call_index=tc_i,
                         )
                         sb_meta: dict[str, Any] = {"sandboxed": False}
                     else:
@@ -13674,6 +13912,8 @@ async def _run_sdlc_sprints_stream(
                             approved=approved,
                             grant_source=grant_source,
                             approval_id=approval_id,
+                            step_id=cur_step,
+                            call_index=tc_i,
                         )
                         if needs_approval and not approved and reject_note:
                             res_obj["output"] += f" User rejection note: {reject_note}"
@@ -16144,6 +16384,1103 @@ class RuntimePersistenceStore:
 
         return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
 
+runtime_persistence = sys.modules[__name__]
+
+"""Durable intent/result ledger and replay classification for workflow side effects (M5-P1-03).
+
+Provides both:
+1. The standalone ``SideEffectLedger`` contract (retained for narrow contract tests).
+2. The authoritative M5 2.0 ``DurableActionLedger`` integrated into the served
+   runtime over Schema v3 ``runtime_actions`` (``runtime_persistence``):
+   - Stable ``action_id`` and monotonic ``attempt`` identities
+     (``derive_action_id``, ``format_attempt_id``);
+   - Explicit separation of ``never_started``, ``in_flight``, ``committed``, and
+     ``uncertain`` (plus ``denied`` and confirmed ``failed``);
+   - Missing results on crash/interruption are reconciled to ``uncertain``
+     (never ``failed``);
+   - Action-type replay classification (``idempotent``, ``reconcilable``,
+     ``non_idempotent``) ensuring non-idempotent uncertain writes are never
+     retried blindly.
+
+Stdlib-only (plus ``runtime_persistence``); inlined into standalone ``studio.py``
+by ``scripts/build_studio.py``.
+"""
+
+
+import hashlib
+import json
+import sqlite3
+import time
+import uuid
+from collections.abc import Mapping
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Literal, Protocol
+
+
+EffectStatus = Literal["claimed", "completed", "failed"]
+_STATUSES = frozenset({"claimed", "completed", "failed"})
+
+ReplayPolicy = Literal["idempotent", "reconcilable", "non_idempotent"]
+LedgerActionStatus = Literal["never_started", "in_flight", "committed", "failed", "denied", "uncertain"]
+ReconciliationVerdict = Literal["verified_committed", "verified_not_applied", "unresolved"]
+
+_LEDGER_READ_ONLY_TOOLS: frozenset[str] = frozenset(
+    {
+        "list_files",
+        "grep_search",
+        "read_file",
+        "codegraph_architecture",
+        "codegraph_context",
+        "codegraph_impact",
+        "codegraph_path",
+        "codegraph_quality",
+        "oc_lint",
+        "ctx_search",
+        "oc_search",
+        "oc_read",
+        "mcp_bridge__get_current_session_data",
+        "mcp_bridge__get_harness_diff",
+        "mcp_bridge__oc_search",
+        "mcp_bridge__oc_lint",
+        "mcp_bridge__codegraph_query",
+    }
+)
+_LEDGER_READ_ONLY_BLOCKS: frozenset[str] = frozenset({"json-peek", "csv-peek", "shortcut-debt"})
+
+_AMBIGUOUS_EXC_NAMES: frozenset[str] = frozenset(
+    {
+        "McpAmbiguousOutcomeError",
+        "AmbiguousSideEffectError",
+        "ReadTimeout",
+        "WriteTimeout",
+        "PoolTimeout",
+        "RemoteProtocolError",
+    }
+)
+
+
+class SideEffectError(ValueError):
+    """Raised when a side-effect ledger request is malformed."""
+
+
+class DuplicateSideEffect(RuntimeError):
+    """Raised when an operation key already represents a non-retryable effect."""
+
+
+class AmbiguousSideEffectError(RuntimeError):
+    """Raised when a side effect was dispatched and its outcome could not be confirmed."""
+
+
+class ActionIdentityConflictError(DuplicateSideEffect, PermissionError):
+    """Raised when an action_id is reused for a different tool or argument digest."""
+
+
+class UncertainActionReplayError(DuplicateSideEffect, PermissionError):
+    """Raised when a non-idempotent or unverified uncertain action is replayed blindly."""
+
+
+class CommittedActionReplayError(DuplicateSideEffect, PermissionError):
+    """Raised when an already-committed consequential action is re-submitted."""
+
+
+@dataclass(frozen=True, slots=True)
+class EffectRecord:
+    operation_key: str
+    effect_name: str
+    request_hash: str
+    status: EffectStatus
+    result_hash: str | None
+    attempts: int
+    updated_at: str
+
+
+def _text(value: str, field: str) -> str:
+    if not isinstance(value, str) or not value.strip() or "\x00" in value:
+        raise SideEffectError(f"{field} must be a non-empty string without NUL characters.")
+    return value.strip()
+
+
+def _status(value: str) -> EffectStatus:
+    if value not in _STATUSES:
+        raise SideEffectError(f"unknown side-effect status: {value}")
+    return value  # type: ignore[return-value]
+
+
+class SideEffectLedger:
+    """Claim operation keys atomically before execution and finalize exactly once."""
+
+    def __init__(self, database: Path) -> None:
+        self.database = Path(database)
+        self.database.parent.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(self.database) as connection:
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS side_effects (
+                    operation_key TEXT PRIMARY KEY,
+                    effect_name TEXT NOT NULL,
+                    request_hash TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    result_hash TEXT,
+                    attempts INTEGER NOT NULL,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CHECK (status IN ('claimed', 'completed', 'failed')),
+                    CHECK (attempts > 0)
+                )
+                """
+            )
+
+    @staticmethod
+    def _record(row: sqlite3.Row | None) -> EffectRecord | None:
+        if row is None:
+            return None
+        _status(row["status"])
+        return EffectRecord(
+            row["operation_key"],
+            row["effect_name"],
+            row["request_hash"],
+            row["status"],
+            row["result_hash"],
+            row["attempts"],
+            row["updated_at"],
+        )
+
+    def get(self, operation_key: str) -> EffectRecord | None:
+        key = _text(operation_key, "operation_key")
+        with sqlite3.connect(self.database) as connection:
+            connection.row_factory = sqlite3.Row
+            return self._record(
+                connection.execute("SELECT * FROM side_effects WHERE operation_key = ?", (key,)).fetchone()
+            )
+
+    def claim(self, operation_key: str, effect_name: str, request_hash: str) -> EffectRecord:
+        key = _text(operation_key, "operation_key")
+        name = _text(effect_name, "effect_name")
+        digest = _text(request_hash, "request_hash")
+        with sqlite3.connect(self.database, timeout=5.0) as connection:
+            connection.row_factory = sqlite3.Row
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT * FROM side_effects WHERE operation_key = ?", (key,)).fetchone()
+            existing = self._record(row)
+            if existing is not None:
+                if existing.request_hash != digest or existing.effect_name != name:
+                    raise DuplicateSideEffect("operation key conflicts with a different request.")
+                if existing.status != "failed":
+                    raise DuplicateSideEffect("operation key already has a claimed or completed side effect.")
+                connection.execute(
+                    "UPDATE side_effects SET status = 'claimed', result_hash = NULL, attempts = attempts + 1, "
+                    "updated_at = CURRENT_TIMESTAMP WHERE operation_key = ?",
+                    (key,),
+                )
+            else:
+                connection.execute(
+                    "INSERT INTO side_effects(operation_key, effect_name, request_hash, status, attempts) "
+                    "VALUES (?, ?, ?, 'claimed', 1)",
+                    (key, name, digest),
+                )
+            updated = connection.execute("SELECT * FROM side_effects WHERE operation_key = ?", (key,)).fetchone()
+        result = self._record(updated)
+        assert result is not None
+        return result
+
+    def complete(self, operation_key: str, result_hash: str) -> EffectRecord:
+        return self._finish(operation_key, "completed", result_hash)
+
+    def fail(self, operation_key: str, result_hash: str = "failure") -> EffectRecord:
+        return self._finish(operation_key, "failed", result_hash)
+
+    def _finish(self, operation_key: str, status: EffectStatus, result_hash: str) -> EffectRecord:
+        key = _text(operation_key, "operation_key")
+        digest = _text(result_hash, "result_hash")
+        with sqlite3.connect(self.database) as connection:
+            connection.row_factory = sqlite3.Row
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT * FROM side_effects WHERE operation_key = ?", (key,)).fetchone()
+            existing = self._record(row)
+            if existing is None or existing.status != "claimed":
+                raise DuplicateSideEffect("only a claimed side effect can be finalized.")
+            connection.execute(
+                "UPDATE side_effects SET status = ?, result_hash = ?, updated_at = CURRENT_TIMESTAMP "
+                "WHERE operation_key = ?",
+                (status, digest, key),
+            )
+            updated = connection.execute("SELECT * FROM side_effects WHERE operation_key = ?", (key,)).fetchone()
+        result = self._record(updated)
+        assert result is not None
+        return result
+
+
+# ---------------------------------------------------------------------------
+# Authoritative M5 2.0 Durable Intent / Result Ledger (`runtime_actions`)
+# ---------------------------------------------------------------------------
+
+
+def canonical_args_sha256(args: Mapping[str, Any] | None) -> str:
+    """Return a deterministic SHA-256 hex digest for structured tool arguments."""
+    payload = dict(args) if isinstance(args, Mapping) else {}
+    serialized = json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8", errors="replace")).hexdigest()
+
+
+def canonical_result_sha256(result: Mapping[str, Any] | None) -> str:
+    """Return a deterministic SHA-256 hex digest for tool output + diff material."""
+    payload = result if isinstance(result, Mapping) else {}
+    material = str(payload.get("output") or "") + "\n" + str(payload.get("diff") or "")
+    return hashlib.sha256(material.encode("utf-8", errors="replace")).hexdigest()
+
+
+def derive_action_id(
+    scope_id: str,
+    tool_name: str,
+    args: Mapping[str, Any] | None,
+    *,
+    step_id: str | int | None = None,
+    call_index: int | None = None,
+) -> str:
+    """Derive a deterministic stable ``action_id`` for a logical execution slot.
+
+    Re-entering the same ``(scope_id, step_id, call_index, tool_name, args_sha256)``
+    slot across retries or crash recovery produces the exact same ``action_id``.
+    """
+    clean_scope = _text(scope_id or "default", "scope_id")
+    clean_tool = _text(tool_name, "tool_name")
+    args_digest = canonical_args_sha256(args)
+    slot_material = json.dumps(
+        {
+            "scope": clean_scope,
+            "step": "" if step_id is None else str(step_id),
+            "index": 0 if call_index is None else int(call_index),
+            "tool": clean_tool,
+            "args_sha256": args_digest,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    digest = hashlib.sha256(slot_material.encode("utf-8")).hexdigest()[:32]
+    return f"act-{digest}"
+
+
+def mint_unique_action_id(
+    scope_id: str,
+    tool_name: str,
+    args: Mapping[str, Any] | None,
+) -> str:
+    """Mint a unique ``action_id`` when a caller invokes an ad-hoc unslotted action."""
+    clean_scope = str(scope_id or "adhoc").strip() or "adhoc"
+    clean_tool = _text(tool_name, "tool_name")
+    nonce = uuid.uuid4().hex
+    return derive_action_id(clean_scope, clean_tool, args, step_id=f"adhoc-{nonce}", call_index=0)
+
+
+def format_attempt_id(action_id: str, attempt: int) -> str:
+    """Format the canonical per-attempt identifier for a stable ``action_id``."""
+    clean_aid = _text(action_id, "action_id")
+    if int(attempt) < 1:
+        raise SideEffectError("attempt must be >= 1.")
+    return f"{clean_aid}#attempt-{int(attempt)}"
+
+
+def classify_replay_policy(
+    tool_name: str,
+    args: Mapping[str, Any] | None = None,
+    *,
+    action_class: str | None = None,
+) -> ReplayPolicy:
+    """Classify replay safety by action type (`idempotent`, `reconcilable`, `non_idempotent`).
+
+    - ``idempotent``: managed reads (`read_only` tools and read-only smart blocks)
+      whose re-execution cannot duplicate or corrupt state.
+    - ``reconcilable``: deterministic target overwrites (`write_file`, and
+      `oc_save_doc` / `mcp_bridge__oc_save_doc` when an explicit ``doc_id`` is
+      supplied) whose target state can be verified before deciding whether to
+      mark committed or retry; still never retried blindly without verification.
+    - ``non_idempotent``: shell/Python execution, skill scripts, relative
+      substring edits (`edit_file`), `oc_save_doc` without `doc_id` (creates a
+      new document UUID per call), subagent delegation, outbound MCP `tools/call`,
+      consequential inbound bridge calls, and any unknown tool.
+    """
+    clean = str(tool_name or "").strip()
+    safe_args = args if isinstance(args, Mapping) else {}
+    if action_class == "read_only":
+        return "idempotent"
+    if clean in _LEDGER_READ_ONLY_TOOLS:
+        return "idempotent"
+    if clean == "ctx_run_block":
+        block = str(safe_args.get("block") or "").strip().lower()
+        if block in _LEDGER_READ_ONLY_BLOCKS:
+            return "idempotent"
+        return "non_idempotent"
+    if clean == "write_file":
+        return "reconcilable"
+    if clean in ("oc_save_doc", "mcp_bridge__oc_save_doc"):
+        doc_id = str(safe_args.get("doc_id") or "").strip()
+        return "reconcilable" if doc_id else "non_idempotent"
+    return "non_idempotent"
+
+
+def is_ambiguous_exception(exc: BaseException) -> bool:
+    """Return True when ``exc`` indicates an ambiguous post-dispatch outcome (`uncertain`)."""
+    if isinstance(
+        exc,
+        (
+            AmbiguousSideEffectError,
+            TimeoutError,
+            ConnectionResetError,
+            BrokenPipeError,
+        ),
+    ):
+        return True
+    for cls in type(exc).__mro__:
+        if cls.__name__ in _AMBIGUOUS_EXC_NAMES:
+            return True
+    return False
+
+
+class ActionReconciler(Protocol):
+    """Callback probing target state for ``reconcilable`` uncertain actions before replay."""
+
+    def __call__(
+        self,
+        record: runtime_persistence.ActionRecord,
+        tool_name: str,
+        args: Mapping[str, Any],
+    ) -> ReconciliationVerdict:
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+class LedgerBeginOutcome:
+    """Decision returned when registering or re-entering an action attempt."""
+
+    proceed: bool
+    action_id: str
+    attempt: int
+    attempt_id: str
+    status: LedgerActionStatus
+    replay_policy: ReplayPolicy
+    record: runtime_persistence.ActionRecord | None = None
+    replay_blocked: bool = False
+    already_committed: bool = False
+    reconciled: bool = False
+    reason: str = ""
+    error: Exception | None = None
+
+
+def _sel_row_to_action(row: sqlite3.Row) -> runtime_persistence.ActionRecord:
+    return runtime_persistence.ActionRecord(
+        action_id=str(row["action_id"]),
+        task_id=(str(row["task_id"]) if row["task_id"] is not None else None),
+        session_id=str(row["session_id"]),
+        epoch=int(row["epoch"]),
+        attempt=int(row["attempt"]),
+        action_class=str(row["action_class"]),
+        replay_policy=str(row["replay_policy"]),
+        tool_name=str(row["tool_name"]),
+        policy=str(row["policy"]),
+        explicit_approval=bool(row["explicit_approval"]),
+        args_sha256=str(row["args_sha256"]),
+        status=str(row["status"]),
+        ok=(bool(row["ok"]) if row["ok"] is not None else None),
+        elapsed_ms=(int(row["elapsed_ms"]) if row["elapsed_ms"] is not None else None),
+        output_sha256=str(row["output_sha256"]),
+        error_code=str(row["error_code"]),
+        created_at=float(row["created_at"]),
+        updated_at=float(row["updated_at"]),
+    )
+
+
+class DurableActionLedger:
+    """Authoritative SQLite ``runtime_actions`` intent, outcome, and replay ledger."""
+
+    def __init__(
+        self,
+        storage: runtime_persistence.StorageProvider,
+        db_path: Path,
+        *,
+        retry_policy: runtime_persistence.BusyRetryPolicy | None = None,
+        reconciler: ActionReconciler | None = None,
+    ) -> None:
+        self._storage = storage
+        self._db_path = Path(db_path)
+        self._retry_policy: runtime_persistence.BusyRetryPolicy = (
+            retry_policy or runtime_persistence.DEFAULT_BUSY_RETRY_POLICY
+        )
+        self._reconciler = reconciler
+
+    def get_action(self, action_id: str) -> runtime_persistence.ActionRecord | None:
+        aid = _text(action_id, "action_id")
+
+        def _read(conn: sqlite3.Connection) -> runtime_persistence.ActionRecord | None:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            return _sel_row_to_action(row) if row is not None else None
+
+        return runtime_persistence.run_read(
+            self._storage, self._db_path, _read, retry_policy=self._retry_policy
+        )
+
+    def stage_never_started(
+        self,
+        action_id: str,
+        *,
+        tool_name: str,
+        args: Mapping[str, Any] | None,
+        policy: str,
+        action_class: str = "consequential",
+        replay_policy: ReplayPolicy | None = None,
+        task_id: str | None = None,
+        session_id: str = "",
+        epoch: int = 0,
+        explicit_approval: bool = False,
+        now: float | None = None,
+    ) -> runtime_persistence.ActionRecord:
+        """Persist an explicit ``never_started`` intent record prior to dispatch."""
+        aid = _text(action_id, "action_id")[:128]
+        tname = _text(tool_name, "tool_name")[:200]
+        pol = _text(policy, "policy")[:40]
+        digest = canonical_args_sha256(args)
+        eff_class = action_class if action_class in runtime_persistence.ACTION_CLASSES else "consequential"
+        eff_replay = replay_policy or classify_replay_policy(tname, args, action_class=eff_class)
+        if eff_replay not in runtime_persistence.REPLAY_POLICIES:
+            raise SideEffectError(f"Unsupported replay_policy: {eff_replay!r}")
+        tid = _text(task_id, "task_id")[:128] if task_id else None
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.ActionRecord:
+            conn.row_factory = sqlite3.Row
+            existing = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            if existing is not None:
+                rec = _sel_row_to_action(existing)
+                if rec.tool_name != tname or rec.args_sha256 != digest:
+                    raise ActionIdentityConflictError(
+                        f"Action `{aid}` conflicts with existing `{rec.tool_name}` intent digest."
+                    )
+                return rec
+            conn.execute(
+                """
+                INSERT INTO runtime_actions (
+                    action_id, task_id, session_id, epoch, attempt, action_class,
+                    replay_policy, tool_name, policy, explicit_approval, args_sha256,
+                    status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 'never_started', ?, ?)
+                """,
+                (
+                    aid,
+                    tid,
+                    str(session_id)[:128],
+                    max(0, int(epoch)),
+                    eff_class,
+                    eff_replay,
+                    tname,
+                    pol,
+                    int(bool(explicit_approval)),
+                    digest,
+                    ts,
+                    ts,
+                ),
+            )
+            row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            assert row is not None
+            return _sel_row_to_action(row)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage, self._db_path, _tx, retry_policy=self._retry_policy
+        )
+
+    def begin(
+        self,
+        *,
+        action_id: str | None,
+        step_id: str | int | None = None,
+        call_index: int | None = None,
+        tool_name: str,
+        args: Mapping[str, Any] | None,
+        policy: str,
+        action_class: str,
+        replay_policy: str | None = None,
+        allowed: bool,
+        explicit_approval: bool,
+        session_id: str,
+        task_id: str | None = None,
+        epoch: int | None = None,
+        now: float | None = None,
+    ) -> LedgerBeginOutcome:
+        """Atomically evaluate replay safety and commit durable ``in_flight`` (or ``denied``) intent."""
+        tname = _text(tool_name, "tool_name")[:200]
+        pol = _text(policy or "standard", "policy")[:40]
+        safe_args = args if isinstance(args, Mapping) else {}
+        digest = canonical_args_sha256(safe_args)
+        eff_class = action_class if action_class in runtime_persistence.ACTION_CLASSES else "consequential"
+        resolved_replay: ReplayPolicy = (
+            replay_policy  # type: ignore[assignment]
+            if replay_policy in runtime_persistence.REPLAY_POLICIES
+            else classify_replay_policy(tname, safe_args, action_class=eff_class)
+        )
+        scope_key = str(task_id or session_id or "default")
+        if action_id is not None and str(action_id).strip():
+            aid = _text(str(action_id), "action_id")[:128]
+        elif step_id is not None or call_index is not None:
+            aid = derive_action_id(scope_key, tname, safe_args, step_id=step_id, call_index=call_index)
+        else:
+            aid = mint_unique_action_id(scope_key, tname, safe_args)
+
+        clean_tid = _text(task_id, "task_id")[:128] if task_id else None
+        clean_epoch = max(0, int(epoch or 0))
+        ts = time.time() if now is None else float(now)
+
+        # Optional pre-transaction reconciliation probe for `reconcilable` actions in `uncertain` state
+        # (performed strictly outside `BEGIN IMMEDIATE` so filesystem/read checks hold no write lock).
+        reconcile_verdict: ReconciliationVerdict = "unresolved"
+        if allowed and resolved_replay == "reconcilable" and self._reconciler is not None:
+            prior = self.get_action(aid)
+            if prior is not None and prior.tool_name == tname and prior.args_sha256 == digest:
+                if prior.status in ("uncertain", "in_flight"):
+                    try:
+                        reconcile_verdict = self._reconciler(prior, tname, safe_args)
+                    except Exception:
+                        reconcile_verdict = "unresolved"
+
+        def _tx(conn: sqlite3.Connection) -> LedgerBeginOutcome:
+            conn.row_factory = sqlite3.Row
+            existing_row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            existing = _sel_row_to_action(existing_row) if existing_row is not None else None
+
+            if existing is not None and (existing.tool_name != tname or existing.args_sha256 != digest):
+                err = ActionIdentityConflictError(
+                    f"Action `{aid}` already bound to `{existing.tool_name}` with a different argument digest."
+                )
+                return LedgerBeginOutcome(
+                    proceed=False,
+                    action_id=aid,
+                    attempt=existing.attempt,
+                    attempt_id=format_attempt_id(aid, existing.attempt),
+                    status=existing.status,  # type: ignore[arg-type]
+                    replay_policy=resolved_replay,
+                    record=existing,
+                    replay_blocked=True,
+                    reason=str(err),
+                    error=err,
+                )
+
+            effective_tid = clean_tid
+            missing_tid_code = ""
+            if effective_tid is not None:
+                t_row = conn.execute("SELECT current_epoch FROM runtime_tasks WHERE task_id = ?", (effective_tid,)).fetchone()
+                if t_row is None:
+                    if not allowed:
+                        effective_tid = None
+                        missing_tid_code = "unknown_task_id"
+                    else:
+                        raise KeyError(f"Runtime task {effective_tid!r} does not exist.")
+
+            if not allowed:
+                if existing is None:
+                    conn.execute(
+                        """
+                        INSERT INTO runtime_actions (
+                            action_id, task_id, session_id, epoch, attempt, action_class,
+                            replay_policy, tool_name, policy, explicit_approval, args_sha256,
+                            status, ok, elapsed_ms, error_code, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 'denied', 0, 1, ?, ?, ?)
+                        """,
+                        (
+                            aid,
+                            effective_tid,
+                            str(session_id)[:128],
+                            clean_epoch,
+                            eff_class,
+                            resolved_replay,
+                            tname,
+                            pol,
+                            int(bool(explicit_approval)),
+                            digest,
+                            missing_tid_code or "admission_denied",
+                            ts,
+                            ts,
+                        ),
+                    )
+                    denied_row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+                    assert denied_row is not None
+                    denied_rec = _sel_row_to_action(denied_row)
+                    return LedgerBeginOutcome(
+                        proceed=False,
+                        action_id=aid,
+                        attempt=denied_rec.attempt,
+                        attempt_id=format_attempt_id(aid, denied_rec.attempt),
+                        status="denied",
+                        replay_policy=resolved_replay,
+                        record=denied_rec,
+                    )
+                if existing.status in ("never_started", "denied", "failed"):
+                    next_att = existing.attempt + 1
+                    conn.execute(
+                        """
+                        UPDATE runtime_actions
+                        SET attempt = ?, epoch = ?, policy = ?, explicit_approval = ?,
+                            status = 'denied', ok = 0, elapsed_ms = 1,
+                            error_code = ?, updated_at = ?
+                        WHERE action_id = ?
+                        """,
+                        (
+                            next_att,
+                            clean_epoch,
+                            pol,
+                            int(bool(explicit_approval)),
+                            missing_tid_code or "admission_denied",
+                            ts,
+                            aid,
+                        ),
+                    )
+                    denied_row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+                    assert denied_row is not None
+                    denied_rec = _sel_row_to_action(denied_row)
+                    return LedgerBeginOutcome(
+                        proceed=False,
+                        action_id=aid,
+                        attempt=denied_rec.attempt,
+                        attempt_id=format_attempt_id(aid, denied_rec.attempt),
+                        status="denied",
+                        replay_policy=resolved_replay,
+                        record=denied_rec,
+                    )
+                # Preserve existing `committed`, `in_flight`, or `uncertain` record without clobbering it.
+                return LedgerBeginOutcome(
+                    proceed=False,
+                    action_id=aid,
+                    attempt=existing.attempt,
+                    attempt_id=format_attempt_id(aid, existing.attempt),
+                    status=existing.status,  # type: ignore[arg-type]
+                    replay_policy=resolved_replay,
+                    record=existing,
+                )
+
+            # `allowed` is True: commit durable `in_flight` intent or enforce replay classification!
+            if existing is None:
+                conn.execute(
+                    """
+                    INSERT INTO runtime_actions (
+                        action_id, task_id, session_id, epoch, attempt, action_class,
+                        replay_policy, tool_name, policy, explicit_approval, args_sha256,
+                        status, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 'in_flight', ?, ?)
+                    """,
+                    (
+                        aid,
+                        effective_tid,
+                        str(session_id)[:128],
+                        clean_epoch,
+                        eff_class,
+                        resolved_replay,
+                        tname,
+                        pol,
+                        int(bool(explicit_approval)),
+                        digest,
+                        ts,
+                        ts,
+                    ),
+                )
+                ins_row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+                assert ins_row is not None
+                ins_rec = _sel_row_to_action(ins_row)
+                return LedgerBeginOutcome(
+                    proceed=True,
+                    action_id=aid,
+                    attempt=1,
+                    attempt_id=format_attempt_id(aid, 1),
+                    status="in_flight",
+                    replay_policy=resolved_replay,
+                    record=ins_rec,
+                )
+
+            # Existing record found on replay of `action_id`:
+            if existing.status == "committed":
+                if resolved_replay == "idempotent":
+                    next_att = existing.attempt + 1
+                    conn.execute(
+                        """
+                        UPDATE runtime_actions
+                        SET attempt = ?, epoch = ?, policy = ?, explicit_approval = ?,
+                            status = 'in_flight', ok = NULL, elapsed_ms = NULL,
+                            output_sha256 = '', error_code = '', updated_at = ?
+                        WHERE action_id = ?
+                        """,
+                        (next_att, clean_epoch, pol, int(bool(explicit_approval)), ts, aid),
+                    )
+                    upd = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+                    assert upd is not None
+                    return LedgerBeginOutcome(
+                        proceed=True,
+                        action_id=aid,
+                        attempt=next_att,
+                        attempt_id=format_attempt_id(aid, next_att),
+                        status="in_flight",
+                        replay_policy=resolved_replay,
+                        record=_sel_row_to_action(upd),
+                    )
+                err_c = CommittedActionReplayError(
+                    f"Replay blocked: consequential action `{aid}` (`{tname}`) is already `committed` "
+                    f"(attempt {existing.attempt}) and will not be executed again."
+                )
+                return LedgerBeginOutcome(
+                    proceed=False,
+                    action_id=aid,
+                    attempt=existing.attempt,
+                    attempt_id=format_attempt_id(aid, existing.attempt),
+                    status="committed",
+                    replay_policy=resolved_replay,
+                    record=existing,
+                    replay_blocked=True,
+                    already_committed=True,
+                    reason=str(err_c),
+                    error=err_c,
+                )
+
+            if existing.status in ("never_started", "denied", "failed"):
+                next_att = existing.attempt + 1
+                conn.execute(
+                    """
+                    UPDATE runtime_actions
+                    SET attempt = ?, task_id = COALESCE(?, task_id), epoch = ?, policy = ?,
+                        explicit_approval = ?, status = 'in_flight', ok = NULL,
+                        elapsed_ms = NULL, output_sha256 = '', error_code = '', updated_at = ?
+                    WHERE action_id = ?
+                    """,
+                    (next_att, effective_tid, clean_epoch, pol, int(bool(explicit_approval)), ts, aid),
+                )
+                upd = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+                assert upd is not None
+                return LedgerBeginOutcome(
+                    proceed=True,
+                    action_id=aid,
+                    attempt=next_att,
+                    attempt_id=format_attempt_id(aid, next_att),
+                    status="in_flight",
+                    replay_policy=resolved_replay,
+                    record=_sel_row_to_action(upd),
+                )
+
+            # `existing.status` is `'in_flight'` (missing result!) or `'uncertain'`:
+            # Missing result on an `'in_flight'` record is NEVER treated as `'failed'` —
+            # transition orphaned `'in_flight'` to `'uncertain'` before applying replay rules.
+            cur_record = existing
+            if existing.status == "in_flight":
+                conn.execute(
+                    """
+                    UPDATE runtime_actions
+                    SET status = 'uncertain', ok = NULL,
+                        error_code = CASE WHEN error_code = '' THEN 'missing_result' ELSE error_code END,
+                        updated_at = ?
+                    WHERE action_id = ? AND status = 'in_flight'
+                    """,
+                    (ts, aid),
+                )
+                re_row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+                assert re_row is not None
+                cur_record = _sel_row_to_action(re_row)
+
+            # Now `cur_record.status == 'uncertain'`: apply action-type replay classification!
+            if resolved_replay == "idempotent":
+                next_att = cur_record.attempt + 1
+                conn.execute(
+                    """
+                    UPDATE runtime_actions
+                    SET attempt = ?, epoch = ?, policy = ?, explicit_approval = ?,
+                        status = 'in_flight', ok = NULL, elapsed_ms = NULL,
+                        output_sha256 = '', error_code = '', updated_at = ?
+                    WHERE action_id = ?
+                    """,
+                    (next_att, clean_epoch, pol, int(bool(explicit_approval)), ts, aid),
+                )
+                upd = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+                assert upd is not None
+                return LedgerBeginOutcome(
+                    proceed=True,
+                    action_id=aid,
+                    attempt=next_att,
+                    attempt_id=format_attempt_id(aid, next_att),
+                    status="in_flight",
+                    replay_policy=resolved_replay,
+                    record=_sel_row_to_action(upd),
+                )
+
+            if resolved_replay == "reconcilable":
+                if reconcile_verdict == "verified_committed":
+                    conn.execute(
+                        """
+                        UPDATE runtime_actions
+                        SET status = 'committed', ok = 1, error_code = 'reconciled_committed', updated_at = ?
+                        WHERE action_id = ? AND status = 'uncertain'
+                        """,
+                        (ts, aid),
+                    )
+                    rec_row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+                    assert rec_row is not None
+                    rec_obj = _sel_row_to_action(rec_row)
+                    return LedgerBeginOutcome(
+                        proceed=False,
+                        action_id=aid,
+                        attempt=rec_obj.attempt,
+                        attempt_id=format_attempt_id(aid, rec_obj.attempt),
+                        status="committed",
+                        replay_policy=resolved_replay,
+                        record=rec_obj,
+                        already_committed=True,
+                        reconciled=True,
+                        reason=f"Reconciled `{tname}` (`{aid}`): target state already reflects the committed effect.",
+                    )
+                if reconcile_verdict == "verified_not_applied":
+                    next_att = cur_record.attempt + 1
+                    conn.execute(
+                        """
+                        UPDATE runtime_actions
+                        SET attempt = ?, epoch = ?, policy = ?, explicit_approval = ?,
+                            status = 'in_flight', ok = NULL, elapsed_ms = NULL,
+                            output_sha256 = '', error_code = '', updated_at = ?
+                        WHERE action_id = ?
+                        """,
+                        (next_att, clean_epoch, pol, int(bool(explicit_approval)), ts, aid),
+                    )
+                    upd = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+                    assert upd is not None
+                    return LedgerBeginOutcome(
+                        proceed=True,
+                        action_id=aid,
+                        attempt=next_att,
+                        attempt_id=format_attempt_id(aid, next_att),
+                        status="in_flight",
+                        replay_policy=resolved_replay,
+                        record=_sel_row_to_action(upd),
+                        reconciled=True,
+                    )
+
+            err_u = UncertainActionReplayError(
+                f"Replay blocked: `{resolved_replay}` action `{aid}` (`{tname}`, attempt {cur_record.attempt}) "
+                f"is in `uncertain` state ({cur_record.error_code or 'unreconciled'}) and cannot be retried blindly."
+            )
+            return LedgerBeginOutcome(
+                proceed=False,
+                action_id=aid,
+                attempt=cur_record.attempt,
+                attempt_id=format_attempt_id(aid, cur_record.attempt),
+                status="uncertain",
+                replay_policy=resolved_replay,
+                record=cur_record,
+                replay_blocked=True,
+                reason=str(err_u),
+                error=err_u,
+            )
+
+        return runtime_persistence.run_write_transaction(
+            self._storage, self._db_path, _tx, retry_policy=self._retry_policy
+        )
+
+    def mark_never_started(
+        self,
+        action_id: str,
+        *,
+        error_code: str = "pre_execute_guard_blocked",
+        now: float | None = None,
+    ) -> runtime_persistence.ActionRecord:
+        """Transition a pre-execution blocked attempt back to ``never_started``."""
+        aid = _text(action_id, "action_id")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.ActionRecord:
+            conn.row_factory = sqlite3.Row
+            conn.execute(
+                """
+                UPDATE runtime_actions
+                SET status = 'never_started', ok = NULL, elapsed_ms = 0,
+                    output_sha256 = '', error_code = ?, updated_at = ?
+                WHERE action_id = ?
+                """,
+                (str(error_code)[:120], ts, aid),
+            )
+            row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            if row is None:
+                raise KeyError(f"Runtime action {aid!r} does not exist.")
+            return _sel_row_to_action(row)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage, self._db_path, _tx, retry_policy=self._retry_policy
+        )
+
+    def complete(
+        self,
+        action_id: str,
+        result: Mapping[str, Any],
+        elapsed_ms: int,
+        *,
+        now: float | None = None,
+    ) -> runtime_persistence.ActionRecord:
+        """Durably finalize a completed, deterministically failed, or uncertain tool result."""
+        aid = _text(action_id, "action_id")
+        out_digest = canonical_result_sha256(result)
+        clean_ms = max(0, int(elapsed_ms))
+        ts = time.time() if now is None else float(now)
+
+        if bool(result.get("uncertain")):
+            final_status: LedgerActionStatus = "uncertain"
+            ok_val: int | None = None
+            err_code = str(result.get("error_code") or "ambiguous_outcome")[:120]
+        elif bool(result.get("ok")):
+            final_status = "committed"
+            ok_val = 1
+            err_code = ""
+        else:
+            final_status = "failed"
+            ok_val = 0
+            err_code = str(result.get("error_code") or "tool_returned_false")[:120]
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.ActionRecord:
+            conn.row_factory = sqlite3.Row
+            conn.execute(
+                """
+                UPDATE runtime_actions
+                SET status = ?, ok = ?, elapsed_ms = ?, output_sha256 = ?, error_code = ?, updated_at = ?
+                WHERE action_id = ?
+                """,
+                (final_status, ok_val, clean_ms, out_digest, err_code, ts, aid),
+            )
+            row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            if row is None:
+                raise KeyError(f"Runtime action {aid!r} does not exist.")
+            return _sel_row_to_action(row)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage, self._db_path, _tx, retry_policy=self._retry_policy
+        )
+
+    def record_exception(
+        self,
+        action_id: str,
+        exc: BaseException,
+        elapsed_ms: int,
+        *,
+        now: float | None = None,
+    ) -> runtime_persistence.ActionRecord:
+        """Finalize an exception raised during execution as ``uncertain`` (if ambiguous) or ``failed``."""
+        aid = _text(action_id, "action_id")
+        ambiguous = is_ambiguous_exception(exc)
+        final_status: LedgerActionStatus = "uncertain" if ambiguous else "failed"
+        ok_val: int | None = None if ambiguous else 0
+        err_code = type(exc).__name__[:120]
+        out_digest = canonical_result_sha256({"output": str(exc), "diff": ""})
+        clean_ms = max(0, int(elapsed_ms))
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.ActionRecord:
+            conn.row_factory = sqlite3.Row
+            conn.execute(
+                """
+                UPDATE runtime_actions
+                SET status = ?, ok = ?, elapsed_ms = ?, output_sha256 = ?, error_code = ?, updated_at = ?
+                WHERE action_id = ?
+                """,
+                (final_status, ok_val, clean_ms, out_digest, err_code, ts, aid),
+            )
+            row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            if row is None:
+                raise KeyError(f"Runtime action {aid!r} does not exist.")
+            return _sel_row_to_action(row)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage, self._db_path, _tx, retry_policy=self._retry_policy
+        )
+
+    def reconcile_missing_results(
+        self,
+        *,
+        task_id: str | None = None,
+        session_id: str | None = None,
+        error_code: str = "missing_result",
+        now: float | None = None,
+    ) -> list[runtime_persistence.ActionRecord]:
+        """Transition orphaned ``in_flight`` actions with missing results to ``uncertain`` (never ``failed``)."""
+        ts = time.time() if now is None else float(now)
+        code = str(error_code or "missing_result")[:120]
+
+        def _tx(conn: sqlite3.Connection) -> list[runtime_persistence.ActionRecord]:
+            conn.row_factory = sqlite3.Row
+            clauses = ["status = 'in_flight'"]
+            params: list[Any] = []
+            if task_id is not None:
+                clauses.append("task_id = ?")
+                params.append(_text(task_id, "task_id"))
+            if session_id is not None:
+                clauses.append("session_id = ?")
+                params.append(_text(session_id, "session_id"))
+            where_sql = " AND ".join(clauses)
+            rows = conn.execute(
+                f"SELECT action_id FROM runtime_actions WHERE {where_sql} ORDER BY created_at ASC",
+                tuple(params),
+            ).fetchall()
+            if not rows:
+                return []
+            ids = [str(r["action_id"]) for r in rows]
+            placeholders = ",".join("?" for _ in ids)
+            conn.execute(
+                f"""
+                UPDATE runtime_actions
+                SET status = 'uncertain', ok = NULL, error_code = ?, updated_at = ?
+                WHERE action_id IN ({placeholders}) AND status = 'in_flight'
+                """,
+                (code, ts, *ids),
+            )
+            updated_rows = conn.execute(
+                f"SELECT * FROM runtime_actions WHERE action_id IN ({placeholders}) ORDER BY created_at ASC",
+                tuple(ids),
+            ).fetchall()
+            return [_sel_row_to_action(r) for r in updated_rows]
+
+        return runtime_persistence.run_write_transaction(
+            self._storage, self._db_path, _tx, retry_policy=self._retry_policy
+        )
+
+    def resolve_uncertain_action(
+        self,
+        action_id: str,
+        *,
+        resolution: Literal["verified_committed", "verified_not_applied"],
+        reason: str = "",
+        now: float | None = None,
+    ) -> runtime_persistence.ActionRecord:
+        """Explicitly reconcile an ``uncertain`` action after verification."""
+        aid = _text(action_id, "action_id")
+        if resolution not in ("verified_committed", "verified_not_applied"):
+            raise SideEffectError(f"Unsupported uncertain resolution: {resolution!r}")
+        ts = time.time() if now is None else float(now)
+        target_status = "committed" if resolution == "verified_committed" else "never_started"
+        ok_val: int | None = 1 if resolution == "verified_committed" else None
+        code = str(reason or resolution)[:120]
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.ActionRecord:
+            conn.row_factory = sqlite3.Row
+            cur = conn.execute("SELECT status FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            if cur is None:
+                raise KeyError(f"Runtime action {aid!r} does not exist.")
+            if str(cur["status"]) not in ("uncertain", "in_flight"):
+                raise SideEffectError(
+                    f"Only `uncertain` or orphaned `in_flight` actions can be reconciled (got `{cur['status']}`)."
+                )
+            conn.execute(
+                """
+                UPDATE runtime_actions
+                SET status = ?, ok = ?, error_code = ?, updated_at = ?
+                WHERE action_id = ?
+                """,
+                (target_status, ok_val, code, ts, aid),
+            )
+            row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            assert row is not None
+            return _sel_row_to_action(row)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage, self._db_path, _tx, retry_policy=self._retry_policy
+        )
+
+side_effect_ledger = sys.modules[__name__]
+
 """MCP wire-protocol boundary: adaptive HTTP transport, parser, and session state.
 
 AS-012 boundary extraction. This module owns everything protocol-level about
@@ -16177,6 +17514,14 @@ STATEFUL_PROTOCOL_VERSION = "2025-06-18"
 
 class McpTransportError(RuntimeError):
     """Raised for MCP protocol/transport failures (subset of RuntimeError for compatibility)."""
+
+
+class McpRpcError(McpTransportError):
+    """Raised when an MCP server returns an explicit JSON-RPC ``error`` object."""
+
+
+class McpAmbiguousOutcomeError(McpTransportError):
+    """Raised when an outbound ``tools/call`` outcome is ambiguous (HTTP 5xx or garbled 200)."""
 
 
 @dataclass(frozen=True)
@@ -16254,12 +17599,16 @@ def parse_mcp_payload(text: str, content_type: str, status_code: int, expected_i
         except Exception as exc:
             raise McpTransportError(f"Invalid MCP JSON response (HTTP {status_code}): {raw_text[:240]}") from exc
 
-    if isinstance(obj, dict) and obj.get("error"):
+    if not isinstance(obj, dict):
+        raise McpTransportError(f"Invalid MCP JSON-RPC envelope (HTTP {status_code}): {raw_text[:240]}")
+    if obj.get("error"):
         err = obj["error"]
         msg = err.get("message") if isinstance(err, dict) else str(err)
         code = err.get("code") if isinstance(err, dict) else ""
-        raise McpTransportError(f"MCP RPC error ({code}): {msg}")
-    return (obj.get("result") if isinstance(obj, dict) else None) or {}
+        raise McpRpcError(f"MCP RPC error ({code}): {msg}")
+    if "result" not in obj:
+        raise McpTransportError(f"MCP JSON-RPC envelope missing result (HTTP {status_code}): {raw_text[:240]}")
+    return obj.get("result") or {}
 
 
 def build_headers(
@@ -16267,6 +17616,7 @@ def build_headers(
     method: str,
     tool_name: str = "",
     client_version: str = "",
+    action_id: str = "",
 ) -> dict[str, str]:
     headers: dict[str, str] = {
         "Accept": "application/json, text/event-stream",
@@ -16275,6 +17625,8 @@ def build_headers(
     }
     if tool_name:
         headers["Mcp-Name"] = tool_name
+    if action_id and method == "tools/call":
+        headers["Idempotency-Key"] = action_id
     for k, v in (server.get("headers") or {}).items():
         headers[str(k)] = str(v)
     tok = (server.get("effective_token") or "").strip()
@@ -16349,16 +17701,23 @@ async def adaptive_call(
     timeout: float = 25.0,
     sessions: SessionStore | None = None,
     client_version: str = "",
+    action_id: str = "",
 ) -> dict[str, Any]:
     """Execute one MCP RPC through the adaptive stateless/stateful transport.
 
     ``post`` must apply the application's outbound URL validation and redirect
     rejection for every request (including retries issued from here).
+    For ``method == 'tools/call'``, HTTP 5xx or malformed HTTP 200 responses raise
+    :class:`McpAmbiguousOutcomeError` immediately rather than re-dispatching a
+    second ``tools/call`` after handshake.
     """
     sessions = sessions or SessionStore()
     alias = str(server.get("alias") or "")
-    tool_name = str((params or {}).get("name") or "") if method == "tools/call" else ""
-    base_headers = build_headers(server, method, tool_name=tool_name, client_version=client_version)
+    is_tool_call = method == "tools/call"
+    tool_name = str((params or {}).get("name") or "") if is_tool_call else ""
+    base_headers = build_headers(
+        server, method, tool_name=tool_name, client_version=client_version, action_id=action_id
+    )
     cached_sid = sessions.get(alias)
 
     req_id = 2
@@ -16378,10 +17737,18 @@ async def adaptive_call(
     if resp1.status_code == 200:
         try:
             return parse_mcp_payload(resp1.text, resp1.content_type, resp1.status_code, req_id)
-        except McpTransportError as rpc_err:
+        except McpRpcError as rpc_err:
             if not _looks_like_session_error(str(rpc_err)):
                 raise
+        except McpTransportError as parse_err:
+            if is_tool_call:
+                raise McpAmbiguousOutcomeError(str(parse_err)) from parse_err
+            raise
     _raise_for_auth(resp1, url)
+    if is_tool_call and resp1.status_code >= 500:
+        raise McpAmbiguousOutcomeError(
+            f"MCP HTTP {resp1.status_code} on `{method}` (`{tool_name}`): remote outcome is uncertain ({resp1.text[:200]})"
+        )
 
     # Fallback to the 2025 stateful `initialize` + `Mcp-Session-Id` handshake.
     sessions.clear(alias)
@@ -16392,7 +17759,9 @@ async def adaptive_call(
     parse_mcp_payload(init_resp.text, init_resp.content_type, init_resp.status_code, 1)
 
     sid = extract_session_id(init_resp.headers)
-    req_headers = build_headers(server, method, tool_name=tool_name, client_version=client_version)
+    req_headers = build_headers(
+        server, method, tool_name=tool_name, client_version=client_version, action_id=action_id
+    )
     notif_headers = build_headers(server, "notifications/initialized", client_version=client_version)
     if sid:
         sessions.set(alias, sid)
@@ -16411,8 +17780,21 @@ async def adaptive_call(
         timeout,
     )
     if final_resp.status_code >= 400:
+        if is_tool_call and final_resp.status_code >= 500:
+            raise McpAmbiguousOutcomeError(
+                f"MCP HTTP {final_resp.status_code} on `{method}` (`{tool_name}`): remote outcome is uncertain ({final_resp.text[:200]})"
+            )
         raise McpTransportError(f"MCP HTTP {final_resp.status_code} on `{method}`: {final_resp.text[:260]}")
-    return parse_mcp_payload(final_resp.text, final_resp.content_type, final_resp.status_code, 3)
+    try:
+        return parse_mcp_payload(final_resp.text, final_resp.content_type, final_resp.status_code, 3)
+    except McpRpcError:
+        raise
+    except McpTransportError as parse_err:
+        if is_tool_call:
+            raise McpAmbiguousOutcomeError(str(parse_err)) from parse_err
+        raise
+
+mcp_client = sys.modules[__name__]
 
 """OpenContext personal-memory store: CRUD, FTS5 search, and vault linting.
 
@@ -16601,6 +17983,8 @@ def lint_vault(storage: StorageLike, db_path: Path) -> dict[str, Any]:
         "stale_docs": stale_docs,
         "thin_docs": thin_docs,
     }
+
+context_store = sys.modules[__name__]
 
 """Deterministic first-run preflight for guided onboarding (AS-039).
 
@@ -16989,6 +18373,8 @@ def build_report(inputs: PreflightInputs) -> PreflightReport:
         notes.append("The local runtime URL did not answer the model listing request.")
     return PreflightReport(steps=steps, notes=tuple(notes))
 
+onboarding_preflight = sys.modules[__name__]
+
 """Authoritative execution-spine admission gate, action classes, and anti-bypass scope (M5-P0-06 / M5-P1-02).
 
 This stdlib-only module defines the authoritative admission boundary between the
@@ -17205,6 +18591,10 @@ class ActionRequest:
     task_state: str | None = None
     epoch: int | None = None
     worker_id: str | None = None
+    action_id: str | None = None
+    step_id: str | int | None = None
+    call_index: int | None = None
+    replay_policy: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -17219,6 +18609,10 @@ class ActiveAdmissionScope:
     grant_source: str
     task_id: str | None = None
     epoch: int | None = None
+    action_id: str = ""
+    attempt: int = 1
+    attempt_id: str = ""
+    replay_policy: str = "non_idempotent"
 
 
 _ACTIVE_ADMISSION_SCOPE: contextvars.ContextVar[ActiveAdmissionScope | None] = contextvars.ContextVar(
@@ -17290,6 +18684,51 @@ class ActionLedger(Protocol):
         self, event_id: int, result: dict[str, Any], elapsed_ms: int, *, status: str = "completed"
     ) -> None:
         """Durably record the outcome for a previously started action."""
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+class IntentBeginDecision:
+    """Authoritative pre-execution intent & replay decision from ``IntentLedger``."""
+
+    proceed: bool
+    action_id: str
+    attempt: int
+    attempt_id: str
+    status: str
+    replay_policy: str
+    replay_blocked: bool = False
+    already_committed: bool = False
+    reconciled: bool = False
+    reason: str = ""
+    error: Exception | None = None
+
+
+class IntentLedger(Protocol):
+    """Durable M5 2.0 intent/result ledger seam over ``runtime_actions`` (M5-P1-03)."""
+
+    def begin(
+        self,
+        request: ActionRequest,
+        *,
+        effective_policy: str,
+        action_class: ActionClass,
+        allowed: bool,
+        explicit_approval: bool,
+    ) -> IntentBeginDecision:
+        """Atomically evaluate replay policy and commit durable ``in_flight`` (or ``denied``) intent."""
+        ...
+
+    def mark_never_started(self, action_id: str, *, error_code: str) -> str:
+        """Record that execution was blocked prior to entering ``executor``."""
+        ...
+
+    def complete(self, action_id: str, result: Mapping[str, Any], elapsed_ms: int) -> str:
+        """Finalize a normal tool return as ``committed``, ``failed``, or ``uncertain``."""
+        ...
+
+    def record_exception(self, action_id: str, exc: BaseException, elapsed_ms: int) -> str:
+        """Finalize an exception raised inside ``executor`` as ``uncertain`` or ``failed``."""
         ...
 
 
@@ -17471,11 +18910,13 @@ class DurableActionBoundary:
         *,
         pre_execute_guard: Callable[[], None] | None = None,
         task_context_resolver: TaskContextResolver | None = None,
+        intent_ledger: IntentLedger | None = None,
     ) -> None:
         self._policy = policy
         self._ledger = ledger
         self._pre_execute_guard = pre_execute_guard
         self._task_context_resolver = task_context_resolver
+        self._intent_ledger = intent_ledger
 
     async def admit_and_execute(self, request: ActionRequest, executor: Executor) -> dict[str, Any]:
         effective = self._policy.effective_policy(request.policy)
@@ -17538,6 +18979,32 @@ class DurableActionBoundary:
             request.session_id, request.tool_name, effective, explicit_approval, request.args
         )
         started = time.perf_counter()
+
+        intent_decision: IntentBeginDecision | None = None
+        if self._intent_ledger is not None:
+            try:
+                intent_decision = self._intent_ledger.begin(
+                    request,
+                    effective_policy=effective,
+                    action_class=action_class,
+                    allowed=decision.allowed,
+                    explicit_approval=explicit_approval,
+                )
+            except Exception as intent_exc:
+                # Fail closed: if durable intent cannot be committed before execution,
+                # the consequential executor must NEVER run.
+                intent_fail: dict[str, Any] = {
+                    "ok": False,
+                    "output": f"Durable intent persistence failed for `{request.tool_name}`: {intent_exc}",
+                    "diff": "",
+                    "elapsed_ms": round((time.perf_counter() - started) * 1000),
+                }
+                try:
+                    self._ledger.finish(event_id, intent_fail, intent_fail["elapsed_ms"], status="failed")
+                except Exception:
+                    pass
+                raise
+
         if not decision.allowed:
             result: dict[str, Any] = {
                 "ok": False,
@@ -17546,6 +19013,12 @@ class DurableActionBoundary:
                 "elapsed_ms": 1,
                 "action_class": action_class,
             }
+            if intent_decision is not None:
+                result["action_id"] = intent_decision.action_id
+                result["attempt"] = intent_decision.attempt
+                result["attempt_id"] = intent_decision.attempt_id
+                result["ledger_status"] = intent_decision.status
+                result["replay_policy"] = intent_decision.replay_policy
             try:
                 self._ledger.finish(event_id, result, 1, status="denied")
             except Exception:
@@ -17553,6 +19026,85 @@ class DurableActionBoundary:
             if request.denial_as_exception:
                 raise PermissionError(result["output"])
             return result
+
+        if intent_decision is not None and not intent_decision.proceed:
+            if intent_decision.reconciled and intent_decision.already_committed:
+                reconciled_res: dict[str, Any] = {
+                    "ok": True,
+                    "output": (
+                        intent_decision.reason
+                        or f"Reconciled `{request.tool_name}` (`{intent_decision.action_id}`): effect already committed."
+                    ),
+                    "diff": "",
+                    "elapsed_ms": 1,
+                    "action_class": action_class,
+                    "action_id": intent_decision.action_id,
+                    "attempt": intent_decision.attempt,
+                    "attempt_id": intent_decision.attempt_id,
+                    "ledger_status": intent_decision.status,
+                    "replay_policy": intent_decision.replay_policy,
+                    "reconciled": True,
+                }
+                try:
+                    self._ledger.finish(event_id, reconciled_res, 1, status="completed")
+                except Exception:
+                    reconciled_res["audit_warning"] = "Reconciliation could not be finalized in the local audit log."
+                return reconciled_res
+
+            blocked_res: dict[str, Any] = {
+                "ok": False,
+                "output": (
+                    intent_decision.reason
+                    or f"Replay blocked for `{request.tool_name}` (`{intent_decision.action_id}`)."
+                ),
+                "diff": "",
+                "elapsed_ms": 1,
+                "action_class": action_class,
+                "action_id": intent_decision.action_id,
+                "attempt": intent_decision.attempt,
+                "attempt_id": intent_decision.attempt_id,
+                "ledger_status": intent_decision.status,
+                "replay_policy": intent_decision.replay_policy,
+                "replay_blocked": True,
+            }
+            if intent_decision.status == "uncertain":
+                blocked_res["uncertain"] = True
+            if intent_decision.already_committed:
+                blocked_res["already_committed"] = True
+            try:
+                self._ledger.finish(event_id, blocked_res, 1, status="denied")
+            except Exception:
+                blocked_res["audit_warning"] = "Replay denial could not be finalized in the local audit log."
+            if request.denial_as_exception:
+                if intent_decision.error is not None:
+                    raise intent_decision.error
+                raise PermissionError(blocked_res["output"])
+            return blocked_res
+
+        if self._pre_execute_guard is not None:
+            try:
+                self._pre_execute_guard()
+            except Exception as guard_exc:
+                guard_ms = round((time.perf_counter() - started) * 1000)
+                if intent_decision is not None and self._intent_ledger is not None:
+                    try:
+                        self._intent_ledger.mark_never_started(
+                            intent_decision.action_id,
+                            error_code=type(guard_exc).__name__,
+                        )
+                    except Exception:
+                        pass
+                guard_fail: dict[str, Any] = {
+                    "ok": False,
+                    "output": f"Tool `{request.tool_name}` blocked before start: {guard_exc}",
+                    "diff": "",
+                    "elapsed_ms": guard_ms,
+                }
+                try:
+                    self._ledger.finish(event_id, guard_fail, guard_ms, status="failed")
+                except Exception:
+                    pass
+                raise
 
         scope = ActiveAdmissionScope(
             tool_name=request.tool_name,
@@ -17563,42 +19115,69 @@ class DurableActionBoundary:
             grant_source=str(request.grant_source or "unspecified"),
             task_id=request.task_id,
             epoch=request.epoch,
+            action_id=(intent_decision.action_id if intent_decision is not None else ""),
+            attempt=(intent_decision.attempt if intent_decision is not None else 1),
+            attempt_id=(intent_decision.attempt_id if intent_decision is not None else ""),
+            replay_policy=(intent_decision.replay_policy if intent_decision is not None else "non_idempotent"),
         )
         try:
-            if self._pre_execute_guard is not None:
-                self._pre_execute_guard()
             scope_token = _ACTIVE_ADMISSION_SCOPE.set(scope)
             try:
                 result = await executor()
             finally:
                 _ACTIVE_ADMISSION_SCOPE.reset(scope_token)
         except Exception as exc:
+            err_ms = round((time.perf_counter() - started) * 1000)
+            err_ledger_status = "failed"
+            if intent_decision is not None and self._intent_ledger is not None:
+                try:
+                    err_ledger_status = self._intent_ledger.record_exception(
+                        intent_decision.action_id, exc, err_ms
+                    )
+                except Exception:
+                    err_ledger_status = "uncertain"
             failure: dict[str, Any] = {
                 "ok": False,
                 "output": f"Tool `{request.tool_name}` failed: {exc}",
                 "diff": "",
-                "elapsed_ms": round((time.perf_counter() - started) * 1000),
+                "elapsed_ms": err_ms,
             }
+            audit_err_status = "uncertain" if err_ledger_status == "uncertain" else "failed"
             try:
-                self._ledger.finish(event_id, failure, failure["elapsed_ms"], status="failed")
+                self._ledger.finish(event_id, failure, err_ms, status=audit_err_status)
             except Exception:
                 pass  # The durable started row still proves that execution was attempted.
             raise
         elapsed = int(result.get("elapsed_ms") or round((time.perf_counter() - started) * 1000))
+        if intent_decision is not None and self._intent_ledger is not None:
+            try:
+                final_status = self._intent_ledger.complete(intent_decision.action_id, result, elapsed)
+                result = {
+                    **result,
+                    "action_id": intent_decision.action_id,
+                    "attempt": intent_decision.attempt,
+                    "attempt_id": intent_decision.attempt_id,
+                    "ledger_status": final_status,
+                }
+            except Exception:
+                result = {
+                    **result,
+                    "action_id": intent_decision.action_id,
+                    "attempt": intent_decision.attempt,
+                    "attempt_id": intent_decision.attempt_id,
+                    "ledger_status": "in_flight",
+                    "audit_warning": "Tool result could not be finalized in the durable action ledger.",
+                }
         try:
-            self._ledger.finish(event_id, result, elapsed)
+            if bool(result.get("uncertain")):
+                self._ledger.finish(event_id, result, elapsed, status="uncertain")
+            else:
+                self._ledger.finish(event_id, result, elapsed)
         except Exception:
             # The durable `started` event still records the action attempt; don't erase its outcome in memory.
             result = {**result, "audit_warning": "Tool result could not be finalized in the local audit log."}
         return result
 
-
-# Single-file build: re-alias the extracted modules to this file so qualified
-# references (mcp_client.*, context_store.*) resolve to the inlined definitions.
-runtime_persistence = sys.modules[__name__]
-mcp_client = sys.modules[__name__]
-context_store = sys.modules[__name__]
-onboarding_preflight = sys.modules[__name__]
 execution_spine = sys.modules[__name__]
 
 """Provider-neutral orchestration primitives for streamed Studio workflows.

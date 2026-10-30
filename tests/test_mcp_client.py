@@ -18,6 +18,7 @@ import pytest
 
 import app as studio
 from mcp_client import (
+    McpAmbiguousOutcomeError,
     McpTransportError,
     SessionStore,
     TransportResponse,
@@ -276,3 +277,63 @@ def test_app_adapter_stateful_handshake_and_session_reuse(monkeypatch: pytest.Mo
     second = asyncio.run(run_call())
     assert second == {"tools": [{"name": "read"}]}
     assert state["initializes"] == 1  # session reuse: no second handshake
+
+
+def test_tools_call_http_5xx_raises_ambiguous_without_handshake_retry() -> None:
+    """M5-P1-03: HTTP 5xx on `tools/call` must never fall back to handshake + second `tools/call`."""
+    post = ScriptedPost(
+        TransportResponse(
+            status_code=502,
+            text="Bad Gateway after remote write",
+            content_type="text/plain",
+            headers={},
+        )
+    )
+    with pytest.raises(McpAmbiguousOutcomeError, match="HTTP 502"):
+        run(
+            adaptive_call(
+                post,
+                url=SERVER["url"],
+                server=SERVER,
+                method="tools/call",
+                params={"name": "create_ticket", "arguments": {"title": "p1"}},
+                sessions=SessionStore(),
+                client_version="9.0.1",
+                action_id="act-mcp-502",
+            )
+        )
+    assert len(post.calls) == 1
+    assert post.calls[0]["headers"]["Idempotency-Key"] == "act-mcp-502"
+
+
+def test_tools_call_malformed_http_200_raises_ambiguous_without_second_dispatch() -> None:
+    """M5-P1-03: Truncated/non-JSON-RPC HTTP 200 on `tools/call` marks outcome ambiguous without re-POSTing."""
+    post = ScriptedPost(
+        TransportResponse(
+            status_code=200,
+            text='{"truncated_session_stream": ',
+            content_type="application/json",
+            headers={},
+        )
+    )
+    with pytest.raises(McpAmbiguousOutcomeError):
+        run(
+            adaptive_call(
+                post,
+                url=SERVER["url"],
+                server=SERVER,
+                method="tools/call",
+                params={"name": "mutate_row", "arguments": {"id": 9}},
+                sessions=SessionStore(),
+                client_version="9.0.1",
+            )
+        )
+    assert len(post.calls) == 1
+
+
+def test_idempotency_key_header_attached_only_to_tools_call() -> None:
+    call_hdrs = build_headers(SERVER, "tools/call", tool_name="write_doc", action_id="act-77")
+    list_hdrs = build_headers(SERVER, "tools/list", action_id="act-77")
+    assert call_hdrs["Idempotency-Key"] == "act-77"
+    assert "Idempotency-Key" not in list_hdrs
+

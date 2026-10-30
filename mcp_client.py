@@ -34,6 +34,14 @@ class McpTransportError(RuntimeError):
     """Raised for MCP protocol/transport failures (subset of RuntimeError for compatibility)."""
 
 
+class McpRpcError(McpTransportError):
+    """Raised when an MCP server returns an explicit JSON-RPC ``error`` object."""
+
+
+class McpAmbiguousOutcomeError(McpTransportError):
+    """Raised when an outbound ``tools/call`` outcome is ambiguous (HTTP 5xx or garbled 200)."""
+
+
 @dataclass(frozen=True)
 class TransportResponse:
     """Transport-agnostic response view; the application adapts its HTTP client to this."""
@@ -109,12 +117,16 @@ def parse_mcp_payload(text: str, content_type: str, status_code: int, expected_i
         except Exception as exc:
             raise McpTransportError(f"Invalid MCP JSON response (HTTP {status_code}): {raw_text[:240]}") from exc
 
-    if isinstance(obj, dict) and obj.get("error"):
+    if not isinstance(obj, dict):
+        raise McpTransportError(f"Invalid MCP JSON-RPC envelope (HTTP {status_code}): {raw_text[:240]}")
+    if obj.get("error"):
         err = obj["error"]
         msg = err.get("message") if isinstance(err, dict) else str(err)
         code = err.get("code") if isinstance(err, dict) else ""
-        raise McpTransportError(f"MCP RPC error ({code}): {msg}")
-    return (obj.get("result") if isinstance(obj, dict) else None) or {}
+        raise McpRpcError(f"MCP RPC error ({code}): {msg}")
+    if "result" not in obj:
+        raise McpTransportError(f"MCP JSON-RPC envelope missing result (HTTP {status_code}): {raw_text[:240]}")
+    return obj.get("result") or {}
 
 
 def build_headers(
@@ -122,6 +134,7 @@ def build_headers(
     method: str,
     tool_name: str = "",
     client_version: str = "",
+    action_id: str = "",
 ) -> dict[str, str]:
     headers: dict[str, str] = {
         "Accept": "application/json, text/event-stream",
@@ -130,6 +143,8 @@ def build_headers(
     }
     if tool_name:
         headers["Mcp-Name"] = tool_name
+    if action_id and method == "tools/call":
+        headers["Idempotency-Key"] = action_id
     for k, v in (server.get("headers") or {}).items():
         headers[str(k)] = str(v)
     tok = (server.get("effective_token") or "").strip()
@@ -204,16 +219,23 @@ async def adaptive_call(
     timeout: float = 25.0,
     sessions: SessionStore | None = None,
     client_version: str = "",
+    action_id: str = "",
 ) -> dict[str, Any]:
     """Execute one MCP RPC through the adaptive stateless/stateful transport.
 
     ``post`` must apply the application's outbound URL validation and redirect
     rejection for every request (including retries issued from here).
+    For ``method == 'tools/call'``, HTTP 5xx or malformed HTTP 200 responses raise
+    :class:`McpAmbiguousOutcomeError` immediately rather than re-dispatching a
+    second ``tools/call`` after handshake.
     """
     sessions = sessions or SessionStore()
     alias = str(server.get("alias") or "")
-    tool_name = str((params or {}).get("name") or "") if method == "tools/call" else ""
-    base_headers = build_headers(server, method, tool_name=tool_name, client_version=client_version)
+    is_tool_call = method == "tools/call"
+    tool_name = str((params or {}).get("name") or "") if is_tool_call else ""
+    base_headers = build_headers(
+        server, method, tool_name=tool_name, client_version=client_version, action_id=action_id
+    )
     cached_sid = sessions.get(alias)
 
     req_id = 2
@@ -233,10 +255,18 @@ async def adaptive_call(
     if resp1.status_code == 200:
         try:
             return parse_mcp_payload(resp1.text, resp1.content_type, resp1.status_code, req_id)
-        except McpTransportError as rpc_err:
+        except McpRpcError as rpc_err:
             if not _looks_like_session_error(str(rpc_err)):
                 raise
+        except McpTransportError as parse_err:
+            if is_tool_call:
+                raise McpAmbiguousOutcomeError(str(parse_err)) from parse_err
+            raise
     _raise_for_auth(resp1, url)
+    if is_tool_call and resp1.status_code >= 500:
+        raise McpAmbiguousOutcomeError(
+            f"MCP HTTP {resp1.status_code} on `{method}` (`{tool_name}`): remote outcome is uncertain ({resp1.text[:200]})"
+        )
 
     # Fallback to the 2025 stateful `initialize` + `Mcp-Session-Id` handshake.
     sessions.clear(alias)
@@ -247,7 +277,9 @@ async def adaptive_call(
     parse_mcp_payload(init_resp.text, init_resp.content_type, init_resp.status_code, 1)
 
     sid = extract_session_id(init_resp.headers)
-    req_headers = build_headers(server, method, tool_name=tool_name, client_version=client_version)
+    req_headers = build_headers(
+        server, method, tool_name=tool_name, client_version=client_version, action_id=action_id
+    )
     notif_headers = build_headers(server, "notifications/initialized", client_version=client_version)
     if sid:
         sessions.set(alias, sid)
@@ -266,5 +298,16 @@ async def adaptive_call(
         timeout,
     )
     if final_resp.status_code >= 400:
+        if is_tool_call and final_resp.status_code >= 500:
+            raise McpAmbiguousOutcomeError(
+                f"MCP HTTP {final_resp.status_code} on `{method}` (`{tool_name}`): remote outcome is uncertain ({final_resp.text[:200]})"
+            )
         raise McpTransportError(f"MCP HTTP {final_resp.status_code} on `{method}`: {final_resp.text[:260]}")
-    return parse_mcp_payload(final_resp.text, final_resp.content_type, final_resp.status_code, 3)
+    try:
+        return parse_mcp_payload(final_resp.text, final_resp.content_type, final_resp.status_code, 3)
+    except McpRpcError:
+        raise
+    except McpTransportError as parse_err:
+        if is_tool_call:
+            raise McpAmbiguousOutcomeError(str(parse_err)) from parse_err
+        raise
