@@ -123,10 +123,10 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "M5-P1-06",
     "last_completed_story": "M5-P1-05",
-    "last_checkpoint": "2026-10-30T15:32:00Z",
-    "last_session_id": "arena/d02f32a0-m5-agent-studio",
+    "last_checkpoint": "2026-10-30T15:39:00Z",
+    "last_session_id": "arena/acf221e1-m5-agent-studio",
     "next_recommended_story": "M5-P1-06",
     "open_risks": [
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
@@ -1419,13 +1419,13 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P1-06: Single-agent verified vertical slice. Objective: Complete one representative real coding task with managed edits and tests. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Choose reproducible fixture and acceptance criteria; Run harness through admission/ledger; Verify patch and test evidence; Inject crash at key action boundaries. Acceptance: One end-to-end coding task completes with evidence; Crash injection does not lose user work or duplicate side effects; False completion rejected. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-30T15:39:00Z",
+        "updated_at": "2026-10-30T15:39:00Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/acf221e1-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -1433,7 +1433,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "next_action": "Inspect app.py, workflow_evaluation.py, failure_injection.py, and existing managed-edit/test-gate paths before implementing verified vertical slice and false-completion rejection.",
         "readme_updated": false
       }
     },
