@@ -208,6 +208,33 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   the refusal. `GET /api/harness/sessions/{session_id}/task` exposes the read-only
   `recovery` summary. Pinned by 34 tests (`tests/test_recovery_guard.py`) and
   documented in [`docs/recovery-guard.md`](docs/recovery-guard.md) (ADR-0009).
+- **The two environment-blocked stories ship their evidence tool and stay blocked
+  (`M5-P3-01`, `M5-P4-01`):** `scripts/qualify_environment.py` (standard library
+  only, with `scripts/qualify_environment.sh` as a thin wrapper) is the operator-run
+  suite that CI cannot be. `--sandbox` probes a live runtime with the **product's**
+  own path (`app._execute_limited` under `STUDIO_EXECUTION_MODE=sandbox`) and an
+  adversarial matrix run with container flags that a test asserts match
+  `app._sandbox_command`: outside-workspace and traversal paths, a workspace symlink
+  pointing outside, direct TCP egress, an inherited host-environment sentinel, raw
+  sockets, a 3 GiB allocation under `--memory 512m`, a surviving descendant, and
+  `scripts/isolation_smoke.py --live`. `--hardware` records the machine fingerprint,
+  checks that `resource_admission` admits exactly one heavy request at 80 % of
+  detected memory and refuses the second, checks that routing confidence without a
+  measured profile is `unknown`, reports (informational, non-required) whether
+  `app.py` consults admission at all, and — only when asked with `--pressure-gb` /
+  `--model-command` — measures swap growth under a touched allocation and the
+  timings of a caller-supplied model probe, optionally persisted as a
+  `model_calibration` profile. Every check records `pass` / `fail` / `skip` /
+  `blocked` with a reason: a required check that could not run makes its suite
+  `blocked`, a failed one makes it `unqualified`, and only an all-passing run is
+  `qualified`; exit codes follow (`0` / `1` / `2`). The record binds the repository
+  revision, OS build, chip, RAM and detected runtime into JSON and Markdown. **No
+  container-isolation or 24 GB claim is made anywhere in this repository**, both
+  stories stay `blocked` in the roadmap until the owner produces a qualified record
+  on the target machine, and `M5-P4-01` additionally requires the serving path to
+  consult admission. Pinned by 41 tests (`tests/test_qualify_environment.py`) and
+  documented in [`docs/qualification-suite.md`](docs/qualification-suite.md)
+  (ADR-0010).
 
 - **The execution boundary is extracted and its coverage is inventoried
   (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`–`M5-P1-04`):**
@@ -570,8 +597,10 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
   **and `M5-P2-05`** (durable failure memory with evidence fingerprints,
   stagnation/oscillation detection, bounded retry/replan/rollback budgets that
   survive a crash, and recovery that requires changed evidence or conditions;
-  phase P2 100%). Next ready story: `M5-P3-01` — blocked on a live container
-  runtime; claim via the coordination protocol before coding.
+  phase P2 100%). Next story: `M5-P3-01` — its evidence tool
+  (`scripts/qualify_environment.py --all`) shipped, but the story itself stays
+  `blocked` until a live run on a Docker host returns `qualified`; see
+  [`docs/qualification-suite.md`](docs/qualification-suite.md).
   Planned work is not implemented product behavior.
 - **AS program (Adaptive Runtime)** —
   [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json)

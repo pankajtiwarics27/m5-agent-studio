@@ -45,6 +45,7 @@ contain placeholder text, and every relative link must resolve.
 | [`security-review-package.md`](security-review-package.md) | The independent-review package and boundary inventory (B1–B12) |
 | [`security-review-signoff.md`](security-review-signoff.md) | Reviewer record and release gate — currently unsigned |
 | [`sandbox-boundary.md`](sandbox-boundary.md) | Sandbox and filesystem boundary hardening |
+| [`qualification-suite.md`](qualification-suite.md) | Operator-run sandbox and hardware qualification (what is measured, how to run it, how to read the record) |
 
 ## Subsystem contracts
 
