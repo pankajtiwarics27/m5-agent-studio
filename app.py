@@ -80,6 +80,8 @@ import workflow_checkpoints
 import workflow_state
 import edit_rollback
 import edit_transactions
+import model_admission
+import resource_admission  # noqa: F401 - inlined into studio.py; model_admission uses it
 import verification_evidence
 import workspace_snapshots
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
@@ -801,6 +803,84 @@ def _migrate_legacy_secrets() -> None:
 
 GIB = 1024**3
 IS_MACOS = platform.system() == "Darwin"
+
+
+# -- heavy local model admission (M5-P4-01) ----------------------------------
+#
+# One local model may occupy unified memory at a time. The policy object is
+# created lazily so a configuration error surfaces on the first model request
+# instead of at import time, and so tests can install their own instance.
+
+_HEAVY_MODEL_ADMISSION: model_admission.HeavyModelAdmission | None = None
+_HEAVY_MODEL_ADMISSION_LOCK = threading.Lock()
+
+
+def _heavy_model_admission() -> model_admission.HeavyModelAdmission:
+    """Process-wide heavy-model admission policy built from the environment."""
+    global _HEAVY_MODEL_ADMISSION
+    with _HEAVY_MODEL_ADMISSION_LOCK:
+        if _HEAVY_MODEL_ADMISSION is None:
+            _HEAVY_MODEL_ADMISSION = model_admission.HeavyModelAdmission(
+                model_admission.limits_from_environment()
+            )
+        return _HEAVY_MODEL_ADMISSION
+
+
+def _reset_heavy_model_admission(admission: model_admission.HeavyModelAdmission | None = None) -> None:
+    """Replace the process-wide policy (tests, and operators changing limits)."""
+    global _HEAVY_MODEL_ADMISSION
+    with _HEAVY_MODEL_ADMISSION_LOCK:
+        _HEAVY_MODEL_ADMISSION = admission
+
+
+@asynccontextmanager
+async def _heavy_model_slot(model_id: str) -> AsyncIterator[model_admission.HeavyModelLease | None]:
+    """Hold the single heavy local model slot for the duration of one stream.
+
+    Nested work on the model already admitted by the caller reuses that lease
+    instead of deadlocking; asking for a different model while one is resident is
+    refused rather than stacking two models into unified memory.
+    """
+    admission = _heavy_model_admission()
+    active = model_admission.active_lease()
+    if active is not None:
+        if active.model_id == model_id:
+            yield active
+            return
+        raise model_admission.HeavyModelDenied(
+            model_admission.DENY_RESIDENT, model_id, admission.snapshot()
+        )
+    lease = admission.try_acquire(model_id)
+    if lease is None:
+        raise model_admission.HeavyModelDenied(
+            admission.would_deny(model_id) or model_admission.DENY_SLOT_BUSY,
+            model_id,
+            admission.snapshot(),
+        )
+    try:
+        with model_admission.hold_lease(lease):
+            yield lease
+    finally:
+        admission.release(lease)
+
+
+def _heavy_model_preflight(model_spec: str) -> None:
+    """Refuse a local model request with ``429`` before a stream starts."""
+    if not is_local_omlx_model(model_spec):
+        return
+    admission = _heavy_model_admission()
+    reason = admission.would_deny(parse_model_route(model_spec)[2])
+    if reason is None:
+        return
+    detail = {
+        "code": reason,
+        "message": (
+            "A heavy local model request is already in flight. Local inference is "
+            "admitted one heavy model at a time; retry when the resident request finishes."
+        ),
+        "admission": admission.snapshot(),
+    }
+    raise HTTPException(status_code=429, detail=detail)
 
 
 def _bind_is_loopback(host: str) -> bool:
@@ -3466,8 +3546,10 @@ async def stream_any_model(
             yield item
         return
 
-    async for item in _stream_omlx_completion(client, rem_model, messages, temperature, max_tokens, reasoning_mode):
-        yield item
+    # Local inference is heavy: hold the single heavy-model slot for the stream.
+    async with _heavy_model_slot(rem_model):
+        async for item in _stream_omlx_completion(client, rem_model, messages, temperature, max_tokens, reasoning_mode):
+            yield item
 
 
 def _workflow_orchestrator(client: httpx.AsyncClient, workflow: str) -> WorkflowOrchestrator:
@@ -3610,6 +3692,7 @@ async def openai_gateway_chat(request: Request):
     stream = bool(body.get("stream", False))
     reasoning_mode = body.get("reasoning_effort") or "off"
     client: httpx.AsyncClient = request.app.state.http
+    _heavy_model_preflight(model)
 
     if not stream:
         buf: list[str] = []
@@ -4081,6 +4164,12 @@ async def _unload_other_omlx_models(client: httpx.AsyncClient, keep_model_id: st
     return unloaded
 
 
+@app.get("/api/models/admission")
+async def api_models_admission() -> JSONResponse:
+    """Read-only view of the heavy local model admission policy (M5-P4-01)."""
+    return JSONResponse(_heavy_model_admission().snapshot())
+
+
 @app.post("/api/models/unload-all")
 async def api_unload_all(request: Request) -> JSONResponse:
     global _demo_loaded_model
@@ -4208,6 +4297,7 @@ async def api_chat_stream(request: Request) -> StreamingResponse:
     workspace_dir = str(Path(body.get("workspace_dir") or str(WORKSPACE_ROOT)).expanduser().resolve())
     skill_ids: list[str] = body.get("skills") or []
     client: httpx.AsyncClient = request.app.state.http
+    _heavy_model_preflight(model)
 
     async def event_gen() -> AsyncIterator[str]:
         final_content_acc: list[str] = []

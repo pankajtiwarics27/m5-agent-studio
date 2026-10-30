@@ -220,21 +220,40 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   `scripts/isolation_smoke.py --live`. `--hardware` records the machine fingerprint,
   checks that `resource_admission` admits exactly one heavy request at 80 % of
   detected memory and refuses the second, checks that routing confidence without a
-  measured profile is `unknown`, reports (informational, non-required) whether
-  `app.py` consults admission at all, and — only when asked with `--pressure-gb` /
-  `--model-command` — measures swap growth under a touched allocation and the
-  timings of a caller-supplied model probe, optionally persisted as a
-  `model_calibration` profile. Every check records `pass` / `fail` / `skip` /
+  measured profile is `unknown`, drives the real `app.stream_any_model` funnel to
+  prove that a second heavy local stream is refused while one is resident, and —
+  only when asked with `--pressure-gb` / `--model-command` — measures swap growth
+  under a touched allocation and the timings of a caller-supplied model probe,
+  optionally persisted as a `model_calibration` profile. Every check records `pass` / `fail` / `skip` /
   `blocked` with a reason: a required check that could not run makes its suite
   `blocked`, a failed one makes it `unqualified`, and only an all-passing run is
   `qualified`; exit codes follow (`0` / `1` / `2`). The record binds the repository
   revision, OS build, chip, RAM and detected runtime into JSON and Markdown. **No
   container-isolation or 24 GB claim is made anywhere in this repository**, both
   stories stay `blocked` in the roadmap until the owner produces a qualified record
-  on the target machine, and `M5-P4-01` additionally requires the serving path to
-  consult admission. Pinned by 43 tests (`tests/test_qualify_environment.py`) and
-  documented in [`docs/qualification-suite.md`](docs/qualification-suite.md)
+  on the target machine. Pinned by 44 tests (`tests/test_qualify_environment.py`)
+  and documented in [`docs/qualification-suite.md`](docs/qualification-suite.md)
   (ADR-0010).
+- **A second heavy local model request is refused by policy in the serving path
+  (`M5-P4-01`, code half — the story stays blocked on measurement):**
+  `model_admission.py` (stdlib only, inlined into `studio.py`) wraps
+  `resource_admission` with local-inference semantics — capacity is the machine's
+  unified memory (detected, or `STUDIO_HEAVY_MODEL_MEMORY_BYTES`), one request
+  reserves 80 % of it, there is one slot, and only one *distinct* model may be
+  resident. `app.stream_any_model`, the single funnel every local stream passes
+  through (direct chat, council, debates, harness critic turns, workflows), holds
+  that lease for the stream lifetime and releases it in `finally`, so an abandoned
+  or failed stream frees the slot; nested work on the same model re-enters the
+  lease instead of deadlocking. `POST /api/chat/stream` and
+  `POST /v1/chat/completions` pre-flight a `429` with the policy snapshot, and
+  `GET /api/models/admission` exposes capacity, usage, residency and grant/denial
+  counters. Denials are typed and stable (`heavy_model_slot_busy`,
+  `heavy_model_memory_exceeded`, `heavy_model_resident`). Cloud providers consume
+  no slot. **The 80 % reservation is a policy constant, not a measurement**: the
+  24 GB pressure criterion is still unmeasured, sequential model switching is
+  `M5-P4-02`, and the policy is per-process like the worker-lease model. Pinned by
+  34 tests (`tests/test_model_admission.py`) and documented in
+  [`docs/model-admission.md`](docs/model-admission.md) (ADR-0011).
 
 - **The execution boundary is extracted and its coverage is inventoried
   (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`–`M5-P1-04`):**
@@ -255,7 +274,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
   pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
   plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
-- **19 of 49 shipped Python modules are wired into the served app**
+- **21 of 49 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`, `execution_spine` since `M5-P0-06`,
   `runtime_persistence` since `M5-P1-01`, `side_effect_ledger` since `M5-P1-03`,
@@ -263,8 +282,9 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   `M5-P1-05`, `failure_injection` since `M5-P1-06`, `task_events` since
   `M5-P1-07`, `sandbox_boundary` + `workspace_snapshots` since `M5-P2-01`, and
   `edit_transactions` since `M5-P2-02`, `edit_rollback` since `M5-P2-03`, and
-  `verification_evidence` since `M5-P2-04`, and `recovery_guard` since
-  `M5-P2-05`; 5 of 42 at the time of the audit table). Together they govern
+  `verification_evidence` since `M5-P2-04`, `recovery_guard` since
+  `M5-P2-05`, and `resource_admission` + `model_admission` since `M5-P4-01`;
+  5 of 42 at the time of the audit table). Together they govern
   schema upgrades, SQLite transactions, authoritative task-state / lease-epoch
   checks at admission (`M5-P1-02`), durable `runtime_actions`
   intent/result/replay tracking (`M5-P1-03`), single-owner worker leases,
@@ -280,8 +300,9 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   with version-checked rollback (`M5-P2-03`), and revision-anchored verification
   evidence with baseline-aware failure classification (`M5-P2-04`), and durable
   failure memory with bounded retry/replan/rollback budgets and safe pause
-  (`M5-P2-05`).
-  The other 30 modules have passing unit tests but **no `app.py` call path**.
+  (`M5-P2-05`), and one-heavy-local-model admission around the streaming funnel
+  (`M5-P4-01`).
+  The other 28 modules have passing unit tests but **no `app.py` call path**.
   Module presence is not integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
 
@@ -597,10 +618,12 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
   **and `M5-P2-05`** (durable failure memory with evidence fingerprints,
   stagnation/oscillation detection, bounded retry/replan/rollback budgets that
   survive a crash, and recovery that requires changed evidence or conditions;
-  phase P2 100%). Next story: `M5-P3-01` — its evidence tool
-  (`scripts/qualify_environment.py --all`) shipped, but the story itself stays
-  `blocked` until a live run on a Docker host returns `qualified`; see
-  [`docs/qualification-suite.md`](docs/qualification-suite.md).
+  phase P2 100%). `M5-P3-01` and `M5-P4-01` are the two stories still open: both
+  now have their code and their evidence tooling (`scripts/qualify_environment.py`,
+  [`docs/qualification-suite.md`](docs/qualification-suite.md)), and both stay
+  `blocked` until a qualified record exists — a live Docker run for the sandbox and
+  a 24 GB pressure measurement for the model story. `P4-01`'s serving-path half is
+  implemented and tested ([`docs/model-admission.md`](docs/model-admission.md)).
   Planned work is not implemented product behavior.
 - **AS program (Adaptive Runtime)** —
   [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json)

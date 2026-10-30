@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pathlib
+import re
 import py_compile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -32,6 +33,8 @@ INLINED_MODULES = (
     "edit_transactions",
     "workspace_snapshots",
     "edit_rollback",
+    "resource_admission",
+    "model_admission",
 )
 
 AUTH_HELPER = '''<script>(function(){const nativeFetch=window.fetch.bind(window);let promptLock=null;window.fetch=async function(input,init={}){const url=typeof input==='string'?input:input.url;const same=new URL(url,location.href).origin===location.origin;const send=async(token)=>{const headers=new Headers(input instanceof Request?input.headers:undefined);new Headers(init.headers||{}).forEach((v,k)=>headers.set(k,v));if(token&&same)headers.set('Authorization','Bearer '+token);return nativeFetch(input,{...init,headers});};let token=sessionStorage.getItem('m5_api_token')||'';let r=await send(token);if(r.status!==401||!same||!url.includes('/api/')&&!url.includes('/v1/'))return r;if(!promptLock)promptLock=new Promise(resolve=>{const v=window.prompt('Studio API token (saved for this browser session):');if(v)sessionStorage.setItem('m5_api_token',v);resolve(v||'');});token=await promptLock;promptLock=null;if(!token)return r;r=await send(token);return r;};})();</script>'''
@@ -76,10 +79,12 @@ def build() -> None:
         raise SystemExit("Could not find history privacy import in app.py")
     out_text = out_text.replace(privacy_import, "", 1)
     for module_name in INLINED_MODULES:
-        module_import = f"import {module_name}\n"
-        if module_import not in out_text:
+        # Tolerate a trailing comment (for example a lint suppression on an
+        # import that exists only so the builder can inline the module).
+        import_pattern = re.compile(rf"^import {re.escape(module_name)}(?:\s+#.*)?\n", re.MULTILINE)
+        if not import_pattern.search(out_text):
             raise SystemExit(f"Could not find {module_name} import in app.py")
-        out_text = out_text.replace(module_import, "", 1)
+        out_text = import_pattern.sub("", out_text, count=1)
     privacy_text = (ROOT / "history_privacy.py").read_text(encoding="utf-8")
     # A mid-file "from __future__ import annotations" is a syntax error; the
     # standalone already declares it at the top of the file.

@@ -63,8 +63,9 @@ Environment qualification is a **separate, operator-run artefact** delivered as
   on every boot; they are opt-in and their failure semantics are spelled out.
 - **A blocked story stays blocked.** Tooling existing is not evidence. `M5-P3-01`
   and `M5-P4-01` remain `blocked` in the ledger until a `qualified` record exists,
-  and `M5-P4-01` additionally requires `app.py` to consult `resource_admission`
-  for its "second simultaneous heavy load rejected under policy" criterion.
+  and `M5-P4-01` additionally requires the serving path to refuse a second heavy
+  local model for its "second simultaneous heavy load rejected under policy"
+  criterion — which it now does (ADR-0011), so only the measurement is missing.
 
 ## Alternatives
 
@@ -92,10 +93,13 @@ Environment qualification is a **separate, operator-run artefact** delivered as
   ledger's `blocked` state is honest but not "progress".
 - The suite duplicates a little of `isolation_smoke.py`'s argv knowledge. The
   parity test caps that risk, but the duplication is real.
-- Some checks are advisory by construction: `p4.admission_wired` text-inspects
-  `app.py` for the admission import. It is marked non-required precisely because
-  a source scan is weaker than a behavioural probe, and it is reported rather than
-  hidden.
+- `p4.admission_wired` drives the real streaming funnel with a fake backend
+  rather than scanning source, so it proves wiring; the cost is that it mutates
+  module state (`DB_PATH`, the local completion backend, the admission policy)
+  inside a temporary directory and restores all of it in a `finally` block. A
+  process that crashes mid-probe therefore leaves the script's own process
+  altered, which is acceptable for a one-shot operator tool and would not be for
+  the server itself.
 - `p4.machine.fingerprint` encodes the story's 24 GB Apple Silicon target as a
   gate. A qualification run on 16 GB or on Linux reports `blocked` even when all
   the other measurements pass — by design, since the criterion names the machine.

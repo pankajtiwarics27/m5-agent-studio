@@ -793,12 +793,87 @@ def _admission_probe(total_memory_bytes: int | None) -> tuple[bool, str]:
 
 
 def _admission_wired() -> tuple[bool, str]:
-    app_source = (ROOT / "app.py").read_text(encoding="utf-8")
-    wired = "resource_admission" in app_source
+    """Observe the serving path: a resident heavy model must make the next stream refuse.
+
+    This drives the real ``app.stream_any_model`` funnel with a fake completion
+    backend, so it proves the *wiring* rather than the presence of a module: the
+    first stream is admitted, a second one is refused while the slot is held, and
+    after release a stream succeeds again.
+    """
+    import asyncio  # noqa: PLC0415 - only needed for the serving-path probe
+
+    sys.path.insert(0, str(ROOT))
+    try:
+        import app as studio  # noqa: PLC0415 - optional dependency of this script
+        import model_admission  # noqa: PLC0415 - optional dependency of this script
+    except Exception as exc:  # noqa: BLE001 - a broken app must not fake a pass
+        return False, f"application could not be imported: {type(exc).__name__}"
+
+    if not hasattr(studio, "stream_any_model") or not hasattr(studio, "_heavy_model_admission"):
+        return False, "the serving path has no heavy-model admission hook"
+
+    async def _fake_stream(*_args: object, **_kwargs: object) -> Any:
+        yield {"type": "content", "text": "probe"}
+
+    def _stream_once(model_id: str) -> list[dict[str, Any]]:
+        async def _run() -> list[dict[str, Any]]:
+            items: list[dict[str, Any]] = []
+            async for item in studio.stream_any_model(  # type: ignore[attr-defined]
+                None, model_id, [{"role": "user", "content": "probe"}], 0.0, 16, "off"
+            ):
+                items.append(item)
+            return items
+
+        return asyncio.run(_run())
+
+    with tempfile.TemporaryDirectory(prefix="m5-admission-probe-") as td:
+        originals = {
+            "DB_PATH": studio.DB_PATH,
+            "stream": studio._stream_omlx_completion,
+        }
+        policy = model_admission.HeavyModelAdmission(
+            model_admission.HeavyModelLimits(memory_bytes=8 * GIB, request_bytes=int(8 * GIB * 0.8))
+        )
+        try:
+            studio.DB_PATH = Path(td) / "admission-probe.db"
+            studio.init_db()
+            studio._stream_omlx_completion = _fake_stream  # type: ignore[attr-defined]
+            studio._reset_heavy_model_admission(policy)  # type: ignore[attr-defined]
+
+            admitted = [item.get("text") for item in _stream_once("m5-qualify-probe")]
+            after_release_free = policy.snapshot()["active_leases"] == 0
+
+            lease = policy.acquire("m5-qualify-probe")
+            try:
+                refused = False
+                try:
+                    _stream_once("m5-qualify-probe")
+                except model_admission.HeavyModelDenied:
+                    refused = True
+            finally:
+                policy.release(lease)
+            recovered = [item.get("text") for item in _stream_once("m5-qualify-probe")]
+        except Exception as exc:  # noqa: BLE001 - a probe that cannot run is not a pass
+            return False, f"admission probe failed: {type(exc).__name__}: {exc}"
+        finally:
+            studio.DB_PATH = originals["DB_PATH"]
+            studio._stream_omlx_completion = originals["stream"]  # type: ignore[attr-defined]
+            studio._reset_heavy_model_admission(None)  # type: ignore[attr-defined]
+
+    wired = (
+        admitted == ["probe"]
+        and after_release_free
+        and refused
+        and recovered == ["probe"]
+    )
     return wired, (
-        "serving path consults the admission primitive"
+        f"first stream admitted; second refused while resident={refused}; "
+        f"stream after release={'admitted' if recovered == ['probe'] else 'refused'}"
         if wired
-        else "admission primitive is module-tested but not consulted by app.py (single-heavy-model admission is not enforced in the serving path)"
+        else (
+            "the serving path does not enforce heavy-model admission "
+            f"(admitted={admitted}, refused_while_resident={refused}, recovered={recovered})"
+        )
     )
 
 
@@ -971,9 +1046,8 @@ def hardware_suite(
     )
     recorder.check(
         "p4.admission_wired", STORY_P4,
-        "the serving path consults resource admission",
+        "the serving path refuses a second heavy local model",
         _admission_wired,
-        required=False,
     )
     recorder.check(
         "p4.priors_not_verified", STORY_P4,
