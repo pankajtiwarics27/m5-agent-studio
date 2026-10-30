@@ -1128,9 +1128,16 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     <div style="padding:15px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:14px;">
       <!-- 1. Broad-Context Product / App / Game Kickoff -->
       <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
           <strong style="font-size:13px; color:#6ee7b7;">Start with a product brief</strong>
-          <span class="mono" style="font-size:11px; color:var(--text-faint);">Optional research sources can inform the initial plan.</span>
+          <span class="mono" style="font-size:11px; color:var(--text-faint);">Saves directly into your chosen Project Directory.</span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr auto; gap:8px; align-items:end; margin-bottom:8px;">
+          <div>
+            <label class="field-lbl" for="sdlcWorkspaceInput">Target Project Directory (Created automatically if missing)</label>
+            <input type="text" id="sdlcWorkspaceInput" style="width:100%; font-family:var(--mono); font-size:11.4px;" placeholder="~/Projects/my-new-app" onchange="syncProjectDirInputs(this.value)" />
+          </div>
+          <button type="button" class="btn btn-xs" onclick="saveWorkspaceDirectory(document.getElementById('sdlcWorkspaceInput').value)">Set Directory</button>
         </div>
         <textarea id="sdlcVisionInput" rows="3" style="width:100%;" placeholder="e.g. Build a modern full-stack E-Commerce storefront with live search, filterable catalog, slide-over cart drawer, promo codes, SQLite order persistence, and unit/E2E tests — OR an end-to-end HTML5 Canvas survival roguelike game with wave progression, upgrades, spatial audio, and 60fps loop."></textarea>
         <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px;">
@@ -1142,10 +1149,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
               <option value="8">8 stories</option>
             </select>
           </div>
-          <div style="display:flex; gap:7px; flex-wrap:wrap;">
-            <button class="btn btn-cyan btn-xs" onclick="startSdlcRun('plan_only')" title="Run Phases 1-4 (Research + PRD + Architecture + backlog.json) for review before coding">1. Research &amp; Plan Backlog Only</button>
-            <button class="btn btn-amber btn-xs" onclick="startSdlcRun('run_sprints')" title="Execute remaining passes:false stories in .sdlc/backlog.json">Resume Pending Sprints</button>
-            <button class="btn btn-primary btn-xs" onclick="startSdlcRun('full')" title="Run Research -> PRD -> Architecture -> Sprint Backlog -> Fresh-Context Execution + Independent QA">Run full workflow</button>
+          <div style="display:flex; gap:7px; align-items:center; flex-wrap:wrap;">
+            <select id="sdlcRunModeSelect" aria-label="SDLC execution mode" style="font-size:12px; padding:5px 10px;">
+              <option value="full" selected>Full Workflow (Research &rarr; PRD &rarr; Arch &rarr; Sprints + QA)</option>
+              <option value="plan_only">1. Research &amp; Plan Backlog Only (.sdlc/backlog.json)</option>
+              <option value="run_sprints">Resume Pending Sprints (passes:false stories)</option>
+            </select>
+            <button class="btn btn-primary btn-xs" onclick="startSdlcSelectedMode()">Launch SDLC</button>
           </div>
         </div>
       </div>
@@ -1229,12 +1239,18 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       <span style="color:var(--border-hi); margin:0 2px;" aria-hidden="true">|</span>
       <span class="field-lbl" style="margin:0;">MCP:</span>
       <div id="activeMcpPills" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;"></div>
-      <div style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap;">
-        <button class="btn btn-xs" onclick="openMcpModal()">MCP tools (<span id="mcpToolsCountBadge">0</span>)</button>
-        <button class="btn btn-xs" onclick="openProvidersModal()">Providers (<span id="providersCountBadge">0</span>)</button>
-        <button class="btn btn-xs" onclick="openSkillsModal()">Skills (<span id="skillsCountBadge">0</span>)</button>
-        <button class="btn btn-xs" onclick="openExternalHarnessModal()" title="External harness configurations">External harness</button>
-        <button class="btn btn-xs" onclick="openContextModal()" title="Knowledge, code graph, and planning tools">Context tools (<span id="ocDocsCountBadge">1</span>)</button>
+      <div style="margin-left:auto; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+        <span style="font-size:11px; color:var(--text-faint); font-family:var(--mono);" title="Configured integrations summary">
+          MCP:<span id="mcpToolsCountBadge">0</span> · Prov:<span id="providersCountBadge">0</span> · Skills:<span id="skillsCountBadge">0</span> · Docs:<span id="ocDocsCountBadge">1</span>
+        </span>
+        <select id="integrationsQuickMenu" aria-label="Open studio tools and integrations" style="font-size:11.6px; padding:4px 9px;" onchange="openIntegrationFromMenu(this)">
+          <option value="">Tools &amp; Integrations…</option>
+          <option value="providers">Cloud &amp; Local Providers</option>
+          <option value="mcp">MCP Tools Hub</option>
+          <option value="skills">Agent Skills (SKILL.md)</option>
+          <option value="context">Knowledge &amp; CodeGraph</option>
+          <option value="external">External Harness CLI Bridge</option>
+        </select>
         <button id="monitorToggleBtn" class="btn btn-xs" onclick="toggleMonitorRail()" aria-controls="monitorRail" aria-expanded="true" title="Toggle telemetry and model monitor">
           <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Telemetry</span>
         </button>
@@ -1274,12 +1290,16 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div style="padding:11px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
             <button class="btn" style="width:100%; justify-content:center;" onclick="startFreshHarnessDraft()">+ New session</button>
             <div>
-              <label class="field-lbl">Workspace Folder</label>
-              <input type="text" id="harnessWorkspaceInput" style="width:100%; font-family:var(--mono); font-size:11.2px;" placeholder="/path/to/repo" />
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                <label class="field-lbl" style="margin:0;" for="harnessWorkspaceInput">Project Directory</label>
+                <button type="button" class="btn btn-xs" style="padding:1px 6px; min-height:20px; font-size:10.4px;" onclick="saveWorkspaceDirectory()" title="Save as default project directory (creates folder if missing)">Set / Create</button>
+              </div>
+              <input type="text" id="harnessWorkspaceInput" style="width:100%; font-family:var(--mono); font-size:11.2px;" placeholder="~/Projects/my-app" onchange="syncProjectDirInputs(this.value)" />
+              <select id="harnessRecentDirsSelect" aria-label="Recent project directories" style="width:100%; margin-top:4px; font-size:11px; padding:3px 6px; display:none;" onchange="if(this.value)saveWorkspaceDirectory(this.value)"></select>
             </div>
-            <label class="chk-lbl" title="Creates an isolated git worktree (.harnesses/wt-<id>) so agent edits never touch your main working copy until you click Apply!">
-              <input type="checkbox" id="harnessUseWorktree" checked />
-              <span>Isolate in <code>git worktree</code></span>
+            <label class="chk-lbl" title="When unchecked (default), projects are saved directly inside your Project Directory above. Check only to isolate in a temporary .harnesses/wt-<id> git worktree.">
+              <input type="checkbox" id="harnessUseWorktree" />
+              <span>Isolate in <code>git worktree</code> (optional)</span>
             </label>
             <div style="display:flex; justify-content:space-between; font-size:10.8px; color:var(--text-faint);">
               <span>HARNESS RUNS (<span id="harnessRunsCount">0</span>)</span>
@@ -1294,11 +1314,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div class="harness-bar">
             <div style="display:flex; flex-direction:column; min-width:170px; flex:1;">
               <label class="field-lbl" style="margin-bottom:2px;">Lead Agent Model</label>
-              <select id="harnessLeadModel" onchange="patchActiveHarnessSettings()"></select>
+              <select id="harnessLeadModel" onchange="handleModelSelectChange(this, patchActiveHarnessSettings)"></select>
             </div>
             <div style="display:flex; flex-direction:column; min-width:155px; flex:1;">
               <label class="field-lbl" style="margin-bottom:2px;">Sub-Agent Critic</label>
-              <select id="harnessCriticModel" onchange="patchActiveHarnessSettings()"></select>
+              <select id="harnessCriticModel" onchange="handleModelSelectChange(this, patchActiveHarnessSettings)"></select>
             </div>
             <div style="display:flex; flex-direction:column;">
               <label class="field-lbl" style="margin-bottom:2px;">Execution Policy</label>
@@ -1340,16 +1360,20 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             </div>
               </div>
             </details>
-            <div style="display:flex; gap:6px; align-self:flex-end;">
-              <button class="btn btn-purple" onclick="compactActiveHarness()" title="Context-Mode Priority Compaction (<=2 KB Session Guide + FTS5 Archive)">Compact</button>
-              <button class="btn btn-cyan" onclick="openHarnessDiffModal()" title="Inspect Git Status & Diff (and Apply Worktree)">Git Diff</button>
+            <div style="display:flex; gap:6px; align-self:flex-end; align-items:center;">
+              <select id="harnessSessionActionSelect" aria-label="Session actions" style="font-size:11.6px; padding:5px 9px;" onchange="runHarnessSessionAction(this)">
+                <option value="">Session Actions…</option>
+                <option value="diff">Inspect Git Status &amp; Diff</option>
+                <option value="compact">Compact Session Context (&le;2 KB)</option>
+                <option value="sdlc">Open Agile SDLC Product Board</option>
+              </select>
               <button id="harnessAbortBtn" class="btn btn-danger" style="display:none;" onclick="abortHarnessRun()">Abort</button>
             </div>
           </div>
 
           <!-- Harness Active Worktree / Session Strip -->
           <div id="harnessInfoBanner" style="padding:6px 16px; background:var(--bg-elev); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:11.6px; color:var(--text-dim); flex-wrap:wrap;">
-            <span id="harnessActiveLabel">New session — choose a workspace and model, then describe the task.</span>
+            <span id="harnessActiveLabel">New session — choose a project directory and model, then describe the task.</span>
             <div style="display:flex; gap:6px; align-items:center;">
               <span id="harnessCtxSavingsBadge" class="badge green" style="display:none;" title="Context-Mode SQLite FTS5 KV-Cache Compression Savings">Ctx Saved 0%</span>
               <span id="harnessActiveStatusBadge" class="badge cyan">READY</span>
@@ -1359,12 +1383,18 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <!-- Trajectory Stream -->
           <div id="harnessStream" class="harness-stream"></div>
 
-          <!-- Multi-Turn Autonomous Task Composer -->
+          <!-- Multi-Turn Autonomous Task Composer (Unified Mode Dropdown + Primary Run Action) -->
           <div class="hall-composer">
-            <textarea id="harnessPromptInput" rows="2" style="flex:1; resize:none;" placeholder="Describe an engineering task, 3-Wave Spec, or click Agile SDLC Factory for broad e-com / game builds..."></textarea>
-            <button id="harnessSdlcBtn" class="btn btn-emerald" onclick="openSdlcModal()" title="MetaGPT SOP + CrewAI Flow + Default-FAIL Sprint Backlog + Research/Feedback Loop for big apps & games">Agile SDLC Factory</button>
-            <button id="harnessGsdBtn" class="btn btn-amber" onclick="runGsdWaveTurn()" title="open-gsd/gsd-core: Run planning, implementation, and verification in separate waves.">Plan, build, verify</button>
-            <button id="harnessRunBtn" class="btn btn-primary" onclick="runHarnessTurn()">Run Turn</button>
+            <textarea id="harnessPromptInput" rows="2" style="flex:1; resize:none;" placeholder="Describe an engineering task, 3-Wave Spec, or full product build for your Project Directory..."></textarea>
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <select id="harnessWorkflowMode" aria-label="Harness workflow mode" style="height:38px; font-size:12.2px; padding:0 10px;" onchange="syncHarnessWorkflowModeUI()">
+                <option value="turn" selected>Autonomous Turn (Step Loop)</option>
+                <option value="gsd">Plan, Build, Verify (GSD 3-Wave)</option>
+                <option value="sdlc_full">Agile SDLC Factory (Full Build)</option>
+                <option value="sdlc_modal">Agile SDLC Board &amp; Backlog…</option>
+              </select>
+              <button id="harnessRunBtn" class="btn btn-primary" style="height:38px;" onclick="executeHarnessSelectedWorkflow()">Run</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1448,9 +1478,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div id="hallConclusionBanner" class="conclusion-banner" style="display:none;"></div>
 
           <div class="hall-composer">
-            <textarea id="hallHumanInput" rows="2" style="flex:1; resize:none;" placeholder="Ask a question or steer the Council as Human Operative (Enter = Post &amp; Convene all 4 LLMs)..."></textarea>
-            <button class="btn" style="height:38px;" onclick="postHumanHallMessage(false)" title="Append note without summoning AI voices">Post Only</button>
-            <button class="btn btn-primary" style="height:38px;" onclick="postHumanHallMessage(true)" title="Post message and run all 4 Council LLMs (Thesis -> Analyst -> Red-Team Critic -> Arbiter)">Send and run round</button>
+            <textarea id="hallHumanInput" rows="2" style="flex:1; resize:none;" placeholder="Ask a question or steer the Council as Human Operative (Enter = Send)..."></textarea>
+            <select id="hallSendModeSelect" aria-label="Council message action" style="height:38px; font-size:12px; padding:0 10px;">
+              <option value="convene" selected>Send &amp; run 4-LLM round</option>
+              <option value="post_only">Post note only</option>
+            </select>
+            <button class="btn btn-primary" style="height:38px;" onclick="submitHallComposer()">Send</button>
           </div>
         </div>
       </div>
@@ -1617,6 +1650,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     <div class="m-card">
       <div class="m-head"><span>Local oMLX Residency</span><span id="omlxActiveReq" class="mono" style="font-size:11px;">0 active</span></div>
       <div id="modelsMonitorList"></div>
+      <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:6px;">
+        <div style="display:flex; gap:5px; align-items:center;">
+          <select id="omlxLoadModelPicker" aria-label="Select local model to load" style="flex:1; font-size:11.2px; padding:4px 7px;" onchange="toggleCustomLoadInput(this.value)">
+            <option value="">+ Load model on demand…</option>
+          </select>
+          <button type="button" class="btn btn-xs btn-cyan" onclick="loadSelectedOmlxModel()">Load</button>
+        </div>
+        <input type="text" id="omlxCustomModelInput" placeholder="Enter local oMLX or HF model ID…" style="display:none; width:100%; font-family:var(--mono); font-size:11.2px; padding:4px 7px;" />
+      </div>
     </div>
 
     <div class="m-card">
@@ -2412,15 +2454,160 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return { arch, coder, critic, judge };
   }
 
-  function syncUnifiedSelectors(localModels, catalog) {
+  function getCustomModels() {
+    try {
+      const raw = JSON.parse(localStorage.getItem("m5_custom_models") || "[]");
+      return Array.isArray(raw) ? raw.filter(Boolean) : [];
+    } catch (_) { return []; }
+  }
+
+  function addCustomModelId(modelId) {
+    const clean = (modelId || "").trim();
+    if (!clean || clean === "__custom__") return "";
+    const cur = getCustomModels();
+    if (!cur.includes(clean)) {
+      cur.unshift(clean);
+      try { localStorage.setItem("m5_custom_models", JSON.stringify(cur.slice(0, 20))); } catch (_) {}
+    }
+    lastCatalogSignature = "";
+    return clean;
+  }
+
+  function handleModelSelectChange(sel, afterCb) {
+    if (!sel) return;
+    if (sel.value === "__custom__") {
+      const customInp = document.getElementById("omlxCustomModelInput");
+      const picker = document.getElementById("omlxLoadModelPicker");
+      if (picker) { picker.value = "__custom__"; toggleCustomLoadInput("__custom__"); }
+      if (customInp) {
+        customInp.style.display = "block";
+        customInp.focus();
+      }
+      showToast("Enter a custom local or provider::model ID in the Residency panel (or Providers modal) to add & load it.", "info");
+      if (unifiedCatalog.length) sel.value = unifiedCatalog[0].id;
+      return;
+    }
+    if (typeof afterCb === "function") afterCb();
+  }
+
+  function toggleCustomLoadInput(val) {
+    const inp = document.getElementById("omlxCustomModelInput");
+    if (!inp) return;
+    inp.style.display = val === "__custom__" ? "block" : "none";
+    if (val === "__custom__") inp.focus();
+  }
+
+  async function loadSelectedOmlxModel() {
+    const picker = document.getElementById("omlxLoadModelPicker");
+    const customInp = document.getElementById("omlxCustomModelInput");
+    if (!picker) return;
+    let targetId = picker.value;
+    if (targetId === "__custom__") {
+      targetId = (customInp ? customInp.value : "").trim();
+      if (!targetId) {
+        showToast("Enter a model ID to load.", "warn");
+        if (customInp) customInp.focus();
+        return;
+      }
+      addCustomModelId(targetId);
+      if (customInp) { customInp.value = ""; customInp.style.display = "none"; }
+    }
+    if (!targetId) {
+      showToast("Choose a model from the dropdown to load into M5 unified memory.", "info");
+      return;
+    }
+    showToast(`Loading '${targetId}' into local oMLX memory...`, "info");
+    await modelAction(targetId, "load");
+    picker.value = "";
+  }
+
+  function openIntegrationFromMenu(sel) {
+    if (!sel || !sel.value) return;
+    const v = sel.value;
+    sel.value = "";
+    if (v === "providers") openProvidersModal();
+    else if (v === "mcp") openMcpModal();
+    else if (v === "skills") openSkillsModal();
+    else if (v === "context") openContextModal();
+    else if (v === "external") openExternalHarnessModal();
+  }
+
+  function runHarnessSessionAction(sel) {
+    if (!sel || !sel.value) return;
+    const v = sel.value;
+    sel.value = "";
+    if (v === "diff") openHarnessDiffModal();
+    else if (v === "compact") compactActiveHarness();
+    else if (v === "sdlc") openSdlcModal();
+  }
+
+  function syncHarnessWorkflowModeUI() {
+    const modeSel = document.getElementById("harnessWorkflowMode");
+    const btn = document.getElementById("harnessRunBtn");
+    if (!modeSel || !btn) return;
+    const m = modeSel.value;
+    if (m === "turn") { btn.textContent = "Run"; btn.className = "btn btn-primary"; }
+    else if (m === "gsd") { btn.textContent = "Run 3-Wave"; btn.className = "btn btn-amber"; }
+    else if (m === "sdlc_full") { btn.textContent = "Run SDLC"; btn.className = "btn btn-emerald"; }
+    else if (m === "sdlc_modal") { btn.textContent = "Open Board"; btn.className = "btn btn-cyan"; }
+  }
+
+  function executeHarnessSelectedWorkflow() {
+    const modeSel = document.getElementById("harnessWorkflowMode");
+    const mode = modeSel ? modeSel.value : "turn";
+    if (mode === "gsd") runGsdWaveTurn();
+    else if (mode === "sdlc_full") startSdlcRun("full");
+    else if (mode === "sdlc_modal") openSdlcModal();
+    else runHarnessTurn();
+  }
+
+  function startSdlcSelectedMode() {
+    const sel = document.getElementById("sdlcRunModeSelect");
+    const mode = sel ? sel.value : "full";
+    startSdlcRun(mode);
+  }
+
+  function submitHallComposer() {
+    const sel = document.getElementById("hallSendModeSelect");
+    const convene = !sel || sel.value !== "post_only";
+    postHumanHallMessage(convene);
+  }
+
+  function syncUnifiedSelectors(localModels, catalog, unloadedModels) {
     knownModels = localModels || [];
-    unifiedCatalog = catalog || [];
+    const baseCatalog = (catalog || []).slice();
+    const seenIds = new Set(baseCatalog.map(c => c.id));
+    for (const cid of getCustomModels()) {
+      if (!seenIds.has(cid)) {
+        seenIds.add(cid);
+        baseCatalog.push({ id: cid, label: `[Custom] ${cid}`, group: "Custom / On-Demand Models", kind: cid.includes("::") ? "cloud" : "local" });
+      }
+    }
+    unifiedCatalog = baseCatalog;
+
+    // Populate the on-demand Load Model picker in the Residency panel with unloaded models
+    const loadPicker = document.getElementById("omlxLoadModelPicker");
+    if (loadPicker) {
+      const prevPick = loadPicker.value;
+      const unloaded = unloadedModels || [];
+      const opts = [`<option value="">+ Load model on demand (${unloaded.length} available)…</option>`];
+      for (const um of unloaded) {
+        const sz = um.size_gb ? ` (${um.size_gb} GB)` : "";
+        opts.push(`<option value="${escapeHtml(um.id)}">${escapeHtml(um.id)}${escapeHtml(sz)}</option>`);
+      }
+      opts.push(`<option value="__custom__">+ Enter custom local / HF model ID…</option>`);
+      loadPicker.innerHTML = opts.join("");
+      if (prevPick && (prevPick === "__custom__" || unloaded.some(u => u.id === prevPick))) {
+        loadPicker.value = prevPick;
+      }
+    }
+
     const sig = unifiedCatalog.map(c => c.id).join("|");
     if (!sig || sig === lastCatalogSignature) return;
     const firstInit = !lastCatalogSignature;
     lastCatalogSignature = sig;
 
-    // Group options by `<optgroup>` (Local M5 vs Cloud Providers vs Fallback Combos)
+    // Group options by `<optgroup>` (Strictly Loaded Local M5 + Cloud Providers + Fallback Combos + Custom)
     const groups = {};
     for (const item of unifiedCatalog) {
       if (!groups[item.group]) groups[item.group] = [];
@@ -2430,7 +2617,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       `<optgroup label="${escapeHtml(g)}">` +
       groups[g].map(it => `<option value="${escapeHtml(it.id)}">${escapeHtml(it.label)}</option>`).join("") +
       `</optgroup>`
-    ).join("");
+    ).join("") + `<optgroup label="On-Demand"><option value="__custom__">+ Load or enter custom model ID…</option></optgroup>`;
 
     const distinct = selectDistinctCouncilModels(unifiedCatalog.length ? unifiedCatalog : knownModels);
     const archDef = distinct.arch;
@@ -2446,13 +2633,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     ]) {
       const sel = document.getElementById(elId);
       if (!sel) continue;
+      if (!sel.dataset.customHooked && elId !== "harnessLeadModel" && elId !== "harnessCriticModel") {
+        sel.dataset.customHooked = "1";
+        sel.addEventListener("change", () => handleModelSelectChange(sel));
+      }
       const prevVal = sel.value;
       sel.innerHTML = optionsHtml;
-      if (!firstInit && prevVal && unifiedCatalog.some(x => x.id === prevVal)) sel.value = prevVal;
+      if (!firstInit && prevVal && prevVal !== "__custom__" && unifiedCatalog.some(x => x.id === prevVal)) sel.value = prevVal;
       else if (defVal) sel.value = defVal;
     }
 
-    // Debate checkboxes include BOTH Local M5 + Cloud Models!
+    // Debate checkboxes include only Loaded Local M5 + Cloud/Combo Models
     const prevChecked = new Set([...document.querySelectorAll(".debate-m-chk:checked")].map(c => c.value));
     document.getElementById("debateModelChecks").innerHTML = unifiedCatalog.slice(0, 10).map((it, idx) => {
       const chk = firstInit ? (idx < 3) : prevChecked.has(it.id);
@@ -2476,7 +2667,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     pill.className = d.omlx_online ? "status-pill" : "status-pill demo";
     document.getElementById("connText").textContent = d.omlx_online ? "oMLX Live (:8000)" : "Preview Demo";
 
-    syncUnifiedSelectors(d.models || [], d.catalog || []);
+    const loadedOnly = d.loaded_models || (d.models || []).filter(m => m.loaded || m.is_loading);
+    const unloadedOnly = d.unloaded_models || (d.models || []).filter(m => !m.loaded && !m.is_loading);
+    syncUnifiedSelectors(loadedOnly, d.catalog || [], unloadedOnly);
 
     const m = d.memory, total = m.total_gb || 24.0;
     const used = +(m.omlx_gb + m.orbstack_gb + m.macos_apps_gb).toFixed(2);
@@ -2494,17 +2687,19 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     document.getElementById("legApps").textContent = `${m.macos_apps_gb.toFixed(2)} GB`;
     document.getElementById("legFree").textContent = `${m.free_gb.toFixed(2)} GB`;
 
-    document.getElementById("omlxActiveReq").textContent = `${d.omlx.active_requests} active`;
-    document.getElementById("modelsMonitorList").innerHTML = (d.models || []).map(mod => {
-      const stateBadge = mod.is_loading ? `<span class="badge cyan">LOADING</span>` : mod.loaded ? `<span class="badge green">LOADED${mod.live_tps > 0 ? " • " + mod.live_tps + " t/s" : ""}</span>` : `<span class="badge">IDLE</span>`;
-      const actionBtn = mod.loaded ? `<button class="btn btn-xs btn-danger" onclick="modelAction('${escapeHtml(mod.id)}','unload')">Unload</button>` : `<button class="btn btn-xs" onclick="modelAction('${escapeHtml(mod.id)}','load')">Load</button>`;
-      const ttlPct = (mod.loaded && mod.ttl_seconds && mod.ttl_remaining_seconds != null) ? Math.max(0, Math.min(100, (mod.ttl_remaining_seconds / mod.ttl_seconds) * 100)) : 0;
-      return `<div class="model-row ${mod.loaded ? 'loaded' : ''}">
-        <div class="model-top"><span class="model-name">${escapeHtml(mod.id)}</span>${actionBtn}</div>
-        <div class="model-sub"><div style="display:flex; gap:4px;">${stateBadge}<span class="badge">${mod.size_gb}G</span>${mod.mtp_enabled ? '<span class="badge indigo">MTP</span>' : ''}</div><span class="mono">${mod.loaded && mod.ttl_remaining_seconds != null ? 'TTL ' + Math.ceil(mod.ttl_remaining_seconds) + 's' : escapeHtml(mod.role_hint)}</span></div>
-        ${mod.loaded && mod.ttl_seconds ? `<div class="ttl-bar"><div class="ttl-fill" style="width:${ttlPct}%"></div></div>` : ''}
-      </div>`;
-    }).join("");
+    document.getElementById("omlxActiveReq").textContent = `${d.omlx.active_requests} active • ${loadedOnly.length} loaded`;
+    document.getElementById("modelsMonitorList").innerHTML = !loadedOnly.length
+      ? `<div style="font-size:11.4px; color:var(--text-faint); padding:6px 2px;">0 local models resident in RAM — use the dropdown below to load any model on demand.</div>`
+      : loadedOnly.map(mod => {
+          const stateBadge = mod.is_loading ? `<span class="badge cyan">LOADING</span>` : `<span class="badge green">LOADED${mod.live_tps > 0 ? " • " + mod.live_tps + " t/s" : ""}</span>`;
+          const actionBtn = `<button class="btn btn-xs btn-danger" onclick="modelAction('${escapeHtml(mod.id)}','unload')">Unload</button>`;
+          const ttlPct = (mod.loaded && mod.ttl_seconds && mod.ttl_remaining_seconds != null) ? Math.max(0, Math.min(100, (mod.ttl_remaining_seconds / mod.ttl_seconds) * 100)) : 0;
+          return `<div class="model-row loaded">
+            <div class="model-top"><span class="model-name">${escapeHtml(mod.id)}</span>${actionBtn}</div>
+            <div class="model-sub"><div style="display:flex; gap:4px;">${stateBadge}${mod.size_gb ? `<span class="badge">${mod.size_gb}G</span>` : ''}${mod.mtp_enabled ? '<span class="badge indigo">MTP</span>' : ''}</div><span class="mono">${mod.loaded && mod.ttl_remaining_seconds != null ? 'TTL ' + Math.ceil(mod.ttl_remaining_seconds) + 's' : escapeHtml(mod.role_hint || '')}</span></div>
+            ${mod.loaded && mod.ttl_seconds ? `<div class="ttl-bar"><div class="ttl-fill" style="width:${ttlPct}%"></div></div>` : ''}
+          </div>`;
+        }).join("");
 
     document.getElementById("sessionTokCount").textContent = `${(d.omlx.session_completion_tokens || 0).toLocaleString()} tok`;
     document.getElementById("ssdCacheText").textContent = `${d.omlx.ssd_cache_used_gb} / ${d.omlx.ssd_cache_max_gb} GB`;
@@ -2781,14 +2976,65 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     renderHarnessSidebar();
   }
 
+  function syncProjectDirInputs(val) {
+    const clean = (val || "").trim();
+    if (!clean) return;
+    for (const id of ["harnessWorkspaceInput", "sdlcWorkspaceInput", "cgWorkspaceInput"]) {
+      const el = document.getElementById(id);
+      if (el && el.value !== clean) el.value = clean;
+    }
+  }
+
+  function renderRecentDirsSelect(recentDirs, currentDir) {
+    const sel = document.getElementById("harnessRecentDirsSelect");
+    if (!sel) return;
+    const dirs = Array.isArray(recentDirs) ? recentDirs.filter(Boolean) : [];
+    if (dirs.length <= 1) {
+      sel.style.display = "none";
+      return;
+    }
+    sel.style.display = "block";
+    sel.innerHTML = `<option value="">Recent project folders (${dirs.length})…</option>` +
+      dirs.map(p => `<option value="${escapeHtml(p)}" ${p === currentDir ? 'selected' : ''}>${escapeHtml(p)}</option>`).join("");
+  }
+
+  async function saveWorkspaceDirectory(rawDir) {
+    const wsInput = document.getElementById("harnessWorkspaceInput");
+    const target = (rawDir !== undefined ? String(rawDir) : (wsInput ? wsInput.value : "")).trim();
+    if (!target) {
+      showToast("Enter a target project directory path first (e.g. ~/Projects/my-app).", "warn");
+      return;
+    }
+    try {
+      const r = await fetch("/api/workspace/directory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspace_dir: target, create_if_missing: true }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || "Could not set directory");
+      syncProjectDirInputs(d.workspace_dir);
+      renderRecentDirsSelect(d.recent_dirs || [], d.workspace_dir);
+      const gi = d.git_info || {};
+      const gitBadge = document.getElementById("harnessGitBadge");
+      if (gitBadge) gitBadge.textContent = gi.is_git ? `git:${gi.branch || 'HEAD'}` : "direct-dir";
+      showToast(`Project directory set to ${d.workspace_dir}`, "ok");
+    } catch (e) {
+      showToast("Directory error: " + e.message, "err");
+    }
+  }
+
   async function loadHarnessSessions() {
     try {
       const d = await (await fetch("/api/harness/sessions")).json();
       harnessSessions = d.sessions || [];
       const wsInput = document.getElementById("harnessWorkspaceInput");
-      if (!wsInput.value && d.default_workspace) wsInput.value = d.default_workspace;
+      if (!wsInput.value && d.default_workspace) {
+        syncProjectDirInputs(d.default_workspace);
+      }
+      renderRecentDirsSelect(d.recent_workspaces || [], wsInput ? wsInput.value : d.default_workspace);
       const gi = d.git_info || {};
-      document.getElementById("harnessGitBadge").textContent = gi.is_git ? `git:${gi.branch || 'HEAD'}` : "no-git";
+      document.getElementById("harnessGitBadge").textContent = gi.is_git ? `git:${gi.branch || 'HEAD'}` : "direct-dir";
       document.getElementById("harnessRunsCount").textContent = harnessSessions.length;
       renderHarnessSidebar();
       if (!activeHarnessId && !document.getElementById("harnessStream").innerHTML.trim()) {
@@ -3158,10 +3404,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   document.getElementById("harnessPromptInput").addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); runHarnessTurn(); }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); executeHarnessSelectedWorkflow(); }
   });
   document.getElementById("chatInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } });
-  document.getElementById("hallHumanInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); postHumanHallMessage(true); } });
+  document.getElementById("hallHumanInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitHallComposer(); } });
 
   // ================= UNIVERSAL CLOUD + CUSTOM MCP HUB (v6.0) =================
   let mcpPresets = {};
@@ -3507,7 +3753,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     stream.appendChild(userDiv);
 
     document.getElementById("harnessRunBtn").disabled = true;
-    document.getElementById("harnessGsdBtn").disabled = true;
+    const gsdBtn = document.getElementById("harnessGsdBtn");
+    if (gsdBtn) gsdBtn.disabled = true;
     document.getElementById("harnessAbortBtn").style.display = "inline-flex";
 
     let liveSteps = {};
@@ -3597,7 +3844,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       }
     }, () => {
       document.getElementById("harnessRunBtn").disabled = false;
-      document.getElementById("harnessGsdBtn").disabled = false;
+      const gsdBtn = document.getElementById("harnessGsdBtn");
+      if (gsdBtn) gsdBtn.disabled = false;
       document.getElementById("harnessAbortBtn").style.display = "none";
     });
   }
@@ -3771,6 +4019,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const promptCarry = document.getElementById("harnessPromptInput").value.trim();
     const vis = document.getElementById("sdlcVisionInput");
     if (promptCarry && !vis.value.trim()) vis.value = promptCarry;
+    const ws = document.getElementById("harnessWorkspaceInput");
+    if (ws && ws.value.trim()) syncProjectDirInputs(ws.value.trim());
     document.getElementById("sdlcModal").classList.add("open");
     await refreshSdlcBoard();
   }
@@ -3819,8 +4069,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (stream.querySelector(".starter-card")) stream.innerHTML = "";
     closeSdlcModal();
     document.getElementById("harnessRunBtn").disabled = true;
-    document.getElementById("harnessGsdBtn").disabled = true;
-    document.getElementById("harnessSdlcBtn").disabled = true;
+    const gsdBtn = document.getElementById("harnessGsdBtn");
+    if (gsdBtn) gsdBtn.disabled = true;
+    const sdlcBtn = document.getElementById("harnessSdlcBtn");
+    if (sdlcBtn) sdlcBtn.disabled = true;
     document.getElementById("harnessAbortBtn").style.display = "inline-flex";
     document.getElementById("harnessActiveStatusBadge").textContent = "SDLC RUNNING";
 
@@ -3857,8 +4109,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       error(d) { showToast("SDLC error: " + d.message, "err"); }
     }, () => {
       document.getElementById("harnessRunBtn").disabled = false;
-      document.getElementById("harnessGsdBtn").disabled = false;
-      document.getElementById("harnessSdlcBtn").disabled = false;
+      if (gsdBtn) gsdBtn.disabled = false;
+      if (sdlcBtn) sdlcBtn.disabled = false;
       document.getElementById("harnessAbortBtn").style.display = "none";
     });
   }
@@ -3869,13 +4121,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       showToast("Describe your product, e-commerce site, or game vision first!", "warn");
       return;
     }
+    const sdlcWs = document.getElementById("sdlcWorkspaceInput");
+    const hnsWs = document.getElementById("harnessWorkspaceInput");
+    const targetWs = (sdlcWs && sdlcWs.value.trim()) ? sdlcWs.value.trim() : (hnsWs ? hnsWs.value.trim() : "");
+    if (targetWs) syncProjectDirInputs(targetWs);
     _streamSdlcEndpoint("/api/harness/sdlc/run", {
       session_id: activeHarnessId || "",
       prompt,
       mode,
       max_stories: parseInt(document.getElementById("sdlcMaxStories").value, 10) || 5,
       max_steps: parseInt(document.getElementById("harnessMaxSteps").value, 10) || 6,
-      workspace_dir: document.getElementById("harnessWorkspaceInput").value.trim(),
+      workspace_dir: targetWs,
       use_worktree: document.getElementById("harnessUseWorktree").checked,
       policy: document.getElementById("harnessPolicy").value,
       lead_model: document.getElementById("harnessLeadModel").value,

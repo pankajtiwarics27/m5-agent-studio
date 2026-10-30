@@ -75,3 +75,19 @@ def test_pipeline_filters_are_keyboard_buttons_with_selection_state():
 def test_integrations_strip_can_be_focused_for_scrolling():
     source = (Path(__file__).resolve().parents[1] / "static/index.html").read_text()
     assert '<div class="skills-strip" tabindex="0" aria-label="Integrations and telemetry controls">' in source
+
+
+def test_harness_composer_and_residency_use_consolidated_dropdowns_and_direct_project_dir():
+    parser = Elements()
+    source = (Path(__file__).resolve().parents[1] / "static/index.html").read_text()
+    parser.feed(source)
+    assert "harnessWorkflowMode" in parser.attrs
+    assert "harnessRunBtn" in parser.attrs
+    assert "harnessSessionActionSelect" in parser.attrs
+    assert "integrationsQuickMenu" in parser.attrs
+    assert "omlxLoadModelPicker" in parser.attrs
+    assert "sdlcRunModeSelect" in parser.attrs
+    assert "hallSendModeSelect" in parser.attrs
+    assert "checked" not in parser.attrs["harnessUseWorktree"]
+    assert "loadedOnly" in source
+

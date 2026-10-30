@@ -768,7 +768,7 @@ _demo_loaded_model: str | None = None
 _demo_loaded_at: float = 0.0
 
 QWEN38_EFFORTS = {"low", "medium", "xhigh"}
-THINKING_BUDGET_BY_EFFORT = {"low": 900, "medium": 1800, "xhigh": 3200}
+THINKING_BUDGET_BY_EFFORT = {"low": 512, "medium": 1024, "xhigh": 2048}
 
 # =============================================================================
 # OmniRoute-Inspired Provider Catalog & Presets
@@ -1655,7 +1655,8 @@ def get_hall_session(session_id: str, after_id: int = 0) -> dict[str, Any]:
 # =============================================================================
 
 
-def list_workspace_files(limit: int = 120) -> list[str]:
+def list_workspace_files(limit: int = 120, root_dir: Path | None = None) -> list[str]:
+    target_root = (root_dir or WORKSPACE_ROOT).resolve()
     skip_dirs = {
         ".git", "node_modules", ".venv", "venv", "__pycache__", ".mypy_cache",
         ".pytest_cache", ".next", "dist", "build", "target", ".agents", ".claude",
@@ -1666,13 +1667,13 @@ def list_workspace_files(limit: int = 120) -> list[str]:
     }
     results: list[str] = []
     try:
-        for root, dirs, files in os.walk(WORKSPACE_ROOT):
+        for root, dirs, files in os.walk(target_root):
             dirs[:] = [d for d in sorted(dirs) if d not in skip_dirs and not d.startswith(".npm")]
             for fname in sorted(files):
                 fpath = Path(root) / fname
                 if fpath.suffix.lower() not in allowed_ext:
                     continue
-                results.append(str(fpath.relative_to(WORKSPACE_ROOT)))
+                results.append(str(fpath.relative_to(target_root)))
                 if len(results) >= limit:
                     return results
     except Exception:
@@ -1790,15 +1791,30 @@ def _extract_search_keywords(prompt_text: str) -> str:
     return " ".join(picked) or "developer dashboard dark mode studio"
 
 
+_UI_DESIGN_KEYWORDS = frozenset({
+    "ui", "ux", "frontend", "css", "html", "design", "layout", "theme", "color",
+    "palette", "button", "modal", "dropdown", "card", "dashboard", "page", "web",
+    "component", "responsive", "accessibility", "wcag", "tailwind", "style", "font",
+})
+
+
+def _task_needs_design_engine(task_text: str) -> bool:
+    words = set(re.findall(r"[a-zA-Z]{2,}", (task_text or "").lower()))
+    return bool(words & _UI_DESIGN_KEYWORDS)
+
+
 async def build_skills_context(skill_ids: list[str], task_text: str) -> tuple[str, list[dict[str, str]]]:
     if not skill_ids:
         return "", []
     all_skills = {s["id"]: s for s in discover_installed_skills()}
     blocks: list[str] = []
     summaries: list[dict[str, str]] = []
-    for sid in skill_ids:
+    total_chars = 0
+    max_total_skill_chars = 3600
+    run_design = _task_needs_design_engine(task_text)
+    for sid in skill_ids[:4]:
         meta = all_skills.get(sid)
-        if not meta:
+        if not meta or total_chars >= max_total_skill_chars:
             continue
         skill_dir = Path(meta["path"])
         try:
@@ -1806,19 +1822,19 @@ async def build_skills_context(skill_ids: list[str], task_text: str) -> tuple[st
         except OSError:
             continue
         name, desc, body = _parse_skill_frontmatter(raw, sid)
-        resolved_body = body.replace("${CLAUDE_PLUGIN_ROOT}/.claude/skills/" + sid, str(skill_dir)).replace("${CLAUDE_PLUGIN_ROOT}", str(skill_dir))[:4500]
+        resolved_body = body.replace("${CLAUDE_PLUGIN_ROOT}/.claude/skills/" + sid, str(skill_dir)).replace("${CLAUDE_PLUGIN_ROOT}", str(skill_dir))[:1500]
         script_output = ""
         search_py = skill_dir / "scripts" / "search.py"
-        if search_py.is_file() and STUDIO_ALLOW_SKILL_CODE:
+        if search_py.is_file() and STUDIO_ALLOW_SKILL_CODE and run_design:
             query_kw = _extract_search_keywords(task_text)
             try:
                 proc = await asyncio.create_subprocess_exec(
-                    "python3", str(search_py), query_kw, "--design-system", "-f", "markdown", "--density", "8",
+                    "python3", str(search_py), query_kw, "--design-system", "-f", "markdown", "--density", "5",
                     stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=str(skill_dir), env=_minimal_execution_env(),
                 )
                 out, _ = await asyncio.wait_for(proc.communicate(), timeout=8.0)
                 if proc.returncode == 0 and out:
-                    script_output = out.decode(errors="ignore").strip()[:3200]
+                    script_output = out.decode(errors="ignore").strip()[:1400]
             except Exception:
                 pass
         section = f'<agent_skill name="{name}">\n{resolved_body}\n'
@@ -1826,6 +1842,7 @@ async def build_skills_context(skill_ids: list[str], task_text: str) -> tuple[st
             section += f'\n### Auto-Generated Design System (`search.py "{query_kw}"`):\n{script_output}\n'
         section += "</agent_skill>"
         blocks.append(section)
+        total_chars += len(section)
         summaries.append({"id": name, "ran_design_engine": "yes" if script_output else "no", "preview": (script_output[:300] if script_output else desc)})
     if not blocks:
         return "", []
@@ -2079,18 +2096,23 @@ def get_mac_unified_memory(omlx_used_bytes: int, orbstack_bytes: int, demo: bool
     }
 
 
-def _build_unified_catalog(local_models: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Build combined catalog of Local M5 models + Cloud Provider models + Fallback Combos."""
+def _build_unified_catalog(local_models: list[dict[str, Any]], *, loaded_only: bool = True) -> list[dict[str, Any]]:
+    """Build combined catalog of Loaded Local M5 models + Cloud Provider models + Fallback Combos."""
     catalog: list[dict[str, Any]] = []
     for lm in local_models:
+        if loaded_only and ("loaded" in lm) and not (lm.get("loaded") or lm.get("is_loading")):
+            continue
+        size_val = lm.get("size_gb") or 0.0
+        size_label = f" ({size_val} GB)" if size_val else ""
         catalog.append(
             {
                 "id": lm["id"],
-                "label": f"[M5 Local] {lm['id']} ({lm['size_gb']} GB)",
-                "group": "Local M5 (oMLX)",
+                "label": f"[M5 Local • Loaded] {lm['id']}{size_label}",
+                "group": "Local M5 (Loaded in RAM)",
                 "source": "local",
                 "provider": "omlx",
-                "size_gb": lm["size_gb"],
+                "size_gb": size_val,
+                "loaded": bool(lm.get("loaded", True)),
             }
         )
     for cp in list_cloud_providers(include_secret=False):
@@ -2153,7 +2175,30 @@ def _demo_telemetry_payload() -> dict[str, Any]:
             "active_requests": 0, "live_tps": 0.0,
         },
     ]
-    used_b = sum(int(m["size_gb"] * GIB) for m in demo_models if m["loaded"])
+    if _demo_loaded_model and not any(m["id"] == _demo_loaded_model for m in demo_models):
+        demo_models.insert(
+            0,
+            {
+                "id": _demo_loaded_model,
+                "display_name": _demo_loaded_model,
+                "role_hint": _role_hint(_demo_loaded_model),
+                "loaded": True,
+                "is_loading": False,
+                "size_gb": 8.0,
+                "pinned": False,
+                "is_default": False,
+                "model_type": "llm",
+                "mtp_enabled": False,
+                "oq_a8_enabled": False,
+                "ttl_seconds": 120,
+                "ttl_remaining_seconds": max(0.0, 120.0 - (now - _demo_loaded_at)),
+                "active_requests": 0,
+                "live_tps": 0.0,
+            },
+        )
+    loaded_models = [m for m in demo_models if m["loaded"] or m["is_loading"]]
+    unloaded_models = [m for m in demo_models if not m["loaded"] and not m["is_loading"]]
+    used_b = sum(int(m["size_gb"] * GIB) for m in loaded_models)
     mem = get_mac_unified_memory(used_b, int(1.35 * GIB), demo=True)
     return {
         "version": STUDIO_VERSION, "omlx_online": False, "demo_mode": True, "omlx_url": OMLX_BASE,
@@ -2165,7 +2210,9 @@ def _demo_telemetry_payload() -> dict[str, Any]:
             "session_cached_tokens": 6144, "ssd_cache_used_gb": 1.84, "ssd_cache_max_gb": 30.0, "ssd_cache_files": 46,
         },
         "models": demo_models,
-        "catalog": _build_unified_catalog(demo_models),
+        "loaded_models": loaded_models,
+        "unloaded_models": unloaded_models,
+        "catalog": _build_unified_catalog(loaded_models, loaded_only=True),
         "docker": {
             "state": "running", "orbstack_detected": True, "running_count": 2,
             "containers_mem_gb": 1.12, "vm_footprint_gb": 1.35, "total_cpu_pct": 2.4,
@@ -2890,6 +2937,72 @@ PROVIDER_ADAPTERS: dict[str, ProviderAdapter] = {
 }
 
 
+def _trim_messages_for_omlx_prefill(
+    messages: list[dict[str, str]],
+    char_budget: int = 22_000,
+) -> list[dict[str, str]]:
+    """Tiered context reassembly to prevent oMLX `prefill_memory_aborted` without losing recent context or system anchors."""
+    if not messages:
+        return messages
+    total_chars = sum(len(m.get("content") or "") for m in messages)
+    if total_chars <= char_budget:
+        return messages
+
+    trimmed: list[dict[str, str]] = [dict(m) for m in messages]
+    sys_End = 1 if trimmed and trimmed[0].get("role") == "system" else 0
+    keep_tail = min(2, max(0, len(trimmed) - sys_End))
+    middle_end = len(trimmed) - keep_tail
+
+    # Pass 1: Compress older tool responses & long assistant tool turns in the middle window
+    for idx in range(sys_End, middle_end):
+        if total_chars <= char_budget:
+            break
+        content = trimmed[idx].get("content") or ""
+        if len(content) <= 360:
+            continue
+        if "<tool_response" in content:
+            tool_names = re.findall(r'<tool_response\s+name="([^"]+)"', content)
+            summary = (
+                f'<tool_response name="{",".join(tool_names[:4]) or "tool"}" ok="true">'
+                f"UNTRUSTED_DATA_JSON\n"
+                f'{{"trusted": false, "content": "[Prior tool output compacted ({len(content)} chars -> summary) to preserve 24GB M5 prefill RAM. Call ctx_search if exact lines are needed.] | Preview: {content[:220].replace(chr(10), " ")}"}}\n'
+                f"</tool_response>"
+            )
+        else:
+            summary = content[:280] + f"\n...[prior turn compacted ({len(content)} chars) for M5 prefill guard]..."
+        saved = len(content) - len(summary)
+        if saved > 0:
+            trimmed[idx]["content"] = summary
+            total_chars -= saved
+
+    # Pass 2: If still above budget, collapse middle messages into a single compact digest
+    if total_chars > char_budget and middle_end > sys_End + 1:
+        digest_lines = ["[Prior conversation turns compacted to fit M5 prefill memory ceiling:]"]
+        for m in trimmed[sys_End:middle_end]:
+            role = m.get("role", "user")
+            snippet = (m.get("content") or "").replace("\n", " ")[:180]
+            digest_lines.append(f"- ({role}): {snippet}")
+        digest_msg = {"role": "user", "content": "\n".join(digest_lines)[:1800]}
+        trimmed = trimmed[:sys_End] + [digest_msg] + trimmed[middle_end:]
+        total_chars = sum(len(m.get("content") or "") for m in trimmed)
+
+    # Pass 3: If system prompt or latest message is still huge, trim excess tail of system prompt and oldest tail message
+    if total_chars > char_budget and sys_End == 1:
+        sys_c = trimmed[0].get("content") or ""
+        max_sys = max(4000, char_budget // 2)
+        if len(sys_c) > max_sys:
+            trimmed[0]["content"] = sys_c[:max_sys] + "\n...[system context trimmed for M5 prefill RAM guard]..."
+            total_chars = sum(len(m.get("content") or "") for m in trimmed)
+
+    if total_chars > char_budget and len(trimmed) > sys_End:
+        last_c = trimmed[-1].get("content") or ""
+        remaining = max(2000, char_budget - sum(len(m.get("content") or "") for m in trimmed[:-1]))
+        if len(last_c) > remaining:
+            trimmed[-1]["content"] = last_c[:remaining] + "\n...[input truncated to fit M5 prefill RAM guard]..."
+
+    return trimmed
+
+
 async def _stream_omlx_completion(
     client: httpx.AsyncClient,
     model: str,
@@ -2953,16 +3066,18 @@ async def _stream_omlx_completion(
         }
         return
 
+    safe_messages = _trim_messages_for_omlx_prefill(messages, char_budget=22_000)
+    capped_max_tokens = min(max_tokens, 2048)
     body: dict[str, Any] = {
-        "model": model, "messages": messages, "temperature": temperature,
-        "max_tokens": max_tokens, "stream": True, "stream_options": {"include_usage": True},
+        "model": model, "messages": safe_messages, "temperature": temperature,
+        "max_tokens": capped_max_tokens, "stream": True, "stream_options": {"include_usage": True},
     }
     if not think_on:
         body["chat_template_kwargs"] = {"enable_thinking": False}
     else:
         effort = mode_clean if mode_clean in QWEN38_EFFORTS else "low"
-        budget = THINKING_BUDGET_BY_EFFORT.get(effort, 1200)
-        body["max_tokens"] = max(max_tokens, budget + 3600)
+        budget = THINKING_BUDGET_BY_EFFORT.get(effort, 512)
+        body["max_tokens"] = min(max(capped_max_tokens, budget + 1024), 2560)
         body["thinking_budget"] = budget
         if "qwen3.8" in model.lower() or "27b" in model.lower():
             body["chat_template_kwargs"] = {"enable_thinking": True, "reasoning_effort": effort}
@@ -2973,59 +3088,81 @@ async def _stream_omlx_completion(
     first_tok_at: float | None = None
     out_tokens, reason_tokens, finish_reason, usage_sent = 0, 0, "stop", False
 
-    async with client.stream("POST", f"{OMLX_BASE}/v1/chat/completions", json=body) as resp:
-        _reject_redirect_response(resp, f"{OMLX_BASE}/v1/chat/completions")
-        if resp.status_code >= 400:
-            err_body = (await resp.aread()).decode(errors="ignore")
-            raise RuntimeError(f"oMLX HTTP {resp.status_code}: {err_body}")
-        async for raw_line in resp.aiter_lines():
-            if not raw_line or not raw_line.startswith("data:"):
-                continue
-            data_str = raw_line[5:].strip()
-            if data_str == "[DONE]":
-                break
-            try:
-                pkt = json.loads(data_str)
-            except json.JSONDecodeError:
-                continue
-            if pkt.get("error"):
-                raise RuntimeError(f"oMLX stream error: {pkt['error']}")
-            for ch in pkt.get("choices") or []:
-                if ch.get("finish_reason"):
-                    finish_reason = ch["finish_reason"]
-                delta = ch.get("delta") or {}
-                if delta.get("reasoning_content"):
-                    if first_tok_at is None:
-                        first_tok_at = time.perf_counter()
-                    out_tokens += 1
-                    reason_tokens += 1
-                    yield {"type": "reasoning", "text": delta["reasoning_content"]}
-                if delta.get("content"):
-                    if first_tok_at is None:
-                        first_tok_at = time.perf_counter()
-                    out_tokens += 1
-                    yield {"type": "content", "text": delta["content"]}
-            u = pkt.get("usage")
-            if u:
-                elapsed = max(0.01, time.perf_counter() - t_start)
-                ttft = u.get("time_to_first_token")
-                if ttft is None and first_tok_at is not None:
-                    ttft = round(first_tok_at - t_start, 2)
-                decode_tps = u.get("generation_tokens_per_second")
-                if not decode_tps and out_tokens > 0:
-                    decode_tps = round(out_tokens / max(0.01, elapsed - float(ttft or 0.0)), 2)
-                usage_sent = True
+    for attempt in (1, 2):
+        try:
+            async with client.stream("POST", f"{OMLX_BASE}/v1/chat/completions", json=body) as resp:
+                _reject_redirect_response(resp, f"{OMLX_BASE}/v1/chat/completions")
+                if resp.status_code >= 400:
+                    err_body = (await resp.aread()).decode(errors="ignore")
+                    raise RuntimeError(f"oMLX HTTP {resp.status_code}: {err_body}")
+                async for raw_line in resp.aiter_lines():
+                    if not raw_line or not raw_line.startswith("data:"):
+                        continue
+                    data_str = raw_line[5:].strip()
+                    if data_str == "[DONE]":
+                        break
+                    try:
+                        pkt = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        continue
+                    if pkt.get("error"):
+                        raise RuntimeError(f"oMLX stream error: {pkt['error']}")
+                    for ch in pkt.get("choices") or []:
+                        if ch.get("finish_reason"):
+                            finish_reason = ch["finish_reason"]
+                        delta = ch.get("delta") or {}
+                        if delta.get("reasoning_content"):
+                            if first_tok_at is None:
+                                first_tok_at = time.perf_counter()
+                            out_tokens += 1
+                            reason_tokens += 1
+                            yield {"type": "reasoning", "text": delta["reasoning_content"]}
+                        if delta.get("content"):
+                            if first_tok_at is None:
+                                first_tok_at = time.perf_counter()
+                            out_tokens += 1
+                            yield {"type": "content", "text": delta["content"]}
+                    u = pkt.get("usage")
+                    if u:
+                        elapsed = max(0.01, time.perf_counter() - t_start)
+                        ttft = u.get("time_to_first_token")
+                        if ttft is None and first_tok_at is not None:
+                            ttft = round(first_tok_at - t_start, 2)
+                        decode_tps = u.get("generation_tokens_per_second")
+                        if not decode_tps and out_tokens > 0:
+                            decode_tps = round(out_tokens / max(0.01, elapsed - float(ttft or 0.0)), 2)
+                        usage_sent = True
+                        yield {
+                            "type": "usage",
+                            "decode_tps": round(float(decode_tps or 0.0), 2),
+                            "prefill_tps": round(float(u.get("prompt_tokens_per_second") or 0.0), 1),
+                            "ttft": round(float(ttft or 0.0), 2),
+                            "completion_tokens": int(u.get("completion_tokens") or out_tokens),
+                            "reasoning_tokens": int((u.get("completion_tokens_details") or {}).get("reasoning_tokens", reason_tokens)),
+                            "cached_tokens": int((u.get("prompt_tokens_details") or {}).get("cached_tokens", 0)),
+                            "finish_reason": finish_reason,
+                            "elapsed_s": round(elapsed, 2),
+                        }
+            break
+        except RuntimeError as exc:
+            err_s = str(exc)
+            is_prefill_abort = "prefill_memory_aborted" in err_s or "process memory limit exceeded" in err_s
+            if attempt == 1 and out_tokens == 0 and is_prefill_abort:
+                await _unload_other_omlx_models(client, model)
+                try:
+                    await client.post(f"{OMLX_BASE}/admin/api/ssd-cache/clear", timeout=4.0)
+                except Exception:
+                    pass
+                body["messages"] = _trim_messages_for_omlx_prefill(messages, char_budget=9_000)
+                body["max_tokens"] = min(1024, capped_max_tokens)
+                body["chat_template_kwargs"] = {"enable_thinking": False}
+                body.pop("thinking_budget", None)
                 yield {
-                    "type": "usage",
-                    "decode_tps": round(float(decode_tps or 0.0), 2),
-                    "prefill_tps": round(float(u.get("prompt_tokens_per_second") or 0.0), 1),
-                    "ttft": round(float(ttft or 0.0), 2),
-                    "completion_tokens": int(u.get("completion_tokens") or out_tokens),
-                    "reasoning_tokens": int((u.get("completion_tokens_details") or {}).get("reasoning_tokens", reason_tokens)),
-                    "cached_tokens": int((u.get("prompt_tokens_details") or {}).get("cached_tokens", 0)),
-                    "finish_reason": finish_reason,
-                    "elapsed_s": round(elapsed, 2),
+                    "type": "reasoning",
+                    "text": "[oMLX memory guard recovery: compacted prompt context & freed inactive cache to stay below 20.2 GB hard watermark]\n",
                 }
+                continue
+            raise
 
     if not usage_sent:
         elapsed = max(0.01, time.perf_counter() - t_start)
@@ -3356,8 +3493,45 @@ async def api_install_skill(request: Request) -> JSONResponse:
 
 
 @app.get("/api/workspace/files")
-async def api_workspace_files() -> JSONResponse:
-    return JSONResponse({"root": str(WORKSPACE_ROOT), "files": list_workspace_files()})
+async def api_workspace_files(path: str = "") -> JSONResponse:
+    target = _resolve_user_project_dir(path) if path.strip() else _get_default_projects_dir()
+    return JSONResponse({"root": str(target), "files": list_workspace_files(root_dir=target)})
+
+
+@app.get("/api/workspace/directory")
+async def api_get_workspace_directory() -> JSONResponse:
+    default_dir = _get_default_projects_dir()
+    prefs = _load_workspace_prefs()
+    return JSONResponse(
+        {
+            "workspace_dir": str(default_dir),
+            "studio_root": str(WORKSPACE_ROOT),
+            "recent_dirs": prefs.get("recent_dirs", []),
+            "git_info": _inspect_git_repo(default_dir),
+        }
+    )
+
+
+@app.post("/api/workspace/directory")
+async def api_set_workspace_directory(request: Request) -> JSONResponse:
+    body = await request.json()
+    raw_dir = (body.get("workspace_dir") or "").strip()
+    create_if_missing = bool(body.get("create_if_missing", True))
+    if not raw_dir:
+        raise HTTPException(status_code=400, detail="workspace_dir is required.")
+    try:
+        resolved = _set_default_projects_dir(raw_dir, create_if_missing=create_if_missing)
+        return JSONResponse(
+            {
+                "status": "ok",
+                "workspace_dir": str(resolved),
+                "git_info": _inspect_git_repo(resolved),
+                "files": list_workspace_files(root_dir=resolved),
+                "recent_dirs": _load_workspace_prefs().get("recent_dirs", []),
+            }
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/hall/sessions")
@@ -3495,14 +3669,18 @@ async def api_telemetry(request: Request) -> JSONResponse:
     docker_task = asyncio.create_task(get_docker_telemetry())
     try:
         await _validate_outbound_url(OMLX_BASE, allow_private=True)
-        models_res, act_res, stats_res, gs_res = await asyncio.gather(
-            client.get(f"{OMLX_BASE}/admin/api/models", timeout=3.0),
-            client.get(f"{OMLX_BASE}/admin/api/activity", timeout=3.0),
-            client.get(f"{OMLX_BASE}/admin/api/stats?scope=session", timeout=3.0),
-            client.get(f"{OMLX_BASE}/admin/api/global-settings", timeout=3.0),
+        models_res, act_res, stats_res, gs_res, v1_res = await asyncio.gather(
+            client.get(f"{OMLX_BASE}/admin/api/models", timeout=4.0),
+            client.get(f"{OMLX_BASE}/admin/api/activity", timeout=4.0),
+            client.get(f"{OMLX_BASE}/admin/api/stats?scope=session", timeout=4.0),
+            client.get(f"{OMLX_BASE}/admin/api/global-settings", timeout=4.0),
+            client.get(f"{OMLX_BASE}/v1/models", timeout=4.0),
+            return_exceptions=True,
         )
-        models_res.raise_for_status()
-        act_res.raise_for_status()
+        admin_models_ok = isinstance(models_res, httpx.Response) and models_res.status_code == 200
+        v1_models_ok = isinstance(v1_res, httpx.Response) and v1_res.status_code == 200
+        if not admin_models_ok and not v1_models_ok:
+            raise RuntimeError("Local model runtime is unreachable")
     except Exception:
         docker_task.cancel()
         payload = _demo_telemetry_payload()
@@ -3511,17 +3689,25 @@ async def api_telemetry(request: Request) -> JSONResponse:
         return JSONResponse(payload)
 
     docker_data = await docker_task
-    raw_models = models_res.json().get("models", [])
-    act_data = act_res.json().get("active_models", {})
-    stats_data = stats_res.json() if stats_res.status_code == 200 else {}
-    gs_data = gs_res.json() if gs_res.status_code == 200 else {}
-    active_by_id = {m["id"]: m for m in act_data.get("models", [])}
+    raw_models = (models_res.json().get("models", []) if (isinstance(models_res, httpx.Response) and models_res.status_code == 200) else [])
+    act_data = (act_res.json().get("active_models", {}) if (isinstance(act_res, httpx.Response) and act_res.status_code == 200) else {})
+    stats_data = (stats_res.json() if (isinstance(stats_res, httpx.Response) and stats_res.status_code == 200) else {})
+    gs_data = (gs_res.json() if (isinstance(gs_res, httpx.Response) and gs_res.status_code == 200) else {})
+    active_by_id = {m["id"]: m for m in act_data.get("models", []) if isinstance(m, dict) and m.get("id")}
+    v1_ids: list[str] = []
+    if isinstance(v1_res, httpx.Response) and v1_res.status_code == 200:
+        try:
+            v1_ids = [str(m.get("id")) for m in (v1_res.json().get("data") or []) if isinstance(m, dict) and m.get("id")]
+        except Exception:
+            v1_ids = []
 
     clean_models = []
+    seen_ids: set[str] = set()
     for m in raw_models:
         if m.get("virtual") or m.get("is_helper") or m.get("is_hidden"):
             continue
-        mid = m["id"]
+        mid = str(m["id"])
+        seen_ids.add(mid)
         act_m = active_by_id.get(mid, {})
         mset = m.get("settings") or {}
         size_b = m.get("actual_size") or m.get("estimated_size") or 0
@@ -3529,7 +3715,8 @@ async def api_telemetry(request: Request) -> JSONResponse:
         clean_models.append(
             {
                 "id": mid, "display_name": m.get("display_name") or mid, "role_hint": _role_hint(mid),
-                "loaded": bool(m.get("loaded")), "is_loading": bool(m.get("is_loading") or act_m.get("is_loading")),
+                "loaded": bool(m.get("loaded") or (mid in active_by_id)),
+                "is_loading": bool(m.get("is_loading") or act_m.get("is_loading")),
                 "size_gb": round(size_b / GIB, 2), "pinned": bool(m.get("pinned")), "is_default": bool(m.get("is_default")),
                 "model_type": mset.get("model_type_override") or m.get("model_type", "llm"),
                 "mtp_enabled": bool(mset.get("mtp_enabled")), "oq_a8_enabled": bool(mset.get("qwen35_oq_a8_enabled")),
@@ -3537,6 +3724,28 @@ async def api_telemetry(request: Request) -> JSONResponse:
                 "active_requests": int(act_m.get("active_requests") or 0), "live_tps": live_tps,
             }
         )
+
+    # Dynamically surface any models from `/v1/models` or `active_models` not listed in `/admin/api/models`
+    for mid in [*active_by_id.keys(), *v1_ids]:
+        if mid in seen_ids:
+            continue
+        seen_ids.add(mid)
+        act_m = active_by_id.get(mid, {})
+        is_loaded = (mid in active_by_id) or (not admin_models_ok)
+        clean_models.append(
+            {
+                "id": mid, "display_name": mid, "role_hint": _role_hint(mid),
+                "loaded": bool(is_loaded),
+                "is_loading": bool(act_m.get("is_loading")),
+                "size_gb": 0.0, "pinned": False, "is_default": False,
+                "model_type": "llm", "mtp_enabled": False, "oq_a8_enabled": False,
+                "ttl_seconds": None, "ttl_remaining_seconds": act_m.get("ttl_remaining_seconds"),
+                "active_requests": int(act_m.get("active_requests") or 0), "live_tps": 0.0,
+            }
+        )
+
+    loaded_models = [m for m in clean_models if m.get("loaded") or m.get("is_loading")]
+    unloaded_models = [m for m in clean_models if not m.get("loaded") and not m.get("is_loading")]
 
     omlx_used_b = int(act_data.get("model_memory_used") or 0)
     omlx_max_b = int(act_data.get("model_memory_max") or 0)
@@ -3564,7 +3773,9 @@ async def api_telemetry(request: Request) -> JSONResponse:
                 "ssd_cache_files": int(rcache.get("total_num_files") or 0),
             },
             "models": clean_models,
-            "catalog": _build_unified_catalog(clean_models),
+            "loaded_models": loaded_models,
+            "unloaded_models": unloaded_models,
+            "catalog": _build_unified_catalog(loaded_models, loaded_only=True),
             "docker": docker_data,
             "perf": _recent_perf_summary(),
         }
@@ -3608,6 +3819,26 @@ async def _unload_omlx_model(client: httpx.AsyncClient, model_id: str) -> None:
         await asyncio.sleep(1.0)
     except Exception:
         pass
+
+
+async def _unload_other_omlx_models(client: httpx.AsyncClient, keep_model_id: str) -> list[str]:
+    """Proactively evict any other resident local oMLX models so `keep_model_id` has maximum 24GB unified RAM headroom."""
+    unloaded: list[str] = []
+    if not await _omlx_is_online(client):
+        return unloaded
+    try:
+        res = await client.get(f"{OMLX_BASE}/admin/api/models", timeout=2.5)
+        if res.status_code == 200:
+            for m in res.json().get("models", []):
+                mid = str(m.get("id") or "")
+                if mid and mid != keep_model_id and m.get("loaded") and not m.get("virtual"):
+                    await client.post(f"{OMLX_BASE}/v1/models/{mid}/unload", timeout=15.0)
+                    unloaded.append(mid)
+            if unloaded:
+                await asyncio.sleep(0.4)
+    except Exception:
+        pass
+    return unloaded
 
 
 @app.post("/api/models/unload-all")
@@ -4830,8 +5061,8 @@ async def api_call_mcp_server_tool(alias: str, request: Request) -> JSONResponse
 # 4-Repo Context Engineering Suite (`OpenContext` + `CodeGraph` + `Context-Mode` + `GSD`)
 # =============================================================================
 
-CTX_SANDBOX_THRESHOLD_CHARS = 3200
-CTX_AUTO_COMPACT_CHARS = 54_000
+CTX_SANDBOX_THRESHOLD_CHARS = 2400
+CTX_AUTO_COMPACT_CHARS = 22_000
 CODEGRAPH_RUN_BUDGET_BYTES = 180_000
 
 GSD_SECRET_EXEMPT_NAMES = {".env.example", ".env.sample", ".env.template", ".env.dist", ".env.test.example"}
@@ -4875,9 +5106,9 @@ def build_pinned_opencontext_prompt() -> str:
     if not pinned:
         return ""
     lines = ["\n### OpenContext Persistent Memory (Pinned Knowledge)"]
-    for d in pinned[:6]:
-        lines.append(f"#### [{d['title']}]({d['uri']}) (`{d['folder']}`)\n{d['content'][:1200]}")
-    return "\n".join(lines) + "\n"
+    for d in pinned[:4]:
+        lines.append(f"#### [{d['title']}]({d['uri']}) (`{d['folder']}`)\n{d['content'][:600]}")
+    return ("\n".join(lines)[:2400]) + "\n"
 
 
 @app.get("/api/opencontext/docs")
@@ -5699,8 +5930,8 @@ def compact_harness_session_messages(session_id: str, worktree_dir: Path) -> dic
     """
     messages = _load_harness_messages(session_id)
     before_chars = sum(len(m.get("content") or "") for m in messages)
-    if len(messages) <= 5:
-        return {"compacted": False, "before_chars": before_chars, "after_chars": before_chars, "message": "Session is already compact (<=5 messages)."}
+    if len(messages) <= 4:
+        return {"compacted": False, "before_chars": before_chars, "after_chars": before_chars, "message": "Session is already compact (<=4 messages)."}
 
     events = _read_harness_events(session_id)
     last_prompt = ""
@@ -5730,7 +5961,7 @@ def compact_harness_session_messages(session_id: str, worktree_dir: Path) -> dic
     plan_excerpt = plan_path.read_text(encoding="utf-8", errors="replace")[:500] if plan_path.is_file() else ""
 
     # Archive middle messages into FTS5 vault so nothing is ever permanently lost!
-    middle_blob = "\n\n".join(f"[{m['role']}]\n{m.get('content', '')}" for m in messages[1:-3])
+    middle_blob = "\n\n".join(f"[{m['role']}]\n{m.get('content', '')}" for m in messages[1:-2])
     doc_id = f"compact-{uuid.uuid4().hex[:6]}"
     with STORAGE.connect(DB_PATH) as conn:
         conn.execute(
@@ -5754,12 +5985,12 @@ def compact_harness_session_messages(session_id: str, worktree_dir: Path) -> dic
     if plan_excerpt:
         guide_lines.append(f"- **Active `.planning/PLAN.md` Excerpt**:\n{plan_excerpt}")
     guide_lines.append(f"*(Prior detailed turns archived in FTS5 `{doc_id}` — call `ctx_search` if needed.)*\n</session_guide>")
-    guide_text = "\n".join(guide_lines)[:2200]
+    guide_text = "\n".join(guide_lines)[:1800]
 
     new_messages = [
         messages[0],
         {"role": "user", "content": guide_text},
-        *messages[-3:],
+        *messages[-2:],
     ]
     _save_harness_messages(session_id, new_messages)
     after_chars = sum(len(m.get("content") or "") for m in new_messages)
@@ -6318,6 +6549,77 @@ def _save_harness_messages(session_id: str, messages: list[dict[str, str]]) -> N
         pass
 
 
+def _workspace_prefs_path() -> Path:
+    _ensure_harness_dirs()
+    return HARNESS_STORE_DIR / "workspace_prefs.json"
+
+
+def _load_workspace_prefs() -> dict[str, Any]:
+    p = _workspace_prefs_path()
+    if not p.exists():
+        return {"default_dir": str(WORKSPACE_ROOT), "recent_dirs": [str(WORKSPACE_ROOT)]}
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        pass
+    return {"default_dir": str(WORKSPACE_ROOT), "recent_dirs": [str(WORKSPACE_ROOT)]}
+
+
+def _save_workspace_prefs(prefs: dict[str, Any]) -> None:
+    p = _workspace_prefs_path()
+    try:
+        p.write_text(json.dumps(prefs, ensure_ascii=False, indent=2), encoding="utf-8")
+        p.chmod(0o600)
+    except OSError:
+        pass
+
+
+def _resolve_user_project_dir(raw_dir: str, *, create_if_missing: bool = False) -> Path:
+    cleaned = (raw_dir or "").strip()
+    if "\x00" in cleaned:
+        raise ValueError("Workspace directory path must not contain NUL characters.")
+    if not cleaned:
+        return _get_default_projects_dir()
+    expanded = _expand_config_path(cleaned, Path.home())
+    if not expanded.is_absolute():
+        base = _get_default_projects_dir()
+        expanded = base / expanded
+    resolved = expanded.resolve()
+    if resolved.exists() and not resolved.is_dir():
+        raise ValueError(f"Workspace path exists and is not a directory: {resolved}")
+    if not resolved.exists():
+        if create_if_missing:
+            try:
+                resolved.mkdir(parents=True, exist_ok=True)
+            except OSError as exc:
+                raise ValueError(f"Could not create project directory '{resolved}': {exc}") from exc
+        else:
+            raise ValueError(f"Workspace directory does not exist: {resolved}")
+    return resolved
+
+
+def _get_default_projects_dir() -> Path:
+    prefs = _load_workspace_prefs()
+    raw = str(prefs.get("default_dir") or "").strip()
+    if raw:
+        cand = Path(raw).expanduser()
+        if cand.is_dir():
+            return cand.resolve()
+    return WORKSPACE_ROOT
+
+
+def _set_default_projects_dir(raw_dir: str, *, create_if_missing: bool = True) -> Path:
+    resolved = _resolve_user_project_dir(raw_dir, create_if_missing=create_if_missing)
+    prefs = _load_workspace_prefs()
+    recent = [str(resolved)] + [d for d in (prefs.get("recent_dirs") or []) if d != str(resolved)]
+    prefs["default_dir"] = str(resolved)
+    prefs["recent_dirs"] = recent[:12]
+    _save_workspace_prefs(prefs)
+    return resolved
+
+
 def create_harness_session_db(
     title: str,
     workspace_dir: str,
@@ -6326,9 +6628,8 @@ def create_harness_session_db(
     lead_model: str,
     critic_model: str,
 ) -> dict[str, Any]:
-    ws_path = Path(workspace_dir).expanduser().resolve()
-    if not ws_path.exists() or not ws_path.is_dir():
-        raise ValueError(f"Workspace directory does not exist: {ws_path}")
+    ws_path = _resolve_user_project_dir(workspace_dir or str(_get_default_projects_dir()), create_if_missing=True)
+    _set_default_projects_dir(str(ws_path), create_if_missing=False)
     pol = policy if policy in HARNESS_POLICIES else "standard"
     sid = f"hns-{uuid.uuid4().hex[:8]}"
     wt_note = ""
@@ -7564,10 +7865,13 @@ async def api_harness_audit(request: Request) -> JSONResponse:
 
 @app.get("/api/harness/sessions")
 async def api_list_harness_sessions() -> JSONResponse:
-    git_info = _inspect_git_repo(WORKSPACE_ROOT)
+    default_ws = _get_default_projects_dir()
+    git_info = _inspect_git_repo(default_ws)
     return JSONResponse(
         {
-            "default_workspace": str(WORKSPACE_ROOT),
+            "default_workspace": str(default_ws),
+            "studio_root": str(WORKSPACE_ROOT),
+            "recent_workspaces": _load_workspace_prefs().get("recent_dirs", []),
             "git_info": git_info,
             "sessions": list_harness_sessions_db(),
         }
@@ -7580,7 +7884,7 @@ async def api_create_harness_session(request: Request) -> JSONResponse:
     try:
         sess = create_harness_session_db(
             title=body.get("title") or "",
-            workspace_dir=body.get("workspace_dir") or str(WORKSPACE_ROOT),
+            workspace_dir=body.get("workspace_dir") or str(_get_default_projects_dir()),
             use_worktree=bool(body.get("use_worktree", False)),
             policy=body.get("policy") or "standard",
             lead_model=body.get("lead_model") or "Qwen3.8-27B-MLX-oQ4e-mtp",
@@ -7736,7 +8040,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
     if not session_id:
         sess = create_harness_session_db(
             title=prompt[:80],
-            workspace_dir=body.get("workspace_dir") or str(WORKSPACE_ROOT),
+            workspace_dir=body.get("workspace_dir") or str(_get_default_projects_dir()),
             use_worktree=bool(body.get("use_worktree", False)),
             policy=body.get("policy") or "standard",
             lead_model=body.get("lead_model") or "Qwen3.8-27B-MLX-oQ4e-mtp",
@@ -7762,6 +8066,8 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
 
     async def event_gen() -> AsyncIterator[str]:
         t_turn = time.perf_counter()
+        if is_local_omlx_model(sess["lead_model"]):
+            await _unload_other_omlx_models(client, parse_model_route(sess["lead_model"])[2])
         skill_block_raw, _ = await build_skills_context(skill_ids, prompt)
         mcp_tools_block = build_active_mcp_tools_prompt()
         oc_pinned_block = build_pinned_opencontext_prompt()
@@ -7802,6 +8108,13 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     yield _sse("aborted", {"step": step_idx})
                     break
 
+                if context_mode and step_idx > 1 and sum(len(m.get("content") or "") for m in messages) > CTX_AUTO_COMPACT_CHARS:
+                    comp_res = compact_harness_session_messages(session_id, Path(sess["worktree_dir"]))
+                    if comp_res.get("compacted"):
+                        messages = _load_harness_messages(session_id)
+                        messages[0] = {"role": "system", "content": sys_prompt}
+                        yield _sse("context_compacted", comp_res)
+
                 steps_run = step_idx
                 sess_live = get_harness_session_db(session_id)
                 lead_model = sess_live["lead_model"]
@@ -7814,9 +8127,10 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                 reason_buf: list[str] = []
                 usage_pkt: dict[str, Any] = {}
                 active_target = lead_model
+                step_max_tok = 2048 if is_local_omlx_model(lead_model) else 4096
 
                 async for item in stream_any_model(
-                    client, lead_model, messages, temperature=0.0, max_tokens=4096, reasoning_mode=reasoning_mode
+                    client, lead_model, messages, temperature=0.0, max_tokens=step_max_tok, reasoning_mode=reasoning_mode
                 ):
                     if session_id in _HARNESS_ABORT_FLAGS:
                         break
@@ -7997,7 +8311,7 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
     if not session_id:
         sess = create_harness_session_db(
             title=f"[GSD] {prompt[:70]}",
-            workspace_dir=body.get("workspace_dir") or str(WORKSPACE_ROOT),
+            workspace_dir=body.get("workspace_dir") or str(_get_default_projects_dir()),
             use_worktree=bool(body.get("use_worktree", False)),
             policy=body.get("policy") if body.get("policy") in HARNESS_POLICIES else "standard",
             lead_model=body.get("lead_model") or "Qwen3.8-27B-MLX-oQ4e-mtp",
@@ -8784,8 +9098,8 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
     if not session_id:
         sess = create_harness_session_db(
             title=f"[SDLC] {(prompt or 'Sprint Run')[:64]}",
-            workspace_dir=body.get("workspace_dir") or str(WORKSPACE_ROOT),
-            use_worktree=bool(body.get("use_worktree", True)),
+            workspace_dir=body.get("workspace_dir") or str(_get_default_projects_dir()),
+            use_worktree=bool(body.get("use_worktree", False)),
             policy=body.get("policy") or "standard",
             lead_model=body.get("lead_model") or "Qwen3.8-27B-MLX-oQ4e-mtp",
             critic_model=body.get("critic_model") or "Gemma-4-21B-REAP-4bit",

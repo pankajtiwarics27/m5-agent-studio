@@ -96,3 +96,95 @@ def test_mcp_http_rpc_modern_contract_and_redirect_rejection(monkeypatch: pytest
 
 async def _allow_url(*_args: object, **_kwargs: object) -> None:
     return None
+
+
+def test_omlx_prefill_memory_aborted_auto_compacts_and_retries(monkeypatch: pytest.MonkeyPatch) -> None:
+    chat_attempts: list[dict[str, object]] = []
+    monkeypatch.setattr(studio, "OMLX_BASE", "http://127.0.0.1:8000")
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/models":
+            return httpx.Response(200, json={"data": [{"id": "fixture-model"}]})
+        if request.url.path == "/admin/api/active-models":
+            return httpx.Response(200, json={"active_models": {"models": []}})
+        if request.url.path == "/admin/api/cache/clear-ssd":
+            return httpx.Response(200, json={"status": "ok"})
+        if request.url.path == "/v1/chat/completions":
+            body = json.loads(request.content.decode("utf-8"))
+            chat_attempts.append(body)
+            if len(chat_attempts) == 1:
+                err_pkt = {
+                    "error": {
+                        "message": "oMLX memory guard aborted this request mid-prefill: process memory limit exceeded",
+                        "code": "prefill_memory_aborted",
+                    }
+                }
+                return httpx.Response(
+                    200,
+                    headers={"content-type": "text/event-stream"},
+                    content=f"data: {json.dumps(err_pkt)}\n\ndata: [DONE]\n\n".encode(),
+                )
+            return httpx.Response(
+                200,
+                headers={"content-type": "text/event-stream"},
+                content=_sse([
+                    {"choices": [{"delta": {"content": "recovered after prefill compaction"}}]},
+                    {"choices": [{"delta": {}, "finish_reason": "stop"}], "usage": {"completion_tokens": 4}},
+                ]),
+            )
+        return httpx.Response(200, json={})
+
+    long_messages = [
+        {"role": "system", "content": "System instructions " * 150},
+        {"role": "user", "content": "Old context " * 800},
+        {"role": "assistant", "content": "Old tool output " * 800},
+        {"role": "user", "content": "Final question"},
+    ]
+
+    async def run() -> list[dict[str, object]]:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler), follow_redirects=False) as client:
+            return [
+                item
+                async for item in studio._stream_omlx_completion(
+                    client, "fixture-model", long_messages, max_tokens=4096, reasoning_mode="low"
+                )
+            ]
+
+    chunks = asyncio.run(run())
+    assert len(chat_attempts) == 2
+    assert any(c.get("type") == "content" and "recovered after prefill compaction" in str(c.get("text")) for c in chunks)
+
+
+def test_loaded_only_catalog_and_direct_user_project_directory(tmp_path: object, monkeypatch: pytest.MonkeyPatch) -> None:
+    from pathlib import Path
+
+    base = Path(str(tmp_path))
+    monkeypatch.setattr(studio, "DB_PATH", base / "studio.db")
+    monkeypatch.setattr(studio, "HARNESS_STORE_DIR", base / ".harnesses")
+    studio.init_db()
+
+    models = [
+        {"id": "loaded-local-model", "loaded": True, "is_loading": False, "size_gb": 12.5, "mtp_enabled": False},
+        {"id": "unloaded-local-model", "loaded": False, "is_loading": False, "size_gb": 19.0, "mtp_enabled": False},
+    ]
+    cat = studio._build_unified_catalog(models, loaded_only=True)
+    local_ids = [item["id"] for item in cat if item.get("source") == "local"]
+    assert "loaded-local-model" in local_ids
+    assert "unloaded-local-model" not in local_ids
+
+    target_project_dir = base / "user-projects" / "new-storefront"
+    assert not target_project_dir.exists()
+    sess = studio.create_harness_session_db(
+        title="Direct User Dir Build",
+        workspace_dir=str(target_project_dir),
+        use_worktree=False,
+        policy="standard",
+        lead_model="loaded-local-model",
+        critic_model="loaded-local-model",
+    )
+    assert target_project_dir.is_dir()
+    assert sess["workspace_dir"] == str(target_project_dir.resolve())
+    assert sess["worktree_dir"] == str(target_project_dir.resolve())
+    assert ".harnesses" not in sess["worktree_dir"]
+    assert sess["use_worktree"] is False
+
