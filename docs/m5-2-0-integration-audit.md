@@ -199,6 +199,15 @@ surface, and it is what stories `M5-P0-06` and `M5-P1-*` address.
 
 ## 5. Security-relevant observations (for M5-P0-03 and beyond)
 
+> **2026-10-30 update (M5-P0-03):** items 1 and 2 below are **contained**.
+> Both skill-script paths now run only through `app._run_skill_script`, which
+> requires `STUDIO_ALLOW_SKILL_CODE=1` **and** a live execution mode
+> (`sandbox` → container boundary via `_execute_limited`; `host` →
+> `STUDIO_ALLOW_HOST_EXECUTION=1`; `disabled` → never executes, no silent host
+> fallback). Regression tests: `tests/test_skill_execution_containment.py`
+> (9 tests). The observations below remain the historical audit record at the
+> audit commit; items 3–5 are unchanged.
+
 1. **Ungated skill-script subprocess** — `_fetch_online_inspiration` (L8645)
    executes repository-adjacent skill code with no `STUDIO_ALLOW_SKILL_CODE`
    check and no sandbox routing. Containment target for `M5-P0-03`.
