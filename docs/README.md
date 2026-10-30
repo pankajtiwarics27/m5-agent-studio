@@ -52,6 +52,8 @@ Harness runtime: [`task-events.md`](task-events.md) (durable task events, cursor
 SSE replay, reload/resync, approval reconciliation),
 [`version-aware-edits.md`](version-aware-edits.md) (content-version expectations,
 compare-and-swap managed edits, durable edit transactions, conflict recovery),
+[`edit-rollback.md`](edit-rollback.md) (durable edit batches, version-checked
+inverse-patch rollback, action reconciliation, resumable recovery),
 [`workflow-checkpoints.md`](workflow-checkpoints.md),
 [`execution-budgets.md`](execution-budgets.md), [`side-effect-idempotency.md`](side-effect-idempotency.md).
 

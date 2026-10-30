@@ -28,7 +28,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
 - **The application runs and its local auth path works.** `scripts/smoke_local.py`
   launches a disposable loopback instance of both `app.py` and the generated
   `studio.py` and verifies the token/security path — both exit 0.
-- **The test suite passes:** **854 passed, 1 skipped** (the skip is the opt-in
+- **The test suite passes:** **881 passed, 1 skipped** (the skip is the opt-in
   live container-runtime test, see below). `ruff`, `mypy` over 43 typed modules,
   `compileall`, and the Node-based frontend syntax check all pass.
 - **Generated artifacts are reproducible:** `studio.py`,
@@ -130,7 +130,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   worktree `/apply` overwrites of uncommitted user edits (`409`), and
   transitioning tasks into a safe `paused` state on `ENOSPC` / disk-full without
   partial file writes — pinned by 8 tests (`tests/test_workspace_snapshots.py`).
-  Multi-file inverse-patch rollback remains follow-up work (`M5-P2-03`).
+  Multi-file inverse-patch rollback arrived in `M5-P2-03`.
 - **Managed edits are version-aware and every applied edit is a durable
   transaction (`M5-P2-02`):** an edit resolves exactly one expected content
   version — the caller's `expected_sha256`, else the digest `read_file` handed
@@ -151,6 +151,25 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   applied edits are published as `edit/conflict` and `edit/applied` task events.
   Pinned by 19 tests (`tests/test_edit_transactions.py`) and documented in
   [`docs/version-aware-edits.md`](docs/version-aware-edits.md) (ADR-0006).
+- **Multi-file edits are journalled and can be rolled back without a destructive
+  Git reset (`M5-P2-03`):** every managed `write_file` / `edit_file` also appends a
+  step to a durable edit batch (`.harnesses/edits/batches/`, `0700`/`0600`, atomic
+  replace) holding the per-file pre/post digests, both CAS blobs, the previous mode
+  and a step state — recorded *before* the bytes land, so an interrupted multi-file
+  edit is recoverable in either direction. `rollback_edits` plans per path from the
+  bytes on disk (`already_reverted`, `delete_created`, `revert`, `revert_merged`,
+  `conflict`), restores through compare-and-swap writes against the digest the batch
+  wrote, and applies a line-level three-way inverse patch when the user edited the
+  file afterwards, so unrelated user edits survive. A single conflicting path means
+  **nothing is written**: the batch is left `unresolved` with per-path reasons.
+  `reconcile_task_actions` reports `in_flight`/`uncertain` managed-edit actions, and
+  a rollback refuses while one exists unless the caller acknowledges it (recorded in
+  the batch notes and the `edit/rollback` task event); an unreadable ledger blocks it
+  too. Per-step durable marking makes an interrupted rollback resumable
+  (`partially_rolled_back`), and no Git command is ever run. Pinned by 27 tests
+  (`tests/test_edit_rollback.py`) and documented in
+  [`docs/edit-rollback.md`](docs/edit-rollback.md) (ADR-0007).
+
 - **The execution boundary is extracted and its coverage is inventoried
   (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`–`M5-P1-04`):**
   `execution_spine.py` and `side_effect_ledger.py` form a stdlib-only seam
@@ -170,14 +189,14 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
   pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
   plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
-- **16 of 46 shipped Python modules are wired into the served app**
+- **17 of 47 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`, `execution_spine` since `M5-P0-06`,
   `runtime_persistence` since `M5-P1-01`, `side_effect_ledger` since `M5-P1-03`,
   `execution_budget`, `workflow_checkpoints`, `workflow_state` since
   `M5-P1-05`, `failure_injection` since `M5-P1-06`, `task_events` since
   `M5-P1-07`, `sandbox_boundary` + `workspace_snapshots` since `M5-P2-01`, and
-  `edit_transactions` since `M5-P2-02`; 5 of 42 at the time of the audit table). Together they govern
+  `edit_transactions` since `M5-P2-02`, and `edit_rollback` since `M5-P2-03`; 5 of 42 at the time of the audit table). Together they govern
   schema upgrades, SQLite transactions, authoritative task-state / lease-epoch
   checks at admission (`M5-P1-02`), durable `runtime_actions`
   intent/result/replay tracking (`M5-P1-03`), single-owner worker leases,
@@ -222,7 +241,7 @@ python3 -m venv .venv
 .venv/bin/mypy                                  # typed contract modules
 .venv/bin/python -m compileall -q app.py scripts tests
 .venv/bin/python scripts/check_frontend_syntax.py
-.venv/bin/python -m pytest -q                   # 854 passed, 1 skipped
+.venv/bin/python -m pytest -q                   # 881 passed, 1 skipped
 .venv/bin/python scripts/smoke_local.py         # loopback app, auth verified
 .venv/bin/python scripts/smoke_local.py --standalone
 ```
@@ -242,7 +261,7 @@ are not guarantees):
 
 ## Verified usage
 
-- **Run the test suite:** `.venv/bin/python -m pytest -q` → 854 passed,
+- **Run the test suite:** `.venv/bin/python -m pytest -q` → 881 passed,
   1 skipped, 1 warning.
 - **Start a disposable authenticated instance (verified):**
   `.venv/bin/python scripts/smoke_local.py` starts `app.py` on a free loopback
@@ -366,7 +385,7 @@ Summary (2026-10-30, Linux x86_64 container, 2 vCPU, ~4 GB RAM, Python 3.11.2):
 
 | Check | Result |
 |---|---|
-| `pytest -q` | 854 passed, 1 skipped (opt-in live container test), 1 warning |
+| `pytest -q` | 881 passed, 1 skipped (opt-in live container test), 1 warning |
 | `ruff check .` | clean |
 | `mypy` | clean (typed contract modules) |
 | `check_frontend_syntax.py` (Node) | pass |
@@ -496,8 +515,11 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
   explicit/observed/last-written content expectations, compare-and-swap atomic
   replacement so a concurrent user edit conflicts instead of being overwritten,
   structured `unauthorized_path` refusals, and one durable edit transaction per
-  applied edit; phase P2 40%). Next ready story: `M5-P2-03` (multi-file rollback
-  and action reconciliation) — claim via the coordination protocol before coding.
+  applied edit), **and `M5-P2-03`** (durable multi-file edit batches, per-path
+  inverse-patch rollback with version checks and a three-way merge around later
+  user edits, refusal with an explicit `unresolved` state, action reconciliation
+  before rollback, and resumable interrupted recovery; phase P2 60%). Next ready
+  story: `M5-P2-04` — claim via the coordination protocol before coding.
   Planned work is not implemented product behavior.
 - **AS program (Adaptive Runtime)** —
   [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json)

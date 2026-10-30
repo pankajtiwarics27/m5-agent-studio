@@ -124,10 +124,10 @@
   },
   "session_state": {
     "active_story": null,
-    "last_completed_story": "M5-P2-02",
-    "last_checkpoint": "2026-10-30T19:05:00Z",
-    "last_session_id": "arena/643fa294-m5-agent-studio",
-    "next_recommended_story": "M5-P2-03",
+    "last_completed_story": "M5-P2-03",
+    "last_checkpoint": "2026-10-30T18:50:00Z",
+    "last_session_id": "arena/e2ce9b9e-m5-agent-studio",
+    "next_recommended_story": "M5-P2-04",
     "open_risks": [
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
       "24 GB Apple Silicon memory/swap and oMLX task measurements blocked in Linux evidence environment (M5-P4-01 to measure on target hardware)",
@@ -135,7 +135,8 @@
       "Multi-agent parallel work active: product/M5_2_0_Autonomous_Roadmap.json tracking blocks are the shared claim ledger; claim protocol and PR/merge rules live in M5_2_0_AGENT_PROMPT.md",
       "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1) recorded in the M5-P0-05 baseline evidence; runtime dependencies clean.",
       "Harness task-event store (task_events.py, M5-P1-07) and workspace snapshot store (workspace_snapshots.py, M5-P2-01) assume a single application process per session, matching the worker-lease model; cross-process concurrent appends are unsupported and not claimed safe.",
-      "The edit ledger and observed-version index assume one application process per session (same assumption as the durable event stream and worker leases); a second process editing the same workspace is not detected. The .harnesses/edits directory is bounded per session (4 MiB rotation) but has no cross-session pruning (M5-P2-02)."
+      "The edit ledger and observed-version index assume one application process per session (same assumption as the durable event stream and worker leases); a second process editing the same workspace is not detected. The .harnesses/edits directory is bounded per session (4 MiB rotation) but has no cross-session pruning (M5-P2-02).",
+      "The M5-P2-03 rollback journal stores both the pre- and post-edit bytes of every managed edit in the edit CAS (.harnesses/edits/blobs) and has no garbage collection; the store grows with edit volume until a retention story adds pruning. Rollback covers managed edits only, and its line-based merge refuses rather than guesses on a user edit inside a region the batch wrote."
     ],
     "last_readme_sync": "2026-10-30T18:02:00Z",
     "last_verified_commit": "3f73d2db4ae6064ac557d2022b617dfa661d44fd",
@@ -1844,23 +1845,81 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P2-03: Multi-file rollback and action reconciliation. Objective: Recover partial edits without destructive Git reset. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Track per-file progress in durable edit transaction; Implement inverse patch/three-way merge with version checks; Reconcile uncertain outcomes before rollback; Test interrupted multi-file edit. Acceptance: Partial failure preserves all user edits; Rollback refuses conflicting overwrite; Recovery leaves explicit unresolved state if unsafe. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-10-30T18:47:00Z",
+        "updated_at": "2026-10-30T18:50:00Z",
+        "completed_at": "2026-10-30T18:50:00Z",
+        "owner_session": "arena/e2ce9b9e-m5-agent-studio",
+        "commit_sha": "b57b216",
+        "changed_files": [
+                "edit_rollback.py",
+                "workspace_snapshots.py",
+                "app.py",
+                "execution_spine.py",
+                "scripts/build_studio.py",
+                "studio.py",
+                "tests/test_edit_rollback.py",
+                "docs/edit-rollback.md",
+                "docs/adr/0007-multi-file-edit-rollback.md",
+                "docs/README.md",
+                "docs/subsystem-dependency-inventory.md",
+                "README.md",
+                "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+                "Task 1 (track per-file progress in a durable edit transaction): edit_rollback.EditBatchJournal writes one atomically replaced JSON document per batch (<store>/edits/batches/, 0700 dirs, 0600 files) with per-path tool, pre/post sha256, the CAS blob of both sides, the previous mode and an explicit step state; a per-session pointer names the open batch. app._record_edit_batch_step records the step BEFORE the write (a crash leaves a readable record; a step whose write never happened plans as already_reverted) and marks it skipped when the write is refused. Re-editing a path inside a batch keeps the first pre-image and advances the written side. Evidence: tests/test_edit_rollback.py::test_journal_records_steps_privately_and_keeps_the_first_pre_image, ::test_journal_refuses_unsafe_ids_and_unknown_states, ::test_mark_step_is_durable_and_rejects_a_missing_path, ::test_failed_write_is_not_left_as_an_applied_step, ::test_sensitive_paths_are_never_journalled.",
+                "Task 2 (inverse patch / three-way merge with version checks): EditRollbackEngine.plan decides per path from the bytes on disk (already_reverted, delete_created, revert, revert_merged, conflict); restores go through workspace_snapshots.atomic_write_confined_bytes with expected_sha256 equal to the digest the batch wrote (compare-and-swap at the rename), deletes only a file the batch created whose bytes still match, and applies a line-level three-way merge (post as common base) when the user edited the file afterwards so disjoint hunks both survive. Evidence: tests/test_edit_rollback.py::test_inverse_merge_reverts_the_written_region_and_keeps_user_edits, ::test_inverse_merge_keeps_a_user_insertion_around_the_written_region, ::test_inverse_merge_refuses_when_the_user_inserted_inside_the_written_region, ::test_rollback_restores_replaced_files_and_removes_created_ones, ::test_rollback_merges_around_user_edits_in_unwritten_regions, ::test_dry_run_reports_the_plan_without_writing.",
+                "Task 3 (reconcile uncertain outcomes before rollback): app._reconcile_managed_edit_actions reads the durable runtime_actions ledger for in_flight/uncertain managed-edit actions of the task and blocks the rollback until the caller acknowledges them (batch notes + edit/rollback task event); an unreadable ledger blocks it (fail closed); the tools exclude their own in-flight ledger row via a ContextVar so a call is not evidence against itself. reconcile_task_actions exposes the report read-only. Evidence: tests/test_edit_rollback.py::test_reconciliation_blocks_rollback_while_a_managed_edit_is_unresolved, ::test_reconciliation_fails_closed_when_the_ledger_is_unreadable, ::test_reconcile_tool_reports_a_clean_task, ::test_blocked_reasons_abort_the_rollback_before_any_write, ::test_rollback_is_denied_by_plan_policy.",
+                "Task 4 (test interrupted multi-file edit): an interrupted edit (one file written, one step recorded but never written) and an interrupted rollback (one step already restored and durably marked) both converge to the pre-batch bytes on the next run, redoing only the steps still applied. Evidence: tests/test_edit_rollback.py::test_interrupted_multi_file_edit_is_recoverable, ::test_resumed_rollback_only_redoes_the_steps_still_applied, ::test_resumed_rollback_only_redoes_the_steps_still_applied.",
+                "AC1 (partial failure preserves all user edits): rollback restores only the paths in the batch, from the bytes each edit replaced, and never runs a Git command; files outside the batch are untouched and a later user edit in an unwritten region survives the merge. Evidence: ::test_rollback_restores_replaced_files_and_removes_created_ones (keep.txt untouched), ::test_rollback_merges_around_user_edits_in_unwritten_regions, ::test_managed_edits_are_journalled_and_roll_back_through_the_tool_surface (user.txt untouched), and README documents that a refused plan writes nothing.",
+                "AC2 (rollback refuses conflicting overwrite): a file changed in a region the batch wrote, a created file edited afterwards, a file deleted afterwards, and a target swapped for a symlink all make the plan a conflict; a conflicting or blocked plan performs no writes at all and leaves the batch unresolved with per-path reasons. Evidence: ::test_rollback_refuses_to_overwrite_a_later_user_edit, ::test_rollback_refuses_when_a_created_file_was_edited_afterwards, ::test_rollback_refuses_when_the_file_was_deleted_afterwards, ::test_rollback_refuses_a_symlinked_target, ::test_rollback_tool_reports_an_unresolved_batch_without_writing.",
+                "AC3 (recovery leaves explicit unresolved state if unsafe): blocked or conflicting rollbacks persist state=unresolved with notes per path plus reasons in the result, an interrupted rollback persists partially_rolled_back with per-step state, and the reconciliation gate refuses by default with an explicit reason while an unresolved managed edit exists. Evidence: ::test_blocked_reasons_abort_the_rollback_before_any_write, ::test_resumed_rollback_only_redoes_the_steps_still_applied, ::test_reconciliation_blocks_rollback_while_a_managed_edit_is_unresolved.",
+                "Standalone bundle parity: edit_rollback.py is inlined into studio.py; a private-global collision with edit_transactions._SHA256_RE inside the single-namespace bundle was found and fixed (names prefixed _erb_*), guarded by tests/test_edit_rollback.py::test_rollback_module_globals_do_not_collide_with_the_bundle_namespace and validated by the bundle-based suites (tests/test_workspace_snapshots.py, tests/test_single_agent_vertical_slice.py, tests/test_release_manager.py)."
+        ],
+        "test_results": [
+                {
+                        "command": ".venv/bin/python -m pytest tests/test_edit_rollback.py -q",
+                        "exit_code": 0,
+                        "result": "27 passed (inverse merge, journal durability/marking/permissions, plan/execute decisions, conflict refusals that write nothing, merge around user edits, symlink refusal, interrupted edit and interrupted rollback resume, reconciliation gate, fail-closed ledger, plan-policy denial, bundle-namespace collision guard)"
+                },
+                {
+                        "command": ".venv/bin/python -m pytest -q",
+                        "exit_code": 0,
+                        "result": "881 passed, 1 skipped (tests/test_live_sandbox.py opt-in container test), 1 warning in 42.41 s; zero regressions (854 -> 881)"
+                },
+                {
+                        "command": ".venv/bin/ruff check . && .venv/bin/mypy",
+                        "exit_code": 0,
+                        "result": "ruff clean; mypy clean across 45 typed modules (edit_rollback.py added to the ratchet)"
+                },
+                {
+                        "command": ".venv/bin/python scripts/build_studio.py (twice) + sha256sum studio.py",
+                        "exit_code": 0,
+                        "result": "Built studio.py: 1,489,824 bytes; identical sha256 6d70b99590c91025d0e7992e37bd69a122b16cb710b987d64157ab8d2e416a63 on both runs (deterministic)"
+                },
+                {
+                        "command": "scripts/validate_docs.py, validate_adrs.py, validate_governance.py, validate_security_signoff.py, check_frontend_syntax.py, demo_tour.py --check, verify_baseline.py, generate_roadmap_status.py, generate_subsystem_inventory.py",
+                        "exit_code": 0,
+                        "result": "all passed (docs 82 files, ADRs incl. 0007, governance 7 files, sign-off state=deferred, JS syntax OK, demo transcript current, baseline 7904892d verified)"
+                }
+        ],
+        "decisions": [
+                "Rollback is a durable per-batch journal plus a version-checked inverse patch, never `git reset --hard` / `git checkout -- PATH` / `git stash`: the destructive forms discard the user's uncommitted work and cannot be scoped to a runtime batch without assuming a clean tree at a known commit (ADR-0007).",
+                "The journal records the intended step BEFORE the write. The planner decides from bytes on disk, so a step whose write never happened plans as already_reverted (no-op) and a step whose write did happen restores the stored pre-image; recording after the write would lose exactly the step an interrupted run needs.",
+                "A refused plan performs no writes at all, including for the individually safe paths: best-effort partial rollback would leave a third state that is neither before nor after, with no record of it. The batch is persisted as unresolved with per-path reasons plus a dry-run plan.",
+                "Three-way merge with `post` as the common base is used when the file changed after the batch: hunks that turn post back into pre are applied onto the current text and disjoint user edits survive; a collision with a user edit is a conflict rather than a guess.",
+                "The reconciliation gate blocks only on in_flight/uncertain managed-edit actions (write_file/edit_file), because those are the writes rollback could race and its own restores are compare-and-swapped; other tools' unresolved actions are reported as warnings. An unreadable ledger blocks the rollback (fail closed).",
+                "Acknowledgement of unresolved actions is an explicit caller decision (acknowledge_unresolved) recorded in the batch notes and the edit/rollback task event, so a silent override cannot happen.",
+                "Batch documents are atomic JSON files rather than a new SQLite table: they are small, written and read whole, need no schema migration, and keep the edit history out of the exported database (same reasoning as ADR-0006's edit ledger).",
+                "Private module globals in edit_rollback are prefixed _erb_* because the standalone bundle concatenates inlined modules into one namespace; the collision guard test pins that property."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
-        "readme_updated": false
-      }
+        "handoff_note": "M5-P2-03 complete: durable multi-file edit batches (edit_rollback.py) recorded before the write, per-path rollback planning from bytes on disk (already_reverted/delete_created/revert/revert_merged/conflict), compare-and-swap restores, three-way inverse merge around later user edits, refusal with an explicit unresolved state, action reconciliation before rollback, and resumable interrupted recovery. New tools list_edit_batches / reconcile_task_actions / rollback_edits; rollback_edits is a managed edit at the execution boundary and is denied by plan policy. Documented in docs/edit-rollback.md (ADR-0007). Not implemented: cross-session rollback, CAS garbage collection, rollback of files changed outside managed edits.",
+        "next_action": "Claim and implement M5-P2-04 (next P2 story) after this PR merges; check its dependencies and the claim ledger first.",
+        "readme_updated": true
+}
     },
     {
       "id": "M5-P2-04",
