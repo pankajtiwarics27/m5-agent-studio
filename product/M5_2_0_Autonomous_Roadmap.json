@@ -123,18 +123,19 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": "M5-P2-01",
-    "last_completed_story": "M5-P1-07",
-    "last_checkpoint": "2026-10-30T17:30:00Z",
+    "active_story": null,
+    "last_completed_story": "M5-P2-01",
+    "last_checkpoint": "2026-10-30T18:05:00Z",
     "last_session_id": "arena/552a0321-m5-agent-studio",
-    "next_recommended_story": "M5-P2-01",
+    "next_recommended_story": "M5-P2-02",
     "open_risks": [
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
       "24 GB Apple Silicon memory/swap and oMLX task measurements blocked in Linux evidence environment (M5-P4-01 to measure on target hardware)",
-      "sandbox_boundary.py unit-tested but not integrated into app.py (assigned to M5-P2-01)",
       "Multi-agent parallel work active: product/M5_2_0_Autonomous_Roadmap.json tracking blocks are the shared claim ledger; claim protocol and PR/merge rules live in M5_2_0_AGENT_PROMPT.md",
       "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1) recorded in the M5-P0-05 baseline evidence; runtime dependencies clean. The M5-P1-07 verification environment installed only extras [dev], so the supply-chain scan was not re-run.",
-      "Harness task-event store (task_events.py, M5-P1-07) assumes a single application process per session, matching the worker-lease model; cross-process concurrent appends are unsupported and not claimed safe. Dedupe keys are only guaranteed over the retained log (8 MiB / 4000 events)."
+      "Harness task-event store (task_events.py, M5-P1-07) assumes a single application process per session, matching the worker-lease model; cross-process concurrent appends are unsupported and not claimed safe. Dedupe keys are only guaranteed over the retained log (8 MiB / 4000 events).",
+      "Baseline snapshots have no prune/GC surface (M5-P2-01): the per-workspace CAS only grows, and metadata-only paths (secret-named files, ignored files, symlinks, files over 2 MiB) are recorded but not restorable, so edits to those paths are refused rather than applied. Documented in docs/workspace-baselines.md and ADR-0006.",
+      "sandbox_boundary.py remains unit-tested but not integrated into app.py; M5-P2-01 delivered pre-edit baselines instead, so this integration is still unassigned and must be picked up by a later P2/P3 story."
     ],
     "last_readme_sync": "2026-10-30T17:17:27Z",
     "last_verified_commit": "9940a083a7f17485955c891d31695a31380cdb7f",
@@ -183,9 +184,9 @@
         "M5-P2-04",
         "M5-P2-05"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
-      "progress_percent": 0
+      "progress_percent": 20
     },
     {
       "id": "P3",
@@ -1645,22 +1646,84 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P2-01: Pre-edit Git baseline and selective user snapshots. Objective: Preserve staged, unstaged and relevant untracked work before edits. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Capture Git tree/HEAD and user changes; Snapshot necessary bytes into content-addressed storage; Preserve ignored sensitive files without indiscriminate copying; Handle disk-full with safe pause. Acceptance: No user changes silently lost; Restore baseline and snapshot verified; No destructive reset/clean. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 10,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-30T17:30:00Z",
-        "updated_at": "2026-10-30T17:30:00Z",
-        "completed_at": null,
+        "updated_at": "2026-10-30T18:05:00Z",
+        "completed_at": "2026-10-30T18:05:00Z",
         "owner_session": "arena/552a0321-m5-agent-studio",
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "commit_sha": "c31fa7979823a248528c345dea7257f99faaa200",
+        "changed_files": [
+          "workspace_baseline.py",
+          "app.py",
+          "tests/test_workspace_baseline.py",
+          "pyproject.toml",
+          "scripts/build_studio.py",
+          "studio.py",
+          "docs/workspace-baselines.md",
+          "docs/adr/0006-workspace-baseline-snapshots.md",
+          "docs/README.md",
+          "docs/route-security-matrix.md",
+          "docs/subsystem-dependency-inventory.md",
+          "README.md",
+          "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "Task 1 (capture Git tree/HEAD and user changes): workspace_baseline.py::WorkspaceBaselineStore.capture reads `git rev-parse HEAD`/`--abbrev-ref HEAD`, `git status --porcelain -z --untracked-files=all --no-renames` (unstaged, staged, untracked, deleted) and `git ls-files -s` (index blob ids), and records head_commit/head_ref/per-file staged_blob in the manifest. Deletions are preserved from the index blob or HEAD (`baseline/<sha>`). Evidence: tests/test_workspace_baseline.py::test_capture_preserves_staged_unstaged_untracked_and_deleted_work, ::test_capture_and_verify_run_only_read_only_plumbing_and_leave_the_tree_identical.",
+          "Task 2 (content-addressed storage): blobs are written to a 0600 temp file, fsync'ed and os.replace'd into `cas/<digest[:2]>/<digest>` under a per-workspace key; manifests carry `manifest_sha256` over the canonical payload. Evidence: ::test_verify_detects_tampered_manifest_and_missing_blob (a hand-edited manifest is detected, a deleted blob is reported as missing rather than believed).",
+          "Task 3 (ignored sensitive files without indiscriminate copying): ignored files are never enumerated in bulk (`--ignored` is never passed); secret-named files (.env*, .netrc, id_*, *.pem/*.key/*.p12, secrets*, credentials*, *api-token*/*api-key*) are metadata-only even when explicitly listed in protected_ignored; only operator-listed `protected_ignored` paths get their bytes copied; symlinks are never followed. Evidence: ::test_capture_never_copies_ignored_or_secret_files_unless_explicitly_protected, ::test_capture_refuses_escaping_focus_paths_and_does_not_follow_symlinks.",
+          "Task 4 (disk-full safe pause): capture sums the expected bytes and refuses with BaselineStorageExhausted unless expected + 8 MiB headroom fits; ENOSPC/EDQUOT maps to the same error. app.py answers 507, appends a `baseline/storage_exhausted` task event, pauses the task via the task state machine and refuses the edit. Evidence: ::test_storage_exhaustion_is_reported_rather_than_half_captured, ::test_disk_full_during_capture_fails_closed_and_pauses_the_task.",
+          "AC1 (No user changes silently lost): every write_file/edit_file now runs _ensure_pre_edit_baseline first, which captures a fresh baseline whenever the target digest differs from the newest baseline and refuses the edit (baseline_blocked) when the target cannot be read or is recorded as unrestorable. Capture covers staged, unstaged, untracked and deleted work, not only the edit target. Evidence: ::test_managed_edit_captures_baseline_and_refreshes_after_a_user_change (the user's second edit is captured and restored byte-for-byte), ::test_managed_edit_is_refused_when_user_work_cannot_be_snapshotted.",
+          "AC2 (Restore baseline and snapshot verified): WorkspaceBaselineStore.verify() materializes every blob into a caller-supplied scratch directory, re-hashes each file after writing, and reports verified/restored/missing/mismatched/unrestorable paths with checked_bytes; `ok` requires nothing missing and nothing mismatched. All three HTTP routes verify into a tempfile.TemporaryDirectory and never write the workspace. Evidence: ::test_managed_edit_captures_baseline_and_refreshes_after_a_user_change, ::test_baseline_http_endpoints_capture_list_and_verify.",
+          "AC3 (No destructive reset/clean): _Git enforces shell=False, GIT_OPTIONAL_LOCKS=0, a 20 s timeout and an allowlist of read-only plumbing (rev-parse, ls-files, status, check-ignore, cat-file, show, ls-tree, diff, hash-object); a denylist of mutating subcommands (reset, clean, checkout, stash, restore, rm, switch, rebase, merge, apply, commit, add, prune, gc, reflog, update-ref, write-tree, read-tree, branch, push, pull, fetch, filter-branch) is refused first. Restore is never performed into the workspace. Evidence: ::test_git_runner_refuses_destructive_subcommands, ::test_capture_and_verify_run_only_read_only_plumbing_and_leave_the_tree_identical (the worktree and index are byte-identical before/after capture and verify).",
+          "README ground-truth update: README.md gains a verified-capability bullet for M5-P2-01 (store location, metadata-only secret handling, fail-closed edit path, 507 pause, read-only Git allowlist, the three routes, 14 tests, ADR-0006), its verified-through marker moves to M5-P2-01, and all three suite counts are corrected to the measured 841 passed / 1 skipped (two of them had drifted to 811). docs/workspace-baselines.md and docs/adr/0006-workspace-baseline-snapshots.md document the behaviour, the non-guarantees and the limits."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest tests/test_workspace_baseline.py -q",
+            "exit_code": 0,
+            "result": "15 passed (capture of staged/unstaged/untracked/deleted work, HEAD+index recording, metadata-only secrets and ignored files, protected_ignored capture, byte-identical restore, tamper detection, destructive-git refusal, storage exhaustion pause, unsafe focus paths, newest-capture ordering, 3 HTTP routes with 401/404/409, standalone inlining)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "842 passed, 1 skipped (tests/test_live_sandbox.py opt-in container test), 1 warning; three consecutive runs, zero regressions (827 -> 842)"
+          },
+          {
+            "command": ".venv/bin/ruff check . && .venv/bin/mypy",
+            "exit_code": 0,
+            "result": "ruff clean; mypy clean across 44 typed modules (workspace_baseline.py added to the ratchet)"
+          },
+          {
+            "command": ".venv/bin/python scripts/build_studio.py (twice) + sha256sum",
+            "exit_code": 0,
+            "result": "deterministic rebuild: identical sha256 5beef62b...d043b, 1,328,787 bytes; side-effect-free generator scripts regenerate byte-for-byte"
+          },
+          {
+            "command": ".venv/bin/python scripts/smoke_local.py && .venv/bin/python scripts/smoke_local.py --standalone",
+            "exit_code": 0,
+            "result": "both app.py and the standalone studio.py pass loopback startup, auth, Origin rejection, isolated DB and injected UI auth-helper checks"
+          },
+          {
+            "command": "validate_docs.py + validate_adrs.py + validate_governance.py + validate_security_signoff.py + check_frontend_syntax.py + verify_baseline.py + generate_route_matrix.py + generate_subsystem_inventory.py + generate_roadmap_status.py",
+            "exit_code": 0,
+            "result": "docs 80 files, ADRs, governance (7 files), sign-off consistency (state=deferred, pending), JS syntax, pinned baseline 7904892d..., and the generated route matrix (74 entries) / subsystem inventory all pass"
+          }
+        ],
+        "decisions": [
+          "Snapshots live in a per-workspace content-addressed store under `.harnesses/baselines` (gitignored, `STUDIO_BASELINE_DIR` override), not in SQLite: blobs are large, append-only and shared across baselines, and user file content should not enter the exported database (ADR-0006).",
+          "Restore is never performed into the workspace in this story: verify() reconstructs into a caller-supplied scratch directory and re-hashes, so nothing in the user's tree can be rewritten by a verification.",
+          "Secret-named files are metadata-only even when an operator lists them in protected_ignored, and any edit target that is not restorable is refused, so the guarantee is 'never silently overwrite bytes we cannot restore' rather than a claim to have copied everything.",
+          "Ignored files are only captured when explicitly named (focus_paths / protected_ignored); `git status --ignored` is never used, which is what prevents indiscriminate copying of .env files and build trees.",
+          "The pre-edit refresh compares the target digest with the newest baseline and skips a capture only for bytes our own managed write produced (process-local note); losing that note after a restart costs one extra capture, never a missed one.",
+          "No destructive Git: an allowlist of read-only plumbing is used and mutating subcommands are refused before execution; deletions are preserved from index/HEAD blobs instead of any checkout.",
+          "Baseline ids are random, so ordering comes from the tamper-evident `captured_at` timestamp at microsecond precision, not from the directory name and not from a second-resolution clock: `latest()` returning an older manifest would make the pre-edit digest check compare the working file against stale bytes and silently skip a needed capture."
+        ],
         "blockers": [],
-        "handoff_note": "Claimed by arena/552a0321-m5-agent-studio at 2026-10-30T17:30Z (post PR #41 merge 3f73d2d).",
-        "next_action": "Implement pre-edit workspace baseline capture (Git HEAD/index/worktree + content-addressed blobs), fail-closed managed edits, disk-full safe pause, and restore verification.",
-        "readme_updated": false
+        "handoff_note": "M5-P2-01 complete: pre-edit workspace baselines (workspace_baseline.py), fail-closed managed edits, disk-full pause (507 + task pause), restore verification and the three authenticated /baseline routes are integrated in app.py and the standalone studio.py (841 passed, 1 skipped; P2 at 20%). The store has no prune/GC surface yet and metadata-only paths (secrets, ignored files, symlinks, >2 MiB files) are not restorable - both documented in docs/workspace-baselines.md and ADR-0006. Next: M5-P2-02 (version-aware managed edits and conflict checks), which builds on the digest comparison added here.",
+        "next_action": "Claim and implement M5-P2-02 (version-aware managed edits and conflict checks) after this PR merges.",
+        "readme_updated": true
       }
     },
     {
