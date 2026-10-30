@@ -1332,6 +1332,25 @@ def init_db() -> None:
                     reason="unresolved_effects_on_startup",
                     allow_inactive_epoch=True,
                 )
+    _recovery_report = workflow_state.DurableTaskStateMachine(STORAGE, DB_PATH).recover_incomplete_transitions()
+    _reconciled_session_map: list[tuple[str, str]] = (
+        [(tid, "paused") for tid in _recovery_report.recovered_task_ids]
+        + [(tid, "blocked") for tid in _recovery_report.blocked_task_ids]
+        + [(tid, "cancelled") for tid in _recovery_report.cancelled_task_ids]
+    )
+    if _reconciled_session_map:
+        _now_rec = time.time()
+        runtime_persistence.run_write_transaction(
+            STORAGE,
+            DB_PATH,
+            lambda rec_conn: [
+                rec_conn.execute(
+                    "UPDATE harness_sessions SET status = ?, updated_at = ? WHERE id = ? AND status = 'running'",
+                    (_st, _now_rec, _sid),
+                )
+                for _sid, _st in _reconciled_session_map
+            ],
+        )
     _migrate_legacy_secrets()
     _seed_env_providers_and_default_combo()
     _seed_default_opencontext()
@@ -12390,18 +12409,160 @@ def get_worker_lease_coordinator(
     )
 
 
-def _acquire_turn_lease_or_409(
+def get_task_state_machine() -> workflow_state.DurableTaskStateMachine:
+    """Return the authoritative M5-P1-05 root-task, milestone, budget, and checkpoint state machine."""
+    return workflow_state.DurableTaskStateMachine(STORAGE, DB_PATH)
+
+
+def _parse_task_budget_spec(raw: Any) -> execution_budget.TaskBudgetSpec | None:
+    """Parse optional caller-supplied ``budget`` object or fail closed with HTTP 400."""
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise HTTPException(status_code=400, detail="budget must be a JSON object when supplied.")
+    try:
+        return execution_budget.TaskBudgetSpec.from_dict(raw)
+    except (TypeError, ValueError, execution_budget.BudgetError) as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid task budget: {exc}") from exc
+
+
+def _collect_step_evidence_refs(
+    session_id: str,
+    *,
+    epoch: int,
+    wt_dir: Path,
+    extra_artifacts: tuple[Path, ...] | list[Path] = (),
+) -> list[workflow_checkpoints.EvidenceRef]:
+    """Build deterministic evidence references for committed actions, artifacts, and git diff."""
+    refs: list[workflow_checkpoints.EvidenceRef] = []
+    store = runtime_persistence.RuntimePersistenceStore(STORAGE, DB_PATH)
+    for act in store.list_task_actions(session_id):
+        if act.epoch == epoch and act.status == "committed":
+            refs.append(
+                workflow_checkpoints.EvidenceRef(
+                    kind="action",
+                    ref_id=act.action_id,
+                    sha256=act.output_sha256 or act.args_sha256,
+                    summary=f"{act.tool_name}:{act.status}",
+                )
+            )
+    for artifact in extra_artifacts:
+        if artifact.is_file():
+            data = artifact.read_bytes()
+            digest = hashlib.sha256(data).hexdigest()
+            try:
+                rel = artifact.resolve().relative_to(wt_dir.resolve()).as_posix()
+            except ValueError:
+                rel = artifact.name
+            refs.append(
+                workflow_checkpoints.EvidenceRef(
+                    kind="artifact",
+                    ref_id=rel,
+                    sha256=digest,
+                    summary=f"{len(data)}B",
+                )
+            )
+    diff_info = _compute_git_diff(wt_dir)
+    diff_txt = str(diff_info.get("diff") or "")
+    status_txt = str(diff_info.get("status") or "").strip()
+    if diff_txt or status_txt:
+        diff_sha = hashlib.sha256(f"{status_txt}\n{diff_txt}".encode("utf-8")).hexdigest()
+        refs.append(
+            workflow_checkpoints.EvidenceRef(
+                kind="git_diff",
+                ref_id="HEAD",
+                sha256=diff_sha,
+                summary=(status_txt.splitlines()[0] if status_txt else "modified")[:160],
+            )
+        )
+    return refs
+
+
+def _acquire_turn_plan_and_lease_or_409(
     sess: Mapping[str, Any],
     *,
     lease_ttl_s: float | None = None,
-) -> tuple[side_effect_ledger.WorkerLeaseCoordinator, side_effect_ledger.LeaseClaimOutcome, str]:
-    """Claim a single-owner monotonic worker lease for a turn or raise HTTP 409 on conflict/hold."""
+    budget_spec: execution_budget.TaskBudgetSpec | None = None,
+    resume: bool = False,
+) -> tuple[
+    side_effect_ledger.WorkerLeaseCoordinator,
+    side_effect_ledger.LeaseClaimOutcome,
+    str,
+    workflow_state.DurableTaskStateMachine,
+    workflow_state.ResumedTaskPlan | None,
+]:
+    """Validate task lifecycle/budgets/checkpoints and claim a single-owner worker lease."""
     sid = str(sess["id"])
     wt_raw = str(sess.get("worktree_dir") or "").strip()
     wt_root = Path(wt_raw).resolve() if wt_raw else None
+    sm = get_task_state_machine()
     coord = get_worker_lease_coordinator(wt_root)
-    worker_id = f"wrk-{_PROCESS_BOOT_ID}-{uuid.uuid4().hex[:8]}"
     ttl = float(DEFAULT_WORKER_LEASE_TTL_S if lease_ttl_s is None else lease_ttl_s)
+    now_ts = time.time()
+
+    existing_task = sm.store.get_task(sid)
+    if existing_task is not None and existing_task.current_epoch > 0:
+        active_ep = sm.store.get_epoch(sid, existing_task.current_epoch)
+        if active_ep is not None and active_ep.status == "active" and active_ep.lease_expires_at > now_ts:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Task {sid!r} is actively owned by worker {active_ep.worker_id!r} "
+                    f"in epoch {active_ep.epoch} (lease valid for {max(0.0, active_ep.lease_expires_at - now_ts):.2f}s)."
+                ),
+            )
+
+    task_rec, budget_state = sm.ensure_root_task(
+        sid,
+        session_id=sid,
+        title=str(sess.get("title") or ""),
+        workspace_dir=wt_raw,
+        policy=str(sess.get("policy") or "standard"),
+        budget_spec=budget_spec,
+        override_budget_spec=(budget_spec is not None),
+        now=now_ts,
+    )
+    if task_rec.state == "cancelled" or budget_state.cancel_requested:
+        raise HTTPException(status_code=409, detail=f"Task {sid!r} is cancelled and cannot execute.")
+
+    resumed_plan: workflow_state.ResumedTaskPlan | None = None
+    should_prepare_resume = bool(resume)
+    already_prepared = False
+    if not should_prepare_resume and task_rec.state in {"paused", "failed"} and task_rec.checkpoint_ref:
+        try:
+            probe_ckpt = sm.checkpoints.load_latest_checkpoint(sid, verify_integrity=True)
+        except workflow_checkpoints.ResumeRejected as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        if probe_ckpt is not None and probe_ckpt.status in {"interrupted", "resumed"}:
+            should_prepare_resume = True
+            already_prepared = probe_ckpt.status == "resumed"
+    elif should_prepare_resume and task_rec.checkpoint_ref:
+        try:
+            probe_ckpt = sm.checkpoints.load_latest_checkpoint(sid, verify_integrity=True)
+        except workflow_checkpoints.ResumeRejected as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        if probe_ckpt is not None and probe_ckpt.status == "resumed":
+            already_prepared = True
+
+    if should_prepare_resume:
+        try:
+            resumed_plan = sm.prepare_resume(
+                sid,
+                consume_recovery_budget=not already_prepared,
+                now=now_ts,
+            )
+        except (
+            workflow_state.WorkflowTransitionRejected,
+            workflow_checkpoints.ResumeRejected,
+            execution_budget.BudgetExceeded,
+        ) as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    else:
+        prior_violation = budget_state.violation_reason(check_recovery=False)
+        if prior_violation:
+            raise HTTPException(status_code=409, detail=prior_violation)
+
+    worker_id = f"wrk-{_PROCESS_BOOT_ID}-{uuid.uuid4().hex[:8]}"
     try:
         claim = coord.acquire_or_takeover(
             sid,
@@ -12417,6 +12578,20 @@ def _acquire_turn_lease_or_409(
         side_effect_ledger.UnresolvedEffectsHoldError,
     ) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    sm.budgets.set_control_flags(sid, pause_requested=False)
+    return coord, claim, worker_id, sm, resumed_plan
+
+
+def _acquire_turn_lease_or_409(
+    sess: Mapping[str, Any],
+    *,
+    lease_ttl_s: float | None = None,
+) -> tuple[side_effect_ledger.WorkerLeaseCoordinator, side_effect_ledger.LeaseClaimOutcome, str]:
+    """Claim a single-owner monotonic worker lease for a turn or raise HTTP 409 on conflict/hold."""
+    coord, claim, worker_id, _, _ = _acquire_turn_plan_and_lease_or_409(
+        sess,
+        lease_ttl_s=lease_ttl_s,
+    )
     return coord, claim, worker_id
 
 
@@ -12498,6 +12673,16 @@ class _AppTaskContextResolver:
         task = store.get_task(clean_task_id)
         if task is None:
             return None
+        effective_state = task.state
+        if effective_state == "running":
+            try:
+                b_state = execution_budget.TaskBudgetState.from_json(task.budget_json)
+                if b_state.cancel_requested:
+                    effective_state = "cancelled"
+                elif b_state.pause_requested:
+                    effective_state = "paused"
+            except execution_budget.BudgetError:
+                pass
         lookup_epoch = request.epoch if request.epoch is not None else (task.current_epoch if task.current_epoch > 0 else None)
         epoch_rec = store.get_epoch(clean_task_id, lookup_epoch) if (lookup_epoch is not None and lookup_epoch > 0) else None
         lease_expired = bool(epoch_rec is not None and epoch_rec.lease_expires_at <= now_ts)
@@ -12512,7 +12697,7 @@ class _AppTaskContextResolver:
         )
         return execution_spine.TaskAdmissionSnapshot(
             task_id=task.task_id,
-            state=task.state,
+            state=effective_state,
             current_epoch=task.current_epoch,
             epoch_status=epoch_rec.status if epoch_rec is not None else None,
             epoch_worker_id=epoch_rec.worker_id if epoch_rec is not None else None,
@@ -13036,6 +13221,211 @@ async def api_abort_harness(session_id: str) -> JSONResponse:
     return JSONResponse({"status": "aborted", "session_id": session_id})
 
 
+def _serialize_task_record(rec: runtime_persistence.TaskRecord) -> dict[str, Any]:
+    return {
+        "task_id": rec.task_id,
+        "parent_task_id": rec.parent_task_id,
+        "session_id": rec.session_id,
+        "title": rec.title,
+        "state": rec.state,
+        "current_epoch": rec.current_epoch,
+        "state_version": rec.state_version,
+        "workspace_dir": rec.workspace_dir,
+        "policy": rec.policy,
+        "checkpoint_ref": rec.checkpoint_ref,
+        "created_at": rec.created_at,
+        "updated_at": rec.updated_at,
+    }
+
+
+def _serialize_transition_record(tr: runtime_persistence.TaskTransitionRecord) -> dict[str, Any]:
+    try:
+        ev = json.loads(tr.evidence_json) if tr.evidence_json else {}
+    except (TypeError, ValueError):
+        ev = {}
+    return {
+        "seq": tr.seq,
+        "from_state": tr.from_state,
+        "to_state": tr.to_state,
+        "epoch": tr.epoch,
+        "reason": tr.reason,
+        "evidence": ev,
+        "created_at": tr.created_at,
+    }
+
+
+@app.get("/api/harness/sessions/{session_id}/task")
+async def api_get_harness_task_state(session_id: str) -> JSONResponse:
+    """Return durable root-task state, child milestones, checkpoints, budgets, and transition log."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    sm = get_task_state_machine()
+    task = sm.store.get_task(session_id)
+    if task is None:
+        task, budget = sm.ensure_root_task(
+            session_id,
+            session_id=session_id,
+            title=str(sess.get("title") or ""),
+            workspace_dir=str(sess.get("worktree_dir") or ""),
+            policy=str(sess.get("policy") or "standard"),
+        )
+    else:
+        budget = sm.budgets.get_budget(session_id)
+    integrity_error = ""
+    latest_ckpt: workflow_checkpoints.TaskCheckpointRecord | None = None
+    try:
+        latest_ckpt = sm.checkpoints.load_latest_checkpoint(session_id, verify_integrity=True)
+    except workflow_checkpoints.ResumeRejected as exc:
+        integrity_error = str(exc)
+    milestones = sm.list_milestones(session_id)
+    transitions = sm.store.list_transitions(session_id)
+    checkpoints = sm.checkpoints.list_checkpoints(session_id, verify_integrity=False)
+    return JSONResponse(
+        {
+            "task": _serialize_task_record(task),
+            "budget": budget.to_dict(),
+            "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
+            "checkpoint_integrity_error": integrity_error,
+            "checkpoints": [ck.to_dict() for ck in checkpoints],
+            "milestones": [_serialize_task_record(ms) for ms in milestones],
+            "transitions": [_serialize_transition_record(tr) for tr in transitions],
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/pause")
+async def api_pause_harness_session(session_id: str, request: Request) -> JSONResponse:
+    """Request a safe-boundary pause on a harness task without claiming premature completion."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    reason = "operator_pause_requested"
+    try:
+        body = await request.json()
+        if isinstance(body, dict) and body.get("reason"):
+            reason = str(body["reason"])[:160]
+    except Exception:
+        pass
+    for aid, slot in list(_PENDING_APPROVALS.items()):
+        if slot.get("session_id") == session_id and not slot["event"].is_set():
+            _resolve_pending_tool_approval(aid, "reject", note="Run paused by operator.", session_id=session_id, remember=True)
+    sm = get_task_state_machine()
+    sm.ensure_root_task(
+        session_id,
+        session_id=session_id,
+        title=str(sess.get("title") or ""),
+        workspace_dir=str(sess.get("worktree_dir") or ""),
+        policy=str(sess.get("policy") or "standard"),
+    )
+    try:
+        outcome = sm.request_pause(session_id, reason=reason)
+    except workflow_state.WorkflowTransitionRejected as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if not outcome.deferred_to_safe_boundary:
+        _update_harness_session_state(session_id, status="paused")
+        _append_harness_event(session_id, "turn/paused", {"reason": reason})
+    return JSONResponse(
+        {
+            "status": "pause_requested" if outcome.deferred_to_safe_boundary else "paused",
+            "session_id": session_id,
+            "deferred_to_safe_boundary": outcome.deferred_to_safe_boundary,
+            "task": _serialize_task_record(outcome.task),
+            "budget": outcome.budget.to_dict(),
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/cancel")
+async def api_cancel_harness_session(session_id: str, request: Request) -> JSONResponse:
+    """Cancel a harness task, fencing active leases and never claiming premature completion."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    reason = "operator_cancelled"
+    try:
+        body = await request.json()
+        if isinstance(body, dict) and body.get("reason"):
+            reason = str(body["reason"])[:160]
+    except Exception:
+        pass
+    _HARNESS_ABORT_FLAGS.add(session_id)
+    for aid, slot in list(_PENDING_APPROVALS.items()):
+        if slot.get("session_id") == session_id and not slot["event"].is_set():
+            _resolve_pending_tool_approval(aid, "reject", note="Run cancelled by operator.", session_id=session_id, remember=True)
+    sm = get_task_state_machine()
+    sm.ensure_root_task(
+        session_id,
+        session_id=session_id,
+        title=str(sess.get("title") or ""),
+        workspace_dir=str(sess.get("worktree_dir") or ""),
+        policy=str(sess.get("policy") or "standard"),
+    )
+    try:
+        outcome = sm.cancel_task(session_id, reason=reason)
+    except workflow_state.WorkflowTransitionRejected as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _update_harness_session_state(session_id, status="cancelled")
+    _append_harness_event(
+        session_id,
+        "turn/cancelled",
+        {"reason": reason, "unresolved_action_ids": list(outcome.unresolved_action_ids)},
+    )
+    return JSONResponse(
+        {
+            "status": "cancelled",
+            "session_id": session_id,
+            "unresolved_action_ids": list(outcome.unresolved_action_ids),
+            "task": _serialize_task_record(outcome.task),
+            "budget": outcome.budget.to_dict(),
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/resume")
+async def api_resume_harness_session(session_id: str) -> JSONResponse:
+    """Validate checkpoint integrity, unresolved side effects, and recovery budget before resume."""
+    try:
+        get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    sm = get_task_state_machine()
+    try:
+        plan = sm.prepare_resume(session_id, consume_recovery_budget=True)
+    except (
+        workflow_state.WorkflowStateError,
+        workflow_state.WorkflowTransitionRejected,
+        workflow_checkpoints.ResumeRejected,
+        execution_budget.BudgetExceeded,
+    ) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _HARNESS_ABORT_FLAGS.discard(session_id)
+    _append_harness_event(
+        session_id,
+        "turn/resume_prepared",
+        {
+            "next_step": plan.next_step,
+            "checkpoint_id": plan.checkpoint.checkpoint_id if plan.checkpoint else "",
+            "recoveries_used": plan.budget.recoveries_used,
+            "completed_milestone_ids": list(plan.completed_milestone_ids),
+        },
+    )
+    return JSONResponse(
+        {
+            "status": "ready_to_resume",
+            "session_id": session_id,
+            "next_step": plan.next_step,
+            "completed_milestone_ids": list(plan.completed_milestone_ids),
+            "checkpoint": plan.checkpoint.to_dict() if plan.checkpoint is not None else None,
+            "task": _serialize_task_record(plan.task),
+            "budget": plan.budget.to_dict(),
+        }
+    )
+
+
 @app.post("/api/harness/run")
 async def api_run_harness_turn(request: Request) -> StreamingResponse:
     """Multi-Step Autonomous `Turn -> Step` Agentic Execution Loop (`deepseek-harness` pattern)."""
@@ -13047,6 +13437,8 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
     skill_ids: list[str] = body.get("skills") or []
     context_mode = bool(body.get("context_mode", True))
     efficiency_mode = str(body.get("efficiency_mode") or "ponytail")
+    resume_requested = bool(body.get("resume", False))
+    budget_spec = _parse_task_budget_spec(body.get("budget"))
 
     if not prompt:
         raise HTTPException(status_code=400, detail="Task prompt is required.")
@@ -13078,7 +13470,11 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
             )
             sess = get_harness_session_db(session_id)
 
-    coord, claim, worker_id = _acquire_turn_lease_or_409(sess)
+    coord, claim, worker_id, sm, resumed_plan = _acquire_turn_plan_and_lease_or_409(
+        sess,
+        budget_spec=budget_spec,
+        resume=resume_requested,
+    )
     lease_epoch = claim.epoch_record.epoch
     lease_released = False
     lease_final_state = "paused"
@@ -13101,6 +13497,17 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
     async def event_gen() -> AsyncIterator[str]:
         nonlocal lease_released, lease_final_state
         t_turn = time.perf_counter()
+        wt_dir = Path(sess["worktree_dir"]).resolve()
+        start_step = (
+            max(1, resumed_plan.next_step)
+            if (
+                resumed_plan is not None
+                and resumed_plan.checkpoint is not None
+                and resumed_plan.checkpoint.payload.get("workflow") == "harness"
+            )
+            else 1
+        )
+        completed_step = start_step - 1
         try:
             if is_local_omlx_model(sess["lead_model"]):
                 await _unload_other_omlx_models(client, parse_model_route(sess["lead_model"])[2])
@@ -13122,14 +13529,15 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
             else:
                 messages[0] = {"role": "system", "content": sys_prompt}
                 if context_mode and sum(len(m.get("content") or "") for m in messages) > CTX_AUTO_COMPACT_CHARS:
-                    comp_res = compact_harness_session_messages(session_id, Path(sess["worktree_dir"]))
+                    comp_res = compact_harness_session_messages(session_id, wt_dir)
                     if comp_res.get("compacted"):
                         messages = _load_harness_messages(session_id)
                         messages[0] = {"role": "system", "content": sys_prompt}
                         yield _sse("context_compacted", comp_res)
 
-            messages.append({"role": "user", "content": prompt})
-            _save_harness_messages(session_id, messages)
+            if start_step == 1 or not resume_requested:
+                messages.append({"role": "user", "content": prompt})
+                _save_harness_messages(session_id, messages)
 
             new_title = prompt[:90] if sess["step_count"] == 0 else None
             _update_harness_session_state(session_id, status="running", title=new_title)
@@ -13142,29 +13550,44 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     "policy": sess["policy"],
                     "epoch": lease_epoch,
                     "worker_id": worker_id,
+                    "resumed_from_step": completed_step if start_step > 1 else 0,
                 },
             )
-            yield _sse("turn_start", {"session": get_harness_session_db(session_id), "event": ev_turn, "epoch": lease_epoch})
+            yield _sse(
+                "turn_start",
+                {
+                    "session": get_harness_session_db(session_id),
+                    "event": ev_turn,
+                    "epoch": lease_epoch,
+                    "resumed_from_step": completed_step if start_step > 1 else 0,
+                },
+            )
 
             steps_run = 0
-            aborted_flag = False
-            for step_idx in range(1, max_steps + 1):
-                if session_id in _HARNESS_ABORT_FLAGS:
-                    aborted_flag = True
-                    _append_harness_event(session_id, "turn/aborted", {"step": step_idx})
-                    yield _sse("aborted", {"step": step_idx})
+            halt_mode: Literal["none", "paused", "cancelled", "budget_exceeded", "max_steps"] = "none"
+            halt_reason = ""
+            for step_idx in range(start_step, start_step + max_steps):
+                boundary = sm.check_safe_boundary(
+                    session_id,
+                    epoch=lease_epoch,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                )
+                if boundary != "continue":
+                    halt_mode = "cancelled" if boundary == "cancel" else "paused"
+                    halt_reason = f"{halt_mode}_before_step_{step_idx}"
                     break
 
                 coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
+                t_step = time.perf_counter()
 
-                if context_mode and step_idx > 1 and sum(len(m.get("content") or "") for m in messages) > CTX_AUTO_COMPACT_CHARS:
-                    comp_res = compact_harness_session_messages(session_id, Path(sess["worktree_dir"]))
+                if context_mode and step_idx > start_step and sum(len(m.get("content") or "") for m in messages) > CTX_AUTO_COMPACT_CHARS:
+                    comp_res = compact_harness_session_messages(session_id, wt_dir)
                     if comp_res.get("compacted"):
                         messages = _load_harness_messages(session_id)
                         messages[0] = {"role": "system", "content": sys_prompt}
                         yield _sse("context_compacted", comp_res)
 
-                steps_run = step_idx
+                steps_run += 1
                 sess_live = _bind_lease_to_session(
                     get_harness_session_db(session_id),
                     task_id=session_id,
@@ -13175,7 +13598,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                 policy = sess_live["policy"]
 
                 _append_harness_event(session_id, "step/start", {"step": step_idx, "model": lead_model})
-                yield _sse("step_start", {"step": step_idx, "max_steps": max_steps, "model": lead_model})
+                yield _sse("step_start", {"step": step_idx, "max_steps": start_step + max_steps - 1, "model": lead_model})
 
                 content_buf: list[str] = []
                 reason_buf: list[str] = []
@@ -13203,6 +13626,16 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     elif item["type"] == "usage":
                         usage_pkt = item
                         record_perf("harness", active_target, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"])
+
+                post_stream_boundary = sm.check_safe_boundary(
+                    session_id,
+                    epoch=lease_epoch,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                )
+                if post_stream_boundary != "continue":
+                    halt_mode = "cancelled" if post_stream_boundary == "cancel" else "paused"
+                    halt_reason = f"{halt_mode}_after_stream_step_{step_idx}"
+                    break
 
                 full_raw = "".join(content_buf)
                 full_reason = "".join(reason_buf)
@@ -13235,14 +13668,40 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     },
                 )
 
-                # If no tool calls were requested, the agent has completed the turn!
+                # If no tool calls were requested, record step usage and finish cleanly if not paused/cancelled.
                 if not tool_calls:
+                    try:
+                        sm.budgets.record_usage(
+                            session_id,
+                            epoch=lease_epoch,
+                            steps_delta=1,
+                            tokens_delta=int(usage_pkt.get("completion_tokens") or 0),
+                            elapsed_delta_s=max(0.0, time.perf_counter() - t_step),
+                        )
+                    except execution_budget.BudgetExceeded as b_exc:
+                        halt_mode = "budget_exceeded"
+                        halt_reason = str(b_exc)
+                    except execution_budget.ExecutionCancelled:
+                        halt_mode = "cancelled"
+                        halt_reason = "cancelled_on_budget_check"
+                    else:
+                        completed_step = step_idx
                     break
 
-                # Execute each requested tool in order with Guarded Policy + Human-in-the-Loop Approval Gate
+                # Execute each requested tool in order with Guarded Policy + Safe-Boundary Pause/Cancel Checks
                 tool_feedback_parts: list[str] = []
+                tools_executed_in_step = 0
+                mid_tool_halt = False
                 for tc_idx, tc in enumerate(tool_calls):
-                    if session_id in _HARNESS_ABORT_FLAGS:
+                    tc_boundary = sm.check_safe_boundary(
+                        session_id,
+                        epoch=lease_epoch,
+                        abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                    )
+                    if tc_boundary != "continue":
+                        halt_mode = "cancelled" if tc_boundary == "cancel" else "paused"
+                        halt_reason = f"{halt_mode}_before_tool_{step_idx}_{tc_idx}"
+                        mid_tool_halt = True
                         break
                     t_name = tc["name"]
                     t_args = tc["arguments"]
@@ -13275,6 +13734,17 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         reject_note = decision["note"]
                         yield _sse("approval_resolved", {"step": step_idx, **decision})
 
+                        post_approval_boundary = sm.check_safe_boundary(
+                            session_id,
+                            epoch=lease_epoch,
+                            abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                        )
+                        if post_approval_boundary != "continue":
+                            halt_mode = "cancelled" if post_approval_boundary == "cancel" else "paused"
+                            halt_reason = f"{halt_mode}_during_approval_{step_idx}_{tc_idx}"
+                            mid_tool_halt = True
+                            break
+
                     coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
                     res_obj = await _execute_harness_tool(
                         client,
@@ -13287,6 +13757,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         step_id=step_idx,
                         call_index=tc_idx,
                     )
+                    tools_executed_in_step += 1
                     if needs_approval and not approved and reject_note:
                         res_obj["output"] += f" User rejection note: {reject_note}"
                     if needs_approval and not approved:
@@ -13330,30 +13801,134 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     )
                     tool_feedback_parts.append(_format_untrusted_tool_response(t_name, res_obj["output"], res_obj["ok"]))
 
-                messages.append({"role": "user", "content": "\n\n".join(tool_feedback_parts)})
-                _save_harness_messages(session_id, messages)
+                if tool_feedback_parts:
+                    messages.append({"role": "user", "content": "\n\n".join(tool_feedback_parts)})
+                    _save_harness_messages(session_id, messages)
+
+                try:
+                    sm.budgets.record_usage(
+                        session_id,
+                        epoch=lease_epoch,
+                        steps_delta=1,
+                        tool_calls_delta=tools_executed_in_step,
+                        tokens_delta=int(usage_pkt.get("completion_tokens") or 0),
+                        elapsed_delta_s=max(0.0, time.perf_counter() - t_step),
+                    )
+                except execution_budget.BudgetExceeded as b_exc:
+                    completed_step = step_idx
+                    halt_mode = "budget_exceeded"
+                    halt_reason = str(b_exc)
+                    break
+                except execution_budget.ExecutionCancelled:
+                    halt_mode = "cancelled"
+                    halt_reason = "cancelled_on_budget_check"
+                    break
+
+                if mid_tool_halt:
+                    completed_step = step_idx
+                    break
+
+                completed_step = step_idx
+                step_refs = _collect_step_evidence_refs(session_id, epoch=lease_epoch, wt_dir=wt_dir)
+                sm.checkpoints.save_checkpoint(
+                    session_id,
+                    step=completed_step,
+                    payload={
+                        "workflow": "harness",
+                        "completed_step": completed_step,
+                        "messages_len": len(messages),
+                    },
+                    evidence_refs=step_refs,
+                    epoch=lease_epoch,
+                    status="committed",
+                    require_active_epoch=True,
+                )
             else:
-                # Reached max_steps cap while agent still wanted tools
+                halt_mode = "max_steps"
+                halt_reason = "turn_max_steps_reached"
                 _append_harness_event(session_id, "turn/max_steps_reached", {"max_steps": max_steps})
                 yield _sse("max_steps_reached", {"max_steps": max_steps})
 
+            if halt_mode == "none":
+                final_boundary = sm.check_safe_boundary(
+                    session_id,
+                    epoch=lease_epoch,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                )
+                if final_boundary != "continue":
+                    halt_mode = "cancelled" if final_boundary == "cancel" else "paused"
+                    halt_reason = f"{halt_mode}_before_completion"
+
             elapsed_turn = round(time.perf_counter() - t_turn, 2)
-            lease_final_state = "paused" if aborted_flag else "completed"
-            lease_released = True
-            did_release = coord.release(
-                session_id,
-                lease_epoch,
-                worker_id,
-                next_state=lease_final_state,
-                reason=f"turn_{lease_final_state}",
-            )
-            if did_release and not aborted_flag:
+            final_refs = _collect_step_evidence_refs(session_id, epoch=lease_epoch, wt_dir=wt_dir)
+
+            if halt_mode == "cancelled":
+                lease_final_state = "cancelled"
+                lease_released = True
+                sm.cancel_task(session_id, reason=halt_reason or "turn_cancelled", evidence_refs=final_refs)
+                _update_harness_session_state(session_id, status="cancelled")
+                _append_harness_event(session_id, "turn/cancelled", {"step": completed_step, "reason": halt_reason})
+                yield _sse("cancelled", {"step": completed_step, "reason": halt_reason})
+            elif halt_mode in {"paused", "budget_exceeded", "max_steps"}:
+                lease_final_state = "paused"
+                lease_released = True
+                try:
+                    sm.pause_at_safe_boundary(
+                        session_id,
+                        worker_id=worker_id,
+                        epoch=lease_epoch,
+                        step=max(0, completed_step),
+                        checkpoint_payload={
+                            "workflow": "harness",
+                            "completed_step": max(0, completed_step),
+                            "messages_len": len(messages),
+                            "halt_mode": halt_mode,
+                        },
+                        evidence_refs=final_refs,
+                        reason=halt_reason or f"turn_{halt_mode}",
+                    )
+                except runtime_persistence.StaleEpochError:
+                    # E.g. /api/harness/abort/{sid} already fenced the epoch into 'paused'.
+                    pass
+                _update_harness_session_state(session_id, status="paused")
+                if halt_mode == "budget_exceeded":
+                    _append_harness_event(session_id, "turn/budget_exceeded", {"step": completed_step, "reason": halt_reason})
+                    yield _sse("budget_exceeded", {"step": completed_step, "reason": halt_reason})
+                elif halt_mode == "paused":
+                    _append_harness_event(session_id, "turn/paused", {"step": completed_step, "reason": halt_reason})
+                    if session_id in _HARNESS_ABORT_FLAGS:
+                        yield _sse("aborted", {"step": completed_step})
+                    yield _sse("paused", {"step": completed_step, "reason": halt_reason})
+            else:
+                sm.complete_task(
+                    session_id,
+                    worker_id=worker_id,
+                    epoch=lease_epoch,
+                    step=max(0, completed_step),
+                    checkpoint_payload={
+                        "workflow": "harness",
+                        "completed_step": max(0, completed_step),
+                        "messages_len": len(messages),
+                        "terminal": True,
+                    },
+                    evidence_refs=final_refs,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                    reason="turn_completed",
+                )
+                lease_final_state = "completed"
+                lease_released = True
                 _update_harness_session_state(session_id, status="completed")
-            diff_summary = _compute_git_diff(Path(sess["worktree_dir"]))
+
+            diff_summary = _compute_git_diff(wt_dir)
             _append_harness_event(
                 session_id,
                 "turn/end",
-                {"steps": steps_run, "elapsed_s": elapsed_turn, "git_status": diff_summary.get("status", "")},
+                {
+                    "steps": steps_run,
+                    "elapsed_s": elapsed_turn,
+                    "git_status": diff_summary.get("status", ""),
+                    "state": lease_final_state,
+                },
             )
             yield _sse(
                 "turn_done",
@@ -13362,8 +13937,18 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     "steps": steps_run,
                     "elapsed_s": elapsed_turn,
                     "git_status": diff_summary.get("status", ""),
+                    "state": lease_final_state,
                 },
             )
+        except runtime_persistence.StaleEpochError:
+            lease_released = True
+            current_t = sm.store.get_task(session_id)
+            if current_t is not None and current_t.state == "cancelled":
+                _update_harness_session_state(session_id, status="cancelled")
+                yield _sse("cancelled", {"step": completed_step, "reason": "epoch_fenced_by_cancel"})
+            else:
+                _update_harness_session_state(session_id, status="paused")
+                yield _sse("paused", {"step": completed_step, "reason": "epoch_fenced"})
         except Exception as exc:
             lease_final_state = "failed"
             lease_released = True
@@ -13403,6 +13988,8 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
     reasoning_mode = body.get("reasoning_mode") or "low"
     skill_ids: list[str] = body.get("skills") or []
     efficiency_mode = str(body.get("efficiency_mode") or "ponytail")
+    resume_requested = bool(body.get("resume", False))
+    budget_spec = _parse_task_budget_spec(body.get("budget"))
 
     if not prompt:
         raise HTTPException(status_code=400, detail="Goal prompt is required for GSD 3-Wave execution.")
@@ -13422,7 +14009,11 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
         if body.get("policy") in HARNESS_POLICIES:
             sess = _set_harness_session_policy(session_id, body["policy"])
 
-    coord, claim, worker_id = _acquire_turn_lease_or_409(sess)
+    coord, claim, worker_id, sm, _resumed_plan = _acquire_turn_plan_and_lease_or_409(
+        sess,
+        budget_spec=budget_spec,
+        resume=resume_requested,
+    )
     lease_epoch = claim.epoch_record.epoch
     lease_released = False
     lease_final_state = "paused"
@@ -13455,6 +14046,13 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
         lead_model = sess["lead_model"]
         critic_model = sess["critic_model"]
         policy = sess["policy"]
+        plan_path = planning_dir / "PLAN.md"
+        state_path = planning_dir / "STATE.md"
+        ver_path = planning_dir / "VERIFICATION.md"
+
+        ms_w1 = sm.ensure_milestone(session_id, "wave_1_plan", title="Wave 1: Spec & Plan")
+        ms_w2 = sm.ensure_milestone(session_id, "wave_2_execute", title="Wave 2: Fresh-Context Execute")
+        ms_w3 = sm.ensure_milestone(session_id, "wave_3_verify", title="Wave 3: Fresh-Context Verify")
 
         _update_harness_session_state(session_id, status="running", title=f"[GSD] {prompt[:75]}" if sess["step_count"] == 0 else None)
         ev_start = _append_harness_event(
@@ -13470,243 +14068,558 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
         )
         yield _sse("turn_start", {"session": get_harness_session_db(session_id), "event": ev_start, "gsd_mode": True, "epoch": lease_epoch})
 
+        halt_mode: Literal["none", "paused", "cancelled", "budget_exceeded"] = "none"
+        halt_reason = ""
+        last_completed_step = 0
+        active_ms_id = ""
+
         try:
             coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
-            # --- WAVE 1: SPEC & PLAN (Fresh Context #1) ---
-            yield _sse("gsd_wave_start", {"wave": 1, "name": "SPEC & PLAN", "model": lead_model, "artifact": ".planning/PLAN.md"})
-            _append_harness_event(session_id, "gsd/wave", {"wave": 1, "name": "SPEC & PLAN", "model": lead_model})
-            cg_arch = run_codegraph_tool(wt_dir, mode="architecture", top_n=10)
             oc_mem = build_pinned_opencontext_prompt()
-            w1_msgs = [
-                {
-                    "role": "system",
-                    "content": (
-                        "You are the GSD Wave-1 Spec Architect (`open-gsd/gsd-core`). Produce a crisp, deterministic "
-                        "implementation specification (`PLAN.md`) with exact file paths, atomic tasks, and verification commands. "
-                        "Do NOT emit `<tool_call>` blocks — output pure Markdown specification."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": f"### Engineering Goal:\n{prompt}\n\n### Workspace CodeGraph Summary:\n{cg_arch}\n{oc_mem}",
-                },
-            ]
-            plan_buf: list[str] = []
-            async for item in stream_any_model(client, lead_model, w1_msgs, temperature=0.0, max_tokens=2400, reasoning_mode=reasoning_mode):
-                if session_id in _HARNESS_ABORT_FLAGS:
-                    break
-                if item["type"] == "content":
-                    plan_buf.append(item["text"])
-                    yield _sse("step_content", {"step": 1, "wave": 1, "text": item["text"]})
-            plan_md = "".join(plan_buf).strip() or f"# GSD Plan\n\nGoal: {prompt}\n"
-            (planning_dir / "PLAN.md").write_text(plan_md, encoding="utf-8")
-            (planning_dir / "STATE.md").write_text(
-                f"# GSD State\n- **Goal**: {prompt}\n- **Phase**: WAVE_1_PLANNED\n- **Lead Model**: `{lead_model}`\n",
-                encoding="utf-8",
-            )
-            _update_harness_session_state(session_id, status="running", step_inc=1)
-            _append_harness_event(
-                session_id,
-                "assistant/message",
-                {"step": 1, "model": lead_model, "content": f"### [GSD Wave 1/3 • `.planning/PLAN.md`]\n\n{plan_md}", "tool_calls": []},
-            )
-            yield _sse("gsd_wave_done", {"wave": 1, "artifact": ".planning/PLAN.md", "chars": len(plan_md)})
 
-            # --- WAVE 2: FRESH-CONTEXT EXECUTE (Fresh Context #2 — zero planner bloat!) ---
-            if session_id not in _HARNESS_ABORT_FLAGS:
-                yield _sse("gsd_wave_start", {"wave": 2, "name": "FRESH-CONTEXT EXECUTE", "model": lead_model, "artifact": ".planning/STATE.md"})
-                _append_harness_event(session_id, "gsd/wave", {"wave": 2, "name": "FRESH-CONTEXT EXECUTE", "model": lead_model})
-                skill_block_raw, _ = await build_skills_context(skill_ids, prompt)
-                eff_block = build_efficiency_mode_prompt(efficiency_mode)
-                extra_blocks = (eff_block or "") + (oc_mem or "") + (skill_block_raw or "") + (build_active_mcp_tools_prompt() or "")
-                exec_sys = HARNESS_SYSTEM_PROMPT_TEMPLATE.format(
-                    worktree_dir=str(wt_dir),
-                    policy=policy,
-                    critic_model=critic_model,
-                    skills_block=extra_blocks,
-                )
-                w2_msgs: list[dict[str, str]] = [
-                    {"role": "system", "content": exec_sys},
-                    {
-                        "role": "user",
-                        "content": (
-                            f"Execute the following specification from `.planning/PLAN.md` inside `{wt_dir}`.\n"
-                            f"Original Goal: {prompt}\n\n"
-                            f"### `.planning/PLAN.md`:\n{plan_md[:6000]}\n\n"
-                            f"Use tools step-by-step (`read_file`, `write_file`/`edit_file`, `run_bash`) and stop once implemented and tested."
-                        ),
-                    },
-                ]
-                sess_exec = _bind_lease_to_session(
-                    {**sess, "policy": policy, "status": "running"},
-                    task_id=session_id,
-                    epoch=lease_epoch,
-                    worker_id=worker_id,
-                )
-                for w2_step in range(1, max_exec_steps + 1):
-                    if session_id in _HARNESS_ABORT_FLAGS:
-                        break
-                    coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
-                    global_step = 1 + w2_step
-                    yield _sse("step_start", {"step": global_step, "max_steps": max_exec_steps + 2, "model": lead_model, "wave": 2})
-                    cbuf: list[str] = []
-                    rbuf: list[str] = []
-                    upkt: dict[str, Any] = {}
-                    async for item in stream_any_model(client, lead_model, w2_msgs, temperature=0.0, max_tokens=3600, reasoning_mode=reasoning_mode):
+            # --- WAVE 1: SPEC & PLAN (Fresh Context #1) ---
+            if ms_w1.state == "completed" and plan_path.is_file():
+                plan_md = plan_path.read_text(encoding="utf-8")
+                last_completed_step = 1
+                yield _sse("gsd_wave_skipped", {"wave": 1, "artifact": ".planning/PLAN.md", "reason": "milestone_already_completed"})
+            else:
+                b_w1 = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
+                if b_w1 != "continue":
+                    halt_mode = "cancelled" if b_w1 == "cancel" else "paused"
+                    halt_reason = f"{halt_mode}_before_wave_1"
+                    plan_md = ""
+                else:
+                    t_w1 = time.perf_counter()
+                    active_ms_id = ms_w1.task_id
+                    sm.transition_milestone(session_id, "wave_1_plan", "running", epoch=lease_epoch, reason="wave_1_start")
+                    yield _sse("gsd_wave_start", {"wave": 1, "name": "SPEC & PLAN", "model": lead_model, "artifact": ".planning/PLAN.md"})
+                    _append_harness_event(session_id, "gsd/wave", {"wave": 1, "name": "SPEC & PLAN", "model": lead_model})
+                    cg_arch = run_codegraph_tool(wt_dir, mode="architecture", top_n=10)
+                    w1_msgs = [
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are the GSD Wave-1 Spec Architect (`open-gsd/gsd-core`). Produce a crisp, deterministic "
+                                "implementation specification (`PLAN.md`) with exact file paths, atomic tasks, and verification commands. "
+                                "Do NOT emit `<tool_call>` blocks — output pure Markdown specification."
+                            ),
+                        },
+                        {
+                            "role": "user",
+                            "content": f"### Engineering Goal:\n{prompt}\n\n### Workspace CodeGraph Summary:\n{cg_arch}\n{oc_mem}",
+                        },
+                    ]
+                    plan_buf: list[str] = []
+                    w1_usage: dict[str, Any] = {}
+                    async for item in stream_any_model(client, lead_model, w1_msgs, temperature=0.0, max_tokens=2400, reasoning_mode=reasoning_mode):
                         if session_id in _HARNESS_ABORT_FLAGS:
                             break
-                        if item["type"] == "reasoning":
-                            rbuf.append(item["text"])
-                            yield _sse("step_reasoning", {"step": global_step, "text": item["text"]})
-                        elif item["type"] == "content":
-                            cbuf.append(item["text"])
-                            yield _sse("step_content", {"step": global_step, "text": item["text"]})
+                        if item["type"] == "content":
+                            plan_buf.append(item["text"])
+                            yield _sse("step_content", {"step": 1, "wave": 1, "text": item["text"]})
                         elif item["type"] == "usage":
-                            upkt = item
-                    raw_out = "".join(cbuf)
-                    clean_txt, tcalls = extract_tool_calls(raw_out)
-                    w2_msgs.append({"role": "assistant", "content": raw_out})
-                    _update_harness_session_state(session_id, status="running", step_inc=1)
-                    _append_harness_event(
-                        session_id,
-                        "assistant/message",
-                        {"step": global_step, "model": lead_model, "reasoning": "".join(rbuf), "content": clean_txt, "tool_calls": tcalls, "usage": upkt},
-                    )
-                    yield _sse("step_assistant_done", {"step": global_step, "clean_content": clean_txt, "tool_calls": tcalls, "usage": upkt})
-                    if not tcalls:
-                        break
-                    feedback_blocks: list[str] = []
-                    for tc_i, tc in enumerate(tcalls):
-                        if session_id in _HARNESS_ABORT_FLAGS:
-                            break
-                        t_name, t_args = tc["name"], tc["arguments"]
-                        yield _sse("tool_call", {"step": global_step, "index": tc_i, "tool": t_name, "args": t_args})
-                        needs_approval = tool_requires_approval(t_name, t_args, policy)
-                        approved = False
-                        grant_source = "policy"
-                        approval_id: str | None = None
-                        reject_note = ""
-                        if needs_approval:
-                            pending = _create_pending_tool_approval(session_id, global_step, t_name, t_args)
-                            try:
-                                yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")} | {"session_id": session_id})
-                                decision = await _await_tool_approval_with_lease(
-                                    pending,
-                                    coord=coord,
-                                    task_id=session_id,
-                                    epoch=lease_epoch,
-                                    worker_id=worker_id,
-                                )
-                            finally:
-                                _abandon_pending_tool_approval(pending)
-                            approved, reject_note = bool(decision["approved"]), decision["note"]
-                            grant_source = "operator_approval" if approved else "none"
-                            approval_id = str(pending["approval_id"]) if approved else None
-                            yield _sse("approval_resolved", {"step": global_step, **decision})
-                        coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
-                        res_obj = await _execute_harness_tool(
-                            client,
-                            sess_exec,
-                            t_name,
-                            t_args,
-                            approved=approved,
-                            grant_source=grant_source,
-                            approval_id=approval_id,
-                            step_id=global_step,
-                            call_index=tc_i,
+                            w1_usage = item
+                    b_w1_after = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
+                    if b_w1_after != "continue":
+                        halt_mode = "cancelled" if b_w1_after == "cancel" else "paused"
+                        halt_reason = f"{halt_mode}_during_wave_1"
+                        plan_md = ""
+                    else:
+                        plan_md = "".join(plan_buf).strip() or f"# GSD Plan\n\nGoal: {prompt}\n"
+                        plan_path.write_text(plan_md, encoding="utf-8")
+                        state_path.write_text(
+                            f"# GSD State\n- **Goal**: {prompt}\n- **Phase**: WAVE_1_PLANNED\n- **Lead Model**: `{lead_model}`\n",
+                            encoding="utf-8",
                         )
-                        if needs_approval and not approved and reject_note:
-                            res_obj["output"] += f" User rejection note: {reject_note}"
-                        comp_out, sb_meta = sandbox_tool_output_if_large(session_id, t_name, res_obj["output"], context_mode_enabled=True)
-                        res_obj["output"] = comp_out
+                        _update_harness_session_state(session_id, status="running", step_inc=1)
                         _append_harness_event(
                             session_id,
-                            "tool/result",
-                            {"step": global_step, "tool": t_name, "args": t_args, "ok": res_obj["ok"], "output": comp_out, "diff": res_obj.get("diff", ""), "elapsed_ms": res_obj.get("elapsed_ms", 0), "sandbox": sb_meta},
+                            "assistant/message",
+                            {"step": 1, "model": lead_model, "content": f"### [GSD Wave 1/3 • `.planning/PLAN.md`]\n\n{plan_md}", "tool_calls": []},
                         )
-                        yield _sse(
-                            "tool_result",
-                            {"step": global_step, "index": tc_i, "tool": t_name, "args": t_args, "ok": res_obj["ok"], "output": comp_out, "diff": res_obj.get("diff", ""), "elapsed_ms": res_obj.get("elapsed_ms", 0), "sandbox": sb_meta},
-                        )
-                        feedback_blocks.append(_format_untrusted_tool_response(t_name, comp_out, res_obj["ok"]))
-                    w2_msgs.append({"role": "user", "content": "\n\n".join(feedback_blocks)})
+                        try:
+                            sm.budgets.record_usage(
+                                session_id,
+                                epoch=lease_epoch,
+                                steps_delta=1,
+                                tokens_delta=int(w1_usage.get("completion_tokens") or 0),
+                                elapsed_delta_s=max(0.0, time.perf_counter() - t_w1),
+                            )
+                        except execution_budget.BudgetExceeded as b_exc:
+                            halt_mode = "budget_exceeded"
+                            halt_reason = str(b_exc)
+                            last_completed_step = 1
+                        except execution_budget.ExecutionCancelled:
+                            halt_mode = "cancelled"
+                            halt_reason = "cancelled_after_wave_1"
+                        else:
+                            last_completed_step = 1
+                            w1_refs = _collect_step_evidence_refs(
+                                session_id,
+                                epoch=lease_epoch,
+                                wt_dir=wt_dir,
+                                extra_artifacts=(plan_path, state_path),
+                            )
+                            ck_w1 = sm.checkpoints.save_checkpoint(
+                                session_id,
+                                step=1,
+                                payload={"workflow": "gsd", "completed_wave": 1},
+                                evidence_refs=w1_refs,
+                                epoch=lease_epoch,
+                                milestone_id=ms_w1.task_id,
+                                status="committed",
+                                require_active_epoch=True,
+                            )
+                            sm.transition_milestone(
+                                session_id,
+                                "wave_1_plan",
+                                "completed",
+                                epoch=lease_epoch,
+                                reason="wave_1_completed",
+                                checkpoint_id=ck_w1.checkpoint_id,
+                                evidence_refs=w1_refs,
+                            )
+                            yield _sse("gsd_wave_done", {"wave": 1, "artifact": ".planning/PLAN.md", "chars": len(plan_md)})
 
-                (planning_dir / "STATE.md").write_text(
-                    f"# GSD State\n- **Goal**: {prompt}\n- **Phase**: WAVE_2_EXECUTED\n- **Lead Model**: `{lead_model}`\n",
-                    encoding="utf-8",
-                )
-                yield _sse("gsd_wave_done", {"wave": 2, "artifact": ".planning/STATE.md"})
+            # --- WAVE 2: FRESH-CONTEXT EXECUTE (Fresh Context #2 — zero planner bloat!) ---
+            if halt_mode == "none":
+                if ms_w2.state == "completed" and state_path.is_file():
+                    last_completed_step = 1 + max_exec_steps
+                    yield _sse("gsd_wave_skipped", {"wave": 2, "artifact": ".planning/STATE.md", "reason": "milestone_already_completed"})
+                else:
+                    b_w2 = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
+                    if b_w2 != "continue":
+                        halt_mode = "cancelled" if b_w2 == "cancel" else "paused"
+                        halt_reason = f"{halt_mode}_before_wave_2"
+                    else:
+                        active_ms_id = ms_w2.task_id
+                        sm.transition_milestone(session_id, "wave_2_execute", "running", epoch=lease_epoch, reason="wave_2_start")
+                        yield _sse("gsd_wave_start", {"wave": 2, "name": "FRESH-CONTEXT EXECUTE", "model": lead_model, "artifact": ".planning/STATE.md"})
+                        _append_harness_event(session_id, "gsd/wave", {"wave": 2, "name": "FRESH-CONTEXT EXECUTE", "model": lead_model})
+                        skill_block_raw, _ = await build_skills_context(skill_ids, prompt)
+                        eff_block = build_efficiency_mode_prompt(efficiency_mode)
+                        extra_blocks = (eff_block or "") + (oc_mem or "") + (skill_block_raw or "") + (build_active_mcp_tools_prompt() or "")
+                        exec_sys = HARNESS_SYSTEM_PROMPT_TEMPLATE.format(
+                            worktree_dir=str(wt_dir),
+                            policy=policy,
+                            critic_model=critic_model,
+                            skills_block=extra_blocks,
+                        )
+                        w2_msgs: list[dict[str, str]] = [
+                            {"role": "system", "content": exec_sys},
+                            {
+                                "role": "user",
+                                "content": (
+                                    f"Execute the following specification from `.planning/PLAN.md` inside `{wt_dir}`.\n"
+                                    f"Original Goal: {prompt}\n\n"
+                                    f"### `.planning/PLAN.md`:\n{plan_md[:6000]}\n\n"
+                                    f"Use tools step-by-step (`read_file`, `write_file`/`edit_file`, `run_bash`) and stop once implemented and tested."
+                                ),
+                            },
+                        ]
+                        sess_exec = _bind_lease_to_session(
+                            {**sess, "policy": policy, "status": "running"},
+                            task_id=session_id,
+                            epoch=lease_epoch,
+                            worker_id=worker_id,
+                        )
+                        for w2_step in range(1, max_exec_steps + 1):
+                            b_step = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
+                            if b_step != "continue":
+                                halt_mode = "cancelled" if b_step == "cancel" else "paused"
+                                halt_reason = f"{halt_mode}_before_wave2_step_{w2_step}"
+                                break
+                            t_w2_step = time.perf_counter()
+                            coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
+                            global_step = 1 + w2_step
+                            yield _sse("step_start", {"step": global_step, "max_steps": max_exec_steps + 2, "model": lead_model, "wave": 2})
+                            cbuf: list[str] = []
+                            rbuf: list[str] = []
+                            upkt: dict[str, Any] = {}
+                            async for item in stream_any_model(client, lead_model, w2_msgs, temperature=0.0, max_tokens=3600, reasoning_mode=reasoning_mode):
+                                if session_id in _HARNESS_ABORT_FLAGS:
+                                    break
+                                if item["type"] == "reasoning":
+                                    rbuf.append(item["text"])
+                                    yield _sse("step_reasoning", {"step": global_step, "text": item["text"]})
+                                elif item["type"] == "content":
+                                    cbuf.append(item["text"])
+                                    yield _sse("step_content", {"step": global_step, "text": item["text"]})
+                                elif item["type"] == "usage":
+                                    upkt = item
+                            b_after_w2_stream = sm.check_safe_boundary(
+                                session_id,
+                                epoch=lease_epoch,
+                                abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                            )
+                            if b_after_w2_stream != "continue":
+                                halt_mode = "cancelled" if b_after_w2_stream == "cancel" else "paused"
+                                halt_reason = f"{halt_mode}_during_wave2_step_{w2_step}"
+                                break
+                            raw_out = "".join(cbuf)
+                            clean_txt, tcalls = extract_tool_calls(raw_out)
+                            w2_msgs.append({"role": "assistant", "content": raw_out})
+                            _update_harness_session_state(session_id, status="running", step_inc=1)
+                            _append_harness_event(
+                                session_id,
+                                "assistant/message",
+                                {"step": global_step, "model": lead_model, "reasoning": "".join(rbuf), "content": clean_txt, "tool_calls": tcalls, "usage": upkt},
+                            )
+                            yield _sse("step_assistant_done", {"step": global_step, "clean_content": clean_txt, "tool_calls": tcalls, "usage": upkt})
+                            if not tcalls:
+                                try:
+                                    sm.budgets.record_usage(
+                                        session_id,
+                                        epoch=lease_epoch,
+                                        steps_delta=1,
+                                        tokens_delta=int(upkt.get("completion_tokens") or 0),
+                                        elapsed_delta_s=max(0.0, time.perf_counter() - t_w2_step),
+                                    )
+                                except execution_budget.BudgetExceeded as b_exc:
+                                    halt_mode = "budget_exceeded"
+                                    halt_reason = str(b_exc)
+                                except execution_budget.ExecutionCancelled:
+                                    halt_mode = "cancelled"
+                                    halt_reason = "cancelled_in_wave_2"
+                                else:
+                                    last_completed_step = global_step
+                                break
+                            feedback_blocks: list[str] = []
+                            w2_tools_run = 0
+                            for tc_i, tc in enumerate(tcalls):
+                                b_tc = sm.check_safe_boundary(
+                                    session_id,
+                                    epoch=lease_epoch,
+                                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                                )
+                                if b_tc != "continue":
+                                    halt_mode = "cancelled" if b_tc == "cancel" else "paused"
+                                    halt_reason = f"{halt_mode}_before_wave2_tool_{w2_step}_{tc_i}"
+                                    break
+                                t_name, t_args = tc["name"], tc["arguments"]
+                                yield _sse("tool_call", {"step": global_step, "index": tc_i, "tool": t_name, "args": t_args})
+                                needs_approval = tool_requires_approval(t_name, t_args, policy)
+                                approved = False
+                                grant_source = "policy"
+                                approval_id: str | None = None
+                                reject_note = ""
+                                if needs_approval:
+                                    pending = _create_pending_tool_approval(session_id, global_step, t_name, t_args)
+                                    try:
+                                        yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")} | {"session_id": session_id})
+                                        decision = await _await_tool_approval_with_lease(
+                                            pending,
+                                            coord=coord,
+                                            task_id=session_id,
+                                            epoch=lease_epoch,
+                                            worker_id=worker_id,
+                                        )
+                                    finally:
+                                        _abandon_pending_tool_approval(pending)
+                                    approved, reject_note = bool(decision["approved"]), decision["note"]
+                                    grant_source = "operator_approval" if approved else "none"
+                                    approval_id = str(pending["approval_id"]) if approved else None
+                                    yield _sse("approval_resolved", {"step": global_step, **decision})
+                                    b_post_app = sm.check_safe_boundary(
+                                        session_id,
+                                        epoch=lease_epoch,
+                                        abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                                    )
+                                    if b_post_app != "continue":
+                                        halt_mode = "cancelled" if b_post_app == "cancel" else "paused"
+                                        halt_reason = f"{halt_mode}_during_wave2_approval_{w2_step}_{tc_i}"
+                                        break
+                                coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
+                                res_obj = await _execute_harness_tool(
+                                    client,
+                                    sess_exec,
+                                    t_name,
+                                    t_args,
+                                    approved=approved,
+                                    grant_source=grant_source,
+                                    approval_id=approval_id,
+                                    step_id=global_step,
+                                    call_index=tc_i,
+                                )
+                                w2_tools_run += 1
+                                if needs_approval and not approved and reject_note:
+                                    res_obj["output"] += f" User rejection note: {reject_note}"
+                                comp_out, sb_meta = sandbox_tool_output_if_large(session_id, t_name, res_obj["output"], context_mode_enabled=True)
+                                res_obj["output"] = comp_out
+                                _append_harness_event(
+                                    session_id,
+                                    "tool/result",
+                                    {"step": global_step, "tool": t_name, "args": t_args, "ok": res_obj["ok"], "output": comp_out, "diff": res_obj.get("diff", ""), "elapsed_ms": res_obj.get("elapsed_ms", 0), "sandbox": sb_meta},
+                                )
+                                yield _sse(
+                                    "tool_result",
+                                    {"step": global_step, "index": tc_i, "tool": t_name, "args": t_args, "ok": res_obj["ok"], "output": comp_out, "diff": res_obj.get("diff", ""), "elapsed_ms": res_obj.get("elapsed_ms", 0), "sandbox": sb_meta},
+                                )
+                                feedback_blocks.append(_format_untrusted_tool_response(t_name, comp_out, res_obj["ok"]))
+                            if feedback_blocks:
+                                w2_msgs.append({"role": "user", "content": "\n\n".join(feedback_blocks)})
+                            try:
+                                sm.budgets.record_usage(
+                                    session_id,
+                                    epoch=lease_epoch,
+                                    steps_delta=1,
+                                    tool_calls_delta=w2_tools_run,
+                                    tokens_delta=int(upkt.get("completion_tokens") or 0),
+                                    elapsed_delta_s=max(0.0, time.perf_counter() - t_w2_step),
+                                )
+                            except execution_budget.BudgetExceeded as b_exc:
+                                last_completed_step = global_step
+                                halt_mode = "budget_exceeded"
+                                halt_reason = str(b_exc)
+                                break
+                            except execution_budget.ExecutionCancelled:
+                                halt_mode = "cancelled"
+                                halt_reason = "cancelled_in_wave_2"
+                                break
+                            last_completed_step = global_step
+                            if halt_mode != "none":
+                                break
+
+                        if halt_mode == "none":
+                            b_w2_done = sm.check_safe_boundary(
+                                session_id,
+                                epoch=lease_epoch,
+                                abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                            )
+                            if b_w2_done != "continue":
+                                halt_mode = "cancelled" if b_w2_done == "cancel" else "paused"
+                                halt_reason = f"{halt_mode}_after_wave_2"
+                            else:
+                                state_path.write_text(
+                                    f"# GSD State\n- **Goal**: {prompt}\n- **Phase**: WAVE_2_EXECUTED\n- **Lead Model**: `{lead_model}`\n",
+                                    encoding="utf-8",
+                                )
+                                w2_refs = _collect_step_evidence_refs(
+                                    session_id,
+                                    epoch=lease_epoch,
+                                    wt_dir=wt_dir,
+                                    extra_artifacts=(plan_path, state_path),
+                                )
+                                ck_w2 = sm.checkpoints.save_checkpoint(
+                                    session_id,
+                                    step=max(2, last_completed_step),
+                                    payload={"workflow": "gsd", "completed_wave": 2},
+                                    evidence_refs=w2_refs,
+                                    epoch=lease_epoch,
+                                    milestone_id=ms_w2.task_id,
+                                    status="committed",
+                                    require_active_epoch=True,
+                                )
+                                sm.transition_milestone(
+                                    session_id,
+                                    "wave_2_execute",
+                                    "completed",
+                                    epoch=lease_epoch,
+                                    reason="wave_2_completed",
+                                    checkpoint_id=ck_w2.checkpoint_id,
+                                    evidence_refs=w2_refs,
+                                )
+                                yield _sse("gsd_wave_done", {"wave": 2, "artifact": ".planning/STATE.md"})
 
             # --- WAVE 3: FRESH-CONTEXT VERIFY (Fresh Context #3 with Critic Model) ---
-            if session_id not in _HARNESS_ABORT_FLAGS:
-                if is_local_omlx_model(lead_model) and is_local_omlx_model(critic_model) and lead_model != critic_model:
-                    await _unload_omlx_model(client, parse_model_route(lead_model)[2])
+            v_step = max_exec_steps + 2
+            if halt_mode == "none":
+                b_w3 = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
+                if b_w3 != "continue":
+                    halt_mode = "cancelled" if b_w3 == "cancel" else "paused"
+                    halt_reason = f"{halt_mode}_before_wave_3"
+                elif ms_w3.state == "completed" and ver_path.is_file():
+                    last_completed_step = v_step
+                    yield _sse("gsd_wave_skipped", {"wave": 3, "artifact": ".planning/VERIFICATION.md", "reason": "milestone_already_completed"})
+                else:
+                    t_w3 = time.perf_counter()
+                    active_ms_id = ms_w3.task_id
+                    sm.transition_milestone(session_id, "wave_3_verify", "running", epoch=lease_epoch, reason="wave_3_start")
+                    if is_local_omlx_model(lead_model) and is_local_omlx_model(critic_model) and lead_model != critic_model:
+                        await _unload_omlx_model(client, parse_model_route(lead_model)[2])
 
-                yield _sse("gsd_wave_start", {"wave": 3, "name": "FRESH-CONTEXT VERIFY", "model": critic_model, "artifact": ".planning/VERIFICATION.md"})
-                _append_harness_event(session_id, "gsd/wave", {"wave": 3, "name": "FRESH-CONTEXT VERIFY", "model": critic_model})
-                diff_pkt = _compute_git_diff(wt_dir)
-                w3_msgs = [
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are the GSD Wave-3 Independent Verifier (`open-gsd/gsd-core`). Given `.planning/PLAN.md` "
-                            "and the resulting workspace diff/status in a clean context window, audit requirement coverage, "
-                            "regressions, and verification status (`PASS` or `NEEDS_FOLLOWUP`)."
-                        ),
-                    },
-                    {
-                        "role": "user",
-                        "content": (
-                            f"### Original Goal:\n{prompt}\n\n"
-                            f"### `.planning/PLAN.md`:\n{plan_md[:3500]}\n\n"
-                            f"### Git Status:\n{diff_pkt.get('status') or '(clean / non-git)'}\n\n"
-                            f"### Workspace Unified Diff:\n{diff_pkt.get('diff', '')[:6000]}"
-                        ),
-                    },
-                ]
-                ver_buf: list[str] = []
-                v_step = max_exec_steps + 2
-                async for item in stream_any_model(client, critic_model, w3_msgs, temperature=0.0, max_tokens=1800, reasoning_mode="off"):
-                    if item["type"] == "content":
-                        ver_buf.append(item["text"])
-                        yield _sse("step_content", {"step": v_step, "wave": 3, "text": item["text"]})
-                ver_md = "".join(ver_buf).strip() or "Verification completed."
-                (planning_dir / "VERIFICATION.md").write_text(ver_md, encoding="utf-8")
-                (planning_dir / "STATE.md").write_text(
-                    f"# GSD State\n- **Goal**: {prompt}\n- **Phase**: WAVE_3_VERIFIED\n- **Lead**: `{lead_model}`\n- **Verifier**: `{critic_model}`\n",
-                    encoding="utf-8",
-                )
-                if is_local_omlx_model(lead_model) and is_local_omlx_model(critic_model) and lead_model != critic_model:
-                    await _unload_omlx_model(client, parse_model_route(critic_model)[2])
+                    yield _sse("gsd_wave_start", {"wave": 3, "name": "FRESH-CONTEXT VERIFY", "model": critic_model, "artifact": ".planning/VERIFICATION.md"})
+                    _append_harness_event(session_id, "gsd/wave", {"wave": 3, "name": "FRESH-CONTEXT VERIFY", "model": critic_model})
+                    diff_pkt = _compute_git_diff(wt_dir)
+                    w3_msgs = [
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are the GSD Wave-3 Independent Verifier (`open-gsd/gsd-core`). Given `.planning/PLAN.md` "
+                                "and the resulting workspace diff/status in a clean context window, audit requirement coverage, "
+                                "regressions, and verification status (`PASS` or `NEEDS_FOLLOWUP`)."
+                            ),
+                        },
+                        {
+                            "role": "user",
+                            "content": (
+                                f"### Original Goal:\n{prompt}\n\n"
+                                f"### `.planning/PLAN.md`:\n{plan_md[:3500]}\n\n"
+                                f"### Git Status:\n{diff_pkt.get('status') or '(clean / non-git)'}\n\n"
+                                f"### Workspace Unified Diff:\n{diff_pkt.get('diff', '')[:6000]}"
+                            ),
+                        },
+                    ]
+                    ver_buf: list[str] = []
+                    w3_usage: dict[str, Any] = {}
+                    async for item in stream_any_model(client, critic_model, w3_msgs, temperature=0.0, max_tokens=1800, reasoning_mode="off"):
+                        if session_id in _HARNESS_ABORT_FLAGS:
+                            break
+                        if item["type"] == "content":
+                            ver_buf.append(item["text"])
+                            yield _sse("step_content", {"step": v_step, "wave": 3, "text": item["text"]})
+                        elif item["type"] == "usage":
+                            w3_usage = item
 
-                _update_harness_session_state(session_id, status="completed", step_inc=1)
-                _append_harness_event(
-                    session_id,
-                    "assistant/message",
-                    {"step": v_step, "model": critic_model, "content": f"### [GSD Wave 3/3 • `.planning/VERIFICATION.md`]\n\n{ver_md}", "tool_calls": []},
-                )
-                hist = _load_harness_messages(session_id)
-                if not hist:
-                    hist = [{"role": "system", "content": "GSD Spec-Driven Session"}]
-                hist.append({"role": "user", "content": f"[GSD 3-Wave Goal] {prompt}"})
-                hist.append({"role": "assistant", "content": f"Completed GSD 3-Wave Spec Loop (`.planning/PLAN.md` -> Execute -> `.planning/VERIFICATION.md`).\n\n{ver_md[:1800]}"})
-                _save_harness_messages(session_id, hist)
-                yield _sse("gsd_wave_done", {"wave": 3, "artifact": ".planning/VERIFICATION.md", "chars": len(ver_md)})
+                    b_w3_after = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
+                    if b_w3_after != "continue":
+                        halt_mode = "cancelled" if b_w3_after == "cancel" else "paused"
+                        halt_reason = f"{halt_mode}_during_wave_3"
+                    else:
+                        ver_md = "".join(ver_buf).strip() or "Verification completed."
+                        ver_path.write_text(ver_md, encoding="utf-8")
+                        state_path.write_text(
+                            f"# GSD State\n- **Goal**: {prompt}\n- **Phase**: WAVE_3_VERIFIED\n- **Lead**: `{lead_model}`\n- **Verifier**: `{critic_model}`\n",
+                            encoding="utf-8",
+                        )
+                        if is_local_omlx_model(lead_model) and is_local_omlx_model(critic_model) and lead_model != critic_model:
+                            await _unload_omlx_model(client, parse_model_route(critic_model)[2])
+
+                        try:
+                            sm.budgets.record_usage(
+                                session_id,
+                                epoch=lease_epoch,
+                                steps_delta=1,
+                                tokens_delta=int(w3_usage.get("completion_tokens") or 0),
+                                elapsed_delta_s=max(0.0, time.perf_counter() - t_w3),
+                            )
+                        except execution_budget.BudgetExceeded as b_exc:
+                            halt_mode = "budget_exceeded"
+                            halt_reason = str(b_exc)
+                            last_completed_step = v_step
+                        except execution_budget.ExecutionCancelled:
+                            halt_mode = "cancelled"
+                            halt_reason = "cancelled_after_wave_3"
+                        else:
+                            last_completed_step = v_step
+                            w3_refs = _collect_step_evidence_refs(
+                                session_id,
+                                epoch=lease_epoch,
+                                wt_dir=wt_dir,
+                                extra_artifacts=(plan_path, state_path, ver_path),
+                            )
+                            sm.transition_milestone(
+                                session_id,
+                                "wave_3_verify",
+                                "completed",
+                                epoch=lease_epoch,
+                                reason="wave_3_completed",
+                                evidence_refs=w3_refs,
+                            )
+                            _append_harness_event(
+                                session_id,
+                                "assistant/message",
+                                {"step": v_step, "model": critic_model, "content": f"### [GSD Wave 3/3 • `.planning/VERIFICATION.md`]\n\n{ver_md}", "tool_calls": []},
+                            )
+                            hist = _load_harness_messages(session_id)
+                            if not hist:
+                                hist = [{"role": "system", "content": "GSD Spec-Driven Session"}]
+                            hist.append({"role": "user", "content": f"[GSD 3-Wave Goal] {prompt}"})
+                            hist.append({"role": "assistant", "content": f"Completed GSD 3-Wave Spec Loop (`.planning/PLAN.md` -> Execute -> `.planning/VERIFICATION.md`).\n\n{ver_md[:1800]}"})
+                            _save_harness_messages(session_id, hist)
+                            yield _sse("gsd_wave_done", {"wave": 3, "artifact": ".planning/VERIFICATION.md", "chars": len(ver_md)})
+
+            if halt_mode == "none":
+                b_final = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
+                if b_final != "continue":
+                    halt_mode = "cancelled" if b_final == "cancel" else "paused"
+                    halt_reason = f"{halt_mode}_before_gsd_completion"
 
             elapsed_s = round(time.perf_counter() - t0, 2)
-            aborted_gsd = session_id in _HARNESS_ABORT_FLAGS
-            lease_final_state = "paused" if aborted_gsd else "completed"
-            lease_released = True
-            coord.release(
+            final_gsd_refs = _collect_step_evidence_refs(
                 session_id,
-                lease_epoch,
-                worker_id,
-                next_state=lease_final_state,
-                reason=f"gsd_{lease_final_state}",
+                epoch=lease_epoch,
+                wt_dir=wt_dir,
+                extra_artifacts=(plan_path, state_path, ver_path),
             )
+            if halt_mode == "cancelled":
+                lease_final_state = "cancelled"
+                lease_released = True
+                sm.cancel_task(session_id, reason=halt_reason or "gsd_cancelled", evidence_refs=final_gsd_refs)
+                _update_harness_session_state(session_id, status="cancelled")
+                yield _sse("cancelled", {"step": last_completed_step, "reason": halt_reason})
+            elif halt_mode in {"paused", "budget_exceeded"}:
+                lease_final_state = "paused"
+                lease_released = True
+                try:
+                    sm.pause_at_safe_boundary(
+                        session_id,
+                        worker_id=worker_id,
+                        epoch=lease_epoch,
+                        step=last_completed_step,
+                        checkpoint_payload={
+                            "workflow": "gsd",
+                            "completed_step": last_completed_step,
+                            "halt_mode": halt_mode,
+                        },
+                        evidence_refs=final_gsd_refs,
+                        milestone_id=active_ms_id,
+                        reason=halt_reason or f"gsd_{halt_mode}",
+                    )
+                except runtime_persistence.StaleEpochError:
+                    pass
+                _update_harness_session_state(session_id, status="paused")
+                if halt_mode == "budget_exceeded":
+                    yield _sse("budget_exceeded", {"step": last_completed_step, "reason": halt_reason})
+                else:
+                    if session_id in _HARNESS_ABORT_FLAGS:
+                        yield _sse("aborted", {"step": last_completed_step})
+                    yield _sse("paused", {"step": last_completed_step, "reason": halt_reason})
+            else:
+                sm.complete_task(
+                    session_id,
+                    worker_id=worker_id,
+                    epoch=lease_epoch,
+                    step=v_step,
+                    checkpoint_payload={"workflow": "gsd", "completed_wave": 3, "terminal": True},
+                    evidence_refs=final_gsd_refs,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                    reason="gsd_completed",
+                )
+                lease_final_state = "completed"
+                lease_released = True
+                _update_harness_session_state(session_id, status="completed", step_inc=1)
+
             diff_final = _compute_git_diff(wt_dir)
-            _append_harness_event(session_id, "turn/end", {"steps": get_harness_session_db(session_id)["step_count"], "elapsed_s": elapsed_s, "git_status": diff_final.get("status", "")})
-            yield _sse("turn_done", {"session": get_harness_session_db(session_id), "elapsed_s": elapsed_s, "git_status": diff_final.get("status", ""), "gsd_mode": True})
+            _append_harness_event(
+                session_id,
+                "turn/end",
+                {
+                    "steps": get_harness_session_db(session_id)["step_count"],
+                    "elapsed_s": elapsed_s,
+                    "git_status": diff_final.get("status", ""),
+                    "state": lease_final_state,
+                },
+            )
+            yield _sse(
+                "turn_done",
+                {
+                    "session": get_harness_session_db(session_id),
+                    "elapsed_s": elapsed_s,
+                    "git_status": diff_final.get("status", ""),
+                    "gsd_mode": True,
+                    "state": lease_final_state,
+                },
+            )
+        except runtime_persistence.StaleEpochError:
+            lease_released = True
+            current_t = sm.store.get_task(session_id)
+            if current_t is not None and current_t.state == "cancelled":
+                _update_harness_session_state(session_id, status="cancelled")
+                yield _sse("cancelled", {"step": last_completed_step, "reason": "epoch_fenced_by_cancel"})
+            else:
+                _update_harness_session_state(session_id, status="paused")
+                yield _sse("paused", {"step": last_completed_step, "reason": "epoch_fenced"})
         except Exception as exc:
             lease_final_state = "failed"
             lease_released = True
@@ -14537,10 +15450,50 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                     ):
                         yield ev_chunk
 
-            aborted_sdlc = session_id in _HARNESS_ABORT_FLAGS
-            lease_final_state = "paused" if aborted_sdlc else "completed"
-            lease_released = True
-            if coord.release(session_id, lease_epoch, worker_id, next_state=lease_final_state, reason=f"sdlc_{lease_final_state}") and not aborted_sdlc:
+            sm_sdlc = get_task_state_machine()
+            try:
+                sdlc_boundary = sm_sdlc.check_safe_boundary(
+                    session_id,
+                    epoch=lease_epoch,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                )
+            except runtime_persistence.StaleEpochError:
+                sdlc_boundary = "cancel" if (sm_sdlc.store.get_task(session_id) and sm_sdlc.store.get_task(session_id).state == "cancelled") else "pause"  # type: ignore[union-attr]
+            sdlc_refs = _collect_step_evidence_refs(session_id, epoch=lease_epoch, wt_dir=wt_dir)
+            if sdlc_boundary == "cancel":
+                lease_final_state = "cancelled"
+                lease_released = True
+                sm_sdlc.cancel_task(session_id, reason="sdlc_cancelled", evidence_refs=sdlc_refs)
+                _update_harness_session_state(session_id, status="cancelled")
+            elif sdlc_boundary == "pause":
+                lease_final_state = "paused"
+                lease_released = True
+                try:
+                    sm_sdlc.pause_at_safe_boundary(
+                        session_id,
+                        worker_id=worker_id,
+                        epoch=lease_epoch,
+                        step=get_harness_session_db(session_id)["step_count"],
+                        checkpoint_payload={"workflow": "sdlc", "mode": mode},
+                        evidence_refs=sdlc_refs,
+                        reason="sdlc_paused",
+                    )
+                except runtime_persistence.StaleEpochError:
+                    pass
+                _update_harness_session_state(session_id, status="paused")
+            else:
+                sm_sdlc.complete_task(
+                    session_id,
+                    worker_id=worker_id,
+                    epoch=lease_epoch,
+                    step=get_harness_session_db(session_id)["step_count"],
+                    checkpoint_payload={"workflow": "sdlc", "mode": mode, "terminal": True},
+                    evidence_refs=sdlc_refs,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                    reason="sdlc_completed",
+                )
+                lease_final_state = "completed"
+                lease_released = True
                 _update_harness_session_state(session_id, status="completed")
             elapsed_s = round(time.perf_counter() - t0, 2)
             diff_final = _compute_git_diff(wt_dir)
@@ -14726,10 +15679,50 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
                 ):
                     yield ev_chunk
 
-            aborted_fb = session_id in _HARNESS_ABORT_FLAGS
-            lease_final_state_fb = "paused" if aborted_fb else "completed"
-            lease_released_fb = True
-            if coord_fb.release(session_id, lease_epoch_fb, worker_id_fb, next_state=lease_final_state_fb, reason=f"sdlc_feedback_{lease_final_state_fb}") and not aborted_fb:
+            sm_fb = get_task_state_machine()
+            try:
+                fb_boundary = sm_fb.check_safe_boundary(
+                    session_id,
+                    epoch=lease_epoch_fb,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                )
+            except runtime_persistence.StaleEpochError:
+                fb_boundary = "cancel" if (sm_fb.store.get_task(session_id) and sm_fb.store.get_task(session_id).state == "cancelled") else "pause"  # type: ignore[union-attr]
+            fb_refs = _collect_step_evidence_refs(session_id, epoch=lease_epoch_fb, wt_dir=wt_dir)
+            if fb_boundary == "cancel":
+                lease_final_state_fb = "cancelled"
+                lease_released_fb = True
+                sm_fb.cancel_task(session_id, reason="sdlc_feedback_cancelled", evidence_refs=fb_refs)
+                _update_harness_session_state(session_id, status="cancelled")
+            elif fb_boundary == "pause":
+                lease_final_state_fb = "paused"
+                lease_released_fb = True
+                try:
+                    sm_fb.pause_at_safe_boundary(
+                        session_id,
+                        worker_id=worker_id_fb,
+                        epoch=lease_epoch_fb,
+                        step=get_harness_session_db(session_id)["step_count"],
+                        checkpoint_payload={"workflow": "sdlc_feedback"},
+                        evidence_refs=fb_refs,
+                        reason="sdlc_feedback_paused",
+                    )
+                except runtime_persistence.StaleEpochError:
+                    pass
+                _update_harness_session_state(session_id, status="paused")
+            else:
+                sm_fb.complete_task(
+                    session_id,
+                    worker_id=worker_id_fb,
+                    epoch=lease_epoch_fb,
+                    step=get_harness_session_db(session_id)["step_count"],
+                    checkpoint_payload={"workflow": "sdlc_feedback", "terminal": True},
+                    evidence_refs=fb_refs,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                    reason="sdlc_feedback_completed",
+                )
+                lease_final_state_fb = "completed"
+                lease_released_fb = True
                 _update_harness_session_state(session_id, status="completed")
             elapsed_s = round(time.perf_counter() - t0, 2)
             diff_final = _compute_git_diff(wt_dir)
@@ -15076,6 +16069,7 @@ EXCLUDED_TABLES: tuple[str, ...] = (
     "runtime_task_epochs",
     "runtime_task_transitions",
     "runtime_actions",
+    "runtime_task_checkpoints",
 )
 
 
@@ -15131,6 +16125,7 @@ def export_history(conn: sqlite3.Connection, *, redact: bool = True) -> dict[str
                 "runtime_task_epochs",
                 "runtime_task_transitions",
                 "runtime_actions",
+                "runtime_task_checkpoints",
             ],
         },
         "tables": tables_out,
@@ -15360,6 +16355,10 @@ REPLAY_POLICIES: frozenset[str] = frozenset({"idempotent", "reconcilable", "non_
 
 ACTION_STATUSES: frozenset[str] = frozenset(
     {"never_started", "in_flight", "committed", "failed", "denied", "uncertain"}
+)
+
+CHECKPOINT_STATUSES: frozenset[str] = frozenset(
+    {"pending_commit", "committed", "interrupted", "resumed", "superseded"}
 )
 
 
@@ -15938,6 +16937,26 @@ def _apply_v3_execution_spine_tables(conn: sqlite3.Connection) -> None:
         """
     )
     conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS runtime_task_checkpoints (
+            checkpoint_id TEXT PRIMARY KEY CHECK (length(trim(checkpoint_id)) > 0),
+            task_id TEXT NOT NULL REFERENCES runtime_tasks(task_id) ON DELETE RESTRICT,
+            seq INTEGER NOT NULL CHECK (seq >= 1),
+            step INTEGER NOT NULL CHECK (step >= 0),
+            epoch INTEGER NOT NULL DEFAULT 0 CHECK (epoch >= 0),
+            milestone_id TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'committed'
+                CHECK (status IN ('pending_commit', 'committed', 'interrupted', 'resumed', 'superseded')),
+            payload_json TEXT NOT NULL DEFAULT '{}',
+            payload_hash TEXT NOT NULL,
+            evidence_refs_json TEXT NOT NULL DEFAULT '[]',
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL,
+            UNIQUE (task_id, seq)
+        )
+        """
+    )
+    conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_runtime_tasks_session_state ON runtime_tasks(session_id, state)"
     )
     conn.execute(
@@ -15954,6 +16973,9 @@ def _apply_v3_execution_spine_tables(conn: sqlite3.Connection) -> None:
     )
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_runtime_actions_session ON runtime_actions(session_id, created_at)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_runtime_task_checkpoints_task ON runtime_task_checkpoints(task_id, seq)"
     )
 
 
@@ -16491,6 +17513,43 @@ class RuntimePersistenceStore:
             conn.row_factory = sqlite3.Row
             row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
             return _row_to_task(row) if row is not None else None
+
+        return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
+    def list_child_tasks(self, parent_task_id: str) -> list[TaskRecord]:
+        """Return child milestone tasks under ``parent_task_id`` ordered by creation."""
+        pid = _non_empty_text(parent_task_id, "parent_task_id", max_len=128)
+
+        def _read(conn: sqlite3.Connection) -> list[TaskRecord]:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT * FROM runtime_tasks WHERE parent_task_id = ? ORDER BY created_at ASC, task_id ASC",
+                (pid,),
+            ).fetchall()
+            return [_row_to_task(r) for r in rows]
+
+        return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
+    def list_root_tasks(self, *, states: tuple[str, ...] | None = None) -> list[TaskRecord]:
+        """Return root ``runtime_tasks`` rows (``parent_task_id IS NULL``)."""
+        if states is not None:
+            for st in states:
+                if st not in TASK_STATES:
+                    raise ValueError(f"Unsupported task state filter: {st!r}")
+
+        def _read(conn: sqlite3.Connection) -> list[TaskRecord]:
+            conn.row_factory = sqlite3.Row
+            if states:
+                placeholders = ",".join("?" for _ in states)
+                rows = conn.execute(
+                    f"SELECT * FROM runtime_tasks WHERE parent_task_id IS NULL AND state IN ({placeholders}) ORDER BY created_at ASC",
+                    tuple(states),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM runtime_tasks WHERE parent_task_id IS NULL ORDER BY created_at ASC"
+                ).fetchall()
+            return [_row_to_task(r) for r in rows]
 
         return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
 
@@ -17212,6 +18271,35 @@ class RuntimePersistenceStore:
             conn.row_factory = sqlite3.Row
             row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
             return _row_to_action(row) if row is not None else None
+
+        return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
+    def list_task_actions(
+        self,
+        task_id: str,
+        *,
+        statuses: tuple[str, ...] | None = None,
+    ) -> list[ActionRecord]:
+        tid = _non_empty_text(task_id, "task_id", max_len=128)
+        if statuses is not None:
+            for st in statuses:
+                if st not in ACTION_STATUSES:
+                    raise ValueError(f"Unsupported action status filter: {st!r}")
+
+        def _read(conn: sqlite3.Connection) -> list[ActionRecord]:
+            conn.row_factory = sqlite3.Row
+            if statuses:
+                placeholders = ",".join("?" for _ in statuses)
+                rows = conn.execute(
+                    f"SELECT * FROM runtime_actions WHERE task_id = ? AND status IN ({placeholders}) ORDER BY created_at ASC",
+                    (tid, *statuses),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM runtime_actions WHERE task_id = ? ORDER BY created_at ASC",
+                    (tid,),
+                ).fetchall()
+            return [_row_to_action(r) for r in rows]
 
         return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
 
@@ -18750,6 +19838,2702 @@ class WorkerLeaseCoordinator:
         return fenced
 
 side_effect_ledger = sys.modules[__name__]
+
+"""Time, token, cost, tool, cancellation, and durable recovery execution budgets."""
+
+
+import json
+import sqlite3
+import threading
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Callable
+
+
+
+class BudgetError(ValueError):
+    """Raised when a budget or usage value is invalid."""
+
+
+class BudgetExceeded(RuntimeError):
+    """Raised when an operation would exceed an execution or recovery budget."""
+
+
+class ExecutionCancelled(RuntimeError):
+    """Raised when cancellation has been requested."""
+
+
+@dataclass(frozen=True, slots=True)
+class BudgetLimits:
+    max_seconds: float
+    max_tokens: int
+    max_cost: float
+    max_tools: int
+    max_retries: int = 0
+
+    def __post_init__(self) -> None:
+        if self.max_seconds <= 0 or self.max_tokens < 0 or self.max_cost < 0 or self.max_tools < 0 or self.max_retries < 0:
+            raise BudgetError("budget limits must be non-negative, with max_seconds positive.")
+
+
+@dataclass(frozen=True, slots=True)
+class BudgetUsage:
+    elapsed_seconds: float
+    tokens: int
+    cost: float
+    tools: int
+    retries: int
+
+
+class ExecutionBudget:
+    """Thread-safe budget guard with monotonic time and explicit cancellation."""
+
+    def __init__(self, limits: BudgetLimits, *, clock: Callable[[], float] = time.monotonic) -> None:
+        self.limits = limits
+        self._clock = clock
+        self._started = clock()
+        self._tokens = 0
+        self._cost = 0.0
+        self._tools = 0
+        self._retries = 0
+        self._cancelled = False
+        self._lock = threading.RLock()
+
+    def cancel(self) -> None:
+        with self._lock:
+            self._cancelled = True
+
+    def _usage(self) -> BudgetUsage:
+        return BudgetUsage(self._clock() - self._started, self._tokens, self._cost, self._tools, self._retries)
+
+    def usage(self) -> BudgetUsage:
+        with self._lock:
+            return self._usage()
+
+    def check(self) -> BudgetUsage:
+        with self._lock:
+            usage = self._usage()
+            if self._cancelled:
+                raise ExecutionCancelled("execution was cancelled.")
+            if usage.elapsed_seconds > self.limits.max_seconds:
+                raise BudgetExceeded("time budget exceeded.")
+            if usage.tokens > self.limits.max_tokens:
+                raise BudgetExceeded("token budget exceeded.")
+            if usage.cost > self.limits.max_cost:
+                raise BudgetExceeded("cost budget exceeded.")
+            if usage.tools > self.limits.max_tools:
+                raise BudgetExceeded("tool budget exceeded.")
+            if usage.retries > self.limits.max_retries:
+                raise BudgetExceeded("retry budget exceeded.")
+            return usage
+
+    def consume(self, *, tokens: int = 0, cost: float = 0.0, tools: int = 0) -> BudgetUsage:
+        if isinstance(tokens, bool) or tokens < 0 or isinstance(tools, bool) or tools < 0 or cost < 0:
+            raise BudgetError("usage increments must be non-negative.")
+        with self._lock:
+            self._tokens += tokens
+            self._cost += cost
+            self._tools += tools
+            return self.check()
+
+    def retry(self) -> BudgetUsage:
+        with self._lock:
+            self._retries += 1
+            return self.check()
+
+    def allow_retry(self) -> bool:
+        try:
+            self.retry()
+        except BudgetExceeded:
+            return False
+        return True
+
+
+def _non_neg_int(value: Any, name: str, *, min_value: int = 0) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < min_value:
+        raise BudgetError(f"{name} must be an integer >= {min_value}.")
+    return int(value)
+
+
+def _non_neg_float(value: Any, name: str, *, strictly_positive: bool = False) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise BudgetError(f"{name} must be numeric.")
+    val = float(value)
+    if strictly_positive and val <= 0:
+        raise BudgetError(f"{name} must be positive.")
+    if not strictly_positive and val < 0:
+        raise BudgetError(f"{name} must be non-negative.")
+    return val
+
+
+@dataclass(frozen=True, slots=True)
+class TaskBudgetSpec:
+    """Durable root-task and crash-recovery budget bounds (M5-P1-05)."""
+
+    max_steps: int = 25
+    max_tool_calls: int = 120
+    max_tokens: int = 500_000
+    max_elapsed_s: float = 1_800.0
+    max_recoveries: int = 3
+
+    def __post_init__(self) -> None:
+        _non_neg_int(self.max_steps, "max_steps", min_value=1)
+        _non_neg_int(self.max_tool_calls, "max_tool_calls", min_value=0)
+        _non_neg_int(self.max_tokens, "max_tokens", min_value=0)
+        _non_neg_float(self.max_elapsed_s, "max_elapsed_s", strictly_positive=True)
+        _non_neg_int(self.max_recoveries, "max_recoveries", min_value=0)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "max_steps": self.max_steps,
+            "max_tool_calls": self.max_tool_calls,
+            "max_tokens": self.max_tokens,
+            "max_elapsed_s": round(self.max_elapsed_s, 4),
+            "max_recoveries": self.max_recoveries,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> TaskBudgetSpec:
+        raw = data or {}
+        return cls(
+            max_steps=int(raw.get("max_steps", 25)),
+            max_tool_calls=int(raw.get("max_tool_calls", 120)),
+            max_tokens=int(raw.get("max_tokens", 500_000)),
+            max_elapsed_s=float(raw.get("max_elapsed_s", 1_800.0)),
+            max_recoveries=int(raw.get("max_recoveries", 3)),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class TaskBudgetState:
+    """Persisted task + recovery budget counters and safe-boundary flags."""
+
+    spec: TaskBudgetSpec
+    steps_used: int = 0
+    tool_calls_used: int = 0
+    tokens_used: int = 0
+    elapsed_s: float = 0.0
+    recoveries_used: int = 0
+    pause_requested: bool = False
+    cancel_requested: bool = False
+    exhausted_reason: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "spec": self.spec.to_dict(),
+            "steps_used": self.steps_used,
+            "tool_calls_used": self.tool_calls_used,
+            "tokens_used": self.tokens_used,
+            "elapsed_s": round(self.elapsed_s, 4),
+            "recoveries_used": self.recoveries_used,
+            "pause_requested": self.pause_requested,
+            "cancel_requested": self.cancel_requested,
+            "exhausted_reason": self.exhausted_reason,
+        }
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+    @classmethod
+    def from_json(
+        cls,
+        raw: str | None,
+        *,
+        default_spec: TaskBudgetSpec | None = None,
+    ) -> TaskBudgetState:
+        fallback = default_spec or TaskBudgetSpec()
+        text = (raw or "").strip()
+        if not text or text == "{}":
+            return cls(spec=fallback)
+        try:
+            parsed = json.loads(text)
+        except (TypeError, ValueError) as exc:
+            raise BudgetError("persisted task budget JSON is malformed.") from exc
+        if not isinstance(parsed, dict):
+            raise BudgetError("persisted task budget JSON must be an object.")
+        spec_raw = parsed.get("spec")
+        if isinstance(spec_raw, dict):
+            spec = TaskBudgetSpec.from_dict(spec_raw)
+        else:
+            spec = TaskBudgetSpec(
+                max_steps=int(parsed.get("max_steps", fallback.max_steps)),
+                max_tool_calls=int(parsed.get("max_tool_calls", fallback.max_tool_calls)),
+                max_tokens=int(parsed.get("max_tokens", fallback.max_tokens)),
+                max_elapsed_s=float(parsed.get("max_elapsed_s", fallback.max_elapsed_s)),
+                max_recoveries=int(parsed.get("max_recoveries", fallback.max_recoveries)),
+            )
+        return cls(
+            spec=spec,
+            steps_used=_non_neg_int(int(parsed.get("steps_used", 0)), "steps_used"),
+            tool_calls_used=_non_neg_int(int(parsed.get("tool_calls_used", 0)), "tool_calls_used"),
+            tokens_used=_non_neg_int(int(parsed.get("tokens_used", 0)), "tokens_used"),
+            elapsed_s=_non_neg_float(float(parsed.get("elapsed_s", 0.0)), "elapsed_s"),
+            recoveries_used=_non_neg_int(int(parsed.get("recoveries_used", 0)), "recoveries_used"),
+            pause_requested=bool(parsed.get("pause_requested", False)),
+            cancel_requested=bool(parsed.get("cancel_requested", False)),
+            exhausted_reason=str(parsed.get("exhausted_reason", "")),
+        )
+
+    def violation_reason(self, *, check_recovery: bool = False) -> str:
+        if self.steps_used > self.spec.max_steps:
+            return f"step budget exceeded ({self.steps_used}/{self.spec.max_steps})"
+        if self.tool_calls_used > self.spec.max_tool_calls:
+            return f"tool budget exceeded ({self.tool_calls_used}/{self.spec.max_tool_calls})"
+        if self.tokens_used > self.spec.max_tokens:
+            return f"token budget exceeded ({self.tokens_used}/{self.spec.max_tokens})"
+        if self.elapsed_s > self.spec.max_elapsed_s:
+            return f"time budget exceeded ({self.elapsed_s:.2f}s/{self.spec.max_elapsed_s:.2f}s)"
+        if check_recovery and self.recoveries_used > self.spec.max_recoveries:
+            return f"recovery budget exceeded ({self.recoveries_used}/{self.spec.max_recoveries})"
+        return ""
+
+
+class DurableTaskBudgetManager:
+    """SQLite-backed task and recovery budget enforcement over ``runtime_tasks.budget_json``."""
+
+    def __init__(
+        self,
+        storage: runtime_persistence.StorageProvider,
+        db_path: Path,
+        *,
+        retry_policy: runtime_persistence.BusyRetryPolicy = runtime_persistence.DEFAULT_BUSY_RETRY_POLICY,
+    ) -> None:
+        self._storage = storage
+        self._db_path = db_path
+        self._retry_policy = retry_policy
+
+    @staticmethod
+    def _validate_task_id(task_id: str) -> str:
+        if not isinstance(task_id, str) or not task_id.strip() or "\x00" in task_id:
+            raise BudgetError("task_id must be a non-empty string without NUL characters.")
+        return task_id.strip()
+
+    def get_budget(
+        self,
+        task_id: str,
+        *,
+        default_spec: TaskBudgetSpec | None = None,
+    ) -> TaskBudgetState:
+        tid = self._validate_task_id(task_id)
+
+        def _read(conn: sqlite3.Connection) -> TaskBudgetState:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT budget_json FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if row is None:
+                raise KeyError(f"Runtime task {tid!r} does not exist.")
+            return TaskBudgetState.from_json(str(row["budget_json"]), default_spec=default_spec)
+
+        return runtime_persistence.run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
+    def ensure_budget(
+        self,
+        task_id: str,
+        *,
+        spec: TaskBudgetSpec | None = None,
+        override_spec: bool = False,
+        now: float | None = None,
+    ) -> TaskBudgetState:
+        tid = self._validate_task_id(task_id)
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> TaskBudgetState:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT budget_json FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if row is None:
+                raise KeyError(f"Runtime task {tid!r} does not exist.")
+            raw = str(row["budget_json"] or "{}").strip()
+            current = TaskBudgetState.from_json(raw, default_spec=spec)
+            effective_spec = spec if (override_spec and spec is not None) else current.spec
+            updated = TaskBudgetState(
+                spec=effective_spec,
+                steps_used=current.steps_used,
+                tool_calls_used=current.tool_calls_used,
+                tokens_used=current.tokens_used,
+                elapsed_s=current.elapsed_s,
+                recoveries_used=current.recoveries_used,
+                pause_requested=current.pause_requested,
+                cancel_requested=current.cancel_requested,
+                exhausted_reason=current.exhausted_reason,
+            )
+            encoded = updated.to_json()
+            if encoded != raw:
+                conn.execute(
+                    "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                    (encoded, ts, tid),
+                )
+            return updated
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def set_control_flags(
+        self,
+        task_id: str,
+        *,
+        pause_requested: bool | None = None,
+        cancel_requested: bool | None = None,
+        now: float | None = None,
+    ) -> TaskBudgetState:
+        tid = self._validate_task_id(task_id)
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> TaskBudgetState:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT budget_json FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if row is None:
+                raise KeyError(f"Runtime task {tid!r} does not exist.")
+            current = TaskBudgetState.from_json(str(row["budget_json"]))
+            updated = TaskBudgetState(
+                spec=current.spec,
+                steps_used=current.steps_used,
+                tool_calls_used=current.tool_calls_used,
+                tokens_used=current.tokens_used,
+                elapsed_s=current.elapsed_s,
+                recoveries_used=current.recoveries_used,
+                pause_requested=current.pause_requested if pause_requested is None else bool(pause_requested),
+                cancel_requested=current.cancel_requested if cancel_requested is None else bool(cancel_requested),
+                exhausted_reason=current.exhausted_reason,
+            )
+            conn.execute(
+                "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                (updated.to_json(), ts, tid),
+            )
+            return updated
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def record_usage(
+        self,
+        task_id: str,
+        *,
+        epoch: int | None = None,
+        steps_delta: int = 0,
+        tool_calls_delta: int = 0,
+        tokens_delta: int = 0,
+        elapsed_delta_s: float = 0.0,
+        enforce: bool = True,
+        now: float | None = None,
+    ) -> TaskBudgetState:
+        tid = self._validate_task_id(task_id)
+        _non_neg_int(steps_delta, "steps_delta")
+        _non_neg_int(tool_calls_delta, "tool_calls_delta")
+        _non_neg_int(tokens_delta, "tokens_delta")
+        _non_neg_float(elapsed_delta_s, "elapsed_delta_s")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> tuple[TaskBudgetState, str, bool]:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT current_epoch, budget_json FROM runtime_tasks WHERE task_id = ?",
+                (tid,),
+            ).fetchone()
+            if row is None:
+                raise KeyError(f"Runtime task {tid!r} does not exist.")
+            if epoch is not None and int(row["current_epoch"]) != int(epoch):
+                raise runtime_persistence.StaleEpochError(
+                    f"Stale epoch {epoch} cannot mutate budget for task {tid!r} at current_epoch={row['current_epoch']}."
+                )
+            current = TaskBudgetState.from_json(str(row["budget_json"]))
+            candidate = TaskBudgetState(
+                spec=current.spec,
+                steps_used=current.steps_used + steps_delta,
+                tool_calls_used=current.tool_calls_used + tool_calls_delta,
+                tokens_used=current.tokens_used + tokens_delta,
+                elapsed_s=round(current.elapsed_s + elapsed_delta_s, 6),
+                recoveries_used=current.recoveries_used,
+                pause_requested=current.pause_requested,
+                cancel_requested=current.cancel_requested,
+                exhausted_reason=current.exhausted_reason,
+            )
+            violation = candidate.violation_reason(check_recovery=False)
+            final_state = (
+                TaskBudgetState(
+                    spec=candidate.spec,
+                    steps_used=candidate.steps_used,
+                    tool_calls_used=candidate.tool_calls_used,
+                    tokens_used=candidate.tokens_used,
+                    elapsed_s=candidate.elapsed_s,
+                    recoveries_used=candidate.recoveries_used,
+                    pause_requested=candidate.pause_requested,
+                    cancel_requested=candidate.cancel_requested,
+                    exhausted_reason=violation or candidate.exhausted_reason,
+                )
+                if violation
+                else candidate
+            )
+            conn.execute(
+                "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                (final_state.to_json(), ts, tid),
+            )
+            return final_state, violation, final_state.cancel_requested
+
+        state, violation, cancelled = runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+        if enforce and cancelled:
+            raise ExecutionCancelled("task cancellation requested.")
+        if enforce and violation:
+            raise BudgetExceeded(violation)
+        return state
+
+    def consume_recovery(
+        self,
+        task_id: str,
+        *,
+        now: float | None = None,
+    ) -> TaskBudgetState:
+        """Atomically consume 1 durable recovery attempt; commit exhaustion before raising."""
+        tid = self._validate_task_id(task_id)
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> tuple[TaskBudgetState, str]:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT budget_json FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if row is None:
+                raise KeyError(f"Runtime task {tid!r} does not exist.")
+            current = TaskBudgetState.from_json(str(row["budget_json"]))
+            next_recoveries = current.recoveries_used + 1
+            violation = ""
+            if next_recoveries > current.spec.max_recoveries:
+                violation = f"recovery budget exceeded ({next_recoveries}/{current.spec.max_recoveries})"
+            persisted = TaskBudgetState(
+                spec=current.spec,
+                steps_used=current.steps_used,
+                tool_calls_used=current.tool_calls_used,
+                tokens_used=current.tokens_used,
+                elapsed_s=current.elapsed_s,
+                recoveries_used=current.recoveries_used if violation else next_recoveries,
+                pause_requested=False if not violation else current.pause_requested,
+                cancel_requested=current.cancel_requested,
+                exhausted_reason=violation or current.exhausted_reason,
+            )
+            conn.execute(
+                "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                (persisted.to_json(), ts, tid),
+            )
+            return persisted, violation
+
+        state, violation = runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+        if violation:
+            raise BudgetExceeded(violation)
+        return state
+
+execution_budget = sys.modules[__name__]
+
+"""Durable workflow checkpoints, evidence references, and safe resume validation."""
+
+
+import hashlib
+import hmac
+import json
+import sqlite3
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Literal, Sequence
+
+
+CheckpointStatus = Literal["active", "interrupted", "resumed", "completed"]
+_STATUSES = frozenset({"active", "interrupted", "resumed", "completed"})
+
+TaskCheckpointStatus = Literal["pending_commit", "committed", "interrupted", "resumed", "superseded"]
+
+
+class CheckpointError(ValueError):
+    """Raised when checkpoint data is malformed or not resumable."""
+
+
+class ResumeRejected(RuntimeError):
+    """Raised when a checkpoint cannot be safely resumed."""
+
+
+@dataclass(frozen=True, slots=True)
+class Checkpoint:
+    workflow_id: str
+    step: int
+    state: CheckpointStatus
+    payload: dict[str, object]
+    payload_hash: str
+    updated_at: str
+
+
+@dataclass(frozen=True, slots=True)
+class AuditEntry:
+    workflow_id: str
+    step: int
+    event: str
+    detail: str
+    created_at: str
+
+
+def _workflow_id(value: str) -> str:
+    if not isinstance(value, str) or not value.strip() or "\x00" in value:
+        raise CheckpointError("workflow_id must be a non-empty string without NUL characters.")
+    return value.strip()
+
+
+def _step(value: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise CheckpointError("step must be a non-negative integer.")
+    return value
+
+
+def _status(value: str) -> CheckpointStatus:
+    if value not in _STATUSES:
+        raise CheckpointError(f"unknown checkpoint state: {value}")
+    return value  # type: ignore[return-value]
+
+
+def _encoded_payload(payload: dict[str, object]) -> tuple[str, str]:
+    try:
+        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    except (TypeError, ValueError) as exc:
+        raise CheckpointError("checkpoint payload must be JSON serializable.") from exc
+    return encoded, hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+class WorkflowCheckpointStore:
+    """SQLite checkpoint store that only resumes intact interrupted steps."""
+
+    def __init__(self, database: Path) -> None:
+        self.database = Path(database)
+        self.database.parent.mkdir(parents=True, exist_ok=True)
+        with self._connect() as connection:
+            connection.executescript(
+                """
+                CREATE TABLE IF NOT EXISTS workflow_checkpoints (
+                    workflow_id TEXT PRIMARY KEY,
+                    step INTEGER NOT NULL,
+                    state TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    payload_hash TEXT NOT NULL,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS workflow_checkpoint_audit (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    workflow_id TEXT NOT NULL,
+                    step INTEGER NOT NULL,
+                    event TEXT NOT NULL,
+                    detail TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                """
+            )
+
+    def _connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.database, timeout=5.0)
+        connection.row_factory = sqlite3.Row
+        return connection
+
+    @staticmethod
+    def _checkpoint(row: sqlite3.Row | None) -> Checkpoint | None:
+        if row is None:
+            return None
+        try:
+            payload = json.loads(row["payload_json"])
+        except (TypeError, ValueError) as exc:
+            raise ResumeRejected("checkpoint payload is not valid JSON.") from exc
+        if not isinstance(payload, dict):
+            raise ResumeRejected("checkpoint payload is not an object.")
+        _status(row["state"])
+        return Checkpoint(row["workflow_id"], row["step"], row["state"], payload, row["payload_hash"], row["updated_at"])
+
+    def save(self, workflow_id: str, step: int, payload: dict[str, object], *, state: CheckpointStatus = "active") -> Checkpoint:
+        identifier = _workflow_id(workflow_id)
+        position = _step(step)
+        normalized_state = _status(state)
+        encoded, payload_hash = _encoded_payload(payload)
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO workflow_checkpoints(workflow_id, step, state, payload_json, payload_hash)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(workflow_id) DO UPDATE SET
+                    step=excluded.step, state=excluded.state,
+                    payload_json=excluded.payload_json, payload_hash=excluded.payload_hash,
+                    updated_at=CURRENT_TIMESTAMP
+                """,
+                (identifier, position, normalized_state, encoded, payload_hash),
+            )
+            connection.execute(
+                "INSERT INTO workflow_checkpoint_audit(workflow_id, step, event, detail) VALUES (?, ?, ?, ?)",
+                (identifier, position, "checkpoint_saved", normalized_state),
+            )
+            row = connection.execute("SELECT * FROM workflow_checkpoints WHERE workflow_id = ?", (identifier,)).fetchone()
+        result = self._checkpoint(row)
+        assert result is not None
+        return result
+
+    def mark_interrupted(self, workflow_id: str) -> Checkpoint:
+        identifier = _workflow_id(workflow_id)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT * FROM workflow_checkpoints WHERE workflow_id = ?", (identifier,)).fetchone()
+            checkpoint = self._checkpoint(row)
+            if checkpoint is None:
+                raise CheckpointError("checkpoint does not exist.")
+            connection.execute("UPDATE workflow_checkpoints SET state = 'interrupted', updated_at = CURRENT_TIMESTAMP WHERE workflow_id = ?", (identifier,))
+            connection.execute(
+                "INSERT INTO workflow_checkpoint_audit(workflow_id, step, event, detail) VALUES (?, ?, ?, ?)",
+                (identifier, checkpoint.step, "workflow_interrupted", "safe resume available"),
+            )
+            updated = connection.execute("SELECT * FROM workflow_checkpoints WHERE workflow_id = ?", (identifier,)).fetchone()
+        result = self._checkpoint(updated)
+        assert result is not None
+        return result
+
+    def resume(self, workflow_id: str) -> Checkpoint:
+        identifier = _workflow_id(workflow_id)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT * FROM workflow_checkpoints WHERE workflow_id = ?", (identifier,)).fetchone()
+            checkpoint = self._checkpoint(row)
+            if checkpoint is None:
+                raise ResumeRejected("checkpoint does not exist.")
+            if checkpoint.state != "interrupted":
+                raise ResumeRejected("only interrupted workflows can be resumed.")
+            encoded, payload_hash = _encoded_payload(checkpoint.payload)
+            if not hmac_compare(payload_hash, checkpoint.payload_hash):
+                raise ResumeRejected("checkpoint integrity hash does not match payload.")
+            connection.execute(
+                "UPDATE workflow_checkpoints SET state = 'resumed', payload_json = ?, payload_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE workflow_id = ?",
+                (encoded, payload_hash, identifier),
+            )
+            connection.execute(
+                "INSERT INTO workflow_checkpoint_audit(workflow_id, step, event, detail) VALUES (?, ?, ?, ?)",
+                (identifier, checkpoint.step, "workflow_resumed", "integrity verified"),
+            )
+            updated = connection.execute("SELECT * FROM workflow_checkpoints WHERE workflow_id = ?", (identifier,)).fetchone()
+        result = self._checkpoint(updated)
+        assert result is not None
+        return result
+
+    def audit(self, workflow_id: str) -> tuple[AuditEntry, ...]:
+        identifier = _workflow_id(workflow_id)
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT workflow_id, step, event, detail, created_at FROM workflow_checkpoint_audit WHERE workflow_id = ? ORDER BY id",
+                (identifier,),
+            ).fetchall()
+        return tuple(AuditEntry(row["workflow_id"], row["step"], row["event"], row["detail"], row["created_at"]) for row in rows)
+
+
+def hmac_compare(left: str, right: str) -> bool:
+    """Constant-time comparison for checkpoint integrity digests."""
+    return hmac.compare_digest(left, right)
+
+
+@dataclass(frozen=True, slots=True)
+class EvidenceRef:
+    """Typed durable evidence pointer attached to a task checkpoint or transition."""
+
+    kind: str
+    ref_id: str
+    sha256: str = ""
+    summary: str = ""
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.kind, str) or not self.kind.strip() or "\x00" in self.kind:
+            raise CheckpointError("EvidenceRef.kind must be a non-empty string.")
+        if not isinstance(self.ref_id, str) or not self.ref_id.strip() or "\x00" in self.ref_id:
+            raise CheckpointError("EvidenceRef.ref_id must be a non-empty string.")
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "kind": self.kind.strip()[:64],
+            "ref_id": self.ref_id.strip()[:256],
+            "sha256": str(self.sha256 or "").strip()[:128],
+            "summary": str(self.summary or "").strip()[:240],
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> EvidenceRef:
+        if not isinstance(data, dict):
+            raise CheckpointError("EvidenceRef entry must be a JSON object.")
+        return cls(
+            kind=str(data.get("kind", "")),
+            ref_id=str(data.get("ref_id", "")),
+            sha256=str(data.get("sha256", "")),
+            summary=str(data.get("summary", "")),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class TaskCheckpointRecord:
+    """Authoritative checkpoint row in ``runtime_task_checkpoints`` (M5-P1-05)."""
+
+    checkpoint_id: str
+    task_id: str
+    seq: int
+    step: int
+    epoch: int
+    milestone_id: str
+    status: str
+    payload: dict[str, Any]
+    payload_hash: str
+    evidence_refs: tuple[EvidenceRef, ...]
+    created_at: float
+    updated_at: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "checkpoint_id": self.checkpoint_id,
+            "task_id": self.task_id,
+            "seq": self.seq,
+            "step": self.step,
+            "epoch": self.epoch,
+            "milestone_id": self.milestone_id,
+            "status": self.status,
+            "payload": self.payload,
+            "payload_hash": self.payload_hash,
+            "evidence_refs": [ref.to_dict() for ref in self.evidence_refs],
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+
+
+def compute_task_checkpoint_digest(payload_json: str, evidence_refs_json: str) -> str:
+    """Compute canonical SHA-256 digest covering both payload and evidence references."""
+    material = f"{payload_json}\n{evidence_refs_json}".encode("utf-8")
+    return hashlib.sha256(material).hexdigest()
+
+
+def _encode_checkpoint_bundle(
+    payload: dict[str, Any],
+    evidence_refs: Sequence[EvidenceRef | dict[str, Any]],
+) -> tuple[str, str, tuple[EvidenceRef, ...], str]:
+    if not isinstance(payload, dict):
+        raise CheckpointError("checkpoint payload must be a dict.")
+    normalized_refs: list[EvidenceRef] = []
+    for item in evidence_refs:
+        if isinstance(item, EvidenceRef):
+            normalized_refs.append(item)
+        elif isinstance(item, dict):
+            normalized_refs.append(EvidenceRef.from_dict(item))
+        else:
+            to_dict_fn = getattr(item, "to_dict", None)
+            if callable(to_dict_fn):
+                normalized_refs.append(EvidenceRef.from_dict(to_dict_fn()))
+            else:
+                raise CheckpointError("evidence_refs items must be EvidenceRef or dict.")
+    try:
+        payload_json = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        refs_json = json.dumps(
+            [r.to_dict() for r in normalized_refs],
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        )
+    except (TypeError, ValueError) as exc:
+        raise CheckpointError("checkpoint payload and evidence_refs must be JSON serializable.") from exc
+    digest = compute_task_checkpoint_digest(payload_json, refs_json)
+    return payload_json, refs_json, tuple(normalized_refs), digest
+
+
+def _decode_and_verify_checkpoint_row(
+    row: sqlite3.Row,
+    *,
+    verify_integrity: bool = True,
+) -> TaskCheckpointRecord:
+    raw_payload = str(row["payload_json"])
+    raw_refs = str(row["evidence_refs_json"])
+    stored_hash = str(row["payload_hash"])
+    try:
+        payload_obj = json.loads(raw_payload)
+        refs_obj = json.loads(raw_refs)
+    except (TypeError, ValueError) as exc:
+        raise ResumeRejected("checkpoint JSON is malformed or truncated.") from exc
+    if not isinstance(payload_obj, dict):
+        raise ResumeRejected("checkpoint payload_json is not a JSON object.")
+    if not isinstance(refs_obj, list):
+        raise ResumeRejected("checkpoint evidence_refs_json is not a JSON array.")
+    try:
+        refs = tuple(EvidenceRef.from_dict(item) for item in refs_obj)
+    except CheckpointError as exc:
+        raise ResumeRejected(f"checkpoint evidence reference invalid: {exc}") from exc
+    status = str(row["status"])
+    if status not in runtime_persistence.CHECKPOINT_STATUSES:
+        raise ResumeRejected(f"unknown checkpoint status {status!r}.")
+    if verify_integrity:
+        canonical_payload = json.dumps(payload_obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        canonical_refs = json.dumps(
+            [r.to_dict() for r in refs],
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        )
+        expected_hash = compute_task_checkpoint_digest(canonical_payload, canonical_refs)
+        if not hmac_compare(expected_hash, stored_hash):
+            raise ResumeRejected("checkpoint integrity hash does not match payload or evidence refs.")
+    return TaskCheckpointRecord(
+        checkpoint_id=str(row["checkpoint_id"]),
+        task_id=str(row["task_id"]),
+        seq=int(row["seq"]),
+        step=int(row["step"]),
+        epoch=int(row["epoch"]),
+        milestone_id=str(row["milestone_id"]),
+        status=status,
+        payload=payload_obj,
+        payload_hash=stored_hash,
+        evidence_refs=refs,
+        created_at=float(row["created_at"]),
+        updated_at=float(row["updated_at"]),
+    )
+
+
+class DurableTaskCheckpointStore:
+    """Authoritative SQLite store for ``runtime_task_checkpoints`` + ``runtime_tasks.checkpoint_ref``."""
+
+    def __init__(
+        self,
+        storage: runtime_persistence.StorageProvider,
+        db_path: Path,
+        *,
+        retry_policy: runtime_persistence.BusyRetryPolicy = runtime_persistence.DEFAULT_BUSY_RETRY_POLICY,
+    ) -> None:
+        self._storage = storage
+        self._db_path = db_path
+        self._retry_policy = retry_policy
+
+    def stage_checkpoint(
+        self,
+        task_id: str,
+        *,
+        step: int,
+        payload: dict[str, Any],
+        evidence_refs: Sequence[EvidenceRef | dict[str, Any]] = (),
+        epoch: int = 0,
+        milestone_id: str = "",
+        now: float | None = None,
+    ) -> TaskCheckpointRecord:
+        """Write a ``pending_commit`` checkpoint row without advancing ``runtime_tasks.checkpoint_ref``."""
+        tid = _workflow_id(task_id)
+        pos = _step(step)
+        payload_json, refs_json, _, digest = _encode_checkpoint_bundle(payload, evidence_refs)
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> TaskCheckpointRecord:
+            conn.row_factory = sqlite3.Row
+            task_row = conn.execute("SELECT current_epoch FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if task_row is None:
+                raise KeyError(f"Runtime task {tid!r} does not exist.")
+            seq_row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_checkpoints WHERE task_id = ?",
+                (tid,),
+            ).fetchone()
+            next_seq = int(seq_row[0]) if seq_row else 1
+            ckpt_id = f"ckpt-{tid[:48]}-s{next_seq}-{digest[:10]}"
+            conn.execute(
+                """
+                INSERT INTO runtime_task_checkpoints (
+                    checkpoint_id, task_id, seq, step, epoch, milestone_id, status,
+                    payload_json, payload_hash, evidence_refs_json, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, 'pending_commit', ?, ?, ?, ?, ?)
+                """,
+                (ckpt_id, tid, next_seq, pos, int(epoch), str(milestone_id)[:128], payload_json, digest, refs_json, ts, ts),
+            )
+            saved = conn.execute(
+                "SELECT * FROM runtime_task_checkpoints WHERE checkpoint_id = ?",
+                (ckpt_id,),
+            ).fetchone()
+            assert saved is not None
+            return _decode_and_verify_checkpoint_row(saved, verify_integrity=True)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def save_checkpoint(
+        self,
+        task_id: str,
+        *,
+        step: int,
+        payload: dict[str, Any],
+        evidence_refs: Sequence[EvidenceRef | dict[str, Any]] = (),
+        epoch: int | None = None,
+        milestone_id: str = "",
+        status: Literal["committed", "interrupted"] = "committed",
+        require_active_epoch: bool = False,
+        now: float | None = None,
+    ) -> TaskCheckpointRecord:
+        """Atomically persist checkpoint + evidence refs and advance ``runtime_tasks.checkpoint_ref``."""
+        tid = _workflow_id(task_id)
+        pos = _step(step)
+        if status not in {"committed", "interrupted"}:
+            raise CheckpointError(f"Unsupported save_checkpoint status: {status!r}")
+        payload_json, refs_json, _, digest = _encode_checkpoint_bundle(payload, evidence_refs)
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> TaskCheckpointRecord:
+            conn.row_factory = sqlite3.Row
+            task_row = conn.execute("SELECT current_epoch FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if task_row is None:
+                raise KeyError(f"Runtime task {tid!r} does not exist.")
+            current_epoch = int(task_row["current_epoch"])
+            if epoch is not None and int(epoch) != current_epoch:
+                raise runtime_persistence.StaleEpochError(
+                    f"Stale epoch {epoch} cannot checkpoint task {tid!r} at current_epoch={current_epoch}."
+                )
+            effective_epoch = current_epoch if epoch is None else int(epoch)
+            if require_active_epoch and effective_epoch > 0:
+                ep_row = conn.execute(
+                    "SELECT status, lease_expires_at FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                    (tid, effective_epoch),
+                ).fetchone()
+                if ep_row is None or str(ep_row["status"]) != "active":
+                    raise runtime_persistence.StaleEpochError(
+                        f"Inactive epoch {effective_epoch} cannot checkpoint task {tid!r}."
+                    )
+                if float(ep_row["lease_expires_at"]) <= ts:
+                    raise runtime_persistence.LeaseExpiredError(
+                        f"Expired epoch {effective_epoch} cannot checkpoint task {tid!r}."
+                    )
+            conn.execute(
+                """
+                UPDATE runtime_task_checkpoints
+                SET status = 'superseded', updated_at = ?
+                WHERE task_id = ? AND status IN ('committed', 'interrupted', 'resumed', 'pending_commit')
+                """,
+                (ts, tid),
+            )
+            seq_row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_checkpoints WHERE task_id = ?",
+                (tid,),
+            ).fetchone()
+            next_seq = int(seq_row[0]) if seq_row else 1
+            ckpt_id = f"ckpt-{tid[:48]}-s{next_seq}-{digest[:10]}"
+            conn.execute(
+                """
+                INSERT INTO runtime_task_checkpoints (
+                    checkpoint_id, task_id, seq, step, epoch, milestone_id, status,
+                    payload_json, payload_hash, evidence_refs_json, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    ckpt_id,
+                    tid,
+                    next_seq,
+                    pos,
+                    effective_epoch,
+                    str(milestone_id)[:128],
+                    status,
+                    payload_json,
+                    digest,
+                    refs_json,
+                    ts,
+                    ts,
+                ),
+            )
+            conn.execute(
+                "UPDATE runtime_tasks SET checkpoint_ref = ?, updated_at = ? WHERE task_id = ?",
+                (ckpt_id, ts, tid),
+            )
+            saved = conn.execute(
+                "SELECT * FROM runtime_task_checkpoints WHERE checkpoint_id = ?",
+                (ckpt_id,),
+            ).fetchone()
+            assert saved is not None
+            return _decode_and_verify_checkpoint_row(saved, verify_integrity=True)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def get_checkpoint(
+        self,
+        checkpoint_id: str,
+        *,
+        verify_integrity: bool = True,
+    ) -> TaskCheckpointRecord | None:
+        cid = _workflow_id(checkpoint_id)
+
+        def _read(conn: sqlite3.Connection) -> TaskCheckpointRecord | None:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT * FROM runtime_task_checkpoints WHERE checkpoint_id = ?",
+                (cid,),
+            ).fetchone()
+            if row is None:
+                return None
+            return _decode_and_verify_checkpoint_row(row, verify_integrity=verify_integrity)
+
+        return runtime_persistence.run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
+    def load_latest_checkpoint(
+        self,
+        task_id: str,
+        *,
+        verify_integrity: bool = True,
+    ) -> TaskCheckpointRecord | None:
+        tid = _workflow_id(task_id)
+
+        def _read(conn: sqlite3.Connection) -> TaskCheckpointRecord | None:
+            conn.row_factory = sqlite3.Row
+            task_row = conn.execute("SELECT checkpoint_ref FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if task_row is None:
+                return None
+            ckpt_ref = str(task_row["checkpoint_ref"] or "").strip()
+            if ckpt_ref:
+                ref_row = conn.execute(
+                    "SELECT * FROM runtime_task_checkpoints WHERE checkpoint_id = ? AND task_id = ?",
+                    (ckpt_ref, tid),
+                ).fetchone()
+                if ref_row is None:
+                    raise ResumeRejected(
+                        f"Task {tid!r} references missing checkpoint {ckpt_ref!r}."
+                    )
+                return _decode_and_verify_checkpoint_row(ref_row, verify_integrity=verify_integrity)
+            latest_row = conn.execute(
+                """
+                SELECT * FROM runtime_task_checkpoints
+                WHERE task_id = ? AND status IN ('committed', 'interrupted', 'resumed')
+                ORDER BY seq DESC LIMIT 1
+                """,
+                (tid,),
+            ).fetchone()
+            if latest_row is None:
+                return None
+            return _decode_and_verify_checkpoint_row(latest_row, verify_integrity=verify_integrity)
+
+        return runtime_persistence.run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
+    def list_checkpoints(
+        self,
+        task_id: str,
+        *,
+        verify_integrity: bool = False,
+    ) -> list[TaskCheckpointRecord]:
+        tid = _workflow_id(task_id)
+
+        def _read(conn: sqlite3.Connection) -> list[TaskCheckpointRecord]:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT * FROM runtime_task_checkpoints WHERE task_id = ? ORDER BY seq ASC",
+                (tid,),
+            ).fetchall()
+            return [_decode_and_verify_checkpoint_row(r, verify_integrity=verify_integrity) for r in rows]
+
+        return runtime_persistence.run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
+    def mark_latest_interrupted(
+        self,
+        task_id: str,
+        *,
+        now: float | None = None,
+    ) -> TaskCheckpointRecord | None:
+        tid = _workflow_id(task_id)
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> TaskCheckpointRecord | None:
+            conn.row_factory = sqlite3.Row
+            task_row = conn.execute("SELECT checkpoint_ref FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if task_row is None:
+                return None
+            ckpt_ref = str(task_row["checkpoint_ref"] or "").strip()
+            row = None
+            if ckpt_ref:
+                row = conn.execute(
+                    "SELECT * FROM runtime_task_checkpoints WHERE checkpoint_id = ? AND task_id = ?",
+                    (ckpt_ref, tid),
+                ).fetchone()
+            if row is None:
+                row = conn.execute(
+                    """
+                    SELECT * FROM runtime_task_checkpoints
+                    WHERE task_id = ? AND status IN ('committed', 'interrupted', 'resumed')
+                    ORDER BY seq DESC LIMIT 1
+                    """,
+                    (tid,),
+                ).fetchone()
+            if row is None:
+                return None
+            verified = _decode_and_verify_checkpoint_row(row, verify_integrity=True)
+            conn.execute(
+                "UPDATE runtime_task_checkpoints SET status = 'interrupted', updated_at = ? WHERE checkpoint_id = ?",
+                (ts, verified.checkpoint_id),
+            )
+            if ckpt_ref != verified.checkpoint_id:
+                conn.execute(
+                    "UPDATE runtime_tasks SET checkpoint_ref = ?, updated_at = ? WHERE task_id = ?",
+                    (verified.checkpoint_id, ts, tid),
+                )
+            refreshed = conn.execute(
+                "SELECT * FROM runtime_task_checkpoints WHERE checkpoint_id = ?",
+                (verified.checkpoint_id,),
+            ).fetchone()
+            assert refreshed is not None
+            return _decode_and_verify_checkpoint_row(refreshed, verify_integrity=True)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def validate_and_mark_resumed(
+        self,
+        task_id: str,
+        *,
+        epoch: int | None = None,
+        now: float | None = None,
+    ) -> TaskCheckpointRecord | None:
+        """Verify latest checkpoint integrity and mark ``resumed`` inside ``BEGIN IMMEDIATE``."""
+        tid = _workflow_id(task_id)
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> TaskCheckpointRecord | None:
+            conn.row_factory = sqlite3.Row
+            task_row = conn.execute("SELECT checkpoint_ref FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if task_row is None:
+                raise ResumeRejected(f"Runtime task {tid!r} does not exist.")
+            ckpt_ref = str(task_row["checkpoint_ref"] or "").strip()
+            row = None
+            if ckpt_ref:
+                row = conn.execute(
+                    "SELECT * FROM runtime_task_checkpoints WHERE checkpoint_id = ? AND task_id = ?",
+                    (ckpt_ref, tid),
+                ).fetchone()
+                if row is None:
+                    raise ResumeRejected(
+                        f"Task {tid!r} references missing checkpoint {ckpt_ref!r}."
+                    )
+            else:
+                row = conn.execute(
+                    """
+                    SELECT * FROM runtime_task_checkpoints
+                    WHERE task_id = ? AND status IN ('interrupted', 'committed', 'resumed')
+                    ORDER BY seq DESC LIMIT 1
+                    """,
+                    (tid,),
+                ).fetchone()
+            if row is None:
+                return None
+            verified = _decode_and_verify_checkpoint_row(row, verify_integrity=True)
+            next_epoch = verified.epoch if epoch is None else int(epoch)
+            conn.execute(
+                """
+                UPDATE runtime_task_checkpoints
+                SET status = 'resumed', epoch = ?, updated_at = ?
+                WHERE checkpoint_id = ?
+                """,
+                (next_epoch, ts, verified.checkpoint_id),
+            )
+            conn.execute(
+                "UPDATE runtime_tasks SET checkpoint_ref = ?, updated_at = ? WHERE task_id = ?",
+                (verified.checkpoint_id, ts, tid),
+            )
+            refreshed = conn.execute(
+                "SELECT * FROM runtime_task_checkpoints WHERE checkpoint_id = ?",
+                (verified.checkpoint_id,),
+            ).fetchone()
+            assert refreshed is not None
+            return _decode_and_verify_checkpoint_row(refreshed, verify_integrity=True)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+workflow_checkpoints = sys.modules[__name__]
+
+"""Persisted workflow and durable root-task/milestone state machine (M5-P1-05)."""
+
+
+import json
+import sqlite3
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Literal, Sequence
+
+
+WorkflowStatus = Literal["pending", "running", "paused", "completed", "failed", "cancelled"]
+_STATUSES = frozenset({"pending", "running", "paused", "completed", "failed", "cancelled"})
+_TRANSITIONS: dict[str, frozenset[str]] = {
+    "pending": frozenset({"running", "cancelled"}),
+    "running": frozenset({"paused", "completed", "failed", "cancelled"}),
+    "paused": frozenset({"running", "cancelled"}),
+    "completed": frozenset(),
+    "failed": frozenset({"running", "cancelled"}),
+    "cancelled": frozenset(),
+}
+
+# Authoritative M5-P1-05 task/milestone transition matrix.
+# Note: 'paused', 'blocked', 'failed', and 'waiting_approval' CANNOT transition
+# directly to 'completed' — only an active 'running' task with zero pending
+# pause/cancel requests, zero incomplete milestones, and zero unresolved side
+# effects may enter 'completed'.
+TASK_STATE_TRANSITIONS: dict[str, frozenset[str]] = {
+    "pending": frozenset({"running", "paused", "blocked", "cancelled"}),
+    "running": frozenset({"running", "paused", "waiting_approval", "blocked", "completed", "failed", "cancelled"}),
+    "waiting_approval": frozenset({"running", "paused", "blocked", "failed", "cancelled"}),
+    "paused": frozenset({"running", "blocked", "cancelled"}),
+    "blocked": frozenset({"running", "paused", "failed", "cancelled"}),
+    "failed": frozenset({"running", "paused", "blocked", "cancelled"}),
+    "completed": frozenset(),
+    "cancelled": frozenset(),
+}
+
+
+class WorkflowStateError(ValueError):
+    """Raised when workflow state or transition input is invalid."""
+
+
+class WorkflowTransitionRejected(RuntimeError):
+    """Raised when a requested transition is not legal for current state."""
+
+
+@dataclass(frozen=True, slots=True)
+class WorkflowRecord:
+    workflow_id: str
+    state: WorkflowStatus
+    version: int
+    updated_at: str
+
+
+class PersistedWorkflowState:
+    """SQLite state store whose transitions are validated inside transactions."""
+
+    def __init__(self, database: Path) -> None:
+        self.database = Path(database)
+        if "\x00" in str(self.database):
+            raise WorkflowStateError("database path must not contain NUL characters.")
+        self.database.parent.mkdir(parents=True, exist_ok=True)
+        self._initialize()
+
+    def _connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.database, timeout=5.0)
+        connection.row_factory = sqlite3.Row
+        return connection
+
+    def _initialize(self) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS workflow_state (
+                    workflow_id TEXT PRIMARY KEY,
+                    state TEXT NOT NULL,
+                    version INTEGER NOT NULL,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CHECK (state IN ('pending', 'running', 'paused', 'completed', 'failed', 'cancelled')),
+                    CHECK (version >= 0)
+                )
+                """
+            )
+
+    @staticmethod
+    def _workflow_id(workflow_id: str) -> str:
+        if not isinstance(workflow_id, str) or not workflow_id.strip() or "\x00" in workflow_id:
+            raise WorkflowStateError("workflow_id must be a non-empty string without NUL characters.")
+        return workflow_id.strip()
+
+    @staticmethod
+    def _status(status: str) -> WorkflowStatus:
+        if status not in _STATUSES:
+            raise WorkflowStateError(f"unknown workflow state: {status}")
+        return status  # type: ignore[return-value]
+
+    @staticmethod
+    def _record(row: sqlite3.Row | None) -> WorkflowRecord | None:
+        if row is None:
+            return None
+        return WorkflowRecord(row["workflow_id"], row["state"], row["version"], row["updated_at"])
+
+    def create(self, workflow_id: str, *, state: WorkflowStatus = "pending") -> WorkflowRecord:
+        identifier = self._workflow_id(workflow_id)
+        normalized = self._status(state)
+        try:
+            with self._connect() as connection:
+                connection.execute(
+                    "INSERT INTO workflow_state(workflow_id, state, version) VALUES (?, ?, 0)",
+                    (identifier, normalized),
+                )
+                row = connection.execute("SELECT * FROM workflow_state WHERE workflow_id = ?", (identifier,)).fetchone()
+        except sqlite3.IntegrityError as exc:
+            raise WorkflowStateError("workflow already exists.") from exc
+        record = self._record(row)
+        assert record is not None
+        return record
+
+    def get(self, workflow_id: str) -> WorkflowRecord | None:
+        identifier = self._workflow_id(workflow_id)
+        with self._connect() as connection:
+            return self._record(connection.execute("SELECT * FROM workflow_state WHERE workflow_id = ?", (identifier,)).fetchone())
+
+    def transition(self, workflow_id: str, target: WorkflowStatus, *, expected_version: int | None = None) -> WorkflowRecord:
+        identifier = self._workflow_id(workflow_id)
+        next_state = self._status(target)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT * FROM workflow_state WHERE workflow_id = ?", (identifier,)).fetchone()
+            current = self._record(row)
+            if current is None:
+                raise WorkflowStateError("workflow does not exist.")
+            if expected_version is not None and current.version != expected_version:
+                raise WorkflowTransitionRejected("workflow version changed; refresh before transitioning.")
+            if next_state not in _TRANSITIONS[current.state]:
+                raise WorkflowTransitionRejected(f"transition {current.state} -> {next_state} is not allowed.")
+            connection.execute(
+                "UPDATE workflow_state SET state = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP WHERE workflow_id = ?",
+                (next_state, identifier),
+            )
+            updated = connection.execute("SELECT * FROM workflow_state WHERE workflow_id = ?", (identifier,)).fetchone()
+        result = self._record(updated)
+        assert result is not None
+        return result
+
+
+@dataclass(frozen=True, slots=True)
+class TaskControlResult:
+    """Outcome of a safe-boundary pause or cancel command."""
+
+    task: runtime_persistence.TaskRecord
+    budget: execution_budget.TaskBudgetState
+    deferred_to_safe_boundary: bool
+    unresolved_action_ids: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class ResumedTaskPlan:
+    """Validated recovery plan produced before resuming an interrupted task."""
+
+    task: runtime_persistence.TaskRecord
+    budget: execution_budget.TaskBudgetState
+    checkpoint: workflow_checkpoints.TaskCheckpointRecord | None
+    milestones: tuple[runtime_persistence.TaskRecord, ...]
+    next_step: int
+    completed_milestone_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class RecoverySweepReport:
+    """Summary of incomplete transitions and staged checkpoints reconciled on recovery."""
+
+    recovered_task_ids: tuple[str, ...]
+    blocked_task_ids: tuple[str, ...]
+    cancelled_task_ids: tuple[str, ...]
+    reconciled_checkpoint_ids: tuple[str, ...]
+    reconciled_milestone_ids: tuple[str, ...]
+
+
+def _validate_identifier(value: str, label: str = "task_id") -> str:
+    if not isinstance(value, str) or not value.strip() or "\x00" in value:
+        raise WorkflowStateError(f"{label} must be a non-empty string without NUL characters.")
+    cleaned = value.strip()
+    if len(cleaned) > 128:
+        raise WorkflowStateError(f"{label} exceeds maximum length 128.")
+    return cleaned
+
+
+def milestone_task_id(root_task_id: str, milestone_key: str) -> str:
+    """Build deterministic child ``runtime_tasks.task_id`` for a milestone."""
+    root = _validate_identifier(root_task_id, "root_task_id")
+    key = _validate_identifier(milestone_key, "milestone_key")
+    candidate = f"{root}::ms:{key}"
+    if len(candidate) <= 128:
+        return candidate
+    import hashlib
+
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+    return f"{root[:96]}::ms:{digest}"
+
+
+def _encode_evidence_json(
+    *,
+    checkpoint_id: str = "",
+    evidence_refs: Sequence[workflow_checkpoints.EvidenceRef | dict[str, Any]] = (),
+    extra: dict[str, Any] | None = None,
+) -> str:
+    refs_out: list[dict[str, str]] = []
+    for item in evidence_refs:
+        if isinstance(item, workflow_checkpoints.EvidenceRef):
+            refs_out.append(item.to_dict())
+        elif isinstance(item, dict):
+            refs_out.append(workflow_checkpoints.EvidenceRef.from_dict(item).to_dict())
+        else:
+            to_dict_fn = getattr(item, "to_dict", None)
+            if callable(to_dict_fn):
+                refs_out.append(workflow_checkpoints.EvidenceRef.from_dict(to_dict_fn()).to_dict())
+    payload: dict[str, Any] = {}
+    if checkpoint_id:
+        payload["checkpoint_id"] = checkpoint_id
+    if refs_out:
+        payload["evidence_refs"] = refs_out
+    if extra:
+        payload.update(extra)
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+class DurableTaskStateMachine:
+    """Authoritative SQLite state machine for root tasks, child milestones, and checkpoints."""
+
+    def __init__(
+        self,
+        storage: runtime_persistence.StorageProvider,
+        db_path: Path,
+        *,
+        retry_policy: runtime_persistence.BusyRetryPolicy = runtime_persistence.DEFAULT_BUSY_RETRY_POLICY,
+    ) -> None:
+        self._storage = storage
+        self._db_path = db_path
+        self._retry_policy = retry_policy
+        self.store = runtime_persistence.RuntimePersistenceStore(storage, db_path, retry_policy=retry_policy)
+        self.budgets = execution_budget.DurableTaskBudgetManager(storage, db_path, retry_policy=retry_policy)
+        self.checkpoints = workflow_checkpoints.DurableTaskCheckpointStore(
+            storage,
+            db_path,
+            retry_policy=retry_policy,
+        )
+
+    def ensure_root_task(
+        self,
+        task_id: str,
+        *,
+        session_id: str = "",
+        title: str = "",
+        workspace_dir: str = "",
+        policy: str = "standard",
+        budget_spec: execution_budget.TaskBudgetSpec | None = None,
+        override_budget_spec: bool = False,
+        now: float | None = None,
+    ) -> tuple[runtime_persistence.TaskRecord, execution_budget.TaskBudgetState]:
+        tid = _validate_identifier(task_id, "task_id")
+        self.store.ensure_task(
+            tid,
+            session_id=session_id or tid,
+            title=title,
+            state="pending",
+            workspace_dir=workspace_dir,
+            policy=policy,
+            now=now,
+        )
+        budget = self.budgets.ensure_budget(
+            tid,
+            spec=budget_spec,
+            override_spec=override_budget_spec,
+            now=now,
+        )
+        refreshed = self.store.get_task(tid)
+        assert refreshed is not None
+        return refreshed, budget
+
+    def ensure_milestone(
+        self,
+        root_task_id: str,
+        milestone_key: str,
+        *,
+        title: str = "",
+        now: float | None = None,
+    ) -> runtime_persistence.TaskRecord:
+        root_id = _validate_identifier(root_task_id, "root_task_id")
+        ms_id = milestone_task_id(root_id, milestone_key)
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.TaskRecord:
+            conn.row_factory = sqlite3.Row
+            parent_row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (root_id,)).fetchone()
+            if parent_row is None:
+                raise WorkflowStateError(f"Root task {root_id!r} does not exist.")
+            existing = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (ms_id,)).fetchone()
+            if existing is not None:
+                return runtime_persistence._row_to_task(existing)
+            conn.execute(
+                """
+                INSERT INTO runtime_tasks (
+                    task_id, parent_task_id, session_id, title, state,
+                    current_epoch, state_version, workspace_dir, policy,
+                    budget_json, checkpoint_ref, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, 'pending', 0, 0, ?, ?, '{}', '', ?, ?)
+                """,
+                (
+                    ms_id,
+                    root_id,
+                    str(parent_row["session_id"]),
+                    str(title or milestone_key)[:240],
+                    str(parent_row["workspace_dir"]),
+                    str(parent_row["policy"]),
+                    ts,
+                    ts,
+                ),
+            )
+            created = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (ms_id,)).fetchone()
+            assert created is not None
+            return runtime_persistence._row_to_task(created)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def list_milestones(self, root_task_id: str) -> list[runtime_persistence.TaskRecord]:
+        return self.store.list_child_tasks(_validate_identifier(root_task_id, "root_task_id"))
+
+    def transition_milestone(
+        self,
+        root_task_id: str,
+        milestone_key: str,
+        to_state: str,
+        *,
+        epoch: int | None = None,
+        expected_state_version: int | None = None,
+        reason: str = "",
+        checkpoint_id: str = "",
+        evidence_refs: Sequence[workflow_checkpoints.EvidenceRef | dict[str, Any]] = (),
+        now: float | None = None,
+    ) -> runtime_persistence.TaskRecord:
+        root_id = _validate_identifier(root_task_id, "root_task_id")
+        ms_id = milestone_task_id(root_id, milestone_key)
+        if to_state not in runtime_persistence.TASK_STATES:
+            raise WorkflowStateError(f"unknown milestone state: {to_state}")
+        evidence_json = _encode_evidence_json(checkpoint_id=checkpoint_id, evidence_refs=evidence_refs)
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.TaskRecord:
+            conn.row_factory = sqlite3.Row
+            parent_row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (root_id,)).fetchone()
+            if parent_row is None:
+                raise WorkflowStateError(f"Root task {root_id!r} does not exist.")
+            if epoch is not None and int(parent_row["current_epoch"]) != int(epoch):
+                raise runtime_persistence.StaleEpochError(
+                    f"Stale epoch {epoch} cannot transition milestone {ms_id!r} (root epoch={parent_row['current_epoch']})."
+                )
+            parent_budget = execution_budget.TaskBudgetState.from_json(str(parent_row["budget_json"]))
+            if to_state == "completed" and (
+                parent_budget.pause_requested
+                or parent_budget.cancel_requested
+                or str(parent_row["state"]) in {"paused", "cancelled"}
+            ):
+                raise WorkflowTransitionRejected(
+                    f"Milestone {ms_id!r} cannot claim completion while root task pause/cancel is active."
+                )
+            ms_row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (ms_id,)).fetchone()
+            if ms_row is None:
+                raise WorkflowStateError(f"Milestone {ms_id!r} does not exist.")
+            from_state = str(ms_row["state"])
+            if expected_state_version is not None and int(ms_row["state_version"]) != expected_state_version:
+                raise WorkflowTransitionRejected("milestone state_version changed; refresh before transitioning.")
+            if from_state == to_state and to_state in {"running", "paused", "cancelled"}:
+                return runtime_persistence._row_to_task(ms_row)
+            allowed = TASK_STATE_TRANSITIONS.get(from_state, frozenset())
+            if to_state not in allowed:
+                raise WorkflowTransitionRejected(
+                    f"milestone transition {from_state} -> {to_state} is not allowed."
+                )
+            eff_epoch = int(parent_row["current_epoch"]) if epoch is None else int(epoch)
+            new_ckpt = checkpoint_id if checkpoint_id else str(ms_row["checkpoint_ref"])
+            seq_row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                (ms_id,),
+            ).fetchone()
+            next_seq = int(seq_row[0]) if seq_row else 1
+            conn.execute(
+                """
+                UPDATE runtime_tasks
+                SET state = ?, current_epoch = ?, state_version = state_version + 1,
+                    checkpoint_ref = ?, updated_at = ?
+                WHERE task_id = ?
+                """,
+                (to_state, eff_epoch, new_ckpt[:256], ts, ms_id),
+            )
+            conn.execute(
+                """
+                INSERT INTO runtime_task_transitions (
+                    task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (ms_id, next_seq, from_state, to_state, eff_epoch, str(reason)[:240], evidence_json, ts),
+            )
+            updated = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (ms_id,)).fetchone()
+            assert updated is not None
+            return runtime_persistence._row_to_task(updated)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def transition_task(
+        self,
+        task_id: str,
+        to_state: str,
+        *,
+        expected_state_version: int | None = None,
+        epoch: int | None = None,
+        allow_new_turn_from_completed: bool = False,
+        allow_inactive_epoch: bool = False,
+        reason: str = "",
+        checkpoint_id: str | None = None,
+        evidence_refs: Sequence[workflow_checkpoints.EvidenceRef | dict[str, Any]] = (),
+        extra_evidence: dict[str, Any] | None = None,
+        now: float | None = None,
+    ) -> runtime_persistence.TaskRecord:
+        tid = _validate_identifier(task_id, "task_id")
+        if to_state not in runtime_persistence.TASK_STATES:
+            raise WorkflowStateError(f"unknown task state: {to_state}")
+        if to_state == "completed":
+            raise WorkflowTransitionRejected(
+                "Use complete_task() to transition a root task to 'completed' with milestone and boundary verification."
+            )
+        evidence_json = _encode_evidence_json(
+            checkpoint_id=checkpoint_id or "",
+            evidence_refs=evidence_refs,
+            extra=extra_evidence,
+        )
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.TaskRecord:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if row is None:
+                raise WorkflowStateError(f"Task {tid!r} does not exist.")
+            from_state = str(row["state"])
+            if expected_state_version is not None and int(row["state_version"]) != expected_state_version:
+                raise WorkflowTransitionRejected("task state_version changed; refresh before transitioning.")
+            current_epoch = int(row["current_epoch"])
+            if epoch is not None and current_epoch != int(epoch):
+                raise runtime_persistence.StaleEpochError(
+                    f"Stale task epoch {epoch} cannot transition task {tid!r} at current_epoch={current_epoch}."
+                )
+            if epoch is not None and int(epoch) > 0 and not allow_inactive_epoch:
+                ep_row = conn.execute(
+                    "SELECT status, lease_expires_at FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                    (tid, int(epoch)),
+                ).fetchone()
+                if ep_row is None or str(ep_row["status"]) != "active":
+                    raise runtime_persistence.StaleEpochError(
+                        f"Inactive task epoch {epoch} cannot transition task {tid!r}."
+                    )
+                if float(ep_row["lease_expires_at"]) <= ts:
+                    raise runtime_persistence.LeaseExpiredError(
+                        f"Expired task epoch {epoch} cannot transition task {tid!r}."
+                    )
+            allowed = TASK_STATE_TRANSITIONS.get(from_state, frozenset())
+            if from_state == "completed" and to_state == "running" and allow_new_turn_from_completed:
+                pass
+            elif to_state not in allowed:
+                raise WorkflowTransitionRejected(
+                    f"task transition {from_state} -> {to_state} is not allowed."
+                )
+            eff_epoch = current_epoch if epoch is None else int(epoch)
+            new_ckpt = str(row["checkpoint_ref"]) if checkpoint_ref_is_none(checkpoint_id) else str(checkpoint_id)[:256]
+            seq_row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                (tid,),
+            ).fetchone()
+            next_seq = int(seq_row[0]) if seq_row else 1
+            conn.execute(
+                """
+                UPDATE runtime_tasks
+                SET state = ?, state_version = state_version + 1, checkpoint_ref = ?, updated_at = ?
+                WHERE task_id = ?
+                """,
+                (to_state, new_ckpt, ts, tid),
+            )
+            conn.execute(
+                """
+                INSERT INTO runtime_task_transitions (
+                    task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (tid, next_seq, from_state, to_state, eff_epoch, str(reason)[:240], evidence_json, ts),
+            )
+            updated = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            assert updated is not None
+            return runtime_persistence._row_to_task(updated)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def check_safe_boundary(
+        self,
+        task_id: str,
+        *,
+        epoch: int | None = None,
+        abort_requested: bool = False,
+    ) -> Literal["continue", "pause", "cancel"]:
+        tid = _validate_identifier(task_id, "task_id")
+
+        def _read(conn: sqlite3.Connection) -> Literal["continue", "pause", "cancel"]:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT state, current_epoch, budget_json FROM runtime_tasks WHERE task_id = ?",
+                (tid,),
+            ).fetchone()
+            if row is None:
+                raise WorkflowStateError(f"Task {tid!r} does not exist.")
+            state = str(row["state"])
+            budget = execution_budget.TaskBudgetState.from_json(str(row["budget_json"]))
+            if state == "cancelled" or budget.cancel_requested:
+                return "cancel"
+            if epoch is not None and int(row["current_epoch"]) != int(epoch):
+                raise runtime_persistence.StaleEpochError(
+                    f"Epoch {epoch} was superseded on task {tid!r} (current_epoch={row['current_epoch']})."
+                )
+            if state == "paused" or budget.pause_requested or abort_requested:
+                return "pause"
+            return "continue"
+
+        return runtime_persistence.run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
+    def request_pause(
+        self,
+        task_id: str,
+        *,
+        reason: str = "operator_pause_requested",
+        now: float | None = None,
+    ) -> TaskControlResult:
+        """Pause an idle/orphaned task immediately or flag ``pause_requested`` for safe-boundary stop."""
+        tid = _validate_identifier(task_id, "task_id")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> TaskControlResult:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if row is None:
+                raise WorkflowStateError(f"Task {tid!r} does not exist.")
+            state = str(row["state"])
+            budget = execution_budget.TaskBudgetState.from_json(str(row["budget_json"]))
+            if state in {"completed", "cancelled"} or budget.cancel_requested:
+                raise WorkflowTransitionRejected(
+                    f"Cannot pause task {tid!r} in state {state!r}."
+                )
+            if state == "paused":
+                return TaskControlResult(
+                    task=runtime_persistence._row_to_task(row),
+                    budget=budget,
+                    deferred_to_safe_boundary=False,
+                )
+            current_epoch = int(row["current_epoch"])
+            has_live_lease = False
+            if current_epoch > 0:
+                ep_row = conn.execute(
+                    "SELECT status, lease_expires_at FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                    (tid, current_epoch),
+                ).fetchone()
+                if ep_row is not None and str(ep_row["status"]) == "active" and float(ep_row["lease_expires_at"]) > ts:
+                    has_live_lease = True
+            if has_live_lease and state in {"running", "waiting_approval"}:
+                deferred_budget = execution_budget.TaskBudgetState(
+                    spec=budget.spec,
+                    steps_used=budget.steps_used,
+                    tool_calls_used=budget.tool_calls_used,
+                    tokens_used=budget.tokens_used,
+                    elapsed_s=budget.elapsed_s,
+                    recoveries_used=budget.recoveries_used,
+                    pause_requested=True,
+                    cancel_requested=budget.cancel_requested,
+                    exhausted_reason=budget.exhausted_reason,
+                )
+                conn.execute(
+                    "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                    (deferred_budget.to_json(), ts, tid),
+                )
+                refreshed = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+                assert refreshed is not None
+                return TaskControlResult(
+                    task=runtime_persistence._row_to_task(refreshed),
+                    budget=deferred_budget,
+                    deferred_to_safe_boundary=True,
+                )
+
+            unresolved_rows = conn.execute(
+                """
+                SELECT action_id FROM runtime_actions
+                WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                ORDER BY created_at ASC
+                """,
+                (tid,),
+            ).fetchall()
+            if unresolved_rows:
+                raise WorkflowTransitionRejected(
+                    f"Cannot pause task {tid!r} directly while consequential actions remain unresolved."
+                )
+
+            cleared_budget = execution_budget.TaskBudgetState(
+                spec=budget.spec,
+                steps_used=budget.steps_used,
+                tool_calls_used=budget.tool_calls_used,
+                tokens_used=budget.tokens_used,
+                elapsed_s=budget.elapsed_s,
+                recoveries_used=budget.recoveries_used,
+                pause_requested=False,
+                cancel_requested=False,
+                exhausted_reason=budget.exhausted_reason,
+            )
+            ckpt_ref = str(row["checkpoint_ref"] or "").strip()
+            if ckpt_ref:
+                conn.execute(
+                    "UPDATE runtime_task_checkpoints SET status = 'interrupted', updated_at = ? WHERE checkpoint_id = ?",
+                    (ts, ckpt_ref),
+                )
+            seq_row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                (tid,),
+            ).fetchone()
+            next_seq = int(seq_row[0]) if seq_row else 1
+            conn.execute(
+                """
+                UPDATE runtime_tasks
+                SET state = 'paused', state_version = state_version + 1, budget_json = ?, updated_at = ?
+                WHERE task_id = ?
+                """,
+                (cleared_budget.to_json(), ts, tid),
+            )
+            conn.execute(
+                """
+                INSERT INTO runtime_task_transitions (
+                    task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                ) VALUES (?, ?, ?, 'paused', ?, ?, ?, ?)
+                """,
+                (
+                    tid,
+                    next_seq,
+                    state,
+                    current_epoch,
+                    str(reason)[:240],
+                    _encode_evidence_json(checkpoint_id=ckpt_ref),
+                    ts,
+                ),
+            )
+            conn.execute(
+                """
+                UPDATE runtime_tasks
+                SET state = 'paused', state_version = state_version + 1, updated_at = ?
+                WHERE parent_task_id = ? AND state IN ('running', 'waiting_approval')
+                """,
+                (ts, tid),
+            )
+            paused_row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            assert paused_row is not None
+            return TaskControlResult(
+                task=runtime_persistence._row_to_task(paused_row),
+                budget=cleared_budget,
+                deferred_to_safe_boundary=False,
+            )
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def pause_at_safe_boundary(
+        self,
+        task_id: str,
+        *,
+        worker_id: str,
+        epoch: int,
+        step: int,
+        checkpoint_payload: dict[str, Any] | None = None,
+        evidence_refs: Sequence[workflow_checkpoints.EvidenceRef | dict[str, Any]] = (),
+        milestone_id: str = "",
+        reason: str = "paused_at_safe_boundary",
+        now: float | None = None,
+    ) -> runtime_persistence.TaskRecord:
+        """Persist an ``interrupted`` checkpoint, pause running milestones, and release lease into ``paused``."""
+        tid = _validate_identifier(task_id, "task_id")
+        wid = _validate_identifier(worker_id, "worker_id")
+        ckpt: workflow_checkpoints.TaskCheckpointRecord | None = None
+        if checkpoint_payload is not None:
+            ckpt = self.checkpoints.save_checkpoint(
+                tid,
+                step=step,
+                payload=checkpoint_payload,
+                evidence_refs=evidence_refs,
+                epoch=epoch,
+                milestone_id=milestone_id,
+                status="interrupted",
+                require_active_epoch=True,
+                now=now,
+            )
+        else:
+            ckpt = self.checkpoints.mark_latest_interrupted(tid, now=now)
+
+        ts = time.time() if now is None else float(now)
+        evidence_json = _encode_evidence_json(
+            checkpoint_id=ckpt.checkpoint_id if ckpt else "",
+            evidence_refs=evidence_refs,
+        )
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.TaskRecord:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if row is None:
+                raise WorkflowStateError(f"Task {tid!r} does not exist.")
+            if int(row["current_epoch"]) != int(epoch):
+                raise runtime_persistence.StaleEpochError(
+                    f"Stale epoch {epoch} cannot pause task {tid!r} at current_epoch={row['current_epoch']}."
+                )
+            budget = execution_budget.TaskBudgetState.from_json(str(row["budget_json"]))
+            if str(row["state"]) == "cancelled" or budget.cancel_requested:
+                raise WorkflowTransitionRejected(f"Task {tid!r} was cancelled before pause boundary completed.")
+            ep_row = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                (tid, int(epoch)),
+            ).fetchone()
+            if ep_row is None or str(ep_row["worker_id"]) != wid or str(ep_row["status"]) != "active":
+                raise runtime_persistence.StaleEpochError(
+                    f"Epoch {epoch} on task {tid!r} is no longer actively owned by {wid!r}."
+                )
+            conn.execute(
+                "UPDATE runtime_task_epochs SET status = 'released', heartbeat_at = ? WHERE task_id = ? AND epoch = ?",
+                (ts, tid, int(epoch)),
+            )
+            cleared_budget = execution_budget.TaskBudgetState(
+                spec=budget.spec,
+                steps_used=budget.steps_used,
+                tool_calls_used=budget.tool_calls_used,
+                tokens_used=budget.tokens_used,
+                elapsed_s=budget.elapsed_s,
+                recoveries_used=budget.recoveries_used,
+                pause_requested=False,
+                cancel_requested=False,
+                exhausted_reason=budget.exhausted_reason,
+            )
+            from_state = str(row["state"])
+            seq_row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                (tid,),
+            ).fetchone()
+            next_seq = int(seq_row[0]) if seq_row else 1
+            conn.execute(
+                """
+                UPDATE runtime_tasks
+                SET state = 'paused', state_version = state_version + 1, budget_json = ?, updated_at = ?
+                WHERE task_id = ?
+                """,
+                (cleared_budget.to_json(), ts, tid),
+            )
+            conn.execute(
+                """
+                INSERT INTO runtime_task_transitions (
+                    task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                ) VALUES (?, ?, ?, 'paused', ?, ?, ?, ?)
+                """,
+                (tid, next_seq, from_state, int(epoch), str(reason)[:240], evidence_json, ts),
+            )
+            ms_rows = conn.execute(
+                "SELECT task_id, state FROM runtime_tasks WHERE parent_task_id = ? AND state IN ('running', 'waiting_approval')",
+                (tid,),
+            ).fetchall()
+            for ms_row in ms_rows:
+                ms_tid = str(ms_row["task_id"])
+                ms_from = str(ms_row["state"])
+                ms_seq_row = conn.execute(
+                    "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                    (ms_tid,),
+                ).fetchone()
+                ms_seq = int(ms_seq_row[0]) if ms_seq_row else 1
+                conn.execute(
+                    "UPDATE runtime_tasks SET state = 'paused', state_version = state_version + 1, updated_at = ? WHERE task_id = ?",
+                    (ts, ms_tid),
+                )
+                conn.execute(
+                    """
+                    INSERT INTO runtime_task_transitions (
+                        task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                    ) VALUES (?, ?, ?, 'paused', ?, ?, ?, ?)
+                    """,
+                    (ms_tid, ms_seq, ms_from, int(epoch), str(reason)[:240], evidence_json, ts),
+                )
+            updated = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            assert updated is not None
+            return runtime_persistence._row_to_task(updated)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def cancel_task(
+        self,
+        task_id: str,
+        *,
+        reason: str = "operator_cancelled",
+        evidence_refs: Sequence[workflow_checkpoints.EvidenceRef | dict[str, Any]] = (),
+        now: float | None = None,
+    ) -> TaskControlResult:
+        """Fence active epochs, preserve unresolved side-effect records, and transition to ``cancelled``."""
+        tid = _validate_identifier(task_id, "task_id")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> TaskControlResult:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if row is None:
+                raise WorkflowStateError(f"Task {tid!r} does not exist.")
+            from_state = str(row["state"])
+            budget = execution_budget.TaskBudgetState.from_json(str(row["budget_json"]))
+            if from_state == "completed":
+                raise WorkflowTransitionRejected(f"Cannot cancel completed task {tid!r}.")
+            if from_state == "cancelled":
+                return TaskControlResult(
+                    task=runtime_persistence._row_to_task(row),
+                    budget=budget,
+                    deferred_to_safe_boundary=False,
+                )
+            current_epoch = int(row["current_epoch"])
+            conn.execute(
+                """
+                UPDATE runtime_task_epochs
+                SET status = 'fenced', fenced_at = ?, fence_reason = 'task_cancelled'
+                WHERE task_id = ? AND status = 'active'
+                """,
+                (ts, tid),
+            )
+            conn.execute(
+                """
+                UPDATE runtime_actions
+                SET status = 'uncertain', error_code = 'cancelled_in_flight', updated_at = ?
+                WHERE task_id = ? AND status = 'in_flight' AND action_class != 'read_only'
+                """,
+                (ts, tid),
+            )
+            conn.execute(
+                """
+                UPDATE runtime_actions
+                SET status = 'failed', ok = 0, error_code = 'cancelled_in_flight', updated_at = ?
+                WHERE task_id = ? AND status = 'in_flight' AND action_class = 'read_only'
+                """,
+                (ts, tid),
+            )
+            unresolved_rows = conn.execute(
+                """
+                SELECT action_id FROM runtime_actions
+                WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                ORDER BY created_at ASC
+                """,
+                (tid,),
+            ).fetchall()
+            unresolved_ids = tuple(str(r["action_id"]) for r in unresolved_rows)
+
+            ckpt_ref = str(row["checkpoint_ref"] or "").strip()
+            if ckpt_ref:
+                conn.execute(
+                    "UPDATE runtime_task_checkpoints SET status = 'interrupted', updated_at = ? WHERE checkpoint_id = ?",
+                    (ts, ckpt_ref),
+                )
+            cancelled_budget = execution_budget.TaskBudgetState(
+                spec=budget.spec,
+                steps_used=budget.steps_used,
+                tool_calls_used=budget.tool_calls_used,
+                tokens_used=budget.tokens_used,
+                elapsed_s=budget.elapsed_s,
+                recoveries_used=budget.recoveries_used,
+                pause_requested=False,
+                cancel_requested=True,
+                exhausted_reason=budget.exhausted_reason,
+            )
+            evidence_json = _encode_evidence_json(
+                checkpoint_id=ckpt_ref,
+                evidence_refs=evidence_refs,
+                extra={"unresolved_action_ids": list(unresolved_ids)} if unresolved_ids else None,
+            )
+            seq_row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                (tid,),
+            ).fetchone()
+            next_seq = int(seq_row[0]) if seq_row else 1
+            conn.execute(
+                """
+                UPDATE runtime_tasks
+                SET state = 'cancelled', state_version = state_version + 1, budget_json = ?, updated_at = ?
+                WHERE task_id = ?
+                """,
+                (cancelled_budget.to_json(), ts, tid),
+            )
+            conn.execute(
+                """
+                INSERT INTO runtime_task_transitions (
+                    task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                ) VALUES (?, ?, ?, 'cancelled', ?, ?, ?, ?)
+                """,
+                (tid, next_seq, from_state, current_epoch, str(reason)[:240], evidence_json, ts),
+            )
+            ms_rows = conn.execute(
+                """
+                SELECT task_id, state FROM runtime_tasks
+                WHERE parent_task_id = ? AND state NOT IN ('completed', 'cancelled')
+                """,
+                (tid,),
+            ).fetchall()
+            for ms_row in ms_rows:
+                ms_tid = str(ms_row["task_id"])
+                ms_from = str(ms_row["state"])
+                ms_seq_row = conn.execute(
+                    "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                    (ms_tid,),
+                ).fetchone()
+                ms_seq = int(ms_seq_row[0]) if ms_seq_row else 1
+                conn.execute(
+                    "UPDATE runtime_tasks SET state = 'cancelled', state_version = state_version + 1, updated_at = ? WHERE task_id = ?",
+                    (ts, ms_tid),
+                )
+                conn.execute(
+                    """
+                    INSERT INTO runtime_task_transitions (
+                        task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                    ) VALUES (?, ?, ?, 'cancelled', ?, ?, ?, ?)
+                    """,
+                    (ms_tid, ms_seq, ms_from, current_epoch, str(reason)[:240], evidence_json, ts),
+                )
+            updated = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            assert updated is not None
+            return TaskControlResult(
+                task=runtime_persistence._row_to_task(updated),
+                budget=cancelled_budget,
+                deferred_to_safe_boundary=False,
+                unresolved_action_ids=unresolved_ids,
+            )
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def prepare_resume(
+        self,
+        task_id: str,
+        *,
+        consume_recovery_budget: bool = True,
+        now: float | None = None,
+    ) -> ResumedTaskPlan:
+        """Validate resumability, checkpoint integrity, unresolved side effects, and recovery budget."""
+        tid = _validate_identifier(task_id, "task_id")
+        task = self.store.get_task(tid)
+        if task is None:
+            raise WorkflowStateError(f"Task {tid!r} does not exist.")
+        if task.state == "cancelled":
+            raise WorkflowTransitionRejected(f"Cancelled task {tid!r} cannot be resumed.")
+        if task.state == "completed":
+            raise WorkflowTransitionRejected(f"Completed task {tid!r} does not require resume.")
+        if task.state == "blocked":
+            raise workflow_checkpoints.ResumeRejected(
+                f"Blocked task {tid!r} has unresolved side effects or integrity violations and cannot resume automatically."
+            )
+        if task.state not in {"paused", "failed"}:
+            raise WorkflowTransitionRejected(
+                f"Task {tid!r} in state {task.state!r} must be paused or failed before resume."
+            )
+        unresolved = [
+            act.action_id
+            for act in self.store.list_task_actions(tid, statuses=("in_flight", "uncertain"))
+            if act.action_class != "read_only"
+        ]
+        if unresolved:
+            raise workflow_checkpoints.ResumeRejected(
+                f"Task {tid!r} has unresolved consequential action(s): {', '.join(unresolved)}."
+            )
+        # Verify checkpoint integrity BEFORE consuming recovery budget.
+        ckpt = self.checkpoints.load_latest_checkpoint(tid, verify_integrity=True)
+        existing_budget = self.budgets.get_budget(tid)
+        if existing_budget.cancel_requested:
+            raise WorkflowTransitionRejected(f"Task {tid!r} has cancellation requested and cannot resume.")
+        violation = existing_budget.violation_reason(check_recovery=False)
+        if violation:
+            raise execution_budget.BudgetExceeded(violation)
+
+        if consume_recovery_budget:
+            try:
+                budget = self.budgets.consume_recovery(tid, now=now)
+            except execution_budget.BudgetExceeded as exc:
+                self.transition_task(
+                    tid,
+                    "blocked",
+                    allow_inactive_epoch=True,
+                    reason="recovery_budget_exceeded",
+                    checkpoint_id=ckpt.checkpoint_id if ckpt else None,
+                    extra_evidence={"error": str(exc)},
+                    now=now,
+                )
+                raise
+        else:
+            budget = self.budgets.set_control_flags(tid, pause_requested=False, now=now)
+
+        resumed_ckpt = self.checkpoints.validate_and_mark_resumed(
+            tid,
+            epoch=task.current_epoch,
+            now=now,
+        )
+        milestones = tuple(self.list_milestones(tid))
+        completed_ms = tuple(ms.task_id for ms in milestones if ms.state == "completed")
+        refreshed_task = self.store.get_task(tid)
+        assert refreshed_task is not None
+        next_step = (resumed_ckpt.step + 1) if resumed_ckpt is not None else 0
+        return ResumedTaskPlan(
+            task=refreshed_task,
+            budget=budget,
+            checkpoint=resumed_ckpt,
+            milestones=milestones,
+            next_step=next_step,
+            completed_milestone_ids=completed_ms,
+        )
+
+    def complete_task(
+        self,
+        task_id: str,
+        *,
+        worker_id: str | None = None,
+        epoch: int | None = None,
+        step: int = 0,
+        checkpoint_payload: dict[str, Any] | None = None,
+        evidence_refs: Sequence[workflow_checkpoints.EvidenceRef | dict[str, Any]] = (),
+        abort_requested: bool = False,
+        reason: str = "task_completed",
+        now: float | None = None,
+    ) -> runtime_persistence.TaskRecord:
+        """Complete a running root task only when all milestones, boundaries, and actions are clean."""
+        tid = _validate_identifier(task_id, "task_id")
+        if abort_requested:
+            raise WorkflowTransitionRejected(
+                f"Task {tid!r} cannot claim completion when abort/pause was requested."
+            )
+        ts = time.time() if now is None else float(now)
+
+        # Pre-check state, control flags, milestones, and unresolved actions before writing final checkpoint.
+        current_task = self.store.get_task(tid)
+        if current_task is None:
+            raise WorkflowStateError(f"Task {tid!r} does not exist.")
+        if current_task.state != "running":
+            raise WorkflowTransitionRejected(
+                f"Task {tid!r} in state {current_task.state!r} cannot transition to 'completed'."
+            )
+        current_budget = self.budgets.get_budget(tid)
+        if current_budget.pause_requested or current_budget.cancel_requested:
+            raise WorkflowTransitionRejected(
+                f"Task {tid!r} cannot claim completion while pause_requested={current_budget.pause_requested} "
+                f"or cancel_requested={current_budget.cancel_requested}."
+            )
+        milestones = self.list_milestones(tid)
+        incomplete_ms = [ms.task_id for ms in milestones if ms.state != "completed"]
+        if incomplete_ms:
+            raise WorkflowTransitionRejected(
+                f"Task {tid!r} cannot complete while milestone(s) remain incomplete: {', '.join(incomplete_ms)}."
+            )
+        unresolved = [
+            act.action_id
+            for act in self.store.list_task_actions(tid, statuses=("in_flight", "uncertain"))
+            if act.action_class != "read_only"
+        ]
+        if unresolved:
+            raise WorkflowTransitionRejected(
+                f"Task {tid!r} cannot complete with unresolved consequential action(s): {', '.join(unresolved)}."
+            )
+
+        ckpt: workflow_checkpoints.TaskCheckpointRecord | None = None
+        if checkpoint_payload is not None:
+            ckpt = self.checkpoints.save_checkpoint(
+                tid,
+                step=step,
+                payload=checkpoint_payload,
+                evidence_refs=evidence_refs,
+                epoch=epoch,
+                status="committed",
+                require_active_epoch=epoch is not None and epoch > 0,
+                now=ts,
+            )
+
+        evidence_json = _encode_evidence_json(
+            checkpoint_id=ckpt.checkpoint_id if ckpt else current_task.checkpoint_ref,
+            evidence_refs=evidence_refs,
+        )
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.TaskRecord:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if row is None:
+                raise WorkflowStateError(f"Task {tid!r} does not exist.")
+            if str(row["state"]) != "running":
+                raise WorkflowTransitionRejected(
+                    f"Task {tid!r} left 'running' state ({row['state']!r}) before completion committed."
+                )
+            budget = execution_budget.TaskBudgetState.from_json(str(row["budget_json"]))
+            if budget.pause_requested or budget.cancel_requested:
+                raise WorkflowTransitionRejected(
+                    f"Task {tid!r} received pause/cancel before completion committed."
+                )
+            current_epoch = int(row["current_epoch"])
+            if epoch is not None and current_epoch != int(epoch):
+                raise runtime_persistence.StaleEpochError(
+                    f"Stale epoch {epoch} cannot complete task {tid!r} at current_epoch={current_epoch}."
+                )
+            if epoch is not None and int(epoch) > 0:
+                ep_row = conn.execute(
+                    "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                    (tid, int(epoch)),
+                ).fetchone()
+                if ep_row is None or str(ep_row["status"]) != "active":
+                    raise runtime_persistence.StaleEpochError(
+                        f"Inactive epoch {epoch} cannot complete task {tid!r}."
+                    )
+                if worker_id is not None and str(ep_row["worker_id"]) != worker_id:
+                    raise runtime_persistence.StaleEpochError(
+                        f"Epoch {epoch} on task {tid!r} is not owned by {worker_id!r}."
+                    )
+                if float(ep_row["lease_expires_at"]) <= ts:
+                    raise runtime_persistence.LeaseExpiredError(
+                        f"Expired epoch {epoch} cannot complete task {tid!r}."
+                    )
+                conn.execute(
+                    "UPDATE runtime_task_epochs SET status = 'released', heartbeat_at = ? WHERE task_id = ? AND epoch = ?",
+                    (ts, tid, int(epoch)),
+                )
+            bad_ms = conn.execute(
+                "SELECT task_id FROM runtime_tasks WHERE parent_task_id = ? AND state != 'completed'",
+                (tid,),
+            ).fetchall()
+            if bad_ms:
+                raise WorkflowTransitionRejected(
+                    f"Task {tid!r} has incomplete milestone(s) inside completion commit."
+                )
+            bad_actions = conn.execute(
+                """
+                SELECT action_id FROM runtime_actions
+                WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                """,
+                (tid,),
+            ).fetchall()
+            if bad_actions:
+                raise WorkflowTransitionRejected(
+                    f"Task {tid!r} has unresolved action(s) inside completion commit."
+                )
+            seq_row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                (tid,),
+            ).fetchone()
+            next_seq = int(seq_row[0]) if seq_row else 1
+            eff_epoch = current_epoch if epoch is None else int(epoch)
+            conn.execute(
+                """
+                UPDATE runtime_tasks
+                SET state = 'completed', state_version = state_version + 1, updated_at = ?
+                WHERE task_id = ?
+                """,
+                (ts, tid),
+            )
+            conn.execute(
+                """
+                INSERT INTO runtime_task_transitions (
+                    task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                ) VALUES (?, ?, 'running', 'completed', ?, ?, ?, ?)
+                """,
+                (tid, next_seq, eff_epoch, str(reason)[:240], evidence_json, ts),
+            )
+            updated = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            assert updated is not None
+            return runtime_persistence._row_to_task(updated)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def recover_incomplete_transitions(
+        self,
+        *,
+        now: float | None = None,
+    ) -> RecoverySweepReport:
+        """Reconcile staged checkpoints, interrupted root transitions, and milestone skew on startup/recovery."""
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> RecoverySweepReport:
+            conn.row_factory = sqlite3.Row
+            reconciled_ckpts: list[str] = []
+            recovered_tasks: list[str] = []
+            blocked_tasks: list[str] = []
+            cancelled_tasks: list[str] = []
+            reconciled_milestones: list[str] = []
+
+            # 1. Reconcile staged 'pending_commit' checkpoints left by mid-transition crashes.
+            pending_ckpts = conn.execute(
+                "SELECT * FROM runtime_task_checkpoints WHERE status = 'pending_commit' ORDER BY created_at ASC, seq ASC"
+            ).fetchall()
+            for ck_row in pending_ckpts:
+                ck_id = str(ck_row["checkpoint_id"])
+                ck_tid = str(ck_row["task_id"])
+                try:
+                    verified = workflow_checkpoints._decode_and_verify_checkpoint_row(ck_row, verify_integrity=True)
+                except workflow_checkpoints.ResumeRejected:
+                    conn.execute(
+                        "UPDATE runtime_task_checkpoints SET status = 'superseded', updated_at = ? WHERE checkpoint_id = ?",
+                        (ts, ck_id),
+                    )
+                    reconciled_ckpts.append(ck_id)
+                    continue
+                conn.execute(
+                    """
+                    UPDATE runtime_task_checkpoints
+                    SET status = 'superseded', updated_at = ?
+                    WHERE task_id = ? AND seq < ? AND status IN ('committed', 'interrupted', 'resumed')
+                    """,
+                    (ts, ck_tid, verified.seq),
+                )
+                conn.execute(
+                    "UPDATE runtime_task_checkpoints SET status = 'interrupted', updated_at = ? WHERE checkpoint_id = ?",
+                    (ts, ck_id),
+                )
+                conn.execute(
+                    "UPDATE runtime_tasks SET checkpoint_ref = ?, updated_at = ? WHERE task_id = ?",
+                    (ck_id, ts, ck_tid),
+                )
+                reconciled_ckpts.append(ck_id)
+
+            # 2. Reconcile orphaned non-terminal root tasks without an active unexpired lease.
+            root_rows = conn.execute(
+                """
+                SELECT * FROM runtime_tasks
+                WHERE parent_task_id IS NULL
+                  AND state IN ('running', 'waiting_approval', 'pending', 'paused', 'blocked', 'failed', 'cancelled')
+                ORDER BY created_at ASC
+                """
+            ).fetchall()
+            for t_row in root_rows:
+                tid = str(t_row["task_id"])
+                state = str(t_row["state"])
+                current_epoch = int(t_row["current_epoch"])
+                has_live_lease = False
+                if current_epoch > 0:
+                    ep_row = conn.execute(
+                        "SELECT status, lease_expires_at FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                        (tid, current_epoch),
+                    ).fetchone()
+                    if ep_row is not None and str(ep_row["status"]) == "active":
+                        if float(ep_row["lease_expires_at"]) > ts:
+                            has_live_lease = True
+                        else:
+                            conn.execute(
+                                """
+                                UPDATE runtime_task_epochs
+                                SET status = 'expired', fenced_at = ?, fence_reason = 'lease_expired_on_recovery'
+                                WHERE task_id = ? AND epoch = ? AND status = 'active'
+                                """,
+                                (ts, tid, current_epoch),
+                            )
+
+                if has_live_lease:
+                    continue
+
+                # Sweep any orphaned in-flight actions on inactive epochs before deciding task state.
+                conn.execute(
+                    """
+                    UPDATE runtime_actions
+                    SET status = 'uncertain', error_code = 'orphaned_in_flight_on_recovery', updated_at = ?
+                    WHERE task_id = ? AND status = 'in_flight' AND action_class != 'read_only'
+                    """,
+                    (ts, tid),
+                )
+                conn.execute(
+                    """
+                    UPDATE runtime_actions
+                    SET status = 'failed', ok = 0, error_code = 'orphaned_in_flight_on_recovery', updated_at = ?
+                    WHERE task_id = ? AND status = 'in_flight' AND action_class = 'read_only'
+                    """,
+                    (ts, tid),
+                )
+
+                try:
+                    budget = execution_budget.TaskBudgetState.from_json(str(t_row["budget_json"]))
+                except execution_budget.BudgetError:
+                    budget = execution_budget.TaskBudgetState(spec=execution_budget.TaskBudgetSpec())
+
+                if state in {"running", "waiting_approval"} or (
+                    budget.cancel_requested and state not in {"cancelled", "completed"}
+                ):
+                    unresolved_rows = conn.execute(
+                        """
+                        SELECT action_id FROM runtime_actions
+                        WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                        ORDER BY created_at ASC
+                        """,
+                        (tid,),
+                    ).fetchall()
+                    unresolved_ids = [str(r["action_id"]) for r in unresolved_rows]
+                    ckpt_ref = str(t_row["checkpoint_ref"] or "").strip()
+                    ckpt_corrupt = False
+                    if ckpt_ref:
+                        ck_check = conn.execute(
+                            "SELECT * FROM runtime_task_checkpoints WHERE checkpoint_id = ? AND task_id = ?",
+                            (ckpt_ref, tid),
+                        ).fetchone()
+                        if ck_check is None:
+                            ckpt_corrupt = True
+                        else:
+                            try:
+                                workflow_checkpoints._decode_and_verify_checkpoint_row(ck_check, verify_integrity=True)
+                                conn.execute(
+                                    """
+                                    UPDATE runtime_task_checkpoints
+                                    SET status = 'interrupted', updated_at = ?
+                                    WHERE checkpoint_id = ? AND status IN ('committed', 'resumed')
+                                    """,
+                                    (ts, ckpt_ref),
+                                )
+                            except workflow_checkpoints.ResumeRejected:
+                                ckpt_corrupt = True
+
+                    if unresolved_ids or ckpt_corrupt:
+                        target_state = "blocked"
+                        reason = (
+                            "corrupt_checkpoint_on_recovery"
+                            if ckpt_corrupt
+                            else "recovered_incomplete_with_unresolved_effects"
+                        )
+                        blocked_tasks.append(tid)
+                    elif budget.cancel_requested:
+                        target_state = "cancelled"
+                        reason = "recovered_incomplete_cancel"
+                        cancelled_tasks.append(tid)
+                    else:
+                        target_state = "paused"
+                        reason = "recovered_incomplete_transition"
+                        recovered_tasks.append(tid)
+
+                    reconciled_budget = execution_budget.TaskBudgetState(
+                        spec=budget.spec,
+                        steps_used=budget.steps_used,
+                        tool_calls_used=budget.tool_calls_used,
+                        tokens_used=budget.tokens_used,
+                        elapsed_s=budget.elapsed_s,
+                        recoveries_used=budget.recoveries_used,
+                        pause_requested=False,
+                        cancel_requested=(target_state == "cancelled"),
+                        exhausted_reason=budget.exhausted_reason,
+                    )
+                    seq_row = conn.execute(
+                        "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                        (tid,),
+                    ).fetchone()
+                    next_seq = int(seq_row[0]) if seq_row else 1
+                    conn.execute(
+                        """
+                        UPDATE runtime_tasks
+                        SET state = ?, state_version = state_version + 1, budget_json = ?, updated_at = ?
+                        WHERE task_id = ?
+                        """,
+                        (target_state, reconciled_budget.to_json(), ts, tid),
+                    )
+                    conn.execute(
+                        """
+                        INSERT INTO runtime_task_transitions (
+                            task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            tid,
+                            next_seq,
+                            state,
+                            target_state,
+                            current_epoch,
+                            reason,
+                            _encode_evidence_json(
+                                checkpoint_id=ckpt_ref,
+                                extra={"unresolved_action_ids": unresolved_ids} if unresolved_ids else None,
+                            ),
+                            ts,
+                        ),
+                    )
+                    state = target_state
+
+                # 3. Reconcile child milestone skew when parent has no live worker lease.
+                if state in {"paused", "blocked", "failed", "cancelled"}:
+                    ms_target = "cancelled" if state == "cancelled" else ("blocked" if state == "blocked" else "paused")
+                    ms_filter = (
+                        "state NOT IN ('completed', 'cancelled')"
+                        if state == "cancelled"
+                        else "state IN ('running', 'waiting_approval')"
+                    )
+                    skewed_ms = conn.execute(
+                        f"SELECT task_id, state FROM runtime_tasks WHERE parent_task_id = ? AND {ms_filter}",
+                        (tid,),
+                    ).fetchall()
+                    for ms_row in skewed_ms:
+                        ms_tid = str(ms_row["task_id"])
+                        ms_from = str(ms_row["state"])
+                        ms_seq_row = conn.execute(
+                            "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                            (ms_tid,),
+                        ).fetchone()
+                        ms_seq = int(ms_seq_row[0]) if ms_seq_row else 1
+                        conn.execute(
+                            """
+                            UPDATE runtime_tasks
+                            SET state = ?, state_version = state_version + 1, updated_at = ?
+                            WHERE task_id = ?
+                            """,
+                            (ms_target, ts, ms_tid),
+                        )
+                        conn.execute(
+                            """
+                            INSERT INTO runtime_task_transitions (
+                                task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                            ) VALUES (?, ?, ?, ?, ?, 'recovered_milestone_skew', '{}', ?)
+                            """,
+                            (ms_tid, ms_seq, ms_from, ms_target, current_epoch, ts),
+                        )
+                        reconciled_milestones.append(ms_tid)
+
+            return RecoverySweepReport(
+                recovered_task_ids=tuple(recovered_tasks),
+                blocked_task_ids=tuple(blocked_tasks),
+                cancelled_task_ids=tuple(cancelled_tasks),
+                reconciled_checkpoint_ids=tuple(reconciled_ckpts),
+                reconciled_milestone_ids=tuple(reconciled_milestones),
+            )
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+
+def checkpoint_ref_is_none(value: str | None) -> bool:
+    return value is None
+
+workflow_state = sys.modules[__name__]
 
 """MCP wire-protocol boundary: adaptive HTTP transport, parser, and session state.
 

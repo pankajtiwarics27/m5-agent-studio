@@ -52,6 +52,7 @@ TABLES: dict[str, str] = {
     "runtime_task_epochs": "Append-only runtime task execution epochs and stale-writer fencing metadata.",
     "runtime_task_transitions": "Append-only durable state transitions per runtime task and epoch.",
     "runtime_actions": "Durable action/effect records with idempotency keys, request/result digests, and execution status.",
+    "runtime_task_checkpoints": "Hash-verified durable task checkpoints and typed evidence references per task and sequence.",
 }
 
 # Function references are resolved from app.py on every generation, so line anchors stay current.

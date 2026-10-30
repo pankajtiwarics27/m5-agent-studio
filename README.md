@@ -28,7 +28,7 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
 - **The application runs and its local auth path works.** `scripts/smoke_local.py`
   launches a disposable loopback instance of both `app.py` and the generated
   `studio.py` and verifies the token/security path — both exit 0.
-- **The test suite passes:** **782 passed, 1 skipped** (the skip is the opt-in
+- **The test suite passes:** **801 passed, 1 skipped** (the skip is the opt-in
   live container-runtime test, see below). `ruff`, `mypy`, `compileall`, and the
   Node-based frontend syntax check all pass.
 - **Generated artifacts are reproducible:** `studio.py`,
@@ -43,9 +43,22 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
   busy/disk-full/corruption errors, prevents active write transactions from
   spanning tool execution, subprocesses, model inference, or keyring I/O, and
   defines durable spine tables (`runtime_tasks`, `runtime_task_epochs`,
-  `runtime_task_transitions`, `runtime_actions`) — pinned by 15 tests
-  (`tests/test_runtime_persistence.py`). Default DB: `studio_history.db` beside
-  the entry point; override with `STUDIO_DB_PATH` (`app.py` L269).
+  `runtime_task_transitions`, `runtime_actions`, `runtime_task_checkpoints`) —
+  pinned by 15 persistence tests (`tests/test_runtime_persistence.py`). Default
+  DB: `studio_history.db` beside the entry point; override with
+  `STUDIO_DB_PATH` (`app.py` L269).
+- **Root tasks, child milestones, hash-verified checkpoints, and task/recovery
+  budgets persist across restarts (`M5-P1-05`):** `workflow_state.py`
+  (`DurableTaskStateMachine`), `workflow_checkpoints.py`
+  (`DurableTaskCheckpointStore`), and `execution_budget.py`
+  (`DurableTaskBudgetManager`) are wired into `init_db()`, harness/GSD/SDLC
+  workflows, and `/api/harness/sessions/{session_id}/{task,pause,cancel,resume}`
+  to persist root task and child milestone transitions, defer mid-flight pauses
+  to safe tool boundaries while fencing cancellations without claiming premature
+  completion, verify SHA-256 checkpoint and `EvidenceRef` digests before resume,
+  reconcile staged/incomplete transitions on startup, and enforce cumulative
+  step/tool/token/time and crash-recovery budgets across restarts — pinned by 9
+  end-to-end and crash-recovery tests (`tests/test_durable_task_state_machine.py`).
 - **The frontend is a single-file vanilla JS UI** (`static/index.html`,
   4,228 lines; no framework build step).
 - **Tool, skill, smart-block, and MCP operations cross an authoritative action
@@ -86,19 +99,21 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
   execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
   pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
   plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
-- **8 of 44 shipped Python modules are wired into the served app**
+- **11 of 44 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`, `execution_spine` since `M5-P0-06`,
-  `runtime_persistence` since `M5-P1-01`, and `side_effect_ledger` since
-  `M5-P1-03`; 5 of 42 at the time of the audit table). `runtime_persistence`
-  and `side_effect_ledger` govern schema upgrades, SQLite transactions,
-  authoritative task-state / lease-epoch checks at admission (`M5-P1-02`),
-  durable `runtime_actions` intent/result/replay tracking (`M5-P1-03`), and
-  single-owner worker leases, fencing, and pre-takeover reconciliation
-  (`M5-P1-04`), while full root task-state checkpoints and execution budgets
-  remain assigned to `M5-P1-05`. The other 36 modules — including
-  `sandbox_boundary.py` — have passing unit tests but **no `app.py` call path**.
-  Module presence is not integration. Full table:
+  `runtime_persistence` since `M5-P1-01`, `side_effect_ledger` since `M5-P1-03`,
+  and `execution_budget`, `workflow_checkpoints`, `workflow_state` since
+  `M5-P1-05`; 5 of 42 at the time of the audit table). Together they govern
+  schema upgrades, SQLite transactions, authoritative task-state / lease-epoch
+  checks at admission (`M5-P1-02`), durable `runtime_actions`
+  intent/result/replay tracking (`M5-P1-03`), single-owner worker leases,
+  fencing, and pre-takeover reconciliation (`M5-P1-04`), and durable root/child
+  task state machines, safe pause/resume/cancel boundaries, hash-verified
+  checkpoints with evidence refs, and persistent task/recovery budgets
+  (`M5-P1-05`). The other 33 modules — including `sandbox_boundary.py` — have
+  passing unit tests but **no `app.py` call path**. Module presence is not
+  integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
 
 Reported claims that this review **refuted**: `app.py` is ~2,200 lines
@@ -256,7 +271,7 @@ Summary (2026-10-30, Linux x86_64 container, 2 vCPU, ~4 GB RAM, Python 3.11.2):
 
 | Check | Result |
 |---|---|
-| `pytest -q` | 782 passed, 1 skipped (opt-in live container test), 1 warning |
+| `pytest -q` | 801 passed, 1 skipped (opt-in live container test), 1 warning |
 | `ruff check .` | clean |
 | `mypy` | clean (typed contract modules) |
 | `check_frontend_syntax.py` (Node) | pass |
@@ -335,13 +350,15 @@ requires `STUDIO_ALLOW_SKILL_CODE=1`; private-URL access requires
    invocation, not every effectful path (since `M5-P0-06`; SQLite discipline
    tightened in `M5-P1-01`; authoritative action admission wired in
    `M5-P1-02`; durable `runtime_actions` intent/result ledger wired in
-   `M5-P1-03`).** The maintained known-bypass inventory
+   `M5-P1-03`; worker leases/fencing wired in `M5-P1-04`; durable task state
+   machine, checkpoints, and budgets wired in `M5-P1-05`).** The maintained
+   known-bypass inventory
    [`docs/m5-2-0-bypass-inventory.md`](docs/m5-2-0-bypass-inventory.md) lists
    what routes through the boundary, what is gated elsewhere (all SQLite reads
    and writes route through `runtime_persistence`), what is read-only, and what
    is still outside it (worktree git effects, `.harnesses/*.jsonl` sidecar
    files, unledgered filesystem writes). Completing coverage is follow-up work
-   (`M5-P1-04`…`M5-P1-05`, `M5-P2-01`…`M5-P2-03`); partial coverage is never
+   (`M5-P1-06`…`M5-P1-07`, `M5-P2-01`…`M5-P2-03`); partial coverage is never
    advertised as complete.
 
 ## Current implementation status
@@ -360,13 +377,18 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
   34 stories across 7 phases. **Done with evidence: `M5-P0-01`…`M5-P0-07`
   (phase P0 100%), `M5-P1-01`** (SQLite Schema v3 migration and persistence
   discipline), **`M5-P1-02`** (authoritative action admission gate, task/epoch
-  checks, action-class separation, and direct-executor anti-bypass), **and
-  `M5-P1-03`** (durable `runtime_actions` intent/result ledger integration,
+  checks, action-class separation, and direct-executor anti-bypass),
+  **`M5-P1-03`** (durable `runtime_actions` intent/result ledger integration,
   4-state `never_started`/`in_flight`/`committed`/`uncertain` separation,
   missing-result-to-`uncertain` reconciliation, and action-type replay
-  classification). Next ready story: `M5-P1-04` (worker leases, epochs and
-  fencing takeover) — claim via the coordination protocol before coding.
-  Planned work is not implemented product behavior.
+  classification), **`M5-P1-04`** (single-owner worker leases, monotonic epoch
+  fencing, and pre-takeover reconciliation), **and `M5-P1-05`** (durable root
+  task and child milestone state machine, safe-boundary pause/resume/cancel,
+  hash-verified checkpoints with evidence refs, incomplete-transition recovery,
+  and persistent task/recovery budgets). Next ready stories: `M5-P1-06`
+  (single-agent verified vertical slice) and `M5-P1-07` (minimal task events,
+  HTTP commands and existing UI) — claim via the coordination protocol before
+  coding. Planned work is not implemented product behavior.
 - **AS program (Adaptive Runtime)** —
   [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json)
   with dashboard [`docs/product-roadmap-status.md`](docs/product-roadmap-status.md):
