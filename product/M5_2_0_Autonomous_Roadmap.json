@@ -123,10 +123,10 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "M5-P1-02",
     "last_completed_story": "M5-P1-01",
-    "last_checkpoint": "2026-10-30T12:28:41Z",
-    "last_session_id": "arena/3e6ea3e5-m5-agent-studio",
+    "last_checkpoint": "2026-10-30T12:53:25Z",
+    "last_session_id": "arena/d67875b4-m5-agent-studio",
     "next_recommended_story": "M5-P1-02",
     "open_risks": [
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
@@ -1014,13 +1014,13 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P1-02: Wire authoritative action admission gate. Objective: Ensure all consequential tool/skill/MCP operations use a common policy boundary. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Inventory and route every tool execution entry point; Check task state, grant, epoch and action class; Deny direct executor bypass and test; Keep managed reads distinguished from consequential effects. Acceptance: All enumerated consequential paths gate through admission; Bypass regression tests pass; No permission inferred from model output. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-30T12:53:25Z",
+        "updated_at": "2026-10-30T12:53:25Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/d67875b4-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -1028,7 +1028,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "next_action": "Inventory all tool, skill, MCP, and smart-block execution entry points; wire authoritative admission gate checking task state, grant, epoch, and action class; block direct executor bypasses; distinguish managed reads from consequential effects.",
         "readme_updated": false
       }
     },
