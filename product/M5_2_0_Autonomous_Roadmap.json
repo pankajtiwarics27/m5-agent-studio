@@ -123,11 +123,11 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": "M5-P0-06",
-    "last_completed_story": "M5-P0-04",
-    "last_checkpoint": "2026-10-30T11:23:34Z",
+    "active_story": "M5-P1-01",
+    "last_completed_story": "M5-P0-06",
+    "last_checkpoint": "2026-10-30T11:35:14Z",
     "last_session_id": "arena/7d57e70a-m5-agent-studio",
-    "next_recommended_story": "M5-P0-06",
+    "next_recommended_story": "M5-P1-01",
     "open_risks": [
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
       "24 GB Apple Silicon memory/swap and oMLX task measurements blocked in Linux evidence environment (M5-P4-01 to measure on target hardware)",
@@ -135,8 +135,8 @@
       "Multi-agent parallel work active: product/M5_2_0_Autonomous_Roadmap.json tracking blocks are the shared claim ledger; claim protocol and PR/merge rules live in M5_2_0_AGENT_PROMPT.md",
       "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1); runtime dependencies clean"
     ],
-    "last_readme_sync": "2026-10-30T10:17:37Z",
-    "last_verified_commit": "ed5f1c8826b972dd04a22f31c86362984c3f8054",
+    "last_readme_sync": "2026-10-30T11:35:14Z",
+    "last_verified_commit": "25aca3ec7319efba702ef52a96b2a18094a427b5",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md"
   },
   "delivery_phases": [
@@ -152,9 +152,9 @@
         "M5-P0-06",
         "M5-P0-07"
       ],
-      "status": "in_progress",
+      "status": "complete",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
-      "progress_percent": 86
+      "progress_percent": 100
     },
     {
       "id": "P1",
@@ -309,8 +309,8 @@
           "Authority consolidation completed 2026-10-30 on user/owner confirmation; AS roadmap retained unmodified as historical source and AS-status ledger (no history deleted)"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. Authority consolidation awaits owner confirmation.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. Authority consolidation awaits owner confirmation.",
         "readme_updated": true
       }
     },
@@ -364,14 +364,14 @@
           "docs/README.md"
         ],
         "evidence": [
-          "docs/m5-2-0-integration-audit.md §1: all 9 reported claims verified/refuted with line evidence (claims 1 and 6 refuted; 2,3,4,5,7,8,9 confirmed)",
-          "§2: FastAPI route -> tool/subprocess/SQLite/MCP traces with function and line references",
-          "§3.1: all 17 direct subprocess entry points in app.py enumerated with gates; §3.2: all consequential SQLite/FS write entry points enumerated",
-          "§4: 42-module code-exists/integrated/tested/qualified table (5 integrated, 37 unit-tested-but-unintegrated)"
+          "docs/m5-2-0-integration-audit.md \u00a71: all 9 reported claims verified/refuted with line evidence (claims 1 and 6 refuted; 2,3,4,5,7,8,9 confirmed)",
+          "\u00a72: FastAPI route -> tool/subprocess/SQLite/MCP traces with function and line references",
+          "\u00a73.1: all 17 direct subprocess entry points in app.py enumerated with gates; \u00a73.2: all consequential SQLite/FS write entry points enumerated",
+          "\u00a74: 42-module code-exists/integrated/tested/qualified table (5 integrated, 37 unit-tested-but-unintegrated)"
         ],
         "test_results": [
           {
-            "command": "grep/sed call-path audit (commands listed in audit doc §6)",
+            "command": "grep/sed call-path audit (commands listed in audit doc \u00a76)",
             "exit_code": 0,
             "result": "evidence captured inline"
           }
@@ -382,8 +382,8 @@
           "Skill-code subprocess paths classified as containment targets for M5-P0-03 (app.py:1831 flag-gated but sandbox-bypassing; app.py:8645 ungated)"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. Containment work continues in M5-P0-03.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. Containment work continues in M5-P0-03.",
         "readme_updated": true
       }
     },
@@ -633,7 +633,7 @@
           "docs/README.md"
         ],
         "evidence": [
-          "docs/m5-2-0-baseline-evidence.md §2: full command log with exit codes",
+          "docs/m5-2-0-baseline-evidence.md \u00a72: full command log with exit codes",
           "pytest: 717 passed, 1 skipped (opt-in live container test), 1 warning, 19.13s",
           "ruff/mypy/compileall/frontend-syntax/smoke_local x2/governance/security-signoff/docs/generators-no-drift/demo-tour/screenshots/adrs: all exit 0",
           "pip_audit exit 1: 21 advisories in venv bootstrap packages pip 23.0.1 + setuptools 66.1.1 only; runtime dependencies clean (recorded undiluted)",
@@ -667,12 +667,12 @@
           }
         ],
         "decisions": [
-          "verify_baseline.py initially failed on the shallow checkout; git fetch --unshallow (documented prerequisite) fixed it — both outcomes recorded",
-          "Blocked measurements (peak unified memory/swap, oMLX coding task, FTS5 load latency, live isolation) listed in evidence doc §4 and never promoted to claims"
+          "verify_baseline.py initially failed on the shallow checkout; git fetch --unshallow (documented prerequisite) fixed it \u2014 both outcomes recorded",
+          "Blocked measurements (peak unified memory/swap, oMLX coding task, FTS5 load latency, live isolation) listed in evidence doc \u00a74 and never promoted to claims"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. Target-hardware telemetry moves to M5-P4-01 / M5-P0-04 on real hardware.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. Target-hardware telemetry moves to M5-P4-01 / M5-P0-04 on real hardware.",
         "readme_updated": true
       }
     },
@@ -713,22 +713,81 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P0-06: Minimal execution-spine interface extraction. Objective: Create auditable persistence/policy/action-admission boundaries without full monolith rewrite. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Define narrow interfaces and migrate the first critical entry points; Inventory all remaining bypass paths; Keep behavior stable and add contract tests; Do not claim complete coverage until independently checked. Acceptance: Interfaces have tests; Known bypass inventory maintained; No broad UI or framework rewrite. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 10,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-30T11:23:34Z",
-        "updated_at": "2026-10-30T11:23:34Z",
-        "completed_at": null,
+        "updated_at": "2026-10-30T11:35:14Z",
+        "completed_at": "2026-10-30T11:35:14Z",
         "owner_session": "arena/7d57e70a-m5-agent-studio",
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "commit_sha": "25aca3ec7319efba702ef52a96b2a18094a427b5",
+        "changed_files": [
+          "execution_spine.py",
+          "app.py",
+          "scripts/build_studio.py",
+          "pyproject.toml",
+          "tests/test_execution_spine.py",
+          "docs/adr/0002-execution-spine-boundaries.md",
+          "docs/m5-2-0-bypass-inventory.md",
+          "README.md",
+          "docs/README.md",
+          "studio.py",
+          "docs/route-security-matrix.md",
+          "docs/subsystem-dependency-inventory.md"
+        ],
+        "evidence": [
+          "execution_spine.py: stdlib-only Policy/ActionLedger protocols and DurableActionBoundary (authorize -> intent record -> execute -> outcome record)",
+          "app.py: _run_authorized_tool is a thin adapter over the boundary (_AppToolPolicy wraps authorize_tool_invocation; _AppActionLedger wraps tool_audit_events start/finish); behavior unchanged (740 passed)",
+          "tests/test_execution_spine.py: 11 contract tests pin fail-closed semantics (policy errors deny; additional denial overrides allow; start failure blocks dispatch; executor exception recorded failed then re-raised; finish failure surfaces audit warning; explicit approval distinguished; policy resolved once)",
+          "docs/adr/0002-execution-spine-boundaries.md: seam decision record (accepted, not-reviewed)",
+          "docs/m5-2-0-bypass-inventory.md: maintained known-bypass inventory - coverage explicitly partial; no complete security guarantee claimed"
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q tests/test_execution_spine.py",
+            "exit_code": 0,
+            "result": "11 passed"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "740 passed, 1 skipped (11 new; behavior preserved)"
+          },
+          {
+            "command": ".venv/bin/python -m mypy .",
+            "exit_code": 0,
+            "result": "no issues found in 41 source files"
+          },
+          {
+            "command": ".venv/bin/python -m ruff check .",
+            "exit_code": 0,
+            "result": "clean"
+          },
+          {
+            "command": "scripts/build_studio.py + route/subsystem generators + git diff --exit-code",
+            "exit_code": 0,
+            "result": "generated artifacts regenerate byte-for-byte"
+          },
+          {
+            "command": ".venv/bin/python scripts/smoke_local.py --standalone",
+            "exit_code": 0,
+            "result": "pass (execution_spine module inlined into standalone)"
+          },
+          {
+            "command": "scripts/validate_adrs.py + scripts/validate_docs.py",
+            "exit_code": 0,
+            "result": "pass (ADR-0002 validated; docs links resolve)"
+          }
+        ],
+        "decisions": [
+          "Extracted the seam as a stdlib-only module so the generated single-file studio.py can inline it (build_studio INLINED_MODULES) and contract tests run without the web stack",
+          "Kept authorize_tool_invocation / audit events as the single policy and ledger implementations; the boundary wraps them rather than replacing them, so behavior stays identical",
+          "Coverage documented as partial in a maintained bypass inventory instead of claiming complete mediation"
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Extract narrow persistence/policy/action-admission interfaces, migrate the first critical entry point (_run_authorized_tool authorize->audit->execute), maintain the bypass inventory, add contract tests, keep behavior stable.",
-        "readme_updated": false
+        "handoff_note": "M5-P0-06 complete: execution spine extracted behind DurableActionBoundary with 11 contract tests; coverage partial and inventoried in docs/m5-2-0-bypass-inventory.md. Side-effect idempotency (side_effect_ledger.py) and sandbox_boundary.py remain unintegrated; worktree git effects are outside the boundary. No independent verification of coverage has occurred.",
+        "next_action": "Begin M5-P1-01 (SQLite schema migration and persistence discipline) after the M5-P0-06 PR merges; its only dependency is M5-P0-06.",
+        "readme_updated": true
       }
     },
     {
@@ -801,8 +860,8 @@
           "Old marketing-forward README content replaced per draft mandate; deep reference material (env vars, API, invariants) preserved in README reference section and docs/ links so validate_docs publication checks stay green"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. README maintenance rule: refresh with verified behavior after every subsequent story.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. README maintenance rule: refresh with verified behavior after every subsequent story.",
         "readme_updated": true
       }
     },
