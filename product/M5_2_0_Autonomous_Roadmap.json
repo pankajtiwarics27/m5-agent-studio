@@ -2145,21 +2145,25 @@
       ],
       "prompt": "Implement story M5-P3-01: Sandbox backend qualification suite. Objective: Validate actual isolation guarantees, not backend labels. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Exercise live container/native candidates on supported macOS; Test path traversal, symlink, network bypass, credentials, descendants, resource limits; Run positive compatibility tests; Bind evidence to OS/runtime/config fingerprint. Acceptance: Each claimed guarantee has positive and adversarial evidence; Unqualified guarantees remain unavailable; No silent host fallback. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "blocked",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-30T19:31:57Z",
+        "updated_at": "2026-10-30T19:31:57Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/bf5fe1a6-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
-        "evidence": [],
+        "evidence": [
+          "Claim: the qualification tooling for this story (scripts/qualify_environment.py --sandbox) is being implemented in this session as part of one deliverable covering M5-P3-01 and M5-P4-01. No isolation result is claimed; the story remains blocked until a live Docker/Podman run returns qualified."
+        ],
         "test_results": [],
         "decisions": [],
-        "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "blockers": [
+          "Live container runtime (Docker/Podman) unavailable in the M5-P0-04/M5-P2 evidence environment; container isolation remains unqualified (docs/m5-2-0-isolation-smoke-evidence.md)."
+        ],
+        "handoff_note": "Claimed by this session for the shared operator-run qualification tooling deliverable (scripts/qualify_environment.py/.sh). The story stays blocked until a qualified record exists.",
+        "next_action": "Run scripts/qualify_environment.py on the target machine and attach the JSON/Markdown record before changing this status.",
         "readme_updated": false
       }
     },
@@ -2476,21 +2480,26 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P4-01: Measured model qualification and RAM admission. Objective: Route from real evidence and enforce one heavy resident model. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Build representative per-category coding cases; Record completed case evidence and uncertainty; Measure load/prefill/swap/thermal behavior; Implement one-heavy-model admission and optional sequential switching. Acceptance: Second simultaneous heavy load rejected under policy; Routing does not treat public priors as verified; 24 GB pressure measured. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "blocked",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-30T19:31:57Z",
+        "updated_at": "2026-10-30T19:31:57Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/bf5fe1a6-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
-        "evidence": [],
+        "evidence": [
+          "Claim: the qualification tooling for this story (scripts/qualify_environment.py --hardware) is being implemented in this session as part of one deliverable covering M5-P3-01 and M5-P4-01. No measurement is claimed; the story remains blocked until a qualified record exists on the target machine."
+        ],
         "test_results": [],
         "decisions": [],
-        "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "blockers": [
+          "24 GB Apple Silicon measurement environment is not available here (Linux x86_64 evidence container); no memory/swap or oMLX numbers are invented.",
+          "The serving path does not yet consult resource_admission, so 'second simultaneous heavy load rejected under policy' is satisfied by the primitive only, which the suite reports as the informational check p4.admission_wired."
+        ],
+        "handoff_note": "Claimed by this session for the shared operator-run qualification tooling deliverable (scripts/qualify_environment.py/.sh). The story stays blocked until a qualified record exists.",
+        "next_action": "Run scripts/qualify_environment.py on the target machine and attach the JSON/Markdown record before changing this status.",
         "readme_updated": false
       }
     },
