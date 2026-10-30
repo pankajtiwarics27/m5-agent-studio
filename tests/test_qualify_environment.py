@@ -42,7 +42,7 @@ def _make_fake_run(behaviour: dict[str, Any] | None = None) -> Any:
 
     def _run(argv: list[str], *, timeout: float, env: dict[str, str] | None = None, cwd: Path | None = None):
         joined = " ".join(str(part) for part in argv)
-        code = str(argv[-1])
+        code = str(argv[argv.index("-c") + 1]) if "-c" in argv else str(argv[-1])
         if "isolation_smoke.py" in joined:
             return _FakeCompleted(behaviour.get("smoke_exit", 0), "isolation_status: qualified\n")
         if "positive-ok" in code:
@@ -612,3 +612,118 @@ def test_asyncio_coroutine_path_is_used_for_product_probes(monkeypatch: pytest.M
     studio = _FakeStudio()
     with pytest.raises(PermissionError):
         asyncio.run(studio._execute_limited(Path("/tmp"), "print(1)", timeout=1, max_output_bytes=16))
+
+
+def test_container_argv_preserves_posix_uid_gid_and_code_args(tmp_path: Path) -> None:
+    """Parity with app._sandbox_command: drop container root via --user uid:gid on POSIX."""
+    import os
+
+    argv = qe.container_argv(
+        "docker",
+        "python:3.12-slim",
+        tmp_path,
+        "print(1)",
+        code_args=("/tmp/outside-canary.txt", "/workspace/qualify-link"),
+    )
+    if os.name == "posix" and hasattr(os, "getuid") and hasattr(os, "getgid"):
+        idx = argv.index("--user")
+        assert argv[idx + 1] == f"{os.getuid()}:{os.getgid()}"
+    assert argv[-2:] == ["/tmp/outside-canary.txt", "/workspace/qualify-link"]
+
+
+def test_escape_probe_code_passes_with_isolated_canary_and_readonly_targets(tmp_path: Path) -> None:
+    """Execute _ESCAPE_CODE directly: readable container /etc/hostname must not false-fail,
+    while dangling symlink + invisible host canary + read-only target pass cleanly."""
+    import os
+    import socket
+    import subprocess
+
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+    missing_host_canary = tmp_path / "unmounted-host-secret.txt"
+    link = ws / "qualify-link"
+    link.symlink_to(missing_host_canary)
+    ro_dir = tmp_path / "ro_dir"
+    ro_dir.mkdir(mode=0o555)
+    ro_probe = ro_dir / "cannot-write.txt"
+
+    closed_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    closed_sock.bind(("127.0.0.1", 0))
+    closed_port = int(closed_sock.getsockname()[1])
+    closed_sock.close()
+
+    env = {"PATH": os.environ.get("PATH", os.defpath)}
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                qe._ESCAPE_CODE,
+                str(missing_host_canary),
+                str(link),
+                str(ro_probe),
+                "0",
+                f"127.0.0.1:{closed_port}",
+            ],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=15.0,
+            check=False,
+        )
+    finally:
+        ro_dir.chmod(0o755)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "denials:none" in proc.stdout
+
+
+def test_escape_probe_code_detects_outside_canary_symlink_writable_root_network_and_env_leaks(
+    tmp_path: Path,
+) -> None:
+    """Execute _ESCAPE_CODE directly against real leaked resources and verify every leak class fails."""
+    import os
+    import socket
+    import subprocess
+
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+    leaked_canary = tmp_path / "mounted-host-secret.txt"
+    leaked_canary.write_text("host-only secret", encoding="utf-8")
+    leaked_link = ws / "qualify-link"
+    leaked_link.symlink_to(leaked_canary)
+    writable_ro_target = tmp_path / "writable-root-probe.txt"
+
+    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    listener.bind(("127.0.0.1", 0))
+    listener.listen(2)
+    port = int(listener.getsockname()[1])
+    try:
+        env = {
+            "PATH": os.environ.get("PATH", os.defpath),
+            "STUDIO_QUALIFICATION_SENTINEL": "leaked-from-host",
+        }
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                qe._ESCAPE_CODE,
+                str(leaked_canary),
+                str(leaked_link),
+                str(writable_ro_target),
+                str(port),
+                f"127.0.0.1:{port}",
+            ],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=15.0,
+            check=False,
+        )
+    finally:
+        listener.close()
+
+    assert proc.returncode == 3
+    marker = next((ln for ln in proc.stdout.splitlines() if ln.startswith("denials:")), "")
+    leaked_items = set(marker.partition(":")[2].split(","))
+    assert {"outside-direct", "readonly-root", "symlink", "network", "env"} <= leaked_items
+

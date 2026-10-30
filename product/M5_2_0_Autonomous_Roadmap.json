@@ -2600,7 +2600,7 @@
           {
             "command": ".venv/bin/python -m pytest tests/test_qualify_environment.py -q",
             "exit_code": 0,
-            "result": "44 passed"
+            "result": "47 passed"
           },
           {
             "command": ".venv/bin/ruff check .",

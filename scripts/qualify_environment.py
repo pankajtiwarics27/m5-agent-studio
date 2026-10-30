@@ -71,6 +71,7 @@ import os
 import platform
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -420,6 +421,7 @@ def container_argv(
     memory: str = "1g",
     pids_limit: int = 128,
     cpus: str = "1",
+    code_args: Sequence[str] = (),
 ) -> list[str]:
     """Build a hardened, ``--rm`` sandbox invocation mirroring the product flags.
 
@@ -439,13 +441,15 @@ def container_argv(
         "--pids-limit", str(pids_limit),
         "--memory", memory,
         "--cpus", cpus,
-        "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
+        "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=64m",
         "--mount", f"type=bind,source={workspace.resolve()},target=/workspace",
         "--workdir", "/workspace",
     ]
+    if os.name == "posix" and hasattr(os, "getuid") and hasattr(os, "getgid"):
+        argv.extend(["--user", f"{os.getuid()}:{os.getgid()}"])
     if name:
         argv.extend(["--name", name])
-    argv.extend([image, "python3", "-c", code])
+    argv.extend([image, "python3", "-c", code, *code_args])
     return argv
 
 
@@ -467,32 +471,61 @@ print('positive-ok')
 
 _ESCAPE_CODE = r"""
 import os, pathlib, socket, sys
-outside = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else None
+outside_raw = sys.argv[1] if len(sys.argv) > 1 else ''
+link_raw = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else '/workspace/qualify-link'
+ro_csv = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3] else '/outside-root-write-probe,/etc/hostname'
+host_port = int(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4].isdigit() else 0
+primary_net = sys.argv[5] if len(sys.argv) > 5 and sys.argv[5] else '1.1.1.1:443'
 failures = []
-for path in ('/etc/hostname', '/workspace/../etc/hostname', '/proc/1/root/etc/hostname'):
+if not outside_raw:
+    failures.append('missing-outside-arg')
+else:
+    suffix = outside_raw if outside_raw.startswith('/') else ('/' + outside_raw)
+    probes = (
+        ('outside-direct', outside_raw),
+        ('outside-traversal', '/workspace/..' + suffix),
+        ('outside-proc-root', '/proc/1/root' + suffix),
+    )
+    for label, candidate in probes:
+        try:
+            pathlib.Path(candidate).read_text(encoding='utf-8')
+        except (OSError, PermissionError):
+            continue
+        failures.append(label)
+for ro_target in [item for item in ro_csv.split(',') if item]:
     try:
-        pathlib.Path(path).read_text(encoding='utf-8')
+        with open(ro_target, 'a', encoding='utf-8'):
+            pass
     except (OSError, PermissionError):
         continue
-    failures.append(path)
-link = pathlib.Path('/workspace/qualify-link')
-if link.exists():
+    failures.append('readonly-root')
+    break
+link = pathlib.Path(link_raw)
+if not link.is_symlink():
+    failures.append('symlink-missing')
+else:
     try:
         link.read_text(encoding='utf-8')
     except (OSError, PermissionError):
         pass
     else:
         failures.append('symlink')
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.settimeout(3.0)
-try:
-    sock.connect(('1.1.1.1', 443))
-except OSError:
-    pass
-else:
-    failures.append('network')
-finally:
-    sock.close()
+net_host, _, net_port_s = primary_net.rpartition(':')
+targets = [(net_host or '1.1.1.1', int(net_port_s) if net_port_s.isdigit() else 443)]
+if host_port > 0:
+    targets.extend([('127.0.0.1', host_port), ('host.docker.internal', host_port)])
+for host, port in targets:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1.5)
+    try:
+        sock.connect((host, port))
+    except OSError:
+        pass
+    else:
+        failures.append('network')
+        break
+    finally:
+        sock.close()
 if os.environ.get('STUDIO_QUALIFICATION_SENTINEL'):
     failures.append('env')
 try:
@@ -606,9 +639,35 @@ def sandbox_suite(
         )
 
         def _denials() -> tuple[bool, str]:
-            proc = run_command(
-                container_argv(runtime, image, workspace, _ESCAPE_CODE), timeout=timeout, env=probe_env
-            )
+            listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            host_port = 0
+            try:
+                listener.bind(("127.0.0.1", 0))
+                listener.listen(2)
+                host_port = int(listener.getsockname()[1])
+            except OSError:
+                listener.close()
+                listener = None  # type: ignore[assignment]
+            try:
+                proc = run_command(
+                    container_argv(
+                        runtime,
+                        image,
+                        workspace,
+                        _ESCAPE_CODE,
+                        code_args=(
+                            str(outside),
+                            "/workspace/qualify-link",
+                            "/outside-root-write-probe,/etc/hostname",
+                            str(host_port),
+                        ),
+                    ),
+                    timeout=timeout,
+                    env=probe_env,
+                )
+            finally:
+                if listener is not None:
+                    listener.close()
             marker = next((line for line in proc.stdout.splitlines() if line.startswith("denials:")), "")
             leaked = marker.partition(":")[2] if marker else "unknown"
             ok = proc.returncode == 0 and leaked == "none"
