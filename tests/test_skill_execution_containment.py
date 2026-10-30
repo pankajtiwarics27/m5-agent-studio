@@ -67,6 +67,14 @@ def _patch_inspiration_seams(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(studio, "list_mcp_servers", lambda **_kwargs: [])
 
 
+@pytest.fixture(autouse=True)
+def _isolated_skill_audit_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    db_file = tmp_path / "skill-audit.db"
+    monkeypatch.setattr(studio, "DB_PATH", db_file)
+    studio.init_db()
+    return db_file
+
+
 # ---------------------------------------------------------------------------
 # Call site 1: build_skills_context
 # ---------------------------------------------------------------------------

@@ -215,3 +215,69 @@ def test_effective_policy_resolved_once_and_fed_to_policy_and_ledger() -> None:
 
     assert policy.calls == [("run_bash", "standard", False)]
     assert ledger.events[0][1]["policy"] == "standard"
+
+
+def test_task_context_resolver_exception_fails_closed() -> None:
+    class BrokenResolver:
+        def resolve_task_context(self, request: spine.ActionRequest) -> spine.TaskAdmissionSnapshot | None:
+            raise RuntimeError("sqlite busy")
+
+    policy = FakePolicy(spine.AdmissionDecision(True, "", False))
+    ledger = FakeLedger()
+    called: list[int] = []
+
+    async def tracked_executor():
+        called.append(1)
+        return await _ok_executor()
+
+    result = asyncio.run(
+        spine.DurableActionBoundary(
+            policy, ledger, task_context_resolver=BrokenResolver()
+        ).admit_and_execute(_request(task_id="t1"), tracked_executor)
+    )
+    assert called == []
+    assert result["ok"] is False
+    assert "Task lifecycle context resolution failed" in result["output"]
+    assert ledger.events[1][1]["status"] == "denied"
+
+
+def test_active_admission_scope_is_minted_only_during_execution_and_reset_on_error() -> None:
+    policy = FakePolicy(spine.AdmissionDecision(True, "", False))
+    ledger = FakeLedger()
+
+    assert spine.current_admission_scope() is None
+    with pytest.raises(spine.DirectExecutorBypassError):
+        spine.require_active_admission(expected_tool="run_bash")
+
+    async def scoped_executor():
+        scope = spine.require_active_admission(
+            expected_tool="run_bash", expected_action_classes=frozenset({"consequential"})
+        )
+        assert scope.session_id == "s-1"
+        raise RuntimeError("boom inside scope")
+
+    with pytest.raises(RuntimeError, match="boom inside scope"):
+        asyncio.run(spine.DurableActionBoundary(policy, ledger).admit_and_execute(_request(), scoped_executor))
+
+    assert spine.current_admission_scope() is None
+
+
+def test_epoch_without_task_context_is_denied() -> None:
+    policy = FakePolicy(spine.AdmissionDecision(True, "", False))
+    ledger = FakeLedger()
+    result = asyncio.run(
+        spine.DurableActionBoundary(policy, ledger).admit_and_execute(_request(epoch=2), _ok_executor)
+    )
+    assert result["ok"] is False
+    assert "without an authoritative task context" in result["output"]
+
+
+def test_classify_action_separates_managed_reads_from_consequential_effects() -> None:
+    assert spine.classify_action("read_file", {"path": "a.py"}) == "read_only"
+    assert spine.classify_action("ctx_run_block", {"block": " JSON-PEEK "}) == "read_only"
+    assert spine.classify_action("ctx_run_block", {"block": "Test-Summary"}) == "consequential"
+    assert spine.classify_action("write_file", {"path": "a.py"}) == "managed_edit"
+    assert spine.classify_action("skill_execute_script", {"script": "s.py"}) == "consequential"
+    assert spine.classify_action("mcp__srv__call", {}) == "external"
+    assert spine.classify_action("unknown_tool", {"action_class": "read_only"}) == "consequential"
+

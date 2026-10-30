@@ -125,57 +125,61 @@ def skill_execution_gates() -> None:
     """Check 3: skill-code gates deny by default and never host-fallback."""
     section("3. Skill-code execution gates (app._run_skill_script)")
     with tempfile.TemporaryDirectory(prefix="m5-isolation-smoke-") as td:
+        smoke_db = Path(td) / "smoke-audit.db"
         skill_dir = Path(td) / "demo-skill"
         (skill_dir / "scripts").mkdir(parents=True)
         script = skill_dir / "scripts" / "search.py"
         script.write_text("print('skill-script-ran')\n", encoding="utf-8")
         args = ["kw"]
 
-        def expect_denial(label: str, exc_types: tuple[type[BaseException], ...]) -> None:
-            try:
-                asyncio.run(studio._run_skill_script(script, args, cwd=skill_dir, timeout=8.0))
-            except exc_types as exc:
-                record(True, label, f"{type(exc).__name__}")
-            except Exception as exc:  # noqa: BLE001 - report unexpected classes as failures
-                record(False, label, f"unexpected {type(exc).__name__}: {exc}")
-            else:
-                record(False, label, "executed instead of denying")
+        with unittest.mock.patch.object(studio, "DB_PATH", smoke_db):
+            studio.init_db()
 
-        with unittest.mock.patch.object(studio, "STUDIO_ALLOW_SKILL_CODE", False):
-            expect_denial("default-off skill-code denial", (PermissionError,))
-        with unittest.mock.patch.object(studio, "STUDIO_ALLOW_SKILL_CODE", True), \
-             unittest.mock.patch.object(studio, "STUDIO_EXECUTION_MODE", "disabled"):
-            expect_denial("execution-disabled denial", (PermissionError,))
-        with unittest.mock.patch.object(studio, "STUDIO_ALLOW_SKILL_CODE", True), \
-             unittest.mock.patch.object(studio, "STUDIO_EXECUTION_MODE", "host"), \
-             unittest.mock.patch.object(studio, "STUDIO_ALLOW_HOST_EXECUTION", False):
-            expect_denial("host-mode-without-opt-in denial", (PermissionError,))
+            def expect_denial(label: str, exc_types: tuple[type[BaseException], ...]) -> None:
+                try:
+                    asyncio.run(studio._run_skill_script(script, args, cwd=skill_dir, timeout=8.0))
+                except exc_types as exc:
+                    record(True, label, f"{type(exc).__name__}")
+                except Exception as exc:  # noqa: BLE001 - report unexpected classes as failures
+                    record(False, label, f"unexpected {type(exc).__name__}: {exc}")
+                else:
+                    record(False, label, "executed instead of denying")
 
-        # Sandbox mode with an unavailable runtime must fail closed without any
-        # host subprocess: stub the container command builder to simulate the
-        # missing runtime and spy on host process creation.
-        spawned: list[str] = []
+            with unittest.mock.patch.object(studio, "STUDIO_ALLOW_SKILL_CODE", False):
+                expect_denial("default-off skill-code denial", (PermissionError,))
+            with unittest.mock.patch.object(studio, "STUDIO_ALLOW_SKILL_CODE", True), \
+                 unittest.mock.patch.object(studio, "STUDIO_EXECUTION_MODE", "disabled"):
+                expect_denial("execution-disabled denial", (PermissionError,))
+            with unittest.mock.patch.object(studio, "STUDIO_ALLOW_SKILL_CODE", True), \
+                 unittest.mock.patch.object(studio, "STUDIO_EXECUTION_MODE", "host"), \
+                 unittest.mock.patch.object(studio, "STUDIO_ALLOW_HOST_EXECUTION", False):
+                expect_denial("host-mode-without-opt-in denial", (PermissionError,))
 
-        def _no_runtime(*_a, **_k):
-            raise RuntimeError("smoke: simulated missing container runtime")
+            # Sandbox mode with an unavailable runtime must fail closed without any
+            # host subprocess: stub the container command builder to simulate the
+            # missing runtime and spy on host process creation.
+            spawned: list[str] = []
 
-        real_exec = asyncio.create_subprocess_exec
+            def _no_runtime(*_a, **_k):
+                raise RuntimeError("smoke: simulated missing container runtime")
 
-        async def _spy_exec(*args, **kwargs):
-            spawned.append(str(args[0]))
-            return await real_exec(*args, **kwargs)
+            real_exec = asyncio.create_subprocess_exec
 
-        with unittest.mock.patch.object(studio, "STUDIO_ALLOW_SKILL_CODE", True), \
-             unittest.mock.patch.object(studio, "STUDIO_EXECUTION_MODE", "sandbox"), \
-             unittest.mock.patch.object(studio, "_sandbox_command", _no_runtime), \
-             unittest.mock.patch.object(asyncio, "create_subprocess_exec", _spy_exec):
-            try:
-                asyncio.run(studio._run_skill_script(script, args, cwd=skill_dir, timeout=8.0))
-            except Exception as exc:  # noqa: BLE001 - any failure is a closed gate here
-                record(not spawned, "sandbox-mode fails closed, no host fallback",
-                       f"{type(exc).__name__}; host spawns: {spawned or 'none'}")
-            else:
-                record(False, "sandbox-mode fails closed, no host fallback", "executed instead of denying")
+            async def _spy_exec(*args, **kwargs):
+                spawned.append(str(args[0]))
+                return await real_exec(*args, **kwargs)
+
+            with unittest.mock.patch.object(studio, "STUDIO_ALLOW_SKILL_CODE", True), \
+                 unittest.mock.patch.object(studio, "STUDIO_EXECUTION_MODE", "sandbox"), \
+                 unittest.mock.patch.object(studio, "_sandbox_command", _no_runtime), \
+                 unittest.mock.patch.object(asyncio, "create_subprocess_exec", _spy_exec):
+                try:
+                    asyncio.run(studio._run_skill_script(script, args, cwd=skill_dir, timeout=8.0))
+                except Exception as exc:  # noqa: BLE001 - any failure is a closed gate here
+                    record(not spawned, "sandbox-mode fails closed, no host fallback",
+                           f"{type(exc).__name__}; host spawns: {spawned or 'none'}")
+                else:
+                    record(False, "sandbox-mode fails closed, no host fallback", "executed instead of denying")
 
 
 def filesystem_confinement() -> None:
