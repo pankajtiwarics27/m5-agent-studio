@@ -1315,13 +1315,13 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P1-05: Durable task state machine and checkpoints. Objective: Resume root task safely after restart with bounded lifecycle. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Persist task/milestone states and transitions; Implement pause/resume/cancel with safe boundaries; Persist checkpoint and evidence refs; Recover incomplete transitions. Acceptance: Task survives injected restart; Pause/cancel do not claim completion prematurely; Task and recovery budgets persist. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-30T15:05:51Z",
+        "updated_at": "2026-10-30T15:05:51Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/d02f32a0-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -1329,7 +1329,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "next_action": "Inspect workflow_*.py, runtime_persistence.py, side_effect_ledger.py, and app.py before designing durable task/milestone state machine, checkpoints, budgets, and incomplete-transition recovery.",
         "readme_updated": false
       }
     },
