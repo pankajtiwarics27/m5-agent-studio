@@ -451,6 +451,7 @@ async def _cleanup_sandbox_container(name: str) -> None:
 
 
 async def _start_code_process(root: Path, command: str, *, python_code: bool = False) -> tuple[asyncio.subprocess.Process, str | None]:
+    runtime_persistence.assert_no_active_write_transaction("code_subprocess")
     mode = _execution_mode()
     if mode == "disabled":
         raise PermissionError("Code execution is disabled. Set STUDIO_EXECUTION_MODE=sandbox with a local container runtime, or explicitly enable host execution and accept the security risk.")
@@ -660,34 +661,53 @@ def _mask_mapping(values: dict[str, Any]) -> dict[str, str]:
 
 def _migrate_legacy_secrets() -> None:
     """One-time idempotent migration of credential-bearing SQLite fields to OS keyring."""
-    with STORAGE.connect(DB_PATH) as conn:
+    def _read_legacy(conn: sqlite3.Connection) -> tuple[list[tuple[Any, ...]], list[tuple[Any, ...]]]:
         providers = conn.execute("SELECT alias, api_key FROM cloud_providers WHERE api_key != ''").fetchall()
-        for alias, raw in providers:
-            if not _is_keyring_ref(raw):
-                ref = _keyring_store(f"cloud:{alias}:api-key", raw)
-                conn.execute("UPDATE cloud_providers SET api_key = ? WHERE alias = ?", (ref, alias))
         servers = conn.execute("SELECT alias, auth_token, headers_json, env_json FROM mcp_servers").fetchall()
-        for alias, token, headers_json, env_json in servers:
-            token_value = token or ""
-            if token_value and not _is_keyring_ref(token_value):
-                token_value = _keyring_store(f"mcp:{alias}:auth-token", token_value)
-            try:
-                headers = json.loads(headers_json or "{}")
-            except (TypeError, json.JSONDecodeError):
-                headers = {}
-            try:
-                env = json.loads(env_json or "{}")
-            except (TypeError, json.JSONDecodeError):
-                env = {}
-            if isinstance(headers, dict):
-                headers = _secure_mapping("mcp-header", alias, headers)
-            if isinstance(env, dict):
-                env = _secure_mapping("mcp-env", alias, env)
+        return providers, servers
+
+    providers, servers = runtime_persistence.run_read(STORAGE, DB_PATH, _read_legacy)
+    provider_updates: list[tuple[str, str]] = []
+    for alias, raw in providers:
+        if not _is_keyring_ref(raw):
+            ref = _keyring_store(f"cloud:{alias}:api-key", raw)
+            provider_updates.append((ref, str(alias)))
+
+    server_updates: list[tuple[str, str, str, str]] = []
+    for alias, token, headers_json, env_json in servers:
+        token_value = token or ""
+        changed = False
+        if token_value and not _is_keyring_ref(token_value):
+            token_value = _keyring_store(f"mcp:{alias}:auth-token", token_value)
+            changed = True
+        try:
+            headers = json.loads(headers_json or "{}")
+        except (TypeError, json.JSONDecodeError):
+            headers = {}
+        try:
+            env = json.loads(env_json or "{}")
+        except (TypeError, json.JSONDecodeError):
+            env = {}
+        new_headers = _secure_mapping("mcp-header", alias, headers) if isinstance(headers, dict) else {}
+        new_env = _secure_mapping("mcp-env", alias, env) if isinstance(env, dict) else {}
+        new_headers_json = json.dumps(new_headers)
+        new_env_json = json.dumps(new_env)
+        if changed or new_headers_json != (headers_json or "{}") or new_env_json != (env_json or "{}"):
+            server_updates.append((token_value, new_headers_json, new_env_json, str(alias)))
+
+    if not provider_updates and not server_updates:
+        return
+
+    def _write_migrated(conn: sqlite3.Connection) -> None:
+        for ref, alias_str in provider_updates:
+            conn.execute("UPDATE cloud_providers SET api_key = ? WHERE alias = ?", (ref, alias_str))
+        for tok, h_json, e_json, alias_str in server_updates:
             conn.execute(
                 "UPDATE mcp_servers SET auth_token = ?, headers_json = ?, env_json = ? WHERE alias = ?",
-                (token_value, json.dumps(headers), json.dumps(env), alias),
+                (tok, h_json, e_json, alias_str),
             )
-        conn.commit()
+
+    runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _write_migrated)
 
 GIB = 1024**3
 IS_MACOS = platform.system() == "Darwin"
@@ -1026,257 +1046,213 @@ AGENT_ROLES: dict[str, dict[str, str]] = {
 # =============================================================================
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def _apply_schema_migrations(conn: sqlite3.Connection) -> None:
     """Upgrade older additive SQLite schemas under an exclusive write transaction."""
-    current = int(conn.execute("PRAGMA user_version").fetchone()[0])
-    if current > SCHEMA_VERSION:
-        raise RuntimeError(f"Database schema version {current} is newer than supported version {SCHEMA_VERSION}.")
-    additions: dict[str, dict[str, str]] = {
-        "runs": {"created_at": "REAL NOT NULL DEFAULT 0", "mode": "TEXT NOT NULL DEFAULT ''", "title": "TEXT NOT NULL DEFAULT ''", "payload_json": "TEXT NOT NULL DEFAULT '{}'"},
-        "perf_samples": {"created_at": "REAL NOT NULL DEFAULT 0", "mode": "TEXT NOT NULL DEFAULT ''", "model": "TEXT NOT NULL DEFAULT ''", "decode_tps": "REAL", "prefill_tps": "REAL", "ttft": "REAL", "completion_tokens": "INTEGER", "cached_tokens": "INTEGER"},
-        "hall_sessions": {"title": "TEXT NOT NULL DEFAULT ''", "request_text": "TEXT NOT NULL DEFAULT ''", "created_by": "TEXT NOT NULL DEFAULT ''", "status": "TEXT NOT NULL DEFAULT 'active'", "context_files_json": "TEXT NOT NULL DEFAULT '[]'", "conclusion_author": "TEXT", "conclusion_text": "TEXT", "conclusion_at": "REAL", "created_at": "REAL NOT NULL DEFAULT 0", "updated_at": "REAL NOT NULL DEFAULT 0"},
-        "hall_messages": {"session_id": "TEXT NOT NULL DEFAULT ''", "author": "TEXT NOT NULL DEFAULT ''", "role_key": "TEXT NOT NULL DEFAULT ''", "model": "TEXT", "content": "TEXT NOT NULL DEFAULT ''", "reasoning": "TEXT DEFAULT ''", "usage_json": "TEXT DEFAULT '{}'", "created_at": "REAL NOT NULL DEFAULT 0"},
-        "cloud_providers": {"name": "TEXT NOT NULL DEFAULT ''", "wire": "TEXT NOT NULL DEFAULT 'openai'", "base_url": "TEXT NOT NULL DEFAULT ''", "api_key": "TEXT NOT NULL DEFAULT ''", "models_json": "TEXT NOT NULL DEFAULT '[]'", "enabled": "INTEGER NOT NULL DEFAULT 1", "updated_at": "REAL NOT NULL DEFAULT 0"},
-        "model_combos": {"name": "TEXT NOT NULL DEFAULT ''", "targets_json": "TEXT NOT NULL DEFAULT '[]'", "updated_at": "REAL NOT NULL DEFAULT 0"},
-        "harness_sessions": {"title": "TEXT NOT NULL DEFAULT ''", "workspace_dir": "TEXT NOT NULL DEFAULT ''", "worktree_dir": "TEXT NOT NULL DEFAULT ''", "branch_name": "TEXT NOT NULL DEFAULT ''", "use_worktree": "INTEGER NOT NULL DEFAULT 0", "policy": "TEXT NOT NULL DEFAULT 'standard'", "lead_model": "TEXT NOT NULL DEFAULT ''", "critic_model": "TEXT NOT NULL DEFAULT ''", "status": "TEXT NOT NULL DEFAULT 'idle'", "step_count": "INTEGER NOT NULL DEFAULT 0", "created_at": "REAL NOT NULL DEFAULT 0", "updated_at": "REAL NOT NULL DEFAULT 0"},
-        "mcp_servers": {"name": "TEXT NOT NULL DEFAULT ''", "category": "TEXT NOT NULL DEFAULT 'cloud'", "transport": "TEXT NOT NULL DEFAULT 'http'", "url": "TEXT NOT NULL DEFAULT ''", "auth_header": "TEXT NOT NULL DEFAULT 'Authorization'", "auth_token": "TEXT NOT NULL DEFAULT ''", "headers_json": "TEXT NOT NULL DEFAULT '{}'", "command": "TEXT NOT NULL DEFAULT ''", "args_json": "TEXT NOT NULL DEFAULT '[]'", "env_json": "TEXT NOT NULL DEFAULT '{}'", "approval_policy": "TEXT NOT NULL DEFAULT 'inherit'", "tools_json": "TEXT NOT NULL DEFAULT '[]'", "enabled_tools_json": "TEXT NOT NULL DEFAULT '[]'", "enabled": "INTEGER NOT NULL DEFAULT 1", "last_sync_at": "REAL DEFAULT 0", "last_error": "TEXT DEFAULT ''", "updated_at": "REAL NOT NULL DEFAULT 0"},
-        "opencontext_docs": {"folder": "TEXT NOT NULL DEFAULT 'decisions'", "title": "TEXT NOT NULL DEFAULT ''", "description": "TEXT NOT NULL DEFAULT ''", "content": "TEXT NOT NULL DEFAULT ''", "pinned": "INTEGER NOT NULL DEFAULT 0", "updated_at": "REAL NOT NULL DEFAULT 0"},
-        "ctx_vault_chunks": {"session_id": "TEXT NOT NULL DEFAULT ''", "doc_id": "TEXT NOT NULL DEFAULT ''", "source_tool": "TEXT NOT NULL DEFAULT ''", "chunk_idx": "INTEGER NOT NULL DEFAULT 0", "content": "TEXT NOT NULL DEFAULT ''", "created_at": "REAL NOT NULL DEFAULT 0"},
-        "ctx_session_metrics": {"raw_bytes": "INTEGER NOT NULL DEFAULT 0", "sent_bytes": "INTEGER NOT NULL DEFAULT 0", "compactions": "INTEGER NOT NULL DEFAULT 0", "updated_at": "REAL NOT NULL DEFAULT 0"},
-    }
-    conn.execute("BEGIN IMMEDIATE")
-    try:
-        for table, columns in additions.items():
-            existing = {row[1] for row in conn.execute(f'PRAGMA table_info("{table}")').fetchall()}
-            if not existing:
-                continue
-            for name, definition in columns.items():
-                if name not in existing:
-                    conn.execute(f'ALTER TABLE "{table}" ADD COLUMN "{name}" {definition}')
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS schema_migrations ("
-            "version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+    runtime_persistence.apply_schema_migrations(conn, target_version=SCHEMA_VERSION)
+
+
+def _ensure_base_tables(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS runs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at REAL NOT NULL,
+            mode TEXT NOT NULL,
+            title TEXT NOT NULL,
+            payload_json TEXT NOT NULL
         )
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS tool_audit_events ("
-            "id INTEGER PRIMARY KEY AUTOINCREMENT, created_at REAL NOT NULL, session_id TEXT NOT NULL, "
-            "tool_name TEXT NOT NULL, policy TEXT NOT NULL, explicit_approval INTEGER NOT NULL, "
-            "args_sha256 TEXT NOT NULL, status TEXT NOT NULL, ok INTEGER, elapsed_ms INTEGER, "
-            "output_sha256 TEXT NOT NULL DEFAULT '')"
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS perf_samples (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at REAL NOT NULL,
+            mode TEXT NOT NULL,
+            model TEXT NOT NULL,
+            decode_tps REAL,
+            prefill_tps REAL,
+            ttft REAL,
+            completion_tokens INTEGER,
+            cached_tokens INTEGER
         )
-        for version in range(1, SCHEMA_VERSION + 1):
-            conn.execute("INSERT OR IGNORE INTO schema_migrations(version) VALUES (?)", (version,))
-        if current < SCHEMA_VERSION:
-            conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS hall_sessions (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            request_text TEXT NOT NULL,
+            created_by TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'active',
+            context_files_json TEXT NOT NULL DEFAULT '[]',
+            conclusion_author TEXT,
+            conclusion_text TEXT,
+            conclusion_at REAL,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS hall_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL,
+            author TEXT NOT NULL,
+            role_key TEXT NOT NULL,
+            model TEXT,
+            content TEXT NOT NULL,
+            reasoning TEXT DEFAULT '',
+            usage_json TEXT DEFAULT '{}',
+            created_at REAL NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS cloud_providers (
+            alias TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            wire TEXT NOT NULL DEFAULT 'openai',
+            base_url TEXT NOT NULL,
+            api_key TEXT NOT NULL DEFAULT '',
+            models_json TEXT NOT NULL DEFAULT '[]',
+            enabled INTEGER NOT NULL DEFAULT 1,
+            updated_at REAL NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS model_combos (
+            alias TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            targets_json TEXT NOT NULL,
+            updated_at REAL NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS harness_sessions (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            workspace_dir TEXT NOT NULL,
+            worktree_dir TEXT NOT NULL,
+            branch_name TEXT NOT NULL DEFAULT '',
+            use_worktree INTEGER NOT NULL DEFAULT 0,
+            policy TEXT NOT NULL DEFAULT 'standard',
+            lead_model TEXT NOT NULL,
+            critic_model TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'idle',
+            step_count INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS mcp_servers (
+            alias TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT 'cloud',
+            transport TEXT NOT NULL DEFAULT 'http',
+            url TEXT NOT NULL DEFAULT '',
+            auth_header TEXT NOT NULL DEFAULT 'Authorization',
+            auth_token TEXT NOT NULL DEFAULT '',
+            headers_json TEXT NOT NULL DEFAULT '{}',
+            command TEXT NOT NULL DEFAULT '',
+            args_json TEXT NOT NULL DEFAULT '[]',
+            env_json TEXT NOT NULL DEFAULT '{}',
+            approval_policy TEXT NOT NULL DEFAULT 'inherit',
+            tools_json TEXT NOT NULL DEFAULT '[]',
+            enabled_tools_json TEXT NOT NULL DEFAULT '[]',
+            enabled INTEGER NOT NULL DEFAULT 1,
+            last_sync_at REAL DEFAULT 0,
+            last_error TEXT DEFAULT '',
+            updated_at REAL NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS opencontext_docs (
+            id TEXT PRIMARY KEY,
+            folder TEXT NOT NULL DEFAULT 'decisions',
+            title TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            content TEXT NOT NULL,
+            pinned INTEGER NOT NULL DEFAULT 0,
+            updated_at REAL NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE VIRTUAL TABLE IF NOT EXISTS opencontext_fts
+        USING fts5(doc_id UNINDEXED, folder, title, description, content, tokenize='porter unicode61')
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ctx_vault_chunks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL,
+            doc_id TEXT NOT NULL,
+            source_tool TEXT NOT NULL,
+            chunk_idx INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            created_at REAL NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE VIRTUAL TABLE IF NOT EXISTS ctx_vault_fts
+        USING fts5(session_id UNINDEXED, doc_id UNINDEXED, source_tool, content, tokenize='porter unicode61')
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ctx_session_metrics (
+            session_id TEXT PRIMARY KEY,
+            raw_bytes INTEGER NOT NULL DEFAULT 0,
+            sent_bytes INTEGER NOT NULL DEFAULT 0,
+            compactions INTEGER NOT NULL DEFAULT 0,
+            updated_at REAL NOT NULL
+        )
+        """
+    )
 
 
 def init_db() -> None:
-    with STORAGE.connect(DB_PATH) as conn:
-        db_version = int(conn.execute("PRAGMA user_version").fetchone()[0])
-        if db_version > SCHEMA_VERSION:
-            raise RuntimeError(f"Database schema version {db_version} is newer than supported version {SCHEMA_VERSION}.")
-        conn.execute("PRAGMA journal_mode=WAL;")
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS runs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                created_at REAL NOT NULL,
-                mode TEXT NOT NULL,
-                title TEXT NOT NULL,
-                payload_json TEXT NOT NULL
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS perf_samples (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                created_at REAL NOT NULL,
-                mode TEXT NOT NULL,
-                model TEXT NOT NULL,
-                decode_tps REAL,
-                prefill_tps REAL,
-                ttft REAL,
-                completion_tokens INTEGER,
-                cached_tokens INTEGER
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS hall_sessions (
-                id TEXT PRIMARY KEY,
-                title TEXT NOT NULL,
-                request_text TEXT NOT NULL,
-                created_by TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'active',
-                context_files_json TEXT NOT NULL DEFAULT '[]',
-                conclusion_author TEXT,
-                conclusion_text TEXT,
-                conclusion_at REAL,
-                created_at REAL NOT NULL,
-                updated_at REAL NOT NULL
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS hall_messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id TEXT NOT NULL,
-                author TEXT NOT NULL,
-                role_key TEXT NOT NULL,
-                model TEXT,
-                content TEXT NOT NULL,
-                reasoning TEXT DEFAULT '',
-                usage_json TEXT DEFAULT '{}',
-                created_at REAL NOT NULL
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS cloud_providers (
-                alias TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                wire TEXT NOT NULL DEFAULT 'openai',
-                base_url TEXT NOT NULL,
-                api_key TEXT NOT NULL DEFAULT '',
-                models_json TEXT NOT NULL DEFAULT '[]',
-                enabled INTEGER NOT NULL DEFAULT 1,
-                updated_at REAL NOT NULL
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS model_combos (
-                alias TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                targets_json TEXT NOT NULL,
-                updated_at REAL NOT NULL
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS harness_sessions (
-                id TEXT PRIMARY KEY,
-                title TEXT NOT NULL,
-                workspace_dir TEXT NOT NULL,
-                worktree_dir TEXT NOT NULL,
-                branch_name TEXT NOT NULL DEFAULT '',
-                use_worktree INTEGER NOT NULL DEFAULT 0,
-                policy TEXT NOT NULL DEFAULT 'standard',
-                lead_model TEXT NOT NULL,
-                critic_model TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'idle',
-                step_count INTEGER NOT NULL DEFAULT 0,
-                created_at REAL NOT NULL,
-                updated_at REAL NOT NULL
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS mcp_servers (
-                alias TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                category TEXT NOT NULL DEFAULT 'cloud',
-                transport TEXT NOT NULL DEFAULT 'http',
-                url TEXT NOT NULL DEFAULT '',
-                auth_header TEXT NOT NULL DEFAULT 'Authorization',
-                auth_token TEXT NOT NULL DEFAULT '',
-                headers_json TEXT NOT NULL DEFAULT '{}',
-                command TEXT NOT NULL DEFAULT '',
-                args_json TEXT NOT NULL DEFAULT '[]',
-                env_json TEXT NOT NULL DEFAULT '{}',
-                approval_policy TEXT NOT NULL DEFAULT 'inherit',
-                tools_json TEXT NOT NULL DEFAULT '[]',
-                enabled_tools_json TEXT NOT NULL DEFAULT '[]',
-                enabled INTEGER NOT NULL DEFAULT 1,
-                last_sync_at REAL DEFAULT 0,
-                last_error TEXT DEFAULT '',
-                updated_at REAL NOT NULL
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS opencontext_docs (
-                id TEXT PRIMARY KEY,
-                folder TEXT NOT NULL DEFAULT 'decisions',
-                title TEXT NOT NULL,
-                description TEXT NOT NULL DEFAULT '',
-                content TEXT NOT NULL,
-                pinned INTEGER NOT NULL DEFAULT 0,
-                updated_at REAL NOT NULL
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE VIRTUAL TABLE IF NOT EXISTS opencontext_fts
-            USING fts5(doc_id UNINDEXED, folder, title, description, content, tokenize='porter unicode61')
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS ctx_vault_chunks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id TEXT NOT NULL,
-                doc_id TEXT NOT NULL,
-                source_tool TEXT NOT NULL,
-                chunk_idx INTEGER NOT NULL,
-                content TEXT NOT NULL,
-                created_at REAL NOT NULL
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE VIRTUAL TABLE IF NOT EXISTS ctx_vault_fts
-            USING fts5(session_id UNINDEXED, doc_id UNINDEXED, source_tool, content, tokenize='porter unicode61')
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS ctx_session_metrics (
-                session_id TEXT PRIMARY KEY,
-                raw_bytes INTEGER NOT NULL DEFAULT 0,
-                sent_bytes INTEGER NOT NULL DEFAULT 0,
-                compactions INTEGER NOT NULL DEFAULT 0,
-                updated_at REAL NOT NULL
-            )
-            """
-        )
-        conn.commit()
-        _apply_schema_migrations(conn)
-    for protected_path in (DB_PATH, Path(str(DB_PATH) + "-wal"), Path(str(DB_PATH) + "-shm")):
-        try:
-            if protected_path.exists():
-                protected_path.chmod(0o600)
-        except OSError:
-            pass
+    runtime_persistence.upgrade_database(
+        STORAGE,
+        DB_PATH,
+        base_ddl=_ensure_base_tables,
+        target_version=SCHEMA_VERSION,
+    )
     _migrate_legacy_secrets()
     _seed_env_providers_and_default_combo()
     _seed_default_opencontext()
     if STUDIO_HISTORY_RETENTION_DAYS > 0:
         try:
-            with sqlite3.connect(DB_PATH) as retention_conn:
-                pruned = apply_retention(
+            pruned = runtime_persistence.run_write_transaction(
+                STORAGE,
+                DB_PATH,
+                lambda retention_conn: apply_retention(
                     retention_conn,
                     max_age_days=STUDIO_HISTORY_RETENTION_DAYS,
                     now=time.time(),
                     harness_store_dir=HARNESS_STORE_DIR,
-                )
+                ),
+            )
             if pruned:
                 deleted_total = sum(count for key, count in pruned.items() if not key.endswith("_failed"))
                 print(f"History retention pruned {deleted_total} item(s): {sorted(pruned.items())}", file=sys.stderr)
@@ -1288,7 +1264,8 @@ def init_db() -> None:
 def _seed_env_providers_and_default_combo() -> None:
     """Auto-register any cloud provider whose API key is already exported in macOS env."""
     now = time.time()
-    with STORAGE.connect(DB_PATH) as conn:
+
+    def _seed_tx(conn: sqlite3.Connection) -> None:
         for alias, preset in PROVIDER_PRESETS.items():
             env_k = preset.get("env_key") or ""
             env_val = os.environ.get(env_k, "").strip() if env_k else ""
@@ -1322,13 +1299,15 @@ def _seed_env_providers_and_default_combo() -> None:
                     now,
                 ),
             )
-        conn.commit()
+
+    runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _seed_tx)
 
 
 def _seed_default_opencontext() -> None:
     """Seed initial M5 architectural memory note into OpenContext vault if empty."""
     now = time.time()
-    with STORAGE.connect(DB_PATH) as conn:
+
+    def _seed_oc_tx(conn: sqlite3.Connection) -> None:
         cnt = conn.execute("SELECT COUNT(*) FROM opencontext_docs").fetchone()[0]
         if cnt == 0:
             doc_id = "oc-m5-core"
@@ -1348,7 +1327,8 @@ def _seed_default_opencontext() -> None:
                 "INSERT INTO opencontext_fts (doc_id, folder, title, description, content) VALUES (?, ?, ?, ?, ?)",
                 (doc_id, folder, title, desc, body),
             )
-            conn.commit()
+
+    runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _seed_oc_tx)
 
 
 def _mask_key(k: str) -> str:
@@ -1360,9 +1340,11 @@ def _mask_key(k: str) -> str:
 
 
 def list_cloud_providers(include_secret: bool = False) -> list[dict[str, Any]]:
-    with STORAGE.connect(DB_PATH) as conn:
+    def _read_providers(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
-        rows = conn.execute("SELECT * FROM cloud_providers ORDER BY alias ASC").fetchall()
+        return conn.execute("SELECT * FROM cloud_providers ORDER BY alias ASC").fetchall()
+
+    rows = runtime_persistence.run_read(STORAGE, DB_PATH, _read_providers)
     out = []
     for r in rows:
         d = dict(r)
@@ -1397,20 +1379,30 @@ def upsert_cloud_provider(
     is_builtin_local = clean_alias in PROVIDER_PRESETS and base_url == PROVIDER_PRESETS[clean_alias].get("base_url") and urlsplit(base_url).hostname in ("localhost", "127.0.0.1", "::1")
     private_host_exception = (urlsplit(base_url).hostname or "").lower().rstrip(".") in STUDIO_PRIVATE_URL_HOSTS
     _validate_url_syntax(base_url, allow_private=(STUDIO_ALLOW_PRIVATE_URLS or is_builtin_local or private_host_exception))
-    now = time.time()
-    with STORAGE.connect(DB_PATH) as conn:
+
+    def _read_prev(conn: sqlite3.Connection) -> sqlite3.Row | None:
         conn.row_factory = sqlite3.Row
-        prev = conn.execute("SELECT api_key FROM cloud_providers WHERE alias = ?", (clean_alias,)).fetchone()
-        # Preserve an existing key when the masked UI field is left blank.
-        if prev and (api_key is None or api_key == ""):
-            final_key = prev["api_key"]
-        elif api_key == "__CLEAR__":
-            _keyring_delete(f"cloud:{clean_alias}:api-key")
-            final_key = ""
-        elif api_key:
-            final_key = _keyring_store(f"cloud:{clean_alias}:api-key", str(api_key).strip())
-        else:
-            final_key = ""
+        return conn.execute("SELECT api_key FROM cloud_providers WHERE alias = ?", (clean_alias,)).fetchone()
+
+    prev = runtime_persistence.run_read(STORAGE, DB_PATH, _read_prev)
+    # Preserve an existing key when the masked UI field is left blank; perform OS keyring I/O outside the DB write lock.
+    if prev and (api_key is None or api_key == ""):
+        final_key = str(prev["api_key"])
+    elif api_key == "__CLEAR__":
+        _keyring_delete(f"cloud:{clean_alias}:api-key")
+        final_key = ""
+    elif api_key:
+        final_key = _keyring_store(f"cloud:{clean_alias}:api-key", str(api_key).strip())
+    else:
+        final_key = ""
+
+    now = time.time()
+    clean_models = json.dumps([m.strip() for m in models if m.strip()])
+    clean_wire = wire if wire in ("openai", "anthropic") else "openai"
+    clean_name = name.strip() or clean_alias
+    enabled_int = 1 if enabled else 0
+
+    def _write_provider(conn: sqlite3.Connection) -> None:
         conn.execute(
             """
             INSERT INTO cloud_providers (alias, name, wire, base_url, api_key, models_json, enabled, updated_at)
@@ -1426,30 +1418,35 @@ def upsert_cloud_provider(
             """,
             (
                 clean_alias,
-                name.strip() or clean_alias,
-                wire if wire in ("openai", "anthropic") else "openai",
-                base_url.strip().rstrip("/"),
+                clean_name,
+                clean_wire,
+                base_url,
                 final_key.strip(),
-                json.dumps([m.strip() for m in models if m.strip()]),
-                1 if enabled else 0,
+                clean_models,
+                enabled_int,
                 now,
             ),
         )
-        conn.commit()
+
+    runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _write_provider)
     return next(p for p in list_cloud_providers(include_secret=False) if p["alias"] == clean_alias)
 
 
 def delete_cloud_provider(alias: str) -> None:
     _keyring_delete(f"cloud:{alias}:api-key")
-    with STORAGE.connect(DB_PATH) as conn:
-        conn.execute("DELETE FROM cloud_providers WHERE alias = ?", (alias,))
-        conn.commit()
+    runtime_persistence.run_write_transaction(
+        STORAGE,
+        DB_PATH,
+        lambda conn: conn.execute("DELETE FROM cloud_providers WHERE alias = ?", (alias,)),
+    )
 
 
 def list_model_combos() -> list[dict[str, Any]]:
-    with STORAGE.connect(DB_PATH) as conn:
+    def _read_combos(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
-        rows = conn.execute("SELECT * FROM model_combos ORDER BY alias ASC").fetchall()
+        return conn.execute("SELECT * FROM model_combos ORDER BY alias ASC").fetchall()
+
+    rows = runtime_persistence.run_read(STORAGE, DB_PATH, _read_combos)
     out = []
     for r in rows:
         d = dict(r)
@@ -1464,8 +1461,13 @@ def upsert_model_combo(alias: str, name: str, targets: list[str]) -> dict[str, A
     clean_targets = [t.strip() for t in targets if t.strip()]
     if not clean_alias or not clean_targets:
         raise ValueError("Combo requires an alias and at least 1 target model")
-    with STORAGE.connect(DB_PATH) as conn:
-        conn.execute(
+    now = time.time()
+    targets_payload = json.dumps(clean_targets)
+    clean_name = name.strip() or clean_alias
+    runtime_persistence.run_write_transaction(
+        STORAGE,
+        DB_PATH,
+        lambda conn: conn.execute(
             """
             INSERT INTO model_combos (alias, name, targets_json, updated_at)
             VALUES (?, ?, ?, ?)
@@ -1474,16 +1476,18 @@ def upsert_model_combo(alias: str, name: str, targets: list[str]) -> dict[str, A
                 targets_json = excluded.targets_json,
                 updated_at = excluded.updated_at
             """,
-            (clean_alias, name.strip() or clean_alias, json.dumps(clean_targets), time.time()),
-        )
-        conn.commit()
+            (clean_alias, clean_name, targets_payload, now),
+        ),
+    )
     return next(c for c in list_model_combos() if c["alias"] == clean_alias)
 
 
 def delete_model_combo(alias: str) -> None:
-    with STORAGE.connect(DB_PATH) as conn:
-        conn.execute("DELETE FROM model_combos WHERE alias = ?", (alias,))
-        conn.commit()
+    runtime_persistence.run_write_transaction(
+        STORAGE,
+        DB_PATH,
+        lambda conn: conn.execute("DELETE FROM model_combos WHERE alias = ?", (alias,)),
+    )
 
 
 def is_local_omlx_model(model_spec: str) -> bool:
@@ -1542,8 +1546,10 @@ def record_perf(
     if not decode_tps and not completion_tokens:
         return
     try:
-        with STORAGE.connect(DB_PATH) as conn:
-            conn.execute(
+        runtime_persistence.run_write_transaction(
+            STORAGE,
+            DB_PATH,
+            lambda conn: conn.execute(
                 """
                 INSERT INTO perf_samples
                 (created_at, mode, model, decode_tps, prefill_tps, ttft, completion_tokens, cached_tokens)
@@ -1554,21 +1560,22 @@ def record_perf(
                     float(decode_tps or 0.0), float(prefill_tps or 0.0), float(ttft or 0.0),
                     int(completion_tokens or 0), int(cached_tokens or 0),
                 ),
-            )
-            conn.commit()
+            ),
+        )
     except Exception:
         pass
 
 
 def save_run(mode: str, title: str, payload: dict[str, Any]) -> int:
     try:
-        with STORAGE.connect(DB_PATH) as conn:
+        def _insert_run(conn: sqlite3.Connection) -> int:
             cur = conn.execute(
                 "INSERT INTO runs (created_at, mode, title, payload_json) VALUES (?, ?, ?, ?)",
                 (time.time(), mode, title[:160], json.dumps(payload)),
             )
-            conn.commit()
             return int(cur.lastrowid or 0)
+
+        return runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _insert_run)
     except Exception:
         return 0
 
@@ -1586,7 +1593,8 @@ def create_hall_session(
     sid = f"ch-{uuid.uuid4().hex[:8]}"
     clean_title = (title or request_text.splitlines()[0] or "Council Session").strip()[:100]
     cfiles = context_files or []
-    with STORAGE.connect(DB_PATH) as conn:
+
+    def _create_hall_tx(conn: sqlite3.Connection) -> None:
         conn.execute(
             """
             INSERT INTO hall_sessions (id, title, request_text, created_by, status, context_files_json, created_at, updated_at)
@@ -1601,7 +1609,8 @@ def create_hall_session(
             """,
             (sid, created_by, request_text, now),
         )
-        conn.commit()
+
+    runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _create_hall_tx)
     return get_hall_session(sid)
 
 
@@ -1615,17 +1624,20 @@ def append_hall_message(
     usage: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     now = time.time()
-    with STORAGE.connect(DB_PATH) as conn:
+    usage_payload = json.dumps(usage or {})
+
+    def _append_msg_tx(conn: sqlite3.Connection) -> int:
         cur = conn.execute(
             """
             INSERT INTO hall_messages (session_id, author, role_key, model, content, reasoning, usage_json, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (session_id, author, role_key, model, content, reasoning, json.dumps(usage or {}), now),
+            (session_id, author, role_key, model, content, reasoning, usage_payload, now),
         )
         conn.execute("UPDATE hall_sessions SET updated_at = ? WHERE id = ?", (now, session_id))
-        conn.commit()
-        msg_id = int(cur.lastrowid or 0)
+        return int(cur.lastrowid or 0)
+
+    msg_id = runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _append_msg_tx)
     return {
         "id": msg_id, "session_id": session_id, "author": author, "role_key": role_key,
         "model": model, "content": content, "reasoning": reasoning, "usage": usage or {}, "created_at": now,
@@ -1634,21 +1646,23 @@ def append_hall_message(
 
 def close_hall_session_db(session_id: str, author: str, conclusion: str) -> dict[str, Any]:
     now = time.time()
-    with STORAGE.connect(DB_PATH) as conn:
-        conn.execute(
+    runtime_persistence.run_write_transaction(
+        STORAGE,
+        DB_PATH,
+        lambda conn: conn.execute(
             """
             UPDATE hall_sessions
             SET status = 'closed', conclusion_author = ?, conclusion_text = ?, conclusion_at = ?, updated_at = ?
             WHERE id = ?
             """,
             (author, conclusion, now, now, session_id),
-        )
-        conn.commit()
+        ),
+    )
     return get_hall_session(session_id)
 
 
 def list_hall_sessions(status: str = "all") -> list[dict[str, Any]]:
-    with STORAGE.connect(DB_PATH) as conn:
+    def _read_hall_list(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
         q = """
             SELECT s.*,
@@ -1661,7 +1675,9 @@ def list_hall_sessions(status: str = "all") -> list[dict[str, Any]]:
             q += " WHERE s.status = ?"
             params = (status,)
         q += " ORDER BY s.updated_at DESC LIMIT 60"
-        rows = conn.execute(q, params).fetchall()
+        return conn.execute(q, params).fetchall()
+
+    rows = runtime_persistence.run_read(STORAGE, DB_PATH, _read_hall_list)
     out = []
     for r in rows:
         d = dict(r)
@@ -1671,15 +1687,20 @@ def list_hall_sessions(status: str = "all") -> list[dict[str, Any]]:
 
 
 def get_hall_session(session_id: str, after_id: int = 0) -> dict[str, Any]:
-    with STORAGE.connect(DB_PATH) as conn:
+    def _read_hall_one(conn: sqlite3.Connection) -> tuple[sqlite3.Row | None, list[sqlite3.Row]]:
         conn.row_factory = sqlite3.Row
-        srow = conn.execute("SELECT * FROM hall_sessions WHERE id = ?", (session_id,)).fetchone()
-        if not srow:
-            raise KeyError(f"Session {session_id} not found")
-        mrows = conn.execute(
+        sr = conn.execute("SELECT * FROM hall_sessions WHERE id = ?", (session_id,)).fetchone()
+        if not sr:
+            return None, []
+        mr = conn.execute(
             "SELECT * FROM hall_messages WHERE session_id = ? AND id > ? ORDER BY id ASC",
             (session_id, after_id),
         ).fetchall()
+        return sr, mr
+
+    srow, mrows = runtime_persistence.run_read(STORAGE, DB_PATH, _read_hall_one)
+    if not srow:
+        raise KeyError(f"Session {session_id} not found")
     sess = dict(srow)
     sess["context_files"] = json.loads(sess.pop("context_files_json", "[]"))
     msgs = []
@@ -7472,6 +7493,7 @@ async def stream_any_model(
     """
     if _depth > 3:
         raise RuntimeError("Combo recursion depth exceeded")
+    runtime_persistence.assert_no_active_write_transaction("model_inference")
 
     kind, meta, rem_model = parse_model_route(model_spec)
 
@@ -8064,12 +8086,13 @@ async def api_telemetry(request: Request) -> JSONResponse:
 
 def _recent_perf_summary() -> dict[str, Any]:
     try:
-        with STORAGE.connect(DB_PATH) as conn:
+        def _read_perf(conn: sqlite3.Connection) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
             conn.row_factory = sqlite3.Row
             rows = conn.execute("SELECT created_at, mode, model, decode_tps, prefill_tps, ttft, completion_tokens FROM perf_samples ORDER BY id DESC LIMIT 24").fetchall()
-            samples = [dict(r) for r in reversed(rows)]
             avgs = conn.execute("SELECT model, ROUND(AVG(decode_tps), 2) AS avg_tps, ROUND(MAX(decode_tps), 2) AS peak_tps, COUNT(*) AS runs FROM perf_samples WHERE decode_tps > 0 GROUP BY model ORDER BY avg_tps DESC").fetchall()
-            leaderboard = [dict(r) for r in avgs]
+            return [dict(r) for r in reversed(rows)], [dict(r) for r in avgs]
+
+        samples, leaderboard = runtime_persistence.run_read(STORAGE, DB_PATH, _read_perf)
     except Exception:
         samples, leaderboard = [], []
     if not samples:
@@ -8175,8 +8198,7 @@ async def api_clear_ssd_cache(request: Request) -> JSONResponse:
 @app.get("/api/history/export")
 async def api_history_export() -> JSONResponse:
     """Download the local history bundle (redacted) as a JSON attachment."""
-    with sqlite3.connect(DB_PATH) as conn:
-        bundle = export_history(conn)
+    bundle = runtime_persistence.run_read(STORAGE, DB_PATH, export_history)
     return JSONResponse(
         bundle,
         headers={
@@ -8195,13 +8217,16 @@ async def api_history_retention_run() -> JSONResponse:
             {"status": "disabled", "detail": "Retention is disabled; set STUDIO_HISTORY_RETENTION_DAYS (1-3650) to enable."},
             status_code=400,
         )
-    with sqlite3.connect(DB_PATH) as conn:
-        pruned = apply_retention(
+    pruned = runtime_persistence.run_write_transaction(
+        STORAGE,
+        DB_PATH,
+        lambda conn: apply_retention(
             conn,
             max_age_days=days,
             now=time.time(),
             harness_store_dir=HARNESS_STORE_DIR,
-        )
+        ),
+    )
     deleted_total = sum(count for key, count in pruned.items() if not key.endswith("_failed"))
     return JSONResponse({"status": "ok", "max_age_days": days, "deleted": pruned, "deleted_total": deleted_total})
 
@@ -8720,9 +8745,11 @@ def _clean_mcp_alias(raw: str) -> str:
 
 
 def list_mcp_servers(include_secret: bool = False) -> list[dict[str, Any]]:
-    with STORAGE.connect(DB_PATH) as conn:
+    def _read_mcp(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
-        rows = conn.execute("SELECT * FROM mcp_servers ORDER BY category ASC, alias ASC").fetchall()
+        return conn.execute("SELECT * FROM mcp_servers ORDER BY category ASC, alias ASC").fetchall()
+
+    rows = runtime_persistence.run_read(STORAGE, DB_PATH, _read_mcp)
     out: list[dict[str, Any]] = []
     for r in rows:
         d = dict(r)
@@ -8852,8 +8879,17 @@ def upsert_mcp_server(payload: dict[str, Any]) -> dict[str, Any]:
     headers = _secure_mapping("mcp-header", alias, headers)
     merged_env = _secure_mapping("mcp-env", alias, merged_env)
     _MCP_HTTP_SESSIONS.pop(alias, None)
-    with STORAGE.connect(DB_PATH) as conn:
-        conn.execute(
+    headers_payload = json.dumps(headers)
+    args_payload = json.dumps(args)
+    env_payload = json.dumps(merged_env)
+    tools_payload = json.dumps(tools_list)
+    enabled_tools_payload = json.dumps(enabled_tools)
+    last_sync_val = prev["last_sync_at"] if prev else 0.0
+    last_err_val = prev["last_error"] if prev else ""
+    runtime_persistence.run_write_transaction(
+        STORAGE,
+        DB_PATH,
+        lambda conn: conn.execute(
             """
             INSERT INTO mcp_servers
             (alias, name, category, transport, url, auth_header, auth_token, headers_json,
@@ -8868,13 +8904,13 @@ def upsert_mcp_server(payload: dict[str, Any]) -> dict[str, Any]:
               enabled_tools_json=excluded.enabled_tools_json, enabled=excluded.enabled, updated_at=excluded.updated_at
             """,
             (
-                alias, name, category, transport, url, auth_header, auth_token, json.dumps(headers),
-                command, json.dumps(args), json.dumps(merged_env), approval_policy,
-                json.dumps(tools_list), json.dumps(enabled_tools), enabled,
-                prev["last_sync_at"] if prev else 0.0, prev["last_error"] if prev else "", now,
+                alias, name, category, transport, url, auth_header, auth_token, headers_payload,
+                command, args_payload, env_payload, approval_policy,
+                tools_payload, enabled_tools_payload, enabled,
+                last_sync_val, last_err_val, now,
             ),
-        )
-        conn.commit()
+        ),
+    )
     return get_mcp_server(alias, include_secret=False)
 
 
@@ -9035,22 +9071,29 @@ async def sync_mcp_server_tools(client: httpx.AsyncClient, alias: str) -> dict[s
                     }
                 )
         now = time.time()
-        with STORAGE.connect(DB_PATH) as conn:
-            conn.execute(
+        tools_payload = json.dumps(cleaned_tools)
+        runtime_persistence.run_write_transaction(
+            STORAGE,
+            DB_PATH,
+            lambda conn: conn.execute(
                 "UPDATE mcp_servers SET tools_json = ?, last_sync_at = ?, last_error = '', updated_at = ? WHERE alias = ?",
-                (json.dumps(cleaned_tools), now, now, srv["alias"]),
-            )
-            conn.commit()
+                (tools_payload, now, now, srv["alias"]),
+            ),
+        )
         updated = get_mcp_server(srv["alias"], include_secret=False)
         updated["sync_elapsed_ms"] = round((time.perf_counter() - t0) * 1000)
         return updated
     except Exception as exc:
-        with STORAGE.connect(DB_PATH) as conn:
-            conn.execute(
+        err_text = str(exc)[:300]
+        err_at = time.time()
+        runtime_persistence.run_write_transaction(
+            STORAGE,
+            DB_PATH,
+            lambda conn: conn.execute(
                 "UPDATE mcp_servers SET last_error = ?, updated_at = ? WHERE alias = ?",
-                (str(exc)[:300], time.time(), srv["alias"]),
-            )
-            conn.commit()
+                (err_text, err_at, srv["alias"]),
+            ),
+        )
         raise
 
 
@@ -9290,9 +9333,11 @@ async def api_delete_mcp_server(alias: str) -> JSONResponse:
             _keyring_delete(f"mcp-env:{clean}:{k}")
     except KeyError:
         pass
-    with STORAGE.connect(DB_PATH) as conn:
-        conn.execute("DELETE FROM mcp_servers WHERE alias = ?", (clean,))
-        conn.commit()
+    runtime_persistence.run_write_transaction(
+        STORAGE,
+        DB_PATH,
+        lambda conn: conn.execute("DELETE FROM mcp_servers WHERE alias = ?", (clean,)),
+    )
     return JSONResponse({"status": "deleted", "servers": list_mcp_servers(include_secret=False)})
 
 
@@ -10049,11 +10094,14 @@ def build_efficiency_mode_prompt(efficiency_mode: str = "ponytail") -> str:
 
 
 def get_ctx_session_metrics(session_id: str) -> dict[str, Any]:
-    with STORAGE.connect(DB_PATH) as conn:
-        row = conn.execute(
+    row = runtime_persistence.run_read(
+        STORAGE,
+        DB_PATH,
+        lambda conn: conn.execute(
             "SELECT raw_bytes, sent_bytes, compactions FROM ctx_session_metrics WHERE session_id = ?",
             (session_id,),
-        ).fetchone()
+        ).fetchone(),
+    )
     raw_b = int(row[0]) if row else 0
     sent_b = int(row[1]) if row else 0
     comp = int(row[2]) if row else 0
@@ -10070,8 +10118,10 @@ def get_ctx_session_metrics(session_id: str) -> dict[str, Any]:
 
 def _record_ctx_bytes(session_id: str, raw_b: int, sent_b: int, compaction_inc: int = 0) -> dict[str, Any]:
     now = time.time()
-    with STORAGE.connect(DB_PATH) as conn:
-        conn.execute(
+    runtime_persistence.run_write_transaction(
+        STORAGE,
+        DB_PATH,
+        lambda conn: conn.execute(
             """
             INSERT INTO ctx_session_metrics (session_id, raw_bytes, sent_bytes, compactions, updated_at)
             VALUES (?, ?, ?, ?, ?)
@@ -10082,8 +10132,8 @@ def _record_ctx_bytes(session_id: str, raw_b: int, sent_b: int, compaction_inc: 
               updated_at = excluded.updated_at
             """,
             (session_id, raw_b, sent_b, compaction_inc, now),
-        )
-        conn.commit()
+        ),
+    )
     return get_ctx_session_metrics(session_id)
 
 
@@ -10121,7 +10171,8 @@ def sandbox_tool_output_if_large(
         chunks.append("\n".join(cur))
 
     now = time.time()
-    with STORAGE.connect(DB_PATH) as conn:
+
+    def _insert_chunks(conn: sqlite3.Connection) -> None:
         for c_idx, ch in enumerate(chunks):
             conn.execute(
                 "INSERT INTO ctx_vault_chunks (session_id, doc_id, source_tool, chunk_idx, content, created_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -10131,7 +10182,8 @@ def sandbox_tool_output_if_large(
                 "INSERT INTO ctx_vault_fts (session_id, doc_id, source_tool, content) VALUES (?, ?, ?, ?)",
                 (session_id, doc_id, tool_name, ch),
             )
-        conn.commit()
+
+    runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _insert_chunks)
 
     smart_dig = _caveman_smart_digest(raw_output, lines)
     if smart_dig:
@@ -10164,10 +10216,13 @@ def sandbox_tool_output_if_large(
 
 def search_ctx_vault(session_id: str, query: str, doc_id: str = "", limit: int = 6) -> str:
     fts_q = context_store.sanitize_fts5_query(query)
-    with STORAGE.connect(DB_PATH) as conn:
+    if not fts_q and not doc_id:
+        return "Provide a `query` or `doc_id` to search the Context-Mode FTS5 Vault."
+
+    def _read_vault(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
         if fts_q and doc_id:
-            rows = conn.execute(
+            return conn.execute(
                 """
                 SELECT doc_id, source_tool, content, bm25(ctx_vault_fts) AS rk
                 FROM ctx_vault_fts
@@ -10176,8 +10231,8 @@ def search_ctx_vault(session_id: str, query: str, doc_id: str = "", limit: int =
                 """,
                 (fts_q, doc_id, limit),
             ).fetchall()
-        elif fts_q:
-            rows = conn.execute(
+        if fts_q:
+            return conn.execute(
                 """
                 SELECT doc_id, source_tool, content, bm25(ctx_vault_fts) AS rk
                 FROM ctx_vault_fts
@@ -10186,13 +10241,12 @@ def search_ctx_vault(session_id: str, query: str, doc_id: str = "", limit: int =
                 """,
                 (fts_q, session_id, limit),
             ).fetchall()
-        elif doc_id:
-            rows = conn.execute(
-                "SELECT doc_id, source_tool, content FROM ctx_vault_chunks WHERE doc_id = ? ORDER BY chunk_idx ASC LIMIT ?",
-                (doc_id, limit),
-            ).fetchall()
-        else:
-            return "Provide a `query` or `doc_id` to search the Context-Mode FTS5 Vault."
+        return conn.execute(
+            "SELECT doc_id, source_tool, content FROM ctx_vault_chunks WHERE doc_id = ? ORDER BY chunk_idx ASC LIMIT ?",
+            (doc_id, limit),
+        ).fetchall()
+
+    rows = runtime_persistence.run_read(STORAGE, DB_PATH, _read_vault)
 
     if not rows:
         return f"No FTS5 chunks matched `{query}` (doc_id=`{doc_id or 'any'}`)."
@@ -10243,16 +10297,20 @@ def compact_harness_session_messages(session_id: str, worktree_dir: Path) -> dic
     # Archive middle messages into FTS5 vault so nothing is ever permanently lost!
     middle_blob = "\n\n".join(f"[{m['role']}]\n{m.get('content', '')}" for m in messages[1:-2])
     doc_id = f"compact-{uuid.uuid4().hex[:6]}"
-    with STORAGE.connect(DB_PATH) as conn:
+    compact_blob = middle_blob[:25000]
+    compact_now = time.time()
+
+    def _archive_compact(conn: sqlite3.Connection) -> None:
         conn.execute(
             "INSERT INTO ctx_vault_chunks (session_id, doc_id, source_tool, chunk_idx, content, created_at) VALUES (?, ?, 'session_compact', 0, ?, ?)",
-            (session_id, doc_id, middle_blob[:25000], time.time()),
+            (session_id, doc_id, compact_blob, compact_now),
         )
         conn.execute(
             "INSERT INTO ctx_vault_fts (session_id, doc_id, source_tool, content) VALUES (?, ?, 'session_compact', ?)",
-            (session_id, doc_id, middle_blob[:25000]),
+            (session_id, doc_id, compact_blob),
         )
-        conn.commit()
+
+    runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _archive_compact)
 
     guide_lines = [
         f"<session_guide compacted_vault_id=\"{doc_id}\">",
@@ -10921,16 +10979,21 @@ def create_harness_session_db(
 
     now = time.time()
     clean_title = (title or ws_path.name or "Agentic Harness").strip()[:120]
-    with STORAGE.connect(DB_PATH) as conn:
-        conn.execute(
+    ws_str = str(ws_path)
+    wt_str = str(wt_path)
+    wt_flag = 1 if actual_wt else 0
+    runtime_persistence.run_write_transaction(
+        STORAGE,
+        DB_PATH,
+        lambda conn: conn.execute(
             """
             INSERT INTO harness_sessions
             (id, title, workspace_dir, worktree_dir, branch_name, use_worktree, policy, lead_model, critic_model, status, step_count, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'idle', 0, ?, ?)
             """,
-            (sid, clean_title, str(ws_path), str(wt_path), branch_name, 1 if actual_wt else 0, pol, lead_model, critic_model, now, now),
-        )
-        conn.commit()
+            (sid, clean_title, ws_str, wt_str, branch_name, wt_flag, pol, lead_model, critic_model, now, now),
+        ),
+    )
     _append_harness_event(
         sid,
         "session/init",
@@ -10951,27 +11014,34 @@ def create_harness_session_db(
 def _set_harness_session_policy(session_id: str, policy: str) -> dict[str, Any]:
     if policy not in HARNESS_POLICIES:
         policy = "standard"
-    with STORAGE.connect(DB_PATH) as conn:
-        cur = conn.execute("UPDATE harness_sessions SET policy = ?, updated_at = ? WHERE id = ?", (policy, time.time(), session_id))
+    now = time.time()
+
+    def _update_pol(conn: sqlite3.Connection) -> None:
+        cur = conn.execute("UPDATE harness_sessions SET policy = ?, updated_at = ? WHERE id = ?", (policy, now, session_id))
         if cur.rowcount != 1:
             raise KeyError(f"Harness session `{session_id}` not found.")
-        conn.commit()
+
+    runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _update_pol)
     return get_harness_session_db(session_id)
 
 
 def list_harness_sessions_db(limit: int = 40) -> list[dict[str, Any]]:
-    with STORAGE.connect(DB_PATH) as conn:
+    def _read_list(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
-        rows = conn.execute(
+        return conn.execute(
             "SELECT * FROM harness_sessions ORDER BY updated_at DESC LIMIT ?", (limit,)
         ).fetchall()
+
+    rows = runtime_persistence.run_read(STORAGE, DB_PATH, _read_list)
     return [dict(r) for r in rows]
 
 
 def get_harness_session_db(session_id: str, include_events: bool = False) -> dict[str, Any]:
-    with STORAGE.connect(DB_PATH) as conn:
+    def _read_one(conn: sqlite3.Connection) -> sqlite3.Row | None:
         conn.row_factory = sqlite3.Row
-        row = conn.execute("SELECT * FROM harness_sessions WHERE id = ?", (session_id,)).fetchone()
+        return conn.execute("SELECT * FROM harness_sessions WHERE id = ?", (session_id,)).fetchone()
+
+    row = runtime_persistence.run_read(STORAGE, DB_PATH, _read_one)
     if not row:
         raise KeyError(f"Harness session '{session_id}' not found.")
     res = dict(row)
@@ -10984,7 +11054,8 @@ def get_harness_session_db(session_id: str, include_events: bool = False) -> dic
 
 def _update_harness_session_state(session_id: str, status: str | None = None, step_inc: int = 0, title: str | None = None) -> None:
     now = time.time()
-    with STORAGE.connect(DB_PATH) as conn:
+
+    def _update_state(conn: sqlite3.Connection) -> None:
         if status and title:
             conn.execute(
                 "UPDATE harness_sessions SET status = ?, title = ?, step_count = step_count + ?, updated_at = ? WHERE id = ?",
@@ -11000,7 +11071,8 @@ def _update_harness_session_state(session_id: str, status: str | None = None, st
                 "UPDATE harness_sessions SET step_count = step_count + ?, updated_at = ? WHERE id = ?",
                 (step_inc, now, session_id),
             )
-        conn.commit()
+
+    runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _update_state)
 
 
 def _resolve_confined_path(root: Path, raw_path: str) -> Path:
@@ -11846,27 +11918,38 @@ async def _execute_harness_tool_inner(
 def _audit_tool_start(session_id: str, tool_name: str, policy: str, approved: bool, args: dict[str, Any]) -> int:
     canonical_args = json.dumps(args, sort_keys=True, ensure_ascii=False, default=str, separators=(",", ":"))
     args_digest = hashlib.sha256(canonical_args.encode("utf-8", errors="replace")).hexdigest()
-    with STORAGE.connect(DB_PATH, timeout=5.0) as conn:
+    now = time.time()
+    clean_sid = str(session_id)[:128]
+    clean_tool = str(tool_name)[:200]
+    clean_pol = str(policy)[:40]
+    approved_int = int(approved)
+
+    def _start_tx(conn: sqlite3.Connection) -> int:
         cur = conn.execute(
             "INSERT INTO tool_audit_events(created_at, session_id, tool_name, policy, explicit_approval, args_sha256, status) "
             "VALUES (?, ?, ?, ?, ?, ?, 'started')",
-            (time.time(), str(session_id)[:128], str(tool_name)[:200], str(policy)[:40], int(approved), args_digest),
+            (now, clean_sid, clean_tool, clean_pol, approved_int, args_digest),
         )
-        conn.commit()
         if cur.lastrowid is None:
             raise RuntimeError("SQLite did not return a tool-audit event ID.")
-        return cur.lastrowid
+        return int(cur.lastrowid)
+
+    return runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _start_tx)
 
 
 def _audit_tool_finish(event_id: int, result: dict[str, Any], elapsed_ms: int, *, status: str = "completed") -> None:
     material = str(result.get("output") or "") + "\n" + str(result.get("diff") or "")
     output_digest = hashlib.sha256(material.encode("utf-8", errors="replace")).hexdigest()
-    with STORAGE.connect(DB_PATH, timeout=5.0) as conn:
-        conn.execute(
+    ok_int = int(bool(result.get("ok")))
+    clean_ms = max(0, int(elapsed_ms))
+    runtime_persistence.run_write_transaction(
+        STORAGE,
+        DB_PATH,
+        lambda conn: conn.execute(
             "UPDATE tool_audit_events SET status=?, ok=?, elapsed_ms=?, output_sha256=? WHERE id=?",
-            (status, int(bool(result.get("ok"))), max(0, int(elapsed_ms)), output_digest, event_id),
-        )
-        conn.commit()
+            (status, ok_int, clean_ms, output_digest, event_id),
+        ),
+    )
 
 
 class _AppToolPolicy:
@@ -11919,7 +12002,11 @@ async def _run_authorized_tool(
     authorize -> record-intent -> execute -> record-outcome algorithm and its
     fail-closed guarantees live there and are pinned by
     ``tests/test_execution_spine.py``."""
-    boundary = execution_spine.DurableActionBoundary(_AppToolPolicy(), _AppActionLedger())
+    boundary = execution_spine.DurableActionBoundary(
+        _AppToolPolicy(),
+        _AppActionLedger(),
+        pre_execute_guard=lambda: runtime_persistence.assert_no_active_write_transaction("tool_execution"),
+    )
     return await boundary.admit_and_execute(
         execution_spine.ActionRequest(
             tool_name=tool_name,
@@ -12130,18 +12217,20 @@ async def api_harness_audit(request: Request) -> JSONResponse:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="limit must be an integer") from exc
     session_id = request.query_params.get("session_id", "")[:128]
-    with STORAGE.connect(DB_PATH) as conn:
+
+    def _read_audit(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
         if session_id:
-            rows = conn.execute(
+            return conn.execute(
                 "SELECT id, created_at, session_id, tool_name, policy, explicit_approval, args_sha256, status, ok, elapsed_ms, output_sha256 "
                 "FROM tool_audit_events WHERE session_id=? ORDER BY id DESC LIMIT ?", (session_id, limit)
             ).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT id, created_at, session_id, tool_name, policy, explicit_approval, args_sha256, status, ok, elapsed_ms, output_sha256 "
-                "FROM tool_audit_events ORDER BY id DESC LIMIT ?", (limit,)
-            ).fetchall()
+        return conn.execute(
+            "SELECT id, created_at, session_id, tool_name, policy, explicit_approval, args_sha256, status, ok, elapsed_ms, output_sha256 "
+            "FROM tool_audit_events ORDER BY id DESC LIMIT ?", (limit,)
+        ).fetchall()
+
+    rows = runtime_persistence.run_read(STORAGE, DB_PATH, _read_audit)
     return JSONResponse({"events": [dict(row) for row in rows], "count": len(rows)})
 
 
@@ -12195,12 +12284,15 @@ async def api_patch_harness_session(session_id: str, request: Request) -> JSONRe
     pol = body.get("policy") if body.get("policy") in HARNESS_POLICIES else sess["policy"]
     lead = body.get("lead_model") or sess["lead_model"]
     critic = body.get("critic_model") or sess["critic_model"]
-    with STORAGE.connect(DB_PATH) as conn:
-        conn.execute(
+    now = time.time()
+    runtime_persistence.run_write_transaction(
+        STORAGE,
+        DB_PATH,
+        lambda conn: conn.execute(
             "UPDATE harness_sessions SET policy = ?, lead_model = ?, critic_model = ?, updated_at = ? WHERE id = ?",
-            (pol, lead, critic, time.time(), session_id),
-        )
-        conn.commit()
+            (pol, lead, critic, now, session_id),
+        ),
+    )
     return JSONResponse(get_harness_session_db(session_id, include_events=True))
 
 
@@ -12212,9 +12304,11 @@ async def api_delete_harness_session(session_id: str) -> JSONResponse:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     _HARNESS_ABORT_FLAGS.add(session_id)
     _remove_harness_worktree(Path(sess["workspace_dir"]), Path(sess["worktree_dir"]), sess.get("branch_name") or "")
-    with STORAGE.connect(DB_PATH) as conn:
-        conn.execute("DELETE FROM harness_sessions WHERE id = ?", (session_id,))
-        conn.commit()
+    runtime_persistence.run_write_transaction(
+        STORAGE,
+        DB_PATH,
+        lambda conn: conn.execute("DELETE FROM harness_sessions WHERE id = ?", (session_id,)),
+    )
     for suffix in (".jsonl", ".messages.json"):
         p = HARNESS_STORE_DIR / f"{session_id}{suffix}"
         if p.exists():
@@ -12335,12 +12429,15 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
             pol_u = body.get("policy") if body.get("policy") in HARNESS_POLICIES else sess["policy"]
             lead_u = body.get("lead_model") or sess["lead_model"]
             crit_u = body.get("critic_model") or sess["critic_model"]
-            with STORAGE.connect(DB_PATH) as conn:
-                conn.execute(
+            now_u = time.time()
+            runtime_persistence.run_write_transaction(
+                STORAGE,
+                DB_PATH,
+                lambda conn: conn.execute(
                     "UPDATE harness_sessions SET policy = ?, lead_model = ?, critic_model = ?, updated_at = ? WHERE id = ?",
-                    (pol_u, lead_u, crit_u, time.time(), session_id),
-                )
-                conn.commit()
+                    (pol_u, lead_u, crit_u, now_u, session_id),
+                ),
+            )
             sess = get_harness_session_db(session_id)
 
     _HARNESS_ABORT_FLAGS.discard(session_id)
@@ -14025,6 +14122,10 @@ EXCLUDED_TABLES: tuple[str, ...] = (
     "mcp_servers",
     "tool_audit_events",
     "schema_migrations",
+    "runtime_tasks",
+    "runtime_task_epochs",
+    "runtime_task_transitions",
+    "runtime_actions",
 )
 
 
@@ -14073,7 +14174,14 @@ def export_history(conn: sqlite3.Connection, *, redact: bool = True) -> dict[str
         "redaction": {"enabled": bool(redact), "replacements": replacements, "marker": REDACTED if redact else None},
         "excluded_tables": {
             "credentials_and_configuration": ["cloud_providers", "model_combos", "mcp_servers"],
-            "security_and_integrity_trails": ["tool_audit_events", "schema_migrations"],
+            "security_and_integrity_trails": [
+                "tool_audit_events",
+                "schema_migrations",
+                "runtime_tasks",
+                "runtime_task_epochs",
+                "runtime_task_transitions",
+                "runtime_actions",
+            ],
         },
         "tables": tables_out,
     }
@@ -14221,6 +14329,1473 @@ def apply_retention(
         deleted["harness_session_files_failed"] = harness_file_failures
     conn.commit()
     return deleted
+
+"""SQLite schema v3 migrations and fail-closed persistence discipline (M5-P1-01).
+
+Provides the authoritative local persistence discipline for the M5 2.0
+single-agent execution spine without introducing an ORM or external migration
+dependency:
+
+1. **Additive versioned schema (`RUNTIME_SCHEMA_VERSION = 3`)**:
+   - Version 1: additive columns on legacy Studio tables and ``schema_migrations``.
+   - Version 2: ``tool_audit_events`` privacy-preserving tool attempt log.
+   - Version 3: durable spine tables for autonomous ``runtime_tasks``,
+     ``runtime_task_epochs`` (worker leases and monotonic fencing epochs),
+     ``runtime_task_transitions`` (append-only state transitions), and
+     ``runtime_actions`` (durable action intents, outcomes, and replay policy).
+2. **Pre-migration backup and rollback protection**:
+   - Pre-flight checks reject corrupted databases and future ``user_version``
+     databases before mutating any bytes.
+   - Upgrading an existing populated database takes an owner-only (``0600``)
+     SQLite online backup first, applies DDL and ``user_version`` atomically
+     under ``BEGIN IMMEDIATE``, rolls back on error, automatically restores from
+     the verified snapshot if the live file's pre-migration state or integrity
+     was disturbed, and unlinks ephemeral snapshots after verified completion so
+     unredacted history is not silently duplicated on disk.
+3. **Short write transactions and bounded busy retries**:
+   - ``run_write_transaction`` enforces synchronous-only callbacks, acquires
+     ``BEGIN IMMEDIATE`` with bounded busy retries and wall-clock ceilings,
+     tracks active write depth via a ``ContextVar``, and always closes
+     connections on exit.
+   - ``assert_no_active_write_transaction`` fails closed if tool execution or
+     model inference is entered while a write transaction is open.
+4. **Fail-closed error classification**:
+   - Busy/locked exhaustion -> ``DatabaseBusyError``
+   - Disk-full / quota / read-only storage -> ``DatabaseCapacityError`` (no retry)
+   - Corrupt / non-database / failed ``quick_check`` -> ``DatabaseCorruptionError`` (no retry)
+
+Stdlib-only; inlined into standalone ``studio.py`` by ``scripts/build_studio.py``.
+"""
+
+import contextlib
+import contextvars
+import errno
+import inspect
+import os
+import sqlite3
+import tempfile
+import time
+from collections.abc import Callable, Iterator
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Protocol, TypeVar
+
+RUNTIME_SCHEMA_VERSION = 3
+
+T = TypeVar("T")
+
+_ACTIVE_WRITE_TX_DEPTH: contextvars.ContextVar[int] = contextvars.ContextVar(
+    "m5_active_sqlite_write_tx_depth",
+    default=0,
+)
+
+TASK_STATES: frozenset[str] = frozenset(
+    {
+        "pending",
+        "running",
+        "paused",
+        "waiting_approval",
+        "blocked",
+        "completed",
+        "failed",
+        "cancelled",
+    }
+)
+
+EPOCH_STATUSES: frozenset[str] = frozenset({"active", "released", "expired", "fenced"})
+
+ACTION_CLASSES: frozenset[str] = frozenset({"read_only", "managed_edit", "consequential", "external"})
+
+REPLAY_POLICIES: frozenset[str] = frozenset({"idempotent", "reconcilable", "non_idempotent"})
+
+ACTION_STATUSES: frozenset[str] = frozenset(
+    {"never_started", "in_flight", "committed", "failed", "denied", "uncertain"}
+)
+
+
+class StorageProvider(Protocol):
+    """Minimal storage connection seam compatible with ``app.SQLiteStorage``."""
+
+    def connect(self, database: Path, *, timeout: float = 5.0) -> sqlite3.Connection: ...
+
+
+class PersistenceError(sqlite3.DatabaseError):
+    """Base fail-closed persistence error for authoritative SQLite state."""
+
+
+class PersistenceOperationalError(PersistenceError, sqlite3.OperationalError):
+    """Operational SQLite failure that is not busy, capacity, or corruption."""
+
+
+class DatabaseBusyError(PersistenceError, sqlite3.OperationalError):
+    """SQLite remained locked past the bounded busy-retry budget."""
+
+
+class DatabaseCapacityError(PersistenceError, sqlite3.OperationalError):
+    """SQLite write failed due to disk-full, quota, or read-only storage."""
+
+
+class DatabaseCorruptionError(PersistenceError):
+    """SQLite database failed integrity checks or is malformed/not a database."""
+
+
+class SchemaMigrationError(PersistenceError, RuntimeError):
+    """Schema version incompatibility or unrecoverable migration invariant error."""
+
+
+class TransactionDisciplineError(PersistenceError, RuntimeError):
+    """Write-transaction boundary violation (async body or spanning tool/inference)."""
+
+
+@dataclass(frozen=True, slots=True)
+class BusyRetryPolicy:
+    """Bounded retry and lock-wait parameters for SQLite contention."""
+
+    max_attempts: int = 4
+    initial_backoff_s: float = 0.01
+    max_backoff_s: float = 0.08
+    max_total_wait_s: float = 0.25
+    busy_timeout_ms: int = 250
+
+    def __post_init__(self) -> None:
+        if self.max_attempts < 1 or self.max_attempts > 20:
+            raise ValueError("max_attempts must be between 1 and 20.")
+        if self.initial_backoff_s < 0 or self.max_backoff_s < self.initial_backoff_s:
+            raise ValueError("backoff bounds must satisfy 0 <= initial_backoff_s <= max_backoff_s.")
+        if self.max_total_wait_s < 0 or self.max_total_wait_s > 10.0:
+            raise ValueError("max_total_wait_s must be between 0 and 10 seconds.")
+        if self.busy_timeout_ms < 0 or self.busy_timeout_ms > 10_000:
+            raise ValueError("busy_timeout_ms must be between 0 and 10000 ms.")
+
+
+DEFAULT_BUSY_RETRY_POLICY = BusyRetryPolicy()
+
+
+def _sqlite_code(exc: BaseException) -> int | None:
+    code = getattr(exc, "sqlite_errorcode", None)
+    return int(code) if isinstance(code, int) else None
+
+
+def is_busy_error(exc: BaseException) -> bool:
+    """Return True iff ``exc`` represents transient SQLite lock contention."""
+    if isinstance(exc, DatabaseBusyError):
+        return True
+    if not isinstance(exc, sqlite3.OperationalError):
+        return False
+    code = _sqlite_code(exc)
+    busy_codes = {
+        getattr(sqlite3, "SQLITE_BUSY", 5),
+        getattr(sqlite3, "SQLITE_LOCKED", 6),
+    }
+    if code is not None and (code & 0xFF) in busy_codes:
+        return True
+    msg = str(exc).lower()
+    return "database is locked" in msg or "database table is locked" in msg or "database schema is locked" in msg
+
+
+def is_capacity_error(exc: BaseException) -> bool:
+    """Return True iff ``exc`` represents disk-full, quota, or read-only failure."""
+    if isinstance(exc, DatabaseCapacityError):
+        return True
+    if isinstance(exc, OSError):
+        if exc.errno in {errno.ENOSPC, getattr(errno, "EDQUOT", errno.ENOSPC), errno.EROFS}:
+            return True
+    if isinstance(exc, sqlite3.DatabaseError):
+        code = _sqlite_code(exc)
+        full_codes = {
+            getattr(sqlite3, "SQLITE_FULL", 13),
+            getattr(sqlite3, "SQLITE_READONLY", 8),
+            getattr(sqlite3, "SQLITE_IOERR", 10),
+        }
+        msg = str(exc).lower()
+        if "database or disk is full" in msg or "disk i/o error" in msg or "readonly database" in msg:
+            return True
+        if code is not None and (code & 0xFF) in full_codes and ("locked" not in msg):
+            return True
+    return False
+
+
+def is_corruption_error(exc: BaseException) -> bool:
+    """Return True iff ``exc`` represents SQLite file corruption or invalid header."""
+    if isinstance(exc, DatabaseCorruptionError):
+        return True
+    if isinstance(exc, sqlite3.DatabaseError):
+        code = _sqlite_code(exc)
+        corrupt_codes = {
+            getattr(sqlite3, "SQLITE_CORRUPT", 11),
+            getattr(sqlite3, "SQLITE_NOTADB", 26),
+        }
+        if code is not None and (code & 0xFF) in corrupt_codes:
+            return True
+        msg = str(exc).lower()
+        if (
+            "database disk image is malformed" in msg
+            or "file is not a database" in msg
+            or "file is encrypted or is not a database" in msg
+            or "malformed database schema" in msg
+        ):
+            return True
+    return False
+
+
+def classify_persistence_error(exc: BaseException) -> BaseException:
+    """Translate raw SQLite/OS storage faults into typed fail-closed errors."""
+    if isinstance(exc, PersistenceError):
+        return exc
+    if isinstance(exc, sqlite3.IntegrityError):
+        return exc
+    if is_corruption_error(exc):
+        return DatabaseCorruptionError(f"SQLite corruption detected (fail closed): {exc}")
+    if is_capacity_error(exc):
+        return DatabaseCapacityError(f"SQLite storage capacity/write failure (fail closed): {exc}")
+    if is_busy_error(exc):
+        return DatabaseBusyError(f"SQLite remained busy/locked (fail closed): {exc}")
+    if isinstance(exc, sqlite3.OperationalError):
+        return PersistenceOperationalError(str(exc))
+    if isinstance(exc, sqlite3.DatabaseError):
+        return PersistenceError(str(exc))
+    return exc
+
+
+def active_write_transaction_depth() -> int:
+    """Return how many tracked SQLite write transactions are active in this context."""
+    return _ACTIVE_WRITE_TX_DEPTH.get()
+
+
+def assert_no_active_write_transaction(boundary_name: str) -> None:
+    """Fail closed if a caller attempts tool execution or inference inside a write transaction."""
+    depth = _ACTIVE_WRITE_TX_DEPTH.get()
+    if depth > 0:
+        raise TransactionDisciplineError(
+            f"Write transaction must not span {boundary_name} (active_write_tx_depth={depth}); failing closed."
+        )
+
+
+@contextlib.contextmanager
+def _write_transaction_scope() -> Iterator[None]:
+    token = _ACTIVE_WRITE_TX_DEPTH.set(_ACTIVE_WRITE_TX_DEPTH.get() + 1)
+    try:
+        yield
+    finally:
+        _ACTIVE_WRITE_TX_DEPTH.reset(token)
+
+
+_SQLITE_FILE_HEADER = b"SQLite format 3\x00"
+
+
+def _verify_sqlite_file_header(db_path: Path) -> None:
+    try:
+        if not db_path.is_file():
+            return
+        size = db_path.stat().st_size
+        if size == 0:
+            return
+        with db_path.open("rb") as handle:
+            prefix = handle.read(16)
+    except OSError:
+        return
+    if prefix != _SQLITE_FILE_HEADER:
+        raise DatabaseCorruptionError(
+            f"SQLite corruption detected (fail closed): invalid file header in {db_path}"
+        )
+
+
+def _configure_connection(conn: sqlite3.Connection, *, busy_timeout_ms: int) -> None:
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute(f"PRAGMA busy_timeout = {int(busy_timeout_ms)}")
+
+
+def _reject_async_callable(fn: Any, kind: str) -> None:
+    if inspect.iscoroutinefunction(fn):
+        raise TransactionDisciplineError(
+            f"{kind} callback must be synchronous; async callables cannot hold SQLite transactions."
+        )
+
+
+def _reject_awaitable_result(value: Any, conn: sqlite3.Connection, kind: str) -> None:
+    if inspect.isawaitable(value):
+        if inspect.iscoroutine(value):
+            value.close()
+        with contextlib.suppress(sqlite3.Error):
+            if conn.in_transaction:
+                conn.rollback()
+        raise TransactionDisciplineError(
+            f"{kind} callback returned an awaitable; SQLite transactions cannot span async operations."
+        )
+
+
+def run_read(
+    storage: StorageProvider,
+    db_path: Path,
+    fn: Callable[[sqlite3.Connection], T],
+    *,
+    retry_policy: BusyRetryPolicy = DEFAULT_BUSY_RETRY_POLICY,
+) -> T:
+    """Execute a bounded read callback and always close the SQLite connection."""
+    _reject_async_callable(fn, "Read")
+    started = time.monotonic()
+    backoff = retry_policy.initial_backoff_s
+    last_busy: BaseException | None = None
+
+    for attempt in range(1, retry_policy.max_attempts + 1):
+        conn: sqlite3.Connection | None = None
+        try:
+            conn = storage.connect(db_path)
+            _verify_sqlite_file_header(db_path)
+            _configure_connection(conn, busy_timeout_ms=retry_policy.busy_timeout_ms)
+            result = fn(conn)
+            _reject_awaitable_result(result, conn, "Read")
+            if conn.in_transaction:
+                conn.rollback()
+            return result
+        except BaseException as exc:
+            if conn is not None:
+                with contextlib.suppress(sqlite3.Error):
+                    if conn.in_transaction:
+                        conn.rollback()
+            if is_corruption_error(exc) or is_capacity_error(exc):
+                raise classify_persistence_error(exc) from exc
+            if is_busy_error(exc):
+                last_busy = exc
+                remaining = retry_policy.max_total_wait_s - (time.monotonic() - started)
+                if attempt < retry_policy.max_attempts and remaining > 0:
+                    sleep_s = min(backoff, remaining)
+                    if sleep_s > 0:
+                        time.sleep(sleep_s)
+                    backoff = min(retry_policy.max_backoff_s, max(backoff * 2, 0.005))
+                    continue
+                raise DatabaseBusyError(
+                    f"SQLite read busy after {attempt} attempt(s) ({round((time.monotonic() - started) * 1000)} ms): {exc}"
+                ) from exc
+            mapped = classify_persistence_error(exc)
+            if mapped is exc:
+                raise
+            raise mapped from exc
+        finally:
+            if conn is not None:
+                with contextlib.suppress(sqlite3.Error):
+                    conn.close()
+
+    assert last_busy is not None
+    raise DatabaseBusyError(f"SQLite read busy: {last_busy}") from last_busy
+
+
+def run_write_transaction(
+    storage: StorageProvider,
+    db_path: Path,
+    fn: Callable[[sqlite3.Connection], T],
+    *,
+    retry_policy: BusyRetryPolicy = DEFAULT_BUSY_RETRY_POLICY,
+) -> T:
+    """Execute a short synchronous ``BEGIN IMMEDIATE`` write transaction with bounded retries."""
+    _reject_async_callable(fn, "Write-transaction")
+    if _ACTIVE_WRITE_TX_DEPTH.get() > 0:
+        raise TransactionDisciplineError(
+            "Nested SQLite write transactions are forbidden; keep write transactions short and non-reentrant."
+        )
+    started = time.monotonic()
+    backoff = retry_policy.initial_backoff_s
+    last_busy: BaseException | None = None
+
+    for attempt in range(1, retry_policy.max_attempts + 1):
+        conn: sqlite3.Connection | None = None
+        try:
+            conn = storage.connect(db_path)
+            _verify_sqlite_file_header(db_path)
+            _configure_connection(conn, busy_timeout_ms=retry_policy.busy_timeout_ms)
+            with _write_transaction_scope():
+                if not conn.in_transaction:
+                    conn.execute("BEGIN IMMEDIATE")
+                result = fn(conn)
+                _reject_awaitable_result(result, conn, "Write-transaction")
+                conn.commit()
+            return result
+        except BaseException as exc:
+            if conn is not None:
+                with contextlib.suppress(sqlite3.Error):
+                    if conn.in_transaction:
+                        conn.rollback()
+            if isinstance(exc, TransactionDisciplineError):
+                raise
+            if is_corruption_error(exc) or is_capacity_error(exc):
+                raise classify_persistence_error(exc) from exc
+            if is_busy_error(exc):
+                last_busy = exc
+                remaining = retry_policy.max_total_wait_s - (time.monotonic() - started)
+                if attempt < retry_policy.max_attempts and remaining > 0:
+                    sleep_s = min(backoff, remaining)
+                    if sleep_s > 0:
+                        time.sleep(sleep_s)
+                    backoff = min(retry_policy.max_backoff_s, max(backoff * 2, 0.005))
+                    continue
+                raise DatabaseBusyError(
+                    f"SQLite write busy after {attempt} attempt(s) ({round((time.monotonic() - started) * 1000)} ms): {exc}"
+                ) from exc
+            mapped = classify_persistence_error(exc)
+            if mapped is exc:
+                raise
+            raise mapped from exc
+        finally:
+            if conn is not None:
+                with contextlib.suppress(sqlite3.Error):
+                    conn.close()
+
+    assert last_busy is not None
+    raise DatabaseBusyError(f"SQLite write busy: {last_busy}") from last_busy
+
+
+# ---------------------------------------------------------------------------
+# Additive versioned schema catalog (v1 -> v2 -> v3)
+# ---------------------------------------------------------------------------
+
+LEGACY_COLUMN_ADDITIONS: dict[str, dict[str, str]] = {
+    "runs": {
+        "created_at": "REAL NOT NULL DEFAULT 0",
+        "mode": "TEXT NOT NULL DEFAULT ''",
+        "title": "TEXT NOT NULL DEFAULT ''",
+        "payload_json": "TEXT NOT NULL DEFAULT '{}'",
+    },
+    "perf_samples": {
+        "created_at": "REAL NOT NULL DEFAULT 0",
+        "mode": "TEXT NOT NULL DEFAULT ''",
+        "model": "TEXT NOT NULL DEFAULT ''",
+        "decode_tps": "REAL",
+        "prefill_tps": "REAL",
+        "ttft": "REAL",
+        "completion_tokens": "INTEGER",
+        "cached_tokens": "INTEGER",
+    },
+    "hall_sessions": {
+        "title": "TEXT NOT NULL DEFAULT ''",
+        "request_text": "TEXT NOT NULL DEFAULT ''",
+        "created_by": "TEXT NOT NULL DEFAULT ''",
+        "status": "TEXT NOT NULL DEFAULT 'active'",
+        "context_files_json": "TEXT NOT NULL DEFAULT '[]'",
+        "conclusion_author": "TEXT",
+        "conclusion_text": "TEXT",
+        "conclusion_at": "REAL",
+        "created_at": "REAL NOT NULL DEFAULT 0",
+        "updated_at": "REAL NOT NULL DEFAULT 0",
+    },
+    "hall_messages": {
+        "session_id": "TEXT NOT NULL DEFAULT ''",
+        "author": "TEXT NOT NULL DEFAULT ''",
+        "role_key": "TEXT NOT NULL DEFAULT ''",
+        "model": "TEXT",
+        "content": "TEXT NOT NULL DEFAULT ''",
+        "reasoning": "TEXT DEFAULT ''",
+        "usage_json": "TEXT DEFAULT '{}'",
+        "created_at": "REAL NOT NULL DEFAULT 0",
+    },
+    "cloud_providers": {
+        "name": "TEXT NOT NULL DEFAULT ''",
+        "wire": "TEXT NOT NULL DEFAULT 'openai'",
+        "base_url": "TEXT NOT NULL DEFAULT ''",
+        "api_key": "TEXT NOT NULL DEFAULT ''",
+        "models_json": "TEXT NOT NULL DEFAULT '[]'",
+        "enabled": "INTEGER NOT NULL DEFAULT 1",
+        "updated_at": "REAL NOT NULL DEFAULT 0",
+    },
+    "model_combos": {
+        "name": "TEXT NOT NULL DEFAULT ''",
+        "targets_json": "TEXT NOT NULL DEFAULT '[]'",
+        "updated_at": "REAL NOT NULL DEFAULT 0",
+    },
+    "harness_sessions": {
+        "title": "TEXT NOT NULL DEFAULT ''",
+        "workspace_dir": "TEXT NOT NULL DEFAULT ''",
+        "worktree_dir": "TEXT NOT NULL DEFAULT ''",
+        "branch_name": "TEXT NOT NULL DEFAULT ''",
+        "use_worktree": "INTEGER NOT NULL DEFAULT 0",
+        "policy": "TEXT NOT NULL DEFAULT 'standard'",
+        "lead_model": "TEXT NOT NULL DEFAULT ''",
+        "critic_model": "TEXT NOT NULL DEFAULT ''",
+        "status": "TEXT NOT NULL DEFAULT 'idle'",
+        "step_count": "INTEGER NOT NULL DEFAULT 0",
+        "created_at": "REAL NOT NULL DEFAULT 0",
+        "updated_at": "REAL NOT NULL DEFAULT 0",
+    },
+    "mcp_servers": {
+        "name": "TEXT NOT NULL DEFAULT ''",
+        "category": "TEXT NOT NULL DEFAULT 'cloud'",
+        "transport": "TEXT NOT NULL DEFAULT 'http'",
+        "url": "TEXT NOT NULL DEFAULT ''",
+        "auth_header": "TEXT NOT NULL DEFAULT 'Authorization'",
+        "auth_token": "TEXT NOT NULL DEFAULT ''",
+        "headers_json": "TEXT NOT NULL DEFAULT '{}'",
+        "command": "TEXT NOT NULL DEFAULT ''",
+        "args_json": "TEXT NOT NULL DEFAULT '[]'",
+        "env_json": "TEXT NOT NULL DEFAULT '{}'",
+        "approval_policy": "TEXT NOT NULL DEFAULT 'inherit'",
+        "tools_json": "TEXT NOT NULL DEFAULT '[]'",
+        "enabled_tools_json": "TEXT NOT NULL DEFAULT '[]'",
+        "enabled": "INTEGER NOT NULL DEFAULT 1",
+        "last_sync_at": "REAL DEFAULT 0",
+        "last_error": "TEXT DEFAULT ''",
+        "updated_at": "REAL NOT NULL DEFAULT 0",
+    },
+    "opencontext_docs": {
+        "folder": "TEXT NOT NULL DEFAULT 'decisions'",
+        "title": "TEXT NOT NULL DEFAULT ''",
+        "description": "TEXT NOT NULL DEFAULT ''",
+        "content": "TEXT NOT NULL DEFAULT ''",
+        "pinned": "INTEGER NOT NULL DEFAULT 0",
+        "updated_at": "REAL NOT NULL DEFAULT 0",
+    },
+    "ctx_vault_chunks": {
+        "session_id": "TEXT NOT NULL DEFAULT ''",
+        "doc_id": "TEXT NOT NULL DEFAULT ''",
+        "source_tool": "TEXT NOT NULL DEFAULT ''",
+        "chunk_idx": "INTEGER NOT NULL DEFAULT 0",
+        "content": "TEXT NOT NULL DEFAULT ''",
+        "created_at": "REAL NOT NULL DEFAULT 0",
+    },
+    "ctx_session_metrics": {
+        "raw_bytes": "INTEGER NOT NULL DEFAULT 0",
+        "sent_bytes": "INTEGER NOT NULL DEFAULT 0",
+        "compactions": "INTEGER NOT NULL DEFAULT 0",
+        "updated_at": "REAL NOT NULL DEFAULT 0",
+    },
+}
+
+
+def _apply_v1_legacy_columns(conn: sqlite3.Connection) -> None:
+    for table, columns in LEGACY_COLUMN_ADDITIONS.items():
+        existing = {row[1] for row in conn.execute(f'PRAGMA table_info("{table}")').fetchall()}
+        if not existing:
+            continue
+        for name, definition in columns.items():
+            if name not in existing:
+                conn.execute(f'ALTER TABLE "{table}" ADD COLUMN "{name}" {definition}')
+
+
+def _apply_v2_tool_audit_events(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS tool_audit_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at REAL NOT NULL,
+            session_id TEXT NOT NULL,
+            tool_name TEXT NOT NULL,
+            policy TEXT NOT NULL,
+            explicit_approval INTEGER NOT NULL,
+            args_sha256 TEXT NOT NULL,
+            status TEXT NOT NULL,
+            ok INTEGER,
+            elapsed_ms INTEGER,
+            output_sha256 TEXT NOT NULL DEFAULT ''
+        )
+        """
+    )
+
+
+def _apply_v3_execution_spine_tables(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS runtime_tasks (
+            task_id TEXT PRIMARY KEY CHECK (length(trim(task_id)) > 0),
+            parent_task_id TEXT REFERENCES runtime_tasks(task_id) ON DELETE RESTRICT,
+            session_id TEXT NOT NULL DEFAULT '',
+            title TEXT NOT NULL DEFAULT '',
+            state TEXT NOT NULL DEFAULT 'pending'
+                CHECK (state IN ('pending', 'running', 'paused', 'waiting_approval', 'blocked', 'completed', 'failed', 'cancelled')),
+            current_epoch INTEGER NOT NULL DEFAULT 0 CHECK (current_epoch >= 0),
+            state_version INTEGER NOT NULL DEFAULT 0 CHECK (state_version >= 0),
+            workspace_dir TEXT NOT NULL DEFAULT '',
+            policy TEXT NOT NULL DEFAULT 'standard',
+            budget_json TEXT NOT NULL DEFAULT '{}',
+            checkpoint_ref TEXT NOT NULL DEFAULT '',
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS runtime_task_epochs (
+            task_id TEXT NOT NULL REFERENCES runtime_tasks(task_id) ON DELETE RESTRICT,
+            epoch INTEGER NOT NULL CHECK (epoch >= 1),
+            worker_id TEXT NOT NULL CHECK (length(trim(worker_id)) > 0),
+            status TEXT NOT NULL DEFAULT 'active'
+                CHECK (status IN ('active', 'released', 'expired', 'fenced')),
+            claimed_at REAL NOT NULL,
+            heartbeat_at REAL NOT NULL,
+            lease_expires_at REAL NOT NULL,
+            fenced_at REAL,
+            fence_reason TEXT NOT NULL DEFAULT '',
+            PRIMARY KEY (task_id, epoch)
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS runtime_task_transitions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id TEXT NOT NULL REFERENCES runtime_tasks(task_id) ON DELETE RESTRICT,
+            seq INTEGER NOT NULL CHECK (seq >= 1),
+            from_state TEXT NOT NULL,
+            to_state TEXT NOT NULL
+                CHECK (to_state IN ('pending', 'running', 'paused', 'waiting_approval', 'blocked', 'completed', 'failed', 'cancelled')),
+            epoch INTEGER NOT NULL DEFAULT 0 CHECK (epoch >= 0),
+            reason TEXT NOT NULL DEFAULT '',
+            evidence_json TEXT NOT NULL DEFAULT '{}',
+            created_at REAL NOT NULL,
+            UNIQUE (task_id, seq)
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS runtime_actions (
+            action_id TEXT PRIMARY KEY CHECK (length(trim(action_id)) > 0),
+            task_id TEXT REFERENCES runtime_tasks(task_id) ON DELETE RESTRICT,
+            session_id TEXT NOT NULL DEFAULT '',
+            epoch INTEGER NOT NULL DEFAULT 0 CHECK (epoch >= 0),
+            attempt INTEGER NOT NULL DEFAULT 1 CHECK (attempt >= 1),
+            action_class TEXT NOT NULL DEFAULT 'consequential'
+                CHECK (action_class IN ('read_only', 'managed_edit', 'consequential', 'external')),
+            replay_policy TEXT NOT NULL DEFAULT 'non_idempotent'
+                CHECK (replay_policy IN ('idempotent', 'reconcilable', 'non_idempotent')),
+            tool_name TEXT NOT NULL CHECK (length(trim(tool_name)) > 0),
+            policy TEXT NOT NULL,
+            explicit_approval INTEGER NOT NULL DEFAULT 0 CHECK (explicit_approval IN (0, 1)),
+            args_sha256 TEXT NOT NULL,
+            status TEXT NOT NULL
+                CHECK (status IN ('never_started', 'in_flight', 'committed', 'failed', 'denied', 'uncertain')),
+            ok INTEGER CHECK (ok IS NULL OR ok IN (0, 1)),
+            elapsed_ms INTEGER CHECK (elapsed_ms IS NULL OR elapsed_ms >= 0),
+            output_sha256 TEXT NOT NULL DEFAULT '',
+            error_code TEXT NOT NULL DEFAULT '',
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_runtime_tasks_session_state ON runtime_tasks(session_id, state)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_runtime_tasks_parent ON runtime_tasks(parent_task_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_runtime_task_epochs_active ON runtime_task_epochs(task_id, status)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_runtime_task_transitions_task ON runtime_task_transitions(task_id, seq)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_runtime_actions_task_status ON runtime_actions(task_id, status)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_runtime_actions_session ON runtime_actions(session_id, created_at)"
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class MigrationStep:
+    """One additive, idempotent SQLite schema upgrade step."""
+
+    version: int
+    name: str
+    apply: Callable[[sqlite3.Connection], None]
+
+
+MIGRATION_STEPS: tuple[MigrationStep, ...] = (
+    MigrationStep(1, "v1_legacy_additive_columns", _apply_v1_legacy_columns),
+    MigrationStep(2, "v2_tool_audit_events", _apply_v2_tool_audit_events),
+    MigrationStep(3, "v3_runtime_execution_spine", _apply_v3_execution_spine_tables),
+)
+
+
+def _ensure_migrations_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            version INTEGER PRIMARY KEY,
+            applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+
+
+def _apply_migrations_locked(
+    conn: sqlite3.Connection,
+    *,
+    current_version: int,
+    target_version: int = RUNTIME_SCHEMA_VERSION,
+    fault_hook: Callable[[int, sqlite3.Connection], None] | None = None,
+) -> int:
+    """Run all additive migration steps up to ``target_version`` inside an active transaction."""
+    if current_version > target_version:
+        raise SchemaMigrationError(
+            f"Database schema version {current_version} is newer than supported version {target_version}."
+        )
+    # Always reconcile additive legacy columns first so partial pre-v1 tables upgrade cleanly.
+    _apply_v1_legacy_columns(conn)
+    _ensure_migrations_table(conn)
+    for step in MIGRATION_STEPS:
+        if step.version > target_version:
+            continue
+        step.apply(conn)
+        if fault_hook is not None:
+            fault_hook(step.version, conn)
+        conn.execute("INSERT OR IGNORE INTO schema_migrations(version) VALUES (?)", (step.version,))
+    if current_version < target_version:
+        conn.execute(f"PRAGMA user_version = {int(target_version)}")
+    return target_version
+
+
+def apply_schema_migrations(
+    conn: sqlite3.Connection,
+    *,
+    target_version: int = RUNTIME_SCHEMA_VERSION,
+    fault_hook: Callable[[int, sqlite3.Connection], None] | None = None,
+) -> int:
+    """Upgrade ``conn`` transactionally under ``BEGIN IMMEDIATE``; roll back on any failure."""
+    try:
+        row = conn.execute("PRAGMA user_version").fetchone()
+        current = int(row[0]) if row else 0
+    except BaseException as exc:
+        mapped = classify_persistence_error(exc)
+        if mapped is exc:
+            raise
+        raise mapped from exc
+
+    if current > target_version:
+        raise SchemaMigrationError(
+            f"Database schema version {current} is newer than supported version {target_version}."
+        )
+
+    try:
+        with _write_transaction_scope():
+            if not conn.in_transaction:
+                conn.execute("BEGIN IMMEDIATE")
+            _apply_migrations_locked(
+                conn,
+                current_version=current,
+                target_version=target_version,
+                fault_hook=fault_hook,
+            )
+            conn.commit()
+        return target_version
+    except BaseException as exc:
+        with contextlib.suppress(sqlite3.Error):
+            conn.rollback()
+        mapped = classify_persistence_error(exc)
+        if mapped is exc:
+            raise
+        raise mapped from exc
+
+
+def _verify_sqlite_integrity(conn: sqlite3.Connection) -> None:
+    row = conn.execute("PRAGMA quick_check").fetchone()
+    if not row or str(row[0]).lower() != "ok":
+        detail = str(row[0]) if row else "empty quick_check result"
+        raise DatabaseCorruptionError(f"SQLite quick_check failed (fail closed): {detail}")
+
+
+def _set_owner_only(path: Path) -> None:
+    with contextlib.suppress(OSError):
+        if path.exists():
+            path.chmod(0o600)
+
+
+def _create_online_snapshot(source_conn: sqlite3.Connection, directory: Path, prefix: str) -> Path:
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    fd, raw_name = tempfile.mkstemp(prefix=prefix, suffix=".sqlite3.tmp", dir=directory)
+    os.close(fd)
+    snapshot = Path(raw_name)
+    try:
+        snapshot.chmod(0o600)
+        with contextlib.closing(sqlite3.connect(snapshot, timeout=10.0)) as dst:
+            source_conn.backup(dst, pages=256, sleep=0.01)
+            dst.execute("PRAGMA journal_mode=DELETE")
+            dst.commit()
+            _verify_sqlite_integrity(dst)
+        with snapshot.open("rb") as handle:
+            os.fsync(handle.fileno())
+        return snapshot
+    except BaseException as exc:
+        snapshot.unlink(missing_ok=True)
+        mapped = classify_persistence_error(exc)
+        if mapped is exc:
+            raise
+        raise mapped from exc
+
+
+def _restore_snapshot_to_live(snapshot: Path, live_db: Path) -> None:
+    fd, raw_stage = tempfile.mkstemp(prefix=f".{live_db.name}.restore-", suffix=".tmp", dir=live_db.parent)
+    os.close(fd)
+    staged = Path(raw_stage)
+    try:
+        staged.chmod(0o600)
+        with (
+            contextlib.closing(sqlite3.connect(snapshot, timeout=10.0)) as src,
+            contextlib.closing(sqlite3.connect(staged, timeout=10.0)) as dst,
+        ):
+            src.backup(dst, pages=256, sleep=0.01)
+            dst.execute("PRAGMA journal_mode=DELETE")
+            dst.commit()
+            _verify_sqlite_integrity(dst)
+        with staged.open("rb") as handle:
+            os.fsync(handle.fileno())
+        for suffix in ("-wal", "-shm"):
+            Path(f"{live_db}{suffix}").unlink(missing_ok=True)
+        os.replace(staged, live_db)
+        _set_owner_only(live_db)
+    finally:
+        staged.unlink(missing_ok=True)
+
+
+def upgrade_database(
+    storage: StorageProvider,
+    db_path: Path,
+    *,
+    base_ddl: Callable[[sqlite3.Connection], None] | None = None,
+    target_version: int = RUNTIME_SCHEMA_VERSION,
+    backup_path: Path | None = None,
+    retry_policy: BusyRetryPolicy = DEFAULT_BUSY_RETRY_POLICY,
+    fault_hook: Callable[[int, sqlite3.Connection], None] | None = None,
+) -> int:
+    """Initialize or upgrade ``db_path`` with pre-flight checks, ``0600`` backup, and rollback/restore."""
+    if backup_path is not None and backup_path.expanduser().resolve() == db_path.expanduser().resolve():
+        raise SchemaMigrationError("Pre-migration backup_path must differ from db_path.")
+
+    file_existed = False
+    try:
+        file_existed = db_path.is_file() and db_path.stat().st_size > 0
+    except OSError:
+        file_existed = False
+
+    pre_version = 0
+    pre_tables: set[str] = set()
+    snapshot: Path | None = None
+
+    if file_existed:
+        conn_check: sqlite3.Connection | None = None
+        try:
+            conn_check = storage.connect(db_path)
+            _configure_connection(conn_check, busy_timeout_ms=retry_policy.busy_timeout_ms)
+            _verify_sqlite_integrity(conn_check)
+            v_row = conn_check.execute("PRAGMA user_version").fetchone()
+            pre_version = int(v_row[0]) if v_row else 0
+            if pre_version > target_version:
+                raise SchemaMigrationError(
+                    f"Database schema version {pre_version} is newer than supported version {target_version}."
+                )
+            pre_tables = {
+                str(r[0])
+                for r in conn_check.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+            }
+            needs_snapshot = (bool(pre_tables) and pre_version < target_version) or (backup_path is not None)
+            if needs_snapshot:
+                snap_dir = backup_path.parent if backup_path is not None else db_path.parent
+                snapshot = _create_online_snapshot(
+                    conn_check,
+                    snap_dir,
+                    prefix=f".{db_path.name}.pre-v{target_version}-",
+                )
+        except BaseException as exc:
+            if snapshot is not None:
+                snapshot.unlink(missing_ok=True)
+            mapped = classify_persistence_error(exc)
+            if mapped is exc:
+                raise
+            raise mapped from exc
+        finally:
+            if conn_check is not None:
+                with contextlib.suppress(sqlite3.Error):
+                    conn_check.close()
+
+    def _upgrade_tx(conn: sqlite3.Connection) -> int:
+        _verify_sqlite_integrity(conn)
+        v_row = conn.execute("PRAGMA user_version").fetchone()
+        current = int(v_row[0]) if v_row else 0
+        if current > target_version:
+            raise SchemaMigrationError(
+                f"Database schema version {current} is newer than supported version {target_version}."
+            )
+        if base_ddl is not None:
+            base_ddl(conn)
+        return _apply_migrations_locked(
+            conn,
+            current_version=current,
+            target_version=target_version,
+            fault_hook=fault_hook,
+        )
+
+    try:
+        # Configure WAL mode outside BEGIN IMMEDIATE once before entering the atomic DDL transaction.
+        wal_conn: sqlite3.Connection | None = None
+        try:
+            wal_conn = storage.connect(db_path)
+            _configure_connection(wal_conn, busy_timeout_ms=retry_policy.busy_timeout_ms)
+            _verify_sqlite_integrity(wal_conn)
+            v_row = wal_conn.execute("PRAGMA user_version").fetchone()
+            current_wal = int(v_row[0]) if v_row else 0
+            if current_wal > target_version:
+                raise SchemaMigrationError(
+                    f"Database schema version {current_wal} is newer than supported version {target_version}."
+                )
+            wal_conn.execute("PRAGMA journal_mode = WAL")
+            wal_conn.execute("PRAGMA synchronous = NORMAL")
+        except BaseException as exc:
+            mapped = classify_persistence_error(exc)
+            if mapped is exc:
+                raise
+            raise mapped from exc
+        finally:
+            if wal_conn is not None:
+                with contextlib.suppress(sqlite3.Error):
+                    wal_conn.close()
+
+        applied_version = run_write_transaction(
+            storage,
+            db_path,
+            _upgrade_tx,
+            retry_policy=retry_policy,
+        )
+    except BaseException:
+        if snapshot is not None:
+            live_intact = False
+            if db_path.is_file():
+                try:
+                    with contextlib.closing(sqlite3.connect(db_path, timeout=5.0)) as verify_conn:
+                        _verify_sqlite_integrity(verify_conn)
+                        after_v = int(verify_conn.execute("PRAGMA user_version").fetchone()[0])
+                        after_tables = {
+                            str(r[0])
+                            for r in verify_conn.execute(
+                                "SELECT name FROM sqlite_master WHERE type='table'"
+                            ).fetchall()
+                        }
+                        live_intact = (after_v == pre_version) and (after_tables == pre_tables)
+                except sqlite3.Error:
+                    live_intact = False
+            if not live_intact and db_path.parent.is_dir():
+                with contextlib.suppress(OSError, sqlite3.Error):
+                    _restore_snapshot_to_live(snapshot, db_path)
+                    live_intact = True
+            if backup_path is not None:
+                with contextlib.suppress(OSError):
+                    os.replace(snapshot, backup_path)
+                    _set_owner_only(backup_path)
+            elif live_intact:
+                snapshot.unlink(missing_ok=True)
+        raise
+
+    for protected in (db_path, Path(f"{db_path}-wal"), Path(f"{db_path}-shm")):
+        _set_owner_only(protected)
+
+    if snapshot is not None:
+        if backup_path is not None:
+            backup_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            os.replace(snapshot, backup_path)
+            _set_owner_only(backup_path)
+        else:
+            snapshot.unlink(missing_ok=True)
+
+    return applied_version
+
+
+# ---------------------------------------------------------------------------
+# Typed durable spine records and short-transaction store (M5-P1-01)
+# ---------------------------------------------------------------------------
+
+
+def _non_empty_text(value: str, field: str, *, max_len: int = 256) -> str:
+    if not isinstance(value, str) or not value.strip() or "\x00" in value:
+        raise ValueError(f"{field} must be a non-empty string without NUL characters.")
+    cleaned = value.strip()
+    if len(cleaned) > max_len:
+        raise ValueError(f"{field} exceeds maximum length ({max_len}).")
+    return cleaned
+
+
+@dataclass(frozen=True, slots=True)
+class TaskRecord:
+    """Durable autonomous root/child task record."""
+
+    task_id: str
+    parent_task_id: str | None
+    session_id: str
+    title: str
+    state: str
+    current_epoch: int
+    state_version: int
+    workspace_dir: str
+    policy: str
+    budget_json: str
+    checkpoint_ref: str
+    created_at: float
+    updated_at: float
+
+
+@dataclass(frozen=True, slots=True)
+class TaskEpochRecord:
+    """Durable worker lease and monotonic fencing epoch record."""
+
+    task_id: str
+    epoch: int
+    worker_id: str
+    status: str
+    claimed_at: float
+    heartbeat_at: float
+    lease_expires_at: float
+    fenced_at: float | None
+    fence_reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class TaskTransitionRecord:
+    """Append-only durable state transition entry for a task."""
+
+    id: int
+    task_id: str
+    seq: int
+    from_state: str
+    to_state: str
+    epoch: int
+    reason: str
+    evidence_json: str
+    created_at: float
+
+
+@dataclass(frozen=True, slots=True)
+class ActionRecord:
+    """Durable consequential action intent and outcome record."""
+
+    action_id: str
+    task_id: str | None
+    session_id: str
+    epoch: int
+    attempt: int
+    action_class: str
+    replay_policy: str
+    tool_name: str
+    policy: str
+    explicit_approval: bool
+    args_sha256: str
+    status: str
+    ok: bool | None
+    elapsed_ms: int | None
+    output_sha256: str
+    error_code: str
+    created_at: float
+    updated_at: float
+
+
+def _row_to_task(row: sqlite3.Row) -> TaskRecord:
+    return TaskRecord(
+        task_id=str(row["task_id"]),
+        parent_task_id=str(row["parent_task_id"]) if row["parent_task_id"] is not None else None,
+        session_id=str(row["session_id"]),
+        title=str(row["title"]),
+        state=str(row["state"]),
+        current_epoch=int(row["current_epoch"]),
+        state_version=int(row["state_version"]),
+        workspace_dir=str(row["workspace_dir"]),
+        policy=str(row["policy"]),
+        budget_json=str(row["budget_json"]),
+        checkpoint_ref=str(row["checkpoint_ref"]),
+        created_at=float(row["created_at"]),
+        updated_at=float(row["updated_at"]),
+    )
+
+
+def _row_to_epoch(row: sqlite3.Row) -> TaskEpochRecord:
+    return TaskEpochRecord(
+        task_id=str(row["task_id"]),
+        epoch=int(row["epoch"]),
+        worker_id=str(row["worker_id"]),
+        status=str(row["status"]),
+        claimed_at=float(row["claimed_at"]),
+        heartbeat_at=float(row["heartbeat_at"]),
+        lease_expires_at=float(row["lease_expires_at"]),
+        fenced_at=float(row["fenced_at"]) if row["fenced_at"] is not None else None,
+        fence_reason=str(row["fence_reason"]),
+    )
+
+
+def _row_to_transition(row: sqlite3.Row) -> TaskTransitionRecord:
+    return TaskTransitionRecord(
+        id=int(row["id"]),
+        task_id=str(row["task_id"]),
+        seq=int(row["seq"]),
+        from_state=str(row["from_state"]),
+        to_state=str(row["to_state"]),
+        epoch=int(row["epoch"]),
+        reason=str(row["reason"]),
+        evidence_json=str(row["evidence_json"]),
+        created_at=float(row["created_at"]),
+    )
+
+
+def _row_to_action(row: sqlite3.Row) -> ActionRecord:
+    return ActionRecord(
+        action_id=str(row["action_id"]),
+        task_id=str(row["task_id"]) if row["task_id"] is not None else None,
+        session_id=str(row["session_id"]),
+        epoch=int(row["epoch"]),
+        attempt=int(row["attempt"]),
+        action_class=str(row["action_class"]),
+        replay_policy=str(row["replay_policy"]),
+        tool_name=str(row["tool_name"]),
+        policy=str(row["policy"]),
+        explicit_approval=bool(row["explicit_approval"]),
+        args_sha256=str(row["args_sha256"]),
+        status=str(row["status"]),
+        ok=bool(row["ok"]) if row["ok"] is not None else None,
+        elapsed_ms=int(row["elapsed_ms"]) if row["elapsed_ms"] is not None else None,
+        output_sha256=str(row["output_sha256"]),
+        error_code=str(row["error_code"]),
+        created_at=float(row["created_at"]),
+        updated_at=float(row["updated_at"]),
+    )
+
+
+class RuntimePersistenceStore:
+    """Short-transaction SQLite repository for tasks, transitions, actions, and epochs."""
+
+    def __init__(
+        self,
+        storage: StorageProvider,
+        db_path: Path,
+        *,
+        retry_policy: BusyRetryPolicy = DEFAULT_BUSY_RETRY_POLICY,
+    ) -> None:
+        self._storage = storage
+        self._db_path = db_path
+        self._retry_policy = retry_policy
+
+    def create_task(
+        self,
+        task_id: str,
+        *,
+        session_id: str = "",
+        parent_task_id: str | None = None,
+        title: str = "",
+        state: str = "pending",
+        workspace_dir: str = "",
+        policy: str = "standard",
+        budget_json: str = "{}",
+        checkpoint_ref: str = "",
+        now: float | None = None,
+    ) -> TaskRecord:
+        tid = _non_empty_text(task_id, "task_id", max_len=128)
+        parent = _non_empty_text(parent_task_id, "parent_task_id", max_len=128) if parent_task_id else None
+        if state not in TASK_STATES:
+            raise ValueError(f"Unsupported task state: {state!r}")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> TaskRecord:
+            conn.row_factory = sqlite3.Row
+            conn.execute(
+                """
+                INSERT INTO runtime_tasks (
+                    task_id, parent_task_id, session_id, title, state,
+                    current_epoch, state_version, workspace_dir, policy,
+                    budget_json, checkpoint_ref, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    tid,
+                    parent,
+                    str(session_id)[:128],
+                    str(title)[:240],
+                    state,
+                    str(workspace_dir),
+                    str(policy)[:40],
+                    str(budget_json or "{}"),
+                    str(checkpoint_ref)[:256],
+                    ts,
+                    ts,
+                ),
+            )
+            row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            assert row is not None
+            return _row_to_task(row)
+
+        return run_write_transaction(self._storage, self._db_path, _tx, retry_policy=self._retry_policy)
+
+    def get_task(self, task_id: str) -> TaskRecord | None:
+        tid = _non_empty_text(task_id, "task_id", max_len=128)
+
+        def _read(conn: sqlite3.Connection) -> TaskRecord | None:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            return _row_to_task(row) if row is not None else None
+
+        return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
+    def claim_epoch(
+        self,
+        task_id: str,
+        worker_id: str,
+        *,
+        lease_ttl_s: float = 30.0,
+        fence_reason: str = "superseded_by_new_epoch",
+        now: float | None = None,
+    ) -> TaskEpochRecord:
+        tid = _non_empty_text(task_id, "task_id", max_len=128)
+        wid = _non_empty_text(worker_id, "worker_id", max_len=128)
+        if lease_ttl_s <= 0:
+            raise ValueError("lease_ttl_s must be positive.")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> TaskEpochRecord:
+            conn.row_factory = sqlite3.Row
+            task_row = conn.execute("SELECT current_epoch FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if task_row is None:
+                raise KeyError(f"Runtime task {tid!r} does not exist.")
+            next_epoch = int(task_row["current_epoch"]) + 1
+            conn.execute(
+                """
+                UPDATE runtime_task_epochs
+                SET status = 'fenced', fenced_at = ?, fence_reason = ?
+                WHERE task_id = ? AND status = 'active'
+                """,
+                (ts, str(fence_reason)[:160], tid),
+            )
+            conn.execute(
+                "UPDATE runtime_tasks SET current_epoch = ?, updated_at = ? WHERE task_id = ?",
+                (next_epoch, ts, tid),
+            )
+            conn.execute(
+                """
+                INSERT INTO runtime_task_epochs (
+                    task_id, epoch, worker_id, status, claimed_at, heartbeat_at, lease_expires_at
+                ) VALUES (?, ?, ?, 'active', ?, ?, ?)
+                """,
+                (tid, next_epoch, wid, ts, ts, ts + lease_ttl_s),
+            )
+            row = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                (tid, next_epoch),
+            ).fetchone()
+            assert row is not None
+            return _row_to_epoch(row)
+
+        return run_write_transaction(self._storage, self._db_path, _tx, retry_policy=self._retry_policy)
+
+    def get_epoch(self, task_id: str, epoch: int) -> TaskEpochRecord | None:
+        tid = _non_empty_text(task_id, "task_id", max_len=128)
+
+        def _read(conn: sqlite3.Connection) -> TaskEpochRecord | None:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                (tid, int(epoch)),
+            ).fetchone()
+            return _row_to_epoch(row) if row is not None else None
+
+        return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
+    def record_transition(
+        self,
+        task_id: str,
+        *,
+        to_state: str,
+        expected_state_version: int | None = None,
+        epoch: int | None = None,
+        reason: str = "",
+        evidence_json: str = "{}",
+        checkpoint_ref: str | None = None,
+        now: float | None = None,
+    ) -> tuple[TaskRecord, TaskTransitionRecord]:
+        tid = _non_empty_text(task_id, "task_id", max_len=128)
+        if to_state not in TASK_STATES:
+            raise ValueError(f"Unsupported target task state: {to_state!r}")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> tuple[TaskRecord, TaskTransitionRecord]:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if row is None:
+                raise KeyError(f"Runtime task {tid!r} does not exist.")
+            current_version = int(row["state_version"])
+            if expected_state_version is not None and current_version != expected_state_version:
+                raise ValueError(
+                    f"Task {tid!r} state_version mismatch (expected {expected_state_version}, actual {current_version})."
+                )
+            current_epoch = int(row["current_epoch"])
+            if epoch is not None and epoch != current_epoch:
+                raise PermissionError(
+                    f"Stale task epoch {epoch} cannot transition task {tid!r} at current_epoch={current_epoch}."
+                )
+            effective_epoch = current_epoch if epoch is None else int(epoch)
+            from_state = str(row["state"])
+            seq_row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                (tid,),
+            ).fetchone()
+            next_seq = int(seq_row[0]) if seq_row else 1
+            new_checkpoint = str(row["checkpoint_ref"]) if checkpoint_ref is None else str(checkpoint_ref)[:256]
+            conn.execute(
+                """
+                UPDATE runtime_tasks
+                SET state = ?, state_version = state_version + 1, checkpoint_ref = ?, updated_at = ?
+                WHERE task_id = ?
+                """,
+                (to_state, new_checkpoint, ts, tid),
+            )
+            cur = conn.execute(
+                """
+                INSERT INTO runtime_task_transitions (
+                    task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (tid, next_seq, from_state, to_state, effective_epoch, str(reason)[:240], str(evidence_json or "{}"), ts),
+            )
+            updated_task = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            tr_row = conn.execute(
+                "SELECT * FROM runtime_task_transitions WHERE id = ?",
+                (cur.lastrowid,),
+            ).fetchone()
+            assert updated_task is not None and tr_row is not None
+            return _row_to_task(updated_task), _row_to_transition(tr_row)
+
+        return run_write_transaction(self._storage, self._db_path, _tx, retry_policy=self._retry_policy)
+
+    def list_transitions(self, task_id: str) -> list[TaskTransitionRecord]:
+        tid = _non_empty_text(task_id, "task_id", max_len=128)
+
+        def _read(conn: sqlite3.Connection) -> list[TaskTransitionRecord]:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT * FROM runtime_task_transitions WHERE task_id = ? ORDER BY seq ASC",
+                (tid,),
+            ).fetchall()
+            return [_row_to_transition(r) for r in rows]
+
+        return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
+    def record_action_intent(
+        self,
+        action_id: str,
+        *,
+        tool_name: str,
+        policy: str,
+        args_sha256: str,
+        task_id: str | None = None,
+        session_id: str = "",
+        epoch: int = 0,
+        attempt: int = 1,
+        action_class: str = "consequential",
+        replay_policy: str = "non_idempotent",
+        explicit_approval: bool = False,
+        status: str = "in_flight",
+        now: float | None = None,
+    ) -> ActionRecord:
+        aid = _non_empty_text(action_id, "action_id", max_len=128)
+        tid = _non_empty_text(task_id, "task_id", max_len=128) if task_id else None
+        tname = _non_empty_text(tool_name, "tool_name", max_len=200)
+        pol = _non_empty_text(policy, "policy", max_len=40)
+        digest = _non_empty_text(args_sha256, "args_sha256", max_len=128)
+        if action_class not in ACTION_CLASSES:
+            raise ValueError(f"Unsupported action_class: {action_class!r}")
+        if replay_policy not in REPLAY_POLICIES:
+            raise ValueError(f"Unsupported replay_policy: {replay_policy!r}")
+        if status not in {"never_started", "in_flight", "denied"}:
+            raise ValueError(f"Invalid initial action status: {status!r}")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> ActionRecord:
+            conn.row_factory = sqlite3.Row
+            if tid is not None:
+                task_row = conn.execute(
+                    "SELECT current_epoch FROM runtime_tasks WHERE task_id = ?",
+                    (tid,),
+                ).fetchone()
+                if task_row is None:
+                    raise KeyError(f"Runtime task {tid!r} does not exist.")
+                if epoch > 0 and int(task_row["current_epoch"]) != int(epoch):
+                    raise PermissionError(
+                        f"Stale epoch {epoch} cannot record action intent for task {tid!r} (current_epoch={task_row['current_epoch']})."
+                    )
+            conn.execute(
+                """
+                INSERT INTO runtime_actions (
+                    action_id, task_id, session_id, epoch, attempt, action_class,
+                    replay_policy, tool_name, policy, explicit_approval, args_sha256,
+                    status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    aid,
+                    tid,
+                    str(session_id)[:128],
+                    int(epoch),
+                    int(attempt),
+                    action_class,
+                    replay_policy,
+                    tname,
+                    pol,
+                    int(bool(explicit_approval)),
+                    digest,
+                    status,
+                    ts,
+                    ts,
+                ),
+            )
+            row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            assert row is not None
+            return _row_to_action(row)
+
+        return run_write_transaction(self._storage, self._db_path, _tx, retry_policy=self._retry_policy)
+
+    def finalize_action(
+        self,
+        action_id: str,
+        *,
+        status: str,
+        ok: bool | None,
+        elapsed_ms: int | None,
+        output_sha256: str = "",
+        error_code: str = "",
+        now: float | None = None,
+    ) -> ActionRecord:
+        aid = _non_empty_text(action_id, "action_id", max_len=128)
+        if status not in {"committed", "failed", "denied", "uncertain"}:
+            raise ValueError(f"Unsupported terminal/reconciled action status: {status!r}")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> ActionRecord:
+            conn.row_factory = sqlite3.Row
+            existing = conn.execute("SELECT status FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            if existing is None:
+                raise KeyError(f"Runtime action {aid!r} does not exist.")
+            conn.execute(
+                """
+                UPDATE runtime_actions
+                SET status = ?, ok = ?, elapsed_ms = ?, output_sha256 = ?, error_code = ?, updated_at = ?
+                WHERE action_id = ?
+                """,
+                (
+                    status,
+                    (int(bool(ok)) if ok is not None else None),
+                    (max(0, int(elapsed_ms)) if elapsed_ms is not None else None),
+                    str(output_sha256)[:128],
+                    str(error_code)[:120],
+                    ts,
+                    aid,
+                ),
+            )
+            row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            assert row is not None
+            return _row_to_action(row)
+
+        return run_write_transaction(self._storage, self._db_path, _tx, retry_policy=self._retry_policy)
+
+    def get_action(self, action_id: str) -> ActionRecord | None:
+        aid = _non_empty_text(action_id, "action_id", max_len=128)
+
+        def _read(conn: sqlite3.Connection) -> ActionRecord | None:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            return _row_to_action(row) if row is not None else None
+
+        return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
 
 """MCP wire-protocol boundary: adaptive HTTP transport, parser, and session state.
 
@@ -14511,6 +16086,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 
+
 class StorageLike(Protocol):
     """Minimal storage seam (structurally compatible with app.SQLiteStorage)."""
 
@@ -14537,25 +16113,33 @@ def _row_to_doc(row: sqlite3.Row) -> dict[str, Any]:
 
 
 def list_docs(storage: StorageLike, db_path: Path, folder: str = "") -> list[dict[str, Any]]:
-    with storage.connect(db_path) as conn:
+    def _read(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
         if folder:
-            rows = conn.execute(
+            return conn.execute(
                 "SELECT * FROM opencontext_docs WHERE folder = ? ORDER BY pinned DESC, updated_at DESC",
                 (folder,),
             ).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT * FROM opencontext_docs ORDER BY pinned DESC, updated_at DESC"
-            ).fetchall()
+        return conn.execute(
+            "SELECT * FROM opencontext_docs ORDER BY pinned DESC, updated_at DESC"
+        ).fetchall()
+
+    rows = runtime_persistence.run_read(storage, db_path, _read)
     return [_row_to_doc(r) for r in rows]
 
 
 def get_doc(storage: StorageLike, db_path: Path, doc_id_or_uri: str) -> dict[str, Any]:
     clean_id = (doc_id_or_uri or "").strip().replace("oc://doc/", "").strip("/")
-    with storage.connect(db_path) as conn:
+
+    def _read(conn: sqlite3.Connection) -> sqlite3.Row | None:
         conn.row_factory = sqlite3.Row
-        row = conn.execute("SELECT * FROM opencontext_docs WHERE id = ?", (clean_id,)).fetchone()
+        row: sqlite3.Row | None = conn.execute(
+            "SELECT * FROM opencontext_docs WHERE id = ?",
+            (clean_id,),
+        ).fetchone()
+        return row
+
+    row = runtime_persistence.run_read(storage, db_path, _read)
     if not row:
         raise KeyError(f"OpenContext doc `{clean_id}` not found.")
     return _row_to_doc(row)
@@ -14578,7 +16162,8 @@ def upsert_doc(
     did = (doc_id or "").strip().replace("oc://doc/", "") or f"oc-{uuid.uuid4().hex[:8]}"
     desc = (description or content.splitlines()[0] if content else "").strip()[:240]
     now = time.time()
-    with storage.connect(db_path) as conn:
+
+    def _write(conn: sqlite3.Connection) -> None:
         conn.execute(
             """
             INSERT INTO opencontext_docs (id, folder, title, description, content, pinned, updated_at)
@@ -14594,25 +16179,29 @@ def upsert_doc(
             "INSERT INTO opencontext_fts (doc_id, folder, title, description, content) VALUES (?, ?, ?, ?, ?)",
             (did, clean_folder, clean_title, desc, content),
         )
-        conn.commit()
+
+    runtime_persistence.run_write_transaction(storage, db_path, _write)
     return get_doc(storage, db_path, did)
 
 
 def delete_doc(storage: StorageLike, db_path: Path, doc_id: str) -> None:
     clean_id = (doc_id or "").strip().replace("oc://doc/", "")
-    with storage.connect(db_path) as conn:
+
+    def _write(conn: sqlite3.Connection) -> None:
         conn.execute("DELETE FROM opencontext_docs WHERE id = ?", (clean_id,))
         conn.execute("DELETE FROM opencontext_fts WHERE doc_id = ?", (clean_id,))
-        conn.commit()
+
+    runtime_persistence.run_write_transaction(storage, db_path, _write)
 
 
 def search_docs(storage: StorageLike, db_path: Path, query: str, limit: int = 8) -> list[dict[str, Any]]:
     fts_q = sanitize_fts5_query(query)
     if not fts_q:
         return list_docs(storage, db_path)[:limit]
-    with storage.connect(db_path) as conn:
+
+    def _read(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
-        rows = conn.execute(
+        return conn.execute(
             """
             SELECT d.*, bm25(opencontext_fts) AS rank_score
             FROM opencontext_fts
@@ -14623,6 +16212,8 @@ def search_docs(storage: StorageLike, db_path: Path, query: str, limit: int = 8)
             """,
             (fts_q, limit),
         ).fetchall()
+
+    rows = runtime_persistence.run_read(storage, db_path, _read)
     return [_row_to_doc(r) for r in rows]
 
 
@@ -15154,11 +16745,21 @@ class DurableActionBoundary:
        exists (a failed finalization is swallowed for the failure path only).
     5. No permission is inferred from caller or model text: approval is an
        explicit boolean resolved against the policy decision.
+    6. Optional ``pre_execute_guard`` (e.g. asserting no active SQLite write
+       transaction spans tool dispatch, M5-P1-01) fails closed before
+       ``executor`` runs, finalizing the attempt as ``failed`` and re-raising.
     """
 
-    def __init__(self, policy: Policy, ledger: ActionLedger) -> None:
+    def __init__(
+        self,
+        policy: Policy,
+        ledger: ActionLedger,
+        *,
+        pre_execute_guard: Callable[[], None] | None = None,
+    ) -> None:
         self._policy = policy
         self._ledger = ledger
+        self._pre_execute_guard = pre_execute_guard
 
     async def admit_and_execute(self, request: ActionRequest, executor: Executor) -> dict[str, Any]:
         effective = self._policy.effective_policy(request.policy)
@@ -15191,6 +16792,8 @@ class DurableActionBoundary:
                 raise PermissionError(result["output"])
             return result
         try:
+            if self._pre_execute_guard is not None:
+                self._pre_execute_guard()
             result = await executor()
         except Exception as exc:
             failure: dict[str, Any] = {
@@ -15215,6 +16818,7 @@ class DurableActionBoundary:
 
 # Single-file build: re-alias the extracted modules to this file so qualified
 # references (mcp_client.*, context_store.*) resolve to the inlined definitions.
+runtime_persistence = sys.modules[__name__]
 mcp_client = sys.modules[__name__]
 context_store = sys.modules[__name__]
 onboarding_preflight = sys.modules[__name__]

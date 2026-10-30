@@ -28,21 +28,30 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
 - **The application runs and its local auth path works.** `scripts/smoke_local.py`
   launches a disposable loopback instance of both `app.py` and the generated
   `studio.py` and verifies the token/security path — both exit 0.
-- **The test suite passes:** **740 passed, 1 skipped** (the skip is the opt-in
+- **The test suite passes:** **755 passed, 1 skipped** (the skip is the opt-in
   live container-runtime test, see below). `ruff`, `mypy`, `compileall`, and the
   Node-based frontend syntax check all pass.
 - **Generated artifacts are reproducible:** `studio.py`,
   `docs/route-security-matrix.md`, `docs/subsystem-dependency-inventory.md`
   regenerate byte-for-byte; the roadmap dashboard matches its JSON.
-- **Storage is SQLite with WAL and FTS5** (`app.py` L1039
-  `PRAGMA journal_mode=WAL`; FTS5 tables at L1181/L1200; BM25 search via
-  `context_store.sanitize_fts5_query`). Default DB: `studio_history.db` beside
-  the entry point; override with `STUDIO_DB_PATH` (code at `app.py` L269).
+- **Storage is SQLite Schema v3 with WAL, FTS5, and short-transaction
+  persistence discipline (ADR-0003, since `M5-P1-01`):** `runtime_persistence.py`
+  executes additive versioned migrations (`SCHEMA_VERSION = 3`) inside
+  `BEGIN IMMEDIATE` after an owner-only (`0600`) pre-upgrade snapshot, routes
+  every `app.py` and `context_store.py` SQLite read/write through `run_read` /
+  `run_write_transaction` with bounded busy retries and fail-closed
+  busy/disk-full/corruption errors, prevents active write transactions from
+  spanning tool execution, subprocesses, model inference, or keyring I/O, and
+  defines durable spine tables (`runtime_tasks`, `runtime_task_epochs`,
+  `runtime_task_transitions`, `runtime_actions`) — pinned by 15 tests
+  (`tests/test_runtime_persistence.py`). Default DB: `studio_history.db` beside
+  the entry point; override with `STUDIO_DB_PATH` (`app.py` L269).
 - **The frontend is a single-file vanilla JS UI** (`static/index.html`,
   4,228 lines; no framework build step).
 - **Tool calls go through a central authorize → audit → execute boundary**
   (`_run_authorized_tool` delegates to `execution_spine.DurableActionBoundary`)
-  with durable `tool_audit_events` rows and fail-closed policy evaluation.
+  with durable `tool_audit_events` rows, a pre-execute write-transaction guard,
+  and fail-closed policy evaluation.
 - **The execution boundary is extracted and its coverage is inventoried
   (ADR-0002, since `M5-P0-06`):** `execution_spine.py` is a stdlib-only seam
   (policy → intent record → execute → outcome record) with 11 contract tests
@@ -55,11 +64,16 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
   live execution mode, through the same execution boundary as tool code —
   pinned by 9 regression tests
   (`tests/test_skill_execution_containment.py`).
-- **Only 6 of 43 shipped Python modules are wired into the served app**
+- **7 of 44 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
-  `workflow_orchestration`, and — since `M5-P0-06` — `execution_spine`; 5 of 42
-  at the time of the audit table). The other 37 — including `sandbox_boundary.py`
-  and `side_effect_ledger.py` — have passing unit tests but **no `app.py` call
+  `workflow_orchestration`, `execution_spine` since `M5-P0-06`, and
+  `runtime_persistence` since `M5-P1-01`; 5 of 42 at the time of the audit
+  table). Note that while `runtime_persistence` governs schema upgrades and
+  all SQLite transactions in `app.py`, its `RuntimePersistenceStore`
+  (`runtime_tasks` / `runtime_task_epochs` / `runtime_task_transitions` /
+  `runtime_actions`) is not yet wired into live task orchestration (`M5-P1-02`–
+  `M5-P1-05`). The other 37 modules — including `sandbox_boundary.py` and
+  `side_effect_ledger.py` — have passing unit tests but **no `app.py` call
   path**. Module presence is not integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
 
@@ -90,7 +104,7 @@ python3 -m venv .venv
 .venv/bin/mypy                                  # typed contract modules
 .venv/bin/python -m compileall -q app.py scripts tests
 .venv/bin/python scripts/check_frontend_syntax.py
-.venv/bin/python -m pytest -q                   # 740 passed, 1 skipped
+.venv/bin/python -m pytest -q                   # 755 passed, 1 skipped
 .venv/bin/python scripts/smoke_local.py         # loopback app, auth verified
 .venv/bin/python scripts/smoke_local.py --standalone
 ```
@@ -110,8 +124,8 @@ are not guarantees):
 
 ## Verified usage
 
-- **Run the test suite:** `.venv/bin/python -m pytest -q` → 740 passed,
-  1 skipped, 1 warning (19.13 s in the review environment).
+- **Run the test suite:** `.venv/bin/python -m pytest -q` → 755 passed,
+  1 skipped, 1 warning.
 - **Start a disposable authenticated instance (verified):**
   `.venv/bin/python scripts/smoke_local.py` starts `app.py` on a free loopback
   port in a temporary directory and exercises the auth/security path.
@@ -141,13 +155,16 @@ are not guarantees):
 Observed structure (see [`docs/architecture.md`](docs/architecture.md) and the
 generated [`docs/subsystem-dependency-inventory.md`](docs/subsystem-dependency-inventory.md)):
 
-- **Backend:** one FastAPI process — `app.py` (9,627 lines) plus 42 small
-  contract modules listed in `pyproject.toml`. `studio.py` (15,235 lines) is a
-  **generated** standalone artifact (`scripts/build_studio.py` embeds
-  `static/index.html`); never hand-edit it.
+- **Backend:** one FastAPI process — `app.py` plus 43 small contract modules
+  listed in `pyproject.toml`. `studio.py` is a **generated** standalone
+  artifact (`scripts/build_studio.py` inlines `runtime_persistence`,
+  `mcp_client`, `context_store`, `onboarding_preflight`, and `execution_spine`,
+  and embeds `static/index.html`); never hand-edit it.
 - **Frontend:** `static/index.html`, vanilla HTML/CSS/JS, no build step.
-- **Storage:** SQLite (`studio_history.db`) in WAL mode with FTS5 tables
-  (`opencontext_fts`, `ctx_vault_fts`) for BM25 context search.
+- **Storage:** SQLite (`studio_history.db`, `SCHEMA_VERSION = 3`) in WAL mode
+  with FTS5 tables (`opencontext_fts`, `ctx_vault_fts`) for BM25 context search
+  and `runtime_persistence.py` enforcing short `BEGIN IMMEDIATE` write
+  transactions, bounded busy retries, and fail-closed persistence errors.
 - **Request path:** `security_boundary` middleware (rate limit, origin checks,
   body limits; `app.py` L2348) → 65 registered routes → either model streaming
   (`stream_any_model`), the harness tool loop
@@ -215,7 +232,7 @@ Summary (2026-10-30, Linux x86_64 container, 2 vCPU, ~4 GB RAM, Python 3.11.2):
 
 | Check | Result |
 |---|---|
-| `pytest -q` | 740 passed, 1 skipped (opt-in live container test), 1 warning |
+| `pytest -q` | 755 passed, 1 skipped (opt-in live container test), 1 warning |
 | `ruff check .` | clean |
 | `mypy` | clean (typed contract modules) |
 | `check_frontend_syntax.py` (Node) | pass |
@@ -285,14 +302,15 @@ requires `STUDIO_ALLOW_SKILL_CODE=1`; private-URL access requires
    ([`docs/security-review-signoff.md`](docs/security-review-signoff.md)).
    Never self-certify that gate.
 8. **The execution boundary covers tool invocation and skill-script
-   execution, not every effectful path (since `M5-P0-06`).** The maintained
-   known-bypass inventory
+   execution, not every effectful path (since `M5-P0-06`; SQLite discipline
+   tightened in `M5-P1-01`).** The maintained known-bypass inventory
    [`docs/m5-2-0-bypass-inventory.md`](docs/m5-2-0-bypass-inventory.md) lists
-   what routes through the boundary, what is gated elsewhere, what is
-   read-only, and what is still outside it (worktree git effects, database
-   writes, MCP registries, session/bootstrap files). Completing coverage is
-   follow-up work (`M5-P1-03`, `M5-P2-01`…`M5-P2-03`); partial coverage is
-   never advertised as complete.
+   what routes through the boundary, what is gated elsewhere (all SQLite reads
+   and writes now route through `runtime_persistence`), what is read-only, and
+   what is still outside it (worktree git effects, `.harnesses/*.jsonl` sidecar
+   files, unledgered filesystem writes). Completing coverage is follow-up work
+   (`M5-P1-02`, `M5-P1-03`, `M5-P2-01`…`M5-P2-03`); partial coverage is never
+   advertised as complete.
 
 ## Current implementation status
 
@@ -307,11 +325,12 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
 
 - **M5 2.0 autonomous-runtime program** —
   [`product/M5_2_0_Autonomous_Roadmap.json`](product/M5_2_0_Autonomous_Roadmap.json):
-  34 stories across 7 phases. **Done with evidence: `M5-P0-01`, `M5-P0-02`,
-  `M5-P0-05`, `M5-P0-07`** (phase P0 at 57%). Next ready story: `M5-P0-03`
-  (contain the skill-execution bypasses) — claim it via the coordination
-  protocol before coding. All other stories are `not_started`; planned work is
-  not implemented product behavior.
+  34 stories across 7 phases. **Done with evidence: `M5-P0-01`…`M5-P0-07`
+  (phase P0 100%) and `M5-P1-01`** (SQLite Schema v3 migration and persistence
+  discipline). Next ready stories: `M5-P1-02` (authoritative task state machine
+  and transitions) and `M5-P1-03` (durable action ledger and side-effect
+  idempotency) — claim via the coordination protocol before coding. Planned
+  work is not implemented product behavior.
 - **AS program (Adaptive Runtime)** —
   [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json)
   with dashboard [`docs/product-roadmap-status.md`](docs/product-roadmap-status.md):

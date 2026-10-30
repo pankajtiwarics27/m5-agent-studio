@@ -91,7 +91,7 @@ The history export is redacted and deliberately omits credentials and audit trai
 
 `GET /api/history/export` -> 200
 
-Observed: export covers 8 tables and excludes 5 credential and audit tables; redaction is on
+Observed: export covers 8 tables and excludes 9 credential and audit tables; redaction is on
 
 ## 10. Leave nothing behind
 

@@ -126,6 +126,10 @@ EXCLUDED_TABLES: tuple[str, ...] = (
     "mcp_servers",
     "tool_audit_events",
     "schema_migrations",
+    "runtime_tasks",
+    "runtime_task_epochs",
+    "runtime_task_transitions",
+    "runtime_actions",
 )
 
 
@@ -174,7 +178,14 @@ def export_history(conn: sqlite3.Connection, *, redact: bool = True) -> dict[str
         "redaction": {"enabled": bool(redact), "replacements": replacements, "marker": REDACTED if redact else None},
         "excluded_tables": {
             "credentials_and_configuration": ["cloud_providers", "model_combos", "mcp_servers"],
-            "security_and_integrity_trails": ["tool_audit_events", "schema_migrations"],
+            "security_and_integrity_trails": [
+                "tool_audit_events",
+                "schema_migrations",
+                "runtime_tasks",
+                "runtime_task_epochs",
+                "runtime_task_transitions",
+                "runtime_actions",
+            ],
         },
         "tables": tables_out,
     }

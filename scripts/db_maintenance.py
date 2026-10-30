@@ -18,7 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from history_privacy import HistoryPrivacyError, apply_retention, export_history  # noqa: E402
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 KEYRING_REF_PREFIX = "keyring:v1:"
 SENSITIVE_PARTS = ("authorization", "cookie", "token", "secret", "password", "api-key", "apikey", "access-key", "accesskey", "private-key", "privatekey", "credential")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
