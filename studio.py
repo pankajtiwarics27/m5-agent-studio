@@ -11466,6 +11466,175 @@ def _workspace_snapshot_store() -> workspace_snapshots.WorkspaceSnapshotStore:
     )
 
 
+def _edit_ledger() -> edit_transactions.EditTransactionLedger:
+    """Durable edit-transaction ledger bound to ``HARNESS_STORE_DIR`` (per-call, like the others)."""
+    _ensure_harness_dirs()
+    return edit_transactions.EditTransactionLedger(HARNESS_STORE_DIR)
+
+
+def _observed_versions() -> edit_transactions.ObservedVersionIndex:
+    """Durable record of the file versions handed to the agent by ``read_file``."""
+    _ensure_harness_dirs()
+    return edit_transactions.ObservedVersionIndex(HARNESS_STORE_DIR)
+
+
+def _edit_conflict_result(
+    rel_s: str,
+    *,
+    expected_sha256: str | None,
+    current_sha256: str | None,
+    observed_sha256: str | None,
+    source: str,
+    detail: str = "",
+) -> dict[str, Any]:
+    """Refuse a managed edit whose version expectation no longer holds."""
+    current_txt = current_sha256 or "absent"
+    expected_txt = expected_sha256 or "absent"
+    hint = (
+        f"`{rel_s}` changed since the version this edit was based on "
+        f"(expected {expected_txt}, found {current_txt}"
+        + (f"; last version read by the agent: {observed_sha256}" if observed_sha256 else "")
+        + "). Nothing was written. Call `read_file` again, re-apply the change to the current content, "
+        "and pass the digest it reports as `expected_sha256`."
+    )
+    if detail:
+        hint = f"{hint} ({detail})"
+    return {
+        "ok": False,
+        "error_code": "stale_version",
+        "conflict": True,
+        "expected_sha256": expected_sha256,
+        "current_sha256": current_sha256,
+        "observed_sha256": observed_sha256,
+        "conflict_source": source,
+        "output": hint,
+        "diff": "",
+        "elapsed_ms": 1,
+    }
+
+
+def _resolve_edit_expectation(
+    sess: dict[str, Any],
+    root_res: Path,
+    rel_s: str,
+    args: Mapping[str, Any],
+) -> tuple[str | None, str | None, dict[str, Any] | None]:
+    """Return ``(expected_sha256, current_sha256, denial)`` for a managed edit.
+
+    The expectation is, in order of authority: the caller's explicit
+    ``expected_sha256``, the version ``read_file`` last handed this session, or the
+    bytes this runtime last wrote. A mismatch is a conflict, never an overwrite;
+    only when none of the three exists (an unread, never-written target) is the
+    edit treated as a first write.
+    """
+    snap_sid = _snapshot_session_id(sess)
+    try:
+        explicit = edit_transactions.parse_expected_sha256(args.get("expected_sha256"))
+    except edit_transactions.EditVersionError as exc:
+        return None, None, {
+            "ok": False,
+            "error_code": "invalid_expected_sha256",
+            "output": f"Invalid `expected_sha256`: {exc}",
+            "diff": "",
+            "elapsed_ms": 1,
+        }
+    observed: str | None = None
+    try:
+        observed = _observed_versions().expected_for(snap_sid, rel_s)
+    except edit_transactions.EditVersionError:
+        observed = None
+    last_written: str | None = None
+    try:
+        prior = _edit_ledger().latest_for_path(snap_sid, rel_s)
+    except edit_transactions.EditVersionError:
+        prior = None
+    if prior is not None:
+        last_written = prior.post_sha256
+
+    try:
+        current = workspace_snapshots.hash_target_in_place(root_res, rel_s)
+    except workspace_snapshots.WorkspaceSnapshotError as exc:
+        return None, None, {
+            "ok": False,
+            "error_code": "unsafe_path",
+            "output": f"Refused: {exc}",
+            "diff": "",
+            "elapsed_ms": 1,
+        }
+    current_sha = current[0] if current is not None else None
+
+    expected = explicit if explicit is not None else (observed if observed is not None else last_written)
+    if expected is not None and expected != current_sha:
+        source = "explicit" if explicit is not None else ("observed_read" if observed is not None else "last_write")
+        return expected, current_sha, _edit_conflict_result(
+            rel_s,
+            expected_sha256=expected,
+            current_sha256=current_sha,
+            observed_sha256=observed,
+            source=source,
+        )
+    return expected, current_sha, None
+
+
+def _record_managed_edit(
+    sess: dict[str, Any],
+    root_res: Path,
+    rel_s: str,
+    *,
+    tool_name: str,
+    pre_sha256: str | None,
+    post_sha256: str,
+    expected_sha256: str | None,
+    observed_sha256: str | None,
+    mode: int | None,
+    bytes_written: int,
+) -> dict[str, Any] | None:
+    """Durably record an applied edit and mark the written version as observed."""
+    snap_sid = _snapshot_session_id(sess)
+    task_id = str(sess.get("task_id") or sess.get("id") or "")
+    try:
+        transaction = _edit_ledger().record(
+            session_id=snap_sid,
+            rel_path=rel_s,
+            tool=tool_name,
+            pre_sha256=pre_sha256,
+            post_sha256=post_sha256,
+            expected_sha256=expected_sha256,
+            observed_sha256=observed_sha256,
+            mode=mode,
+            bytes_written=bytes_written,
+            task_id=task_id,
+        )
+    except (edit_transactions.EditVersionError, OSError) as exc:
+        # The bytes are already on disk; refusing to claim success would be a lie,
+        # but the missing transaction is reported so recovery can re-derive it.
+        _safe_append_harness_event(
+            snap_sid,
+            "edit/ledger_failed",
+            {"path": rel_s, "tool": tool_name, "reason": str(exc)[:300]},
+        )
+        return None
+    try:
+        _observed_versions().mark_observed(snap_sid, rel_s, post_sha256)
+    except (edit_transactions.EditVersionError, OSError):
+        pass
+    _safe_append_harness_event(
+        snap_sid,
+        "edit/applied",
+        {
+            "edit_id": transaction.edit_id,
+            "seq": transaction.seq,
+            "path": rel_s,
+            "tool": tool_name,
+            "pre_sha256": pre_sha256,
+            "post_sha256": post_sha256,
+            "bytes": bytes_written,
+        },
+        dedupe_key=f"edit-applied:{transaction.edit_id}",
+    )
+    return transaction.to_dict()
+
+
 def _snapshot_session_id(sess: Mapping[str, Any] | None, fallback: str = "adhoc-session") -> str:
     raw = str((sess or {}).get("id") or fallback).strip()
     sanitized = re.sub(r"[^A-Za-z0-9._-]+", "-", raw).strip("-._")
@@ -12002,8 +12171,17 @@ def _atomic_write_workspace_text(
     text: str,
     *,
     mode: int | None = None,
+    expected_sha256: str | None = None,
 ) -> None:
-    """Atomically replace a workspace file through an anchored parent fd."""
+    """Atomically replace a workspace file through an anchored parent fd.
+
+    With ``expected_sha256`` the replacement is a compare-and-swap: the current
+    bytes are re-hashed through the same directory descriptor immediately before
+    the rename and the write is refused with
+    :class:`workspace_snapshots.SnapshotConflictError` when they differ (or when
+    the file is gone). The temporary file is unlinked, so a refused write leaves
+    the workspace untouched — a user edit that lands mid-write is never lost.
+    """
     root_res, parts = _workspace_relative_parts(root, raw_path)
     parent_fd, leaf = _open_workspace_parent_fd(root_res, parts, create=True)
     temp_name = f".m5-studio-{uuid.uuid4().hex}.tmp"
@@ -12023,6 +12201,13 @@ def _atomic_write_workspace_text(
         os.fsync(temp_fd)
         os.close(temp_fd)
         temp_fd = None
+        if expected_sha256 is not None:
+            current = workspace_snapshots.hash_confined_child(parent_fd, leaf)
+            if current != expected_sha256:
+                raise workspace_snapshots.SnapshotConflictError(
+                    f"Refusing to overwrite {'/'.join(parts)!r}: expected content {expected_sha256} but found "
+                    f"{current if current is not None else 'no file'}. Nothing was written."
+                )
         os.rename(temp_name, leaf, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
     except OSError as exc:
         if workspace_snapshots.is_disk_full_os_error(exc):
@@ -12391,11 +12576,25 @@ async def _execute_harness_tool_inner(
             e_line = min(total, int(args.get("end_line") or (s_line + 219)))
             snippet = [f"{idx:4d} | {lines[idx - 1]}" for idx in range(s_line, e_line + 1)]
             header = f"File: {Path(*relative_parts)} (lines {s_line}-{e_line} of {total})"
+            # Hash the bytes actually on disk (not the decoded text) and remember
+            # them: this is the version the agent's edit is entitled to assume.
+            read_sha256: str | None = None
+            try:
+                read_sha256 = workspace_snapshots.hash_target_in_place(root_res, "/".join(relative_parts))[0]
+            except (workspace_snapshots.WorkspaceSnapshotError, TypeError):
+                read_sha256 = None
+            if read_sha256 is not None:
+                try:
+                    _observed_versions().mark_observed(_snapshot_session_id(sess), "/".join(relative_parts), read_sha256)
+                except (edit_transactions.EditVersionError, OSError):
+                    pass
+                header += f"\nsha256: {read_sha256}"
             return {
                 "ok": True,
                 "output": header + "\n" + "\n".join(snippet),
                 "diff": "",
                 "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                "sha256": read_sha256,
             }
 
         if tool_name in ("write_file", "edit_file"):
@@ -12409,14 +12608,50 @@ async def _execute_harness_tool_inner(
             raw_p = str(args.get("path") or "")
             sec_err = _check_gsd_secret_guard(raw_p)
             if sec_err:
-                return {"ok": False, "output": sec_err, "diff": "", "elapsed_ms": 1}
-            root_res, relative_parts = _workspace_relative_parts(root, raw_p)
+                return {"ok": False, "error_code": "unauthorized_path", "output": sec_err, "diff": "", "elapsed_ms": 1}
+            try:
+                root_res, relative_parts = _workspace_relative_parts(root, raw_p)
+            except (OSError, PermissionError, RuntimeError, ValueError) as exc:
+                # Absolute paths, `..` traversal and unresolvable roots are refusals,
+                # not crashes: the caller gets a structured denial it can act on.
+                return {
+                    "ok": False,
+                    "error_code": "unauthorized_path",
+                    "output": f"Refused: {exc}",
+                    "diff": "",
+                    "elapsed_ms": 1,
+                }
             fp = root_res.joinpath(*relative_parts)
             rel_s = "/".join(relative_parts)
             if _is_secret_path(fp) or workspace_snapshots.is_sensitive_rel_path(rel_s):
-                return {"ok": False, "output": _check_gsd_secret_guard(str(fp)) or "Blocked secret file.", "diff": "", "elapsed_ms": 1}
+                return {
+                    "ok": False,
+                    "error_code": "unauthorized_path",
+                    "output": _check_gsd_secret_guard(str(fp)) or "Blocked secret file.",
+                    "diff": "",
+                    "elapsed_ms": 1,
+                }
             snap_sid = _snapshot_session_id(sess)
             snap_task_id = str(sess.get("task_id") or sess.get("id") or "").strip() or None
+            observed_sha = None
+            try:
+                observed_sha = _observed_versions().expected_for(snap_sid, rel_s)
+            except edit_transactions.EditVersionError:
+                observed_sha = None
+            expected_sha, current_sha, denial = _resolve_edit_expectation(sess, root_res, rel_s, args)
+            if denial is not None:
+                _safe_append_harness_event(
+                    snap_sid,
+                    "edit/conflict",
+                    {
+                        "path": rel_s,
+                        "tool": tool_name,
+                        "expected_sha256": denial.get("expected_sha256"),
+                        "current_sha256": denial.get("current_sha256"),
+                        "source": denial.get("conflict_source"),
+                    },
+                )
+                return denial
             if tool_name == "write_file":
                 try:
                     before, prior_info = _read_workspace_text(root_res, Path(*relative_parts), errors="replace")
@@ -12427,12 +12662,39 @@ async def _execute_harness_tool_inner(
                 after = str(args.get("content") if args.get("content") is not None else "")
                 try:
                     _workspace_snapshot_store().capture_target_before_edit(snap_sid, root_res, rel_s)
-                    _atomic_write_workspace_text(root_res, Path(*relative_parts), after, mode=prior_mode)
-                    _workspace_snapshot_store().record_target_after_edit(
-                        snap_sid,
-                        root_res,
+                except workspace_snapshots.SnapshotDiskFullError as disk_exc:
+                    _request_disk_full_safe_pause(snap_task_id, reason=str(disk_exc))
+                    return {
+                        "ok": False,
+                        "error_code": "disk_full",
+                        "disk_full": True,
+                        "safe_pause_required": True,
+                        "output": f"Paused safely (disk full): `{rel_s}` was preserved without partial modification ({disk_exc}).",
+                        "diff": "",
+                        "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                    }
+                except workspace_snapshots.SnapshotConflictError as conflict_exc:
+                    return {
+                        "ok": False,
+                        "error_code": "unsafe_path",
+                        "output": f"Refused: {conflict_exc}",
+                        "diff": "",
+                        "elapsed_ms": 1,
+                    }
+                write_kwargs: dict[str, Any] = {"mode": prior_mode}
+                if expected_sha is not None:
+                    write_kwargs["expected_sha256"] = expected_sha
+                try:
+                    _atomic_write_workspace_text(root_res, Path(*relative_parts), after, **write_kwargs)
+                except workspace_snapshots.SnapshotConflictError:
+                    fresh = workspace_snapshots.hash_target_in_place(root_res, rel_s)
+                    return _edit_conflict_result(
                         rel_s,
-                        hashlib.sha256(after.encode("utf-8")).hexdigest(),
+                        expected_sha256=expected_sha,
+                        current_sha256=fresh[0] if fresh is not None else None,
+                        observed_sha256=observed_sha,
+                        source="write_race",
+                        detail="changed between the version check and the atomic replace",
                     )
                 except workspace_snapshots.SnapshotDiskFullError as disk_exc:
                     _request_disk_full_safe_pause(snap_task_id, reason=str(disk_exc))
@@ -12445,12 +12707,32 @@ async def _execute_harness_tool_inner(
                         "diff": "",
                         "elapsed_ms": round((time.perf_counter() - t0) * 1000),
                     }
+                post_sha = hashlib.sha256(after.encode("utf-8", errors="surrogateescape")).hexdigest()
+                try:
+                    _workspace_snapshot_store().record_target_after_edit(snap_sid, root_res, rel_s, post_sha)
+                except (workspace_snapshots.WorkspaceSnapshotError, OSError):
+                    pass
+                transaction = _record_managed_edit(
+                    sess,
+                    root_res,
+                    rel_s,
+                    tool_name=tool_name,
+                    pre_sha256=current_sha,
+                    post_sha256=post_sha,
+                    expected_sha256=expected_sha,
+                    observed_sha256=observed_sha,
+                    mode=prior_mode,
+                    bytes_written=len(after.encode("utf-8", errors="surrogateescape")),
+                )
                 diff_txt = _unified_diff_snippet(rel_s, before, after)
                 return {
                     "ok": True,
                     "output": f"Wrote `{rel_s}` ({len(after.splitlines())} lines, {len(after)} chars).",
                     "diff": diff_txt,
                     "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                    "edit_transaction": transaction,
+                    "sha256": post_sha,
+                    "previous_sha256": current_sha,
                 }
 
             # edit_file
@@ -12485,12 +12767,39 @@ async def _execute_harness_tool_inner(
                 after = "\n".join(replaced_lines) + ("\n" if before.endswith("\n") else "")
             try:
                 _workspace_snapshot_store().capture_target_before_edit(snap_sid, root_res, rel_s)
-                _atomic_write_workspace_text(root_res, Path(*relative_parts), after, mode=stat.S_IMODE(prior_info.st_mode))
-                _workspace_snapshot_store().record_target_after_edit(
-                    snap_sid,
-                    root_res,
+            except workspace_snapshots.SnapshotDiskFullError as disk_exc:
+                _request_disk_full_safe_pause(snap_task_id, reason=str(disk_exc))
+                return {
+                    "ok": False,
+                    "error_code": "disk_full",
+                    "disk_full": True,
+                    "safe_pause_required": True,
+                    "output": f"Paused safely (disk full): `{rel_s}` was preserved without partial modification ({disk_exc}).",
+                    "diff": "",
+                    "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                }
+            except workspace_snapshots.SnapshotConflictError as conflict_exc:
+                return {
+                    "ok": False,
+                    "error_code": "unsafe_path",
+                    "output": f"Refused: {conflict_exc}",
+                    "diff": "",
+                    "elapsed_ms": 1,
+                }
+            edit_kwargs: dict[str, Any] = {"mode": stat.S_IMODE(prior_info.st_mode)}
+            if expected_sha is not None:
+                edit_kwargs["expected_sha256"] = expected_sha
+            try:
+                _atomic_write_workspace_text(root_res, Path(*relative_parts), after, **edit_kwargs)
+            except workspace_snapshots.SnapshotConflictError:
+                fresh = workspace_snapshots.hash_target_in_place(root_res, rel_s)
+                return _edit_conflict_result(
                     rel_s,
-                    hashlib.sha256(after.encode("utf-8")).hexdigest(),
+                    expected_sha256=expected_sha,
+                    current_sha256=fresh[0] if fresh is not None else None,
+                    observed_sha256=observed_sha,
+                    source="edit_race",
+                    detail="changed between the version check and the atomic replace",
                 )
             except workspace_snapshots.SnapshotDiskFullError as disk_exc:
                 _request_disk_full_safe_pause(snap_task_id, reason=str(disk_exc))
@@ -12503,12 +12812,32 @@ async def _execute_harness_tool_inner(
                     "diff": "",
                     "elapsed_ms": round((time.perf_counter() - t0) * 1000),
                 }
+            post_sha = hashlib.sha256(after.encode("utf-8", errors="surrogateescape")).hexdigest()
+            try:
+                _workspace_snapshot_store().record_target_after_edit(snap_sid, root_res, rel_s, post_sha)
+            except (workspace_snapshots.WorkspaceSnapshotError, OSError):
+                pass
+            transaction = _record_managed_edit(
+                sess,
+                root_res,
+                rel_s,
+                tool_name=tool_name,
+                pre_sha256=current_sha,
+                post_sha256=post_sha,
+                expected_sha256=expected_sha,
+                observed_sha256=observed_sha,
+                mode=stat.S_IMODE(prior_info.st_mode),
+                bytes_written=len(after.encode("utf-8", errors="surrogateescape")),
+            )
             diff_txt = _unified_diff_snippet(rel_s, before, after)
             return {
                 "ok": True,
                 "output": f"Edited `{rel_s}` successfully.",
                 "diff": diff_txt,
                 "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                "edit_transaction": transaction,
+                "sha256": post_sha,
+                "previous_sha256": current_sha,
             }
 
         if tool_name == "run_bash":
@@ -27123,6 +27452,502 @@ def sandbox_command(
 
 sandbox_boundary = sys.modules[__name__]
 
+"""Version-aware managed edits: durable edit transactions and observed versions (M5-P2-02).
+
+A managed edit is a compare-and-swap on file *content*, not on a path. Two facts
+have to be durable for that to be true:
+
+1. **What the agent saw.** ``read_file`` hands the agent a version of a file. If
+   the user edits the file afterwards, the agent's reasoning is about bytes that
+   no longer exist, and applying "replace ``old_text`` with ``new_text``" would
+   silently revert the user's change. ``ObservedVersionIndex`` records the SHA-256
+   of the bytes handed to the agent per session and path, durably (it survives a
+   restart, because the transcript does too).
+2. **What the edit actually did.** ``EditTransactionLedger`` appends one durable
+   record per applied edit: pre-edit digest (or "the file did not exist"),
+   post-edit digest, the expected/observed digests the decision was based on, the
+   tool, mode, size, session/task/snapshot ids and a monotonic ``seq``. A later
+   reader — recovery, reconciliation, an operator audit — can therefore explain
+   every byte the runtime wrote, without trusting an in-memory claim.
+
+Both stores live under the harness store directory (``edits/`` beside
+``sessions/``), are owner-only (``0700`` directories, ``0600`` files), append with
+``O_APPEND`` + ``fsync`` (ledger) or replace atomically (observed index), and keep
+a bounded history so a long session cannot grow them without limit.
+
+The module is standard-library only, does no I/O outside the store directory it
+is given, never invents a record, and never rewrites a durable record after it is
+written.
+"""
+
+
+import json
+import os
+import re
+import threading
+import time
+import uuid
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Iterable
+
+EDIT_LEDGER_VERSION = 1
+
+#: Default number of transactions returned by a history read.
+DEFAULT_READ_LIMIT = 50
+MAX_READ_LIMIT = 500
+#: Rotate a session ledger beyond this size, keeping the newest records.
+DEFAULT_MAX_LEDGER_BYTES = 4 * 1024 * 1024
+DEFAULT_RETAIN_TRANSACTIONS = 2000
+#: How many observed versions are remembered per session before the oldest go.
+MAX_OBSERVED_ENTRIES = 2048
+MAX_REL_PATH_LENGTH = 1024
+
+_SHA256_RE = re.compile(r"^(?:sha256:)?([0-9a-fA-F]{64})$")
+_SAFE_SESSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+
+_LEDGER_LOCK = threading.Lock()
+_OBSERVED_LOCK = threading.Lock()
+_SEQ_CACHE: dict[str, int] = {}
+
+
+class EditVersionError(ValueError):
+    """Raised for a malformed expected hash, session id, or workspace path."""
+
+
+def parse_expected_sha256(raw: Any) -> str | None:
+    """Validate a caller-supplied expected content hash and normalize it to lowercase hex.
+
+    Accepts ``None``/``""`` (no expectation), a bare 64-character hex digest, or a
+    ``sha256:``-prefixed digest, case-insensitively. Anything else — a truncated
+    hash, a git blob id from another algorithm, a path, a dict — raises instead of
+    being ignored: a silently dropped expectation would be a promise the runtime
+    did not keep.
+    """
+    if raw is None:
+        return None
+    if not isinstance(raw, str):
+        raise EditVersionError("expected_sha256 must be a string containing a SHA-256 digest.")
+    text = raw.strip()
+    if not text:
+        return None
+    match = _SHA256_RE.match(text)
+    if match is None:
+        raise EditVersionError(
+            "expected_sha256 must be 64 hexadecimal characters (optionally prefixed with 'sha256:'), "
+            f"got {text[:80]!r}."
+        )
+    return match.group(1).lower()
+
+
+def _safe_session_id(session_id: str) -> str:
+    """Return a store-safe session id or raise (never sanitize into a different session)."""
+    sid = (session_id or "").strip()
+    if not sid:
+        raise EditVersionError("Edit ledger session id must not be empty.")
+    if not _SAFE_SESSION_RE.match(sid):
+        raise EditVersionError(f"Unsafe edit ledger session id: {session_id!r}")
+    return sid
+
+
+def _safe_rel_path(rel_path: str) -> str:
+    """Validate a workspace-relative path for recording; never normalize it into another file."""
+    raw = (rel_path or "").strip().replace("\\", "/")
+    if not raw:
+        raise EditVersionError("Edit ledger path must not be empty.")
+    if len(raw) > MAX_REL_PATH_LENGTH:
+        raise EditVersionError("Edit ledger path is too long to record.")
+    if raw.startswith("/") or re.match(r"^[A-Za-z]:", raw):
+        raise EditVersionError(f"Edit ledger path must be workspace-relative, got {rel_path!r}.")
+    parts = [part for part in raw.split("/") if part not in ("", ".")]
+    if not parts or any(part == ".." for part in parts):
+        raise EditVersionError(f"Edit ledger path must stay inside the workspace, got {rel_path!r}.")
+    return "/".join(parts)
+
+
+def _now() -> float:
+    return round(time.time(), 6)
+
+
+def _restrict_file(path: Path) -> None:
+    """Best-effort owner-only permissions on a file we just created."""
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+
+
+def _ensure_private_dir(path: Path) -> Path:
+    path.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(path, 0o700)
+    except OSError:
+        pass
+    return path
+
+
+@dataclass(frozen=True, slots=True)
+class EditTransaction:
+    """One applied managed edit, with the hashes that justify it."""
+
+    edit_id: str
+    seq: int
+    session_id: str
+    rel_path: str
+    tool: str
+    pre_sha256: str | None
+    post_sha256: str
+    pre_existed: bool
+    expected_sha256: str | None
+    observed_sha256: str | None
+    mode: int | None
+    bytes_written: int
+    recorded_at: float
+    task_id: str = ""
+    snapshot_id: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": EDIT_LEDGER_VERSION,
+            "edit_id": self.edit_id,
+            "seq": self.seq,
+            "session_id": self.session_id,
+            "rel_path": self.rel_path,
+            "tool": self.tool,
+            "pre_sha256": self.pre_sha256,
+            "post_sha256": self.post_sha256,
+            "pre_existed": self.pre_existed,
+            "expected_sha256": self.expected_sha256,
+            "observed_sha256": self.observed_sha256,
+            "mode": self.mode,
+            "bytes_written": self.bytes_written,
+            "recorded_at": self.recorded_at,
+            "task_id": self.task_id,
+            "snapshot_id": self.snapshot_id,
+        }
+
+    @classmethod
+    def from_dict(cls, raw: dict[str, Any]) -> "EditTransaction":
+        return cls(
+            edit_id=str(raw["edit_id"]),
+            seq=int(raw["seq"]),
+            session_id=str(raw["session_id"]),
+            rel_path=str(raw["rel_path"]),
+            tool=str(raw.get("tool") or ""),
+            pre_sha256=str(raw["pre_sha256"]) if raw.get("pre_sha256") else None,
+            post_sha256=str(raw["post_sha256"]),
+            pre_existed=bool(raw.get("pre_existed")),
+            expected_sha256=str(raw["expected_sha256"]) if raw.get("expected_sha256") else None,
+            observed_sha256=str(raw["observed_sha256"]) if raw.get("observed_sha256") else None,
+            mode=int(raw["mode"]) if raw.get("mode") is not None else None,
+            bytes_written=int(raw.get("bytes_written") or 0),
+            recorded_at=float(raw.get("recorded_at") or 0.0),
+            task_id=str(raw.get("task_id") or ""),
+            snapshot_id=str(raw.get("snapshot_id") or ""),
+        )
+
+
+class EditTransactionLedger:
+    """Append-only, durable record of the edits this runtime applied."""
+
+    def __init__(
+        self,
+        store_root: Path,
+        *,
+        max_ledger_bytes: int = DEFAULT_MAX_LEDGER_BYTES,
+        retain_transactions: int = DEFAULT_RETAIN_TRANSACTIONS,
+    ) -> None:
+        self.store_root = Path(store_root)
+        self.max_ledger_bytes = max(0, int(max_ledger_bytes))
+        self.retain_transactions = max(1, int(retain_transactions))
+
+    # -- paths -----------------------------------------------------------
+
+    def ledger_dir(self) -> Path:
+        return self.store_root / "edits"
+
+    def ledger_path(self, session_id: str) -> Path:
+        return self.ledger_dir() / f"{_safe_session_id(session_id)}.jsonl"
+
+    # -- writing ---------------------------------------------------------
+
+    def record(
+        self,
+        *,
+        session_id: str,
+        rel_path: str,
+        tool: str,
+        post_sha256: str,
+        pre_sha256: str | None = None,
+        expected_sha256: str | None = None,
+        observed_sha256: str | None = None,
+        mode: int | None = None,
+        bytes_written: int = 0,
+        task_id: str = "",
+        snapshot_id: str = "",
+    ) -> EditTransaction:
+        """Append one transaction and return it as recorded (durable before return)."""
+        sid = _safe_session_id(session_id)
+        rel = _safe_rel_path(rel_path)
+        post = parse_expected_sha256(post_sha256)
+        if post is None:
+            raise EditVersionError("An edit transaction requires the SHA-256 of the bytes written.")
+        pre = parse_expected_sha256(pre_sha256)
+        expected = parse_expected_sha256(expected_sha256)
+        observed = parse_expected_sha256(observed_sha256)
+        path = self.ledger_path(sid)
+        _ensure_private_dir(path.parent)
+        with _LEDGER_LOCK:
+            seq = _next_seq(path)
+            transaction = EditTransaction(
+                edit_id=f"ed-{uuid.uuid4().hex[:16]}",
+                seq=seq,
+                session_id=sid,
+                rel_path=rel,
+                tool=str(tool or "")[:40],
+                pre_sha256=pre,
+                post_sha256=post,
+                pre_existed=pre is not None,
+                expected_sha256=expected,
+                observed_sha256=observed,
+                mode=int(mode) if mode is not None else None,
+                bytes_written=max(0, int(bytes_written)),
+                recorded_at=_now(),
+                task_id=str(task_id or "")[:128],
+                snapshot_id=str(snapshot_id or "")[:128],
+            )
+            payload = json.dumps(transaction.to_dict(), sort_keys=True, ensure_ascii=False)
+            fd = os.open(path, os.O_APPEND | os.O_CREAT | os.O_WRONLY | getattr(os, "O_CLOEXEC", 0), 0o600)
+            try:
+                _restrict_file(path)
+                os.write(fd, (payload + "\n").encode("utf-8"))
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+            _rotate_if_needed(path, self.max_ledger_bytes, self.retain_transactions)
+        return transaction
+
+    # -- reading ---------------------------------------------------------
+
+    def _read_records(self, path: Path) -> tuple[list[EditTransaction], int]:
+        """Read valid transactions plus the count of unreadable (torn) lines."""
+        records: list[EditTransaction] = []
+        skipped = 0
+        try:
+            raw = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return records, skipped
+        except OSError as exc:
+            raise EditVersionError(f"Cannot read the edit ledger at {path}: {exc}") from exc
+        for line in raw.splitlines():
+            if not line.strip():
+                continue
+            try:
+                records.append(EditTransaction.from_dict(json.loads(line)))
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+                # A torn append is reported, never repaired into a plausible record.
+                skipped += 1
+        return records, skipped
+
+    def list_transactions(self, session_id: str, *, limit: int = DEFAULT_READ_LIMIT) -> list[EditTransaction]:
+        """Newest-first transactions for a session."""
+        path = self.ledger_path(session_id)
+        records, _skipped = self._read_records(path)
+        records.sort(key=lambda record: record.seq, reverse=True)
+        return records[: max(1, min(int(limit), MAX_READ_LIMIT))]
+
+    def latest_for_path(self, session_id: str, rel_path: str) -> EditTransaction | None:
+        """Most recent transaction for one workspace path, if any."""
+        target = _safe_rel_path(rel_path)
+        for record in self.list_transactions(session_id, limit=MAX_READ_LIMIT):
+            if record.rel_path == target:
+                return record
+        return None
+
+    def count_unreadable_lines(self, session_id: str) -> int:
+        """Number of lines that could not be parsed (torn appends), for diagnostics."""
+        _records, skipped = self._read_records(self.ledger_path(session_id))
+        return skipped
+
+
+def _next_seq(path: Path) -> int:
+    """Next sequence number for a ledger file, seeded from its last record."""
+    key = str(path)
+    cached = _SEQ_CACHE.get(key)
+    if cached is not None:
+        _SEQ_CACHE[key] = cached + 1
+        return cached + 1
+    last = 0
+    try:
+        with path.open("rb") as stream:
+            for line in stream:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    last = max(last, int(json.loads(line).get("seq") or 0))
+                except (json.JSONDecodeError, TypeError, ValueError, AttributeError):
+                    continue
+    except FileNotFoundError:
+        last = 0
+    _SEQ_CACHE[key] = last + 1
+    return last + 1
+
+
+def _rotate_if_needed(path: Path, max_bytes: int, retain: int) -> None:
+    """Keep the ledger bounded by rewriting the newest records atomically."""
+    if max_bytes <= 0:
+        return
+    try:
+        if path.stat().st_size <= max_bytes:
+            return
+    except OSError:
+        return
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError:
+        return
+    kept = [line for line in raw.splitlines() if line.strip()][-retain:]
+    tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0), 0o600)
+    try:
+        os.write(fd, ("\n".join(kept) + "\n").encode("utf-8") if kept else b"")
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    os.replace(tmp, path)
+    _SEQ_CACHE.pop(str(path), None)
+
+
+class ObservedVersionIndex:
+    """Durable record of the content version handed to the agent for a path."""
+
+    def __init__(self, store_root: Path, *, max_entries: int = MAX_OBSERVED_ENTRIES) -> None:
+        self.store_root = Path(store_root)
+        self.max_entries = max(1, int(max_entries))
+
+    def index_dir(self) -> Path:
+        return self.store_root / "edits"
+
+    def index_path(self, session_id: str) -> Path:
+        return self.index_dir() / f"{_safe_session_id(session_id)}.observed.json"
+
+    def _load(self, session_id: str) -> dict[str, dict[str, Any]]:
+        path = self.index_path(session_id)
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return {}
+        except (OSError, json.JSONDecodeError):
+            # A corrupt index must not be trusted as "the agent has no version":
+            # callers treat a failed lookup as unknown and fall back to their own read.
+            raise EditVersionError(f"Observed-version index at {path} is unreadable.")
+        entries = raw.get("entries")
+        if not isinstance(entries, dict):
+            raise EditVersionError(f"Observed-version index at {path} is malformed.")
+        cleaned: dict[str, dict[str, Any]] = {}
+        for key, value in entries.items():
+            if isinstance(key, str) and isinstance(value, dict) and isinstance(value.get("sha256"), str):
+                cleaned[key] = {"sha256": value["sha256"], "recorded_at": float(value.get("recorded_at") or 0.0)}
+        return cleaned
+
+    def _save(self, session_id: str, entries: dict[str, dict[str, Any]]) -> None:
+        path = self.index_path(session_id)
+        _ensure_private_dir(path.parent)
+        payload = json.dumps(
+            {"schema_version": EDIT_LEDGER_VERSION, "session_id": _safe_session_id(session_id), "entries": entries},
+            sort_keys=True,
+            ensure_ascii=False,
+        )
+        tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0), 0o600)
+        try:
+            os.write(fd, payload.encode("utf-8"))
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        os.replace(tmp, path)
+        _restrict_file(path)
+
+    def mark_observed(self, session_id: str, rel_path: str, sha256_hex: str) -> None:
+        """Record that the agent currently holds the bytes with this digest."""
+        rel = _safe_rel_path(rel_path)
+        digest = parse_expected_sha256(sha256_hex)
+        if digest is None:
+            raise EditVersionError("Observed version requires a SHA-256 digest.")
+        with _OBSERVED_LOCK:
+            entries = self._load(session_id)
+            entries[rel] = {"sha256": digest, "recorded_at": _now()}
+            if len(entries) > self.max_entries:
+                ordered = sorted(entries.items(), key=lambda item: item[1]["recorded_at"], reverse=True)
+                entries = dict(ordered[: self.max_entries])
+            self._save(session_id, entries)
+
+    def expected_for(self, session_id: str, rel_path: str) -> str | None:
+        """Digest the agent last saw for a path, or None when nothing was observed."""
+        rel = _safe_rel_path(rel_path)
+        with _OBSERVED_LOCK:
+            entry = self._load(session_id).get(rel)
+        if entry is None:
+            return None
+        return parse_expected_sha256(entry["sha256"])
+
+    def forget(self, session_id: str, rel_path: str) -> None:
+        """Drop the recorded version for a path (used when the runtime deletes it)."""
+        rel = _safe_rel_path(rel_path)
+        with _OBSERVED_LOCK:
+            entries = self._load(session_id)
+            if entries.pop(rel, None) is not None:
+                self._save(session_id, entries)
+
+    def entries(self, session_id: str) -> dict[str, str]:
+        """All recorded path → digest pairs for a session."""
+        with _OBSERVED_LOCK:
+            entries = self._load(session_id)
+        return {path: entry["sha256"] for path, entry in entries.items()}
+
+    def clear(self, session_id: str) -> None:
+        """Forget every recorded version for a session."""
+        with _OBSERVED_LOCK:
+            try:
+                self.index_path(session_id).unlink()
+            except FileNotFoundError:
+                pass
+
+
+def describe_history(transactions: Iterable[EditTransaction], *, limit: int = 20) -> list[dict[str, Any]]:
+    """Compact newest-first history rows for display or tests."""
+    rows: list[dict[str, Any]] = []
+    for record in list(transactions)[:limit]:
+        rows.append(
+            {
+                "edit_id": record.edit_id,
+                "seq": record.seq,
+                "path": record.rel_path,
+                "tool": record.tool,
+                "pre_sha256": record.pre_sha256,
+                "post_sha256": record.post_sha256,
+                "recorded_at": record.recorded_at,
+            }
+        )
+    return rows
+
+
+__all__ = [
+    "DEFAULT_READ_LIMIT",
+    "EDIT_LEDGER_VERSION",
+    "MAX_OBSERVED_ENTRIES",
+    "MAX_READ_LIMIT",
+    "EditTransaction",
+    "EditTransactionLedger",
+    "EditVersionError",
+    "ObservedVersionIndex",
+    "describe_history",
+    "parse_expected_sha256",
+]
+
+edit_transactions = sys.modules[__name__]
+
 """Pre-edit Git baseline capture, selective CAS user snapshots, and non-destructive restore (M5-P2-01).
 
 This stdlib-only module preserves user work before autonomous edits:
@@ -27431,6 +28256,30 @@ def _wsnap_normalize_rel_path(root: Path, raw_path: str) -> tuple[str, tuple[str
     return "/".join(parts), parts
 
 
+def _wsnap_lexical_parts(raw_path: str) -> tuple[str, ...]:
+    """Split a workspace-relative path lexically, refusing absolute and escaping inputs.
+
+    Deliberately does not resolve symlinks: callers that hash a target need the
+    components the caller actually named, so a link can be refused rather than
+    followed into a different file.
+    """
+    cleaned = (raw_path or "").replace("\\", "/").strip()
+    if not cleaned or cleaned == ".":
+        raise SnapshotConflictError("A managed edit needs a file path inside the workspace.")
+    if cleaned.startswith("/") or re.match(r"^[A-Za-z]:", cleaned):
+        raise SnapshotConflictError(f"Path {raw_path!r} is absolute; managed edits require workspace-relative paths.")
+    parts: list[str] = []
+    for part in cleaned.split("/"):
+        if part in ("", "."):
+            continue
+        if part == "..":
+            raise SnapshotConflictError(f"Path {raw_path!r} escapes the workspace boundary.")
+        parts.append(part)
+    if not parts or parts[-1] in ("", "."):
+        raise SnapshotConflictError(f"Path {raw_path!r} does not name a file inside the workspace.")
+    return tuple(parts)
+
+
 def _wsnap_open_root_fd(root: Path) -> int:
     nofollow = getattr(os, "O_NOFOLLOW", 0)
     directory = getattr(os, "O_DIRECTORY", 0)
@@ -27534,6 +28383,77 @@ def _wsnap_hash_confined_file_in_place(root: Path, rel_parts: tuple[str, ...]) -
             os.close(current_fd)
 
 
+def hash_confined_child(parent_fd: int, leaf: str) -> str | None:
+    """SHA-256 of a regular file directly under an open directory fd, or ``None`` if absent.
+
+    Opened relative to the caller's directory descriptor with ``O_NOFOLLOW``, so the
+    hash describes the entry the caller is about to replace even if a symlink was
+    swapped in, and the read cannot be redirected outside the workspace.
+    """
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    file_fd: int | None = None
+    try:
+        file_fd = os.open(leaf, os.O_RDONLY | nofollow | getattr(os, "O_CLOEXEC", 0), dir_fd=parent_fd)
+    except (FileNotFoundError, NotADirectoryError):
+        return None
+    except OSError as exc:
+        if exc.errno == errno.ELOOP:
+            raise SnapshotConflictError(f"Refusing to read symlink at {leaf!r}.") from exc
+        raise
+    try:
+        info = os.fstat(file_fd)
+        if not stat.S_ISREG(info.st_mode):
+            return None
+        hasher = hashlib.sha256()
+        with os.fdopen(file_fd, "rb") as fh:
+            file_fd = None
+            while True:
+                chunk = fh.read(65536)
+                if not chunk:
+                    break
+                hasher.update(chunk)
+        return hasher.hexdigest()
+    finally:
+        if file_fd is not None:
+            os.close(file_fd)
+
+
+def hash_target_in_place(root: Path, raw_rel_path: str) -> tuple[str, int, int] | None:
+    """``(sha256, size_bytes, mode)`` for a confined regular file, or ``None`` when it does not exist.
+
+    The digest is streamed, so a large target can still be version-checked (the
+    snapshot size cap applies to *copying* bytes, not to reading a digest).
+    Symlinks are never followed: a managed edit must not be redirectable by a
+    link that appeared after the path was validated.
+    """
+    root_res = Path(root).expanduser().resolve(strict=True)
+    # Walk the *lexical* path first so a symlink component is refused instead of
+    # being resolved into a different file that the caller never named.
+    rel_parts = _wsnap_lexical_parts(raw_rel_path)
+    rel_posix = "/".join(rel_parts)
+    current = root_res
+    for part in rel_parts[:-1]:
+        current = current / part
+        if current.is_symlink():
+            raise SnapshotConflictError(f"Refusing to write through symlinked directory {str(current)!r}.")
+        if not current.is_dir():
+            return None
+    leaf = root_res.joinpath(*rel_parts)
+    try:
+        entry_st = os.lstat(leaf)
+    except FileNotFoundError:
+        return None
+    if stat.S_ISLNK(entry_st.st_mode):
+        raise SnapshotConflictError(f"Refusing to follow symlink at {rel_posix!r}.")
+    if not stat.S_ISREG(entry_st.st_mode):
+        raise SnapshotConflictError(f"{rel_posix!r} is not a regular file and cannot be edited.")
+    hashed = _wsnap_hash_confined_file_in_place(root_res, rel_parts)
+    if hashed is None:
+        return None
+    digest, info = hashed
+    return digest, int(info.st_size), stat.S_IMODE(info.st_mode)
+
+
 def atomic_write_confined_bytes(
     root: Path,
     raw_rel_path: str,
@@ -27541,9 +28461,19 @@ def atomic_write_confined_bytes(
     *,
     mode: int | None = None,
     min_free_bytes: int = DEFAULT_MIN_FREE_BYTES,
+    expected_sha256: str | None = None,
 ) -> str:
-    """Atomically write ``data`` to a confined workspace path via anchored ``O_NOFOLLOW`` temp file + fsync."""
+    """Atomically write ``data`` to a confined workspace path via anchored ``O_NOFOLLOW`` temp file + fsync.
+
+    With ``expected_sha256`` the write is a compare-and-swap: the current bytes are
+    re-hashed through the same directory descriptor immediately before the rename,
+    and the write is refused with :class:`SnapshotConflictError` when they differ
+    (including when the file is missing). The temporary file is unlinked, so a
+    refused write leaves the workspace exactly as it was.
+    """
     rel_posix, rel_parts = _wsnap_normalize_rel_path(root, raw_rel_path)
+    if expected_sha256 is not None and not _WSNAP_HEX64_RE.match(str(expected_sha256)):
+        raise WorkspaceSnapshotError("expected_sha256 must be 64 lowercase hexadecimal characters.")
     _wsnap_preflight_disk_space(root, needed_bytes=len(data), min_free_bytes=min_free_bytes, operation="workspace_write")
     nofollow = getattr(os, "O_NOFOLLOW", 0)
     directory = getattr(os, "O_DIRECTORY", 0)
@@ -27597,6 +28527,14 @@ def atomic_write_confined_bytes(
             os.fsync(tmp_fd)
             os.close(tmp_fd)
             tmp_fd = None
+            if expected_sha256 is not None:
+                current = hash_confined_child(parent_fd, leaf)
+                if current != expected_sha256:
+                    raise SnapshotConflictError(
+                        "Refusing to overwrite "
+                        f"{rel_posix!r}: expected content {expected_sha256} but found "
+                        f"{current if current is not None else 'no file'}. Nothing was written."
+                    )
             os.rename(tmp_name, leaf, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
             try:
                 os.fsync(parent_fd)

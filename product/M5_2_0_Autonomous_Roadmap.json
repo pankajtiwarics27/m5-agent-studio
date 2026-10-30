@@ -123,18 +123,19 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": "M5-P2-02",
-    "last_completed_story": "M5-P2-01",
-    "last_checkpoint": "2026-10-30T18:12:00Z",
-    "last_session_id": "arena/038b1d22-m5-agent-studio",
-    "next_recommended_story": "M5-P2-02",
+    "active_story": null,
+    "last_completed_story": "M5-P2-02",
+    "last_checkpoint": "2026-10-30T19:05:00Z",
+    "last_session_id": "arena/643fa294-m5-agent-studio",
+    "next_recommended_story": "M5-P2-03",
     "open_risks": [
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
       "24 GB Apple Silicon memory/swap and oMLX task measurements blocked in Linux evidence environment (M5-P4-01 to measure on target hardware)",
       "sandbox_boundary.confined_path is integrated into app.py and workspace_snapshots.py (M5-P2-01), while sandbox_boundary.sandbox_command remains separate from app.py inline _sandbox_command (assigned to M5-P3-01/M5-P3-02)",
       "Multi-agent parallel work active: product/M5_2_0_Autonomous_Roadmap.json tracking blocks are the shared claim ledger; claim protocol and PR/merge rules live in M5_2_0_AGENT_PROMPT.md",
       "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1) recorded in the M5-P0-05 baseline evidence; runtime dependencies clean.",
-      "Harness task-event store (task_events.py, M5-P1-07) and workspace snapshot store (workspace_snapshots.py, M5-P2-01) assume a single application process per session, matching the worker-lease model; cross-process concurrent appends are unsupported and not claimed safe."
+      "Harness task-event store (task_events.py, M5-P1-07) and workspace snapshot store (workspace_snapshots.py, M5-P2-01) assume a single application process per session, matching the worker-lease model; cross-process concurrent appends are unsupported and not claimed safe.",
+      "The edit ledger and observed-version index assume one application process per session (same assumption as the durable event stream and worker leases); a second process editing the same workspace is not detected. The .harnesses/edits directory is bounded per session (4 MiB rotation) but has no cross-session pruning (M5-P2-02)."
     ],
     "last_readme_sync": "2026-10-30T18:02:00Z",
     "last_verified_commit": "3f73d2db4ae6064ac557d2022b617dfa661d44fd",
@@ -185,7 +186,7 @@
       ],
       "status": "in_progress",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
-      "progress_percent": 20
+      "progress_percent": 40
     },
     {
       "id": "P3",
@@ -1726,22 +1727,85 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P2-02: Version-aware managed edits and conflict checks. Objective: Avoid overwriting concurrent user edits. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Validate canonical path and expected content version; Implement atomic file replacement where appropriate; Record edit transaction and resulting hashes; Test symlink/path and concurrent-edit cases. Acceptance: Concurrent user edit causes safe conflict not overwrite; Expected hash enforced; Unauthorized path rejected. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 5,
-        "attempts": 1,
-        "started_at": "2026-10-30T18:12:00Z",
-        "updated_at": "2026-10-30T18:12:00Z",
-        "completed_at": null,
-        "owner_session": "arena/038b1d22-m5-agent-studio",
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 2,
+        "started_at": "2026-10-30T18:20:00Z",
+        "updated_at": "2026-10-30T19:05:00Z",
+        "completed_at": "2026-10-30T19:05:00Z",
+        "owner_session": "arena/643fa294-m5-agent-studio",
+        "commit_sha": "735ab450ca0df52c368e4af0d473c31718a725be",
+        "changed_files": [
+          "edit_transactions.py",
+          "app.py",
+          "workspace_snapshots.py",
+          "tests/test_edit_transactions.py",
+          "tests/test_workspace_snapshots.py",
+          "pyproject.toml",
+          "scripts/build_studio.py",
+          "studio.py",
+          "docs/version-aware-edits.md",
+          "docs/adr/0006-version-aware-managed-edits.md",
+          "docs/README.md",
+          "docs/subsystem-dependency-inventory.md",
+          "README.md",
+          "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "Task 1 (validate canonical path and expected content version): every write_file/edit_file now resolves one expected version in app._resolve_edit_expectation - explicit `expected_sha256` (validated as 64 hex by edit_transactions.parse_expected_sha256, refused as `invalid_expected_sha256` otherwise), else the digest read_file handed this session (ObservedVersionIndex), else the post-edit digest of the last managed write (EditTransactionLedger) - and compares it with the confined, symlink-refusing digest from workspace_snapshots.hash_target_in_place. Canonical paths come from an anchored O_NOFOLLOW walk; absolute paths, `..`, and symlinked components/leaves raise SnapshotConflictError before anything is written. Evidence: tests/test_edit_transactions.py::test_parse_expected_sha256_accepts_documented_forms_and_refuses_the_rest, ::test_write_file_enforces_the_expected_version_and_records_the_transaction, ::test_write_file_rejects_a_malformed_expected_hash_without_writing, ::test_managed_edits_reject_escaping_absolute_traversal_and_symlink_paths, ::test_symlink_inside_the_workspace_is_still_refused.",
+          "Task 2 (atomic file replacement where appropriate): the replacement stays an anchored temp-file + fsync + os.rename, and now carries an optional `expected_sha256`; the current bytes are re-hashed through the same parent directory descriptor immediately before the rename, so a change landing between the version check and the replace is refused (SnapshotConflictError), the temp file is unlinked, and the workspace is left untouched. Implemented in both writers (workspace_snapshots.atomic_write_confined_bytes and app._atomic_write_workspace_text via workspace_snapshots.hash_confined_child). Evidence: ::test_atomic_write_confined_bytes_enforces_the_expected_digest (no temp files remain after a refusal), ::test_atomic_write_confined_bytes_conflicts_on_missing_target_and_symlink, ::test_edit_race_between_the_version_check_and_the_replace_still_conflicts (conflict_source=edit_race).",
+          "Task 3 (record edit transaction and resulting hashes): edit_transactions.py writes one durable, owner-only transaction per applied edit to `<harness store>/edits/<session>.jsonl` (O_APPEND + fsync, 0600 file in a 0700 dir) with edit_id, monotonic seq, session/task ids, tool, path, pre_sha256 (absent for a create), post_sha256, expected_sha256, observed_sha256, mode, bytes_written and recorded_at; a >4 MiB ledger rotates to the newest 2000 rows and a torn line is counted (count_unreadable_lines) rather than repaired. The tool result exposes `edit_transaction`, `sha256` and `previous_sha256`, the written digest is marked as the observed version, and `edit/applied` (+ `edit/conflict`, `edit/ledger_failed`) are appended to the durable task stream. Evidence: ::test_edit_ledger_records_ordered_private_transactions, ::test_edit_ledger_is_durable_across_reload_and_reports_torn_lines, ::test_edit_ledger_refuses_unsafe_session_and_path_values, ::test_observed_version_index_is_durable_bounded_and_session_scoped, ::test_edit_history_and_observed_versions_survive_a_restart, ::test_edit_events_are_recorded_on_the_task_stream.",
+          "Task 4 (test symlink/path and concurrent-edit cases): 19 tests cover symlinked leaves and directories (inside and outside the workspace), absolute paths, `..` traversal, secret paths, missing targets, a user save between the version check and the rename, a user save between read_file and edit_file, a user save after the runtime's own last write without any re-read, and the documented re-read recovery loop. Nothing outside the workspace is ever written and refused edits leave no temp files. Evidence: ::test_managed_edits_reject_escaping_absolute_traversal_and_symlink_paths, ::test_managed_edits_still_refuse_secret_paths, ::test_read_file_reports_the_version_and_a_concurrent_user_edit_conflicts, ::test_user_edit_after_our_last_write_conflicts_even_without_a_re_read.",
+          "AC1 (Concurrent user edit causes safe conflict not overwrite): a stale edit is refused with `error_code: \"stale_version\"`, `conflict: true`, the expected/current/observed digests and a `conflict_source` (`explicit` | `observed_read` | `last_write` | `write_race` | `edit_race`), plus a recovery hint to re-read. The user's bytes are byte-identical after the refusal and no transaction is recorded. Evidence: ::test_read_file_reports_the_version_and_a_concurrent_user_edit_conflicts, ::test_user_edit_after_our_last_write_conflicts_even_without_a_re_read, ::test_edit_race_between_the_version_check_and_the_replace_still_conflicts.",
+          "AC2 (Expected hash enforced): an explicit `expected_sha256` equal to the current content applies the edit (matching, `sha256:`-prefixed and case-insensitive forms accepted); any mismatch refuses without writing; a malformed value is refused with `invalid_expected_sha256` rather than ignored. The same expectation is enforced again at the rename. Evidence: ::test_write_file_enforces_the_expected_version_and_records_the_transaction, ::test_write_file_rejects_a_malformed_expected_hash_without_writing, ::test_atomic_write_confined_bytes_enforces_the_expected_digest.",
+          "AC3 (Unauthorized path rejected): absolute paths, `..` traversal, symlinked files and directories, and secret paths (.env and the sensitive-name set) are refused with `error_code: \"unauthorized_path\"` or `unsafe_path` before any snapshot or write, nothing outside the workspace is created or modified, and no edit transaction is recorded. Evidence: ::test_managed_edits_reject_escaping_absolute_traversal_and_symlink_paths, ::test_symlink_inside_the_workspace_is_still_refused, ::test_managed_edits_still_refuse_secret_paths.",
+          "README ground-truth update: README.md gains a verified-capability bullet for M5-P2-02 (version expectations, compare-and-swap, stale_version/unauthorized_path refusals, the durable ledger, 19 tests, ADR-0006), corrects the suite counts to the measured 854 passed / 1 skipped, the typed-module count to 45, the integrated-module count to 16 of 46 and the standalone inlining count to 14 siblings, drops the stale 'version-aware conflict checks are follow-up work' note, and moves the program status to phase P2 40% with M5-P2-03 as the next ready story. docs/version-aware-edits.md documents the contract, the records, the refusal codes and the limits; docs/README.md indexes the page."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest tests/test_edit_transactions.py -q",
+            "exit_code": 0,
+            "result": "19 passed (expected-hash parsing/enforcement, observed + last-written + race conflicts, read_file digest reporting, symlink/absolute/traversal/secret refusals, ledger durability/torn lines/rotation/permissions, observed-index durability and bounds, task events, standalone inlining)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "854 passed, 1 skipped (tests/test_live_sandbox.py opt-in container test), 1 warning in 42.65 s; zero regressions (835 -> 854)"
+          },
+          {
+            "command": ".venv/bin/ruff check . && .venv/bin/mypy",
+            "exit_code": 0,
+            "result": "ruff clean; mypy clean across 45 typed modules (edit_transactions.py added to the ratchet)"
+          },
+          {
+            "command": ".venv/bin/python scripts/build_studio.py (twice) + sha256sum",
+            "exit_code": 0,
+            "result": "deterministic rebuild (identical sha256), 1,434,480 bytes; route matrix, subsystem inventory and roadmap dashboard regenerate byte-for-byte"
+          },
+          {
+            "command": ".venv/bin/python scripts/smoke_local.py && .venv/bin/python scripts/smoke_local.py --standalone",
+            "exit_code": 0,
+            "result": "both app.py and the standalone studio.py pass loopback startup, auth, Origin rejection, isolated DB and injected UI auth-helper checks"
+          },
+          {
+            "command": "validate_docs.py + validate_adrs.py + validate_governance.py + validate_security_signoff.py + check_frontend_syntax.py + verify_baseline.py + compileall + demo_tour.py --check + validate_screenshots.py",
+            "exit_code": 0,
+            "result": "docs 80 files, ADRs (incl. ADR-0006), governance (7 files), sign-off consistency (state=deferred, pending), JS syntax, pinned baseline 7904892d..., compileall and the demo transcript all pass"
+          }
+        ],
+        "decisions": [
+          "An edit is a compare-and-swap on content, not a path: the expectation is resolved from (1) the caller's expected_sha256, (2) the version read_file handed this session, (3) the bytes this runtime last wrote, and refused on mismatch. A target that was never read and never written is still a first write, so create-then-edit flows keep working.",
+          "The expectation is re-checked immediately before the rename through the same directory descriptor (hash_confined_child), because a check that happens only before the write is exactly the read-then-write race the story exists to close.",
+          "read_file hashes the bytes on disk rather than the decoded text, so the digest the agent quotes back as expected_sha256 is the digest the writer compares (no locale/encoding drift between read and write).",
+          "The edit ledger is an append-only per-session JSONL under the harness store (O_APPEND + fsync, bounded by rotation) rather than a schema-v4 SQLite table: it is per-session, append-only and bounded, and putting the edit history inside the exported database would duplicate user file metadata there.",
+          "Observed versions are durable (atomic JSON index, bounded to 2048 entries) because the agent's transcript survives a restart; downgrading 'I read version X' to 'no expectation' after a restart would silently weaken the guarantee.",
+          "Path refusals are structured (`unauthorized_path`/`unsafe_path`) instead of surfacing as a generic tool error, and symlinks are refused even when they point inside the workspace: a managed edit edits the file the caller named or nothing.",
+          "A ledger append failure after the bytes are on disk cannot un-write them, so the edit reports edit_transaction=null plus an edit/ledger_failed event rather than claiming a rollback it did not perform."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect managed edit call paths in app.py and workspace_snapshots.py, then implement version-aware expected-hash conflict checks and transaction ledgering.",
-        "readme_updated": false
+        "handoff_note": "M5-P2-02 complete: version-aware managed edits (edit_transactions.py), expected/observed/last-written content expectations, compare-and-swap atomic replacement in both writers, durable edit transactions and observed versions under .harnesses/edits/, structured stale_version/unauthorized_path refusals, and edit/applied + edit/conflict task events are integrated in app.py and the standalone studio.py (854 passed, 1 skipped; P2 at 40%). Not covered here: multi-file inverse-patch rollback and action reconciliation (M5-P2-03), and the locks assume one application process per session. The store has no pruning of the .harnesses/edits directory beyond the 4 MiB per-session rotation.",
+        "next_action": "Claim and implement M5-P2-03 (multi-file rollback and action reconciliation) after this PR merges.",
+        "readme_updated": true
       }
     },
     {
