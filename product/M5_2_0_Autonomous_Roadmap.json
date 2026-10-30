@@ -123,10 +123,10 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "M5-P2-04",
     "last_completed_story": "M5-P2-03",
-    "last_checkpoint": "2026-10-30T18:50:00Z",
-    "last_session_id": "arena/e2ce9b9e-m5-agent-studio",
+    "last_checkpoint": "2026-10-30T18:56:00Z",
+    "last_session_id": "arena/e2bde3ff-m5-agent-studio",
     "next_recommended_story": "M5-P2-04",
     "open_risks": [
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
@@ -1956,13 +1956,13 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P2-04: Verification evidence and baseline-aware tests. Objective: Accept coding completion only with applicable test evidence. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Record source revision, test identity, environment and acceptance coverage; Capture pre-existing failures where feasible; Select staged targeted then broader checks; Classify flaky/environmental/introduced failures. Acceptance: Test result tied to source revision; Pre-existing failure not misattributed; No success claim on sandbox denial. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 5,
+        "attempts": 1,
+        "started_at": "2026-10-30T18:56:00Z",
+        "updated_at": "2026-10-30T18:56:00Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/e2bde3ff-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -1970,7 +1970,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "next_action": "Extend the M5-P1-06 completion gate (workflow_state.TaskVerificationSpec/TaskVerificationReport/verify_task_completion) so a verified result carries the source revision, test identity, environment and acceptance coverage, classifies pre-existing/environmental/introduced failures, and refuses any success claim when execution was denied.",
         "readme_updated": false
       }
     },
