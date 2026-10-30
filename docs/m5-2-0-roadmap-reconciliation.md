@@ -7,17 +7,19 @@ Performed 2026-10-30 against commit `1e2e0bd876409a9e4eeb4b0128b403422bac7013`.
 
 | File | Role after this reconciliation |
 |---|---|
-| [`product/M5_2_0_Autonomous_Roadmap.json`](../product/M5_2_0_Autonomous_Roadmap.json) | **Authoritative execution ledger for the M5 2.0 autonomous-runtime program** (stories `M5-P0-01`…`M5-P6-03`). Installed by this story at its declared `source_of_truth.intended_path`. |
-| [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](../product/Adaptive_Runtime_Product_Roadmap_v2.json) | **Retained, unmodified** — historical and still-authoritative status ledger for the AS story program (`AS-001`…`AS-063`), its generated dashboard ([`product-roadmap-status.md`](product-roadmap-status.md)), and the contributor process in [`AGENTS.md`](../AGENTS.md). No history deleted. |
+| [`product/M5_2_0_Autonomous_Roadmap.json`](../product/M5_2_0_Autonomous_Roadmap.json) | **Authoritative execution ledger (owner-confirmed 2026-10-30)** for the M5 2.0 autonomous-runtime program (stories `M5-P0-01`…`M5-P6-03`). Installed by this story at its declared `source_of_truth.intended_path`. |
+| [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](../product/Adaptive_Runtime_Product_Roadmap_v2.json) | **Retained, unmodified** — historical source and status ledger for the AS story program (`AS-001`…`AS-063`), its generated dashboard ([`product-roadmap-status.md`](product-roadmap-status.md)), and the contributor process in [`AGENTS.md`](../AGENTS.md). No history deleted. |
 | [`README_GROUND_TRUTH_DRAFT.md`](../README_GROUND_TRUTH_DRAFT.md) | Retained input draft (readme-contract provenance). Superseded as the product README by the verified [`README.md`](../README.md). |
 
-The M5 2.0 roadmap's own rule governs the handover: *"Do not replace existing
-roadmap until P0-01 maps all items and user/owner confirms authority."* The
-mapping (this document) is complete; **full supersession of the AS program
-ledger awaits explicit owner confirmation** and is recorded as the single
-unresolved governance item (§4, conflict C1). Until then both files coexist:
-AS-status updates continue in the AS roadmap per `AGENTS.md`; M5 2.0 story
-tracking lives in the M5 2.0 roadmap.
+The M5 2.0 roadmap's own rule governed the handover: *"Do not replace existing
+roadmap until P0-01 maps all items and user/owner confirms authority."* Both
+conditions are now met: the mapping (this document) was completed in `M5-P0-01`,
+and the **user/owner confirmed authority on 2026-10-30** (recorded in
+`source_of_truth.authority_status: owner_confirmed`). Going forward the M5 2.0
+roadmap is the authoritative execution ledger for the M5 2.0 program; AS-status
+updates remain in the AS roadmap per `AGENTS.md`, and M5 2.0 story tracking
+lives in the M5 2.0 roadmap. Multi-agent coordination rules:
+[`../M5_2_0_AGENT_PROMPT.md`](../M5_2_0_AGENT_PROMPT.md).
 
 ## 2. Scope difference (why the two roadmaps are not duplicates)
 
@@ -117,7 +119,7 @@ Coverage totals: 63/63 items mapped — 24 **covers**, 30 **partial** (of which
 
 | ID | Conflict | Resolution |
 |---|---|---|
-| C1 | Two roadmaps claim source-of-truth; `AGENTS.md` names the AS roadmap; the M5 2.0 roadmap requires owner confirmation before replacement. | M5 2.0 roadmap identified as authoritative for the M5 2.0 program only. AS roadmap retained unmodified for AS-story status. **Full authority consolidation: explicitly unresolved pending user/owner confirmation.** |
+| C1 | Two roadmaps claim source-of-truth; `AGENTS.md` names the AS roadmap; the M5 2.0 roadmap requires owner confirmation before replacement. | **Resolved 2026-10-30 (owner confirmation):** `product/M5_2_0_Autonomous_Roadmap.json` is the authoritative execution ledger for the M5 2.0 program. AS roadmap retained unmodified as historical source and AS-status ledger; `AGENTS.md` updated to name both roles. No history deleted. |
 | C2 | Status vocabularies differ (`planned/in_progress/completed/verified` vs `not_started/in_progress/blocked/in_review/done/deferred/cancelled`). | Kept separate per ledger; no cross-conversion performed. Mapping table (§3) uses mapping states, not either vocabulary. |
 | C3 | AS-043/AS-044 (external beta) have no autonomous counterpart. | Explicitly unresolved: external-human scope is outside the M5 2.0 autonomous story set. Owner decides later. |
 | C4 | Naming collision: old milestone `M5` ("Open-source beta") vs product name "M5 2.0" / story prefix `M5-Pn-nn`. | Disambiguated in prose: "AS program milestone M5" vs "M5 2.0 stories". IDs never overlap. |
@@ -127,8 +129,10 @@ Coverage totals: 63/63 items mapped — 24 **covers**, 30 **partial** (of which
 ## 5. Acceptance evidence (M5-P0-01)
 
 1. **One authoritative roadmap identified** — §1: `product/M5_2_0_Autonomous_Roadmap.json`
-   for the M5 2.0 program, with the AS ledger retained for AS status; the
-   only open governance item (full supersession) is named, not silently decided.
+   for the M5 2.0 program, with the AS ledger retained for AS status. The
+   authority decision that the roadmap rule reserved for the owner was
+   **confirmed by the user/owner on 2026-10-30** and is recorded in the
+   roadmap's `source_of_truth` block and conflict C1.
 2. **Every competing item mapped, deferred, or explicitly unresolved** — §3
    covers all 63 AS stories; AS-043/AS-044 are explicitly unresolved; UI-heavy
    items are marked deferred where the M5 2.0 non-goals apply.

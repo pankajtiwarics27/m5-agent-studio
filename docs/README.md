@@ -103,7 +103,9 @@ the two roadmaps map to each other) ·
 [`m5-2-0-integration-audit.md`](m5-2-0-integration-audit.md) (verified call
 paths, bypass inventory, module integration status) ·
 [`m5-2-0-baseline-evidence.md`](m5-2-0-baseline-evidence.md) (commands, exit
-codes, blocked measurements).
+codes, blocked measurements) ·
+[`../M5_2_0_AGENT_PROMPT.md`](../M5_2_0_AGENT_PROMPT.md) (parallel-agent
+prompt and the multi-agent claim/review/merge protocol).
 
 ## Keeping this set honest
 

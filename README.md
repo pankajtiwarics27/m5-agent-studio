@@ -260,16 +260,22 @@ requires `STUDIO_ALLOW_SKILL_CODE=1`; private-URL access requires
 
 ## Current implementation status
 
-Two roadmaps coexist; the mapping between them is recorded in
+The owner confirmed on 2026-10-30 that
+[`product/M5_2_0_Autonomous_Roadmap.json`](product/M5_2_0_Autonomous_Roadmap.json)
+is the **authoritative execution ledger**; the mapping to the AS program is
+recorded in
 [`docs/m5-2-0-roadmap-reconciliation.md`](docs/m5-2-0-roadmap-reconciliation.md)
-(no history deleted; full authority consolidation awaits owner confirmation).
+and the AS roadmap is retained unmodified (no history deleted). Multiple
+implementation agents may work in parallel under the claim/review/merge
+protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
 
 - **M5 2.0 autonomous-runtime program** —
   [`product/M5_2_0_Autonomous_Roadmap.json`](product/M5_2_0_Autonomous_Roadmap.json):
   34 stories across 7 phases. **Done with evidence: `M5-P0-01`, `M5-P0-02`,
   `M5-P0-05`, `M5-P0-07`** (phase P0 at 57%). Next ready story: `M5-P0-03`
-  (contain the skill-execution bypasses). All other stories are `not_started`;
-  planned work is not implemented product behavior.
+  (contain the skill-execution bypasses) — claim it via the coordination
+  protocol before coding. All other stories are `not_started`; planned work is
+  not implemented product behavior.
 - **AS program (Adaptive Runtime)** —
   [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json)
   with dashboard [`docs/product-roadmap-status.md`](docs/product-roadmap-status.md):

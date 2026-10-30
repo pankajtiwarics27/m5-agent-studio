@@ -8,8 +8,12 @@
   "source_of_truth": {
     "intended_path": "product/M5_2_0_Autonomous_Roadmap.json",
     "existing_competing_roadmap": "product/Adaptive_Runtime_Product_Roadmap_v2.json",
-    "reconciliation_required": true,
-    "rule": "Do not replace existing roadmap until P0-01 maps all items and user/owner confirms authority."
+    "reconciliation_required": false,
+    "rule": "Do not replace existing roadmap until P0-01 maps all items and user/owner confirms authority.",
+    "reconciliation_completed": "2026-10-30 (M5-P0-01; docs/m5-2-0-roadmap-reconciliation.md)",
+    "authority_status": "owner_confirmed",
+    "authority_confirmed_date": "2026-10-30",
+    "authority_decision": "Owner confirmed this roadmap as the authoritative execution ledger for the M5 2.0 program (chat confirmation 2026-10-30). product/Adaptive_Runtime_Product_Roadmap_v2.json is retained unmodified as historical source and AS-program status ledger. The original rule text above is preserved for history."
   },
   "evidence_basis": {
     "provided_documents": [
@@ -121,7 +125,7 @@
   "session_state": {
     "active_story": null,
     "last_completed_story": "M5-P0-07",
-    "last_checkpoint": "2026-10-30T10:23:10Z",
+    "last_checkpoint": "2026-10-30T10:36:06Z",
     "last_session_id": "arena/a396d067-m5-agent-studio",
     "next_recommended_story": "M5-P0-03",
     "open_risks": [
@@ -130,11 +134,12 @@
       "Live container isolation unqualified: no Docker/Podman in evidence environment; tests/test_live_sandbox.py skipped (opt-in only)",
       "24 GB Apple Silicon memory/swap and oMLX task measurements blocked in Linux evidence environment (M5-P4-01 to measure on target hardware)",
       "side_effect_ledger.py and sandbox_boundary.py unit-tested but not integrated into app.py (M5-P0-06 / M5-P1-03)",
-      "Roadmap authority consolidation pending owner confirmation (docs/m5-2-0-roadmap-reconciliation.md conflict C1)",
-      "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1); runtime dependencies clean"
+      "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1); runtime dependencies clean",
+      "Multi-agent parallel work active: product/M5_2_0_Autonomous_Roadmap.json tracking blocks are the shared claim ledger; claim protocol and PR/merge rules live in M5_2_0_AGENT_PROMPT.md"
     ],
     "last_readme_sync": "2026-10-30T10:17:37Z",
-    "last_verified_commit": "31656a9846e5f3a3b78f421ed0d267e2d063c3fc"
+    "last_verified_commit": "31656a9846e5f3a3b78f421ed0d267e2d063c3fc",
+    "coordination_protocol": "M5_2_0_AGENT_PROMPT.md"
   },
   "delivery_phases": [
     {
@@ -274,7 +279,7 @@
         "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-30T10:17:37Z",
-        "updated_at": "2026-10-30T10:23:10Z",
+        "updated_at": "2026-10-30T10:36:06Z",
         "completed_at": "2026-10-30T10:17:37Z",
         "owner_session": "arena/a396d067-m5-agent-studio",
         "commit_sha": "31656a9846e5f3a3b78f421ed0d267e2d063c3fc",
@@ -289,7 +294,8 @@
           "docs/m5-2-0-roadmap-reconciliation.md: all 63 AS stories mapped (24 covers / 30 partial / 7 retained / 2 unresolved), 6 conflicts recorded with resolutions",
           "product/Adaptive_Runtime_Product_Roadmap_v2.json untouched (no history deleted; git diff empty for it)",
           "Roadmap installed at declared source_of_truth.intended_path product/M5_2_0_Autonomous_Roadmap.json",
-          "README_GROUND_TRUTH_DRAFT.md installed at readme_contract.draft_file path as provenance"
+          "README_GROUND_TRUTH_DRAFT.md installed at readme_contract.draft_file path as provenance",
+          "Owner confirmation recorded 2026-10-30: M5_2_0_Autonomous_Roadmap.json is the authoritative execution ledger (roadmap source_of_truth.authority_status=owner_confirmed); reconciliation conflict C1 resolved in docs/m5-2-0-roadmap-reconciliation.md"
         ],
         "test_results": [
           {
@@ -301,7 +307,8 @@
         "decisions": [
           "M5_2_0_Autonomous_Roadmap.json identified as authoritative execution ledger for the M5 2.0 program only; AS roadmap retained as AS-story status ledger per its own source_of_truth.rule",
           "Full roadmap supersession left explicitly unresolved pending user/owner confirmation (roadmap rule requires it; see reconciliation doc conflict C1)",
-          "README rewritten once, at M5-P0-07 completion, covering all four P0 evidence stories atomically per readme_contract.refresh_after_every_story and the draft's replace-only-after-verification mandate"
+          "README rewritten once, at M5-P0-07 completion, covering all four P0 evidence stories atomically per readme_contract.refresh_after_every_story and the draft's replace-only-after-verification mandate",
+          "Authority consolidation completed 2026-10-30 on user/owner confirmation; AS roadmap retained unmodified as historical source and AS-status ledger (no history deleted)"
         ],
         "blockers": [],
         "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
