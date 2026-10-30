@@ -71,6 +71,7 @@ import mcp_client
 import onboarding_preflight
 import runtime_persistence
 import side_effect_ledger
+import task_events
 import workflow_checkpoints
 import workflow_state
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
@@ -6404,6 +6405,7 @@ def _resolve_pending_tool_approval(
             scoping_session,
             "approval/decision",
             {"approval_id": approval_id, "decision": decision, "note": slot.get("note") or ""},
+            dedupe_key=f"approval-decision:{approval_id}",
         )
 
 
@@ -6471,7 +6473,12 @@ async def _await_tool_approval(pending: dict[str, Any], timeout: float = 600.0) 
     )
     approved = slot.get("decision") == "approve"
     decision = {"approved": approved, "note": slot.get("note") or "", "approval_id": approval_id, "decision": "approve" if approved else "reject"}
-    _append_harness_event(session_id, "approval/decision", {"step": pending["step"], **decision})
+    _append_harness_event(
+        session_id,
+        "approval/decision",
+        {"step": pending["step"], **decision},
+        dedupe_key=f"approval-decision:{approval_id}",
+    )
     return decision
 
 
@@ -6868,40 +6875,60 @@ def _remove_harness_worktree(workspace_dir: Path, worktree_dir: Path, branch_nam
         return
 
 
-def _append_harness_event(session_id: str, event_type: str, payload: dict[str, Any]) -> dict[str, Any]:
+def _task_event_log() -> task_events.TaskEventLog:
+    """Return a durable task-event log bound to the current harness store directory.
+
+    Deliberately constructed per call rather than cached at import time: the
+    store directory is configuration (and is relocated by tests and embedded
+    launches), so a module-level cache would address the wrong store.
+    """
     _ensure_harness_dirs()
-    log_path = HARNESS_STORE_DIR / f"{session_id}.jsonl"
-    seq = 1
-    if log_path.exists():
-        try:
-            with log_path.open("rb") as f:
-                seq = sum(1 for _ in f) + 1
-        except OSError:
-            seq = 1
-    record = {"seq": seq, "ts": round(time.time(), 3), "type": event_type, **payload}
-    with log_path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    return task_events.TaskEventLog(HARNESS_STORE_DIR)
+
+
+def _append_harness_event(
+    session_id: str,
+    event_type: str,
+    payload: dict[str, Any],
+    *,
+    dedupe_key: str | None = None,
+) -> dict[str, Any]:
+    """Append one durable task event and return the durable record.
+
+    With `dedupe_key` the append is idempotent: a retried or concurrently
+    resumed turn returns the record that already exists instead of emitting a
+    second copy of a terminal outcome or approval decision.
+    """
     try:
-        log_path.chmod(0o600)
-    except OSError:
-        pass
-    return record
+        return _task_event_log().append(session_id, event_type, payload, dedupe_key=dedupe_key)
+    except task_events.TaskEventError as exc:
+        raise ValueError(str(exc)) from exc
 
 
 def _read_harness_events(session_id: str) -> list[dict[str, Any]]:
-    log_path = HARNESS_STORE_DIR / f"{session_id}.jsonl"
-    if not log_path.exists():
-        return []
-    events: list[dict[str, Any]] = []
-    for line in log_path.read_text(encoding="utf-8", errors="ignore").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            events.append(json.loads(line))
-        except json.JSONDecodeError:
-            continue
-    return events
+    """Every retained event for a session, in sequence order."""
+    try:
+        return _task_event_log().all_events(session_id)
+    except task_events.TaskEventError as exc:
+        raise ValueError(str(exc)) from exc
+
+
+def _read_harness_event_page(
+    session_id: str,
+    *,
+    cursor: int = 0,
+    limit: int = 200,  # task_events.DEFAULT_READ_LIMIT (see the note in api_get_harness_session_events)
+) -> task_events.TaskEventPage:
+    """Cursor read over the durable event log, including its resync verdict."""
+    try:
+        return _task_event_log().read(session_id, cursor=cursor, limit=limit)
+    except task_events.TaskEventError as exc:
+        raise ValueError(str(exc)) from exc
+
+
+def _harness_event_snapshot(session_id: str) -> task_events.TaskEventSnapshot:
+    """Event-derived session facts used to reconstruct state after a reload."""
+    return _task_event_log().reconstruct(session_id)
 
 
 def _load_harness_messages(session_id: str) -> list[dict[str, str]]:
@@ -9084,6 +9111,15 @@ async def api_approve_harness_tool(request: Request) -> JSONResponse:
             detail="Approval already resolved; re-submission (replay) rejected.",
         )
 
+    # Durable replay detection: the decision is also recorded in the session's
+    # append-only event log, so a stale approval id stays rejected after a
+    # process restart, when the in-memory tombstone no longer exists.
+    if _durable_approval_decision(request_session, aid):
+        raise HTTPException(
+            status_code=409,
+            detail="Approval already resolved (durable decision record); re-submission rejected.",
+        )
+
     slot = _PENDING_APPROVALS.get(aid)
     if not slot:
         # Never existed or already consumed out-of-band; fail closed.
@@ -9154,6 +9190,234 @@ def _serialize_transition_record(tr: runtime_persistence.TaskTransitionRecord) -
         "evidence": ev,
         "created_at": tr.created_at,
     }
+
+
+def _serialize_harness_session_row(sess: dict[str, Any]) -> dict[str, Any]:
+    """Session row without the event log (the log has its own cursor endpoint)."""
+    return {k: v for k, v in sess.items() if k != "events"}
+
+
+def _harness_approval_state(session_id: str) -> dict[str, Any]:
+    """Reconcile pending intent (in-memory approval slots) with durable outcomes.
+
+    The durable `approval/request` events carry the tool, args, and step, so a
+    reload can re-render the approval card. Only a request whose in-memory slot
+    is still waiting can be approved; an undecided request whose slot is gone
+    (process restart, aborted run) is reported as `expired`, never pending.
+    """
+    snapshot = _harness_event_snapshot(session_id)
+    decided = {aid: decision for aid, decision in snapshot.approval_decisions}
+    requests: dict[str, dict[str, Any]] = {}
+    for event in reversed(_read_harness_events(session_id)):
+        if event.get("type") != "approval/request":
+            continue
+        approval_id = str(event.get("approval_id") or "")
+        if approval_id and approval_id not in requests:
+            requests[approval_id] = {
+                "approval_id": approval_id,
+                "step": event.get("step"),
+                "tool": event.get("tool"),
+                "args": event.get("args") or {},
+                "requested_at": event.get("ts"),
+            }
+    pending: list[dict[str, Any]] = []
+    expired: list[dict[str, Any]] = []
+    for approval_id, info in requests.items():
+        if approval_id in decided:
+            continue
+        slot = _PENDING_APPROVALS.get(approval_id)
+        live = slot is not None and not slot["event"].is_set()
+        (pending if live else expired).append({**info, "live": live, "decision": "pending"})
+    recent = [
+        {"approval_id": approval_id, "decision": decision}
+        for approval_id, decision in snapshot.approval_decisions[-10:]
+    ]
+    return {"pending": pending, "expired": expired, "recent_decisions": recent}
+
+
+def _durable_approval_decision(session_id: str, approval_id: str) -> str:
+    """Durable decision record for an approval id (survives process restarts)."""
+    if not session_id or not approval_id:
+        return ""
+    try:
+        return _task_event_log().approval_decision(session_id, approval_id)
+    except (task_events.TaskEventError, ValueError, OSError):
+        return ""
+
+
+def _harness_session_state_snapshot(session_id: str) -> dict[str, Any]:
+    """Authoritative state for a harness session: task, events, and approvals.
+
+    This is what a reload or an event-stream gap resynchronizes against. It is
+    reconstructed from durable stores only (SQLite task/checkpoint rows plus the
+    session event log) so it never depends on a live in-flight coroutine.
+    """
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    sm = get_task_state_machine()
+    task = sm.store.get_task(session_id)
+    if task is None:
+        task, budget = sm.ensure_root_task(
+            session_id,
+            session_id=session_id,
+            title=str(sess.get("title") or ""),
+            workspace_dir=str(sess.get("worktree_dir") or ""),
+            policy=str(sess.get("policy") or "standard"),
+        )
+    else:
+        budget = sm.budgets.get_budget(session_id)
+    integrity_error = ""
+    latest_ckpt: workflow_checkpoints.TaskCheckpointRecord | None = None
+    try:
+        latest_ckpt = sm.checkpoints.load_latest_checkpoint(session_id, verify_integrity=True)
+    except workflow_checkpoints.ResumeRejected as exc:
+        integrity_error = str(exc)
+    try:
+        event_stream = _harness_event_snapshot(session_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    approvals = _harness_approval_state(session_id)
+    # The task state machine is authoritative. A live approval gate is the one
+    # overlay: the runtime is waiting on the operator, not on the model.
+    status = "waiting_approval" if approvals["pending"] else task.state
+    milestones = sm.list_milestones(session_id)
+    verification_spec = sm.get_verification_spec(session_id)
+    return {
+        "session_id": session_id,
+        "status": status,
+        "task_status": task.state,
+        "terminal": task.state in {"completed", "cancelled", "failed"},
+        "session": _serialize_harness_session_row(sess),
+        "task": _serialize_task_record(task),
+        "budget": budget.to_dict(),
+        "verification_spec": verification_spec.to_dict() if verification_spec is not None else None,
+        "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
+        "checkpoint_integrity_error": integrity_error,
+        "checkpoints": [ck.to_dict() for ck in sm.checkpoints.list_checkpoints(session_id, verify_integrity=False)],
+        "milestones": [_serialize_task_record(ms) for ms in milestones],
+        "transitions": [_serialize_transition_record(tr) for tr in sm.store.list_transitions(session_id)],
+        "event_stream": event_stream.to_dict(),
+        "approvals": approvals,
+        "turns_started": event_stream.turns_started,
+        "turns_completed": event_stream.turns_completed,
+        "last_turn_state": event_stream.last_turn_state,
+        "generated_at": round(time.time(), 3),
+    }
+
+
+@app.get("/api/harness/sessions/{session_id}/state")
+async def api_get_harness_session_state(session_id: str) -> JSONResponse:
+    """Authoritative task/event/approval snapshot used to rebuild the UI on reload."""
+    return JSONResponse(_harness_session_state_snapshot(session_id))
+
+
+@app.get("/api/harness/sessions/{session_id}/events")
+async def api_get_harness_session_events(
+    session_id: str,
+    cursor: int = 0,
+    # Literal, not task_events.DEFAULT_READ_LIMIT: this default is evaluated at
+    # import time, before scripts/build_studio.py installs the inlined module
+    # alias in the standalone artifact.
+    limit: int = 200,
+) -> JSONResponse:
+    """Cursor read over the durable task event log.
+
+    `snapshot_required` is the server's verdict on whether the caller's cursor
+    can be resumed from (false) or whether only a full snapshot is faithful
+    (true: pruned history, cursor ahead of the store, or a sequence gap).
+    """
+    try:
+        get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    try:
+        page = _read_harness_event_page(session_id, cursor=cursor, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(page.to_dict())
+
+
+@app.get("/api/harness/sessions/{session_id}/events/stream")
+async def api_stream_harness_session_events(
+    session_id: str,
+    request: Request,
+    cursor: int = -1,
+    limit: int = 200,  # task_events.DEFAULT_READ_LIMIT (import-time safe)
+    poll_interval: float = 0.5,
+    max_seconds: float = 120.0,
+    drain: bool = False,
+) -> StreamingResponse:
+    """Server-sent task events with cursor replay, gap signalling, and heartbeats.
+
+    Each frame carries the event `seq` as its SSE `id`, so a reconnecting client
+    can resume from `Last-Event-ID`. When the requested cursor cannot be
+    resumed (`snapshot_required`), the stream emits `resync_required` and closes:
+    the client must reload the snapshot rather than silently continue with a
+    partial history. `drain=true` closes as soon as the client is caught up,
+    which is what scripted verification uses; the browser uses the default
+    follow mode with a bounded lifetime.
+    """
+    try:
+        get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    header_cursor = task_events.parse_cursor(request.headers.get("last-event-id"), default=0)
+    start_cursor = cursor if cursor >= 0 else header_cursor
+    safe_limit = max(1, min(int(limit), task_events.MAX_READ_LIMIT))
+    safe_interval = max(0.05, min(float(poll_interval), 5.0))
+    safe_max_seconds = max(0.0, min(float(max_seconds), 900.0))
+
+    async def event_gen() -> AsyncIterator[str]:
+        stream_cursor = start_cursor
+        deadline = time.monotonic() + safe_max_seconds
+        last_heartbeat = time.monotonic()
+        while True:
+            if await request.is_disconnected():
+                return
+            try:
+                page = _read_harness_event_page(session_id, cursor=stream_cursor, limit=safe_limit)
+            except ValueError as exc:
+                yield _sse("stream_error", {"session_id": session_id, "message": str(exc)})
+                return
+            if page.snapshot_required:
+                yield _sse(
+                    "resync_required",
+                    {
+                        "session_id": session_id,
+                        "reason": page.resync_reason,
+                        "cursor": stream_cursor,
+                        "latest_seq": page.latest_seq,
+                        "retained_from_seq": page.retained_from_seq,
+                        "missing_ranges": [{"from_seq": a, "to_seq": b} for a, b in page.missing_ranges],
+                    },
+                )
+                return
+            for event in page.events:
+                stream_cursor = int(event["seq"])
+                yield f"id: {stream_cursor}\nevent: task_event\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
+            if drain:
+                yield _sse(
+                    "stream_caught_up",
+                    {"session_id": session_id, "cursor": stream_cursor, "latest_seq": page.latest_seq},
+                )
+                return
+            now = time.monotonic()
+            if not page.events and now - last_heartbeat >= task_events.STREAM_HEARTBEAT_SECONDS:
+                yield _sse(
+                    "heartbeat",
+                    {"session_id": session_id, "cursor": stream_cursor, "latest_seq": page.latest_seq},
+                )
+                last_heartbeat = now
+            if now >= deadline:
+                yield _sse("stream_timeout", {"session_id": session_id, "cursor": stream_cursor})
+                return
+            if page.has_more:
+                continue
+            await asyncio.sleep(safe_interval)
+
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
 
 
 @app.get("/api/harness/sessions/{session_id}/task")
@@ -9277,6 +9541,7 @@ async def api_cancel_harness_session(session_id: str, request: Request) -> JSONR
         session_id,
         "turn/cancelled",
         {"reason": reason, "unresolved_action_ids": list(outcome.unresolved_action_ids)},
+        dedupe_key=f"turn-cancelled:{outcome.task.current_epoch}",
     )
     return JSONResponse(
         {
@@ -9819,7 +10084,12 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                 lease_released = True
                 sm.cancel_task(session_id, reason=halt_reason or "turn_cancelled", evidence_refs=final_refs)
                 _update_harness_session_state(session_id, status="cancelled")
-                _append_harness_event(session_id, "turn/cancelled", {"step": completed_step, "reason": halt_reason})
+                _append_harness_event(
+                    session_id,
+                    "turn/cancelled",
+                    {"step": completed_step, "reason": halt_reason},
+                    dedupe_key=f"turn-cancelled:{lease_epoch}:{completed_step}",
+                )
                 yield _sse("cancelled", {"step": completed_step, "reason": halt_reason})
             elif halt_mode in {"paused", "budget_exceeded", "max_steps"}:
                 lease_final_state = "paused"
@@ -9870,7 +10140,12 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     if did_rel_ver:
                         _update_harness_session_state(session_id, status="error")
                     ver_payload = verification_report.to_dict()
-                    _append_harness_event(session_id, "turn/verification_failed", ver_payload)
+                    _append_harness_event(
+                        session_id,
+                        "turn/verification_failed",
+                        ver_payload,
+                        dedupe_key=f"turn-verification-failed:{lease_epoch}",
+                    )
                     yield _sse("verification_failed", ver_payload)
                 else:
                     failure_injection.check_action_boundary(
@@ -9899,7 +10174,12 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     _update_harness_session_state(session_id, status="completed")
                     if verification_report.spec_sha256:
                         ver_ok_payload = verification_report.to_dict()
-                        _append_harness_event(session_id, "turn/verified", ver_ok_payload)
+                        _append_harness_event(
+                            session_id,
+                            "turn/verified",
+                            ver_ok_payload,
+                            dedupe_key=f"turn-verified:{lease_epoch}",
+                        )
                         yield _sse("verification_passed", ver_ok_payload)
 
             diff_summary = _compute_git_diff(wt_dir)
@@ -9912,6 +10192,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     "git_status": diff_summary.get("status", ""),
                     "state": lease_final_state,
                 },
+                dedupe_key=f"turn-end:{lease_epoch}:{lease_final_state}",
             )
             yield _sse(
                 "turn_done",
@@ -9949,7 +10230,12 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
             )
             if did_release_err:
                 _update_harness_session_state(session_id, status="error")
-            _append_harness_event(session_id, "turn/error", {"message": str(exc)})
+            _append_harness_event(
+                session_id,
+                "turn/error",
+                {"message": str(exc)},
+                dedupe_key=f"turn-error:{lease_epoch}",
+            )
             yield _sse("error", {"message": str(exc)})
         finally:
             _release_turn_lease()
@@ -10588,6 +10874,7 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                     "git_status": diff_final.get("status", ""),
                     "state": lease_final_state,
                 },
+                dedupe_key=f"turn-end:{lease_epoch}:{lease_final_state}",
             )
             yield _sse(
                 "turn_done",
@@ -10613,7 +10900,12 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
             lease_released = True
             if coord.release(session_id, lease_epoch, worker_id, next_state="failed", reason="gsd_failed"):
                 _update_harness_session_state(session_id, status="error")
-            _append_harness_event(session_id, "turn/error", {"message": str(exc)})
+            _append_harness_event(
+                session_id,
+                "turn/error",
+                {"message": str(exc)},
+                dedupe_key=f"turn-error:{lease_epoch}",
+            )
             yield _sse("error", {"message": str(exc)})
         finally:
             _release_gsd_lease()
@@ -11486,7 +11778,12 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
             elapsed_s = round(time.perf_counter() - t0, 2)
             diff_final = _compute_git_diff(wt_dir)
             stories_final = _read_sdlc_backlog(sdlc_dir)
-            _append_harness_event(session_id, "turn/end", {"steps": get_harness_session_db(session_id)["step_count"], "elapsed_s": elapsed_s, "git_status": diff_final.get("status", "")})
+            _append_harness_event(
+                session_id,
+                "turn/end",
+                {"steps": get_harness_session_db(session_id)["step_count"], "elapsed_s": elapsed_s, "git_status": diff_final.get("status", "")},
+                dedupe_key=f"turn-end:{lease_epoch}:{lease_final_state}",
+            )
             yield _sse(
                 "turn_done",
                 {
@@ -11504,7 +11801,12 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
             lease_released = True
             if coord.release(session_id, lease_epoch, worker_id, next_state="failed", reason="sdlc_failed"):
                 _update_harness_session_state(session_id, status="error")
-            _append_harness_event(session_id, "turn/error", {"message": str(exc)})
+            _append_harness_event(
+                session_id,
+                "turn/error",
+                {"message": str(exc)},
+                dedupe_key=f"turn-error:{lease_epoch}",
+            )
             yield _sse("error", {"message": str(exc)})
         finally:
             _release_sdlc_lease()
@@ -11715,7 +12017,12 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
             elapsed_s = round(time.perf_counter() - t0, 2)
             diff_final = _compute_git_diff(wt_dir)
             stories_final = _read_sdlc_backlog(sdlc_dir)
-            _append_harness_event(session_id, "turn/end", {"steps": get_harness_session_db(session_id)["step_count"], "elapsed_s": elapsed_s, "git_status": diff_final.get("status", "")})
+            _append_harness_event(
+                session_id,
+                "turn/end",
+                {"steps": get_harness_session_db(session_id)["step_count"], "elapsed_s": elapsed_s, "git_status": diff_final.get("status", "")},
+                dedupe_key=f"turn-end:{lease_epoch_fb}:{lease_final_state_fb}",
+            )
             yield _sse(
                 "turn_done",
                 {
@@ -11733,7 +12040,12 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
             lease_released_fb = True
             if coord_fb.release(session_id, lease_epoch_fb, worker_id_fb, next_state="failed", reason="sdlc_feedback_failed"):
                 _update_harness_session_state(session_id, status="error")
-            _append_harness_event(session_id, "turn/error", {"message": str(exc)})
+            _append_harness_event(
+                session_id,
+                "turn/error",
+                {"message": str(exc)},
+                dedupe_key=f"turn-error:{lease_epoch_fb}",
+            )
             yield _sse("error", {"message": str(exc)})
         finally:
             _release_fb_lease()

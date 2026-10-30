@@ -76,7 +76,13 @@ database is not encrypted — see [`privacy.md`](privacy.md).
 
 Harness events and message snapshots also exist as JSONL/message files under
 `.harnesses/`, which can contain raw prompts and tool output and are covered by
-retention rather than by the SQLite export.
+retention rather than by the SQLite export. Since `M5-P1-07` the session event
+log is a cursor-addressable durable stream (`task_events.py`: monotonic `seq`, a
+durable `<session>.seq` sidecar, idempotent terminal records, pruning with
+explicit truncation) exposed at `GET /api/harness/sessions/{session_id}/events`,
+`.../events/stream` (SSE with `Last-Event-ID` resume and `resync_required`), and
+`.../state` (authoritative snapshot). The task state machine stays the authority
+for task status; see [`task-events.md`](task-events.md).
 
 ## Generated artifacts
 
