@@ -125,8 +125,8 @@
   "session_state": {
     "active_story": "M5-P2-02",
     "last_completed_story": "M5-P2-01",
-    "last_checkpoint": "2026-10-30T18:12:00Z",
-    "last_session_id": "arena/038b1d22-m5-agent-studio",
+    "last_checkpoint": "2026-10-30T18:20:00Z",
+    "last_session_id": "arena/643fa294-m5-agent-studio",
     "next_recommended_story": "M5-P2-02",
     "open_risks": [
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
@@ -1727,20 +1727,20 @@
       "prompt": "Implement story M5-P2-02: Version-aware managed edits and conflict checks. Objective: Avoid overwriting concurrent user edits. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Validate canonical path and expected content version; Implement atomic file replacement where appropriate; Record edit transaction and resulting hashes; Test symlink/path and concurrent-edit cases. Acceptance: Concurrent user edit causes safe conflict not overwrite; Expected hash enforced; Unauthorized path rejected. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
         "status": "in_progress",
-        "progress_percent": 5,
-        "attempts": 1,
-        "started_at": "2026-10-30T18:12:00Z",
-        "updated_at": "2026-10-30T18:12:00Z",
+        "progress_percent": 10,
+        "attempts": 2,
+        "started_at": "2026-10-30T18:20:00Z",
+        "updated_at": "2026-10-30T18:20:00Z",
         "completed_at": null,
-        "owner_session": "arena/038b1d22-m5-agent-studio",
+        "owner_session": "arena/643fa294-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
         "test_results": [],
         "decisions": [],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect managed edit call paths in app.py and workspace_snapshots.py, then implement version-aware expected-hash conflict checks and transaction ledgering.",
+        "handoff_note": "Re-claimed by arena/643fa294-m5-agent-studio. The previous claim (arena/038b1d22-m5-agent-studio, attempt 1) was merged to main in PR #44 as a claim-only change-set: `git log origin/main` shows 393f3e0 (merge) -> 090c64e (claim) with no implementation commit, `gh pr view 44 --json files` lists only product/M5_2_0_Autonomous_Roadmap.json, and the work tree at 393f3e0 contains no expected-version/conflict handling for write_file/edit_file. Merging that PR closed the owner branch, so the claim was left orphaned at 5% with no open PR. No other open PR references M5-P2-02.",
+        "next_action": "Implement version-aware managed edits: expected-SHA-256 enforcement on write_file/edit_file, compare-and-swap atomic replacement so a concurrent user edit conflicts instead of being overwritten, a durable edit transaction ledger with pre/post hashes, and tests for stale-version, symlink/path and concurrent-edit cases.",
         "readme_updated": false
       }
     },
