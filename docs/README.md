@@ -101,7 +101,9 @@ measurements without trusting them).
 [`m5-2-0-roadmap-reconciliation.md`](m5-2-0-roadmap-reconciliation.md) (how
 the two roadmaps map to each other) ·
 [`m5-2-0-integration-audit.md`](m5-2-0-integration-audit.md) (verified call
-paths, bypass inventory, module integration status) ·
+paths, module integration status) ·
+[`m5-2-0-bypass-inventory.md`](m5-2-0-bypass-inventory.md) (maintained
+known-bypass inventory for the extracted execution boundary, ADR-0002) ·
 [`m5-2-0-baseline-evidence.md`](m5-2-0-baseline-evidence.md) (commands, exit
 codes, blocked measurements) ·
 [`../M5_2_0_AGENT_PROMPT.md`](../M5_2_0_AGENT_PROMPT.md) (parallel-agent
