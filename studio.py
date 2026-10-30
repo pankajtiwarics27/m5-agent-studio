@@ -546,6 +546,57 @@ async def _communicate_limited(proc: asyncio.subprocess.Process, max_bytes: int)
     return b"".join(chunks), truncated
 
 
+async def _run_skill_script(script: Path, args: list[str], *, cwd: Path, timeout: float) -> str:
+    """Execute a repository skill script inside the configured execution boundary.
+
+    Skill sources are untrusted code, so this helper enforces both gates that
+    apply to code execution: ``STUDIO_ALLOW_SKILL_CODE=1`` (skill-code opt-in)
+    and a live execution mode from ``_execution_mode()``. ``sandbox`` routes
+    through the same container boundary as tool code (``_execute_limited``);
+    ``host`` runs as a direct child process and itself requires
+    ``STUDIO_ALLOW_HOST_EXECUTION=1``; ``disabled`` (the default) raises and
+    callers skip the optional script output. There is no silent host fallback:
+    when the boundary or runtime is unavailable the skill's static text still
+    applies and nothing executes on the host.
+    """
+    if not STUDIO_ALLOW_SKILL_CODE:
+        raise PermissionError(
+            "Skill code execution is disabled. Set STUDIO_ALLOW_SKILL_CODE=1 after reviewing the skill sources."
+        )
+    mode = _execution_mode()
+    if mode == "disabled":
+        raise PermissionError(
+            "Skill code execution requires STUDIO_EXECUTION_MODE=sandbox (container boundary) "
+            "or STUDIO_EXECUTION_MODE=host with STUDIO_ALLOW_HOST_EXECUTION=1."
+        )
+    if not script.is_file():
+        raise ValueError(f"Skill script not found: {script}")
+    if mode == "sandbox":
+        skill_root = cwd.resolve(strict=True)
+        rel = script.resolve(strict=True).relative_to(skill_root)
+        command = "python3 " + " ".join(shlex.quote(part) for part in (f"/workspace/{rel.as_posix()}", *args))
+        exit_code, out_bytes, _truncated, timed_out = await _execute_limited(
+            skill_root, command, timeout=timeout, max_output_bytes=64_000,
+        )
+        if timed_out or exit_code != 0:
+            return ""
+        return out_bytes.decode("utf-8", errors="replace")
+    proc = await asyncio.create_subprocess_exec(
+        "python3", str(script), *args,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        cwd=str(cwd), env=_minimal_execution_env(),
+    )
+    try:
+        out, _err = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+    except asyncio.TimeoutError:
+        proc.kill()
+        await proc.wait()
+        return ""
+    if proc.returncode != 0:
+        return ""
+    return out.decode("utf-8", errors="replace")
+
+
 def _is_keyring_ref(value: str) -> bool:
     return isinstance(value, str) and value.startswith(KEYRING_REF_PREFIX)
 
@@ -1823,15 +1874,18 @@ async def build_skills_context(skill_ids: list[str], task_text: str) -> tuple[st
         if search_py.is_file() and STUDIO_ALLOW_SKILL_CODE and run_design:
             query_kw = _extract_search_keywords(task_text)
             try:
-                proc = await asyncio.create_subprocess_exec(
-                    "python3", str(search_py), query_kw, "--design-system", "-f", "markdown", "--density", "5",
-                    stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=str(skill_dir), env=_minimal_execution_env(),
-                )
-                out, _ = await asyncio.wait_for(proc.communicate(), timeout=8.0)
-                if proc.returncode == 0 and out:
-                    script_output = out.decode(errors="ignore").strip()[:1400]
+                # M5-P0-03: skill code runs only inside the configured execution
+                # boundary (_run_skill_script); disabled/sandbox never host-fallback.
+                script_output = (
+                    await _run_skill_script(
+                        search_py,
+                        [query_kw, "--design-system", "-f", "markdown", "--density", "5"],
+                        cwd=skill_dir,
+                        timeout=8.0,
+                    )
+                ).strip()[:1400]
             except Exception:
-                pass
+                script_output = ""
         section = f'<agent_skill name="{name}">\n{resolved_body}\n'
         if script_output:
             section += f'\n### Auto-Generated Design System (`search.py "{query_kw}"`):\n{script_output}\n'
@@ -12865,15 +12919,21 @@ async def _fetch_online_inspiration(client: httpx.AsyncClient, query: str, cwd: 
         pass
 
     # 4. Local `ui-ux-pro-max` BM25 Design System Intelligence (if installed in `.agents/skills`)
+    # M5-P0-03: downloaded skill code is untrusted — it now requires the
+    # STUDIO_ALLOW_SKILL_CODE opt-in and runs only inside the configured
+    # execution boundary (_run_skill_script). Previously this path executed the
+    # script whenever the file existed, bypassing the sandbox boundary.
     ux_script = BASE_DIR / ".agents" / "skills" / "ui-ux-pro-max" / "scripts" / "search.py"
-    if ux_script.exists():
+    if ux_script.is_file() and STUDIO_ALLOW_SKILL_CODE:
         try:
-            proc = await asyncio.create_subprocess_exec(
-                sys.executable, str(ux_script), q_clean[:80], "--domain", "ux", "-n", "3",
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL, env=_minimal_execution_env(),
-            )
-            out_b, _ = await asyncio.wait_for(proc.communicate(), timeout=5.0)
-            ux_txt = out_b.decode("utf-8", errors="replace").strip()
+            ux_txt = (
+                await _run_skill_script(
+                    ux_script,
+                    [q_clean[:80], "--domain", "ux", "-n", "3"],
+                    cwd=ux_script.parent.parent,
+                    timeout=5.0,
+                )
+            ).strip()
             if ux_txt:
                 sections.append(f"#### `ui-ux-pro-max` UX & Design Intelligence\n{ux_txt[:1100]}")
         except Exception:
