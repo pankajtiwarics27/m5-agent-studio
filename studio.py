@@ -547,19 +547,19 @@ async def _communicate_limited(proc: asyncio.subprocess.Process, max_bytes: int)
     return b"".join(chunks), truncated
 
 
-async def _run_skill_script(script: Path, args: list[str], *, cwd: Path, timeout: float) -> str:
-    """Execute a repository skill script inside the configured execution boundary.
-
-    Skill sources are untrusted code, so this helper enforces both gates that
-    apply to code execution: ``STUDIO_ALLOW_SKILL_CODE=1`` (skill-code opt-in)
-    and a live execution mode from ``_execution_mode()``. ``sandbox`` routes
-    through the same container boundary as tool code (``_execute_limited``);
-    ``host`` runs as a direct child process and itself requires
-    ``STUDIO_ALLOW_HOST_EXECUTION=1``; ``disabled`` (the default) raises and
-    callers skip the optional script output. There is no silent host fallback:
-    when the boundary or runtime is unavailable the skill's static text still
-    applies and nothing executes on the host.
-    """
+async def _execute_skill_script_inner(
+    script: Path,
+    args: list[str],
+    *,
+    cwd: Path,
+    timeout: float,
+) -> dict[str, Any]:
+    """Inner skill-script executor; cannot run without an active admission scope."""
+    execution_spine.require_active_admission(
+        expected_tool="skill_execute_script",
+        expected_action_classes=frozenset({"consequential"}),
+    )
+    t0 = time.perf_counter()
     if not STUDIO_ALLOW_SKILL_CODE:
         raise PermissionError(
             "Skill code execution is disabled. Set STUDIO_ALLOW_SKILL_CODE=1 after reviewing the skill sources."
@@ -579,9 +579,15 @@ async def _run_skill_script(script: Path, args: list[str], *, cwd: Path, timeout
         exit_code, out_bytes, _truncated, timed_out = await _execute_limited(
             skill_root, command, timeout=timeout, max_output_bytes=64_000,
         )
+        elapsed_ms = round((time.perf_counter() - t0) * 1000)
         if timed_out or exit_code != 0:
-            return ""
-        return out_bytes.decode("utf-8", errors="replace")
+            return {"ok": False, "output": "", "diff": "", "elapsed_ms": elapsed_ms}
+        return {
+            "ok": True,
+            "output": out_bytes.decode("utf-8", errors="replace"),
+            "diff": "",
+            "elapsed_ms": elapsed_ms,
+        }
     proc = await asyncio.create_subprocess_exec(
         "python3", str(script), *args,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
@@ -592,10 +598,54 @@ async def _run_skill_script(script: Path, args: list[str], *, cwd: Path, timeout
     except asyncio.TimeoutError:
         proc.kill()
         await proc.wait()
-        return ""
+        return {"ok": False, "output": "", "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
+    elapsed_ms = round((time.perf_counter() - t0) * 1000)
     if proc.returncode != 0:
-        return ""
-    return out.decode("utf-8", errors="replace")
+        return {"ok": False, "output": "", "diff": "", "elapsed_ms": elapsed_ms}
+    return {
+        "ok": True,
+        "output": out.decode("utf-8", errors="replace"),
+        "diff": "",
+        "elapsed_ms": elapsed_ms,
+    }
+
+
+async def _run_skill_script(
+    script: Path,
+    args: list[str],
+    *,
+    cwd: Path,
+    timeout: float,
+    policy: str = "standard",
+    session_id: str = "skill_context",
+    task_id: str | None = None,
+    epoch: int | None = None,
+    worker_id: str | None = None,
+) -> str:
+    """Execute a repository skill script through the authoritative admission boundary.
+
+    Skill sources are untrusted code, so this entry point routes through
+    ``_run_authorized_tool`` (``DurableActionBoundary``) with ``skill_opt_in``
+    grant provenance and enforces ``STUDIO_ALLOW_SKILL_CODE=1``, a live
+    execution mode from ``_execution_mode()``, and non-``plan`` policy.
+    ``sandbox`` routes through the container boundary (``_execute_limited``);
+    ``host`` requires ``STUDIO_ALLOW_HOST_EXECUTION=1``; ``disabled`` raises and
+    callers skip the optional script output without any host fallback.
+    """
+    res = await _run_authorized_tool(
+        "skill_execute_script",
+        {"script": str(script), "args": [str(a) for a in args], "cwd": str(cwd)},
+        policy,
+        approved=True,
+        session_id=session_id,
+        executor=lambda: _execute_skill_script_inner(script, args, cwd=cwd, timeout=timeout),
+        denial_as_exception=True,
+        grant_source="skill_opt_in",
+        task_id=task_id,
+        epoch=epoch,
+        worker_id=worker_id,
+    )
+    return str(res.get("output") or "")
 
 
 def _is_keyring_ref(value: str) -> bool:
@@ -1870,7 +1920,16 @@ def _task_needs_design_engine(task_text: str) -> bool:
     return bool(words & _UI_DESIGN_KEYWORDS)
 
 
-async def build_skills_context(skill_ids: list[str], task_text: str) -> tuple[str, list[dict[str, str]]]:
+async def build_skills_context(
+    skill_ids: list[str],
+    task_text: str,
+    *,
+    policy: str = "standard",
+    session_id: str = "skill_context",
+    task_id: str | None = None,
+    epoch: int | None = None,
+    worker_id: str | None = None,
+) -> tuple[str, list[dict[str, str]]]:
     if not skill_ids:
         return "", []
     all_skills = {s["id"]: s for s in discover_installed_skills()}
@@ -1892,17 +1951,23 @@ async def build_skills_context(skill_ids: list[str], task_text: str) -> tuple[st
         resolved_body = body.replace("${CLAUDE_PLUGIN_ROOT}/.claude/skills/" + sid, str(skill_dir)).replace("${CLAUDE_PLUGIN_ROOT}", str(skill_dir))[:1500]
         script_output = ""
         search_py = skill_dir / "scripts" / "search.py"
-        if search_py.is_file() and STUDIO_ALLOW_SKILL_CODE and run_design:
+        if search_py.is_file() and run_design:
             query_kw = _extract_search_keywords(task_text)
             try:
-                # M5-P0-03: skill code runs only inside the configured execution
-                # boundary (_run_skill_script); disabled/sandbox never host-fallback.
+                # M5-P0-03 / M5-P1-02: skill code routes through the authoritative
+                # admission boundary (_run_skill_script -> DurableActionBoundary);
+                # default-off and disabled/sandbox never host-fallback.
                 script_output = (
                     await _run_skill_script(
                         search_py,
                         [query_kw, "--design-system", "-f", "markdown", "--density", "5"],
                         cwd=skill_dir,
                         timeout=8.0,
+                        policy=policy,
+                        session_id=session_id,
+                        task_id=task_id,
+                        epoch=epoch,
+                        worker_id=worker_id,
                     )
                 ).strip()[:1400]
             except Exception:
@@ -8345,7 +8410,14 @@ async def api_chat_stream(request: Request) -> StreamingResponse:
                 tool_resp_blocks: list[str] = []
                 for tc in tool_calls[:6]:
                     t_name, t_args = tc["name"], tc["arguments"]
-                    res_obj = await _execute_harness_tool(client, chat_pseudo_sess, t_name, t_args)
+                    res_obj = await _execute_harness_tool(
+                        client,
+                        chat_pseudo_sess,
+                        t_name,
+                        t_args,
+                        approved=False,
+                        grant_source="none",
+                    )
                     compressed_out, _ = sandbox_tool_output_if_large(
                         chat_sess_id, t_name, res_obj["output"], context_mode_enabled=True
                     )
@@ -9128,6 +9200,10 @@ async def _execute_mcp_tool_call_inner(
     arguments: dict[str, Any],
     cwd: Path | None = None,
 ) -> dict[str, Any]:
+    execution_spine.require_active_admission(
+        expected_tool=f"mcp__{alias}__{remote_tool}",
+        expected_action_classes=frozenset({"external"}),
+    )
     srv = get_mcp_server(alias, include_secret=True)
     if not srv.get("enabled"):
         raise PermissionError(f"MCP server `{alias}` is disabled.")
@@ -9183,9 +9259,10 @@ def tool_requires_approval(tool_name: str, args: dict[str, Any], policy: str) ->
     mcp_target = parse_mcp_namespaced_tool(tool_name)
     if mcp_target is not None:
         return mcp_tool_needs_approval(mcp_target[0], policy)
+    block = execution_spine.normalize_reusable_block_name(args.get("block") if isinstance(args, dict) else "")
     return policy == "standard" and (
         tool_name in ("run_bash", "ctx_execute_python")
-        or (tool_name == "ctx_run_block" and str(args.get("block") or "") in ("test-summary", "first-error"))
+        or (tool_name == "ctx_run_block" and block in execution_spine.CONSEQUENTIAL_BLOCKS)
     )
 
 
@@ -9376,6 +9453,7 @@ async def api_call_mcp_server_tool(alias: str, request: Request) -> JSONResponse
             policy="standard",
             approved=True,  # This authenticated, explicit playground action is one-call user approval.
             session_id="manual-mcp-playground",
+            grant_source="operator_one_call",
         )
         return JSONResponse(res)
     except Exception as exc:
@@ -10017,9 +10095,16 @@ async def run_reusable_block(root: Path, block_name: str, target: str = "") -> d
     """
     `JuliusBrussee/caveman` (`caveman-ai/blocks` Code-Mode Reusable Blocks):
       Pre-built zero-retyping blocks (`json-peek`, `csv-peek`, `shortcut-debt`, `test-summary`, `first-error`).
+      Managed-read blocks (`json-peek`, `csv-peek`, `shortcut-debt`) stay separated from
+      consequential shell blocks (`test-summary`, `first-error`), which require an active
+      consequential admission scope from ``DurableActionBoundary``.
     """
     t0 = time.perf_counter()
-    bname = (block_name or "").strip().lower()
+    bname = execution_spine.normalize_reusable_block_name(block_name)
+    if bname not in execution_spine.MANAGED_READ_BLOCKS:
+        execution_spine.require_active_admission(
+            expected_action_classes=frozenset({"consequential"}),
+        )
     if bname == "shortcut-debt":
         out = run_codegraph_tool(root, mode="debt", sub_path=target or ".")
         return {"ok": True, "output": out, "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
@@ -10517,7 +10602,9 @@ BUILTIN_TOOL_NAMES = frozenset(
         "oc_save_doc",
     }
 )
-PLAN_DENIED_TOOLS = frozenset({"write_file", "edit_file", "run_bash", "ctx_execute_python", "oc_save_doc"})
+PLAN_DENIED_TOOLS = frozenset(
+    {"write_file", "edit_file", "run_bash", "ctx_execute_python", "oc_save_doc", "delegate_subagent"}
+)
 MCP_BRIDGE_TOOL_NAMES = frozenset(
     {
         "start_council",
@@ -10545,6 +10632,7 @@ class ToolAuthorization:
     allowed: bool
     requires_approval: bool = False
     reason: str = ""
+    action_class: execution_spine.ActionClass = "consequential"
 
 
 def _effective_harness_policy(requested: Any, session: dict[str, Any]) -> str:
@@ -10559,31 +10647,65 @@ def authorize_tool_invocation(
     *,
     approved: bool = False,
 ) -> ToolAuthorization:
-    """Single deny-by-default policy decision for built-in and MCP tool execution."""
+    """Single deny-by-default policy decision for built-in, skill, and MCP tool execution."""
     effective_policy = _effective_harness_policy(policy, {})
+    safe_args = args if isinstance(args, dict) else {}
+    action_class = execution_spine.classify_action(tool_name, safe_args)
+
+    if tool_name == "skill_execute_script":
+        if effective_policy == "plan":
+            return ToolAuthorization(False, True, "Skill script execution is disabled by read-only plan policy.", action_class)
+        if not STUDIO_ALLOW_SKILL_CODE:
+            return ToolAuthorization(
+                False,
+                True,
+                "Skill code execution is disabled. Set STUDIO_ALLOW_SKILL_CODE=1 after reviewing the skill sources.",
+                action_class,
+            )
+        try:
+            mode = _execution_mode()
+        except PermissionError as exc:
+            return ToolAuthorization(False, True, str(exc), action_class)
+        if mode == "disabled":
+            return ToolAuthorization(
+                False,
+                True,
+                "Skill code execution requires STUDIO_EXECUTION_MODE=sandbox (container boundary) "
+                "or STUDIO_EXECUTION_MODE=host with STUDIO_ALLOW_HOST_EXECUTION=1.",
+                action_class,
+            )
+        if not approved:
+            return ToolAuthorization(False, True, "Skill script execution requires explicit server opt-in grant.", action_class)
+        return ToolAuthorization(True, True, action_class=action_class)
+
     if tool_name.startswith("mcp_bridge__"):
         if tool_name not in MCP_BRIDGE_AUTH_TOOL_NAMES:
-            return ToolAuthorization(False, reason="Inbound MCP bridge tool is not registered.")
+            return ToolAuthorization(False, reason="Inbound MCP bridge tool is not registered.", action_class=action_class)
         requires_approval = tool_name in MCP_BRIDGE_APPROVAL_TOOLS
         if effective_policy == "plan" and requires_approval:
-            return ToolAuthorization(False, requires_approval, "State-changing MCP bridge tools are disabled by plan policy.")
+            return ToolAuthorization(
+                False,
+                requires_approval,
+                "State-changing MCP bridge tools are disabled by plan policy.",
+                action_class=action_class,
+            )
         if requires_approval and not approved:
-            return ToolAuthorization(False, True, "MCP bridge tool requires explicit one-call approval.")
-        return ToolAuthorization(True, requires_approval)
+            return ToolAuthorization(False, True, "MCP bridge tool requires explicit one-call approval.", action_class=action_class)
+        return ToolAuthorization(True, requires_approval, action_class=action_class)
 
     mcp_target = parse_mcp_namespaced_tool(tool_name)
     if tool_name.startswith("mcp__"):
         if mcp_target is None:
-            return ToolAuthorization(False, reason="Malformed MCP tool name.")
+            return ToolAuthorization(False, reason="Malformed MCP tool name.", action_class=action_class)
         if effective_policy == "plan":
-            return ToolAuthorization(False, reason="External MCP tools are disabled by plan policy.")
+            return ToolAuthorization(False, reason="External MCP tools are disabled by plan policy.", action_class=action_class)
         alias, remote_tool = mcp_target
         try:
             server = get_mcp_server(alias, include_secret=False)
         except KeyError:
-            return ToolAuthorization(False, reason="MCP server is not configured.")
+            return ToolAuthorization(False, reason="MCP server is not configured.", action_class=action_class)
         if not server.get("enabled"):
-            return ToolAuthorization(False, reason="MCP server is disabled.")
+            return ToolAuthorization(False, reason="MCP server is disabled.", action_class=action_class)
         known_tools = {
             str(tool.get("name"))
             for tool in (server.get("tools") or [])
@@ -10591,26 +10713,36 @@ def authorize_tool_invocation(
         }
         enabled_tools = set(server.get("enabled_tools") or known_tools)
         if remote_tool not in known_tools or remote_tool not in enabled_tools:
-            return ToolAuthorization(False, reason="MCP tool is not in the enabled-tool allowlist.")
+            return ToolAuthorization(False, reason="MCP tool is not in the enabled-tool allowlist.", action_class=action_class)
         requires_approval = mcp_tool_needs_approval(alias, effective_policy)
         if requires_approval and not approved:
-            return ToolAuthorization(False, True, "MCP tool requires explicit approval.")
-        return ToolAuthorization(True, requires_approval)
+            return ToolAuthorization(False, True, "MCP tool requires explicit approval.", action_class=action_class)
+        return ToolAuthorization(True, requires_approval, action_class=action_class)
 
     if tool_name not in BUILTIN_TOOL_NAMES:
-        return ToolAuthorization(False, reason="Tool is not registered.")
+        return ToolAuthorization(False, reason="Tool is not registered.", action_class=action_class)
 
-    executing_block = tool_name == "ctx_run_block" and str(args.get("block") or "") in ("test-summary", "first-error")
-    requires_approval = tool_requires_approval(tool_name, args, effective_policy)
+    block = ""
+    if tool_name == "ctx_run_block":
+        block = execution_spine.normalize_reusable_block_name(safe_args.get("block"))
+        if block not in execution_spine.ALL_REUSABLE_BLOCKS:
+            return ToolAuthorization(False, False, "Unknown reusable block.", action_class="consequential")
+
+    executing_block = tool_name == "ctx_run_block" and block in execution_spine.CONSEQUENTIAL_BLOCKS
+    requires_approval = tool_requires_approval(tool_name, safe_args, effective_policy)
     if effective_policy == "plan" and (tool_name in PLAN_DENIED_TOOLS or executing_block):
-        return ToolAuthorization(False, requires_approval, "Tool is not permitted by read-only plan policy.")
+        return ToolAuthorization(False, requires_approval, "Tool is not permitted by read-only plan policy.", action_class=action_class)
     if tool_name in ("run_bash", "ctx_execute_python") or executing_block:
-        if _execution_mode() == "disabled":
-            return ToolAuthorization(False, requires_approval, "Code execution is disabled.")
+        try:
+            mode = _execution_mode()
+        except PermissionError as exc:
+            return ToolAuthorization(False, requires_approval, str(exc), action_class=action_class)
+        if mode == "disabled":
+            return ToolAuthorization(False, requires_approval, "Code execution is disabled.", action_class=action_class)
 
     if requires_approval and not approved:
-        return ToolAuthorization(False, True, "Tool requires explicit approval.")
-    return ToolAuthorization(True, requires_approval)
+        return ToolAuthorization(False, True, "Tool requires explicit approval.", action_class=action_class)
+    return ToolAuthorization(True, requires_approval, action_class=action_class)
 
 
 HARNESS_SYSTEM_PROMPT_TEMPLATE = """You are an autonomous Principal Software Engineer running inside HARNESS_AGENT_RUNTIME_V7 on Apple Silicon (24GB M5 Context-Engineered Harness).
@@ -11539,6 +11671,22 @@ async def _execute_harness_tool_inner(
     *,
     approved: bool = False,
 ) -> dict[str, Any]:
+    action_class = execution_spine.classify_action(tool_name, args if isinstance(args, dict) else None)
+    if execution_spine.is_consequential_action_class(action_class):
+        try:
+            execution_spine.require_active_admission(
+                expected_tool=tool_name,
+                expected_action_classes=frozenset({action_class}),
+            )
+        except execution_spine.DirectExecutorBypassError as exc:
+            return {
+                "ok": False,
+                "output": f"Denied: {exc}",
+                "diff": "",
+                "elapsed_ms": 0,
+                "bypass_denied": True,
+            }
+
     root = Path(sess["worktree_dir"]).resolve()
     policy = sess.get("policy") or "standard"
     if policy not in HARNESS_POLICIES:
@@ -11549,8 +11697,9 @@ async def _execute_harness_tool_inner(
     try:
         if tool_name in ("run_bash", "ctx_execute_python") and _execution_mode() == "disabled":
             return {"ok": False, "output": "Code execution is disabled. Configure STUDIO_EXECUTION_MODE=sandbox and a local Docker/Podman runtime, or explicitly opt in to unsandboxed host execution.", "diff": "", "elapsed_ms": 1}
+        norm_block = execution_spine.normalize_reusable_block_name(args.get("block") if isinstance(args, dict) else "")
         mutating_or_executing = tool_name in ("run_bash", "ctx_execute_python") or (
-            tool_name == "ctx_run_block" and str(args.get("block") or "") in ("test-summary", "first-error")
+            tool_name == "ctx_run_block" and norm_block in execution_spine.CONSEQUENTIAL_BLOCKS
         )
         if policy == "standard" and mutating_or_executing and not approved:
             return {"ok": False, "output": f"Denied: `{tool_name}` requires an explicit approval in standard policy.", "diff": "", "elapsed_ms": 1}
@@ -11953,9 +12102,9 @@ def _audit_tool_finish(event_id: int, result: dict[str, Any], elapsed_ms: int, *
 
 
 class _AppToolPolicy:
-    """Policy seam adapter (M5-P0-06): the inline authorization policy behind
-    ``execution_spine.Policy``. Kept in app.py because it reads app-level state;
-    the decision algorithm lives in ``authorize_tool_invocation``."""
+    """Policy seam adapter (M5-P0-06 / M5-P1-02): the inline authorization
+    policy behind ``execution_spine.Policy``. Kept in app.py because it reads
+    app-level state; the decision algorithm lives in ``authorize_tool_invocation``."""
 
     def effective_policy(self, requested: str) -> str:
         return _effective_harness_policy(requested, {})
@@ -11965,7 +12114,10 @@ class _AppToolPolicy:
     ) -> execution_spine.AdmissionDecision:
         decision = authorize_tool_invocation(tool_name, args, policy, approved=approved)
         return execution_spine.AdmissionDecision(
-            bool(decision.allowed), str(decision.reason or ""), bool(decision.requires_approval)
+            bool(decision.allowed),
+            str(decision.reason or ""),
+            bool(decision.requires_approval),
+            decision.action_class,
         )
 
 
@@ -11984,6 +12136,45 @@ class _AppActionLedger:
         _audit_tool_finish(event_id, result, elapsed_ms, status=status)
 
 
+class _AppTaskContextResolver:
+    """Authoritative task-lifecycle and lease-epoch resolver (M5-P1-02).
+
+    Enforces live session abort flags (``_HARNESS_ABORT_FLAGS``) as well as
+    durable ``runtime_tasks`` state and ``runtime_task_epochs`` lease-epoch
+    validation via ``runtime_persistence.RuntimePersistenceStore``.
+    """
+
+    def resolve_task_context(
+        self, request: execution_spine.ActionRequest
+    ) -> execution_spine.TaskAdmissionSnapshot | None:
+        if request.session_id and request.session_id in _HARNESS_ABORT_FLAGS:
+            return execution_spine.TaskAdmissionSnapshot(
+                task_id=request.task_id or request.session_id,
+                state="aborted",
+                current_epoch=0,
+            )
+        if request.task_id is None:
+            return None
+        clean_task_id = str(request.task_id).strip()
+        if not clean_task_id or not DB_PATH.exists():
+            return None
+        store = runtime_persistence.RuntimePersistenceStore(STORAGE, DB_PATH)
+        task = store.get_task(clean_task_id)
+        if task is None:
+            return None
+        lookup_epoch = request.epoch if request.epoch is not None else (task.current_epoch if task.current_epoch > 0 else None)
+        epoch_rec = store.get_epoch(clean_task_id, lookup_epoch) if (lookup_epoch is not None and lookup_epoch > 0) else None
+        lease_expired = bool(epoch_rec is not None and epoch_rec.lease_expires_at <= time.time())
+        return execution_spine.TaskAdmissionSnapshot(
+            task_id=task.task_id,
+            state=task.state,
+            current_epoch=task.current_epoch,
+            epoch_status=epoch_rec.status if epoch_rec is not None else None,
+            epoch_worker_id=epoch_rec.worker_id if epoch_rec is not None else None,
+            lease_expired=lease_expired,
+        )
+
+
 async def _run_authorized_tool(
     tool_name: str,
     args: dict[str, Any],
@@ -11994,18 +12185,26 @@ async def _run_authorized_tool(
     executor: Callable[[], Awaitable[dict[str, Any]]],
     denial_as_exception: bool = False,
     additional_denial: str | None = None,
+    action_class: execution_spine.ActionClass | None = None,
+    grant_source: str = "unspecified",
+    approval_id: str | None = None,
+    task_id: str | None = None,
+    task_state: str | None = None,
+    epoch: int | None = None,
+    worker_id: str | None = None,
 ) -> dict[str, Any]:
     """Authorize, durably audit, and then execute exactly one tool attempt.
 
     Thin adapter over the extracted execution-spine boundary
-    (``execution_spine.DurableActionBoundary``; see ADR-0002): the
-    authorize -> record-intent -> execute -> record-outcome algorithm and its
-    fail-closed guarantees live there and are pinned by
-    ``tests/test_execution_spine.py``."""
+    (``execution_spine.DurableActionBoundary``; see ADR-0002): action-class
+    separation, grant provenance, task-state/epoch fencing, policy evaluation,
+    durable intent/outcome auditing, and scoped anti-bypass admission tokens
+    are enforced there."""
     boundary = execution_spine.DurableActionBoundary(
         _AppToolPolicy(),
         _AppActionLedger(),
         pre_execute_guard=lambda: runtime_persistence.assert_no_active_write_transaction("tool_execution"),
+        task_context_resolver=_AppTaskContextResolver(),
     )
     return await boundary.admit_and_execute(
         execution_spine.ActionRequest(
@@ -12016,6 +12215,13 @@ async def _run_authorized_tool(
             session_id=session_id,
             additional_denial=additional_denial,
             denial_as_exception=denial_as_exception,
+            action_class=action_class,
+            grant_source=grant_source,
+            approval_id=approval_id,
+            task_id=task_id,
+            task_state=task_state,
+            epoch=epoch,
+            worker_id=worker_id,
         ),
         executor,
     )
@@ -12031,9 +12237,20 @@ async def execute_mcp_tool_call(
     policy: str = "standard",
     approved: bool = False,
     session_id: str = "mcp-direct",
+    grant_source: str = "unspecified",
+    approval_id: str | None = None,
+    task_id: str | None = None,
+    task_state: str | None = None,
+    epoch: int | None = None,
+    worker_id: str | None = None,
 ) -> dict[str, Any]:
     """Policy-checked and audited MCP entry point; direct denial preserves PermissionError behavior."""
     tool_name = f"mcp__{alias}__{remote_tool}"
+    effective_grant = (
+        grant_source
+        if grant_source != "unspecified"
+        else ("operator_one_call" if approved else "policy")
+    )
     return await _run_authorized_tool(
         tool_name,
         arguments,
@@ -12042,6 +12259,12 @@ async def execute_mcp_tool_call(
         session_id=session_id,
         executor=lambda: _execute_mcp_tool_call_inner(client, alias, remote_tool, arguments, cwd=cwd),
         denial_as_exception=True,
+        grant_source=effective_grant,
+        approval_id=approval_id,
+        task_id=task_id,
+        task_state=task_state,
+        epoch=epoch,
+        worker_id=worker_id,
     )
 
 
@@ -12053,9 +12276,29 @@ async def _execute_harness_tool(
     *,
     approved: bool = False,
     policy_denial: str | None = None,
+    grant_source: str = "unspecified",
+    approval_id: str | None = None,
+    task_id: str | None = None,
+    task_state: str | None = None,
+    epoch: int | None = None,
+    worker_id: str | None = None,
 ) -> dict[str, Any]:
     """Central policy and audit boundary for harness and Direct Chat tool calls."""
     policy = _effective_harness_policy(sess.get("policy"), {})
+    resolved_task_id = task_id if task_id is not None else (str(sess["task_id"]).strip() if sess.get("task_id") else None)
+    raw_status = str(task_state or sess.get("task_state") or sess.get("status") or "").strip().lower()
+    resolved_task_state = (
+        raw_status
+        if (resolved_task_id is None and raw_status and raw_status != "idle")
+        else task_state
+    )
+    resolved_epoch = epoch if epoch is not None else (int(sess["epoch"]) if sess.get("epoch") is not None else None)
+    resolved_worker_id = worker_id if worker_id is not None else (str(sess["worker_id"]).strip() if sess.get("worker_id") else None)
+    effective_grant = (
+        grant_source
+        if grant_source != "unspecified"
+        else ("operator_approval" if approved else "policy")
+    )
     return await _run_authorized_tool(
         tool_name,
         args,
@@ -12064,6 +12307,12 @@ async def _execute_harness_tool(
         session_id=str(sess.get("id") or "unknown"),
         executor=lambda: _execute_harness_tool_inner(client, sess, tool_name, args, approved=approved),
         additional_denial=policy_denial,
+        grant_source=effective_grant,
+        approval_id=approval_id,
+        task_id=resolved_task_id,
+        task_state=resolved_task_state,
+        epoch=resolved_epoch,
+        worker_id=resolved_worker_id,
     )
 
 
@@ -12576,7 +12825,9 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
 
                     # Central approval decision; the executor independently re-checks the same policy.
                     needs_approval = tool_requires_approval(t_name, t_args, policy)
-                    approved = True
+                    approved = False
+                    grant_source = "policy"
+                    approval_id: str | None = None
                     reject_note = ""
 
                     if needs_approval:
@@ -12586,14 +12837,24 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                             decision = await _await_tool_approval(pending)
                         finally:
                             _abandon_pending_tool_approval(pending)
-                        approved = decision["approved"]
+                        approved = bool(decision["approved"])
+                        grant_source = "operator_approval" if approved else "none"
+                        approval_id = str(pending["approval_id"]) if approved else None
                         reject_note = decision["note"]
                         yield _sse("approval_resolved", {"step": step_idx, **decision})
 
-                    res_obj = await _execute_harness_tool(client, sess_live, t_name, t_args, approved=approved)
-                    if not approved and reject_note:
+                    res_obj = await _execute_harness_tool(
+                        client,
+                        sess_live,
+                        t_name,
+                        t_args,
+                        approved=approved,
+                        grant_source=grant_source,
+                        approval_id=approval_id,
+                    )
+                    if needs_approval and not approved and reject_note:
                         res_obj["output"] += f" User rejection note: {reject_note}"
-                    if not approved:
+                    if needs_approval and not approved:
                         sandbox_meta: dict[str, Any] = {"sandboxed": False}
                     else:
                         compressed_out, sandbox_meta = sandbox_tool_output_if_large(
@@ -12788,7 +13049,7 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                         ),
                     },
                 ]
-                sess_exec = {**sess, "policy": policy}
+                sess_exec = {**sess, "policy": policy, "status": "running"}
                 for w2_step in range(1, max_exec_steps + 1):
                     if session_id in _HARNESS_ABORT_FLAGS:
                         break
@@ -12822,21 +13083,36 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                         break
                     feedback_blocks: list[str] = []
                     for tc_i, tc in enumerate(tcalls):
+                        if session_id in _HARNESS_ABORT_FLAGS:
+                            break
                         t_name, t_args = tc["name"], tc["arguments"]
                         yield _sse("tool_call", {"step": global_step, "index": tc_i, "tool": t_name, "args": t_args})
-                        approved = not tool_requires_approval(t_name, t_args, policy)
+                        needs_approval = tool_requires_approval(t_name, t_args, policy)
+                        approved = False
+                        grant_source = "policy"
+                        approval_id: str | None = None
                         reject_note = ""
-                        if not approved:
+                        if needs_approval:
                             pending = _create_pending_tool_approval(session_id, global_step, t_name, t_args)
                             try:
                                 yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")} | {"session_id": session_id})
                                 decision = await _await_tool_approval(pending)
                             finally:
                                 _abandon_pending_tool_approval(pending)
-                            approved, reject_note = decision["approved"], decision["note"]
+                            approved, reject_note = bool(decision["approved"]), decision["note"]
+                            grant_source = "operator_approval" if approved else "none"
+                            approval_id = str(pending["approval_id"]) if approved else None
                             yield _sse("approval_resolved", {"step": global_step, **decision})
-                        res_obj = await _execute_harness_tool(client, sess_exec, t_name, t_args, approved=approved)
-                        if not approved and reject_note:
+                        res_obj = await _execute_harness_tool(
+                            client,
+                            sess_exec,
+                            t_name,
+                            t_args,
+                            approved=approved,
+                            grant_source=grant_source,
+                            approval_id=approval_id,
+                        )
+                        if needs_approval and not approved and reject_note:
                             res_obj["output"] += f" User rejection note: {reject_note}"
                         comp_out, sb_meta = sandbox_tool_output_if_large(session_id, t_name, res_obj["output"], context_mode_enabled=True)
                         res_obj["output"] = comp_out
@@ -12947,7 +13223,17 @@ def _ensure_sdlc_dir(wt_dir: Path) -> Path:
     return sdlc_dir
 
 
-async def _fetch_online_inspiration(client: httpx.AsyncClient, query: str, cwd: Path) -> str:
+async def _fetch_online_inspiration(
+    client: httpx.AsyncClient,
+    query: str,
+    cwd: Path,
+    *,
+    policy: str = "standard",
+    session_id: str = "inspiration",
+    task_id: str | None = None,
+    epoch: int | None = None,
+    worker_id: str | None = None,
+) -> str:
     """
     Gather live online & design-system inspiration for Research / Feedback Brainstorming:
       1. Enabled Search MCP servers (`exa`, `tavily`, `deepwiki`, `context7`) if configured,
@@ -12968,7 +13254,20 @@ async def _fetch_online_inspiration(client: httpx.AsyncClient, query: str, cwd: 
                 tools = srv.get("tools") or []
                 if tools:
                     t_first = tools[0]["name"]
-                    mcp_res = await execute_mcp_tool_call(client, alias, t_first, {"query": q_clean}, cwd=cwd)
+                    mcp_res = await execute_mcp_tool_call(
+                        client,
+                        alias,
+                        t_first,
+                        {"query": q_clean},
+                        cwd=cwd,
+                        policy=policy,
+                        approved=False,
+                        session_id=session_id,
+                        grant_source="policy",
+                        task_id=task_id,
+                        epoch=epoch,
+                        worker_id=worker_id,
+                    )
                     if mcp_res.get("ok") and mcp_res.get("output"):
                         sections.append(f"#### Live MCP Search (`{alias}::{t_first}`)\n{mcp_res['output'][:1400]}")
                         break
@@ -13018,12 +13317,11 @@ async def _fetch_online_inspiration(client: httpx.AsyncClient, query: str, cwd: 
         pass
 
     # 4. Local `ui-ux-pro-max` BM25 Design System Intelligence (if installed in `.agents/skills`)
-    # M5-P0-03: downloaded skill code is untrusted — it now requires the
-    # STUDIO_ALLOW_SKILL_CODE opt-in and runs only inside the configured
-    # execution boundary (_run_skill_script). Previously this path executed the
-    # script whenever the file existed, bypassing the sandbox boundary.
+    # M5-P0-03 / M5-P1-02: downloaded skill code is untrusted — it routes through
+    # _run_skill_script -> DurableActionBoundary, requiring STUDIO_ALLOW_SKILL_CODE=1
+    # and a live execution mode without any silent host fallback.
     ux_script = BASE_DIR / ".agents" / "skills" / "ui-ux-pro-max" / "scripts" / "search.py"
-    if ux_script.is_file() and STUDIO_ALLOW_SKILL_CODE:
+    if ux_script.is_file():
         try:
             ux_txt = (
                 await _run_skill_script(
@@ -13031,6 +13329,11 @@ async def _fetch_online_inspiration(client: httpx.AsyncClient, query: str, cwd: 
                     [q_clean[:80], "--domain", "ux", "-n", "3"],
                     cwd=ux_script.parent.parent,
                     timeout=5.0,
+                    policy=policy,
+                    session_id=session_id,
+                    task_id=task_id,
+                    epoch=epoch,
+                    worker_id=worker_id,
                 )
             ).strip()
             if ux_txt:
@@ -13306,6 +13609,7 @@ async def _run_sdlc_sprints_stream(
             sess_live = get_harness_session_db(session_id)
             # Use the effective workflow policy at the last execution boundary, even for an existing session.
             sess_live["policy"] = policy
+            sess_live["status"] = "running"
             for st_i in range(1, max_steps_per_story + 1):
                 if session_id in _HARNESS_ABORT_FLAGS:
                     break
@@ -13329,6 +13633,8 @@ async def _run_sdlc_sprints_stream(
                     break
                 fb_blocks: list[str] = []
                 for tc_i, tc in enumerate(t_calls[:6]):
+                    if session_id in _HARNESS_ABORT_FLAGS:
+                        break
                     tn, ta = tc["name"], tc["arguments"]
                     res_obj: dict[str, Any]
                     # Hard guard: prevent coding worker from self-editing `.sdlc/backlog.json`
@@ -13340,22 +13646,36 @@ async def _run_sdlc_sprints_stream(
                             ta,
                             approved=False,
                             policy_denial="Blocked by Default-FAIL Contract: Coding worker cannot edit `.sdlc/backlog.json`.",
+                            grant_source="none",
                         )
                         sb_meta: dict[str, Any] = {"sandboxed": False}
                     else:
-                        approved = not tool_requires_approval(tn, ta, policy)
+                        needs_approval = tool_requires_approval(tn, ta, policy)
+                        approved = False
+                        grant_source = "policy"
+                        approval_id: str | None = None
                         reject_note = ""
-                        if not approved:
+                        if needs_approval:
                             pending = _create_pending_tool_approval(session_id, cur_step, tn, ta)
                             try:
                                 yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")} | {"session_id": session_id})
                                 decision = await _await_tool_approval(pending)
                             finally:
                                 _abandon_pending_tool_approval(pending)
-                            approved, reject_note = decision["approved"], decision["note"]
+                            approved, reject_note = bool(decision["approved"]), decision["note"]
+                            grant_source = "operator_approval" if approved else "none"
+                            approval_id = str(pending["approval_id"]) if approved else None
                             yield _sse("approval_resolved", {"step": cur_step, **decision})
-                        res_obj = await _execute_harness_tool(client, sess_live, tn, ta, approved=approved)
-                        if not approved and reject_note:
+                        res_obj = await _execute_harness_tool(
+                            client,
+                            sess_live,
+                            tn,
+                            ta,
+                            approved=approved,
+                            grant_source=grant_source,
+                            approval_id=approval_id,
+                        )
+                        if needs_approval and not approved and reject_note:
                             res_obj["output"] += f" User rejection note: {reject_note}"
                         comp_out, sb_meta = sandbox_tool_output_if_large(session_id, tn, res_obj["output"], context_mode_enabled=context_mode)
                         res_obj["output"] = comp_out
@@ -13372,8 +13692,11 @@ async def _run_sdlc_sprints_stream(
                 v_out_txt = "(not executed: plan policy is read-only)"
             elif v_cmd:
                 verification_args = {"command": v_cmd, "timeout_sec": 30}
-                approved = not tool_requires_approval("run_bash", verification_args, policy)
-                if not approved:
+                v_needs_approval = tool_requires_approval("run_bash", verification_args, policy)
+                approved = False
+                v_grant_source = "policy"
+                v_approval_id: str | None = None
+                if v_needs_approval:
                     verification_step = int(get_harness_session_db(session_id)["step_count"]) + 1
                     pending = _create_pending_tool_approval(session_id, verification_step, "run_bash", verification_args)
                     try:
@@ -13381,7 +13704,9 @@ async def _run_sdlc_sprints_stream(
                         decision = await _await_tool_approval(pending)
                     finally:
                         _abandon_pending_tool_approval(pending)
-                    approved = decision["approved"]
+                    approved = bool(decision["approved"])
+                    v_grant_source = "operator_approval" if approved else "none"
+                    v_approval_id = str(pending["approval_id"]) if approved else None
                     yield _sse("approval_resolved", {"step": verification_step, **decision})
                 vres = await _execute_harness_tool(
                     client,
@@ -13389,7 +13714,9 @@ async def _run_sdlc_sprints_stream(
                     "run_bash",
                     verification_args,
                     approved=approved,
-                    policy_denial=None if approved else "Verification command was not approved; story cannot pass.",
+                    policy_denial="Verification command was not approved; story cannot pass." if (v_needs_approval and not approved) else None,
+                    grant_source=v_grant_source,
+                    approval_id=v_approval_id,
                 )
                 verification_ok = bool(vres.get("ok"))
                 v_out_txt = f"[ok={verification_ok}]\n{vres.get('output', '')[:1500]}"
@@ -13862,6 +14189,13 @@ async def _mcp_summon_model(session_id: str, model: str, role_key: str) -> str:
 
 async def _dispatch_mcp_stdio_tool(tname: str, args: dict[str, Any], default_agent_name: str) -> dict[str, Any]:
     """Execute one explicitly registered inbound MCP bridge tool after central authorization."""
+    bridge_tool_name = f"mcp_bridge__{tname}"
+    bridge_class = execution_spine.classify_action(bridge_tool_name, args if isinstance(args, dict) else None)
+    if execution_spine.is_consequential_action_class(bridge_class):
+        execution_spine.require_active_admission(
+            expected_tool=bridge_tool_name,
+            expected_action_classes=frozenset({bridge_class}),
+        )
     t0 = time.perf_counter()
     if not isinstance(args, dict):
         raise ValueError("MCP tool arguments must be a JSON object.")
@@ -13923,16 +14257,29 @@ async def _execute_mcp_stdio_tool(
     args: dict[str, Any],
     default_agent_name: str,
     *,
+    policy: str = "standard",
+    approved: bool = True,
+    session_id: str = "mcp-stdio-bridge",
+    grant_source: str = "operator_one_call",
     additional_denial: str | None = None,
+    task_id: str | None = None,
+    task_state: str | None = None,
+    epoch: int | None = None,
+    worker_id: str | None = None,
 ) -> dict[str, Any]:
     return await _run_authorized_tool(
         f"mcp_bridge__{tname}",
         args,
-        "standard",
-        approved=True,  # An inbound tools/call request is an explicit one-call request on the opted-in stdio bridge.
-        session_id="mcp-stdio-bridge",
+        policy,
+        approved=approved,  # An inbound tools/call request is an explicit one-call request on the opted-in stdio bridge.
+        session_id=session_id,
         executor=lambda: _dispatch_mcp_stdio_tool(tname, args, default_agent_name),
         additional_denial=additional_denial,
+        grant_source=grant_source,
+        task_id=task_id,
+        task_state=task_state,
+        epoch=epoch,
+        worker_id=worker_id,
     )
 
 
@@ -16642,37 +16989,176 @@ def build_report(inputs: PreflightInputs) -> PreflightReport:
         notes.append("The local runtime URL did not answer the model listing request.")
     return PreflightReport(steps=steps, notes=tuple(notes))
 
-"""Narrow execution-spine seams: policy, durable action ledger, admission (M5-P0-06).
+"""Authoritative execution-spine admission gate, action classes, and anti-bypass scope (M5-P0-06 / M5-P1-02).
 
-The M5 2.0 execution spine needs auditable boundaries between the runtime and
-its persistence, policy, and action-admission machinery, without a monolith
-rewrite. This module defines those narrow interfaces (Protocols) plus the
-default composition used by the served application:
+This stdlib-only module defines the authoritative admission boundary between the
+runtime and every consequential tool, skill script, smart block, and MCP
+operation:
 
-- ``Policy`` -- authorization decision for one tool invocation;
+- ``ActionClass`` / ``classify_action`` -- deterministic separation between
+  managed reads (``read_only``) and consequential effects (``managed_edit``,
+  ``consequential``, ``external``);
+- ``TaskAdmissionSnapshot`` / ``TaskContextResolver`` -- authoritative task
+  lifecycle state and lease-epoch fencing checks;
+- ``Policy`` -- deny-by-default authorization decision for one invocation;
 - ``ActionLedger`` -- durable intent (start) before execution and durable
   outcome (finish) after;
-- ``DurableActionBoundary`` -- authorize -> record intent -> execute ->
-  record outcome, with the fail-closed guarantees pinned by
-  ``tests/test_execution_spine.py``.
+- ``ActiveAdmissionScope`` / ``require_active_admission`` -- unforgeable
+  ``ContextVar`` capability token minted exclusively inside
+  ``DurableActionBoundary.admit_and_execute`` so direct inner-executor bypass
+  fails closed at runtime;
+- ``DurableActionBoundary`` -- classify -> check grant provenance -> check task
+  state & epoch -> authorize policy -> durably record intent -> execute inside
+  scoped admission token -> durably record outcome.
 
-``app.py`` wires its existing inline policy (``authorize_tool_invocation``)
-and audit tables (``_audit_tool_start`` / ``_audit_tool_finish``) behind these
-interfaces at the first critical entry point (``_run_authorized_tool``, which
-gates harness tool calls and MCP tool calls alike). Coverage is deliberately
-partial: the maintained inventory of entry points that do NOT yet cross these
-boundaries lives in ``docs/m5-2-0-bypass-inventory.md``. This extraction is
-not intended to change behavior.
-
-This module is stdlib-only and is inlined into the standalone artifact by
-``scripts/build_studio.py`` (``INLINED_MODULES``); keep its imports to the
-standard library and free of references to ``app``.
+This module is inlined into the standalone artifact by
+``scripts/build_studio.py`` (``INLINED_MODULES``); keep its imports strictly to
+the Python standard library and free of references to ``app``.
 """
 
+import contextvars
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
+
+ActionClass = Literal["read_only", "managed_edit", "consequential", "external"]
+
+ACTION_CLASSES: frozenset[str] = frozenset({"read_only", "managed_edit", "consequential", "external"})
+CONSEQUENTIAL_ACTION_CLASSES: frozenset[str] = frozenset({"managed_edit", "consequential", "external"})
+
+MANAGED_READ_TOOLS: frozenset[str] = frozenset(
+    {
+        "list_files",
+        "grep_search",
+        "read_file",
+        "codegraph_architecture",
+        "codegraph_context",
+        "codegraph_impact",
+        "codegraph_path",
+        "codegraph_quality",
+        "oc_lint",
+        "ctx_search",
+        "oc_search",
+        "oc_read",
+        "mcp_bridge__get_current_session_data",
+        "mcp_bridge__get_harness_diff",
+        "mcp_bridge__oc_search",
+        "mcp_bridge__oc_lint",
+        "mcp_bridge__codegraph_query",
+    }
+)
+
+MANAGED_READ_BLOCKS: frozenset[str] = frozenset({"json-peek", "csv-peek", "shortcut-debt"})
+CONSEQUENTIAL_BLOCKS: frozenset[str] = frozenset({"test-summary", "first-error"})
+ALL_REUSABLE_BLOCKS: frozenset[str] = MANAGED_READ_BLOCKS | CONSEQUENTIAL_BLOCKS
+
+MANAGED_EDIT_TOOLS: frozenset[str] = frozenset({"write_file", "edit_file", "oc_save_doc"})
+
+CONSEQUENTIAL_TOOLS: frozenset[str] = frozenset(
+    {
+        "run_bash",
+        "ctx_execute_python",
+        "delegate_subagent",
+        "skill_execute_script",
+        "mcp_bridge__start_council",
+        "mcp_bridge__send_response",
+        "mcp_bridge__summon_omlx_agent",
+        "mcp_bridge__close_council",
+        "mcp_bridge__create_harness_worktree",
+        "mcp_bridge__oc_save_doc",
+    }
+)
+
+GRANT_SOURCES: frozenset[str] = frozenset(
+    {
+        "unspecified",
+        "none",
+        "policy",
+        "operator_approval",
+        "operator_one_call",
+        "skill_opt_in",
+        "model_output",
+    }
+)
+
+# Grant sources permitted to carry an explicit one-call or human approval (`approved=True`).
+# `"unspecified"` preserves compatibility for narrow contract callers that supply
+# `ActionRequest(..., approved=True)` directly; `"model_output"`, `"none"`, and `"policy"`
+# can never confer an explicit approval grant.
+EXPLICIT_APPROVAL_GRANT_SOURCES: frozenset[str] = frozenset(
+    {"unspecified", "operator_approval", "operator_one_call", "skill_opt_in"}
+)
+
+# Keys inside model-emitted tool arguments that are untrusted data and are never
+# consulted by admission, grant, policy, task-state, or epoch checks.
+MODEL_UNTRUSTED_AUTHORITY_KEYS: frozenset[str] = frozenset(
+    {
+        "approved",
+        "user_approved",
+        "auto_approve",
+        "grant",
+        "grant_source",
+        "approval_id",
+        "policy",
+        "harness_policy",
+        "action_class",
+        "task_id",
+        "task_state",
+        "epoch",
+        "current_epoch",
+        "worker_id",
+        "bypass_admission",
+    }
+)
+
+ADMISSIBLE_CONSEQUENTIAL_TASK_STATES: frozenset[str] = frozenset({"running"})
+ADMISSIBLE_MANAGED_READ_TASK_STATES: frozenset[str] = frozenset(
+    {"running", "waiting_approval", "awaiting_approval"}
+)
+
+
+class DirectExecutorBypassError(PermissionError):
+    """Raised when an inner consequential executor is called outside DurableActionBoundary."""
+
+
+def normalize_reusable_block_name(raw_block: Any) -> str:
+    """Normalize a smart-block selector so case/whitespace never bypasses policy."""
+    return str(raw_block or "").strip().lower()
+
+
+def classify_action(tool_name: str, args: Mapping[str, Any] | None = None) -> ActionClass:
+    """Deterministically classify an action into managed read vs consequential effect.
+
+    Unknown or malformed tool names always classify as ``"consequential"`` (never
+    ``"read_only"``) so unregistered operations fail closed under consequential
+    scrutiny. Model-supplied metadata inside ``args`` (such as ``args["action_class"]``)
+    is ignored; only structural dispatch selectors are inspected.
+    """
+    clean = str(tool_name or "").strip()
+    if not clean:
+        return "consequential"
+    if clean == "ctx_run_block":
+        block = normalize_reusable_block_name(args.get("block") if isinstance(args, Mapping) else "")
+        if block in MANAGED_READ_BLOCKS:
+            return "read_only"
+        return "consequential"
+    if clean in MANAGED_READ_TOOLS:
+        return "read_only"
+    if clean in MANAGED_EDIT_TOOLS:
+        return "managed_edit"
+    if clean.startswith("mcp__"):
+        return "external"
+    if clean in CONSEQUENTIAL_TOOLS:
+        return "consequential"
+    return "consequential"
+
+
+def is_consequential_action_class(action_class: str) -> bool:
+    """Return True for every non-read-only (or unrecognized) action class."""
+    if action_class not in ACTION_CLASSES:
+        return True
+    return action_class != "read_only"
 
 
 @dataclass(frozen=True, slots=True)
@@ -16682,11 +17168,28 @@ class AdmissionDecision:
     allowed: bool
     reason: str = ""
     requires_approval: bool = False
+    action_class: ActionClass = "consequential"
+
+    @property
+    def is_consequential(self) -> bool:
+        return is_consequential_action_class(self.action_class)
+
+
+@dataclass(frozen=True, slots=True)
+class TaskAdmissionSnapshot:
+    """Authoritative server-side snapshot of task lifecycle state and lease epoch."""
+
+    task_id: str
+    state: str
+    current_epoch: int = 0
+    epoch_status: str | None = None
+    epoch_worker_id: str | None = None
+    lease_expired: bool = False
 
 
 @dataclass(frozen=True, slots=True)
 class ActionRequest:
-    """One consequential action submitted to the admission boundary."""
+    """One action submitted to the authoritative admission boundary."""
 
     tool_name: str
     args: dict[str, Any]
@@ -16695,6 +17198,69 @@ class ActionRequest:
     session_id: str
     additional_denial: str | None = None
     denial_as_exception: bool = False
+    action_class: ActionClass | None = None
+    grant_source: str = "unspecified"
+    approval_id: str | None = None
+    task_id: str | None = None
+    task_state: str | None = None
+    epoch: int | None = None
+    worker_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ActiveAdmissionScope:
+    """Unforgeable capability scope active only while an admitted executor runs."""
+
+    tool_name: str
+    action_class: ActionClass
+    policy: str
+    session_id: str
+    event_id: int
+    grant_source: str
+    task_id: str | None = None
+    epoch: int | None = None
+
+
+_ACTIVE_ADMISSION_SCOPE: contextvars.ContextVar[ActiveAdmissionScope | None] = contextvars.ContextVar(
+    "m5_active_admission_scope",
+    default=None,
+)
+
+
+def current_admission_scope() -> ActiveAdmissionScope | None:
+    """Return the active admission scope for the current async/call context, if any."""
+    return _ACTIVE_ADMISSION_SCOPE.get()
+
+
+def require_active_admission(
+    *,
+    expected_tool: str | None = None,
+    expected_action_classes: frozenset[str] | set[str] | None = None,
+) -> ActiveAdmissionScope:
+    """Assert that execution is inside an admitted ``DurableActionBoundary`` scope.
+
+    Raises ``DirectExecutorBypassError`` (a ``PermissionError`` subclass) when
+    an inner consequential executor is called directly without crossing the
+    admission gate, or when an admitted lower-privilege scope attempts to
+    invoke an executor of another action class or tool identity.
+    """
+    scope = _ACTIVE_ADMISSION_SCOPE.get()
+    if scope is None:
+        target = f" for `{expected_tool}`" if expected_tool else ""
+        raise DirectExecutorBypassError(
+            f"Direct executor bypass blocked{target}: consequential execution must cross DurableActionBoundary."
+        )
+    if expected_tool is not None and scope.tool_name != expected_tool:
+        raise DirectExecutorBypassError(
+            f"Direct executor bypass blocked: active admission for `{scope.tool_name}` cannot execute `{expected_tool}`."
+        )
+    if expected_action_classes is not None and scope.action_class not in expected_action_classes:
+        allowed_str = ", ".join(sorted(expected_action_classes))
+        raise DirectExecutorBypassError(
+            f"Direct executor bypass blocked: active admission class `{scope.action_class}` "
+            f"for `{scope.tool_name}` is not permitted for `{allowed_str}` executor."
+        )
+    return scope
 
 
 class Policy(Protocol):
@@ -16727,25 +17293,173 @@ class ActionLedger(Protocol):
         ...
 
 
+class TaskContextResolver(Protocol):
+    """Authoritative resolver for task lifecycle state and lease-epoch metadata."""
+
+    def resolve_task_context(self, request: ActionRequest) -> TaskAdmissionSnapshot | None:
+        """Return the authoritative snapshot for ``request``, or ``None`` if unbound/missing."""
+        ...
+
+
 Executor = Callable[[], Awaitable[dict[str, Any]]]
+
+
+def _validate_grant_and_action_class(
+    request: ActionRequest,
+) -> tuple[ActionClass, bool, str | None]:
+    """Validate action class and grant provenance; return ``(action_class, effective_approved, denial_reason)``."""
+    inferred_class = classify_action(request.tool_name, request.args)
+    resolved_class: ActionClass = inferred_class
+    if request.action_class is not None:
+        if request.action_class not in ACTION_CLASSES:
+            return (
+                "consequential",
+                False,
+                f"Unrecognized action class `{request.action_class}`; invocation denied.",
+            )
+        if is_consequential_action_class(inferred_class) and request.action_class == "read_only":
+            return (
+                inferred_class,
+                False,
+                f"Action class downgrade from `{inferred_class}` to `read_only` for `{request.tool_name}` is forbidden.",
+            )
+        resolved_class = request.action_class
+
+    grant_source = str(request.grant_source or "").strip() or "unspecified"
+    if grant_source not in GRANT_SOURCES:
+        return (
+            resolved_class,
+            False,
+            f"Unrecognized grant provenance `{grant_source}`; invocation denied.",
+        )
+    if grant_source == "model_output":
+        if request.approved:
+            return (
+                resolved_class,
+                False,
+                "Permission or approval cannot be inferred from model output.",
+            )
+        effective_approved = False
+    elif request.approved and grant_source not in EXPLICIT_APPROVAL_GRANT_SOURCES:
+        return (
+            resolved_class,
+            False,
+            f"Explicit approval cannot originate from grant source `{grant_source}`.",
+        )
+    else:
+        effective_approved = bool(request.approved)
+
+    if request.tool_name == "skill_execute_script" and grant_source != "skill_opt_in":
+        return (
+            resolved_class,
+            False,
+            "Skill script execution requires server `skill_opt_in` provenance and cannot be invoked by model tool calls.",
+        )
+
+    return resolved_class, effective_approved, None
+
+
+def _validate_task_state_and_epoch(
+    request: ActionRequest,
+    action_class: ActionClass,
+    snapshot: TaskAdmissionSnapshot | None,
+) -> str | None:
+    """Validate task lifecycle state and durable epoch fencing; return denial reason or ``None``."""
+    if request.task_id is not None and snapshot is None:
+        return f"Authoritative task `{request.task_id}` does not exist."
+
+    if snapshot is None:
+        if request.epoch is not None:
+            return "Task epoch supplied without an authoritative task context."
+        if request.task_state is not None:
+            snapshot = TaskAdmissionSnapshot(
+                task_id=request.session_id or "transient",
+                state=request.task_state,
+                current_epoch=0,
+            )
+        else:
+            return None
+
+    normalized_state = str(snapshot.state or "").strip().lower()
+    if not normalized_state:
+        return f"Task `{snapshot.task_id}` has an empty or invalid lifecycle state."
+
+    if is_consequential_action_class(action_class):
+        if normalized_state not in ADMISSIBLE_CONSEQUENTIAL_TASK_STATES:
+            return (
+                f"Consequential `{action_class}` action `{request.tool_name}` requires task state "
+                f"`running` (current state: `{normalized_state}`)."
+            )
+    else:
+        if normalized_state not in ADMISSIBLE_MANAGED_READ_TASK_STATES:
+            return (
+                f"Managed read `{request.tool_name}` is not permitted when task `{snapshot.task_id}` "
+                f"is in state `{normalized_state}`."
+            )
+
+    if request.epoch is not None and request.epoch <= 0:
+        return f"Invalid non-positive task epoch `{request.epoch}`."
+    if snapshot.current_epoch < 0:
+        return f"Task `{snapshot.task_id}` has invalid negative epoch `{snapshot.current_epoch}`."
+
+    if snapshot.current_epoch > 0:
+        if request.epoch is None:
+            return (
+                f"Missing required task epoch for task `{snapshot.task_id}` "
+                f"(current epoch: {snapshot.current_epoch})."
+            )
+        if request.epoch != snapshot.current_epoch:
+            return (
+                f"Stale or mismatched task epoch {request.epoch} for task `{snapshot.task_id}` "
+                f"(current epoch: {snapshot.current_epoch})."
+            )
+        if snapshot.epoch_status != "active":
+            return (
+                f"Task `{snapshot.task_id}` epoch {request.epoch} is not active "
+                f"(status: `{snapshot.epoch_status or 'missing'}`)."
+            )
+        if snapshot.lease_expired:
+            return f"Task `{snapshot.task_id}` epoch {request.epoch} lease has expired."
+        if (
+            request.worker_id is not None
+            and snapshot.epoch_worker_id is not None
+            and request.worker_id != snapshot.epoch_worker_id
+        ):
+            return (
+                f"Worker `{request.worker_id}` does not own task `{snapshot.task_id}` epoch "
+                f"{request.epoch} (owned by `{snapshot.epoch_worker_id}`)."
+            )
+    elif request.epoch is not None:
+        return (
+            f"Unexpected task epoch {request.epoch} supplied for task `{snapshot.task_id}` "
+            "with no active epoch."
+        )
+
+    return None
 
 
 class DurableActionBoundary:
     """Authorize -> durably record intent -> execute -> durably record outcome.
 
-    Guarantees pinned by ``tests/test_execution_spine.py``:
+    Guarantees pinned by ``tests/test_execution_spine.py`` and
+    ``tests/test_action_admission_gate.py``:
 
-    1. Policy-evaluation errors deny (fail closed); they never authorize.
-    2. An action whose intent record cannot be persisted is never executed.
-    3. Denials and failures are recorded durably when the ledger allows; a
+    1. Action classification deterministically separates managed reads
+       (``read_only``) from consequential effects (``managed_edit``,
+       ``consequential``, ``external``) and forbids class downgrades.
+    2. Grant provenance, task lifecycle state, durable epoch fencing, and policy
+       errors all fail closed; no permission is ever inferred from model text
+       or untrusted tool arguments.
+    3. An action whose intent record cannot be persisted is never executed.
+    4. Denials and failures are recorded durably when the ledger allows; a
        ledger failure while finalizing surfaces as an ``audit_warning`` on the
        result instead of silently dropping the record, and the durable
        ``started`` row still proves the attempt.
-    4. Executor exceptions re-raise only after the durable attempt record
+    5. Executor exceptions re-raise only after the durable attempt record
        exists (a failed finalization is swallowed for the failure path only).
-    5. No permission is inferred from caller or model text: approval is an
-       explicit boolean resolved against the policy decision.
-    6. Optional ``pre_execute_guard`` (e.g. asserting no active SQLite write
+    6. Execution runs inside a ``ContextVar`` ``ActiveAdmissionScope`` so inner
+       executors enforce ``require_active_admission`` and reject direct bypass.
+    7. Optional ``pre_execute_guard`` (e.g. asserting no active SQLite write
        transaction spans tool dispatch, M5-P1-01) fails closed before
        ``executor`` runs, finalizing the attempt as ``failed`` and re-raising.
     """
@@ -16756,23 +17470,70 @@ class DurableActionBoundary:
         ledger: ActionLedger,
         *,
         pre_execute_guard: Callable[[], None] | None = None,
+        task_context_resolver: TaskContextResolver | None = None,
     ) -> None:
         self._policy = policy
         self._ledger = ledger
         self._pre_execute_guard = pre_execute_guard
+        self._task_context_resolver = task_context_resolver
 
     async def admit_and_execute(self, request: ActionRequest, executor: Executor) -> dict[str, Any]:
         effective = self._policy.effective_policy(request.policy)
-        try:
-            decision = self._policy.authorize(
-                request.tool_name, request.args, effective, approved=request.approved
-            )
-        except Exception:
-            # Policy evaluation errors are not permission to execute.
-            decision = AdmissionDecision(False, "Authorization policy evaluation failed; invocation denied.")
+        action_class, effective_approved, pre_denial = _validate_grant_and_action_class(request)
+
+        task_denial: str | None = None
+        if pre_denial is None:
+            snapshot: TaskAdmissionSnapshot | None = None
+            if self._task_context_resolver is not None:
+                try:
+                    snapshot = self._task_context_resolver.resolve_task_context(request)
+                except Exception:
+                    task_denial = "Task lifecycle context resolution failed; invocation denied."
+            elif request.task_id is not None and request.task_state is not None:
+                snapshot = TaskAdmissionSnapshot(
+                    task_id=request.task_id,
+                    state=request.task_state,
+                    current_epoch=request.epoch or 0,
+                    epoch_status="active" if request.epoch else None,
+                    epoch_worker_id=request.worker_id,
+                    lease_expired=False,
+                )
+            if task_denial is None:
+                task_denial = _validate_task_state_and_epoch(request, action_class, snapshot)
+
+        if pre_denial is not None:
+            decision = AdmissionDecision(False, pre_denial, False, action_class)
+        elif task_denial is not None:
+            decision = AdmissionDecision(False, task_denial, False, action_class)
+        else:
+            try:
+                raw_decision = self._policy.authorize(
+                    request.tool_name, request.args, effective, approved=effective_approved
+                )
+                decision = AdmissionDecision(
+                    bool(raw_decision.allowed),
+                    str(raw_decision.reason or ""),
+                    bool(raw_decision.requires_approval),
+                    action_class,
+                )
+            except Exception:
+                # Policy evaluation errors are not permission to execute.
+                decision = AdmissionDecision(
+                    False,
+                    "Authorization policy evaluation failed; invocation denied.",
+                    False,
+                    action_class,
+                )
+
         if request.additional_denial:
-            decision = AdmissionDecision(False, request.additional_denial)
-        explicit_approval = bool(request.approved and decision.requires_approval)
+            decision = AdmissionDecision(
+                False,
+                request.additional_denial,
+                False,
+                action_class,
+            )
+
+        explicit_approval = bool(effective_approved and decision.requires_approval)
         event_id = self._ledger.start(
             request.session_id, request.tool_name, effective, explicit_approval, request.args
         )
@@ -16783,6 +17544,7 @@ class DurableActionBoundary:
                 "output": f"Denied: {decision.reason}",
                 "diff": "",
                 "elapsed_ms": 1,
+                "action_class": action_class,
             }
             try:
                 self._ledger.finish(event_id, result, 1, status="denied")
@@ -16791,10 +17553,25 @@ class DurableActionBoundary:
             if request.denial_as_exception:
                 raise PermissionError(result["output"])
             return result
+
+        scope = ActiveAdmissionScope(
+            tool_name=request.tool_name,
+            action_class=action_class,
+            policy=effective,
+            session_id=request.session_id,
+            event_id=event_id,
+            grant_source=str(request.grant_source or "unspecified"),
+            task_id=request.task_id,
+            epoch=request.epoch,
+        )
         try:
             if self._pre_execute_guard is not None:
                 self._pre_execute_guard()
-            result = await executor()
+            scope_token = _ACTIVE_ADMISSION_SCOPE.set(scope)
+            try:
+                result = await executor()
+            finally:
+                _ACTIVE_ADMISSION_SCOPE.reset(scope_token)
         except Exception as exc:
             failure: dict[str, Any] = {
                 "ok": False,

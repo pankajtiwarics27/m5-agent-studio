@@ -48,31 +48,39 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
   the entry point; override with `STUDIO_DB_PATH` (`app.py` L269).
 - **The frontend is a single-file vanilla JS UI** (`static/index.html`,
   4,228 lines; no framework build step).
-- **Tool calls go through a central authorize → audit → execute boundary**
-  (`_run_authorized_tool` delegates to `execution_spine.DurableActionBoundary`)
-  with durable `tool_audit_events` rows, a pre-execute write-transaction guard,
-  and fail-closed policy evaluation.
+- **Tool, skill, smart-block, and MCP operations cross an authoritative action
+  admission gate** (`_run_authorized_tool` delegates to
+  `execution_spine.DurableActionBoundary`, tightened in `M5-P1-02`) with
+  deterministic action classes (`read_only` vs `managed_edit`, `consequential`,
+  `external`), grant provenance (no permission inferred from model output),
+  authoritative `runtime_tasks` state and `runtime_task_epochs` lease-epoch
+  checks, durable `tool_audit_events` rows, a pre-execute write-transaction
+  guard, and scoped `require_active_admission` anti-bypass enforcement on inner
+  executors (`tests/test_action_admission_gate.py`).
 - **The execution boundary is extracted and its coverage is inventoried
-  (ADR-0002, since `M5-P0-06`):** `execution_spine.py` is a stdlib-only seam
-  (policy → intent record → execute → outcome record) with 11 contract tests
-  (`tests/test_execution_spine.py`). Coverage is **partial** —
+  (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`):** `execution_spine.py`
+  is a stdlib-only seam (classify → grant/task/epoch check → policy → intent
+  record → scoped execute → outcome record) with 15 spine contract tests
+  (`tests/test_execution_spine.py`) and 10 admission-gate regression tests
+  (`tests/test_action_admission_gate.py`). Coverage is **partial** —
   [`docs/m5-2-0-bypass-inventory.md`](docs/m5-2-0-bypass-inventory.md) is the
   maintained inventory of which entry points are outside the boundary; no
   complete security guarantee is claimed.
-- **Skill-code execution is deny-by-default and boundary-routed** (since
-  `M5-P0-03`): skill scripts run only with `STUDIO_ALLOW_SKILL_CODE=1` and a
-  live execution mode, through the same execution boundary as tool code —
-  pinned by 9 regression tests
-  (`tests/test_skill_execution_containment.py`).
+- **Skill-code execution is deny-by-default and admission-routed** (since
+  `M5-P0-03`, wired into `DurableActionBoundary` in `M5-P1-02`): skill scripts
+  run only with `STUDIO_ALLOW_SKILL_CODE=1`, non-`plan` policy, and a live
+  execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
+  pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
+  plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
 - **7 of 44 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`, `execution_spine` since `M5-P0-06`, and
   `runtime_persistence` since `M5-P1-01`; 5 of 42 at the time of the audit
-  table). Note that while `runtime_persistence` governs schema upgrades and
-  all SQLite transactions in `app.py`, its `RuntimePersistenceStore`
-  (`runtime_tasks` / `runtime_task_epochs` / `runtime_task_transitions` /
-  `runtime_actions`) is not yet wired into live task orchestration (`M5-P1-02`–
-  `M5-P1-05`). The other 37 modules — including `sandbox_boundary.py` and
+  table). `runtime_persistence` governs schema upgrades, all SQLite
+  transactions in `app.py`, and authoritative task-state / lease-epoch checks
+  at action admission (`M5-P1-02`), while durable action replay, worker lease
+  recovery, and full task-loop migration remain assigned to `M5-P1-03`–
+  `M5-P1-05`. The other 37 modules — including `sandbox_boundary.py` and
   `side_effect_ledger.py` — have passing unit tests but **no `app.py` call
   path**. Module presence is not integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
@@ -301,15 +309,16 @@ requires `STUDIO_ALLOW_SKILL_CODE=1`; private-URL access requires
    release remains blocked until an authorized reviewer signs the record
    ([`docs/security-review-signoff.md`](docs/security-review-signoff.md)).
    Never self-certify that gate.
-8. **The execution boundary covers tool invocation and skill-script
-   execution, not every effectful path (since `M5-P0-06`; SQLite discipline
-   tightened in `M5-P1-01`).** The maintained known-bypass inventory
+8. **The execution boundary covers tool, smart-block, skill-script, and MCP
+   invocation, not every effectful path (since `M5-P0-06`; SQLite discipline
+   tightened in `M5-P1-01`; authoritative action admission wired in
+   `M5-P1-02`).** The maintained known-bypass inventory
    [`docs/m5-2-0-bypass-inventory.md`](docs/m5-2-0-bypass-inventory.md) lists
    what routes through the boundary, what is gated elsewhere (all SQLite reads
-   and writes now route through `runtime_persistence`), what is read-only, and
-   what is still outside it (worktree git effects, `.harnesses/*.jsonl` sidecar
+   and writes route through `runtime_persistence`), what is read-only, and what
+   is still outside it (worktree git effects, `.harnesses/*.jsonl` sidecar
    files, unledgered filesystem writes). Completing coverage is follow-up work
-   (`M5-P1-02`, `M5-P1-03`, `M5-P2-01`…`M5-P2-03`); partial coverage is never
+   (`M5-P1-03`…`M5-P1-05`, `M5-P2-01`…`M5-P2-03`); partial coverage is never
    advertised as complete.
 
 ## Current implementation status
@@ -326,11 +335,12 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
 - **M5 2.0 autonomous-runtime program** —
   [`product/M5_2_0_Autonomous_Roadmap.json`](product/M5_2_0_Autonomous_Roadmap.json):
   34 stories across 7 phases. **Done with evidence: `M5-P0-01`…`M5-P0-07`
-  (phase P0 100%) and `M5-P1-01`** (SQLite Schema v3 migration and persistence
-  discipline). Next ready stories: `M5-P1-02` (authoritative task state machine
-  and transitions) and `M5-P1-03` (durable action ledger and side-effect
-  idempotency) — claim via the coordination protocol before coding. Planned
-  work is not implemented product behavior.
+  (phase P0 100%), `M5-P1-01`** (SQLite Schema v3 migration and persistence
+  discipline), **and `M5-P1-02`** (authoritative action admission gate, task/epoch
+  checks, action-class separation, and direct-executor anti-bypass). Next ready
+  story: `M5-P1-03` (durable intent/result ledger integration) — claim via the
+  coordination protocol before coding. Planned work is not implemented product
+  behavior.
 - **AS program (Adaptive Runtime)** —
   [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json)
   with dashboard [`docs/product-roadmap-status.md`](docs/product-roadmap-status.md):
