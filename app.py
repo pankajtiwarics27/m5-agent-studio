@@ -64,11 +64,14 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from history_privacy import HistoryPrivacyError, apply_retention, export_history
 import context_store
+import execution_budget
 import execution_spine
 import mcp_client
 import onboarding_preflight
 import runtime_persistence
 import side_effect_ledger
+import workflow_checkpoints
+import workflow_state
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
 
 STUDIO_VERSION = "9.0.1"
@@ -1340,6 +1343,25 @@ def init_db() -> None:
                     reason="unresolved_effects_on_startup",
                     allow_inactive_epoch=True,
                 )
+    _recovery_report = workflow_state.DurableTaskStateMachine(STORAGE, DB_PATH).recover_incomplete_transitions()
+    _reconciled_session_map: list[tuple[str, str]] = (
+        [(tid, "paused") for tid in _recovery_report.recovered_task_ids]
+        + [(tid, "blocked") for tid in _recovery_report.blocked_task_ids]
+        + [(tid, "cancelled") for tid in _recovery_report.cancelled_task_ids]
+    )
+    if _reconciled_session_map:
+        _now_rec = time.time()
+        runtime_persistence.run_write_transaction(
+            STORAGE,
+            DB_PATH,
+            lambda rec_conn: [
+                rec_conn.execute(
+                    "UPDATE harness_sessions SET status = ?, updated_at = ? WHERE id = ? AND status = 'running'",
+                    (_st, _now_rec, _sid),
+                )
+                for _sid, _st in _reconciled_session_map
+            ],
+        )
     _migrate_legacy_secrets()
     _seed_env_providers_and_default_combo()
     _seed_default_opencontext()
@@ -8167,18 +8189,160 @@ def get_worker_lease_coordinator(
     )
 
 
-def _acquire_turn_lease_or_409(
+def get_task_state_machine() -> workflow_state.DurableTaskStateMachine:
+    """Return the authoritative M5-P1-05 root-task, milestone, budget, and checkpoint state machine."""
+    return workflow_state.DurableTaskStateMachine(STORAGE, DB_PATH)
+
+
+def _parse_task_budget_spec(raw: Any) -> execution_budget.TaskBudgetSpec | None:
+    """Parse optional caller-supplied ``budget`` object or fail closed with HTTP 400."""
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise HTTPException(status_code=400, detail="budget must be a JSON object when supplied.")
+    try:
+        return execution_budget.TaskBudgetSpec.from_dict(raw)
+    except (TypeError, ValueError, execution_budget.BudgetError) as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid task budget: {exc}") from exc
+
+
+def _collect_step_evidence_refs(
+    session_id: str,
+    *,
+    epoch: int,
+    wt_dir: Path,
+    extra_artifacts: tuple[Path, ...] | list[Path] = (),
+) -> list[workflow_checkpoints.EvidenceRef]:
+    """Build deterministic evidence references for committed actions, artifacts, and git diff."""
+    refs: list[workflow_checkpoints.EvidenceRef] = []
+    store = runtime_persistence.RuntimePersistenceStore(STORAGE, DB_PATH)
+    for act in store.list_task_actions(session_id):
+        if act.epoch == epoch and act.status == "committed":
+            refs.append(
+                workflow_checkpoints.EvidenceRef(
+                    kind="action",
+                    ref_id=act.action_id,
+                    sha256=act.output_sha256 or act.args_sha256,
+                    summary=f"{act.tool_name}:{act.status}",
+                )
+            )
+    for artifact in extra_artifacts:
+        if artifact.is_file():
+            data = artifact.read_bytes()
+            digest = hashlib.sha256(data).hexdigest()
+            try:
+                rel = artifact.resolve().relative_to(wt_dir.resolve()).as_posix()
+            except ValueError:
+                rel = artifact.name
+            refs.append(
+                workflow_checkpoints.EvidenceRef(
+                    kind="artifact",
+                    ref_id=rel,
+                    sha256=digest,
+                    summary=f"{len(data)}B",
+                )
+            )
+    diff_info = _compute_git_diff(wt_dir)
+    diff_txt = str(diff_info.get("diff") or "")
+    status_txt = str(diff_info.get("status") or "").strip()
+    if diff_txt or status_txt:
+        diff_sha = hashlib.sha256(f"{status_txt}\n{diff_txt}".encode("utf-8")).hexdigest()
+        refs.append(
+            workflow_checkpoints.EvidenceRef(
+                kind="git_diff",
+                ref_id="HEAD",
+                sha256=diff_sha,
+                summary=(status_txt.splitlines()[0] if status_txt else "modified")[:160],
+            )
+        )
+    return refs
+
+
+def _acquire_turn_plan_and_lease_or_409(
     sess: Mapping[str, Any],
     *,
     lease_ttl_s: float | None = None,
-) -> tuple[side_effect_ledger.WorkerLeaseCoordinator, side_effect_ledger.LeaseClaimOutcome, str]:
-    """Claim a single-owner monotonic worker lease for a turn or raise HTTP 409 on conflict/hold."""
+    budget_spec: execution_budget.TaskBudgetSpec | None = None,
+    resume: bool = False,
+) -> tuple[
+    side_effect_ledger.WorkerLeaseCoordinator,
+    side_effect_ledger.LeaseClaimOutcome,
+    str,
+    workflow_state.DurableTaskStateMachine,
+    workflow_state.ResumedTaskPlan | None,
+]:
+    """Validate task lifecycle/budgets/checkpoints and claim a single-owner worker lease."""
     sid = str(sess["id"])
     wt_raw = str(sess.get("worktree_dir") or "").strip()
     wt_root = Path(wt_raw).resolve() if wt_raw else None
+    sm = get_task_state_machine()
     coord = get_worker_lease_coordinator(wt_root)
-    worker_id = f"wrk-{_PROCESS_BOOT_ID}-{uuid.uuid4().hex[:8]}"
     ttl = float(DEFAULT_WORKER_LEASE_TTL_S if lease_ttl_s is None else lease_ttl_s)
+    now_ts = time.time()
+
+    existing_task = sm.store.get_task(sid)
+    if existing_task is not None and existing_task.current_epoch > 0:
+        active_ep = sm.store.get_epoch(sid, existing_task.current_epoch)
+        if active_ep is not None and active_ep.status == "active" and active_ep.lease_expires_at > now_ts:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Task {sid!r} is actively owned by worker {active_ep.worker_id!r} "
+                    f"in epoch {active_ep.epoch} (lease valid for {max(0.0, active_ep.lease_expires_at - now_ts):.2f}s)."
+                ),
+            )
+
+    task_rec, budget_state = sm.ensure_root_task(
+        sid,
+        session_id=sid,
+        title=str(sess.get("title") or ""),
+        workspace_dir=wt_raw,
+        policy=str(sess.get("policy") or "standard"),
+        budget_spec=budget_spec,
+        override_budget_spec=(budget_spec is not None),
+        now=now_ts,
+    )
+    if task_rec.state == "cancelled" or budget_state.cancel_requested:
+        raise HTTPException(status_code=409, detail=f"Task {sid!r} is cancelled and cannot execute.")
+
+    resumed_plan: workflow_state.ResumedTaskPlan | None = None
+    should_prepare_resume = bool(resume)
+    already_prepared = False
+    if not should_prepare_resume and task_rec.state in {"paused", "failed"} and task_rec.checkpoint_ref:
+        try:
+            probe_ckpt = sm.checkpoints.load_latest_checkpoint(sid, verify_integrity=True)
+        except workflow_checkpoints.ResumeRejected as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        if probe_ckpt is not None and probe_ckpt.status in {"interrupted", "resumed"}:
+            should_prepare_resume = True
+            already_prepared = probe_ckpt.status == "resumed"
+    elif should_prepare_resume and task_rec.checkpoint_ref:
+        try:
+            probe_ckpt = sm.checkpoints.load_latest_checkpoint(sid, verify_integrity=True)
+        except workflow_checkpoints.ResumeRejected as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        if probe_ckpt is not None and probe_ckpt.status == "resumed":
+            already_prepared = True
+
+    if should_prepare_resume:
+        try:
+            resumed_plan = sm.prepare_resume(
+                sid,
+                consume_recovery_budget=not already_prepared,
+                now=now_ts,
+            )
+        except (
+            workflow_state.WorkflowTransitionRejected,
+            workflow_checkpoints.ResumeRejected,
+            execution_budget.BudgetExceeded,
+        ) as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    else:
+        prior_violation = budget_state.violation_reason(check_recovery=False)
+        if prior_violation:
+            raise HTTPException(status_code=409, detail=prior_violation)
+
+    worker_id = f"wrk-{_PROCESS_BOOT_ID}-{uuid.uuid4().hex[:8]}"
     try:
         claim = coord.acquire_or_takeover(
             sid,
@@ -8194,6 +8358,20 @@ def _acquire_turn_lease_or_409(
         side_effect_ledger.UnresolvedEffectsHoldError,
     ) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    sm.budgets.set_control_flags(sid, pause_requested=False)
+    return coord, claim, worker_id, sm, resumed_plan
+
+
+def _acquire_turn_lease_or_409(
+    sess: Mapping[str, Any],
+    *,
+    lease_ttl_s: float | None = None,
+) -> tuple[side_effect_ledger.WorkerLeaseCoordinator, side_effect_ledger.LeaseClaimOutcome, str]:
+    """Claim a single-owner monotonic worker lease for a turn or raise HTTP 409 on conflict/hold."""
+    coord, claim, worker_id, _, _ = _acquire_turn_plan_and_lease_or_409(
+        sess,
+        lease_ttl_s=lease_ttl_s,
+    )
     return coord, claim, worker_id
 
 
@@ -8275,6 +8453,16 @@ class _AppTaskContextResolver:
         task = store.get_task(clean_task_id)
         if task is None:
             return None
+        effective_state = task.state
+        if effective_state == "running":
+            try:
+                b_state = execution_budget.TaskBudgetState.from_json(task.budget_json)
+                if b_state.cancel_requested:
+                    effective_state = "cancelled"
+                elif b_state.pause_requested:
+                    effective_state = "paused"
+            except execution_budget.BudgetError:
+                pass
         lookup_epoch = request.epoch if request.epoch is not None else (task.current_epoch if task.current_epoch > 0 else None)
         epoch_rec = store.get_epoch(clean_task_id, lookup_epoch) if (lookup_epoch is not None and lookup_epoch > 0) else None
         lease_expired = bool(epoch_rec is not None and epoch_rec.lease_expires_at <= now_ts)
@@ -8289,7 +8477,7 @@ class _AppTaskContextResolver:
         )
         return execution_spine.TaskAdmissionSnapshot(
             task_id=task.task_id,
-            state=task.state,
+            state=effective_state,
             current_epoch=task.current_epoch,
             epoch_status=epoch_rec.status if epoch_rec is not None else None,
             epoch_worker_id=epoch_rec.worker_id if epoch_rec is not None else None,
@@ -8813,6 +9001,211 @@ async def api_abort_harness(session_id: str) -> JSONResponse:
     return JSONResponse({"status": "aborted", "session_id": session_id})
 
 
+def _serialize_task_record(rec: runtime_persistence.TaskRecord) -> dict[str, Any]:
+    return {
+        "task_id": rec.task_id,
+        "parent_task_id": rec.parent_task_id,
+        "session_id": rec.session_id,
+        "title": rec.title,
+        "state": rec.state,
+        "current_epoch": rec.current_epoch,
+        "state_version": rec.state_version,
+        "workspace_dir": rec.workspace_dir,
+        "policy": rec.policy,
+        "checkpoint_ref": rec.checkpoint_ref,
+        "created_at": rec.created_at,
+        "updated_at": rec.updated_at,
+    }
+
+
+def _serialize_transition_record(tr: runtime_persistence.TaskTransitionRecord) -> dict[str, Any]:
+    try:
+        ev = json.loads(tr.evidence_json) if tr.evidence_json else {}
+    except (TypeError, ValueError):
+        ev = {}
+    return {
+        "seq": tr.seq,
+        "from_state": tr.from_state,
+        "to_state": tr.to_state,
+        "epoch": tr.epoch,
+        "reason": tr.reason,
+        "evidence": ev,
+        "created_at": tr.created_at,
+    }
+
+
+@app.get("/api/harness/sessions/{session_id}/task")
+async def api_get_harness_task_state(session_id: str) -> JSONResponse:
+    """Return durable root-task state, child milestones, checkpoints, budgets, and transition log."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    sm = get_task_state_machine()
+    task = sm.store.get_task(session_id)
+    if task is None:
+        task, budget = sm.ensure_root_task(
+            session_id,
+            session_id=session_id,
+            title=str(sess.get("title") or ""),
+            workspace_dir=str(sess.get("worktree_dir") or ""),
+            policy=str(sess.get("policy") or "standard"),
+        )
+    else:
+        budget = sm.budgets.get_budget(session_id)
+    integrity_error = ""
+    latest_ckpt: workflow_checkpoints.TaskCheckpointRecord | None = None
+    try:
+        latest_ckpt = sm.checkpoints.load_latest_checkpoint(session_id, verify_integrity=True)
+    except workflow_checkpoints.ResumeRejected as exc:
+        integrity_error = str(exc)
+    milestones = sm.list_milestones(session_id)
+    transitions = sm.store.list_transitions(session_id)
+    checkpoints = sm.checkpoints.list_checkpoints(session_id, verify_integrity=False)
+    return JSONResponse(
+        {
+            "task": _serialize_task_record(task),
+            "budget": budget.to_dict(),
+            "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
+            "checkpoint_integrity_error": integrity_error,
+            "checkpoints": [ck.to_dict() for ck in checkpoints],
+            "milestones": [_serialize_task_record(ms) for ms in milestones],
+            "transitions": [_serialize_transition_record(tr) for tr in transitions],
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/pause")
+async def api_pause_harness_session(session_id: str, request: Request) -> JSONResponse:
+    """Request a safe-boundary pause on a harness task without claiming premature completion."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    reason = "operator_pause_requested"
+    try:
+        body = await request.json()
+        if isinstance(body, dict) and body.get("reason"):
+            reason = str(body["reason"])[:160]
+    except Exception:
+        pass
+    for aid, slot in list(_PENDING_APPROVALS.items()):
+        if slot.get("session_id") == session_id and not slot["event"].is_set():
+            _resolve_pending_tool_approval(aid, "reject", note="Run paused by operator.", session_id=session_id, remember=True)
+    sm = get_task_state_machine()
+    sm.ensure_root_task(
+        session_id,
+        session_id=session_id,
+        title=str(sess.get("title") or ""),
+        workspace_dir=str(sess.get("worktree_dir") or ""),
+        policy=str(sess.get("policy") or "standard"),
+    )
+    try:
+        outcome = sm.request_pause(session_id, reason=reason)
+    except workflow_state.WorkflowTransitionRejected as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if not outcome.deferred_to_safe_boundary:
+        _update_harness_session_state(session_id, status="paused")
+        _append_harness_event(session_id, "turn/paused", {"reason": reason})
+    return JSONResponse(
+        {
+            "status": "pause_requested" if outcome.deferred_to_safe_boundary else "paused",
+            "session_id": session_id,
+            "deferred_to_safe_boundary": outcome.deferred_to_safe_boundary,
+            "task": _serialize_task_record(outcome.task),
+            "budget": outcome.budget.to_dict(),
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/cancel")
+async def api_cancel_harness_session(session_id: str, request: Request) -> JSONResponse:
+    """Cancel a harness task, fencing active leases and never claiming premature completion."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    reason = "operator_cancelled"
+    try:
+        body = await request.json()
+        if isinstance(body, dict) and body.get("reason"):
+            reason = str(body["reason"])[:160]
+    except Exception:
+        pass
+    _HARNESS_ABORT_FLAGS.add(session_id)
+    for aid, slot in list(_PENDING_APPROVALS.items()):
+        if slot.get("session_id") == session_id and not slot["event"].is_set():
+            _resolve_pending_tool_approval(aid, "reject", note="Run cancelled by operator.", session_id=session_id, remember=True)
+    sm = get_task_state_machine()
+    sm.ensure_root_task(
+        session_id,
+        session_id=session_id,
+        title=str(sess.get("title") or ""),
+        workspace_dir=str(sess.get("worktree_dir") or ""),
+        policy=str(sess.get("policy") or "standard"),
+    )
+    try:
+        outcome = sm.cancel_task(session_id, reason=reason)
+    except workflow_state.WorkflowTransitionRejected as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _update_harness_session_state(session_id, status="cancelled")
+    _append_harness_event(
+        session_id,
+        "turn/cancelled",
+        {"reason": reason, "unresolved_action_ids": list(outcome.unresolved_action_ids)},
+    )
+    return JSONResponse(
+        {
+            "status": "cancelled",
+            "session_id": session_id,
+            "unresolved_action_ids": list(outcome.unresolved_action_ids),
+            "task": _serialize_task_record(outcome.task),
+            "budget": outcome.budget.to_dict(),
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/resume")
+async def api_resume_harness_session(session_id: str) -> JSONResponse:
+    """Validate checkpoint integrity, unresolved side effects, and recovery budget before resume."""
+    try:
+        get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    sm = get_task_state_machine()
+    try:
+        plan = sm.prepare_resume(session_id, consume_recovery_budget=True)
+    except (
+        workflow_state.WorkflowStateError,
+        workflow_state.WorkflowTransitionRejected,
+        workflow_checkpoints.ResumeRejected,
+        execution_budget.BudgetExceeded,
+    ) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _HARNESS_ABORT_FLAGS.discard(session_id)
+    _append_harness_event(
+        session_id,
+        "turn/resume_prepared",
+        {
+            "next_step": plan.next_step,
+            "checkpoint_id": plan.checkpoint.checkpoint_id if plan.checkpoint else "",
+            "recoveries_used": plan.budget.recoveries_used,
+            "completed_milestone_ids": list(plan.completed_milestone_ids),
+        },
+    )
+    return JSONResponse(
+        {
+            "status": "ready_to_resume",
+            "session_id": session_id,
+            "next_step": plan.next_step,
+            "completed_milestone_ids": list(plan.completed_milestone_ids),
+            "checkpoint": plan.checkpoint.to_dict() if plan.checkpoint is not None else None,
+            "task": _serialize_task_record(plan.task),
+            "budget": plan.budget.to_dict(),
+        }
+    )
+
+
 @app.post("/api/harness/run")
 async def api_run_harness_turn(request: Request) -> StreamingResponse:
     """Multi-Step Autonomous `Turn -> Step` Agentic Execution Loop (`deepseek-harness` pattern)."""
@@ -8824,6 +9217,8 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
     skill_ids: list[str] = body.get("skills") or []
     context_mode = bool(body.get("context_mode", True))
     efficiency_mode = str(body.get("efficiency_mode") or "ponytail")
+    resume_requested = bool(body.get("resume", False))
+    budget_spec = _parse_task_budget_spec(body.get("budget"))
 
     if not prompt:
         raise HTTPException(status_code=400, detail="Task prompt is required.")
@@ -8855,7 +9250,11 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
             )
             sess = get_harness_session_db(session_id)
 
-    coord, claim, worker_id = _acquire_turn_lease_or_409(sess)
+    coord, claim, worker_id, sm, resumed_plan = _acquire_turn_plan_and_lease_or_409(
+        sess,
+        budget_spec=budget_spec,
+        resume=resume_requested,
+    )
     lease_epoch = claim.epoch_record.epoch
     lease_released = False
     lease_final_state = "paused"
@@ -8878,6 +9277,17 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
     async def event_gen() -> AsyncIterator[str]:
         nonlocal lease_released, lease_final_state
         t_turn = time.perf_counter()
+        wt_dir = Path(sess["worktree_dir"]).resolve()
+        start_step = (
+            max(1, resumed_plan.next_step)
+            if (
+                resumed_plan is not None
+                and resumed_plan.checkpoint is not None
+                and resumed_plan.checkpoint.payload.get("workflow") == "harness"
+            )
+            else 1
+        )
+        completed_step = start_step - 1
         try:
             if is_local_omlx_model(sess["lead_model"]):
                 await _unload_other_omlx_models(client, parse_model_route(sess["lead_model"])[2])
@@ -8899,14 +9309,15 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
             else:
                 messages[0] = {"role": "system", "content": sys_prompt}
                 if context_mode and sum(len(m.get("content") or "") for m in messages) > CTX_AUTO_COMPACT_CHARS:
-                    comp_res = compact_harness_session_messages(session_id, Path(sess["worktree_dir"]))
+                    comp_res = compact_harness_session_messages(session_id, wt_dir)
                     if comp_res.get("compacted"):
                         messages = _load_harness_messages(session_id)
                         messages[0] = {"role": "system", "content": sys_prompt}
                         yield _sse("context_compacted", comp_res)
 
-            messages.append({"role": "user", "content": prompt})
-            _save_harness_messages(session_id, messages)
+            if start_step == 1 or not resume_requested:
+                messages.append({"role": "user", "content": prompt})
+                _save_harness_messages(session_id, messages)
 
             new_title = prompt[:90] if sess["step_count"] == 0 else None
             _update_harness_session_state(session_id, status="running", title=new_title)
@@ -8919,29 +9330,44 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     "policy": sess["policy"],
                     "epoch": lease_epoch,
                     "worker_id": worker_id,
+                    "resumed_from_step": completed_step if start_step > 1 else 0,
                 },
             )
-            yield _sse("turn_start", {"session": get_harness_session_db(session_id), "event": ev_turn, "epoch": lease_epoch})
+            yield _sse(
+                "turn_start",
+                {
+                    "session": get_harness_session_db(session_id),
+                    "event": ev_turn,
+                    "epoch": lease_epoch,
+                    "resumed_from_step": completed_step if start_step > 1 else 0,
+                },
+            )
 
             steps_run = 0
-            aborted_flag = False
-            for step_idx in range(1, max_steps + 1):
-                if session_id in _HARNESS_ABORT_FLAGS:
-                    aborted_flag = True
-                    _append_harness_event(session_id, "turn/aborted", {"step": step_idx})
-                    yield _sse("aborted", {"step": step_idx})
+            halt_mode: Literal["none", "paused", "cancelled", "budget_exceeded", "max_steps"] = "none"
+            halt_reason = ""
+            for step_idx in range(start_step, start_step + max_steps):
+                boundary = sm.check_safe_boundary(
+                    session_id,
+                    epoch=lease_epoch,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                )
+                if boundary != "continue":
+                    halt_mode = "cancelled" if boundary == "cancel" else "paused"
+                    halt_reason = f"{halt_mode}_before_step_{step_idx}"
                     break
 
                 coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
+                t_step = time.perf_counter()
 
-                if context_mode and step_idx > 1 and sum(len(m.get("content") or "") for m in messages) > CTX_AUTO_COMPACT_CHARS:
-                    comp_res = compact_harness_session_messages(session_id, Path(sess["worktree_dir"]))
+                if context_mode and step_idx > start_step and sum(len(m.get("content") or "") for m in messages) > CTX_AUTO_COMPACT_CHARS:
+                    comp_res = compact_harness_session_messages(session_id, wt_dir)
                     if comp_res.get("compacted"):
                         messages = _load_harness_messages(session_id)
                         messages[0] = {"role": "system", "content": sys_prompt}
                         yield _sse("context_compacted", comp_res)
 
-                steps_run = step_idx
+                steps_run += 1
                 sess_live = _bind_lease_to_session(
                     get_harness_session_db(session_id),
                     task_id=session_id,
@@ -8952,7 +9378,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                 policy = sess_live["policy"]
 
                 _append_harness_event(session_id, "step/start", {"step": step_idx, "model": lead_model})
-                yield _sse("step_start", {"step": step_idx, "max_steps": max_steps, "model": lead_model})
+                yield _sse("step_start", {"step": step_idx, "max_steps": start_step + max_steps - 1, "model": lead_model})
 
                 content_buf: list[str] = []
                 reason_buf: list[str] = []
@@ -8980,6 +9406,16 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     elif item["type"] == "usage":
                         usage_pkt = item
                         record_perf("harness", active_target, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"])
+
+                post_stream_boundary = sm.check_safe_boundary(
+                    session_id,
+                    epoch=lease_epoch,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                )
+                if post_stream_boundary != "continue":
+                    halt_mode = "cancelled" if post_stream_boundary == "cancel" else "paused"
+                    halt_reason = f"{halt_mode}_after_stream_step_{step_idx}"
+                    break
 
                 full_raw = "".join(content_buf)
                 full_reason = "".join(reason_buf)
@@ -9012,14 +9448,40 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     },
                 )
 
-                # If no tool calls were requested, the agent has completed the turn!
+                # If no tool calls were requested, record step usage and finish cleanly if not paused/cancelled.
                 if not tool_calls:
+                    try:
+                        sm.budgets.record_usage(
+                            session_id,
+                            epoch=lease_epoch,
+                            steps_delta=1,
+                            tokens_delta=int(usage_pkt.get("completion_tokens") or 0),
+                            elapsed_delta_s=max(0.0, time.perf_counter() - t_step),
+                        )
+                    except execution_budget.BudgetExceeded as b_exc:
+                        halt_mode = "budget_exceeded"
+                        halt_reason = str(b_exc)
+                    except execution_budget.ExecutionCancelled:
+                        halt_mode = "cancelled"
+                        halt_reason = "cancelled_on_budget_check"
+                    else:
+                        completed_step = step_idx
                     break
 
-                # Execute each requested tool in order with Guarded Policy + Human-in-the-Loop Approval Gate
+                # Execute each requested tool in order with Guarded Policy + Safe-Boundary Pause/Cancel Checks
                 tool_feedback_parts: list[str] = []
+                tools_executed_in_step = 0
+                mid_tool_halt = False
                 for tc_idx, tc in enumerate(tool_calls):
-                    if session_id in _HARNESS_ABORT_FLAGS:
+                    tc_boundary = sm.check_safe_boundary(
+                        session_id,
+                        epoch=lease_epoch,
+                        abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                    )
+                    if tc_boundary != "continue":
+                        halt_mode = "cancelled" if tc_boundary == "cancel" else "paused"
+                        halt_reason = f"{halt_mode}_before_tool_{step_idx}_{tc_idx}"
+                        mid_tool_halt = True
                         break
                     t_name = tc["name"]
                     t_args = tc["arguments"]
@@ -9052,6 +9514,17 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         reject_note = decision["note"]
                         yield _sse("approval_resolved", {"step": step_idx, **decision})
 
+                        post_approval_boundary = sm.check_safe_boundary(
+                            session_id,
+                            epoch=lease_epoch,
+                            abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                        )
+                        if post_approval_boundary != "continue":
+                            halt_mode = "cancelled" if post_approval_boundary == "cancel" else "paused"
+                            halt_reason = f"{halt_mode}_during_approval_{step_idx}_{tc_idx}"
+                            mid_tool_halt = True
+                            break
+
                     coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
                     res_obj = await _execute_harness_tool(
                         client,
@@ -9064,6 +9537,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         step_id=step_idx,
                         call_index=tc_idx,
                     )
+                    tools_executed_in_step += 1
                     if needs_approval and not approved and reject_note:
                         res_obj["output"] += f" User rejection note: {reject_note}"
                     if needs_approval and not approved:
@@ -9107,30 +9581,134 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     )
                     tool_feedback_parts.append(_format_untrusted_tool_response(t_name, res_obj["output"], res_obj["ok"]))
 
-                messages.append({"role": "user", "content": "\n\n".join(tool_feedback_parts)})
-                _save_harness_messages(session_id, messages)
+                if tool_feedback_parts:
+                    messages.append({"role": "user", "content": "\n\n".join(tool_feedback_parts)})
+                    _save_harness_messages(session_id, messages)
+
+                try:
+                    sm.budgets.record_usage(
+                        session_id,
+                        epoch=lease_epoch,
+                        steps_delta=1,
+                        tool_calls_delta=tools_executed_in_step,
+                        tokens_delta=int(usage_pkt.get("completion_tokens") or 0),
+                        elapsed_delta_s=max(0.0, time.perf_counter() - t_step),
+                    )
+                except execution_budget.BudgetExceeded as b_exc:
+                    completed_step = step_idx
+                    halt_mode = "budget_exceeded"
+                    halt_reason = str(b_exc)
+                    break
+                except execution_budget.ExecutionCancelled:
+                    halt_mode = "cancelled"
+                    halt_reason = "cancelled_on_budget_check"
+                    break
+
+                if mid_tool_halt:
+                    completed_step = step_idx
+                    break
+
+                completed_step = step_idx
+                step_refs = _collect_step_evidence_refs(session_id, epoch=lease_epoch, wt_dir=wt_dir)
+                sm.checkpoints.save_checkpoint(
+                    session_id,
+                    step=completed_step,
+                    payload={
+                        "workflow": "harness",
+                        "completed_step": completed_step,
+                        "messages_len": len(messages),
+                    },
+                    evidence_refs=step_refs,
+                    epoch=lease_epoch,
+                    status="committed",
+                    require_active_epoch=True,
+                )
             else:
-                # Reached max_steps cap while agent still wanted tools
+                halt_mode = "max_steps"
+                halt_reason = "turn_max_steps_reached"
                 _append_harness_event(session_id, "turn/max_steps_reached", {"max_steps": max_steps})
                 yield _sse("max_steps_reached", {"max_steps": max_steps})
 
+            if halt_mode == "none":
+                final_boundary = sm.check_safe_boundary(
+                    session_id,
+                    epoch=lease_epoch,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                )
+                if final_boundary != "continue":
+                    halt_mode = "cancelled" if final_boundary == "cancel" else "paused"
+                    halt_reason = f"{halt_mode}_before_completion"
+
             elapsed_turn = round(time.perf_counter() - t_turn, 2)
-            lease_final_state = "paused" if aborted_flag else "completed"
-            lease_released = True
-            did_release = coord.release(
-                session_id,
-                lease_epoch,
-                worker_id,
-                next_state=lease_final_state,
-                reason=f"turn_{lease_final_state}",
-            )
-            if did_release and not aborted_flag:
+            final_refs = _collect_step_evidence_refs(session_id, epoch=lease_epoch, wt_dir=wt_dir)
+
+            if halt_mode == "cancelled":
+                lease_final_state = "cancelled"
+                lease_released = True
+                sm.cancel_task(session_id, reason=halt_reason or "turn_cancelled", evidence_refs=final_refs)
+                _update_harness_session_state(session_id, status="cancelled")
+                _append_harness_event(session_id, "turn/cancelled", {"step": completed_step, "reason": halt_reason})
+                yield _sse("cancelled", {"step": completed_step, "reason": halt_reason})
+            elif halt_mode in {"paused", "budget_exceeded", "max_steps"}:
+                lease_final_state = "paused"
+                lease_released = True
+                try:
+                    sm.pause_at_safe_boundary(
+                        session_id,
+                        worker_id=worker_id,
+                        epoch=lease_epoch,
+                        step=max(0, completed_step),
+                        checkpoint_payload={
+                            "workflow": "harness",
+                            "completed_step": max(0, completed_step),
+                            "messages_len": len(messages),
+                            "halt_mode": halt_mode,
+                        },
+                        evidence_refs=final_refs,
+                        reason=halt_reason or f"turn_{halt_mode}",
+                    )
+                except runtime_persistence.StaleEpochError:
+                    # E.g. /api/harness/abort/{sid} already fenced the epoch into 'paused'.
+                    pass
+                _update_harness_session_state(session_id, status="paused")
+                if halt_mode == "budget_exceeded":
+                    _append_harness_event(session_id, "turn/budget_exceeded", {"step": completed_step, "reason": halt_reason})
+                    yield _sse("budget_exceeded", {"step": completed_step, "reason": halt_reason})
+                elif halt_mode == "paused":
+                    _append_harness_event(session_id, "turn/paused", {"step": completed_step, "reason": halt_reason})
+                    if session_id in _HARNESS_ABORT_FLAGS:
+                        yield _sse("aborted", {"step": completed_step})
+                    yield _sse("paused", {"step": completed_step, "reason": halt_reason})
+            else:
+                sm.complete_task(
+                    session_id,
+                    worker_id=worker_id,
+                    epoch=lease_epoch,
+                    step=max(0, completed_step),
+                    checkpoint_payload={
+                        "workflow": "harness",
+                        "completed_step": max(0, completed_step),
+                        "messages_len": len(messages),
+                        "terminal": True,
+                    },
+                    evidence_refs=final_refs,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                    reason="turn_completed",
+                )
+                lease_final_state = "completed"
+                lease_released = True
                 _update_harness_session_state(session_id, status="completed")
-            diff_summary = _compute_git_diff(Path(sess["worktree_dir"]))
+
+            diff_summary = _compute_git_diff(wt_dir)
             _append_harness_event(
                 session_id,
                 "turn/end",
-                {"steps": steps_run, "elapsed_s": elapsed_turn, "git_status": diff_summary.get("status", "")},
+                {
+                    "steps": steps_run,
+                    "elapsed_s": elapsed_turn,
+                    "git_status": diff_summary.get("status", ""),
+                    "state": lease_final_state,
+                },
             )
             yield _sse(
                 "turn_done",
@@ -9139,8 +9717,18 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     "steps": steps_run,
                     "elapsed_s": elapsed_turn,
                     "git_status": diff_summary.get("status", ""),
+                    "state": lease_final_state,
                 },
             )
+        except runtime_persistence.StaleEpochError:
+            lease_released = True
+            current_t = sm.store.get_task(session_id)
+            if current_t is not None and current_t.state == "cancelled":
+                _update_harness_session_state(session_id, status="cancelled")
+                yield _sse("cancelled", {"step": completed_step, "reason": "epoch_fenced_by_cancel"})
+            else:
+                _update_harness_session_state(session_id, status="paused")
+                yield _sse("paused", {"step": completed_step, "reason": "epoch_fenced"})
         except Exception as exc:
             lease_final_state = "failed"
             lease_released = True
@@ -9180,6 +9768,8 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
     reasoning_mode = body.get("reasoning_mode") or "low"
     skill_ids: list[str] = body.get("skills") or []
     efficiency_mode = str(body.get("efficiency_mode") or "ponytail")
+    resume_requested = bool(body.get("resume", False))
+    budget_spec = _parse_task_budget_spec(body.get("budget"))
 
     if not prompt:
         raise HTTPException(status_code=400, detail="Goal prompt is required for GSD 3-Wave execution.")
@@ -9199,7 +9789,11 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
         if body.get("policy") in HARNESS_POLICIES:
             sess = _set_harness_session_policy(session_id, body["policy"])
 
-    coord, claim, worker_id = _acquire_turn_lease_or_409(sess)
+    coord, claim, worker_id, sm, _resumed_plan = _acquire_turn_plan_and_lease_or_409(
+        sess,
+        budget_spec=budget_spec,
+        resume=resume_requested,
+    )
     lease_epoch = claim.epoch_record.epoch
     lease_released = False
     lease_final_state = "paused"
@@ -9232,6 +9826,13 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
         lead_model = sess["lead_model"]
         critic_model = sess["critic_model"]
         policy = sess["policy"]
+        plan_path = planning_dir / "PLAN.md"
+        state_path = planning_dir / "STATE.md"
+        ver_path = planning_dir / "VERIFICATION.md"
+
+        ms_w1 = sm.ensure_milestone(session_id, "wave_1_plan", title="Wave 1: Spec & Plan")
+        ms_w2 = sm.ensure_milestone(session_id, "wave_2_execute", title="Wave 2: Fresh-Context Execute")
+        ms_w3 = sm.ensure_milestone(session_id, "wave_3_verify", title="Wave 3: Fresh-Context Verify")
 
         _update_harness_session_state(session_id, status="running", title=f"[GSD] {prompt[:75]}" if sess["step_count"] == 0 else None)
         ev_start = _append_harness_event(
@@ -9247,243 +9848,558 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
         )
         yield _sse("turn_start", {"session": get_harness_session_db(session_id), "event": ev_start, "gsd_mode": True, "epoch": lease_epoch})
 
+        halt_mode: Literal["none", "paused", "cancelled", "budget_exceeded"] = "none"
+        halt_reason = ""
+        last_completed_step = 0
+        active_ms_id = ""
+
         try:
             coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
-            # --- WAVE 1: SPEC & PLAN (Fresh Context #1) ---
-            yield _sse("gsd_wave_start", {"wave": 1, "name": "SPEC & PLAN", "model": lead_model, "artifact": ".planning/PLAN.md"})
-            _append_harness_event(session_id, "gsd/wave", {"wave": 1, "name": "SPEC & PLAN", "model": lead_model})
-            cg_arch = run_codegraph_tool(wt_dir, mode="architecture", top_n=10)
             oc_mem = build_pinned_opencontext_prompt()
-            w1_msgs = [
-                {
-                    "role": "system",
-                    "content": (
-                        "You are the GSD Wave-1 Spec Architect (`open-gsd/gsd-core`). Produce a crisp, deterministic "
-                        "implementation specification (`PLAN.md`) with exact file paths, atomic tasks, and verification commands. "
-                        "Do NOT emit `<tool_call>` blocks — output pure Markdown specification."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": f"### Engineering Goal:\n{prompt}\n\n### Workspace CodeGraph Summary:\n{cg_arch}\n{oc_mem}",
-                },
-            ]
-            plan_buf: list[str] = []
-            async for item in stream_any_model(client, lead_model, w1_msgs, temperature=0.0, max_tokens=2400, reasoning_mode=reasoning_mode):
-                if session_id in _HARNESS_ABORT_FLAGS:
-                    break
-                if item["type"] == "content":
-                    plan_buf.append(item["text"])
-                    yield _sse("step_content", {"step": 1, "wave": 1, "text": item["text"]})
-            plan_md = "".join(plan_buf).strip() or f"# GSD Plan\n\nGoal: {prompt}\n"
-            (planning_dir / "PLAN.md").write_text(plan_md, encoding="utf-8")
-            (planning_dir / "STATE.md").write_text(
-                f"# GSD State\n- **Goal**: {prompt}\n- **Phase**: WAVE_1_PLANNED\n- **Lead Model**: `{lead_model}`\n",
-                encoding="utf-8",
-            )
-            _update_harness_session_state(session_id, status="running", step_inc=1)
-            _append_harness_event(
-                session_id,
-                "assistant/message",
-                {"step": 1, "model": lead_model, "content": f"### [GSD Wave 1/3 • `.planning/PLAN.md`]\n\n{plan_md}", "tool_calls": []},
-            )
-            yield _sse("gsd_wave_done", {"wave": 1, "artifact": ".planning/PLAN.md", "chars": len(plan_md)})
 
-            # --- WAVE 2: FRESH-CONTEXT EXECUTE (Fresh Context #2 — zero planner bloat!) ---
-            if session_id not in _HARNESS_ABORT_FLAGS:
-                yield _sse("gsd_wave_start", {"wave": 2, "name": "FRESH-CONTEXT EXECUTE", "model": lead_model, "artifact": ".planning/STATE.md"})
-                _append_harness_event(session_id, "gsd/wave", {"wave": 2, "name": "FRESH-CONTEXT EXECUTE", "model": lead_model})
-                skill_block_raw, _ = await build_skills_context(skill_ids, prompt)
-                eff_block = build_efficiency_mode_prompt(efficiency_mode)
-                extra_blocks = (eff_block or "") + (oc_mem or "") + (skill_block_raw or "") + (build_active_mcp_tools_prompt() or "")
-                exec_sys = HARNESS_SYSTEM_PROMPT_TEMPLATE.format(
-                    worktree_dir=str(wt_dir),
-                    policy=policy,
-                    critic_model=critic_model,
-                    skills_block=extra_blocks,
-                )
-                w2_msgs: list[dict[str, str]] = [
-                    {"role": "system", "content": exec_sys},
-                    {
-                        "role": "user",
-                        "content": (
-                            f"Execute the following specification from `.planning/PLAN.md` inside `{wt_dir}`.\n"
-                            f"Original Goal: {prompt}\n\n"
-                            f"### `.planning/PLAN.md`:\n{plan_md[:6000]}\n\n"
-                            f"Use tools step-by-step (`read_file`, `write_file`/`edit_file`, `run_bash`) and stop once implemented and tested."
-                        ),
-                    },
-                ]
-                sess_exec = _bind_lease_to_session(
-                    {**sess, "policy": policy, "status": "running"},
-                    task_id=session_id,
-                    epoch=lease_epoch,
-                    worker_id=worker_id,
-                )
-                for w2_step in range(1, max_exec_steps + 1):
-                    if session_id in _HARNESS_ABORT_FLAGS:
-                        break
-                    coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
-                    global_step = 1 + w2_step
-                    yield _sse("step_start", {"step": global_step, "max_steps": max_exec_steps + 2, "model": lead_model, "wave": 2})
-                    cbuf: list[str] = []
-                    rbuf: list[str] = []
-                    upkt: dict[str, Any] = {}
-                    async for item in stream_any_model(client, lead_model, w2_msgs, temperature=0.0, max_tokens=3600, reasoning_mode=reasoning_mode):
+            # --- WAVE 1: SPEC & PLAN (Fresh Context #1) ---
+            if ms_w1.state == "completed" and plan_path.is_file():
+                plan_md = plan_path.read_text(encoding="utf-8")
+                last_completed_step = 1
+                yield _sse("gsd_wave_skipped", {"wave": 1, "artifact": ".planning/PLAN.md", "reason": "milestone_already_completed"})
+            else:
+                b_w1 = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
+                if b_w1 != "continue":
+                    halt_mode = "cancelled" if b_w1 == "cancel" else "paused"
+                    halt_reason = f"{halt_mode}_before_wave_1"
+                    plan_md = ""
+                else:
+                    t_w1 = time.perf_counter()
+                    active_ms_id = ms_w1.task_id
+                    sm.transition_milestone(session_id, "wave_1_plan", "running", epoch=lease_epoch, reason="wave_1_start")
+                    yield _sse("gsd_wave_start", {"wave": 1, "name": "SPEC & PLAN", "model": lead_model, "artifact": ".planning/PLAN.md"})
+                    _append_harness_event(session_id, "gsd/wave", {"wave": 1, "name": "SPEC & PLAN", "model": lead_model})
+                    cg_arch = run_codegraph_tool(wt_dir, mode="architecture", top_n=10)
+                    w1_msgs = [
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are the GSD Wave-1 Spec Architect (`open-gsd/gsd-core`). Produce a crisp, deterministic "
+                                "implementation specification (`PLAN.md`) with exact file paths, atomic tasks, and verification commands. "
+                                "Do NOT emit `<tool_call>` blocks — output pure Markdown specification."
+                            ),
+                        },
+                        {
+                            "role": "user",
+                            "content": f"### Engineering Goal:\n{prompt}\n\n### Workspace CodeGraph Summary:\n{cg_arch}\n{oc_mem}",
+                        },
+                    ]
+                    plan_buf: list[str] = []
+                    w1_usage: dict[str, Any] = {}
+                    async for item in stream_any_model(client, lead_model, w1_msgs, temperature=0.0, max_tokens=2400, reasoning_mode=reasoning_mode):
                         if session_id in _HARNESS_ABORT_FLAGS:
                             break
-                        if item["type"] == "reasoning":
-                            rbuf.append(item["text"])
-                            yield _sse("step_reasoning", {"step": global_step, "text": item["text"]})
-                        elif item["type"] == "content":
-                            cbuf.append(item["text"])
-                            yield _sse("step_content", {"step": global_step, "text": item["text"]})
+                        if item["type"] == "content":
+                            plan_buf.append(item["text"])
+                            yield _sse("step_content", {"step": 1, "wave": 1, "text": item["text"]})
                         elif item["type"] == "usage":
-                            upkt = item
-                    raw_out = "".join(cbuf)
-                    clean_txt, tcalls = extract_tool_calls(raw_out)
-                    w2_msgs.append({"role": "assistant", "content": raw_out})
-                    _update_harness_session_state(session_id, status="running", step_inc=1)
-                    _append_harness_event(
-                        session_id,
-                        "assistant/message",
-                        {"step": global_step, "model": lead_model, "reasoning": "".join(rbuf), "content": clean_txt, "tool_calls": tcalls, "usage": upkt},
-                    )
-                    yield _sse("step_assistant_done", {"step": global_step, "clean_content": clean_txt, "tool_calls": tcalls, "usage": upkt})
-                    if not tcalls:
-                        break
-                    feedback_blocks: list[str] = []
-                    for tc_i, tc in enumerate(tcalls):
-                        if session_id in _HARNESS_ABORT_FLAGS:
-                            break
-                        t_name, t_args = tc["name"], tc["arguments"]
-                        yield _sse("tool_call", {"step": global_step, "index": tc_i, "tool": t_name, "args": t_args})
-                        needs_approval = tool_requires_approval(t_name, t_args, policy)
-                        approved = False
-                        grant_source = "policy"
-                        approval_id: str | None = None
-                        reject_note = ""
-                        if needs_approval:
-                            pending = _create_pending_tool_approval(session_id, global_step, t_name, t_args)
-                            try:
-                                yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")} | {"session_id": session_id})
-                                decision = await _await_tool_approval_with_lease(
-                                    pending,
-                                    coord=coord,
-                                    task_id=session_id,
-                                    epoch=lease_epoch,
-                                    worker_id=worker_id,
-                                )
-                            finally:
-                                _abandon_pending_tool_approval(pending)
-                            approved, reject_note = bool(decision["approved"]), decision["note"]
-                            grant_source = "operator_approval" if approved else "none"
-                            approval_id = str(pending["approval_id"]) if approved else None
-                            yield _sse("approval_resolved", {"step": global_step, **decision})
-                        coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
-                        res_obj = await _execute_harness_tool(
-                            client,
-                            sess_exec,
-                            t_name,
-                            t_args,
-                            approved=approved,
-                            grant_source=grant_source,
-                            approval_id=approval_id,
-                            step_id=global_step,
-                            call_index=tc_i,
+                            w1_usage = item
+                    b_w1_after = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
+                    if b_w1_after != "continue":
+                        halt_mode = "cancelled" if b_w1_after == "cancel" else "paused"
+                        halt_reason = f"{halt_mode}_during_wave_1"
+                        plan_md = ""
+                    else:
+                        plan_md = "".join(plan_buf).strip() or f"# GSD Plan\n\nGoal: {prompt}\n"
+                        plan_path.write_text(plan_md, encoding="utf-8")
+                        state_path.write_text(
+                            f"# GSD State\n- **Goal**: {prompt}\n- **Phase**: WAVE_1_PLANNED\n- **Lead Model**: `{lead_model}`\n",
+                            encoding="utf-8",
                         )
-                        if needs_approval and not approved and reject_note:
-                            res_obj["output"] += f" User rejection note: {reject_note}"
-                        comp_out, sb_meta = sandbox_tool_output_if_large(session_id, t_name, res_obj["output"], context_mode_enabled=True)
-                        res_obj["output"] = comp_out
+                        _update_harness_session_state(session_id, status="running", step_inc=1)
                         _append_harness_event(
                             session_id,
-                            "tool/result",
-                            {"step": global_step, "tool": t_name, "args": t_args, "ok": res_obj["ok"], "output": comp_out, "diff": res_obj.get("diff", ""), "elapsed_ms": res_obj.get("elapsed_ms", 0), "sandbox": sb_meta},
+                            "assistant/message",
+                            {"step": 1, "model": lead_model, "content": f"### [GSD Wave 1/3 • `.planning/PLAN.md`]\n\n{plan_md}", "tool_calls": []},
                         )
-                        yield _sse(
-                            "tool_result",
-                            {"step": global_step, "index": tc_i, "tool": t_name, "args": t_args, "ok": res_obj["ok"], "output": comp_out, "diff": res_obj.get("diff", ""), "elapsed_ms": res_obj.get("elapsed_ms", 0), "sandbox": sb_meta},
-                        )
-                        feedback_blocks.append(_format_untrusted_tool_response(t_name, comp_out, res_obj["ok"]))
-                    w2_msgs.append({"role": "user", "content": "\n\n".join(feedback_blocks)})
+                        try:
+                            sm.budgets.record_usage(
+                                session_id,
+                                epoch=lease_epoch,
+                                steps_delta=1,
+                                tokens_delta=int(w1_usage.get("completion_tokens") or 0),
+                                elapsed_delta_s=max(0.0, time.perf_counter() - t_w1),
+                            )
+                        except execution_budget.BudgetExceeded as b_exc:
+                            halt_mode = "budget_exceeded"
+                            halt_reason = str(b_exc)
+                            last_completed_step = 1
+                        except execution_budget.ExecutionCancelled:
+                            halt_mode = "cancelled"
+                            halt_reason = "cancelled_after_wave_1"
+                        else:
+                            last_completed_step = 1
+                            w1_refs = _collect_step_evidence_refs(
+                                session_id,
+                                epoch=lease_epoch,
+                                wt_dir=wt_dir,
+                                extra_artifacts=(plan_path, state_path),
+                            )
+                            ck_w1 = sm.checkpoints.save_checkpoint(
+                                session_id,
+                                step=1,
+                                payload={"workflow": "gsd", "completed_wave": 1},
+                                evidence_refs=w1_refs,
+                                epoch=lease_epoch,
+                                milestone_id=ms_w1.task_id,
+                                status="committed",
+                                require_active_epoch=True,
+                            )
+                            sm.transition_milestone(
+                                session_id,
+                                "wave_1_plan",
+                                "completed",
+                                epoch=lease_epoch,
+                                reason="wave_1_completed",
+                                checkpoint_id=ck_w1.checkpoint_id,
+                                evidence_refs=w1_refs,
+                            )
+                            yield _sse("gsd_wave_done", {"wave": 1, "artifact": ".planning/PLAN.md", "chars": len(plan_md)})
 
-                (planning_dir / "STATE.md").write_text(
-                    f"# GSD State\n- **Goal**: {prompt}\n- **Phase**: WAVE_2_EXECUTED\n- **Lead Model**: `{lead_model}`\n",
-                    encoding="utf-8",
-                )
-                yield _sse("gsd_wave_done", {"wave": 2, "artifact": ".planning/STATE.md"})
+            # --- WAVE 2: FRESH-CONTEXT EXECUTE (Fresh Context #2 — zero planner bloat!) ---
+            if halt_mode == "none":
+                if ms_w2.state == "completed" and state_path.is_file():
+                    last_completed_step = 1 + max_exec_steps
+                    yield _sse("gsd_wave_skipped", {"wave": 2, "artifact": ".planning/STATE.md", "reason": "milestone_already_completed"})
+                else:
+                    b_w2 = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
+                    if b_w2 != "continue":
+                        halt_mode = "cancelled" if b_w2 == "cancel" else "paused"
+                        halt_reason = f"{halt_mode}_before_wave_2"
+                    else:
+                        active_ms_id = ms_w2.task_id
+                        sm.transition_milestone(session_id, "wave_2_execute", "running", epoch=lease_epoch, reason="wave_2_start")
+                        yield _sse("gsd_wave_start", {"wave": 2, "name": "FRESH-CONTEXT EXECUTE", "model": lead_model, "artifact": ".planning/STATE.md"})
+                        _append_harness_event(session_id, "gsd/wave", {"wave": 2, "name": "FRESH-CONTEXT EXECUTE", "model": lead_model})
+                        skill_block_raw, _ = await build_skills_context(skill_ids, prompt)
+                        eff_block = build_efficiency_mode_prompt(efficiency_mode)
+                        extra_blocks = (eff_block or "") + (oc_mem or "") + (skill_block_raw or "") + (build_active_mcp_tools_prompt() or "")
+                        exec_sys = HARNESS_SYSTEM_PROMPT_TEMPLATE.format(
+                            worktree_dir=str(wt_dir),
+                            policy=policy,
+                            critic_model=critic_model,
+                            skills_block=extra_blocks,
+                        )
+                        w2_msgs: list[dict[str, str]] = [
+                            {"role": "system", "content": exec_sys},
+                            {
+                                "role": "user",
+                                "content": (
+                                    f"Execute the following specification from `.planning/PLAN.md` inside `{wt_dir}`.\n"
+                                    f"Original Goal: {prompt}\n\n"
+                                    f"### `.planning/PLAN.md`:\n{plan_md[:6000]}\n\n"
+                                    f"Use tools step-by-step (`read_file`, `write_file`/`edit_file`, `run_bash`) and stop once implemented and tested."
+                                ),
+                            },
+                        ]
+                        sess_exec = _bind_lease_to_session(
+                            {**sess, "policy": policy, "status": "running"},
+                            task_id=session_id,
+                            epoch=lease_epoch,
+                            worker_id=worker_id,
+                        )
+                        for w2_step in range(1, max_exec_steps + 1):
+                            b_step = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
+                            if b_step != "continue":
+                                halt_mode = "cancelled" if b_step == "cancel" else "paused"
+                                halt_reason = f"{halt_mode}_before_wave2_step_{w2_step}"
+                                break
+                            t_w2_step = time.perf_counter()
+                            coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
+                            global_step = 1 + w2_step
+                            yield _sse("step_start", {"step": global_step, "max_steps": max_exec_steps + 2, "model": lead_model, "wave": 2})
+                            cbuf: list[str] = []
+                            rbuf: list[str] = []
+                            upkt: dict[str, Any] = {}
+                            async for item in stream_any_model(client, lead_model, w2_msgs, temperature=0.0, max_tokens=3600, reasoning_mode=reasoning_mode):
+                                if session_id in _HARNESS_ABORT_FLAGS:
+                                    break
+                                if item["type"] == "reasoning":
+                                    rbuf.append(item["text"])
+                                    yield _sse("step_reasoning", {"step": global_step, "text": item["text"]})
+                                elif item["type"] == "content":
+                                    cbuf.append(item["text"])
+                                    yield _sse("step_content", {"step": global_step, "text": item["text"]})
+                                elif item["type"] == "usage":
+                                    upkt = item
+                            b_after_w2_stream = sm.check_safe_boundary(
+                                session_id,
+                                epoch=lease_epoch,
+                                abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                            )
+                            if b_after_w2_stream != "continue":
+                                halt_mode = "cancelled" if b_after_w2_stream == "cancel" else "paused"
+                                halt_reason = f"{halt_mode}_during_wave2_step_{w2_step}"
+                                break
+                            raw_out = "".join(cbuf)
+                            clean_txt, tcalls = extract_tool_calls(raw_out)
+                            w2_msgs.append({"role": "assistant", "content": raw_out})
+                            _update_harness_session_state(session_id, status="running", step_inc=1)
+                            _append_harness_event(
+                                session_id,
+                                "assistant/message",
+                                {"step": global_step, "model": lead_model, "reasoning": "".join(rbuf), "content": clean_txt, "tool_calls": tcalls, "usage": upkt},
+                            )
+                            yield _sse("step_assistant_done", {"step": global_step, "clean_content": clean_txt, "tool_calls": tcalls, "usage": upkt})
+                            if not tcalls:
+                                try:
+                                    sm.budgets.record_usage(
+                                        session_id,
+                                        epoch=lease_epoch,
+                                        steps_delta=1,
+                                        tokens_delta=int(upkt.get("completion_tokens") or 0),
+                                        elapsed_delta_s=max(0.0, time.perf_counter() - t_w2_step),
+                                    )
+                                except execution_budget.BudgetExceeded as b_exc:
+                                    halt_mode = "budget_exceeded"
+                                    halt_reason = str(b_exc)
+                                except execution_budget.ExecutionCancelled:
+                                    halt_mode = "cancelled"
+                                    halt_reason = "cancelled_in_wave_2"
+                                else:
+                                    last_completed_step = global_step
+                                break
+                            feedback_blocks: list[str] = []
+                            w2_tools_run = 0
+                            for tc_i, tc in enumerate(tcalls):
+                                b_tc = sm.check_safe_boundary(
+                                    session_id,
+                                    epoch=lease_epoch,
+                                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                                )
+                                if b_tc != "continue":
+                                    halt_mode = "cancelled" if b_tc == "cancel" else "paused"
+                                    halt_reason = f"{halt_mode}_before_wave2_tool_{w2_step}_{tc_i}"
+                                    break
+                                t_name, t_args = tc["name"], tc["arguments"]
+                                yield _sse("tool_call", {"step": global_step, "index": tc_i, "tool": t_name, "args": t_args})
+                                needs_approval = tool_requires_approval(t_name, t_args, policy)
+                                approved = False
+                                grant_source = "policy"
+                                approval_id: str | None = None
+                                reject_note = ""
+                                if needs_approval:
+                                    pending = _create_pending_tool_approval(session_id, global_step, t_name, t_args)
+                                    try:
+                                        yield _sse("approval_required", {k: pending[k] for k in ("step", "approval_id", "tool", "args")} | {"session_id": session_id})
+                                        decision = await _await_tool_approval_with_lease(
+                                            pending,
+                                            coord=coord,
+                                            task_id=session_id,
+                                            epoch=lease_epoch,
+                                            worker_id=worker_id,
+                                        )
+                                    finally:
+                                        _abandon_pending_tool_approval(pending)
+                                    approved, reject_note = bool(decision["approved"]), decision["note"]
+                                    grant_source = "operator_approval" if approved else "none"
+                                    approval_id = str(pending["approval_id"]) if approved else None
+                                    yield _sse("approval_resolved", {"step": global_step, **decision})
+                                    b_post_app = sm.check_safe_boundary(
+                                        session_id,
+                                        epoch=lease_epoch,
+                                        abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                                    )
+                                    if b_post_app != "continue":
+                                        halt_mode = "cancelled" if b_post_app == "cancel" else "paused"
+                                        halt_reason = f"{halt_mode}_during_wave2_approval_{w2_step}_{tc_i}"
+                                        break
+                                coord.heartbeat(session_id, lease_epoch, worker_id, lease_ttl_s=DEFAULT_WORKER_LEASE_TTL_S)
+                                res_obj = await _execute_harness_tool(
+                                    client,
+                                    sess_exec,
+                                    t_name,
+                                    t_args,
+                                    approved=approved,
+                                    grant_source=grant_source,
+                                    approval_id=approval_id,
+                                    step_id=global_step,
+                                    call_index=tc_i,
+                                )
+                                w2_tools_run += 1
+                                if needs_approval and not approved and reject_note:
+                                    res_obj["output"] += f" User rejection note: {reject_note}"
+                                comp_out, sb_meta = sandbox_tool_output_if_large(session_id, t_name, res_obj["output"], context_mode_enabled=True)
+                                res_obj["output"] = comp_out
+                                _append_harness_event(
+                                    session_id,
+                                    "tool/result",
+                                    {"step": global_step, "tool": t_name, "args": t_args, "ok": res_obj["ok"], "output": comp_out, "diff": res_obj.get("diff", ""), "elapsed_ms": res_obj.get("elapsed_ms", 0), "sandbox": sb_meta},
+                                )
+                                yield _sse(
+                                    "tool_result",
+                                    {"step": global_step, "index": tc_i, "tool": t_name, "args": t_args, "ok": res_obj["ok"], "output": comp_out, "diff": res_obj.get("diff", ""), "elapsed_ms": res_obj.get("elapsed_ms", 0), "sandbox": sb_meta},
+                                )
+                                feedback_blocks.append(_format_untrusted_tool_response(t_name, comp_out, res_obj["ok"]))
+                            if feedback_blocks:
+                                w2_msgs.append({"role": "user", "content": "\n\n".join(feedback_blocks)})
+                            try:
+                                sm.budgets.record_usage(
+                                    session_id,
+                                    epoch=lease_epoch,
+                                    steps_delta=1,
+                                    tool_calls_delta=w2_tools_run,
+                                    tokens_delta=int(upkt.get("completion_tokens") or 0),
+                                    elapsed_delta_s=max(0.0, time.perf_counter() - t_w2_step),
+                                )
+                            except execution_budget.BudgetExceeded as b_exc:
+                                last_completed_step = global_step
+                                halt_mode = "budget_exceeded"
+                                halt_reason = str(b_exc)
+                                break
+                            except execution_budget.ExecutionCancelled:
+                                halt_mode = "cancelled"
+                                halt_reason = "cancelled_in_wave_2"
+                                break
+                            last_completed_step = global_step
+                            if halt_mode != "none":
+                                break
+
+                        if halt_mode == "none":
+                            b_w2_done = sm.check_safe_boundary(
+                                session_id,
+                                epoch=lease_epoch,
+                                abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                            )
+                            if b_w2_done != "continue":
+                                halt_mode = "cancelled" if b_w2_done == "cancel" else "paused"
+                                halt_reason = f"{halt_mode}_after_wave_2"
+                            else:
+                                state_path.write_text(
+                                    f"# GSD State\n- **Goal**: {prompt}\n- **Phase**: WAVE_2_EXECUTED\n- **Lead Model**: `{lead_model}`\n",
+                                    encoding="utf-8",
+                                )
+                                w2_refs = _collect_step_evidence_refs(
+                                    session_id,
+                                    epoch=lease_epoch,
+                                    wt_dir=wt_dir,
+                                    extra_artifacts=(plan_path, state_path),
+                                )
+                                ck_w2 = sm.checkpoints.save_checkpoint(
+                                    session_id,
+                                    step=max(2, last_completed_step),
+                                    payload={"workflow": "gsd", "completed_wave": 2},
+                                    evidence_refs=w2_refs,
+                                    epoch=lease_epoch,
+                                    milestone_id=ms_w2.task_id,
+                                    status="committed",
+                                    require_active_epoch=True,
+                                )
+                                sm.transition_milestone(
+                                    session_id,
+                                    "wave_2_execute",
+                                    "completed",
+                                    epoch=lease_epoch,
+                                    reason="wave_2_completed",
+                                    checkpoint_id=ck_w2.checkpoint_id,
+                                    evidence_refs=w2_refs,
+                                )
+                                yield _sse("gsd_wave_done", {"wave": 2, "artifact": ".planning/STATE.md"})
 
             # --- WAVE 3: FRESH-CONTEXT VERIFY (Fresh Context #3 with Critic Model) ---
-            if session_id not in _HARNESS_ABORT_FLAGS:
-                if is_local_omlx_model(lead_model) and is_local_omlx_model(critic_model) and lead_model != critic_model:
-                    await _unload_omlx_model(client, parse_model_route(lead_model)[2])
+            v_step = max_exec_steps + 2
+            if halt_mode == "none":
+                b_w3 = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
+                if b_w3 != "continue":
+                    halt_mode = "cancelled" if b_w3 == "cancel" else "paused"
+                    halt_reason = f"{halt_mode}_before_wave_3"
+                elif ms_w3.state == "completed" and ver_path.is_file():
+                    last_completed_step = v_step
+                    yield _sse("gsd_wave_skipped", {"wave": 3, "artifact": ".planning/VERIFICATION.md", "reason": "milestone_already_completed"})
+                else:
+                    t_w3 = time.perf_counter()
+                    active_ms_id = ms_w3.task_id
+                    sm.transition_milestone(session_id, "wave_3_verify", "running", epoch=lease_epoch, reason="wave_3_start")
+                    if is_local_omlx_model(lead_model) and is_local_omlx_model(critic_model) and lead_model != critic_model:
+                        await _unload_omlx_model(client, parse_model_route(lead_model)[2])
 
-                yield _sse("gsd_wave_start", {"wave": 3, "name": "FRESH-CONTEXT VERIFY", "model": critic_model, "artifact": ".planning/VERIFICATION.md"})
-                _append_harness_event(session_id, "gsd/wave", {"wave": 3, "name": "FRESH-CONTEXT VERIFY", "model": critic_model})
-                diff_pkt = _compute_git_diff(wt_dir)
-                w3_msgs = [
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are the GSD Wave-3 Independent Verifier (`open-gsd/gsd-core`). Given `.planning/PLAN.md` "
-                            "and the resulting workspace diff/status in a clean context window, audit requirement coverage, "
-                            "regressions, and verification status (`PASS` or `NEEDS_FOLLOWUP`)."
-                        ),
-                    },
-                    {
-                        "role": "user",
-                        "content": (
-                            f"### Original Goal:\n{prompt}\n\n"
-                            f"### `.planning/PLAN.md`:\n{plan_md[:3500]}\n\n"
-                            f"### Git Status:\n{diff_pkt.get('status') or '(clean / non-git)'}\n\n"
-                            f"### Workspace Unified Diff:\n{diff_pkt.get('diff', '')[:6000]}"
-                        ),
-                    },
-                ]
-                ver_buf: list[str] = []
-                v_step = max_exec_steps + 2
-                async for item in stream_any_model(client, critic_model, w3_msgs, temperature=0.0, max_tokens=1800, reasoning_mode="off"):
-                    if item["type"] == "content":
-                        ver_buf.append(item["text"])
-                        yield _sse("step_content", {"step": v_step, "wave": 3, "text": item["text"]})
-                ver_md = "".join(ver_buf).strip() or "Verification completed."
-                (planning_dir / "VERIFICATION.md").write_text(ver_md, encoding="utf-8")
-                (planning_dir / "STATE.md").write_text(
-                    f"# GSD State\n- **Goal**: {prompt}\n- **Phase**: WAVE_3_VERIFIED\n- **Lead**: `{lead_model}`\n- **Verifier**: `{critic_model}`\n",
-                    encoding="utf-8",
-                )
-                if is_local_omlx_model(lead_model) and is_local_omlx_model(critic_model) and lead_model != critic_model:
-                    await _unload_omlx_model(client, parse_model_route(critic_model)[2])
+                    yield _sse("gsd_wave_start", {"wave": 3, "name": "FRESH-CONTEXT VERIFY", "model": critic_model, "artifact": ".planning/VERIFICATION.md"})
+                    _append_harness_event(session_id, "gsd/wave", {"wave": 3, "name": "FRESH-CONTEXT VERIFY", "model": critic_model})
+                    diff_pkt = _compute_git_diff(wt_dir)
+                    w3_msgs = [
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are the GSD Wave-3 Independent Verifier (`open-gsd/gsd-core`). Given `.planning/PLAN.md` "
+                                "and the resulting workspace diff/status in a clean context window, audit requirement coverage, "
+                                "regressions, and verification status (`PASS` or `NEEDS_FOLLOWUP`)."
+                            ),
+                        },
+                        {
+                            "role": "user",
+                            "content": (
+                                f"### Original Goal:\n{prompt}\n\n"
+                                f"### `.planning/PLAN.md`:\n{plan_md[:3500]}\n\n"
+                                f"### Git Status:\n{diff_pkt.get('status') or '(clean / non-git)'}\n\n"
+                                f"### Workspace Unified Diff:\n{diff_pkt.get('diff', '')[:6000]}"
+                            ),
+                        },
+                    ]
+                    ver_buf: list[str] = []
+                    w3_usage: dict[str, Any] = {}
+                    async for item in stream_any_model(client, critic_model, w3_msgs, temperature=0.0, max_tokens=1800, reasoning_mode="off"):
+                        if session_id in _HARNESS_ABORT_FLAGS:
+                            break
+                        if item["type"] == "content":
+                            ver_buf.append(item["text"])
+                            yield _sse("step_content", {"step": v_step, "wave": 3, "text": item["text"]})
+                        elif item["type"] == "usage":
+                            w3_usage = item
 
-                _update_harness_session_state(session_id, status="completed", step_inc=1)
-                _append_harness_event(
-                    session_id,
-                    "assistant/message",
-                    {"step": v_step, "model": critic_model, "content": f"### [GSD Wave 3/3 • `.planning/VERIFICATION.md`]\n\n{ver_md}", "tool_calls": []},
-                )
-                hist = _load_harness_messages(session_id)
-                if not hist:
-                    hist = [{"role": "system", "content": "GSD Spec-Driven Session"}]
-                hist.append({"role": "user", "content": f"[GSD 3-Wave Goal] {prompt}"})
-                hist.append({"role": "assistant", "content": f"Completed GSD 3-Wave Spec Loop (`.planning/PLAN.md` -> Execute -> `.planning/VERIFICATION.md`).\n\n{ver_md[:1800]}"})
-                _save_harness_messages(session_id, hist)
-                yield _sse("gsd_wave_done", {"wave": 3, "artifact": ".planning/VERIFICATION.md", "chars": len(ver_md)})
+                    b_w3_after = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
+                    if b_w3_after != "continue":
+                        halt_mode = "cancelled" if b_w3_after == "cancel" else "paused"
+                        halt_reason = f"{halt_mode}_during_wave_3"
+                    else:
+                        ver_md = "".join(ver_buf).strip() or "Verification completed."
+                        ver_path.write_text(ver_md, encoding="utf-8")
+                        state_path.write_text(
+                            f"# GSD State\n- **Goal**: {prompt}\n- **Phase**: WAVE_3_VERIFIED\n- **Lead**: `{lead_model}`\n- **Verifier**: `{critic_model}`\n",
+                            encoding="utf-8",
+                        )
+                        if is_local_omlx_model(lead_model) and is_local_omlx_model(critic_model) and lead_model != critic_model:
+                            await _unload_omlx_model(client, parse_model_route(critic_model)[2])
+
+                        try:
+                            sm.budgets.record_usage(
+                                session_id,
+                                epoch=lease_epoch,
+                                steps_delta=1,
+                                tokens_delta=int(w3_usage.get("completion_tokens") or 0),
+                                elapsed_delta_s=max(0.0, time.perf_counter() - t_w3),
+                            )
+                        except execution_budget.BudgetExceeded as b_exc:
+                            halt_mode = "budget_exceeded"
+                            halt_reason = str(b_exc)
+                            last_completed_step = v_step
+                        except execution_budget.ExecutionCancelled:
+                            halt_mode = "cancelled"
+                            halt_reason = "cancelled_after_wave_3"
+                        else:
+                            last_completed_step = v_step
+                            w3_refs = _collect_step_evidence_refs(
+                                session_id,
+                                epoch=lease_epoch,
+                                wt_dir=wt_dir,
+                                extra_artifacts=(plan_path, state_path, ver_path),
+                            )
+                            sm.transition_milestone(
+                                session_id,
+                                "wave_3_verify",
+                                "completed",
+                                epoch=lease_epoch,
+                                reason="wave_3_completed",
+                                evidence_refs=w3_refs,
+                            )
+                            _append_harness_event(
+                                session_id,
+                                "assistant/message",
+                                {"step": v_step, "model": critic_model, "content": f"### [GSD Wave 3/3 • `.planning/VERIFICATION.md`]\n\n{ver_md}", "tool_calls": []},
+                            )
+                            hist = _load_harness_messages(session_id)
+                            if not hist:
+                                hist = [{"role": "system", "content": "GSD Spec-Driven Session"}]
+                            hist.append({"role": "user", "content": f"[GSD 3-Wave Goal] {prompt}"})
+                            hist.append({"role": "assistant", "content": f"Completed GSD 3-Wave Spec Loop (`.planning/PLAN.md` -> Execute -> `.planning/VERIFICATION.md`).\n\n{ver_md[:1800]}"})
+                            _save_harness_messages(session_id, hist)
+                            yield _sse("gsd_wave_done", {"wave": 3, "artifact": ".planning/VERIFICATION.md", "chars": len(ver_md)})
+
+            if halt_mode == "none":
+                b_final = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
+                if b_final != "continue":
+                    halt_mode = "cancelled" if b_final == "cancel" else "paused"
+                    halt_reason = f"{halt_mode}_before_gsd_completion"
 
             elapsed_s = round(time.perf_counter() - t0, 2)
-            aborted_gsd = session_id in _HARNESS_ABORT_FLAGS
-            lease_final_state = "paused" if aborted_gsd else "completed"
-            lease_released = True
-            coord.release(
+            final_gsd_refs = _collect_step_evidence_refs(
                 session_id,
-                lease_epoch,
-                worker_id,
-                next_state=lease_final_state,
-                reason=f"gsd_{lease_final_state}",
+                epoch=lease_epoch,
+                wt_dir=wt_dir,
+                extra_artifacts=(plan_path, state_path, ver_path),
             )
+            if halt_mode == "cancelled":
+                lease_final_state = "cancelled"
+                lease_released = True
+                sm.cancel_task(session_id, reason=halt_reason or "gsd_cancelled", evidence_refs=final_gsd_refs)
+                _update_harness_session_state(session_id, status="cancelled")
+                yield _sse("cancelled", {"step": last_completed_step, "reason": halt_reason})
+            elif halt_mode in {"paused", "budget_exceeded"}:
+                lease_final_state = "paused"
+                lease_released = True
+                try:
+                    sm.pause_at_safe_boundary(
+                        session_id,
+                        worker_id=worker_id,
+                        epoch=lease_epoch,
+                        step=last_completed_step,
+                        checkpoint_payload={
+                            "workflow": "gsd",
+                            "completed_step": last_completed_step,
+                            "halt_mode": halt_mode,
+                        },
+                        evidence_refs=final_gsd_refs,
+                        milestone_id=active_ms_id,
+                        reason=halt_reason or f"gsd_{halt_mode}",
+                    )
+                except runtime_persistence.StaleEpochError:
+                    pass
+                _update_harness_session_state(session_id, status="paused")
+                if halt_mode == "budget_exceeded":
+                    yield _sse("budget_exceeded", {"step": last_completed_step, "reason": halt_reason})
+                else:
+                    if session_id in _HARNESS_ABORT_FLAGS:
+                        yield _sse("aborted", {"step": last_completed_step})
+                    yield _sse("paused", {"step": last_completed_step, "reason": halt_reason})
+            else:
+                sm.complete_task(
+                    session_id,
+                    worker_id=worker_id,
+                    epoch=lease_epoch,
+                    step=v_step,
+                    checkpoint_payload={"workflow": "gsd", "completed_wave": 3, "terminal": True},
+                    evidence_refs=final_gsd_refs,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                    reason="gsd_completed",
+                )
+                lease_final_state = "completed"
+                lease_released = True
+                _update_harness_session_state(session_id, status="completed", step_inc=1)
+
             diff_final = _compute_git_diff(wt_dir)
-            _append_harness_event(session_id, "turn/end", {"steps": get_harness_session_db(session_id)["step_count"], "elapsed_s": elapsed_s, "git_status": diff_final.get("status", "")})
-            yield _sse("turn_done", {"session": get_harness_session_db(session_id), "elapsed_s": elapsed_s, "git_status": diff_final.get("status", ""), "gsd_mode": True})
+            _append_harness_event(
+                session_id,
+                "turn/end",
+                {
+                    "steps": get_harness_session_db(session_id)["step_count"],
+                    "elapsed_s": elapsed_s,
+                    "git_status": diff_final.get("status", ""),
+                    "state": lease_final_state,
+                },
+            )
+            yield _sse(
+                "turn_done",
+                {
+                    "session": get_harness_session_db(session_id),
+                    "elapsed_s": elapsed_s,
+                    "git_status": diff_final.get("status", ""),
+                    "gsd_mode": True,
+                    "state": lease_final_state,
+                },
+            )
+        except runtime_persistence.StaleEpochError:
+            lease_released = True
+            current_t = sm.store.get_task(session_id)
+            if current_t is not None and current_t.state == "cancelled":
+                _update_harness_session_state(session_id, status="cancelled")
+                yield _sse("cancelled", {"step": last_completed_step, "reason": "epoch_fenced_by_cancel"})
+            else:
+                _update_harness_session_state(session_id, status="paused")
+                yield _sse("paused", {"step": last_completed_step, "reason": "epoch_fenced"})
         except Exception as exc:
             lease_final_state = "failed"
             lease_released = True
@@ -10314,10 +11230,50 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                     ):
                         yield ev_chunk
 
-            aborted_sdlc = session_id in _HARNESS_ABORT_FLAGS
-            lease_final_state = "paused" if aborted_sdlc else "completed"
-            lease_released = True
-            if coord.release(session_id, lease_epoch, worker_id, next_state=lease_final_state, reason=f"sdlc_{lease_final_state}") and not aborted_sdlc:
+            sm_sdlc = get_task_state_machine()
+            try:
+                sdlc_boundary = sm_sdlc.check_safe_boundary(
+                    session_id,
+                    epoch=lease_epoch,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                )
+            except runtime_persistence.StaleEpochError:
+                sdlc_boundary = "cancel" if (sm_sdlc.store.get_task(session_id) and sm_sdlc.store.get_task(session_id).state == "cancelled") else "pause"  # type: ignore[union-attr]
+            sdlc_refs = _collect_step_evidence_refs(session_id, epoch=lease_epoch, wt_dir=wt_dir)
+            if sdlc_boundary == "cancel":
+                lease_final_state = "cancelled"
+                lease_released = True
+                sm_sdlc.cancel_task(session_id, reason="sdlc_cancelled", evidence_refs=sdlc_refs)
+                _update_harness_session_state(session_id, status="cancelled")
+            elif sdlc_boundary == "pause":
+                lease_final_state = "paused"
+                lease_released = True
+                try:
+                    sm_sdlc.pause_at_safe_boundary(
+                        session_id,
+                        worker_id=worker_id,
+                        epoch=lease_epoch,
+                        step=get_harness_session_db(session_id)["step_count"],
+                        checkpoint_payload={"workflow": "sdlc", "mode": mode},
+                        evidence_refs=sdlc_refs,
+                        reason="sdlc_paused",
+                    )
+                except runtime_persistence.StaleEpochError:
+                    pass
+                _update_harness_session_state(session_id, status="paused")
+            else:
+                sm_sdlc.complete_task(
+                    session_id,
+                    worker_id=worker_id,
+                    epoch=lease_epoch,
+                    step=get_harness_session_db(session_id)["step_count"],
+                    checkpoint_payload={"workflow": "sdlc", "mode": mode, "terminal": True},
+                    evidence_refs=sdlc_refs,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                    reason="sdlc_completed",
+                )
+                lease_final_state = "completed"
+                lease_released = True
                 _update_harness_session_state(session_id, status="completed")
             elapsed_s = round(time.perf_counter() - t0, 2)
             diff_final = _compute_git_diff(wt_dir)
@@ -10503,10 +11459,50 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
                 ):
                     yield ev_chunk
 
-            aborted_fb = session_id in _HARNESS_ABORT_FLAGS
-            lease_final_state_fb = "paused" if aborted_fb else "completed"
-            lease_released_fb = True
-            if coord_fb.release(session_id, lease_epoch_fb, worker_id_fb, next_state=lease_final_state_fb, reason=f"sdlc_feedback_{lease_final_state_fb}") and not aborted_fb:
+            sm_fb = get_task_state_machine()
+            try:
+                fb_boundary = sm_fb.check_safe_boundary(
+                    session_id,
+                    epoch=lease_epoch_fb,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                )
+            except runtime_persistence.StaleEpochError:
+                fb_boundary = "cancel" if (sm_fb.store.get_task(session_id) and sm_fb.store.get_task(session_id).state == "cancelled") else "pause"  # type: ignore[union-attr]
+            fb_refs = _collect_step_evidence_refs(session_id, epoch=lease_epoch_fb, wt_dir=wt_dir)
+            if fb_boundary == "cancel":
+                lease_final_state_fb = "cancelled"
+                lease_released_fb = True
+                sm_fb.cancel_task(session_id, reason="sdlc_feedback_cancelled", evidence_refs=fb_refs)
+                _update_harness_session_state(session_id, status="cancelled")
+            elif fb_boundary == "pause":
+                lease_final_state_fb = "paused"
+                lease_released_fb = True
+                try:
+                    sm_fb.pause_at_safe_boundary(
+                        session_id,
+                        worker_id=worker_id_fb,
+                        epoch=lease_epoch_fb,
+                        step=get_harness_session_db(session_id)["step_count"],
+                        checkpoint_payload={"workflow": "sdlc_feedback"},
+                        evidence_refs=fb_refs,
+                        reason="sdlc_feedback_paused",
+                    )
+                except runtime_persistence.StaleEpochError:
+                    pass
+                _update_harness_session_state(session_id, status="paused")
+            else:
+                sm_fb.complete_task(
+                    session_id,
+                    worker_id=worker_id_fb,
+                    epoch=lease_epoch_fb,
+                    step=get_harness_session_db(session_id)["step_count"],
+                    checkpoint_payload={"workflow": "sdlc_feedback", "terminal": True},
+                    evidence_refs=fb_refs,
+                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                    reason="sdlc_feedback_completed",
+                )
+                lease_final_state_fb = "completed"
+                lease_released_fb = True
                 _update_harness_session_state(session_id, status="completed")
             elapsed_s = round(time.perf_counter() - t0, 2)
             diff_final = _compute_git_diff(wt_dir)

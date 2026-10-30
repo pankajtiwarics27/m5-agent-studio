@@ -81,6 +81,10 @@ ACTION_STATUSES: frozenset[str] = frozenset(
     {"never_started", "in_flight", "committed", "failed", "denied", "uncertain"}
 )
 
+CHECKPOINT_STATUSES: frozenset[str] = frozenset(
+    {"pending_commit", "committed", "interrupted", "resumed", "superseded"}
+)
+
 
 class StorageProvider(Protocol):
     """Minimal storage connection seam compatible with ``app.SQLiteStorage``."""
@@ -657,6 +661,26 @@ def _apply_v3_execution_spine_tables(conn: sqlite3.Connection) -> None:
         """
     )
     conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS runtime_task_checkpoints (
+            checkpoint_id TEXT PRIMARY KEY CHECK (length(trim(checkpoint_id)) > 0),
+            task_id TEXT NOT NULL REFERENCES runtime_tasks(task_id) ON DELETE RESTRICT,
+            seq INTEGER NOT NULL CHECK (seq >= 1),
+            step INTEGER NOT NULL CHECK (step >= 0),
+            epoch INTEGER NOT NULL DEFAULT 0 CHECK (epoch >= 0),
+            milestone_id TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'committed'
+                CHECK (status IN ('pending_commit', 'committed', 'interrupted', 'resumed', 'superseded')),
+            payload_json TEXT NOT NULL DEFAULT '{}',
+            payload_hash TEXT NOT NULL,
+            evidence_refs_json TEXT NOT NULL DEFAULT '[]',
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL,
+            UNIQUE (task_id, seq)
+        )
+        """
+    )
+    conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_runtime_tasks_session_state ON runtime_tasks(session_id, state)"
     )
     conn.execute(
@@ -673,6 +697,9 @@ def _apply_v3_execution_spine_tables(conn: sqlite3.Connection) -> None:
     )
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_runtime_actions_session ON runtime_actions(session_id, created_at)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_runtime_task_checkpoints_task ON runtime_task_checkpoints(task_id, seq)"
     )
 
 
@@ -1210,6 +1237,43 @@ class RuntimePersistenceStore:
             conn.row_factory = sqlite3.Row
             row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
             return _row_to_task(row) if row is not None else None
+
+        return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
+    def list_child_tasks(self, parent_task_id: str) -> list[TaskRecord]:
+        """Return child milestone tasks under ``parent_task_id`` ordered by creation."""
+        pid = _non_empty_text(parent_task_id, "parent_task_id", max_len=128)
+
+        def _read(conn: sqlite3.Connection) -> list[TaskRecord]:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT * FROM runtime_tasks WHERE parent_task_id = ? ORDER BY created_at ASC, task_id ASC",
+                (pid,),
+            ).fetchall()
+            return [_row_to_task(r) for r in rows]
+
+        return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
+    def list_root_tasks(self, *, states: tuple[str, ...] | None = None) -> list[TaskRecord]:
+        """Return root ``runtime_tasks`` rows (``parent_task_id IS NULL``)."""
+        if states is not None:
+            for st in states:
+                if st not in TASK_STATES:
+                    raise ValueError(f"Unsupported task state filter: {st!r}")
+
+        def _read(conn: sqlite3.Connection) -> list[TaskRecord]:
+            conn.row_factory = sqlite3.Row
+            if states:
+                placeholders = ",".join("?" for _ in states)
+                rows = conn.execute(
+                    f"SELECT * FROM runtime_tasks WHERE parent_task_id IS NULL AND state IN ({placeholders}) ORDER BY created_at ASC",
+                    tuple(states),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM runtime_tasks WHERE parent_task_id IS NULL ORDER BY created_at ASC"
+                ).fetchall()
+            return [_row_to_task(r) for r in rows]
 
         return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
 
@@ -1931,5 +1995,34 @@ class RuntimePersistenceStore:
             conn.row_factory = sqlite3.Row
             row = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
             return _row_to_action(row) if row is not None else None
+
+        return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
+    def list_task_actions(
+        self,
+        task_id: str,
+        *,
+        statuses: tuple[str, ...] | None = None,
+    ) -> list[ActionRecord]:
+        tid = _non_empty_text(task_id, "task_id", max_len=128)
+        if statuses is not None:
+            for st in statuses:
+                if st not in ACTION_STATUSES:
+                    raise ValueError(f"Unsupported action status filter: {st!r}")
+
+        def _read(conn: sqlite3.Connection) -> list[ActionRecord]:
+            conn.row_factory = sqlite3.Row
+            if statuses:
+                placeholders = ",".join("?" for _ in statuses)
+                rows = conn.execute(
+                    f"SELECT * FROM runtime_actions WHERE task_id = ? AND status IN ({placeholders}) ORDER BY created_at ASC",
+                    (tid, *statuses),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM runtime_actions WHERE task_id = ? ORDER BY created_at ASC",
+                    (tid,),
+                ).fetchall()
+            return [_row_to_action(r) for r in rows]
 
         return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)

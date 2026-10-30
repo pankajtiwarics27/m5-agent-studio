@@ -130,6 +130,7 @@ EXCLUDED_TABLES: tuple[str, ...] = (
     "runtime_task_epochs",
     "runtime_task_transitions",
     "runtime_actions",
+    "runtime_task_checkpoints",
 )
 
 
@@ -185,6 +186,7 @@ def export_history(conn: sqlite3.Connection, *, redact: bool = True) -> dict[str
                 "runtime_task_epochs",
                 "runtime_task_transitions",
                 "runtime_actions",
+                "runtime_task_checkpoints",
             ],
         },
         "tables": tables_out,

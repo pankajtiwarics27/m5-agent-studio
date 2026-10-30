@@ -17,6 +17,9 @@ OUT = ROOT / "studio.py"
 INLINED_MODULES = (
     "runtime_persistence",
     "side_effect_ledger",
+    "execution_budget",
+    "workflow_checkpoints",
+    "workflow_state",
     "mcp_client",
     "context_store",
     "onboarding_preflight",
