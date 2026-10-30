@@ -79,6 +79,7 @@ import workflow_checkpoints
 import workflow_state
 import edit_rollback
 import edit_transactions
+import verification_evidence
 import workspace_snapshots
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
 
@@ -9157,6 +9158,23 @@ def _parse_task_verification_spec(
         raw_exp = raw.get("expected_test_output_contains") or []
         if isinstance(raw_exp, str) or not isinstance(raw_exp, list):
             raise ValueError("expected_test_output_contains must be an array of strings.")
+        raw_pre_existing = raw.get("pre_existing_failures") or []
+        if isinstance(raw_pre_existing, str) or not isinstance(raw_pre_existing, list):
+            raise ValueError("pre_existing_failures must be an array of test ids.")
+        raw_targeted = raw.get("targeted_test_command") or []
+        if isinstance(raw_targeted, str) or not isinstance(raw_targeted, list):
+            raise ValueError("targeted_test_command must be an argv array of strings.")
+        raw_cov = raw.get("acceptance_coverage") or []
+        if not isinstance(raw_cov, list):
+            raise ValueError("acceptance_coverage must be an array of {criterion, test_ids} objects.")
+        coverage_entries: list[tuple[str, tuple[str, ...]]] = []
+        for entry in raw_cov:
+            if not isinstance(entry, dict):
+                raise ValueError("acceptance_coverage entries must be {criterion, test_ids} objects.")
+            raw_ids = entry.get("test_ids") or []
+            if isinstance(raw_ids, str) or not isinstance(raw_ids, list):
+                raise ValueError("acceptance_coverage test_ids must be an array of test ids.")
+            coverage_entries.append((str(entry.get("criterion", "")), tuple(str(t) for t in raw_ids)))
 
         return workflow_state.TaskVerificationSpec(
             require_managed_edit=bool(raw.get("require_managed_edit", True)),
@@ -9169,6 +9187,11 @@ def _parse_task_verification_spec(
             test_command=tuple(str(x) for x in raw_cmd),
             expected_test_output_contains=tuple(str(x) for x in raw_exp),
             timeout_s=float(raw.get("timeout_s", 30.0)),
+            pre_existing_failures=tuple(str(x) for x in raw_pre_existing),
+            allow_pre_existing_failures=bool(raw.get("allow_pre_existing_failures", False)),
+            require_revision_stability=bool(raw.get("require_revision_stability", True)),
+            targeted_test_command=tuple(str(x) for x in raw_targeted),
+            acceptance_coverage=tuple(coverage_entries),
         )
     except (TypeError, ValueError, workflow_state.WorkflowStateError) as exc:
         raise HTTPException(status_code=400, detail=f"Invalid task verification contract: {exc}") from exc
@@ -10521,11 +10544,34 @@ async def api_get_harness_task_state(session_id: str) -> JSONResponse:
     transitions = sm.store.list_transitions(session_id)
     checkpoints = sm.checkpoints.list_checkpoints(session_id, verify_integrity=False)
     ver_spec = sm.get_verification_spec(session_id)
+    # The evidence a completion claim would be tied to right now: the workspace
+    # revision and the environment an authoritative test command would run in.
+    # Read-only; a capture that fails leaves the preview empty rather than failing
+    # the whole task view.
+    ver_evidence_preview: dict[str, Any] | None = None
+    ws_dir_raw = str(sess.get("worktree_dir") or "").strip()
+    if ver_spec is not None and ws_dir_raw:
+        try:
+            ws_dir_path = Path(ws_dir_raw).expanduser().resolve(strict=True)
+            ver_evidence_preview = {
+                "schema_version": verification_evidence.EVIDENCE_SCHEMA_VERSION,
+                "environment": verification_evidence.environment_snapshot(ws_dir_path),
+                "revision": verification_evidence.capture_source_revision(
+                    ws_dir_path,
+                    tuple(ver_spec.required_modified_files) + tuple(ver_spec.required_files),
+                ).to_dict(),
+                "pre_existing_failures": list(ver_spec.pre_existing_failures),
+                "allow_pre_existing_failures": ver_spec.allow_pre_existing_failures,
+                "require_revision_stability": ver_spec.require_revision_stability,
+            }
+        except (verification_evidence.VerificationEvidenceError, OSError):
+            ver_evidence_preview = None
     return JSONResponse(
         {
             "task": _serialize_task_record(task),
             "budget": budget.to_dict(),
             "verification_spec": ver_spec.to_dict() if ver_spec is not None else None,
+            "verification_evidence": ver_evidence_preview,
             "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
             "checkpoint_integrity_error": integrity_error,
             "checkpoints": [ck.to_dict() for ck in checkpoints],

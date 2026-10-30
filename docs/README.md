@@ -54,6 +54,9 @@ SSE replay, reload/resync, approval reconciliation),
 compare-and-swap managed edits, durable edit transactions, conflict recovery),
 [`edit-rollback.md`](edit-rollback.md) (durable edit batches, version-checked
 inverse-patch rollback, action reconciliation, resumable recovery),
+[`verification-evidence.md`](verification-evidence.md) (revision-anchored test
+evidence, staged checks, baseline-aware failure classification, denial refusal,
+declared acceptance coverage),
 [`workflow-checkpoints.md`](workflow-checkpoints.md),
 [`execution-budgets.md`](execution-budgets.md), [`side-effect-idempotency.md`](side-effect-idempotency.md).
 

@@ -86,6 +86,7 @@ files = [
   "workflow_checkpoints.py",
   "workflow_evaluation.py",
   "workflow_orchestration.py",
+  "verification_evidence.py",
   "workflow_state.py",
   "workflow_tracing.py",
   "workspace_snapshots.py",

@@ -169,6 +169,27 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   (`partially_rolled_back`), and no Git command is ever run. Pinned by 27 tests
   (`tests/test_edit_rollback.py`) and documented in
   [`docs/edit-rollback.md`](docs/edit-rollback.md) (ADR-0007).
+- **A verified completion now carries revision-anchored evidence, and failures are
+  attributed instead of assumed (`M5-P2-04`):** `verification_evidence.py` (stdlib
+  only, inlined into `studio.py`) captures the revision the authoritative test
+  command ran against — `git HEAD`, the bounded dirty-path list with cache/coverage
+  artifacts filtered out, and each declared file's SHA-256 — before *and* after the
+  run, so a workspace that moves mid-run fails as
+  `workspace_changed_during_verification` instead of passing on a stale tree. The
+  transcript hash covers the command, exit code, bounded output and both revision
+  digests; the environment snapshot (interpreter, platform, cwd, execution surface)
+  is recorded with it. Failures are parsed from the transcript and classified
+  `pre_existing` / `environmental` / `introduced`; pre-existing failures only
+  tolerate verification under an explicit `allow_pre_existing_failures` opt-in, and
+  unparseable non-zero output becomes an `introduced` record rather than a clean
+  run. Refusal markers (`code execution is disabled`, sandbox unavailable, plan
+  denial) force `denied` and fail completion **even at exit code 0**. An optional
+  `targeted_test_command` runs first and stops the broader stage when it fails, and
+  an optional `acceptance_coverage` declaration fails completion when a named test
+  id was not observed passing. `GET /api/harness/sessions/{session_id}/task` exposes
+  a read-only revision preview. Pinned by 31 tests
+  (`tests/test_verification_evidence.py`) and documented in
+  [`docs/verification-evidence.md`](docs/verification-evidence.md) (ADR-0008).
 
 - **The execution boundary is extracted and its coverage is inventoried
   (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`–`M5-P1-04`):**
@@ -189,14 +210,16 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
   pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
   plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
-- **17 of 47 shipped Python modules are wired into the served app**
+- **18 of 48 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`, `execution_spine` since `M5-P0-06`,
   `runtime_persistence` since `M5-P1-01`, `side_effect_ledger` since `M5-P1-03`,
   `execution_budget`, `workflow_checkpoints`, `workflow_state` since
   `M5-P1-05`, `failure_injection` since `M5-P1-06`, `task_events` since
   `M5-P1-07`, `sandbox_boundary` + `workspace_snapshots` since `M5-P2-01`, and
-  `edit_transactions` since `M5-P2-02`, and `edit_rollback` since `M5-P2-03`; 5 of 42 at the time of the audit table). Together they govern
+  `edit_transactions` since `M5-P2-02`, `edit_rollback` since `M5-P2-03`, and
+  `verification_evidence` since `M5-P2-04`; 5 of 42 at the time of the audit
+  table). Together they govern
   schema upgrades, SQLite transactions, authoritative task-state / lease-epoch
   checks at admission (`M5-P1-02`), durable `runtime_actions`
   intent/result/replay tracking (`M5-P1-03`), single-owner worker leases,
@@ -207,8 +230,10 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   action-boundary crash injection (`M5-P1-06`), the durable cursor-addressed
   task-event stream with reload/resync and approval reconciliation (`M5-P1-07`),
   pre-edit Git baseline capture, selective CAS snapshots, path confinement, and
-  non-destructive baseline restore (`M5-P2-01`), and version-aware managed edits
-  with durable edit transactions (`M5-P2-02`).
+  non-destructive baseline restore (`M5-P2-01`), version-aware managed edits
+  with durable edit transactions (`M5-P2-02`), durable multi-file edit batches
+  with version-checked rollback (`M5-P2-03`), and revision-anchored verification
+  evidence with baseline-aware failure classification (`M5-P2-04`).
   The other 30 modules have passing unit tests but **no `app.py` call path**.
   Module presence is not integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
@@ -518,8 +543,12 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
   applied edit), **and `M5-P2-03`** (durable multi-file edit batches, per-path
   inverse-patch rollback with version checks and a three-way merge around later
   user edits, refusal with an explicit `unresolved` state, action reconciliation
-  before rollback, and resumable interrupted recovery; phase P2 60%). Next ready
-  story: `M5-P2-04` — claim via the coordination protocol before coding.
+  before rollback, and resumable interrupted recovery), **and `M5-P2-04`**
+  (revision-anchored verification evidence, staged targeted-then-broader checks,
+  baseline-aware pre-existing/environmental/introduced failure classification,
+  denial-is-not-a-result, and declared acceptance coverage that fails closed;
+  phase P2 80%). Next ready story: `M5-P2-05` — claim via the coordination
+  protocol before coding.
   Planned work is not implemented product behavior.
 - **AS program (Adaptive Runtime)** —
   [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json)

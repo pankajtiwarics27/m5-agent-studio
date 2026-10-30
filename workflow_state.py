@@ -14,6 +14,7 @@ from typing import Any, Literal, Sequence
 
 import execution_budget
 import runtime_persistence
+import verification_evidence
 import workflow_checkpoints
 
 WorkflowStatus = Literal["pending", "running", "paused", "completed", "failed", "cancelled"]
@@ -112,6 +113,23 @@ class TaskVerificationSpec:
     test_command: tuple[str, ...] = ()
     expected_test_output_contains: tuple[str, ...] = ()
     timeout_s: float = 30.0
+    #: Test ids known to fail before this task ran (M5-P2-04). A failure that
+    #: matches one of these is reported as pre-existing rather than introduced.
+    pre_existing_failures: tuple[str, ...] = ()
+    #: When true, a run whose only failures are pre-existing may still verify.
+    #: Default false: pre-existing failures are classified honestly but completion
+    #: still needs a clean run.
+    allow_pre_existing_failures: bool = False
+    #: Require the workspace revision to be identical before and after the
+    #: authoritative test command, so the result is tied to one revision.
+    require_revision_stability: bool = True
+    #: Cheapest check that must pass before the broader command runs (M5-P2-04
+    #: staged verification). A failing first stage stops the broader run.
+    targeted_test_command: tuple[str, ...] = ()
+    #: ``(criterion, test_ids)`` pairs declared by the caller. Coverage is
+    #: recorded from the observed transcript, and an uncovered criterion fails
+    #: completion instead of being assumed covered.
+    acceptance_coverage: tuple[tuple[str, tuple[str, ...]], ...] = ()
 
     def __post_init__(self) -> None:
         norm_mod = tuple(_normalize_workspace_rel_path(p, "required_modified_files") for p in self.required_modified_files)
@@ -137,6 +155,39 @@ class TaskVerificationSpec:
         exp_sub = tuple(str(s) for s in self.expected_test_output_contains if str(s))
         if isinstance(self.timeout_s, bool) or not isinstance(self.timeout_s, (int, float)) or self.timeout_s <= 0 or self.timeout_s > 120.0:
             raise WorkflowStateError("timeout_s must be in (0, 120].")
+        norm_pre: list[str] = []
+        for raw_fail in self.pre_existing_failures:
+            cleaned = str(raw_fail or "").strip()
+            if not cleaned:
+                continue
+            if "\x00" in cleaned:
+                raise WorkflowStateError("pre_existing_failures entries must be NUL-free strings.")
+            if cleaned not in norm_pre:
+                norm_pre.append(cleaned[:300])
+        targeted_cmd = tuple(str(tok) for tok in self.targeted_test_command)
+        if any((not tok or "\x00" in tok) for tok in targeted_cmd):
+            raise WorkflowStateError("targeted_test_command tokens must be non-empty strings without NUL.")
+        norm_cov: list[tuple[str, tuple[str, ...]]] = []
+        seen_criteria: set[str] = set()
+        for entry in self.acceptance_coverage:
+            if not isinstance(entry, (tuple, list)) or len(entry) != 2:
+                raise WorkflowStateError("acceptance_coverage entries must be (criterion, test_ids) pairs.")
+            criterion = str(entry[0] or "").strip()
+            raw_ids = entry[1] if entry[1] is not None else ()
+            if not criterion or "\x00" in criterion:
+                raise WorkflowStateError("acceptance_coverage criteria must be non-empty, NUL-free strings.")
+            if isinstance(raw_ids, str) or not isinstance(raw_ids, (list, tuple)):
+                raise WorkflowStateError("acceptance_coverage test ids must be a list/tuple of strings.")
+            ids = tuple(dict.fromkeys(str(t).strip()[:300] for t in raw_ids if str(t).strip()))
+            if not ids:
+                raise WorkflowStateError(f"acceptance_coverage[{criterion!r}] needs at least one test id.")
+            if criterion[:300] in seen_criteria:
+                continue
+            seen_criteria.add(criterion[:300])
+            norm_cov.append((criterion[:300], ids))
+        object.__setattr__(self, "targeted_test_command", targeted_cmd)
+        object.__setattr__(self, "acceptance_coverage", tuple(norm_cov[:100]))
+        object.__setattr__(self, "pre_existing_failures", tuple(norm_pre[:200]))
         object.__setattr__(self, "required_modified_files", norm_mod)
         object.__setattr__(self, "required_files", norm_req)
         object.__setattr__(self, "protected_files", norm_prot)
@@ -157,6 +208,14 @@ class TaskVerificationSpec:
             "test_command": list(self.test_command),
             "expected_test_output_contains": list(self.expected_test_output_contains),
             "timeout_s": round(self.timeout_s, 4),
+            "pre_existing_failures": list(self.pre_existing_failures),
+            "allow_pre_existing_failures": self.allow_pre_existing_failures,
+            "require_revision_stability": self.require_revision_stability,
+            "targeted_test_command": list(self.targeted_test_command),
+            "acceptance_coverage": [
+                {"criterion": criterion, "test_ids": list(ids)}
+                for criterion, ids in self.acceptance_coverage
+            ],
         }
 
     def sha256(self) -> str:
@@ -192,6 +251,15 @@ class TaskVerificationSpec:
             test_command=tuple(str(x) for x in raw_cmd),
             expected_test_output_contains=tuple(str(x) for x in raw_exp),
             timeout_s=float(data.get("timeout_s", 30.0)),
+            pre_existing_failures=tuple(str(x) for x in (data.get("pre_existing_failures") or ())),
+            allow_pre_existing_failures=bool(data.get("allow_pre_existing_failures", False)),
+            require_revision_stability=bool(data.get("require_revision_stability", True)),
+            targeted_test_command=tuple(str(x) for x in (data.get("targeted_test_command") or ())),
+            acceptance_coverage=tuple(
+                (str(entry.get("criterion", "")), tuple(str(t) for t in (entry.get("test_ids") or ())))
+                for entry in (data.get("acceptance_coverage") or ())
+                if isinstance(entry, dict)
+            ),
         )
 
 
@@ -211,6 +279,15 @@ class TaskVerificationReport:
     committed_edit_action_ids: tuple[str, ...] = ()
     committed_test_action_ids: tuple[str, ...] = ()
     evidence_refs: tuple[workflow_checkpoints.EvidenceRef, ...] = ()
+    #: Digest of the workspace revision the result is tied to (M5-P2-04).
+    source_revision: str = ""
+    revision: dict[str, Any] = field(default_factory=dict)
+    test_evidence: dict[str, Any] = field(default_factory=dict)
+    environment: dict[str, Any] = field(default_factory=dict)
+    staged_test_evidence: dict[str, Any] = field(default_factory=dict)
+    acceptance_coverage: tuple[dict[str, Any], ...] = ()
+    failure_classification: str = ""
+    denied: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -226,6 +303,14 @@ class TaskVerificationReport:
             "committed_edit_action_ids": list(self.committed_edit_action_ids),
             "committed_test_action_ids": list(self.committed_test_action_ids),
             "evidence_refs": [ref.to_dict() for ref in self.evidence_refs],
+            "source_revision": self.source_revision,
+            "revision": dict(self.revision),
+            "test_evidence": dict(self.test_evidence),
+            "environment": dict(self.environment),
+            "staged_test_evidence": dict(self.staged_test_evidence),
+            "acceptance_coverage": [dict(entry) for entry in self.acceptance_coverage],
+            "failure_classification": self.failure_classification,
+            "denied": self.denied,
         }
 
 
@@ -1489,81 +1574,248 @@ class DurableTaskStateMachine:
             )
         ]
 
-        # 6. Authoritative independent test command execution.
+        # 6. Authoritative independent test command execution, tied to one revision.
+        try:
+            base_revision = verification_evidence.capture_source_revision(ws_root, tuple(modified_paths))
+        except (verification_evidence.VerificationEvidenceError, OSError) as exc:
+            return TaskVerificationReport(
+                verified=False,
+                spec_sha256=spec_digest,
+                failure_code="revision_capture_failed",
+                failure_detail=f"Cannot tie the verification result to a source revision: {exc}",
+            )
+        revision_files = tuple(modified_paths)
+        environment = verification_evidence.environment_snapshot(ws_root)
         test_exit: int | None = None
         test_excerpt = ""
         test_sha = ""
-        if effective_spec.test_command:
-            sanitized_env = {k: v for k, v in os.environ.items() if k in _SAFE_VERIFY_ENV_KEYS}
-            sanitized_env["PYTHONDONTWRITEBYTECODE"] = "1"
-            sanitized_env["GIT_TERMINAL_PROMPT"] = "0"
+        evidence: verification_evidence.TestEvidence | None = None
+        evidence_kwargs: dict[str, Any] = {
+            "spec_sha256": spec_digest,
+            "modified_files": tuple(modified_paths),
+            "patch_sha256": patch_sha,
+            "committed_edit_action_ids": tuple(a.action_id for a in committed_edits),
+            "committed_test_action_ids": tuple(a.action_id for a in committed_tests),
+            "source_revision": base_revision.digest,
+            "revision": base_revision.to_dict(),
+            "environment": dict(environment),
+        }
+        if effective_spec.targeted_test_command:
+            # Stage 1: the cheapest check that proves the change forwards.
             try:
-                proc = subprocess.run(
-                    list(effective_spec.test_command),
-                    cwd=ws_root,
-                    capture_output=True,
-                    text=True,
-                    timeout=effective_spec.timeout_s,
-                    check=False,
-                    env=sanitized_env,
+                targeted = verification_evidence.run_verification_command(
+                    effective_spec.targeted_test_command,
+                    workspace=ws_root,
+                    timeout_s=effective_spec.timeout_s,
+                    files=revision_files,
+                    pre_existing=effective_spec.pre_existing_failures,
                 )
-            except subprocess.TimeoutExpired:
+            except (verification_evidence.VerificationEvidenceError, OSError) as exc:
                 return TaskVerificationReport(
                     verified=False,
-                    spec_sha256=spec_digest,
-                    failure_code="verification_test_timeout",
-                    failure_detail=f"Authoritative verification command timed out after {effective_spec.timeout_s}s.",
-                    modified_files=tuple(modified_paths),
-                    patch_sha256=patch_sha,
+                    failure_code="verification_targeted_test_exec_error",
+                    failure_detail=f"Targeted verification command could not be recorded: {exc}",
+                    evidence_refs=tuple(refs),
+                    **evidence_kwargs,
                 )
-            except OSError as exc:
-                return TaskVerificationReport(
-                    verified=False,
-                    spec_sha256=spec_digest,
-                    failure_code="verification_test_exec_error",
-                    failure_detail=f"Authoritative verification command failed to start: {exc}",
-                    modified_files=tuple(modified_paths),
-                    patch_sha256=patch_sha,
+            evidence_kwargs["staged_test_evidence"] = {"targeted": targeted.to_dict()}
+            evidence_kwargs["failure_classification"] = targeted.classification
+            evidence_kwargs["denied"] = bool(targeted.denied)
+            targeted_label = " ".join(effective_spec.targeted_test_command)[:100]
+            refs.append(
+                workflow_checkpoints.EvidenceRef(
+                    kind="targeted_test_verification",
+                    ref_id=targeted_label or "targeted_test_command",
+                    sha256=targeted.output_sha256,
+                    summary=(
+                        f"exit_code={targeted.exit_code}; classification={targeted.classification}; "
+                        f"revision={targeted.revision_before.digest[:12] if targeted.revision_before else '?'}"
+                    )[:240],
                 )
-            test_exit = int(proc.returncode)
-            combined_out = f"{proc.stdout or ''}\n{proc.stderr or ''}".strip()
-            test_excerpt = combined_out[:500]
-            test_transcript = json.dumps(
-                {
-                    "cmd": list(effective_spec.test_command),
-                    "exit_code": test_exit,
-                    "output": combined_out,
-                },
-                sort_keys=True,
-                separators=(",", ":"),
             )
-            test_sha = hashlib.sha256(test_transcript.encode("utf-8")).hexdigest()
-            if test_exit != 0:
+            if targeted.denied:
                 return TaskVerificationReport(
                     verified=False,
-                    spec_sha256=spec_digest,
-                    failure_code="verification_test_failed",
-                    failure_detail=f"Authoritative test command exited with code {test_exit}: {test_excerpt[:240]}",
-                    modified_files=tuple(modified_paths),
-                    patch_sha256=patch_sha,
-                    test_exit_code=test_exit,
-                    test_output_excerpt=test_excerpt,
-                    test_sha256=test_sha,
-                    committed_edit_action_ids=tuple(a.action_id for a in committed_edits),
-                    committed_test_action_ids=tuple(a.action_id for a in committed_tests),
+                    failure_code="verification_test_denied",
+                    failure_detail=(
+                        f"Targeted verification command was refused, not run (`{targeted.denied}`); "
+                        "a denied run is never a passing test result."
+                    ),
+                    evidence_refs=tuple(refs),
+                    **evidence_kwargs,
                 )
-            for needle in effective_spec.expected_test_output_contains:
-                if needle not in combined_out:
+            if targeted.exit_code is None:
+                target_detail = targeted.failures[0].detail if targeted.failures else "no exit code"
+                return TaskVerificationReport(
+                    verified=False,
+                    failure_code=(
+                        "verification_test_timeout"
+                        if "timed out" in target_detail
+                        else "verification_targeted_test_exec_error"
+                    ),
+                    failure_detail=f"Targeted verification command did not complete: {target_detail}",
+                    evidence_refs=tuple(refs),
+                    **evidence_kwargs,
+                )
+            if effective_spec.require_revision_stability and targeted.revision_changed:
+                return TaskVerificationReport(
+                    verified=False,
+                    failure_code="workspace_changed_during_verification",
+                    failure_detail=(
+                        "The workspace revision changed while the targeted verification command ran; "
+                        "the result cannot be tied to the revision it claims to verify."
+                    ),
+                    evidence_refs=tuple(refs),
+                    **evidence_kwargs,
+                )
+            targeted_tolerated = (
+                effective_spec.allow_pre_existing_failures
+                and targeted.classification == verification_evidence.RUN_PRE_EXISTING_ONLY
+            )
+            if targeted.exit_code != 0 and not targeted_tolerated:
+                targeted_failing = ", ".join(
+                    record.test_id or (record.detail[:60] or "<unparsed>") for record in targeted.failures[:5]
+                )
+                return TaskVerificationReport(
+                    verified=False,
+                    failure_code="verification_targeted_test_failed",
+                    failure_detail=(
+                        f"Targeted verification command exited with code {targeted.exit_code} "
+                        f"(classification={targeted.classification}; failures: {targeted_failing or 'unparsed'}); "
+                        "the broader verification stage was not run."
+                    ),
+                    evidence_refs=tuple(refs),
+                    **evidence_kwargs,
+                )
+
+        if effective_spec.test_command:
+            try:
+                evidence = verification_evidence.run_verification_command(
+                    effective_spec.test_command,
+                    workspace=ws_root,
+                    timeout_s=effective_spec.timeout_s,
+                    files=revision_files,
+                    pre_existing=effective_spec.pre_existing_failures,
+                )
+            except (verification_evidence.VerificationEvidenceError, OSError) as exc:
+                return TaskVerificationReport(
+                    verified=False,
+                    failure_code="verification_test_exec_error",
+                    failure_detail=f"Authoritative verification command could not be recorded: {exc}",
+                    evidence_refs=tuple(refs),
+                    **evidence_kwargs,
+                )
+            test_exit = evidence.exit_code
+            test_excerpt = evidence.output_excerpt
+            test_sha = evidence.output_sha256
+            evidence_kwargs.update(
+                {
+                    "test_exit_code": evidence.exit_code,
+                    "test_output_excerpt": test_excerpt,
+                    "test_sha256": test_sha,
+                    "source_revision": evidence.revision_before.digest if evidence.revision_before else base_revision.digest,
+                    "revision": evidence.revision_before.to_dict() if evidence.revision_before else base_revision.to_dict(),
+                    "test_evidence": evidence.to_dict(),
+                    "failure_classification": evidence.classification,
+                    "denied": bool(evidence.denied),
+                }
+            )
+
+            if evidence.denied:
+                return TaskVerificationReport(
+                    verified=False,
+                    failure_code="verification_test_denied",
+                    failure_detail=(
+                        "Authoritative verification command was refused, not run "
+                        f"(`{evidence.denied}`); a denied run is never a passing test result."
+                    ),
+                    evidence_refs=tuple(refs),
+                    **evidence_kwargs,
+                )
+            if evidence.exit_code is None:
+                first_detail = evidence.failures[0].detail if evidence.failures else "no exit code"
+                timed_out = "timed out" in first_detail
+                return TaskVerificationReport(
+                    verified=False,
+                    failure_code="verification_test_timeout" if timed_out else "verification_test_exec_error",
+                    failure_detail=(
+                        f"Authoritative verification command timed out after {effective_spec.timeout_s}s."
+                        if timed_out
+                        else f"Authoritative verification command failed to start: {first_detail}"
+                    ),
+                    evidence_refs=tuple(refs),
+                    **evidence_kwargs,
+                )
+            if effective_spec.require_revision_stability and evidence.revision_changed:
+                return TaskVerificationReport(
+                    verified=False,
+                    failure_code="workspace_changed_during_verification",
+                    failure_detail=(
+                        "The workspace revision changed while the verification command ran "
+                        f"({evidence.revision_before.digest[:12] if evidence.revision_before else '?'} -> "
+                        f"{evidence.revision_after.digest[:12] if evidence.revision_after else '?'}); "
+                        "the result cannot be tied to the revision it claims to verify."
+                    ),
+                    evidence_refs=tuple(refs),
+                    **evidence_kwargs,
+                )
+
+            tolerates_pre_existing = (
+                effective_spec.allow_pre_existing_failures
+                and evidence.classification == verification_evidence.RUN_PRE_EXISTING_ONLY
+            )
+            if evidence.exit_code != 0 and not tolerates_pre_existing:
+                if evidence.classification == verification_evidence.RUN_ENVIRONMENT_BLOCKED:
+                    failure_code = "verification_test_environment_blocked"
+                elif evidence.classification == verification_evidence.RUN_PRE_EXISTING_ONLY:
+                    failure_code = "verification_test_failed_pre_existing"
+                elif evidence.classification == verification_evidence.RUN_INTRODUCED:
+                    failure_code = "verification_test_failed_introduced"
+                else:
+                    failure_code = "verification_test_failed"
+                failing = ", ".join(
+                    record.test_id or (record.detail[:60] or "<unparsed>") for record in evidence.failures[:5]
+                )
+                return TaskVerificationReport(
+                    verified=False,
+                    failure_code=failure_code,
+                    failure_detail=(
+                        f"Authoritative test command exited with code {evidence.exit_code} "
+                        f"(classification={evidence.classification}; failures: {failing or 'unparsed'}): "
+                        f"{test_excerpt[:200]}"
+                    ),
+                    evidence_refs=tuple(refs),
+                    **evidence_kwargs,
+                )
+            coverage = verification_evidence.evaluate_acceptance_coverage(
+                effective_spec.acceptance_coverage,
+                output=evidence.output_text,
+                failures=evidence.failures,
+            )
+            if coverage:
+                evidence_kwargs["acceptance_coverage"] = coverage
+                uncovered = [entry for entry in coverage if not entry["covered"]]
+                if uncovered:
+                    missing_detail = "; ".join(
+                        f"{entry['criterion'][:80]} (missing: {', '.join(entry['missing_test_ids'])[:120]})"
+                        for entry in uncovered[:5]
+                    )
                     return TaskVerificationReport(
                         verified=False,
-                        spec_sha256=spec_digest,
+                        failure_code="verification_acceptance_coverage_missing",
+                        failure_detail=(
+                            "Declared acceptance criteria were not demonstrated by the authoritative run: "
+                            f"{missing_detail}"
+                        ),
+                        **evidence_kwargs,
+                    )
+            for needle in effective_spec.expected_test_output_contains:
+                if needle not in (test_excerpt if evidence.exit_code == 0 else ""):
+                    return TaskVerificationReport(
+                        verified=False,
                         failure_code="verification_test_output_mismatch",
                         failure_detail=f"Authoritative test output did not contain required marker {needle!r}.",
-                        modified_files=tuple(modified_paths),
-                        patch_sha256=patch_sha,
-                        test_exit_code=test_exit,
-                        test_output_excerpt=test_excerpt,
-                        test_sha256=test_sha,
+                        **evidence_kwargs,
                     )
             cmd_label = " ".join(effective_spec.test_command)[:100]
             refs.append(
@@ -1571,7 +1823,10 @@ class DurableTaskStateMachine:
                     kind="test_verification",
                     ref_id=cmd_label or "test_command",
                     sha256=test_sha,
-                    summary=f"exit_code=0; {test_excerpt.splitlines()[-1] if test_excerpt else 'passed'}"[:240],
+                    summary=(
+                        f"exit_code={evidence.exit_code}; classification={evidence.classification}; "
+                        f"revision={evidence_kwargs['source_revision'][:12]}"
+                    )[:240],
                 )
             )
 
@@ -1586,6 +1841,13 @@ class DurableTaskStateMachine:
             committed_edit_action_ids=tuple(a.action_id for a in committed_edits),
             committed_test_action_ids=tuple(a.action_id for a in committed_tests),
             evidence_refs=tuple(refs),
+            source_revision=evidence_kwargs["source_revision"],
+            revision=evidence_kwargs["revision"],
+            test_evidence=evidence_kwargs.get("test_evidence", {}),
+            staged_test_evidence=evidence_kwargs.get("staged_test_evidence", {}),
+            acceptance_coverage=tuple(evidence_kwargs.get("acceptance_coverage", ())),
+            failure_classification=evidence_kwargs.get("failure_classification", ""),
+            denied=bool(evidence_kwargs.get("denied", False)),
         )
 
     def complete_task(
