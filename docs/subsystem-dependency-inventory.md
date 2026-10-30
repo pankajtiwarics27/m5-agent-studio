@@ -5,9 +5,9 @@
 
 ## Runtime and authorization overview
 
-- FastAPI app and startup boundary: [`app.py:L2501`](../app.py#L2501). Startup validates bind/auth/execution settings, initializes local SQLite, and creates the shared HTTP client; it does not issue model/provider requests.
-- Shared HTTP request policy: [`app.py:L2577`](../app.py#L2577). All `/api/*` and `/v1/*` routes require bearer auth unless explicitly disabled on loopback; host allowlisting, state-changing Origin checks, request limits, and selected POST rate limits are also applied here.
-- Route inventory: 71 method/path registrations, plus the separately listed static mount. Optional FastAPI `/docs` and `/openapi.json` are disabled by default in the app constructor at [`app.py:L2529`](../app.py#L2529); when enabled, those routes are public. `/redoc` is not registered.
+- FastAPI app and startup boundary: [`app.py:L2504`](../app.py#L2504). Startup validates bind/auth/execution settings, initializes local SQLite, and creates the shared HTTP client; it does not issue model/provider requests.
+- Shared HTTP request policy: [`app.py:L2580`](../app.py#L2580). All `/api/*` and `/v1/*` routes require bearer auth unless explicitly disabled on loopback; host allowlisting, state-changing Origin checks, request limits, and selected POST rate limits are also applied here.
+- Route inventory: 74 method/path registrations, plus the separately listed static mount. Optional FastAPI `/docs` and `/openapi.json` are disabled by default in the app constructor at [`app.py:L2532`](../app.py#L2532); when enabled, those routes are public. `/redoc` is not registered.
 - There is one operator trust domain: no user identity, tenant separation, or route-level RBAC is implemented. A valid bearer token is the primary API authorization boundary.
 - Route authentication and tool authorization are separate boundaries: built-in, outbound MCP, and bundled inbound stdio MCP tool attempts pass through one deny-by-default policy and privacy-preserving audit boundary, including denials and approval rejections. The authenticated `/api/harness/approve` resolves pending harness approvals; explicit playground and inbound `tools/call` requests count as one-call intent but remain subject to registered-tool/server allowlists.
 
@@ -15,118 +15,121 @@
 
 | Method | Path | Handler source | Subsystem | Authorization path |
 |---|---|---|---|---|
-| `GET` | `/` | [`index`](../app.py#L2647) | Browser UI | Public; no bearer token. |
-| `POST` | `/api/cache/clear-ssd` | [`api_clear_ssd_cache`](../app.py#L4117) | Local runtime cache control | Shared API bearer/host/Origin boundary; this bearer-authenticated request directly invokes local runtime controls, with no separate role/approval layer. |
-| `POST` | `/api/chat/stream` | [`api_chat_stream`](../app.py#L4189) | Inference and agent workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/codegraph/analyze` | [`api_codegraph_analyze`](../app.py#L5917) | Workspace code analysis | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/codegraph/query` | [`api_codegraph_query`](../app.py#L5943) | Workspace code analysis | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/combos` | [`api_save_combo`](../app.py#L2841) | Model routing configuration | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `DELETE` | `/api/combos/{alias}` | [`api_delete_combo`](../app.py#L2855) | Model routing configuration | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/council/stream` | [`api_council_stream`](../app.py#L4329) | Council workflow | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/debate/stream` | [`api_debate_stream`](../app.py#L4383) | Debate workflow | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/hall/sessions` | [`api_hall_list`](../app.py#L3767) | Council Hall | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/hall/sessions` | [`api_hall_create`](../app.py#L3772) | Council Hall | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/hall/sessions/{session_id}` | [`api_hall_get`](../app.py#L3788) | Council Hall | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/hall/sessions/{session_id}/close` | [`api_hall_close`](../app.py#L3812) | Council Hall | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/hall/sessions/{session_id}/message` | [`api_hall_post_message`](../app.py#L3796) | Council Hall | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/hall/sessions/{session_id}/summon` | [`api_hall_summon`](../app.py#L3821) | Council Hall | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/harness/abort/{session_id}` | [`api_abort_harness`](../app.py#L9143) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/harness/approve` | [`api_approve_harness_tool`](../app.py#L9094) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; resolves a pending approval ID within the single-operator trust domain. |
-| `GET` | `/api/harness/audit` | [`api_harness_audit`](../app.py#L8951) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/harness/external-configs` | [`api_harness_external_configs`](../app.py#L8946) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/harness/gsd-wave` | [`api_run_gsd_fresh_wave`](../app.py#L10249) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; workflow policy and centralized tool authorization/approval apply to tool execution. |
-| `POST` | `/api/harness/run` | [`api_run_harness_turn`](../app.py#L9618) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; workflow policy and centralized tool authorization/approval apply to tool execution. |
-| `POST` | `/api/harness/sdlc/feedback` | [`api_run_sdlc_feedback_loop`](../app.py#L11820) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; workflow policy and centralized tool authorization/approval apply to tool execution. |
-| `POST` | `/api/harness/sdlc/run` | [`api_run_agile_sdlc_factory`](../app.py#L11518) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; workflow policy and centralized tool authorization/approval apply to tool execution. |
-| `GET` | `/api/harness/sessions` | [`api_list_harness_sessions`](../app.py#L8975) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/harness/sessions` | [`api_create_harness_session`](../app.py#L8990) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `DELETE` | `/api/harness/sessions/{session_id}` | [`api_delete_harness_session`](../app.py#L9037) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/harness/sessions/{session_id}` | [`api_get_harness_session`](../app.py#L9007) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `PATCH` | `/api/harness/sessions/{session_id}` | [`api_patch_harness_session`](../app.py#L9015) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/harness/sessions/{session_id}/apply` | [`api_apply_harness_worktree`](../app.py#L9071) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; applies the selected harness worktree when this operation is called; no separate user/role identity exists. |
-| `POST` | `/api/harness/sessions/{session_id}/cancel` | [`api_cancel_harness_session`](../app.py#L9510) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/harness/sessions/{session_id}/compact` | [`api_compact_harness_session`](../app.py#L9082) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/harness/sessions/{session_id}/diff` | [`api_get_harness_diff`](../app.py#L9062) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/harness/sessions/{session_id}/events` | [`api_get_harness_session_events`](../app.py#L9317) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/harness/sessions/{session_id}/events/stream` | [`api_stream_harness_session_events`](../app.py#L9343) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/harness/sessions/{session_id}/pause` | [`api_pause_harness_session`](../app.py#L9467) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/harness/sessions/{session_id}/resume` | [`api_resume_harness_session`](../app.py#L9558) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/harness/sessions/{session_id}/sdlc` | [`api_get_harness_sdlc_state`](../app.py#L11216) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/harness/sessions/{session_id}/state` | [`api_get_harness_session_state`](../app.py#L9311) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/harness/sessions/{session_id}/task` | [`api_get_harness_task_state`](../app.py#L9424) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/history/export` | [`api_history_export`](../app.py#L4126) | History privacy controls | Shared API bearer/host/Origin boundary; returns the local history bundle with best-effort secret redaction applied; credential/configuration and audit tables are excluded by construction; no separate user/tenant role check is implemented. |
-| `POST` | `/api/history/retention/run` | [`api_history_retention_run`](../app.py#L4139) | History privacy controls | Shared API bearer/host/Origin boundary; applies configured retention to aged conversation/telemetry/context-vault rows and FTS copies plus inactive harness sessions/transcripts; never touches credentials, the tool audit trail, or OpenContext documents; no separate user/tenant role check is implemented. |
-| `POST` | `/api/mcp/import-json` | [`api_import_mcp_json`](../app.py#L5215) | MCP configuration and tools | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/mcp/servers` | [`api_list_mcp_servers`](../app.py#L5193) | MCP configuration and tools | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/mcp/servers` | [`api_save_mcp_server`](../app.py#L5198) | MCP configuration and tools | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `DELETE` | `/api/mcp/servers/{alias}` | [`api_delete_mcp_server`](../app.py#L5297) | MCP configuration and tools | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `PATCH` | `/api/mcp/servers/{alias}` | [`api_patch_mcp_server`](../app.py#L5271) | MCP configuration and tools | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/mcp/servers/{alias}/call` | [`api_call_mcp_server_tool`](../app.py#L5329) | MCP configuration and tools | Shared API bearer/host/Origin boundary; explicit playground request is one-call user approval and passes through central authorization/audit; MCP server/tool allowlists apply, and stdio still requires explicit opt-in. |
-| `POST` | `/api/mcp/servers/{alias}/sync` | [`api_sync_mcp_server`](../app.py#L5318) | MCP configuration and tools | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/models/unload-all` | [`api_unload_all`](../app.py#L4075) | Local model controls | Shared API bearer/host/Origin boundary; this bearer-authenticated request directly invokes local runtime controls, with no separate role/approval layer. |
-| `POST` | `/api/models/{model_id:path}/load` | [`api_load_model`](../app.py#L4091) | Local model controls | Shared API bearer/host/Origin boundary; this bearer-authenticated request directly invokes local runtime controls, with no separate role/approval layer. |
-| `POST` | `/api/models/{model_id:path}/unload` | [`api_unload_model`](../app.py#L4105) | Local model controls | Shared API bearer/host/Origin boundary; this bearer-authenticated request directly invokes local runtime controls, with no separate role/approval layer. |
-| `GET` | `/api/onboarding/preflight` | [`api_onboarding_preflight`](../app.py#L2733) | Guided onboarding preflight | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/opencontext/docs` | [`api_list_opencontext`](../app.py#L5418) | OpenContext memory | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/opencontext/docs` | [`api_save_opencontext`](../app.py#L5428) | OpenContext memory | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `DELETE` | `/api/opencontext/docs/{doc_id}` | [`api_delete_opencontext`](../app.py#L5463) | OpenContext memory | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `PATCH` | `/api/opencontext/docs/{doc_id}` | [`api_patch_opencontext`](../app.py#L5445) | OpenContext memory | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/opencontext/lint` | [`api_lint_opencontext`](../app.py#L5471) | OpenContext memory | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/opencontext/search` | [`api_search_opencontext`](../app.py#L5423) | OpenContext memory | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/providers` | [`api_get_providers`](../app.py#L2760) | Provider configuration | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/providers` | [`api_save_provider`](../app.py#L2771) | Provider configuration | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/providers/fetch-models` | [`api_fetch_provider_models`](../app.py#L2795) | Provider configuration | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `DELETE` | `/api/providers/{alias}` | [`api_delete_provider`](../app.py#L2789) | Provider configuration | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/skills` | [`api_list_skills`](../app.py#L3699) | Skills | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/skills/install` | [`api_install_skill`](../app.py#L3710) | Skills | Shared API bearer/host/Origin boundary; GitHub HTTPS source validation; installing files is operator-triggered; downloaded code is not executed by default. |
-| `GET` | `/api/telemetry` | [`api_telemetry`](../app.py#L3896) | Runtime telemetry | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/workspace/directory` | [`api_get_workspace_directory`](../app.py#L3731) | Workspace browsing | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/workspace/directory` | [`api_set_workspace_directory`](../app.py#L3745) | Workspace browsing | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/workspace/files` | [`api_workspace_files`](../app.py#L3725) | Workspace browsing | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/healthz` | [`healthz`](../app.py#L2631) | Liveness | Public; no bearer token. |
-| `POST` | `/v1/chat/completions` | [`openai_gateway_chat`](../app.py#L3593) | OpenAI-compatible gateway | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/v1/models` | [`openai_gateway_models`](../app.py#L3505) | OpenAI-compatible gateway | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/` | [`index`](../app.py#L2650) | Browser UI | Public; no bearer token. |
+| `POST` | `/api/cache/clear-ssd` | [`api_clear_ssd_cache`](../app.py#L4120) | Local runtime cache control | Shared API bearer/host/Origin boundary; this bearer-authenticated request directly invokes local runtime controls, with no separate role/approval layer. |
+| `POST` | `/api/chat/stream` | [`api_chat_stream`](../app.py#L4192) | Inference and agent workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/codegraph/analyze` | [`api_codegraph_analyze`](../app.py#L5920) | Workspace code analysis | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/codegraph/query` | [`api_codegraph_query`](../app.py#L5946) | Workspace code analysis | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/combos` | [`api_save_combo`](../app.py#L2844) | Model routing configuration | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `DELETE` | `/api/combos/{alias}` | [`api_delete_combo`](../app.py#L2858) | Model routing configuration | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/council/stream` | [`api_council_stream`](../app.py#L4332) | Council workflow | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/debate/stream` | [`api_debate_stream`](../app.py#L4386) | Debate workflow | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/hall/sessions` | [`api_hall_list`](../app.py#L3770) | Council Hall | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/hall/sessions` | [`api_hall_create`](../app.py#L3775) | Council Hall | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/hall/sessions/{session_id}` | [`api_hall_get`](../app.py#L3791) | Council Hall | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/hall/sessions/{session_id}/close` | [`api_hall_close`](../app.py#L3815) | Council Hall | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/hall/sessions/{session_id}/message` | [`api_hall_post_message`](../app.py#L3799) | Council Hall | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/hall/sessions/{session_id}/summon` | [`api_hall_summon`](../app.py#L3824) | Council Hall | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/harness/abort/{session_id}` | [`api_abort_harness`](../app.py#L9351) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/harness/approve` | [`api_approve_harness_tool`](../app.py#L9302) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; resolves a pending approval ID within the single-operator trust domain. |
+| `GET` | `/api/harness/audit` | [`api_harness_audit`](../app.py#L9139) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/harness/external-configs` | [`api_harness_external_configs`](../app.py#L9134) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/harness/gsd-wave` | [`api_run_gsd_fresh_wave`](../app.py#L10649) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; workflow policy and centralized tool authorization/approval apply to tool execution. |
+| `POST` | `/api/harness/run` | [`api_run_harness_turn`](../app.py#L9957) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; workflow policy and centralized tool authorization/approval apply to tool execution. |
+| `POST` | `/api/harness/sdlc/feedback` | [`api_run_sdlc_feedback_loop`](../app.py#L12220) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; workflow policy and centralized tool authorization/approval apply to tool execution. |
+| `POST` | `/api/harness/sdlc/run` | [`api_run_agile_sdlc_factory`](../app.py#L11918) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; workflow policy and centralized tool authorization/approval apply to tool execution. |
+| `GET` | `/api/harness/sessions` | [`api_list_harness_sessions`](../app.py#L9163) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/harness/sessions` | [`api_create_harness_session`](../app.py#L9178) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `DELETE` | `/api/harness/sessions/{session_id}` | [`api_delete_harness_session`](../app.py#L9227) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/harness/sessions/{session_id}` | [`api_get_harness_session`](../app.py#L9197) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `PATCH` | `/api/harness/sessions/{session_id}` | [`api_patch_harness_session`](../app.py#L9205) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/harness/sessions/{session_id}/apply` | [`api_apply_harness_worktree`](../app.py#L9262) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; applies the selected harness worktree when this operation is called; no separate user/role identity exists. |
+| `POST` | `/api/harness/sessions/{session_id}/cancel` | [`api_cancel_harness_session`](../app.py#L9849) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/harness/sessions/{session_id}/compact` | [`api_compact_harness_session`](../app.py#L9290) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/harness/sessions/{session_id}/diff` | [`api_get_harness_diff`](../app.py#L9253) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/harness/sessions/{session_id}/events` | [`api_get_harness_session_events`](../app.py#L9656) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/harness/sessions/{session_id}/events/stream` | [`api_stream_harness_session_events`](../app.py#L9682) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/harness/sessions/{session_id}/pause` | [`api_pause_harness_session`](../app.py#L9806) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/harness/sessions/{session_id}/resume` | [`api_resume_harness_session`](../app.py#L9897) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/harness/sessions/{session_id}/sdlc` | [`api_get_harness_sdlc_state`](../app.py#L11616) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/harness/sessions/{session_id}/snapshots` | [`api_list_harness_session_snapshots`](../app.py#L9536) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/harness/sessions/{session_id}/snapshots` | [`api_capture_harness_session_snapshot`](../app.py#L9561) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/harness/sessions/{session_id}/snapshots/{snapshot_id}/restore` | [`api_restore_harness_session_snapshot`](../app.py#L9598) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/harness/sessions/{session_id}/state` | [`api_get_harness_session_state`](../app.py#L9530) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/harness/sessions/{session_id}/task` | [`api_get_harness_task_state`](../app.py#L9763) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/history/export` | [`api_history_export`](../app.py#L4129) | History privacy controls | Shared API bearer/host/Origin boundary; returns the local history bundle with best-effort secret redaction applied; credential/configuration and audit tables are excluded by construction; no separate user/tenant role check is implemented. |
+| `POST` | `/api/history/retention/run` | [`api_history_retention_run`](../app.py#L4142) | History privacy controls | Shared API bearer/host/Origin boundary; applies configured retention to aged conversation/telemetry/context-vault rows and FTS copies plus inactive harness sessions/transcripts; never touches credentials, the tool audit trail, or OpenContext documents; no separate user/tenant role check is implemented. |
+| `POST` | `/api/mcp/import-json` | [`api_import_mcp_json`](../app.py#L5218) | MCP configuration and tools | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/mcp/servers` | [`api_list_mcp_servers`](../app.py#L5196) | MCP configuration and tools | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/mcp/servers` | [`api_save_mcp_server`](../app.py#L5201) | MCP configuration and tools | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `DELETE` | `/api/mcp/servers/{alias}` | [`api_delete_mcp_server`](../app.py#L5300) | MCP configuration and tools | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `PATCH` | `/api/mcp/servers/{alias}` | [`api_patch_mcp_server`](../app.py#L5274) | MCP configuration and tools | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/mcp/servers/{alias}/call` | [`api_call_mcp_server_tool`](../app.py#L5332) | MCP configuration and tools | Shared API bearer/host/Origin boundary; explicit playground request is one-call user approval and passes through central authorization/audit; MCP server/tool allowlists apply, and stdio still requires explicit opt-in. |
+| `POST` | `/api/mcp/servers/{alias}/sync` | [`api_sync_mcp_server`](../app.py#L5321) | MCP configuration and tools | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/models/unload-all` | [`api_unload_all`](../app.py#L4078) | Local model controls | Shared API bearer/host/Origin boundary; this bearer-authenticated request directly invokes local runtime controls, with no separate role/approval layer. |
+| `POST` | `/api/models/{model_id:path}/load` | [`api_load_model`](../app.py#L4094) | Local model controls | Shared API bearer/host/Origin boundary; this bearer-authenticated request directly invokes local runtime controls, with no separate role/approval layer. |
+| `POST` | `/api/models/{model_id:path}/unload` | [`api_unload_model`](../app.py#L4108) | Local model controls | Shared API bearer/host/Origin boundary; this bearer-authenticated request directly invokes local runtime controls, with no separate role/approval layer. |
+| `GET` | `/api/onboarding/preflight` | [`api_onboarding_preflight`](../app.py#L2736) | Guided onboarding preflight | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/opencontext/docs` | [`api_list_opencontext`](../app.py#L5421) | OpenContext memory | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/opencontext/docs` | [`api_save_opencontext`](../app.py#L5431) | OpenContext memory | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `DELETE` | `/api/opencontext/docs/{doc_id}` | [`api_delete_opencontext`](../app.py#L5466) | OpenContext memory | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `PATCH` | `/api/opencontext/docs/{doc_id}` | [`api_patch_opencontext`](../app.py#L5448) | OpenContext memory | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/opencontext/lint` | [`api_lint_opencontext`](../app.py#L5474) | OpenContext memory | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/opencontext/search` | [`api_search_opencontext`](../app.py#L5426) | OpenContext memory | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/providers` | [`api_get_providers`](../app.py#L2763) | Provider configuration | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/providers` | [`api_save_provider`](../app.py#L2774) | Provider configuration | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/providers/fetch-models` | [`api_fetch_provider_models`](../app.py#L2798) | Provider configuration | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `DELETE` | `/api/providers/{alias}` | [`api_delete_provider`](../app.py#L2792) | Provider configuration | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/skills` | [`api_list_skills`](../app.py#L3702) | Skills | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/skills/install` | [`api_install_skill`](../app.py#L3713) | Skills | Shared API bearer/host/Origin boundary; GitHub HTTPS source validation; installing files is operator-triggered; downloaded code is not executed by default. |
+| `GET` | `/api/telemetry` | [`api_telemetry`](../app.py#L3899) | Runtime telemetry | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/workspace/directory` | [`api_get_workspace_directory`](../app.py#L3734) | Workspace browsing | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/workspace/directory` | [`api_set_workspace_directory`](../app.py#L3748) | Workspace browsing | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/workspace/files` | [`api_workspace_files`](../app.py#L3728) | Workspace browsing | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/healthz` | [`healthz`](../app.py#L2634) | Liveness | Public; no bearer token. |
+| `POST` | `/v1/chat/completions` | [`openai_gateway_chat`](../app.py#L3596) | OpenAI-compatible gateway | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/v1/models` | [`openai_gateway_models`](../app.py#L3508) | OpenAI-compatible gateway | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
 
 ## Authorization path detail
 
 | Layer | Source | Decision / scope |
 |---|---|---|
-| Startup/bind authorization | [`app.py:L2501`](../app.py#L2501) | Requires a configured high-entropy token for non-loopback binds and permits auth-disabled mode only on loopback. |
-| Shared HTTP gate | [`app.py:L2577`](../app.py#L2577) | Checks Host and Origin, bearer token, selected rate limits, and request byte limits before routing. |
-| Central tool authorization policy | [`app.py:L6556`](../app.py#L6556) | Deny-by-default allowlist, action-class classification (`read_only` vs `managed_edit`, `consequential`, `external`), and workflow-policy decision for registered built-in, skill, smart-block, and MCP tools; preserves approval and execution-mode guards. |
-| Central tool execution and audit boundary | [`app.py:L8638`](../app.py#L8638) | Enforces action-class separation, grant provenance, task-state and lease-epoch validation, durable `runtime_actions` intent-before-effect and replay classification (`side_effect_ledger.DurableActionLedger`), privacy-preserving `tool_audit_events` start/finish, write-transaction discipline, and scoped anti-bypass admission tokens via `DurableActionBoundary`. |
-| Harness approval decision | [`app.py:L5149`](../app.py#L5149) | Determines whether a human approval is required; centralized authorization independently enforces the decision at execution. |
-| Harness execution boundary | [`app.py:L8749`](../app.py#L8749) | Routes built-in tool attempts through central authorization, durable audit, and the executor. |
-| Approval request lifecycle | [`app.py:L6356`](../app.py#L6356) | Creates an in-process pending approval entry and records its request event. |
-| Approval resolution API | [`app.py:L9094`](../app.py#L9094) | Authenticated operator resolves a pending approval by ID; there is no separate identity/role model. |
-| MCP tool execution | [`app.py:L8701`](../app.py#L8701) | Uses central policy and audit; requires an enabled server and enabled-tool allowlist entry, with explicit approval per server/workflow policy; stdio launch is separately opt-in. |
-| Inbound MCP bridge execution | [`app.py:L12151`](../app.py#L12151) | Routes each bundled stdio `tools/call` through the central registry, one-call authorization, and privacy-preserving audit. |
-| MCP approval requirement | [`app.py:L5136`](../app.py#L5136) | Applies the configured MCP approval policy; the central execution boundary enforces it for harness, direct, automated, and inbound bridge calls. |
-| MCP playground route | [`app.py:L5329`](../app.py#L5329) | Authenticated explicit playground action is treated as one-call user approval, then centrally authorized and audited against server/tool allowlists. |
+| Startup/bind authorization | [`app.py:L2504`](../app.py#L2504) | Requires a configured high-entropy token for non-loopback binds and permits auth-disabled mode only on loopback. |
+| Shared HTTP gate | [`app.py:L2580`](../app.py#L2580) | Checks Host and Origin, bearer token, selected rate limits, and request byte limits before routing. |
+| Central tool authorization policy | [`app.py:L6559`](../app.py#L6559) | Deny-by-default allowlist, action-class classification (`read_only` vs `managed_edit`, `consequential`, `external`), and workflow-policy decision for registered built-in, skill, smart-block, and MCP tools; preserves approval and execution-mode guards. |
+| Central tool execution and audit boundary | [`app.py:L8762`](../app.py#L8762) | Enforces action-class separation, grant provenance, task-state and lease-epoch validation, durable `runtime_actions` intent-before-effect and replay classification (`side_effect_ledger.DurableActionLedger`), privacy-preserving `tool_audit_events` start/finish, write-transaction discipline, and scoped anti-bypass admission tokens via `DurableActionBoundary`. |
+| Harness approval decision | [`app.py:L5152`](../app.py#L5152) | Determines whether a human approval is required; centralized authorization independently enforces the decision at execution. |
+| Harness execution boundary | [`app.py:L8873`](../app.py#L8873) | Routes built-in tool attempts through central authorization, durable audit, and the executor. |
+| Approval request lifecycle | [`app.py:L6359`](../app.py#L6359) | Creates an in-process pending approval entry and records its request event. |
+| Approval resolution API | [`app.py:L9302`](../app.py#L9302) | Authenticated operator resolves a pending approval by ID; there is no separate identity/role model. |
+| MCP tool execution | [`app.py:L8825`](../app.py#L8825) | Uses central policy and audit; requires an enabled server and enabled-tool allowlist entry, with explicit approval per server/workflow policy; stdio launch is separately opt-in. |
+| Inbound MCP bridge execution | [`app.py:L12551`](../app.py#L12551) | Routes each bundled stdio `tools/call` through the central registry, one-call authorization, and privacy-preserving audit. |
+| MCP approval requirement | [`app.py:L5139`](../app.py#L5139) | Applies the configured MCP approval policy; the central execution boundary enforces it for harness, direct, automated, and inbound bridge calls. |
+| MCP playground route | [`app.py:L5332`](../app.py#L5332) | Authenticated explicit playground action is treated as one-call user approval, then centrally authorized and audited against server/tool allowlists. |
 
 ## Mounted static assets
 
-The public `/static/*` ASGI mount is registered when the static directory exists. It is listed separately because Starlette mounts do not expose a method set for the ordinary route enumerator. Source: [`app.py:L2539`](../app.py#L2539).
+The public `/static/*` ASGI mount is registered when the static directory exists. It is listed separately because Starlette mounts do not expose a method set for the ordinary route enumerator. Source: [`app.py:L2542`](../app.py#L2542).
 
 ## SQLite tables and schema contracts
 
-`DB_PATH` is local SQLite; initialization and additive schema upgrades are implemented by `init_db` and `_apply_schema_migrations` ([`app.py:L1320`](../app.py#L1320), [`app.py:L1134`](../app.py#L1134)) delegating to `runtime_persistence.py`. Current `SCHEMA_VERSION` is 3. Credential values are migrated to the OS keyring; history/context remains local SQLite data.
+`DB_PATH` is local SQLite; initialization and additive schema upgrades are implemented by `init_db` and `_apply_schema_migrations` ([`app.py:L1323`](../app.py#L1323), [`app.py:L1137`](../app.py#L1137)) delegating to `runtime_persistence.py`. Current `SCHEMA_VERSION` is 3. Credential values are migrated to the OS keyring; history/context remains local SQLite data.
 
 | Table | Kind | Responsibility | Declaration source |
 |---|---|---|---|
-| `cloud_providers` | table | Provider aliases, endpoint settings, model lists, and keyring references. | [`app.py:L1200`](../app.py#L1200) |
-| `ctx_session_metrics` | table | Raw/sent byte and compaction counters per session. | [`app.py:L1305`](../app.py#L1305) |
-| `ctx_vault_chunks` | table | Session-scoped compacted tool-output chunks. | [`app.py:L1286`](../app.py#L1286) |
-| `ctx_vault_fts` | FTS5 virtual table | SQLite FTS5 index for session context-vault search. | [`app.py:L1299`](../app.py#L1299) |
-| `hall_messages` | table | Council Hall messages, reasoning, and usage records. | [`app.py:L1185`](../app.py#L1185) |
-| `hall_sessions` | table | Council Hall session metadata and conclusions. | [`app.py:L1168`](../app.py#L1168) |
-| `harness_sessions` | table | Harness workspaces, policy, selected models, status, and step counts. | [`app.py:L1224`](../app.py#L1224) |
-| `mcp_servers` | table | MCP transport/configuration, tool inventory/allowlist, and keyring references. | [`app.py:L1243`](../app.py#L1243) |
-| `model_combos` | table | Ordered model routing/fallback targets. | [`app.py:L1214`](../app.py#L1214) |
-| `opencontext_docs` | table | Persistent local OpenContext documents and pinned state. | [`app.py:L1267`](../app.py#L1267) |
-| `opencontext_fts` | FTS5 virtual table | SQLite FTS5 index for OpenContext document search. | [`app.py:L1280`](../app.py#L1280) |
-| `perf_samples` | table | Per-run/model performance measurements and token counters. | [`app.py:L1153`](../app.py#L1153) |
-| `runs` | table | Saved run summaries and payload JSON. | [`app.py:L1142`](../app.py#L1142) |
+| `cloud_providers` | table | Provider aliases, endpoint settings, model lists, and keyring references. | [`app.py:L1203`](../app.py#L1203) |
+| `ctx_session_metrics` | table | Raw/sent byte and compaction counters per session. | [`app.py:L1308`](../app.py#L1308) |
+| `ctx_vault_chunks` | table | Session-scoped compacted tool-output chunks. | [`app.py:L1289`](../app.py#L1289) |
+| `ctx_vault_fts` | FTS5 virtual table | SQLite FTS5 index for session context-vault search. | [`app.py:L1302`](../app.py#L1302) |
+| `hall_messages` | table | Council Hall messages, reasoning, and usage records. | [`app.py:L1188`](../app.py#L1188) |
+| `hall_sessions` | table | Council Hall session metadata and conclusions. | [`app.py:L1171`](../app.py#L1171) |
+| `harness_sessions` | table | Harness workspaces, policy, selected models, status, and step counts. | [`app.py:L1227`](../app.py#L1227) |
+| `mcp_servers` | table | MCP transport/configuration, tool inventory/allowlist, and keyring references. | [`app.py:L1246`](../app.py#L1246) |
+| `model_combos` | table | Ordered model routing/fallback targets. | [`app.py:L1217`](../app.py#L1217) |
+| `opencontext_docs` | table | Persistent local OpenContext documents and pinned state. | [`app.py:L1270`](../app.py#L1270) |
+| `opencontext_fts` | FTS5 virtual table | SQLite FTS5 index for OpenContext document search. | [`app.py:L1283`](../app.py#L1283) |
+| `perf_samples` | table | Per-run/model performance measurements and token counters. | [`app.py:L1156`](../app.py#L1156) |
+| `runs` | table | Saved run summaries and payload JSON. | [`app.py:L1145`](../app.py#L1145) |
 | `runtime_actions` | table | Durable action/effect records with idempotency keys, request/result digests, and execution status. | [`runtime_persistence.py:L638`](../runtime_persistence.py#L638) |
 | `runtime_task_checkpoints` | table | Hash-verified durable task checkpoints and typed evidence references per task and sequence. | [`runtime_persistence.py:L665`](../runtime_persistence.py#L665) |
 | `runtime_task_epochs` | table | Append-only runtime task execution epochs and stale-writer fencing metadata. | [`runtime_persistence.py:L604`](../runtime_persistence.py#L604) |
@@ -139,22 +142,22 @@ The public `/static/*` ASGI mount is registered when the static directory exists
 
 | Boundary | Source | Dependencies and authorization/trigger |
 |---|---|---|
-| Outbound HTTP transport | [`app.py:L895`](../app.py#L895) | Configured provider, local runtime, and MCP HTTP requests use URL validation/IP pinning; redirects and ambient proxies are disabled. Requests occur only when the relevant API/workflow is invoked. |
-| Configured OpenAI-compatible provider | [`app.py:L2909`](../app.py#L2909) | Provider URL and credentials come from provider configuration/keyring; remote requests occur during caller-triggered chat/model workflows. `/api/providers/fetch-models` separately queries the configured `/models` endpoint. No provider traffic from startup or route inventory. |
-| Configured Anthropic-compatible provider | [`app.py:L3012`](../app.py#L3012) | Provider URL and credentials come from provider configuration/keyring; remote request is explicit in a chat/model workflow. No provider traffic from startup or route inventory. |
-| Local model runtime (oMLX-compatible HTTP) | [`app.py:L3234`](../app.py#L3234) | Uses configured OMLX_BASE_URL (loopback default); local model list/stream/admin operations are caller-triggered. No model call from startup or route inventory. |
-| Configured MCP HTTP server | [`app.py:L4875`](../app.py#L4875) | Per-server endpoint; URL validation, pinned transport, and redirect rejection apply. Tool execution also checks enabled server and enabled-tool allowlist. Only MCP sync/call or a workflow using configured MCP tools. |
-| Configured local MCP stdio process | [`app.py:L4926`](../app.py#L4926) | Launches a configured executable with filtered environment; disabled unless STUDIO_ALLOW_MCP_STDIO=1. Runs with host-user privileges, not the code sandbox. Only when explicitly enabled and an MCP operation requires stdio. |
-| GitHub skill repository download | [`app.py:L2138`](../app.py#L2138) | Shallow Git clone from validated GitHub HTTPS source; selected skill files are copied. Downloaded search code is not run unless STUDIO_ALLOW_SKILL_CODE=1. Triggered by /api/skills/install, not app startup. |
-| Local skill script subprocess | [`app.py:L642`](../app.py#L642) | Routes repository/documented skill scripts (`skill_execute_script`) through `_run_authorized_tool` (`DurableActionBoundary`) with server-only `skill_opt_in` provenance, requiring `STUDIO_ALLOW_SKILL_CODE=1`, non-`plan` policy, and a live execution mode: sandbox routes through the no-network container boundary, host requires `STUDIO_ALLOW_HOST_EXECUTION=1`, disabled never executes. No silent host fallback. Triggered only when a workflow loads skills and the skill provides scripts/search.py. |
-| Online inspiration/search | [`app.py:L10939`](../app.py#L10939) | Calls GitHub repository search and DuckDuckGo; may also use enabled search MCP servers and, only with STUDIO_ALLOW_SKILL_CODE=1 and a live execution mode, a locally installed skill script run inside the execution boundary. No separate remote-search opt-in is visible in this path. Triggered by SDLC feedback workflow; remote search is part of that route's behavior. |
-| Shell/Python tool subprocess | [`app.py:L466`](../app.py#L466) | Execution is disabled by default; sandbox mode uses a pre-pulled container with networking disabled; host mode requires STUDIO_ALLOW_HOST_EXECUTION=1 and runs unsandboxed. Triggered only by approved workflow tool calls under the configured execution policy. |
-| Local container-runtime telemetry | [`app.py:L2225`](../app.py#L2225) | Invokes the local `docker` CLI when present; does not contact a remote provider through Studio's HTTP client. Triggered by telemetry requests; cached briefly. |
-| Local host telemetry | [`app.py:L2201`](../app.py#L2201) | Reads OS system values using `/usr/sbin/sysctl`; unsupported/failing calls fall back to unavailable/zero telemetry. Triggered by telemetry collection. |
-| Optional local runtime telemetry | [`app.py:L2208`](../app.py#L2208) | On the macOS path, reads local process RSS using `/bin/ps` and filters for OrbStack; no network request. Triggered by telemetry collection; otherwise returns unavailable. |
-| Local memory telemetry | [`app.py:L2278`](../app.py#L2278) | On the macOS path, reads `/usr/bin/vm_stat`; when unavailable, the existing implementation falls back to 24 GiB total memory and 16 KiB pages. Triggered by telemetry collection. |
-| Local Git worktree operations | [`app.py:L6778`](../app.py#L6778) | Uses local `git worktree` and branch commands for workspace isolation/removal; does not fetch or push remotes. Triggered by harness session creation/removal when worktree mode is requested. |
-| Operating-system credential store | [`app.py:L687`](../app.py#L687) | Stores provider/MCP secrets outside SQLite; credential migration/storage fails closed if the keyring cannot accept writes. Used when saving, migrating, reading, or deleting credentials. |
+| Outbound HTTP transport | [`app.py:L898`](../app.py#L898) | Configured provider, local runtime, and MCP HTTP requests use URL validation/IP pinning; redirects and ambient proxies are disabled. Requests occur only when the relevant API/workflow is invoked. |
+| Configured OpenAI-compatible provider | [`app.py:L2912`](../app.py#L2912) | Provider URL and credentials come from provider configuration/keyring; remote requests occur during caller-triggered chat/model workflows. `/api/providers/fetch-models` separately queries the configured `/models` endpoint. No provider traffic from startup or route inventory. |
+| Configured Anthropic-compatible provider | [`app.py:L3015`](../app.py#L3015) | Provider URL and credentials come from provider configuration/keyring; remote request is explicit in a chat/model workflow. No provider traffic from startup or route inventory. |
+| Local model runtime (oMLX-compatible HTTP) | [`app.py:L3237`](../app.py#L3237) | Uses configured OMLX_BASE_URL (loopback default); local model list/stream/admin operations are caller-triggered. No model call from startup or route inventory. |
+| Configured MCP HTTP server | [`app.py:L4878`](../app.py#L4878) | Per-server endpoint; URL validation, pinned transport, and redirect rejection apply. Tool execution also checks enabled server and enabled-tool allowlist. Only MCP sync/call or a workflow using configured MCP tools. |
+| Configured local MCP stdio process | [`app.py:L4929`](../app.py#L4929) | Launches a configured executable with filtered environment; disabled unless STUDIO_ALLOW_MCP_STDIO=1. Runs with host-user privileges, not the code sandbox. Only when explicitly enabled and an MCP operation requires stdio. |
+| GitHub skill repository download | [`app.py:L2141`](../app.py#L2141) | Shallow Git clone from validated GitHub HTTPS source; selected skill files are copied. Downloaded search code is not run unless STUDIO_ALLOW_SKILL_CODE=1. Triggered by /api/skills/install, not app startup. |
+| Local skill script subprocess | [`app.py:L645`](../app.py#L645) | Routes repository/documented skill scripts (`skill_execute_script`) through `_run_authorized_tool` (`DurableActionBoundary`) with server-only `skill_opt_in` provenance, requiring `STUDIO_ALLOW_SKILL_CODE=1`, non-`plan` policy, and a live execution mode: sandbox routes through the no-network container boundary, host requires `STUDIO_ALLOW_HOST_EXECUTION=1`, disabled never executes. No silent host fallback. Triggered only when a workflow loads skills and the skill provides scripts/search.py. |
+| Online inspiration/search | [`app.py:L11339`](../app.py#L11339) | Calls GitHub repository search and DuckDuckGo; may also use enabled search MCP servers and, only with STUDIO_ALLOW_SKILL_CODE=1 and a live execution mode, a locally installed skill script run inside the execution boundary. No separate remote-search opt-in is visible in this path. Triggered by SDLC feedback workflow; remote search is part of that route's behavior. |
+| Shell/Python tool subprocess | [`app.py:L469`](../app.py#L469) | Execution is disabled by default; sandbox mode uses a pre-pulled container with networking disabled; host mode requires STUDIO_ALLOW_HOST_EXECUTION=1 and runs unsandboxed. Triggered only by approved workflow tool calls under the configured execution policy. |
+| Local container-runtime telemetry | [`app.py:L2228`](../app.py#L2228) | Invokes the local `docker` CLI when present; does not contact a remote provider through Studio's HTTP client. Triggered by telemetry requests; cached briefly. |
+| Local host telemetry | [`app.py:L2204`](../app.py#L2204) | Reads OS system values using `/usr/sbin/sysctl`; unsupported/failing calls fall back to unavailable/zero telemetry. Triggered by telemetry collection. |
+| Optional local runtime telemetry | [`app.py:L2211`](../app.py#L2211) | On the macOS path, reads local process RSS using `/bin/ps` and filters for OrbStack; no network request. Triggered by telemetry collection; otherwise returns unavailable. |
+| Local memory telemetry | [`app.py:L2281`](../app.py#L2281) | On the macOS path, reads `/usr/bin/vm_stat`; when unavailable, the existing implementation falls back to 24 GiB total memory and 16 KiB pages. Triggered by telemetry collection. |
+| Local Git worktree operations | [`app.py:L6781`](../app.py#L6781) | Uses local `git worktree` and branch commands for workspace isolation/removal; does not fetch or push remotes. Triggered by harness session creation/removal when worktree mode is requested. |
+| Operating-system credential store | [`app.py:L690`](../app.py#L690) | Stores provider/MCP secrets outside SQLite; credential migration/storage fails closed if the keyring cannot accept writes. Used when saving, migrating, reading, or deleting credentials. |
 
 ## Subsystem dependency map
 

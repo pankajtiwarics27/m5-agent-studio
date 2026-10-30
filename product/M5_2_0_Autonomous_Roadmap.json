@@ -123,21 +123,21 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": "M5-P2-01",
-    "last_completed_story": "M5-P1-07",
-    "last_checkpoint": "2026-10-30T17:26:00Z",
+    "active_story": null,
+    "last_completed_story": "M5-P2-01",
+    "last_checkpoint": "2026-10-30T18:02:00Z",
     "last_session_id": "arena/b2a81d07-m5-agent-studio",
-    "next_recommended_story": "M5-P2-01",
+    "next_recommended_story": "M5-P2-02",
     "open_risks": [
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
       "24 GB Apple Silicon memory/swap and oMLX task measurements blocked in Linux evidence environment (M5-P4-01 to measure on target hardware)",
-      "sandbox_boundary.py unit-tested but not integrated into app.py (assigned to M5-P2-01)",
+      "sandbox_boundary.confined_path is integrated into app.py and workspace_snapshots.py (M5-P2-01), while sandbox_boundary.sandbox_command remains separate from app.py inline _sandbox_command (assigned to M5-P3-01/M5-P3-02)",
       "Multi-agent parallel work active: product/M5_2_0_Autonomous_Roadmap.json tracking blocks are the shared claim ledger; claim protocol and PR/merge rules live in M5_2_0_AGENT_PROMPT.md",
-      "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1) recorded in the M5-P0-05 baseline evidence; runtime dependencies clean. The M5-P1-07 verification environment installed only extras [dev], so the supply-chain scan was not re-run.",
-      "Harness task-event store (task_events.py, M5-P1-07) assumes a single application process per session, matching the worker-lease model; cross-process concurrent appends are unsupported and not claimed safe. Dedupe keys are only guaranteed over the retained log (8 MiB / 4000 events)."
+      "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1) recorded in the M5-P0-05 baseline evidence; runtime dependencies clean.",
+      "Harness task-event store (task_events.py, M5-P1-07) and workspace snapshot store (workspace_snapshots.py, M5-P2-01) assume a single application process per session, matching the worker-lease model; cross-process concurrent appends are unsupported and not claimed safe."
     ],
-    "last_readme_sync": "2026-10-30T17:17:27Z",
-    "last_verified_commit": "9940a083a7f17485955c891d31695a31380cdb7f",
+    "last_readme_sync": "2026-10-30T18:02:00Z",
+    "last_verified_commit": "3f73d2db4ae6064ac557d2022b617dfa661d44fd",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md"
   },
   "delivery_phases": [
@@ -185,7 +185,7 @@
       ],
       "status": "in_progress",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
-      "progress_percent": 0
+      "progress_percent": 20
     },
     {
       "id": "P3",
@@ -1645,22 +1645,50 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P2-01: Pre-edit Git baseline and selective user snapshots. Objective: Preserve staged, unstaged and relevant untracked work before edits. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Capture Git tree/HEAD and user changes; Snapshot necessary bytes into content-addressed storage; Preserve ignored sensitive files without indiscriminate copying; Handle disk-full with safe pause. Acceptance: No user changes silently lost; Restore baseline and snapshot verified; No destructive reset/clean. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 5,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-30T17:26:00Z",
-        "updated_at": "2026-10-30T17:26:00Z",
-        "completed_at": null,
+        "updated_at": "2026-10-30T18:02:00Z",
+        "completed_at": "2026-10-30T18:02:00Z",
         "owner_session": "arena/b2a81d07-m5-agent-studio",
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "commit_sha": "b41aacc",
+        "changed_files": [
+          "workspace_snapshots.py",
+          "app.py",
+          "studio.py",
+          "pyproject.toml",
+          "scripts/build_studio.py",
+          "tests/test_workspace_snapshots.py",
+          "docs/route-security-matrix.md",
+          "docs/subsystem-dependency-inventory.md",
+          "README.md",
+          "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "AC1 (No user changes silently lost): WorkspaceSnapshotStore.capture_baseline records HEAD commit/tree, staged index deltas, unstaged worktree edits/deletions, and relevant untracked user files into 0600 SHA-256 CAS blobs, lazily captures clean target files before first managed write_file/edit_file, preserves ignored/sensitive files (.env, .secrets, keys, credentials) in place without copying secret bytes into CAS, and blocks worktree /apply from overwriting dirty or sensitive user files with HTTP 409 (tests/test_workspace_snapshots.py::test_git_baseline_captures_and_restores_staged_unstaged_deleted_and_untracked_work, ::test_ignored_and_sensitive_files_preserved_in_place_without_cas_copying, ::test_worktree_apply_blocks_concurrent_user_conflict_and_preserves_baseline, ::test_restore_refuses_concurrent_user_edit_without_force).",
+          "AC2 (Restore baseline and snapshot verified): WorkspaceSnapshotStore.restore_snapshot and verify_snapshot_state verify manifest_sha256, restore working-tree bytes from CAS, reconcile git index entries via non-destructive git update-index plumbing, verify preserved sensitive files remain intact, and expose GET/POST /api/harness/sessions/{session_id}/snapshots and POST .../snapshots/{snapshot_id}/restore in both app.py and standalone studio.py (tests/test_workspace_snapshots.py::test_git_baseline_captures_and_restores_staged_unstaged_deleted_and_untracked_work, ::test_cas_deduplication_lazy_pre_edit_capture_and_tamper_detection, ::test_http_turn_pre_edit_snapshot_disk_full_safe_pause_and_restore, ::test_standalone_studio_bundle_exposes_workspace_snapshots).",
+          "AC3 (No destructive reset/clean): detect_destructive_git_command and assert_non_destructive_git_argv reject git reset --hard/--merge/--keep, git clean -f/-fd/-fx, and blanket git checkout/restore discards both inside workspace_snapshots plumbing and at app._is_shell_blocked for run_bash (tests/test_workspace_snapshots.py::test_destructive_git_commands_blocked_in_detector_and_shell_guard).",
+          "Task 3 & sandbox_boundary integration: app._resolve_confined_path delegates to sandbox_boundary.confined_path while preserving PermissionError contracts, retiring the M5-P2-01 open_risks path-confinement item; workspace_snapshots uses O_NOFOLLOW openat traversal and 0600 atomic CAS writes.",
+          "Task 4 (Disk-full safe pause): SnapshotDiskFullError (ENOSPC/EDQUOT or free-space threshold breach) before turn start, mid-step before write_file/edit_file, or during atomic write leaves target files untouched and transitions the durable task to paused without advancing completed_step (tests/test_workspace_snapshots.py::test_http_turn_pre_edit_snapshot_disk_full_safe_pause_and_restore)."
+        ],
+        "test_results": [
+          ".venv/bin/pytest -v tests/test_workspace_snapshots.py -> exit 0 (8 passed)",
+          ".venv/bin/pytest -q -> exit 0 (835 passed, 1 skipped)",
+          ".venv/bin/ruff check . -> exit 0",
+          ".venv/bin/mypy -> exit 0 (44 source files, 0 issues)",
+          ".venv/bin/python scripts/smoke_local.py && .venv/bin/python scripts/smoke_local.py --standalone -> exit 0",
+          ".venv/bin/python scripts/verify_baseline.py && scripts/validate_docs.py && scripts/validate_adrs.py && scripts/validate_governance.py && scripts/validate_security_signoff.py && scripts/check_frontend_syntax.py -> exit 0"
+        ],
+        "decisions": [
+          "Stored selective SHA-256 CAS blobs and integrity-hashed JSON snapshot manifests under HARNESS_STORE_DIR / snapshots (0600 owner-only permissions) rather than context_store.py SQLite FTS5 tables to avoid inflating WAL pages with file blobs and keep context_store scoped to OpenContext documents.",
+          "Keyed per-workspace _baseline_<ws_hash>.json and _latest_<ws_hash>.json pointers alongside session defaults so use_worktree=True sessions maintain isolated baselines for workspace_dir and worktree_dir.",
+          "Preserved ignored and sensitive files (.env, .secrets, *.pem, *.key, credentials) via metadata-only manifest entries (stored_in_cas=False, cas_sha256=None) verified in place without copying secret bytes into CAS."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect existing workspace/worktree/git/snapshot modules and app.py managed-edit paths before implementing.",
-        "readme_updated": false
+        "handoff_note": "M5-P2-01 complete and verified across app.py and standalone studio.py. Ready for M5-P2-02 (version-aware managed edits and expected-hash conflict checks) building directly on PreEditTargetEntry and atomic_write_confined_bytes.",
+        "next_action": "Claim M5-P2-02 (or next unblocked story per multi-agent protocol) on a fresh branch after PR #42 merges.",
+        "readme_updated": true
       }
     },
     {

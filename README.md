@@ -77,7 +77,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   uses deterministic scripted streams; resident local-oMLX coding runs and live
   container sandboxing remain unverified in the Linux CI environment.
 - **The frontend is a single-file vanilla JS UI** (`static/index.html`,
-  4,228 lines; no framework build step).
+  4,576 lines; no framework build step).
 - **Tool, skill, smart-block, and MCP operations cross an authoritative action
   admission gate and durable intent/result ledger** (`_run_authorized_tool`
   delegates to `execution_spine.DurableActionBoundary` +
@@ -114,6 +114,24 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   is rejected with `409` even after a restart. Pinned by 16 tests
   (`tests/test_task_events.py`) and documented in
   [`docs/task-events.md`](docs/task-events.md) (ADR-0005).
+- **Pre-edit Git baselines, selective content-addressed snapshots, sensitive-file
+  in-place preservation, and disk-full safe pause protect user work (`M5-P2-01`):**
+  `workspace_snapshots.py` and `sandbox_boundary.py` (`confined_path`) are wired
+  into `app.py` and `studio.py` across session creation, turn start, managed
+  `write_file`/`edit_file` tools, worktree `/apply`, `run_bash` destructive-Git
+  blocking, and `/api/harness/sessions/{session_id}/snapshots` (`GET`, `POST`,
+  and `POST .../{snapshot_id}/restore`). Baselines record `HEAD` commit/tree,
+  staged index deltas, unstaged working-tree edits/deletions, and relevant
+  untracked user files into owner-only (`0600`) SHA-256 content-addressed blobs
+  while lazily capturing clean target files before first edit, preserving
+  ignored/sensitive files (`.env`, `.secrets`, keys, credentials) in place
+  without copying secret bytes into CAS, blocking `git reset --hard`,
+  `git clean -f`, and blanket `git checkout -- .` / `git restore .`, refusing
+  worktree `/apply` overwrites of uncommitted user edits (`409`), and
+  transitioning tasks into a safe `paused` state on `ENOSPC` / disk-full without
+  partial file writes — pinned by 8 tests (`tests/test_workspace_snapshots.py`).
+  Note: version-aware concurrent expected-hash conflict checks per edit and
+  multi-file inverse-patch rollback remain follow-up work (`M5-P2-02`–`M5-P2-03`).
 - **The execution boundary is extracted and its coverage is inventoried
   (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`–`M5-P1-04`):**
   `execution_spine.py` and `side_effect_ledger.py` form a stdlib-only seam
@@ -133,13 +151,14 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
   pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
   plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
-- **13 of 44 shipped Python modules are wired into the served app**
+- **15 of 45 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`, `execution_spine` since `M5-P0-06`,
   `runtime_persistence` since `M5-P1-01`, `side_effect_ledger` since `M5-P1-03`,
   `execution_budget`, `workflow_checkpoints`, `workflow_state` since
-  `M5-P1-05`, `failure_injection` since `M5-P1-06`, and `task_events` since
-  `M5-P1-07`; 5 of 42 at the time of the audit table). Together they govern
+  `M5-P1-05`, `failure_injection` since `M5-P1-06`, `task_events` since
+  `M5-P1-07`, and `sandbox_boundary` + `workspace_snapshots` since `M5-P2-01`;
+  5 of 42 at the time of the audit table). Together they govern
   schema upgrades, SQLite transactions, authoritative task-state / lease-epoch
   checks at admission (`M5-P1-02`), durable `runtime_actions`
   intent/result/replay tracking (`M5-P1-03`), single-owner worker leases,
@@ -147,15 +166,16 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   task state machines, safe pause/resume/cancel boundaries, hash-verified
   checkpoints with evidence refs, and persistent task/recovery budgets
   (`M5-P1-05`), verified coding-task completion gates plus deterministic
-  action-boundary crash injection (`M5-P1-06`), and the durable cursor-addressed
-  task-event stream with reload/resync and approval reconciliation (`M5-P1-07`).
-  The other 31 modules — including
-  `sandbox_boundary.py` — have passing unit tests but **no `app.py` call path**.
+  action-boundary crash injection (`M5-P1-06`), the durable cursor-addressed
+  task-event stream with reload/resync and approval reconciliation (`M5-P1-07`),
+  and pre-edit Git baseline capture, selective CAS snapshots, path confinement,
+  and non-destructive baseline restore (`M5-P2-01`).
+  The other 30 modules have passing unit tests but **no `app.py` call path**.
   Module presence is not integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
 
 Reported claims that this review **refuted**: `app.py` is ~2,200 lines
-(actual at the `M5-P0-02` audit: **9,627**; **12,255** at the `M5-P1-07`
+(actual at the `M5-P0-02` audit: **9,627**; **12,655** at the `M5-P2-01`
 change-set), and `mcp_client` has no call sites (it is invoked at
 `app.py` L4643 via `mcp_client.adaptive_call`).
 
@@ -182,7 +202,7 @@ python3 -m venv .venv
 .venv/bin/mypy                                  # typed contract modules
 .venv/bin/python -m compileall -q app.py scripts tests
 .venv/bin/python scripts/check_frontend_syntax.py
-.venv/bin/python -m pytest -q                   # 811 passed, 1 skipped
+.venv/bin/python -m pytest -q                   # 835 passed, 1 skipped
 .venv/bin/python scripts/smoke_local.py         # loopback app, auth verified
 .venv/bin/python scripts/smoke_local.py --standalone
 ```
@@ -202,7 +222,7 @@ are not guarantees):
 
 ## Verified usage
 
-- **Run the test suite:** `.venv/bin/python -m pytest -q` → 827 passed,
+- **Run the test suite:** `.venv/bin/python -m pytest -q` → 835 passed,
   1 skipped, 1 warning.
 - **Start a disposable authenticated instance (verified):**
   `.venv/bin/python scripts/smoke_local.py` starts `app.py` on a free loopback
@@ -224,6 +244,11 @@ are not guarantees):
   `GET /api/harness/sessions/{session_id}/state`. All require the bearer token
   like every other `/api/*` route. Behaviour, guarantees, and the single-process
   limitation are in [`docs/task-events.md`](docs/task-events.md).
+- **Workspace baselines and selective CAS snapshots (verified by tests):**
+  `GET /api/harness/sessions/{session_id}/snapshots`,
+  `POST /api/harness/sessions/{session_id}/snapshots`, and
+  `POST /api/harness/sessions/{session_id}/snapshots/{snapshot_id}/restore`
+  (accepting `"baseline"`, `"latest"`, or an explicit snapshot ID).
 - **OpenAI-compatible gateway:** `/v1/models`, `/v1/chat/completions`
   (routes at `app.py` L3275/L3363).
 - The previous README's full configuration table (environment variables),
@@ -239,18 +264,23 @@ are not guarantees):
 Observed structure (see [`docs/architecture.md`](docs/architecture.md) and the
 generated [`docs/subsystem-dependency-inventory.md`](docs/subsystem-dependency-inventory.md)):
 
-- **Backend:** one FastAPI process — `app.py` plus 43 small contract modules
+- **Backend:** one FastAPI process — `app.py` plus 44 small contract modules
   listed in `pyproject.toml`. `studio.py` is a **generated** standalone
-  artifact (`scripts/build_studio.py` inlines `runtime_persistence`,
-  `side_effect_ledger`, `mcp_client`, `context_store`, `onboarding_preflight`,
-  and `execution_spine`, and embeds `static/index.html`); never hand-edit it.
+  artifact (`scripts/build_studio.py` inlines 13 sibling modules —
+  `runtime_persistence`, `side_effect_ledger`, `execution_budget`,
+  `workflow_checkpoints`, `workflow_state`, `mcp_client`, `context_store`,
+  `onboarding_preflight`, `failure_injection`, `execution_spine`, `task_events`,
+  `sandbox_boundary`, and `workspace_snapshots` — plus `history_privacy` and
+  `workflow_orchestration`, and embeds `static/index.html`); never hand-edit it.
 - **Frontend:** `static/index.html`, vanilla HTML/CSS/JS, no build step.
 - **Storage:** SQLite (`studio_history.db`, `SCHEMA_VERSION = 3`) in WAL mode
   with FTS5 tables (`opencontext_fts`, `ctx_vault_fts`) for BM25 context search
   and `runtime_persistence.py` enforcing short `BEGIN IMMEDIATE` write
-  transactions, bounded busy retries, and fail-closed persistence errors.
+  transactions, bounded busy retries, and fail-closed persistence errors, plus
+  per-session `.harnesses/{id}.jsonl` task-event journals and `.harnesses/snapshots/`
+  (`0600` SHA-256 content-addressed blobs and integrity-checked baseline manifests).
 - **Request path:** `security_boundary` middleware (rate limit, origin checks,
-  body limits; `app.py` L2348) → 65 registered routes → either model streaming
+  body limits; `app.py` L2348) → 74 registered routes → either model streaming
   (`stream_any_model`), the harness tool loop
   (`_execute_harness_tool` L7679 → `_run_authorized_tool` L7592 →
   `_execute_harness_tool_inner` L7182), or MCP calls (`_mcp_http_rpc` L4623 →
@@ -316,7 +346,7 @@ Summary (2026-10-30, Linux x86_64 container, 2 vCPU, ~4 GB RAM, Python 3.11.2):
 
 | Check | Result |
 |---|---|
-| `pytest -q` | 811 passed, 1 skipped (opt-in live container test), 1 warning |
+| `pytest -q` | 835 passed, 1 skipped (opt-in live container test), 1 warning |
 | `ruff check .` | clean |
 | `mypy` | clean (typed contract modules) |
 | `check_frontend_syntax.py` (Node) | pass |
@@ -362,16 +392,20 @@ requires `STUDIO_ALLOW_SKILL_CODE=1`; private-URL access requires
    isolation is unqualified; it must never silently fall back to host mode.
 3. **A git worktree is not an operating-system sandbox.** Worktree isolation
    protects the main checkout from agent edits; it does not confine processes.
-4. **`side_effect_ledger.py` is integrated (`M5-P1-03`), while `sandbox_boundary.py`
-   remains unit-tested but unwired.** `DurableActionLedger` commits durable
+4. **`side_effect_ledger.py` (`M5-P1-03`) and `sandbox_boundary.confined_path`
+   (`M5-P2-01`) are integrated, while container-command construction in `app.py`
+   still uses inline helpers.** `DurableActionLedger` commits durable
    `runtime_actions` intent rows before admitted consequential actions,
    transitions missing results and ambiguous MCP/timeout outcomes to `uncertain`
    (never `failed`), forwards `Idempotency-Key` on outbound HTTP MCP
    `tools/call`, and refuses blind replay of `non_idempotent` or unverified
-   `uncertain` writes. However, globally exactly-once external effects still
-   cannot be guaranteed when a third-party MCP server ignores `Idempotency-Key`,
-   `sandbox_boundary.py` path-confinement integration remains assigned to
-   `M5-P2-01`, and not all subprocess descendants can be guaranteed terminable.
+   `uncertain` writes; `_resolve_confined_path` and `workspace_snapshots.py`
+   enforce `sandbox_boundary.confined_path` against traversal and symlink
+   escapes. However, globally exactly-once external effects still cannot be
+   guaranteed when a third-party MCP server ignores `Idempotency-Key`,
+   `sandbox_boundary.sandbox_command` is not yet unified with `app.py`'s inline
+   `_sandbox_command` (`M5-P3-01`–`M5-P3-03`), and not all subprocess descendants
+   can be guaranteed terminable.
 5. **Live container isolation is unqualified (smoke test 2026-10-30, `M5-P0-04`).**
    No Docker/Podman exists in the evidence environment; the live probes were
    **attempted and failed closed** (`RuntimeError: Sandbox runtime 'docker' is
@@ -430,11 +464,16 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
   fencing, and pre-takeover reconciliation), **`M5-P1-05`** (durable root
   task and child milestone state machine, safe-boundary pause/resume/cancel,
   hash-verified checkpoints with evidence refs, incomplete-transition recovery,
-  and persistent task/recovery budgets), **and `M5-P1-06`** (single-agent
+  and persistent task/recovery budgets), **`M5-P1-06`** (single-agent
   verified vertical slice with authoritative patch + test verification gates,
   action-boundary crash injection, user-work preservation, duplicate-effect
-  prevention, and false-completion rejection). Next ready story: `M5-P1-07`
-  (minimal task events, HTTP commands and existing UI) — claim via the
+  prevention, and false-completion rejection), **`M5-P1-07`** (phase P1 100% —
+  durable cursor-addressed task-event stream, SSE replay/gap resync, and
+  approval reconciliation), **and `M5-P2-01`** (pre-edit Git baseline capture,
+  selective SHA-256 CAS user snapshots, ignored/sensitive file preservation
+  without indiscriminate copying, disk-full safe pause, and verified
+  non-destructive restore; phase P2 20%). Next ready story: `M5-P2-02`
+  (version-aware managed edits and conflict checks) — claim via the
   coordination protocol before coding. Planned work is not implemented product
   behavior.
 - **AS program (Adaptive Runtime)** —

@@ -29,6 +29,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import difflib
+import errno
 import fnmatch
 import hashlib
 import ipaddress
@@ -70,10 +71,12 @@ import failure_injection
 import mcp_client
 import onboarding_preflight
 import runtime_persistence
+import sandbox_boundary
 import side_effect_ledger
 import task_events
 import workflow_checkpoints
 import workflow_state
+import workspace_snapshots
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
 
 STUDIO_VERSION = "9.0.1"
@@ -6886,6 +6889,55 @@ def _task_event_log() -> task_events.TaskEventLog:
     return task_events.TaskEventLog(HARNESS_STORE_DIR)
 
 
+# Monkeypatchable disk-space safety floor for workspace snapshots / CAS writes (no STUDIO_* env var).
+DEFAULT_SNAPSHOT_MIN_FREE_BYTES = 2 * 1024 * 1024
+
+
+def _workspace_snapshot_store() -> workspace_snapshots.WorkspaceSnapshotStore:
+    """Return a workspace baseline/CAS snapshot store bound to ``HARNESS_STORE_DIR``."""
+    _ensure_harness_dirs()
+    return workspace_snapshots.WorkspaceSnapshotStore(
+        HARNESS_STORE_DIR,
+        min_free_bytes=DEFAULT_SNAPSHOT_MIN_FREE_BYTES,
+    )
+
+
+def _snapshot_session_id(sess: Mapping[str, Any] | None, fallback: str = "adhoc-session") -> str:
+    raw = str((sess or {}).get("id") or fallback).strip()
+    sanitized = re.sub(r"[^A-Za-z0-9._-]+", "-", raw).strip("-._")
+    return (sanitized or fallback)[:120]
+
+
+def _request_disk_full_safe_pause(task_id: str | None, *, reason: str) -> None:
+    """Best-effort durable pause flag when disk space is exhausted during snapshot/edit."""
+    clean_id = str(task_id or "").strip()
+    if not clean_id or not DB_PATH.exists():
+        return
+    try:
+        sm = get_task_state_machine()
+        task = sm.store.get_task(clean_id)
+        if task is not None and task.state in {"running", "waiting_approval"}:
+            sm.request_pause(clean_id, reason=f"disk_full_safe_pause:{reason[:160]}")
+    except Exception:
+        pass
+
+
+def _safe_append_harness_event(
+    session_id: str,
+    event_type: str,
+    payload: dict[str, Any],
+    *,
+    dedupe_key: str | None = None,
+) -> dict[str, Any] | None:
+    """Append a task event while tolerating disk-full errors during emergency safe pause."""
+    try:
+        return _append_harness_event(session_id, event_type, payload, dedupe_key=dedupe_key)
+    except (OSError, ValueError, task_events.TaskEventError) as exc:
+        if workspace_snapshots.is_disk_full_os_error(exc) or "No space left" in str(exc):
+            return None
+        raise
+
+
 def _append_harness_event(
     session_id: str,
     event_type: str,
@@ -7042,6 +7094,26 @@ def create_harness_session_db(
     else:
         wt_path, branch_name, actual_wt = ws_path, "", False
 
+    snap_store = _workspace_snapshot_store()
+    ws_baseline = snap_store.capture_baseline(
+        sid,
+        ws_path,
+        label="workspace_init_baseline" if actual_wt else "pre_edit_baseline",
+        set_as_baseline_if_missing=not actual_wt,
+    )
+    if actual_wt:
+        wt_baseline = snap_store.capture_baseline(
+            sid,
+            wt_path,
+            label="pre_edit_baseline",
+            set_as_baseline_if_missing=True,
+        )
+        # Keep workspace_dir's own baseline pointer alongside the worktree baseline pointer.
+        snap_store._save_manifest(ws_baseline, set_baseline_pointer=True, set_latest_pointer=False)
+        primary_baseline_id = wt_baseline.snapshot_id
+    else:
+        primary_baseline_id = ws_baseline.snapshot_id
+
     now = time.time()
     clean_title = (title or ws_path.name or "Agentic Harness").strip()[:120]
     ws_str = str(ws_path)
@@ -7080,6 +7152,7 @@ def create_harness_session_db(
             "lead_model": lead_model,
             "critic_model": critic_model,
             "note": wt_note,
+            "baseline_snapshot_id": primary_baseline_id,
         },
     )
     return get_harness_session_db(sid)
@@ -7150,12 +7223,10 @@ def _update_harness_session_state(session_id: str, status: str | None = None, st
 
 
 def _resolve_confined_path(root: Path, raw_path: str) -> Path:
-    root_res = root.resolve()
-    p = Path(raw_path or ".")
-    cand = p.resolve() if p.is_absolute() else (root_res / p).resolve()
-    if cand != root_res and root_res not in cand.parents:
-        raise PermissionError(f"Path '{raw_path}' escapes confined harness root '{root_res}'.")
-    return cand
+    try:
+        return sandbox_boundary.confined_path(root, raw_path or ".")
+    except sandbox_boundary.SandboxBoundaryError as exc:
+        raise PermissionError(f"Path '{raw_path}' escapes confined harness root '{root.resolve()}': {exc}") from exc
 
 
 def _workspace_relative_parts(root: Path, raw_path: str | Path) -> tuple[Path, tuple[str, ...]]:
@@ -7385,9 +7456,19 @@ def _atomic_write_workspace_text(
             if written <= 0:
                 raise OSError("Could not finish writing the workspace file.")
             view = view[written:]
+        os.fsync(temp_fd)
         os.close(temp_fd)
         temp_fd = None
         os.rename(temp_name, leaf, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+    except OSError as exc:
+        if workspace_snapshots.is_disk_full_os_error(exc):
+            raise workspace_snapshots.SnapshotDiskFullError(
+                f"Disk full writing workspace file {'/'.join(parts)!r}: {exc}",
+                operation="atomic_write_workspace_text",
+                target_path="/".join(parts),
+                errno_code=int(exc.errno or errno.ENOSPC),
+            ) from exc
+        raise
     finally:
         if temp_fd is not None:
             os.close(temp_fd)
@@ -7599,6 +7680,9 @@ def _try_parse_tool_json(raw: str) -> dict[str, Any] | None:
 
 
 def _is_shell_blocked(cmd: str) -> str | None:
+    git_block = workspace_snapshots.detect_destructive_git_command(cmd)
+    if git_block:
+        return git_block
     for pat in BLOCKED_SHELL_PATTERNS:
         if re.search(pat, cmd):
             return f"Blocked destructive shell pattern matching `{pat}`."
@@ -7764,9 +7848,11 @@ async def _execute_harness_tool_inner(
                 return {"ok": False, "output": sec_err, "diff": "", "elapsed_ms": 1}
             root_res, relative_parts = _workspace_relative_parts(root, raw_p)
             fp = root_res.joinpath(*relative_parts)
-            if _is_secret_path(fp):
+            rel_s = "/".join(relative_parts)
+            if _is_secret_path(fp) or workspace_snapshots.is_sensitive_rel_path(rel_s):
                 return {"ok": False, "output": _check_gsd_secret_guard(str(fp)) or "Blocked secret file.", "diff": "", "elapsed_ms": 1}
-            rel_s = str(Path(*relative_parts))
+            snap_sid = _snapshot_session_id(sess)
+            snap_task_id = str(sess.get("task_id") or sess.get("id") or "").strip() or None
             if tool_name == "write_file":
                 try:
                     before, prior_info = _read_workspace_text(root_res, Path(*relative_parts), errors="replace")
@@ -7775,7 +7861,26 @@ async def _execute_harness_tool_inner(
                     before = ""
                     prior_mode = None
                 after = str(args.get("content") if args.get("content") is not None else "")
-                _atomic_write_workspace_text(root_res, Path(*relative_parts), after, mode=prior_mode)
+                try:
+                    _workspace_snapshot_store().capture_target_before_edit(snap_sid, root_res, rel_s)
+                    _atomic_write_workspace_text(root_res, Path(*relative_parts), after, mode=prior_mode)
+                    _workspace_snapshot_store().record_target_after_edit(
+                        snap_sid,
+                        root_res,
+                        rel_s,
+                        hashlib.sha256(after.encode("utf-8")).hexdigest(),
+                    )
+                except workspace_snapshots.SnapshotDiskFullError as disk_exc:
+                    _request_disk_full_safe_pause(snap_task_id, reason=str(disk_exc))
+                    return {
+                        "ok": False,
+                        "error_code": "disk_full",
+                        "disk_full": True,
+                        "safe_pause_required": True,
+                        "output": f"Paused safely (disk full): `{rel_s}` was preserved without partial modification ({disk_exc}).",
+                        "diff": "",
+                        "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                    }
                 diff_txt = _unified_diff_snippet(rel_s, before, after)
                 return {
                     "ok": True,
@@ -7814,7 +7919,26 @@ async def _execute_harness_tool_inner(
                     }
                 replaced_lines = b_lines[:match_idx] + new_text.splitlines() + b_lines[match_idx + len(o_lines):]
                 after = "\n".join(replaced_lines) + ("\n" if before.endswith("\n") else "")
-            _atomic_write_workspace_text(root_res, Path(*relative_parts), after, mode=stat.S_IMODE(prior_info.st_mode))
+            try:
+                _workspace_snapshot_store().capture_target_before_edit(snap_sid, root_res, rel_s)
+                _atomic_write_workspace_text(root_res, Path(*relative_parts), after, mode=stat.S_IMODE(prior_info.st_mode))
+                _workspace_snapshot_store().record_target_after_edit(
+                    snap_sid,
+                    root_res,
+                    rel_s,
+                    hashlib.sha256(after.encode("utf-8")).hexdigest(),
+                )
+            except workspace_snapshots.SnapshotDiskFullError as disk_exc:
+                _request_disk_full_safe_pause(snap_task_id, reason=str(disk_exc))
+                return {
+                    "ok": False,
+                    "error_code": "disk_full",
+                    "disk_full": True,
+                    "safe_pause_required": True,
+                    "output": f"Paused safely (disk full): `{rel_s}` was preserved without partial modification ({disk_exc}).",
+                    "diff": "",
+                    "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                }
             diff_txt = _unified_diff_snippet(rel_s, before, after)
             return {
                 "ok": True,
@@ -8841,39 +8965,103 @@ def _compute_git_diff(target_dir: Path) -> dict[str, Any]:
         return {"is_git": True, "branch": info.get("branch", ""), "status": "", "diff": f"Git diff error: {exc}"}
 
 
-def _apply_worktree_to_main(sess: dict[str, Any]) -> dict[str, Any]:
+def _apply_worktree_to_main(sess: dict[str, Any], *, force: bool = False) -> dict[str, Any]:
     ws_dir = Path(sess["workspace_dir"]).resolve()
     wt_dir = Path(sess["worktree_dir"]).resolve()
     if ws_dir == wt_dir:
         return {"status": "noop", "message": "Session is already operating directly in main workspace."}
-    copied, deleted = [], []
-    # Sync modified and untracked files from worktree back to main workspace cleanly
-    status_lines = subprocess.check_output(
-        ["git", "status", "--porcelain"], cwd=str(wt_dir), text=True, timeout=5.0
-    ).splitlines()
-    for line in status_lines:
-        if len(line) < 4:
+    snap_sid = _snapshot_session_id(sess)
+    snap_store = _workspace_snapshot_store()
+    ws_pre_apply = snap_store.capture_baseline(
+        snap_sid,
+        ws_dir,
+        label="pre_worktree_apply",
+        set_as_baseline_if_missing=True,
+    )
+    dirty_user_paths = (
+        {e.rel_path for e in ws_pre_apply.staged_changes}
+        | {e.rel_path for e in ws_pre_apply.unstaged_changes}
+        | {e.rel_path for e in ws_pre_apply.untracked_files}
+    )
+
+    raw_porcelain = subprocess.check_output(
+        ["git", "status", "--porcelain=v1", "-z"],
+        cwd=str(wt_dir),
+        timeout=5.0,
+    )
+    tokens = [tok.decode("utf-8", errors="surrogateescape") for tok in raw_porcelain.split(b"\x00") if tok]
+    operations: list[tuple[str, str, Path, Path]] = []
+    conflicts: list[dict[str, str]] = []
+    idx = 0
+    while idx < len(tokens):
+        entry = tokens[idx]
+        idx += 1
+        if len(entry) < 4:
             continue
-        code = line[:2]
-        rel = line[3:].strip().strip('"')
-        if " -> " in rel:
-            rel = rel.split(" -> ", 1)[1].strip()
-        if rel.startswith(".harnesses"):
+        code = entry[:2]
+        rel = entry[3:]
+        if ("R" in code or "C" in code) and idx < len(tokens):
+            # In porcelain=v1 -z, R/C emits "XY new_path\0old_path\0"
+            idx += 1
+        if rel.startswith((".harnesses", ".sdlc", ".planning")):
             continue
-        src = wt_dir / rel
-        dst = _resolve_confined_path(ws_dir, rel)
+        try:
+            src = _resolve_confined_path(wt_dir, rel)
+            dst = _resolve_confined_path(ws_dir, rel)
+        except PermissionError as exc:
+            conflicts.append({"path": rel, "reason": f"path_outside_workspace:{exc}"})
+            continue
+        if _is_secret_path(Path(rel)) or workspace_snapshots.is_sensitive_rel_path(rel):
+            conflicts.append({"path": rel, "reason": "sensitive_file_protected"})
+            continue
+        if not force and rel in dirty_user_paths:
+            # Allow only if destination bytes already equal worktree source bytes
+            same_bytes = (
+                "D" not in code
+                and src.is_file()
+                and dst.is_file()
+                and not dst.is_symlink()
+                and src.read_bytes() == dst.read_bytes()
+            )
+            if not same_bytes:
+                conflicts.append({"path": rel, "reason": "uncommitted_user_changes_in_workspace"})
+                continue
+        operations.append((code, rel, src, dst))
+
+    if conflicts:
+        return {
+            "status": "conflict",
+            "conflicts": conflicts,
+            "copied_files": [],
+            "deleted_files": [],
+            "snapshot_id": ws_pre_apply.snapshot_id,
+            "message": f"Refused to overwrite {len(conflicts)} protected or user-modified file(s) in `{ws_dir}`.",
+        }
+
+    copied: list[str] = []
+    deleted: list[str] = []
+    for code, rel, src, _dst in operations:
+        snap_store.capture_target_before_edit(snap_sid, ws_dir, rel)
         if "D" in code and not src.exists():
-            if dst.exists():
-                dst.unlink()
+            if workspace_snapshots._wsnap_unlink_confined_file(ws_dir, rel):
                 deleted.append(rel)
-        elif src.is_file():
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dst)
+        elif src.is_file() and not src.is_symlink():
+            src_bytes = src.read_bytes()
+            src_mode = stat.S_IMODE(src.stat().st_mode)
+            written_sha = workspace_snapshots.atomic_write_confined_bytes(
+                ws_dir,
+                rel,
+                src_bytes,
+                mode=src_mode,
+                min_free_bytes=DEFAULT_SNAPSHOT_MIN_FREE_BYTES,
+            )
+            snap_store.record_target_after_edit(snap_sid, ws_dir, rel, written_sha)
             copied.append(rel)
     return {
         "status": "applied",
         "copied_files": copied,
         "deleted_files": deleted,
+        "snapshot_id": ws_pre_apply.snapshot_id,
         "message": f"Applied {len(copied)} modified/new file(s) and {len(deleted)} deletion(s) to `{ws_dir}`.",
     }
 
@@ -8999,7 +9187,9 @@ async def api_create_harness_session(request: Request) -> JSONResponse:
             critic_model=body.get("critic_model") or "Gemma-4-21B-REAP-4bit",
         )
         return JSONResponse({"status": "ok", "session": sess, "sessions": list_harness_sessions_db()})
-    except ValueError as exc:
+    except workspace_snapshots.SnapshotDiskFullError as exc:
+        raise HTTPException(status_code=507, detail=str(exc)) from exc
+    except (ValueError, workspace_snapshots.WorkspaceSnapshotError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
@@ -9051,10 +9241,11 @@ async def api_delete_harness_session(session_id: str) -> JSONResponse:
         DB_PATH,
         lambda conn: conn.execute("DELETE FROM harness_sessions WHERE id = ?", (session_id,)),
     )
-    for suffix in (".jsonl", ".messages.json"):
+    for suffix in (".jsonl", ".seq", ".messages.json"):
         p = HARNESS_STORE_DIR / f"{session_id}{suffix}"
         if p.exists():
             p.unlink(missing_ok=True)
+    _workspace_snapshot_store().delete_session_snapshots(session_id)
     return JSONResponse({"status": "deleted", "sessions": list_harness_sessions_db()})
 
 
@@ -9068,13 +9259,30 @@ async def api_get_harness_diff(session_id: str) -> JSONResponse:
 
 
 @app.post("/api/harness/sessions/{session_id}/apply")
-async def api_apply_harness_worktree(session_id: str) -> JSONResponse:
+async def api_apply_harness_worktree(session_id: str, request: Request) -> JSONResponse:
     try:
         sess = get_harness_session_db(session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    res = _apply_worktree_to_main(sess)
-    _append_harness_event(session_id, "worktree/applied", res)
+    force = False
+    try:
+        raw_body = await request.body()
+        if raw_body:
+            parsed = json.loads(raw_body)
+            if isinstance(parsed, dict):
+                force = bool(parsed.get("force", False))
+    except Exception:
+        force = False
+    try:
+        res = _apply_worktree_to_main(sess, force=force)
+    except workspace_snapshots.SnapshotDiskFullError as exc:
+        _request_disk_full_safe_pause(session_id, reason=str(exc))
+        raise HTTPException(status_code=507, detail=str(exc)) from exc
+    except workspace_snapshots.SnapshotConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _safe_append_harness_event(session_id, "worktree/applied", res)
+    if res.get("status") == "conflict":
+        return JSONResponse(res, status_code=409)
     return JSONResponse(res)
 
 
@@ -9284,6 +9492,16 @@ def _harness_session_state_snapshot(session_id: str) -> dict[str, Any]:
     status = "waiting_approval" if approvals["pending"] else task.state
     milestones = sm.list_milestones(session_id)
     verification_spec = sm.get_verification_spec(session_id)
+    baseline_summary: dict[str, Any] | None = None
+    try:
+        wt_root_snap = Path(sess["worktree_dir"]).resolve()
+        baseline_summary = _workspace_snapshot_store().load_manifest(
+            session_id,
+            "baseline",
+            workspace_root=wt_root_snap,
+        ).summary_dict()
+    except (KeyError, workspace_snapshots.WorkspaceSnapshotError, OSError):
+        baseline_summary = None
     return {
         "session_id": session_id,
         "status": status,
@@ -9293,6 +9511,7 @@ def _harness_session_state_snapshot(session_id: str) -> dict[str, Any]:
         "task": _serialize_task_record(task),
         "budget": budget.to_dict(),
         "verification_spec": verification_spec.to_dict() if verification_spec is not None else None,
+        "workspace_baseline": baseline_summary,
         "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
         "checkpoint_integrity_error": integrity_error,
         "checkpoints": [ck.to_dict() for ck in sm.checkpoints.list_checkpoints(session_id, verify_integrity=False)],
@@ -9311,6 +9530,126 @@ def _harness_session_state_snapshot(session_id: str) -> dict[str, Any]:
 async def api_get_harness_session_state(session_id: str) -> JSONResponse:
     """Authoritative task/event/approval snapshot used to rebuild the UI on reload."""
     return JSONResponse(_harness_session_state_snapshot(session_id))
+
+
+@app.get("/api/harness/sessions/{session_id}/snapshots")
+async def api_list_harness_session_snapshots(session_id: str) -> JSONResponse:
+    """List recorded workspace baseline and pre-turn/pre-apply snapshots for a session."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    store = _workspace_snapshot_store()
+    wt_root = Path(sess["worktree_dir"]).resolve()
+    try:
+        snapshots = store.list_snapshots(session_id)
+        baseline_id = store._resolve_pointer_id(session_id, "baseline", workspace_root=wt_root)
+        latest_id = store._resolve_pointer_id(session_id, "latest", workspace_root=wt_root)
+    except workspace_snapshots.WorkspaceSnapshotError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return JSONResponse(
+        {
+            "session_id": session_id,
+            "baseline_snapshot_id": baseline_id,
+            "latest_snapshot_id": latest_id,
+            "snapshots": snapshots,
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/snapshots")
+async def api_capture_harness_session_snapshot(session_id: str, request: Request) -> JSONResponse:
+    """Capture an on-demand workspace snapshot into CAS (`507` + safe pause on disk-full)."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    label = "manual_snapshot"
+    target_kind = "worktree"
+    try:
+        raw_body = await request.body()
+        if raw_body:
+            body = json.loads(raw_body)
+            if isinstance(body, dict):
+                label = str(body.get("label") or label)[:80]
+                if body.get("target") == "workspace":
+                    target_kind = "workspace"
+    except Exception:
+        pass
+    target_dir = Path(sess["workspace_dir"] if target_kind == "workspace" else sess["worktree_dir"]).resolve()
+    try:
+        manifest = _workspace_snapshot_store().capture_baseline(
+            session_id,
+            target_dir,
+            label=label,
+            set_as_baseline_if_missing=True,
+        )
+    except workspace_snapshots.SnapshotDiskFullError as exc:
+        _request_disk_full_safe_pause(session_id, reason=str(exc))
+        raise HTTPException(status_code=507, detail=str(exc)) from exc
+    except workspace_snapshots.WorkspaceSnapshotError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    summary = manifest.summary_dict()
+    _safe_append_harness_event(session_id, "workspace/snapshot_captured", summary)
+    return JSONResponse({"status": "ok", "snapshot": summary})
+
+
+@app.post("/api/harness/sessions/{session_id}/snapshots/{snapshot_id}/restore")
+async def api_restore_harness_session_snapshot(
+    session_id: str,
+    snapshot_id: str,
+    request: Request,
+) -> JSONResponse:
+    """Non-destructively restore a session's baseline or named snapshot (`409` if actively leased or conflicting)."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    sm = get_task_state_machine()
+    task = sm.store.get_task(session_id)
+    if task is not None and task.state == "running" and task.current_epoch > 0:
+        ep = sm.store.get_epoch(session_id, task.current_epoch)
+        if ep is not None and ep.status == "active" and ep.lease_expires_at > time.time():
+            raise HTTPException(
+                status_code=409,
+                detail="Cannot restore workspace snapshot while an active worker lease is running; pause or cancel first.",
+            )
+    target_kind = "worktree"
+    force_concurrent = False
+    try:
+        raw_body = await request.body()
+        if raw_body:
+            body = json.loads(raw_body)
+            if isinstance(body, dict):
+                if body.get("target") == "workspace":
+                    target_kind = "workspace"
+                force_concurrent = bool(body.get("force_overwrite_concurrent", False))
+    except Exception:
+        pass
+    target_root = (
+        Path(sess["workspace_dir"]).resolve()
+        if target_kind == "workspace"
+        else (Path(sess["worktree_dir"]).resolve() if snapshot_id in {"baseline", "latest"} else None)
+    )
+    try:
+        report = _workspace_snapshot_store().restore_snapshot(
+            session_id,
+            snapshot_id,
+            target_root=target_root,
+            force_overwrite_concurrent=force_concurrent,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except workspace_snapshots.SnapshotDiskFullError as exc:
+        _request_disk_full_safe_pause(session_id, reason=str(exc))
+        raise HTTPException(status_code=507, detail=str(exc)) from exc
+    except (workspace_snapshots.SnapshotConflictError, workspace_snapshots.SnapshotIntegrityError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except workspace_snapshots.WorkspaceSnapshotError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    report_dict = report.to_dict()
+    _safe_append_harness_event(session_id, "workspace/snapshot_restored", report_dict)
+    return JSONResponse({"status": "restored", "report": report_dict})
 
 
 @app.get("/api/harness/sessions/{session_id}/events")
@@ -9633,14 +9972,17 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
         raise HTTPException(status_code=400, detail="Task prompt is required.")
 
     if not session_id:
-        sess = create_harness_session_db(
-            title=prompt[:80],
-            workspace_dir=body.get("workspace_dir") or str(_get_default_projects_dir()),
-            use_worktree=bool(body.get("use_worktree", False)),
-            policy=body.get("policy") or "standard",
-            lead_model=body.get("lead_model") or "Qwen3.8-27B-MLX-oQ4e-mtp",
-            critic_model=body.get("critic_model") or "Gemma-4-21B-REAP-4bit",
-        )
+        try:
+            sess = create_harness_session_db(
+                title=prompt[:80],
+                workspace_dir=body.get("workspace_dir") or str(_get_default_projects_dir()),
+                use_worktree=bool(body.get("use_worktree", False)),
+                policy=body.get("policy") or "standard",
+                lead_model=body.get("lead_model") or "Qwen3.8-27B-MLX-oQ4e-mtp",
+                critic_model=body.get("critic_model") or "Gemma-4-21B-REAP-4bit",
+            )
+        except workspace_snapshots.SnapshotDiskFullError as exc:
+            raise HTTPException(status_code=507, detail=str(exc)) from exc
         session_id = sess["id"]
     else:
         sess = get_harness_session_db(session_id)
@@ -9783,7 +10125,28 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
             steps_run = 0
             halt_mode: Literal["none", "paused", "cancelled", "budget_exceeded", "max_steps"] = "none"
             halt_reason = ""
-            for step_idx in range(start_step, start_step + max_steps):
+            disk_full_pause = False
+
+            try:
+                pre_turn_snap = _workspace_snapshot_store().capture_baseline(
+                    session_id,
+                    wt_dir,
+                    label=f"turn_epoch_{lease_epoch}_baseline",
+                    set_as_baseline_if_missing=True,
+                )
+                _safe_append_harness_event(
+                    session_id,
+                    "workspace/snapshot_captured",
+                    pre_turn_snap.summary_dict(),
+                    dedupe_key=f"turn-baseline-snap:{lease_epoch}",
+                )
+            except workspace_snapshots.SnapshotDiskFullError as snap_disk_exc:
+                halt_mode = "paused"
+                disk_full_pause = True
+                halt_reason = f"disk_full_safe_pause:{str(snap_disk_exc)[:160]}"
+
+            step_range = () if halt_mode != "none" else range(start_step, start_step + max_steps)
+            for step_idx in step_range:
                 boundary = sm.check_safe_boundary(
                     session_id,
                     epoch=lease_epoch,
@@ -9988,7 +10351,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         )
                         res_obj["output"] = compressed_out
 
-                    _append_harness_event(
+                    _safe_append_harness_event(
                         session_id,
                         "tool/result",
                         {
@@ -10017,6 +10380,12 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         },
                     )
                     tool_feedback_parts.append(_format_untrusted_tool_response(t_name, res_obj["output"], res_obj["ok"]))
+                    if res_obj.get("safe_pause_required") or res_obj.get("error_code") == "disk_full":
+                        halt_mode = "paused"
+                        disk_full_pause = True
+                        halt_reason = f"disk_full_safe_pause:{str(res_obj.get('output') or '')[:140]}"
+                        mid_tool_halt = True
+                        break
 
                 if tool_feedback_parts:
                     messages.append({"role": "user", "content": "\n\n".join(tool_feedback_parts)})
@@ -10040,31 +10409,44 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     halt_mode = "cancelled"
                     halt_reason = "cancelled_on_budget_check"
                     break
+                except runtime_persistence.PersistenceFullError as full_exc:
+                    halt_mode = "paused"
+                    disk_full_pause = True
+                    halt_reason = f"disk_full_safe_pause:{str(full_exc)[:140]}"
+                    break
 
                 if mid_tool_halt:
-                    completed_step = step_idx
+                    if not disk_full_pause:
+                        completed_step = step_idx
                     break
 
                 completed_step = step_idx
                 step_refs = _collect_step_evidence_refs(session_id, epoch=lease_epoch, wt_dir=wt_dir)
-                sm.checkpoints.save_checkpoint(
-                    session_id,
-                    step=completed_step,
-                    payload={
-                        "workflow": "harness",
-                        "completed_step": completed_step,
-                        "messages_len": len(messages),
-                    },
-                    evidence_refs=step_refs,
-                    epoch=lease_epoch,
-                    status="committed",
-                    require_active_epoch=True,
-                )
+                try:
+                    sm.checkpoints.save_checkpoint(
+                        session_id,
+                        step=completed_step,
+                        payload={
+                            "workflow": "harness",
+                            "completed_step": completed_step,
+                            "messages_len": len(messages),
+                        },
+                        evidence_refs=step_refs,
+                        epoch=lease_epoch,
+                        status="committed",
+                        require_active_epoch=True,
+                    )
+                except runtime_persistence.PersistenceFullError as ckpt_full_exc:
+                    halt_mode = "paused"
+                    disk_full_pause = True
+                    halt_reason = f"disk_full_safe_pause:{str(ckpt_full_exc)[:140]}"
+                    break
             else:
-                halt_mode = "max_steps"
-                halt_reason = "turn_max_steps_reached"
-                _append_harness_event(session_id, "turn/max_steps_reached", {"max_steps": max_steps})
-                yield _sse("max_steps_reached", {"max_steps": max_steps})
+                if halt_mode == "none":
+                    halt_mode = "max_steps"
+                    halt_reason = "turn_max_steps_reached"
+                    _safe_append_harness_event(session_id, "turn/max_steps_reached", {"max_steps": max_steps})
+                    yield _sse("max_steps_reached", {"max_steps": max_steps})
 
             if halt_mode == "none":
                 final_boundary = sm.check_safe_boundary(
@@ -10112,15 +10494,33 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                 except runtime_persistence.StaleEpochError:
                     # E.g. /api/harness/abort/{sid} already fenced the epoch into 'paused'.
                     pass
-                _update_harness_session_state(session_id, status="paused")
+                except runtime_persistence.PersistenceFullError:
+                    # Disk full also prevents checkpoint page allocation; release lease into 'paused' directly.
+                    try:
+                        coord.release(
+                            session_id,
+                            lease_epoch,
+                            worker_id,
+                            next_state="paused",
+                            reason=halt_reason or "disk_full_safe_pause",
+                        )
+                    except Exception:
+                        pass
+                try:
+                    _update_harness_session_state(session_id, status="paused")
+                except runtime_persistence.PersistenceFullError:
+                    pass
                 if halt_mode == "budget_exceeded":
-                    _append_harness_event(session_id, "turn/budget_exceeded", {"step": completed_step, "reason": halt_reason})
+                    _safe_append_harness_event(session_id, "turn/budget_exceeded", {"step": completed_step, "reason": halt_reason})
                     yield _sse("budget_exceeded", {"step": completed_step, "reason": halt_reason})
                 elif halt_mode == "paused":
-                    _append_harness_event(session_id, "turn/paused", {"step": completed_step, "reason": halt_reason})
+                    pause_payload: dict[str, Any] = {"step": completed_step, "reason": halt_reason}
+                    if disk_full_pause:
+                        pause_payload["error_code"] = "disk_full"
+                    _safe_append_harness_event(session_id, "turn/paused", pause_payload)
                     if session_id in _HARNESS_ABORT_FLAGS:
                         yield _sse("aborted", {"step": completed_step})
-                    yield _sse("paused", {"step": completed_step, "reason": halt_reason})
+                    yield _sse("paused", pause_payload)
             else:
                 verification_report = sm.verify_task_completion(
                     session_id,
@@ -10183,7 +10583,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         yield _sse("verification_passed", ver_ok_payload)
 
             diff_summary = _compute_git_diff(wt_dir)
-            _append_harness_event(
+            _safe_append_harness_event(
                 session_id,
                 "turn/end",
                 {
