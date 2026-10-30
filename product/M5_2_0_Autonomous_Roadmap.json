@@ -125,7 +125,7 @@
   "session_state": {
     "active_story": null,
     "last_completed_story": "M5-P0-03",
-    "last_checkpoint": "2026-10-30T11:00:53Z",
+    "last_checkpoint": "2026-10-30T11:01:49Z",
     "last_session_id": "arena/f1d4a766-m5-agent-studio",
     "next_recommended_story": "M5-P0-04",
     "open_risks": [
@@ -137,7 +137,7 @@
       "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1); runtime dependencies clean"
     ],
     "last_readme_sync": "2026-10-30T10:17:37Z",
-    "last_verified_commit": "31656a9846e5f3a3b78f421ed0d267e2d063c3fc",
+    "last_verified_commit": "3d84766b7f62c0e498feb54df9a5ec28e9f26988",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md"
   },
   "delivery_phases": [
@@ -428,10 +428,10 @@
         "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-30T10:51:46Z",
-        "updated_at": "2026-10-30T11:00:53Z",
+        "updated_at": "2026-10-30T11:01:49Z",
         "completed_at": "2026-10-30T11:00:53Z",
         "owner_session": "arena/f1d4a766-m5-agent-studio",
-        "commit_sha": null,
+        "commit_sha": "3d84766b7f62c0e498feb54df9a5ec28e9f26988",
         "changed_files": [
           "app.py",
           "tests/test_skill_execution_containment.py",
