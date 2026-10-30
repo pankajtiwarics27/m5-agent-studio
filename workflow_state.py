@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
 import sqlite3
 import subprocess
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Literal, Sequence
 
 import execution_budget
+import recovery_guard
 import runtime_persistence
 import verification_evidence
 import workflow_checkpoints
@@ -288,6 +290,9 @@ class TaskVerificationReport:
     acceptance_coverage: tuple[dict[str, Any], ...] = ()
     failure_classification: str = ""
     denied: bool = False
+    #: Recovery-memory verdict for this attempt (M5-P2-05): state, repeat count,
+    #: escalation, and whether a safe pause was requested.
+    stagnation: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -311,6 +316,7 @@ class TaskVerificationReport:
             "acceptance_coverage": [dict(entry) for entry in self.acceptance_coverage],
             "failure_classification": self.failure_classification,
             "denied": self.denied,
+            "stagnation": dict(self.stagnation),
         }
 
 
@@ -504,6 +510,7 @@ class DurableTaskStateMachine:
         db_path: Path,
         *,
         retry_policy: runtime_persistence.BusyRetryPolicy = runtime_persistence.DEFAULT_BUSY_RETRY_POLICY,
+        recovery_memory: recovery_guard.RecoveryGuard | None = None,
     ) -> None:
         self._storage = storage
         self._db_path = db_path
@@ -514,6 +521,9 @@ class DurableTaskStateMachine:
             storage,
             db_path,
             retry_policy=retry_policy,
+        )
+        self.recovery = recovery_memory if recovery_memory is not None else recovery_guard.RecoveryGuard(
+            db_path.parent / "recovery"
         )
 
     def ensure_root_task(
@@ -1239,6 +1249,32 @@ class DurableTaskStateMachine:
             retry_policy=self._retry_policy,
         )
 
+    def _recovery_conditions(self, task: Any) -> recovery_guard.EvidenceSnapshot:
+        """Observable conditions a recovery attempt would start from (M5-P2-05)."""
+        workspace = str(getattr(task, "workspace_dir", "") or "").strip()
+        if not workspace:
+            return recovery_guard.EvidenceSnapshot()
+        root = Path(workspace)
+        files: tuple[str, ...] = ()
+        try:
+            contract = self.budgets.get_budget(task.task_id).verification_contract or {}
+            raw_files = contract.get("required_modified_files") or ()
+            if isinstance(raw_files, (list, tuple)):
+                files = tuple(str(item) for item in raw_files)
+        except (KeyError, execution_budget.BudgetError, runtime_persistence.PersistenceError):
+            files = ()
+        try:
+            revision = verification_evidence.capture_source_revision(root, files)
+            environment = verification_evidence.environment_snapshot(root)
+        except (verification_evidence.VerificationEvidenceError, OSError):
+            return recovery_guard.EvidenceSnapshot()
+        return recovery_guard.EvidenceSnapshot(
+            revision_digest=revision.digest,
+            environment_digest=hashlib.sha256(
+                json.dumps(environment, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            ).hexdigest(),
+        )
+
     def prepare_resume(
         self,
         task_id: str,
@@ -1280,6 +1316,34 @@ class DurableTaskStateMachine:
         violation = existing_budget.violation_reason(check_recovery=False)
         if violation:
             raise execution_budget.BudgetExceeded(violation)
+
+        # A recovery action needs changed evidence or changed conditions: refusing
+        # here is what stops an unchanged workspace from being retried forever.
+        conditions = self._recovery_conditions(task)
+        if conditions.revision_digest or conditions.environment_digest:
+            try:
+                self.recovery.require_progress(tid, conditions, action="resume", compare="conditions")
+            except recovery_guard.RecoveryRejected as exc:
+                with contextlib.suppress(
+                    KeyError, runtime_persistence.PersistenceError, execution_budget.BudgetError
+                ):
+                    self.budgets.set_control_flags(tid, pause_requested=True, now=now)
+                if task.state != "paused":
+                    with contextlib.suppress(WorkflowTransitionRejected):
+                        self.transition_task(
+                            tid,
+                            "paused",
+                            allow_inactive_epoch=True,
+                            reason="recovery_requires_new_evidence",
+                            checkpoint_id=ckpt.checkpoint_id if ckpt else None,
+                            extra_evidence={"error": str(exc)},
+                            now=now,
+                        )
+                raise WorkflowTransitionRejected(str(exc)) from exc
+            except (recovery_guard.RecoveryGuardError, OSError):
+                # Unreadable memory cannot prove progress, but it also cannot prove
+                # repetition; the recovery budget remains the bound.
+                pass
 
         if consume_recovery_budget:
             try:
@@ -1341,6 +1405,68 @@ class DurableTaskStateMachine:
         return TaskVerificationSpec.from_dict(budget.verification_contract)
 
     def verify_task_completion(
+        self,
+        task_id: str,
+        *,
+        workspace_dir: Path,
+        spec: TaskVerificationSpec | None = None,
+    ) -> TaskVerificationReport:
+        """Verify completion, then record the attempt in durable failure memory.
+
+        The report is unchanged when the attempt made progress. When the same
+        failure evidence repeats (or an abandoned state is revisited), the verdict
+        is attached and a safe pause is requested instead of letting the loop try
+        the same strategy again (M5-P2-05).
+        """
+        report = self._verify_task_completion_impl(task_id, workspace_dir=workspace_dir, spec=spec)
+        return self._record_verification_attempt(_validate_identifier(task_id, "task_id"), report)
+
+    def _record_verification_attempt(self, task_id: str, report: TaskVerificationReport) -> TaskVerificationReport:
+        """Persist this attempt's evidence and attach the stagnation verdict."""
+        failure_ids = tuple(
+            str(record.get("test_id", ""))
+            for record in (report.test_evidence.get("failures") or ())
+            if isinstance(record, dict)
+        )
+        environment_digest = ""
+        if report.environment:
+            environment_digest = hashlib.sha256(
+                json.dumps(report.environment, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            ).hexdigest()
+        evidence = recovery_guard.EvidenceSnapshot(
+            revision_digest=report.source_revision if len(report.source_revision) == 64 else "",
+            transcript_sha256=report.test_sha256 if len(report.test_sha256) == 64 else "",
+            failure_fingerprint=recovery_guard.failure_fingerprint(report.failure_code, failure_ids),
+            failure_code=report.failure_code,
+            failure_ids=failure_ids,
+            environment_digest=environment_digest,
+        )
+        outcome = "verified" if report.verified else "failed"
+        try:
+            record, verdict = self.recovery.record_attempt(
+                task_id, kind="verification", outcome=outcome, evidence=evidence
+            )
+        except (recovery_guard.RecoveryGuardError, OSError) as exc:
+            if report.verified:
+                return report
+            # Fail closed: without memory there is no stagnation bound, so stop.
+            return replace(
+                report,
+                failure_detail=f"{report.failure_detail} [recovery memory unavailable: {exc}]".strip()[:600],
+                stagnation={"state": "unavailable", "escalate": True, "reason": str(exc)[:240], "pause_requested": True},
+            )
+        stagnation = dict(verdict.to_dict())
+        stagnation["sequence"] = record.sequence
+        stagnation["pause_requested"] = False
+        if not report.verified and verdict.escalate:
+            try:
+                self.budgets.set_control_flags(task_id, pause_requested=True)
+                stagnation["pause_requested"] = True
+            except (KeyError, runtime_persistence.PersistenceError, execution_budget.BudgetError):
+                stagnation["pause_requested"] = self.recovery.budget(task_id).pause_requested
+        return replace(report, stagnation=stagnation)
+
+    def _verify_task_completion_impl(
         self,
         task_id: str,
         *,

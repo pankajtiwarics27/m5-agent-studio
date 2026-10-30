@@ -57,6 +57,8 @@ inverse-patch rollback, action reconciliation, resumable recovery),
 [`verification-evidence.md`](verification-evidence.md) (revision-anchored test
 evidence, staged checks, baseline-aware failure classification, denial refusal,
 declared acceptance coverage),
+[`recovery-guard.md`](recovery-guard.md) (durable failure memory, stagnation and
+oscillation verdicts, retry/replan/rollback budgets, safe pause),
 [`workflow-checkpoints.md`](workflow-checkpoints.md),
 [`execution-budgets.md`](execution-budgets.md), [`side-effect-idempotency.md`](side-effect-idempotency.md).
 

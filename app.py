@@ -71,6 +71,7 @@ import execution_spine
 import failure_injection
 import mcp_client
 import onboarding_preflight
+import recovery_guard
 import runtime_persistence
 import sandbox_boundary
 import side_effect_ledger
@@ -1361,7 +1362,9 @@ def init_db() -> None:
                     reason="unresolved_effects_on_startup",
                     allow_inactive_epoch=True,
                 )
-    _recovery_report = workflow_state.DurableTaskStateMachine(STORAGE, DB_PATH).recover_incomplete_transitions()
+    _recovery_report = workflow_state.DurableTaskStateMachine(
+        STORAGE, DB_PATH, recovery_memory=recovery_guard.RecoveryGuard(HARNESS_STORE_DIR)
+    ).recover_incomplete_transitions()
     _reconciled_session_map: list[tuple[str, str]] = (
         [(tid, "paused") for tid in _recovery_report.recovered_task_ids]
         + [(tid, "blocked") for tid in _recovery_report.blocked_task_ids]
@@ -8596,6 +8599,16 @@ async def _execute_harness_tool_inner(
                 return _edit_rollback_denial("That edit batch belongs to another session and is not yours to roll back.")
             dry_run = bool(args.get("dry_run", True))
             acknowledge = bool(args.get("acknowledge_unresolved", False))
+            if not dry_run:
+                try:
+                    get_recovery_guard().consume(snap_sid, "rollback")
+                except recovery_guard.RecoveryRejected as exc:
+                    _safe_append_harness_event(
+                        snap_sid, "edit/rollback_refused", {"batch_id": batch.batch_id, "reason": str(exc)}
+                    )
+                    return _edit_rollback_denial(str(exc))
+                except (recovery_guard.RecoveryGuardError, OSError) as exc:
+                    return _edit_rollback_denial(f"Rollback refused: recovery memory unavailable: {exc}")
             target_task = str(args.get("task_id") or sess.get("task_id") or sess.get("id") or "").strip()
             reconciliation = _reconcile_managed_edit_actions(
                 target_task,
@@ -9064,9 +9077,14 @@ def get_worker_lease_coordinator(
     )
 
 
+def get_recovery_guard() -> recovery_guard.RecoveryGuard:
+    """Return durable failure memory and retry/replan/rollback budgets (M5-P2-05)."""
+    return recovery_guard.RecoveryGuard(HARNESS_STORE_DIR)
+
+
 def get_task_state_machine() -> workflow_state.DurableTaskStateMachine:
     """Return the authoritative M5-P1-05 root-task, milestone, budget, and checkpoint state machine."""
-    return workflow_state.DurableTaskStateMachine(STORAGE, DB_PATH)
+    return workflow_state.DurableTaskStateMachine(STORAGE, DB_PATH, recovery_memory=get_recovery_guard())
 
 
 def _extract_session_known_action_args(session_id: str) -> dict[str, dict[str, Any]]:
@@ -9365,8 +9383,28 @@ def _acquire_turn_plan_and_lease_or_409(
         side_effect_ledger.UnresolvedEffectsHoldError,
     ) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if should_prepare_resume or resumed_plan is not None:
+        _consume_recovery_attempt_budget(sid)
     sm.budgets.set_control_flags(sid, pause_requested=False)
     return coord, claim, worker_id, sm, resumed_plan
+
+
+def _consume_recovery_attempt_budget(task_id: str) -> None:
+    """Spend the retry (or replan, after stagnation) budget for one resumed turn.
+
+    Called only after the worker lease is held, so a 409 lease conflict cannot burn
+    a budget. An exhausted budget is a durable safe pause surfaced as HTTP 409.
+    """
+    guard = get_recovery_guard()
+    try:
+        verdict_state = str(guard.summary(task_id, limit=1)["latest_verdict"].get("state", ""))
+        guard.consume(task_id, "replan" if verdict_state in {"stagnant", "oscillating"} else "retry")
+    except recovery_guard.RecoveryRejected as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (recovery_guard.RecoveryGuardError, OSError):
+        # No readable memory means no bound to enforce here; the task budget and
+        # recovery budget still bound the loop.
+        return
 
 
 def _acquire_turn_lease_or_409(
@@ -10515,6 +10553,14 @@ async def api_stream_harness_session_events(
     return StreamingResponse(event_gen(), media_type="text/event-stream")
 
 
+def _recovery_summary_or_none(task_id: str) -> dict[str, Any] | None:
+    """Read-only recovery memory view; unreadable memory is reported, never fatal."""
+    try:
+        return get_recovery_guard().summary(task_id)
+    except (recovery_guard.RecoveryGuardError, OSError) as exc:
+        return {"error": str(exc)[:240], "schema_version": recovery_guard.RECOVERY_SCHEMA_VERSION}
+
+
 @app.get("/api/harness/sessions/{session_id}/task")
 async def api_get_harness_task_state(session_id: str) -> JSONResponse:
     """Return durable root-task state, child milestones, checkpoints, budgets, and transition log."""
@@ -10572,6 +10618,7 @@ async def api_get_harness_task_state(session_id: str) -> JSONResponse:
             "budget": budget.to_dict(),
             "verification_spec": ver_spec.to_dict() if ver_spec is not None else None,
             "verification_evidence": ver_evidence_preview,
+            "recovery": _recovery_summary_or_none(session_id),
             "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
             "checkpoint_integrity_error": integrity_error,
             "checkpoints": [ck.to_dict() for ck in checkpoints],
@@ -11306,22 +11353,32 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     workspace_dir=wt_dir,
                 )
                 if not verification_report.verified:
-                    lease_final_state = "failed"
+                    # Repeated identical evidence or a revisited patch state is not a
+                    # retryable failure: pause at the safe boundary for a human
+                    # (M5-P2-05) instead of letting the loop try the same thing again.
+                    stagnation = dict(verification_report.stagnation or {})
+                    stagnated = bool(stagnation.get("escalate"))
+                    lease_final_state = "paused" if stagnated else "failed"
                     lease_released = True
-                    rej_reason = f"false_completion_rejected:{verification_report.failure_code or 'unverified'}"[:240]
+                    rej_reason = (
+                        f"stagnation_detected:{stagnation.get('state', '')}"
+                        if stagnated
+                        else f"false_completion_rejected:{verification_report.failure_code or 'unverified'}"
+                    )[:240]
                     did_rel_ver = coord.release(
                         session_id,
                         lease_epoch,
                         worker_id,
-                        next_state="failed",
+                        next_state=lease_final_state,
                         reason=rej_reason,
                     )
                     if did_rel_ver:
-                        _update_harness_session_state(session_id, status="error")
+                        _update_harness_session_state(session_id, status="paused" if stagnated else "error")
                     ver_payload = verification_report.to_dict()
+                    ver_payload["stagnation_pause"] = stagnated
                     _append_harness_event(
                         session_id,
-                        "turn/verification_failed",
+                        "turn/stagnation_paused" if stagnated else "turn/verification_failed",
                         ver_payload,
                         dedupe_key=f"turn-verification-failed:{lease_epoch}",
                     )
