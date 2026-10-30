@@ -28,7 +28,7 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
 - **The application runs and its local auth path works.** `scripts/smoke_local.py`
   launches a disposable loopback instance of both `app.py` and the generated
   `studio.py` and verifies the token/security path — both exit 0.
-- **The test suite passes:** **755 passed, 1 skipped** (the skip is the opt-in
+- **The test suite passes:** **782 passed, 1 skipped** (the skip is the opt-in
   live container-runtime test, see below). `ruff`, `mypy`, `compileall`, and the
   Node-based frontend syntax check all pass.
 - **Generated artifacts are reproducible:** `studio.py`,
@@ -49,20 +49,28 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
 - **The frontend is a single-file vanilla JS UI** (`static/index.html`,
   4,228 lines; no framework build step).
 - **Tool, skill, smart-block, and MCP operations cross an authoritative action
-  admission gate** (`_run_authorized_tool` delegates to
-  `execution_spine.DurableActionBoundary`, tightened in `M5-P1-02`) with
-  deterministic action classes (`read_only` vs `managed_edit`, `consequential`,
-  `external`), grant provenance (no permission inferred from model output),
-  authoritative `runtime_tasks` state and `runtime_task_epochs` lease-epoch
-  checks, durable `tool_audit_events` rows, a pre-execute write-transaction
-  guard, and scoped `require_active_admission` anti-bypass enforcement on inner
-  executors (`tests/test_action_admission_gate.py`).
+  admission gate and durable intent/result ledger** (`_run_authorized_tool`
+  delegates to `execution_spine.DurableActionBoundary` +
+  `side_effect_ledger.DurableActionLedger`, tightened in `M5-P1-02` and
+  `M5-P1-03`) with deterministic action classes (`read_only` vs `managed_edit`,
+  `consequential`, `external`), grant provenance (no permission inferred from
+  model output), authoritative `runtime_tasks` state and `runtime_task_epochs`
+  lease-epoch checks, durable `runtime_actions` intent rows committed before
+  side effects (`never_started`, `in_flight`, `committed`, `uncertain` plus
+  `denied`/`failed`), missing-result reconciliation to `uncertain` (never
+  `failed`), action-type replay classification (`idempotent`, `reconcilable`,
+  `non_idempotent`) blocking blind replay of uncertain non-idempotent writes,
+  durable `tool_audit_events` rows, a pre-execute write-transaction guard, and
+  scoped `require_active_admission` anti-bypass enforcement on inner executors
+  (`tests/test_action_admission_gate.py`, `tests/test_durable_intent_ledger.py`).
 - **The execution boundary is extracted and its coverage is inventoried
-  (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`):** `execution_spine.py`
-  is a stdlib-only seam (classify → grant/task/epoch check → policy → intent
-  record → scoped execute → outcome record) with 15 spine contract tests
-  (`tests/test_execution_spine.py`) and 10 admission-gate regression tests
-  (`tests/test_action_admission_gate.py`). Coverage is **partial** —
+  (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02` and `M5-P1-03`):**
+  `execution_spine.py` and `side_effect_ledger.py` form a stdlib-only seam
+  (classify → grant/task/epoch check → policy → durable intent & replay gate →
+  scoped execute → durable outcome/reconciliation) with 15 spine contract tests
+  (`tests/test_execution_spine.py`), 10 admission-gate regression tests
+  (`tests/test_action_admission_gate.py`), and 10 durable intent-ledger tests
+  (`tests/test_durable_intent_ledger.py`). Coverage is **partial** —
   [`docs/m5-2-0-bypass-inventory.md`](docs/m5-2-0-bypass-inventory.md) is the
   maintained inventory of which entry points are outside the boundary; no
   complete security guarantee is claimed.
@@ -72,17 +80,18 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
   execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
   pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
   plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
-- **7 of 44 shipped Python modules are wired into the served app**
+- **8 of 44 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
-  `workflow_orchestration`, `execution_spine` since `M5-P0-06`, and
-  `runtime_persistence` since `M5-P1-01`; 5 of 42 at the time of the audit
-  table). `runtime_persistence` governs schema upgrades, all SQLite
-  transactions in `app.py`, and authoritative task-state / lease-epoch checks
-  at action admission (`M5-P1-02`), while durable action replay, worker lease
-  recovery, and full task-loop migration remain assigned to `M5-P1-03`–
-  `M5-P1-05`. The other 37 modules — including `sandbox_boundary.py` and
-  `side_effect_ledger.py` — have passing unit tests but **no `app.py` call
-  path**. Module presence is not integration. Full table:
+  `workflow_orchestration`, `execution_spine` since `M5-P0-06`,
+  `runtime_persistence` since `M5-P1-01`, and `side_effect_ledger` since
+  `M5-P1-03`; 5 of 42 at the time of the audit table). `runtime_persistence`
+  and `side_effect_ledger` govern schema upgrades, SQLite transactions,
+  authoritative task-state / lease-epoch checks at admission (`M5-P1-02`), and
+  durable `runtime_actions` intent/result/replay tracking (`M5-P1-03`), while
+  worker lease recovery and full task-loop migration remain assigned to
+  `M5-P1-04`–`M5-P1-05`. The other 36 modules — including `sandbox_boundary.py`
+  — have passing unit tests but **no `app.py` call path**. Module presence is
+  not integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
 
 Reported claims that this review **refuted**: `app.py` is ~2,200 lines
@@ -112,7 +121,7 @@ python3 -m venv .venv
 .venv/bin/mypy                                  # typed contract modules
 .venv/bin/python -m compileall -q app.py scripts tests
 .venv/bin/python scripts/check_frontend_syntax.py
-.venv/bin/python -m pytest -q                   # 755 passed, 1 skipped
+.venv/bin/python -m pytest -q                   # 782 passed, 1 skipped
 .venv/bin/python scripts/smoke_local.py         # loopback app, auth verified
 .venv/bin/python scripts/smoke_local.py --standalone
 ```
@@ -132,7 +141,7 @@ are not guarantees):
 
 ## Verified usage
 
-- **Run the test suite:** `.venv/bin/python -m pytest -q` → 755 passed,
+- **Run the test suite:** `.venv/bin/python -m pytest -q` → 782 passed,
   1 skipped, 1 warning.
 - **Start a disposable authenticated instance (verified):**
   `.venv/bin/python scripts/smoke_local.py` starts `app.py` on a free loopback
@@ -166,8 +175,8 @@ generated [`docs/subsystem-dependency-inventory.md`](docs/subsystem-dependency-i
 - **Backend:** one FastAPI process — `app.py` plus 43 small contract modules
   listed in `pyproject.toml`. `studio.py` is a **generated** standalone
   artifact (`scripts/build_studio.py` inlines `runtime_persistence`,
-  `mcp_client`, `context_store`, `onboarding_preflight`, and `execution_spine`,
-  and embeds `static/index.html`); never hand-edit it.
+  `side_effect_ledger`, `mcp_client`, `context_store`, `onboarding_preflight`,
+  and `execution_spine`, and embeds `static/index.html`); never hand-edit it.
 - **Frontend:** `static/index.html`, vanilla HTML/CSS/JS, no build step.
 - **Storage:** SQLite (`studio_history.db`, `SCHEMA_VERSION = 3`) in WAL mode
   with FTS5 tables (`opencontext_fts`, `ctx_vault_fts`) for BM25 context search
@@ -240,7 +249,7 @@ Summary (2026-10-30, Linux x86_64 container, 2 vCPU, ~4 GB RAM, Python 3.11.2):
 
 | Check | Result |
 |---|---|
-| `pytest -q` | 755 passed, 1 skipped (opt-in live container test), 1 warning |
+| `pytest -q` | 782 passed, 1 skipped (opt-in live container test), 1 warning |
 | `ruff check .` | clean |
 | `mypy` | clean (typed contract modules) |
 | `check_frontend_syntax.py` (Node) | pass |
@@ -286,10 +295,16 @@ requires `STUDIO_ALLOW_SKILL_CODE=1`; private-URL access requires
    isolation is unqualified; it must never silently fall back to host mode.
 3. **A git worktree is not an operating-system sandbox.** Worktree isolation
    protects the main checkout from agent edits; it does not confine processes.
-4. **`side_effect_ledger.py` (durable idempotency) and `sandbox_boundary.py`
-   (path confinement primitives) are unit-tested but not integrated** into
-   `app.py`. Exactly-once external effects are **not** claimed, and not all
-   subprocess descendants can be guaranteed terminable.
+4. **`side_effect_ledger.py` is integrated (`M5-P1-03`), while `sandbox_boundary.py`
+   remains unit-tested but unwired.** `DurableActionLedger` commits durable
+   `runtime_actions` intent rows before admitted consequential actions,
+   transitions missing results and ambiguous MCP/timeout outcomes to `uncertain`
+   (never `failed`), forwards `Idempotency-Key` on outbound HTTP MCP
+   `tools/call`, and refuses blind replay of `non_idempotent` or unverified
+   `uncertain` writes. However, globally exactly-once external effects still
+   cannot be guaranteed when a third-party MCP server ignores `Idempotency-Key`,
+   `sandbox_boundary.py` path-confinement integration remains assigned to
+   `M5-P2-01`, and not all subprocess descendants can be guaranteed terminable.
 5. **Live container isolation is unqualified (smoke test 2026-10-30, `M5-P0-04`).**
    No Docker/Podman exists in the evidence environment; the live probes were
    **attempted and failed closed** (`RuntimeError: Sandbox runtime 'docker' is
@@ -312,13 +327,14 @@ requires `STUDIO_ALLOW_SKILL_CODE=1`; private-URL access requires
 8. **The execution boundary covers tool, smart-block, skill-script, and MCP
    invocation, not every effectful path (since `M5-P0-06`; SQLite discipline
    tightened in `M5-P1-01`; authoritative action admission wired in
-   `M5-P1-02`).** The maintained known-bypass inventory
+   `M5-P1-02`; durable `runtime_actions` intent/result ledger wired in
+   `M5-P1-03`).** The maintained known-bypass inventory
    [`docs/m5-2-0-bypass-inventory.md`](docs/m5-2-0-bypass-inventory.md) lists
    what routes through the boundary, what is gated elsewhere (all SQLite reads
    and writes route through `runtime_persistence`), what is read-only, and what
    is still outside it (worktree git effects, `.harnesses/*.jsonl` sidecar
    files, unledgered filesystem writes). Completing coverage is follow-up work
-   (`M5-P1-03`…`M5-P1-05`, `M5-P2-01`…`M5-P2-03`); partial coverage is never
+   (`M5-P1-04`…`M5-P1-05`, `M5-P2-01`…`M5-P2-03`); partial coverage is never
    advertised as complete.
 
 ## Current implementation status
@@ -336,11 +352,14 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
   [`product/M5_2_0_Autonomous_Roadmap.json`](product/M5_2_0_Autonomous_Roadmap.json):
   34 stories across 7 phases. **Done with evidence: `M5-P0-01`…`M5-P0-07`
   (phase P0 100%), `M5-P1-01`** (SQLite Schema v3 migration and persistence
-  discipline), **and `M5-P1-02`** (authoritative action admission gate, task/epoch
-  checks, action-class separation, and direct-executor anti-bypass). Next ready
-  story: `M5-P1-03` (durable intent/result ledger integration) — claim via the
-  coordination protocol before coding. Planned work is not implemented product
-  behavior.
+  discipline), **`M5-P1-02`** (authoritative action admission gate, task/epoch
+  checks, action-class separation, and direct-executor anti-bypass), **and
+  `M5-P1-03`** (durable `runtime_actions` intent/result ledger integration,
+  4-state `never_started`/`in_flight`/`committed`/`uncertain` separation,
+  missing-result-to-`uncertain` reconciliation, and action-type replay
+  classification). Next ready story: `M5-P1-04` (worker leases, epochs and
+  fencing takeover) — claim via the coordination protocol before coding.
+  Planned work is not implemented product behavior.
 - **AS program (Adaptive Runtime)** —
   [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json)
   with dashboard [`docs/product-roadmap-status.md`](docs/product-roadmap-status.md):

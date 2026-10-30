@@ -215,6 +215,10 @@ class ActionRequest:
     task_state: str | None = None
     epoch: int | None = None
     worker_id: str | None = None
+    action_id: str | None = None
+    step_id: str | int | None = None
+    call_index: int | None = None
+    replay_policy: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -229,6 +233,10 @@ class ActiveAdmissionScope:
     grant_source: str
     task_id: str | None = None
     epoch: int | None = None
+    action_id: str = ""
+    attempt: int = 1
+    attempt_id: str = ""
+    replay_policy: str = "non_idempotent"
 
 
 _ACTIVE_ADMISSION_SCOPE: contextvars.ContextVar[ActiveAdmissionScope | None] = contextvars.ContextVar(
@@ -300,6 +308,51 @@ class ActionLedger(Protocol):
         self, event_id: int, result: dict[str, Any], elapsed_ms: int, *, status: str = "completed"
     ) -> None:
         """Durably record the outcome for a previously started action."""
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+class IntentBeginDecision:
+    """Authoritative pre-execution intent & replay decision from ``IntentLedger``."""
+
+    proceed: bool
+    action_id: str
+    attempt: int
+    attempt_id: str
+    status: str
+    replay_policy: str
+    replay_blocked: bool = False
+    already_committed: bool = False
+    reconciled: bool = False
+    reason: str = ""
+    error: Exception | None = None
+
+
+class IntentLedger(Protocol):
+    """Durable M5 2.0 intent/result ledger seam over ``runtime_actions`` (M5-P1-03)."""
+
+    def begin(
+        self,
+        request: ActionRequest,
+        *,
+        effective_policy: str,
+        action_class: ActionClass,
+        allowed: bool,
+        explicit_approval: bool,
+    ) -> IntentBeginDecision:
+        """Atomically evaluate replay policy and commit durable ``in_flight`` (or ``denied``) intent."""
+        ...
+
+    def mark_never_started(self, action_id: str, *, error_code: str) -> str:
+        """Record that execution was blocked prior to entering ``executor``."""
+        ...
+
+    def complete(self, action_id: str, result: Mapping[str, Any], elapsed_ms: int) -> str:
+        """Finalize a normal tool return as ``committed``, ``failed``, or ``uncertain``."""
+        ...
+
+    def record_exception(self, action_id: str, exc: BaseException, elapsed_ms: int) -> str:
+        """Finalize an exception raised inside ``executor`` as ``uncertain`` or ``failed``."""
         ...
 
 
@@ -481,11 +534,13 @@ class DurableActionBoundary:
         *,
         pre_execute_guard: Callable[[], None] | None = None,
         task_context_resolver: TaskContextResolver | None = None,
+        intent_ledger: IntentLedger | None = None,
     ) -> None:
         self._policy = policy
         self._ledger = ledger
         self._pre_execute_guard = pre_execute_guard
         self._task_context_resolver = task_context_resolver
+        self._intent_ledger = intent_ledger
 
     async def admit_and_execute(self, request: ActionRequest, executor: Executor) -> dict[str, Any]:
         effective = self._policy.effective_policy(request.policy)
@@ -548,6 +603,32 @@ class DurableActionBoundary:
             request.session_id, request.tool_name, effective, explicit_approval, request.args
         )
         started = time.perf_counter()
+
+        intent_decision: IntentBeginDecision | None = None
+        if self._intent_ledger is not None:
+            try:
+                intent_decision = self._intent_ledger.begin(
+                    request,
+                    effective_policy=effective,
+                    action_class=action_class,
+                    allowed=decision.allowed,
+                    explicit_approval=explicit_approval,
+                )
+            except Exception as intent_exc:
+                # Fail closed: if durable intent cannot be committed before execution,
+                # the consequential executor must NEVER run.
+                intent_fail: dict[str, Any] = {
+                    "ok": False,
+                    "output": f"Durable intent persistence failed for `{request.tool_name}`: {intent_exc}",
+                    "diff": "",
+                    "elapsed_ms": round((time.perf_counter() - started) * 1000),
+                }
+                try:
+                    self._ledger.finish(event_id, intent_fail, intent_fail["elapsed_ms"], status="failed")
+                except Exception:
+                    pass
+                raise
+
         if not decision.allowed:
             result: dict[str, Any] = {
                 "ok": False,
@@ -556,6 +637,12 @@ class DurableActionBoundary:
                 "elapsed_ms": 1,
                 "action_class": action_class,
             }
+            if intent_decision is not None:
+                result["action_id"] = intent_decision.action_id
+                result["attempt"] = intent_decision.attempt
+                result["attempt_id"] = intent_decision.attempt_id
+                result["ledger_status"] = intent_decision.status
+                result["replay_policy"] = intent_decision.replay_policy
             try:
                 self._ledger.finish(event_id, result, 1, status="denied")
             except Exception:
@@ -563,6 +650,85 @@ class DurableActionBoundary:
             if request.denial_as_exception:
                 raise PermissionError(result["output"])
             return result
+
+        if intent_decision is not None and not intent_decision.proceed:
+            if intent_decision.reconciled and intent_decision.already_committed:
+                reconciled_res: dict[str, Any] = {
+                    "ok": True,
+                    "output": (
+                        intent_decision.reason
+                        or f"Reconciled `{request.tool_name}` (`{intent_decision.action_id}`): effect already committed."
+                    ),
+                    "diff": "",
+                    "elapsed_ms": 1,
+                    "action_class": action_class,
+                    "action_id": intent_decision.action_id,
+                    "attempt": intent_decision.attempt,
+                    "attempt_id": intent_decision.attempt_id,
+                    "ledger_status": intent_decision.status,
+                    "replay_policy": intent_decision.replay_policy,
+                    "reconciled": True,
+                }
+                try:
+                    self._ledger.finish(event_id, reconciled_res, 1, status="completed")
+                except Exception:
+                    reconciled_res["audit_warning"] = "Reconciliation could not be finalized in the local audit log."
+                return reconciled_res
+
+            blocked_res: dict[str, Any] = {
+                "ok": False,
+                "output": (
+                    intent_decision.reason
+                    or f"Replay blocked for `{request.tool_name}` (`{intent_decision.action_id}`)."
+                ),
+                "diff": "",
+                "elapsed_ms": 1,
+                "action_class": action_class,
+                "action_id": intent_decision.action_id,
+                "attempt": intent_decision.attempt,
+                "attempt_id": intent_decision.attempt_id,
+                "ledger_status": intent_decision.status,
+                "replay_policy": intent_decision.replay_policy,
+                "replay_blocked": True,
+            }
+            if intent_decision.status == "uncertain":
+                blocked_res["uncertain"] = True
+            if intent_decision.already_committed:
+                blocked_res["already_committed"] = True
+            try:
+                self._ledger.finish(event_id, blocked_res, 1, status="denied")
+            except Exception:
+                blocked_res["audit_warning"] = "Replay denial could not be finalized in the local audit log."
+            if request.denial_as_exception:
+                if intent_decision.error is not None:
+                    raise intent_decision.error
+                raise PermissionError(blocked_res["output"])
+            return blocked_res
+
+        if self._pre_execute_guard is not None:
+            try:
+                self._pre_execute_guard()
+            except Exception as guard_exc:
+                guard_ms = round((time.perf_counter() - started) * 1000)
+                if intent_decision is not None and self._intent_ledger is not None:
+                    try:
+                        self._intent_ledger.mark_never_started(
+                            intent_decision.action_id,
+                            error_code=type(guard_exc).__name__,
+                        )
+                    except Exception:
+                        pass
+                guard_fail: dict[str, Any] = {
+                    "ok": False,
+                    "output": f"Tool `{request.tool_name}` blocked before start: {guard_exc}",
+                    "diff": "",
+                    "elapsed_ms": guard_ms,
+                }
+                try:
+                    self._ledger.finish(event_id, guard_fail, guard_ms, status="failed")
+                except Exception:
+                    pass
+                raise
 
         scope = ActiveAdmissionScope(
             tool_name=request.tool_name,
@@ -573,30 +739,64 @@ class DurableActionBoundary:
             grant_source=str(request.grant_source or "unspecified"),
             task_id=request.task_id,
             epoch=request.epoch,
+            action_id=(intent_decision.action_id if intent_decision is not None else ""),
+            attempt=(intent_decision.attempt if intent_decision is not None else 1),
+            attempt_id=(intent_decision.attempt_id if intent_decision is not None else ""),
+            replay_policy=(intent_decision.replay_policy if intent_decision is not None else "non_idempotent"),
         )
         try:
-            if self._pre_execute_guard is not None:
-                self._pre_execute_guard()
             scope_token = _ACTIVE_ADMISSION_SCOPE.set(scope)
             try:
                 result = await executor()
             finally:
                 _ACTIVE_ADMISSION_SCOPE.reset(scope_token)
         except Exception as exc:
+            err_ms = round((time.perf_counter() - started) * 1000)
+            err_ledger_status = "failed"
+            if intent_decision is not None and self._intent_ledger is not None:
+                try:
+                    err_ledger_status = self._intent_ledger.record_exception(
+                        intent_decision.action_id, exc, err_ms
+                    )
+                except Exception:
+                    err_ledger_status = "uncertain"
             failure: dict[str, Any] = {
                 "ok": False,
                 "output": f"Tool `{request.tool_name}` failed: {exc}",
                 "diff": "",
-                "elapsed_ms": round((time.perf_counter() - started) * 1000),
+                "elapsed_ms": err_ms,
             }
+            audit_err_status = "uncertain" if err_ledger_status == "uncertain" else "failed"
             try:
-                self._ledger.finish(event_id, failure, failure["elapsed_ms"], status="failed")
+                self._ledger.finish(event_id, failure, err_ms, status=audit_err_status)
             except Exception:
                 pass  # The durable started row still proves that execution was attempted.
             raise
         elapsed = int(result.get("elapsed_ms") or round((time.perf_counter() - started) * 1000))
+        if intent_decision is not None and self._intent_ledger is not None:
+            try:
+                final_status = self._intent_ledger.complete(intent_decision.action_id, result, elapsed)
+                result = {
+                    **result,
+                    "action_id": intent_decision.action_id,
+                    "attempt": intent_decision.attempt,
+                    "attempt_id": intent_decision.attempt_id,
+                    "ledger_status": final_status,
+                }
+            except Exception:
+                result = {
+                    **result,
+                    "action_id": intent_decision.action_id,
+                    "attempt": intent_decision.attempt,
+                    "attempt_id": intent_decision.attempt_id,
+                    "ledger_status": "in_flight",
+                    "audit_warning": "Tool result could not be finalized in the durable action ledger.",
+                }
         try:
-            self._ledger.finish(event_id, result, elapsed)
+            if bool(result.get("uncertain")):
+                self._ledger.finish(event_id, result, elapsed, status="uncertain")
+            else:
+                self._ledger.finish(event_id, result, elapsed)
         except Exception:
             # The durable `started` event still records the action attempt; don't erase its outcome in memory.
             result = {**result, "audit_warning": "Tool result could not be finalized in the local audit log."}

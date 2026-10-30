@@ -123,10 +123,10 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "M5-P1-03",
     "last_completed_story": "M5-P1-02",
-    "last_checkpoint": "2026-10-30T13:17:57Z",
-    "last_session_id": "arena/d67875b4-m5-agent-studio",
+    "last_checkpoint": "2026-10-30T13:27:21Z",
+    "last_session_id": "arena/9d2ba5b8-m5-agent-studio",
     "next_recommended_story": "M5-P1-03",
     "open_risks": [
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
@@ -170,7 +170,7 @@
       ],
       "status": "in_progress",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
-      "progress_percent": 29
+      "progress_percent": 43
     },
     {
       "id": "P2",
@@ -1115,22 +1115,70 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P1-03: Durable intent/result ledger integration. Objective: Record intent before side effect and result/reconciliation afterward. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Integrate side_effect_ledger.py or replace only if justified; Use stable action and attempt identities; Separate never-started, in-flight, committed and uncertain; Implement action-type replay classification. Acceptance: Intent committed before every consequential action; Missing result never treated as failed; Non-idempotent uncertain writes are not retried blindly. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-10-30T13:27:21Z",
+        "updated_at": "2026-10-30T13:53:46Z",
+        "completed_at": "2026-10-30T13:53:46Z",
+        "owner_session": "arena/9d2ba5b8-m5-agent-studio",
+        "commit_sha": "45b1abfad7bb2cb0bf73eb700a12e7adcb76d7e4",
+        "changed_files": [
+          "side_effect_ledger.py",
+          "mcp_client.py",
+          "execution_spine.py",
+          "app.py",
+          "scripts/build_studio.py",
+          "scripts/generate_subsystem_inventory.py",
+          "studio.py",
+          "docs/subsystem-dependency-inventory.md",
+          "docs/m5-2-0-bypass-inventory.md",
+          "README.md",
+          "tests/test_durable_intent_ledger.py",
+          "tests/test_mcp_client.py",
+          "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "AC1 (Intent committed before every consequential action): side_effect_ledger.DurableActionLedger.begin writes a durable status=in_flight row to runtime_actions inside runtime_persistence.run_write_transaction (BEGIN IMMEDIATE) prior to entering executor() in execution_spine.DurableActionBoundary.admit_and_execute; mid-execution SQLite probes and failure-injection tests in tests/test_durable_intent_ledger.py verify in_flight rows exist on disk before side effects and that intent-persistence errors prevent executor() from running.",
+          "AC2 (Missing result never treated as failed): Orphaned in_flight rows left by crashes or interrupted finalization transition exclusively to status=uncertain (ok=NULL, error_code=missing_result_on_startup / missing_result) both during init_db() startup sweep (reconcile_missing_results) and on subsequent begin() encounters, and post-dispatch timeouts (run_bash, ctx_execute_python, run_reusable_block, _run_skill_script) plus MCP transport drops / HTTP 5xx / malformed HTTP 200 responses record status=uncertain (never failed).",
+          "AC3 (Non-idempotent uncertain writes are not retried blindly): classify_replay_policy separates idempotent reads, reconcilable target overwrites (write_file, oc_save_doc with explicit doc_id), and non_idempotent mutations (edit_file, run_bash, ctx_execute_python, test-summary/first-error, skill_execute_script, oc_save_doc without doc_id, mcp__*, consequential mcp_bridge__*); DurableActionLedger.begin blocks blind replay of uncertain non_idempotent and unverified reconcilable writes (UncertainActionReplayError / HTTP 409 on /api/mcp/servers/{alias}/call), while mcp_client.adaptive_call raises McpAmbiguousOutcomeError on HTTP 5xx or malformed HTTP 200 for tools/call instead of falling back to handshake + second POST."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/pytest -v tests/test_durable_intent_ledger.py tests/test_mcp_client.py tests/test_side_effect_ledger.py",
+            "exit_code": 0,
+            "result": "32 passed (10 in test_durable_intent_ledger.py + 18 in test_mcp_client.py + 4 in test_side_effect_ledger.py)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "782 passed, 1 skipped (13 new tests; all pre-existing contracts preserved)"
+          },
+          {
+            "command": ".venv/bin/mypy && .venv/bin/mypy --strict side_effect_ledger.py execution_spine.py mcp_client.py && .venv/bin/ruff check .",
+            "exit_code": 0,
+            "result": "mypy clean across 42 source files (and --strict on side_effect_ledger.py, execution_spine.py, mcp_client.py); ruff clean"
+          },
+          {
+            "command": ".venv/bin/python scripts/smoke_local.py && .venv/bin/python scripts/smoke_local.py --standalone && .venv/bin/python scripts/isolation_smoke.py",
+            "exit_code": 0,
+            "result": "both app.py and standalone studio.py pass loopback auth/security smoke; isolation_smoke.py 0 checks failed"
+          },
+          {
+            "command": "scripts/build_studio.py + generate_route_matrix.py + generate_subsystem_inventory.py + generate_roadmap_status.py --check + demo_tour.py --check + validate_docs.py + validate_adrs.py + validate_governance.py + validate_security_signoff.py + verify_baseline.py",
+            "exit_code": 0,
+            "result": "all artifact reproducibility, demo transcript, documentation, ADR, governance, security-signoff, and baseline checks pass"
+          }
+        ],
+        "decisions": [
+          "Integrated side_effect_ledger.py directly into the served app and standalone studio.py (INLINED_MODULES) by adding DurableActionLedger over Schema v3 runtime_actions while retaining legacy SideEffectLedger compatibility.",
+          "Used deterministic derive_action_id(scope_id, tool_name, args, step_id=..., call_index=...) for logical model/workflow slots, monotonic per-action attempt counters (attempt_id = action_id#attempt-N), and ActionIdentityConflictError when an action_id is reused with different tool/args.",
+          "Hardened mcp_client.adaptive_call with McpAmbiguousOutcomeError and Idempotency-Key forwarding on tools/call so HTTP 5xx or malformed HTTP 200 responses never trigger handshake fallback + duplicate remote tool execution."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
-        "readme_updated": false
+        "handoff_note": "M5-P1-03 complete: side_effect_ledger.DurableActionLedger is wired into execution_spine.DurableActionBoundary and standalone studio.py with pre-effect in_flight commits, 4-state separation (never_started, in_flight, committed, uncertain), startup/replay missing-result-to-uncertain reconciliation, MCP tools/call ambiguity protection, and replay classification. Ready for M5-P1-04 (Worker leases, epochs and fencing takeover).",
+        "next_action": "Claim and implement M5-P1-04 (Worker leases, epochs and fencing takeover) on a fresh branch after M5-P1-03 merges.",
+        "readme_updated": true
       }
     },
     {
