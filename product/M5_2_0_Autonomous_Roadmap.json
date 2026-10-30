@@ -123,14 +123,13 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": "M5-P0-04",
-    "last_completed_story": "M5-P0-03",
-    "last_checkpoint": "2026-10-30T11:08:14Z",
+    "active_story": null,
+    "last_completed_story": "M5-P0-04",
+    "last_checkpoint": "2026-10-30T11:13:30Z",
     "last_session_id": "arena/13166201-m5-agent-studio",
-    "next_recommended_story": "M5-P0-04",
+    "next_recommended_story": "M5-P0-06",
     "open_risks": [
-      "Skill-script containment landed (M5-P0-03): residual risk is sandbox isolation itself remaining unqualified until a live container runtime proves the denials (M5-P0-04 / M5-P3-01)",
-      "Live container isolation unqualified: no Docker/Podman in the evidence environment; tests/test_live_sandbox.py skipped (opt-in only)",
+      "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
       "24 GB Apple Silicon memory/swap and oMLX task measurements blocked in Linux evidence environment (M5-P4-01 to measure on target hardware)",
       "side_effect_ledger.py and sandbox_boundary.py unit-tested but not integrated into app.py (M5-P0-06 / M5-P1-03)",
       "Multi-agent parallel work active: product/M5_2_0_Autonomous_Roadmap.json tracking blocks are the shared claim ledger; claim protocol and PR/merge rules live in M5_2_0_AGENT_PROMPT.md",
@@ -155,7 +154,7 @@
       ],
       "status": "in_progress",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
-      "progress_percent": 71
+      "progress_percent": 86
     },
     {
       "id": "P1",
@@ -528,22 +527,59 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P0-04: Live isolation smoke test. Objective: Establish minimum enforceable container boundary on supported macOS. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Identify actual Docker/Podman availability; Test synthetic outside-workspace file access and direct network attempt; Test skill execution path and default-off host bypass; Record environment fingerprint and unsupported guarantees. Acceptance: Observed denial for each claimed smoke-test boundary; No silent host fallback; If no live runtime, mark isolation unqualified and block dependent execution. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 10,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-30T11:08:14Z",
-        "updated_at": "2026-10-30T11:08:14Z",
-        "completed_at": null,
+        "updated_at": "2026-10-30T11:13:30Z",
+        "completed_at": "2026-10-30T11:13:30Z",
         "owner_session": "arena/13166201-m5-agent-studio",
         "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "changed_files": [
+          "scripts/isolation_smoke.py",
+          "tests/test_isolation_smoke.py",
+          "docs/m5-2-0-isolation-smoke-evidence.md",
+          "README.md",
+          "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "AC3 path taken (no live runtime): docker/podman/nerdctl absent, no docker.sock - fingerprint recorded in docs/m5-2-0-isolation-smoke-evidence.md section 1.",
+          "AC1 (observed denials for every boundary observable without a container): scripts/isolation_smoke.py - 16/16 checks pass: skill-code gates (default-off, execution-disabled, host-without-opt-in), sandbox-mode fail-closed with zero host spawns, sandbox_boundary.confined_path denials (traversal, absolute outside, NUL, symlink escape), and sandbox invocation invariants (--network=none, --read-only, --cap-drop=ALL, --security-opt=no-new-privileges, --pull=never, resource limits, single /workspace bind mount) as actually constructed by app._sandbox_command.",
+          "AC2 (no silent host fallback): live-sandbox attempt with explicit opt-in (STUDIO_SANDBOX_INTEGRATION=1 STUDIO_EXECUTION_MODE=sandbox pytest tests/test_live_sandbox.py) fails closed with `RuntimeError: Sandbox runtime `docker` is not installed or not on PATH` - no host fallback; container-level denials explicitly NOT claimed as observed.",
+          "AC3 completion (mark unqualified + block dependent execution): smoke summary records isolation_status: unqualified and dependent_execution: blocked (fail closed); M5-P3-01/02/03 carry blocked_by_unknowns pointing at the live-runtime qualification; README security section updated with the same status."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python scripts/isolation_smoke.py",
+            "exit_code": 0,
+            "result": "16/16 observable checks pass; isolation_status: unqualified; dependent_execution: blocked"
+          },
+          {
+            "command": "STUDIO_SANDBOX_INTEGRATION=1 STUDIO_EXECUTION_MODE=sandbox .venv/bin/python -m pytest -q tests/test_live_sandbox.py",
+            "exit_code": 1,
+            "result": "attempted, environment-blocked: RuntimeError: Sandbox runtime `docker` is not installed or not on PATH (fail closed)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q tests/test_isolation_smoke.py",
+            "exit_code": 0,
+            "result": "3 passed (smoke-script regression)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "full suite green on final tree (see PR)"
+          }
+        ],
+        "decisions": [
+          "Built scripts/isolation_smoke.py as the reproducible evidence tool: observable checks run everywhere; container probes run only with --live AND a working runtime; status is 'qualified' only after observed live denials - never advertised without proof.",
+          "Live probes are built on the app's own _execute_limited/_sandbox_command machinery so the smoke tests the shipped boundary, not a lookalike.",
+          "Scoped 'block dependent execution' as: fail-closed enforcement verified (runtime), isolation_status=unqualified recorded, and isolation-dependent stories M5-P3-01/02/03 marked blocked_by_unknowns until live qualification (story-selection rule requires verified security preconditions).",
+          "No app.py changes in this story (smoke tool + tests + evidence only); no generated artifacts drift."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Probe Docker/Podman availability (none found pre-claim), run every smoke-test boundary that is observable in this environment, record the environment fingerprint, and per acceptance mark isolation unqualified and block dependent execution where the live runtime is absent.",
-        "readme_updated": false
+        "handoff_note": "M5-P0-04 complete via the no-runtime acceptance path: observable denials proven live, container-level isolation explicitly unqualified, dependent execution blocked. Next ready story is M5-P0-06 (Minimal execution-spine interface extraction; deps M5-P0-02+M5-P0-03 done). To unblock M5-P3-01 later: run `python3 scripts/isolation_smoke.py --live` and tests/test_live_sandbox.py with STUDIO_SANDBOX_INTEGRATION=1 on a machine with Docker/Podman and the pre-pulled image, then clear blocked_by_unknowns with evidence.",
+        "next_action": "None - done. Next ready story: M5-P0-06.",
+        "readme_updated": true
       }
     },
     {
@@ -1449,7 +1485,9 @@
         "specific evidence for every acceptance criterion",
         "README ground-truth update or explicit no-change explanation"
       ],
-      "blocked_by_unknowns": [],
+      "blocked_by_unknowns": [
+        "Live container runtime (Docker/Podman) unavailable in the M5-P0-04 evidence environment; container isolation unqualified (docs/m5-2-0-isolation-smoke-evidence.md). Qualify with `python3 scripts/isolation_smoke.py --live` plus tests/test_live_sandbox.py on a machine with a working runtime before unblocking."
+      ],
       "prompt": "Implement story M5-P3-01: Sandbox backend qualification suite. Objective: Validate actual isolation guarantees, not backend labels. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Exercise live container/native candidates on supported macOS; Test path traversal, symlink, network bypass, credentials, descendants, resource limits; Run positive compatibility tests; Bind evidence to OS/runtime/config fingerprint. Acceptance: Each claimed guarantee has positive and adversarial evidence; Unqualified guarantees remain unavailable; No silent host fallback. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
         "status": "not_started",
@@ -1504,7 +1542,9 @@
         "specific evidence for every acceptance criterion",
         "README ground-truth update or explicit no-change explanation"
       ],
-      "blocked_by_unknowns": [],
+      "blocked_by_unknowns": [
+        "Live container runtime (Docker/Podman) unavailable in the M5-P0-04 evidence environment; container isolation unqualified (docs/m5-2-0-isolation-smoke-evidence.md). Qualify with `python3 scripts/isolation_smoke.py --live` plus tests/test_live_sandbox.py on a machine with a working runtime before unblocking."
+      ],
       "prompt": "Implement story M5-P3-02: Unified execution profiles and resource footprints. Objective: Apply consistent permission rules to managed and sandboxed operations. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Define verified capability descriptors; Conservative footprints for arbitrary shell commands; Acquire resource barriers with admission; Observe expansion and reconcile. Acceptance: No shell bypass of managed policy; Unknown side effects reserve conservative scope; Conflicting action admission prevented. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
         "status": "not_started",
@@ -1558,7 +1598,9 @@
         "specific evidence for every acceptance criterion",
         "README ground-truth update or explicit no-change explanation"
       ],
-      "blocked_by_unknowns": [],
+      "blocked_by_unknowns": [
+        "Live container runtime (Docker/Podman) unavailable in the M5-P0-04 evidence environment; container isolation unqualified (docs/m5-2-0-isolation-smoke-evidence.md). Qualify with `python3 scripts/isolation_smoke.py --live` plus tests/test_live_sandbox.py on a machine with a working runtime before unblocking."
+      ],
       "prompt": "Implement story M5-P3-03: Process supervision and in-flight containment. Objective: Contain actions after cancellation, ownership loss or security incident. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Track subprocess identities and groups; Implement cooperative cancel, bounded termination and reconciliation; Persist unresolved effects/barriers; Test detached child and crash. Acceptance: Stale process cannot admit new actions; Unresolved side effects block conflicting resumption; Containment state survives restart. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
         "status": "not_started",

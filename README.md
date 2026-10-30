@@ -216,6 +216,7 @@ Summary (2026-10-30, Linux x86_64 container, 2 vCPU, ~4 GB RAM, Python 3.11.2):
 | governance / security-signoff / docs / ADR / screenshots / demo-tour checks | pass |
 | generated artifacts drift check | pass (byte-for-byte) |
 | `pip-audit` | **exit 1** — 21 advisories in 2 packages: `pip` 23.0.1 and `setuptools` 66.1.1 (venv bootstrap tooling only). Declared runtime dependencies (`fastapi`, `uvicorn`, `httpx`, `httpcore`, `keyring`) have no reported advisories. |
+| `scripts/isolation_smoke.py` | 16/16 observable checks pass; summary `isolation_status: unqualified` (no container runtime in the evidence environment — live container probes blocked) |
 
 **Not measured (explicitly blocked, no numbers claimed):** peak unified-memory
 and swap on a 24 GB Apple Silicon Mac; a resident-oMLX coding-task run;
@@ -256,10 +257,19 @@ requires `STUDIO_ALLOW_SKILL_CODE=1`; private-URL access requires
    (path confinement primitives) are unit-tested but not integrated** into
    `app.py`. Exactly-once external effects are **not** claimed, and not all
    subprocess descendants can be guaranteed terminable.
-5. **Live container isolation is unqualified.** No Docker/Podman was available
-   for this review (`tests/test_live_sandbox.py` is opt-in and was skipped).
-   Isolation guarantees remain unproven until a live runtime shows the
-   denials (`M5-P0-04`, `M5-P3-01`).
+5. **Live container isolation is unqualified (smoke test 2026-10-30, `M5-P0-04`).**
+   No Docker/Podman exists in the evidence environment; the live probes were
+   **attempted and failed closed** (`RuntimeError: Sandbox runtime 'docker' is
+   not installed or not on PATH`) with **no silent host fallback**. Everything
+   observable without a container passes — skill-code gate denials, the
+   host-bypass denial, path-confinement denials, and the sandbox invocation
+   invariants (`--network=none`, read-only root, cap drop, single workspace
+   mount) as actually constructed — 16/16 checks in
+   [`scripts/isolation_smoke.py`](scripts/isolation_smoke.py). Container-level
+   guarantees stay **unproven** until `scripts/isolation_smoke.py --live`
+   passes on a machine with a working runtime; dependent execution remains
+   blocked (fail closed). Evidence:
+   [`docs/m5-2-0-isolation-smoke-evidence.md`](docs/m5-2-0-isolation-smoke-evidence.md).
 6. **`pip-audit` reports 21 advisories** in venv bootstrap packages
    (`pip` 23.0.1, `setuptools` 66.1.1); runtime dependencies are clean.
 7. **Independent security review (`AS-031`) is `completed`, not `verified`** —
