@@ -125,13 +125,13 @@
   "session_state": {
     "active_story": null,
     "last_completed_story": "M5-P2-05",
-    "last_checkpoint": "2026-10-30T19:37:54Z",
-    "last_session_id": "arena/bf5fe1a6-m5-agent-studio",
+    "last_checkpoint": "2026-10-30T19:50:24Z",
+    "last_session_id": "arena/7cdf26c8-m5-agent-studio",
     "next_recommended_story": "M5-P3-01",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). The operator-run suite scripts/qualify_environment.py --sandbox (docs/qualification-suite.md, ADR-0010) is now the qualification path; M5-P3-01 stays blocked until it returns qualified on a Docker/Podman host.",
-      "24 GB Apple Silicon memory/swap and oMLX task measurements blocked in Linux evidence environment; scripts/qualify_environment.py --hardware --pressure-gb N --model-command CMD measures them on target hardware and M5-P4-01 stays blocked until a qualified record exists and app.py consults resource_admission.",
+      "24 GB Apple Silicon memory/swap and oMLX measurements are still missing (M5-P4-01): serving-path heavy-model admission is implemented and tested (docs/model-admission.md, ADR-0011), but the story stays blocked until scripts/qualify_environment.py --hardware --pressure-gb N --model-command CMD produces a qualified record on target hardware.",
       "sandbox_boundary.confined_path is integrated into app.py and workspace_snapshots.py (M5-P2-01), while sandbox_boundary.sandbox_command remains separate from app.py inline _sandbox_command (assigned to M5-P3-01/M5-P3-02)",
       "Multi-agent parallel work active: product/M5_2_0_Autonomous_Roadmap.json tracking blocks are the shared claim ledger; claim protocol and PR/merge rules live in M5_2_0_AGENT_PROMPT.md",
       "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1) recorded in the M5-P0-05 baseline evidence; runtime dependencies clean.",
@@ -2551,41 +2551,56 @@
       "prompt": "Implement story M5-P4-01: Measured model qualification and RAM admission. Objective: Route from real evidence and enforce one heavy resident model. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Build representative per-category coding cases; Record completed case evidence and uncertainty; Measure load/prefill/swap/thermal behavior; Implement one-heavy-model admission and optional sequential switching. Acceptance: Second simultaneous heavy load rejected under policy; Routing does not treat public priors as verified; 24 GB pressure measured. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
         "status": "blocked",
-        "progress_percent": 25,
+        "progress_percent": 60,
         "attempts": 1,
         "started_at": "2026-10-30T19:31:57Z",
-        "updated_at": "2026-10-30T19:37:54Z",
+        "updated_at": "2026-10-30T19:50:24Z",
         "completed_at": null,
-        "owner_session": "arena/bf5fe1a6-m5-agent-studio",
-        "commit_sha": "44c16b4",
+        "owner_session": "arena/7cdf26c8-m5-agent-studio",
+        "commit_sha": "ed1d15b",
         "changed_files": [
+          "model_admission.py",
+          "app.py",
+          "scripts/build_studio.py",
           "scripts/qualify_environment.py",
-          "scripts/qualify_environment.sh",
+          "pyproject.toml",
+          "studio.py",
+          "tests/test_model_admission.py",
           "tests/test_qualify_environment.py",
-          "docs/qualification-suite.md",
+          "docs/model-admission.md",
+          "docs/adr/0011-heavy-local-model-admission.md",
           "docs/adr/0010-operator-run-environment-qualification.md",
+          "docs/qualification-suite.md",
           "docs/README.md",
+          "docs/route-security-matrix.md",
+          "docs/subsystem-dependency-inventory.md",
           "README.md",
           "product/M5_2_0_Autonomous_Roadmap.json"
         ],
         "evidence": [
-          "Deliverable (tooling, not a measurement): scripts/qualify_environment.py --hardware records the machine fingerprint (chip, OS build, cores, total RAM, swap, git revision) and gates p4.machine.fingerprint on the story's 24 GB Apple Silicon target; on any other machine the check is `blocked`, not `pass`.",
-          "AC 'second simultaneous heavy load rejected under policy' is demonstrated for the primitive: p4.single_heavy_model admits a request at 80 % of detected memory, requires the second to be refused, and requires admission to succeed again after release (tests: test_admission_probe_rejects_a_second_heavy_request). app.py does not import resource_admission, so this is reported honestly as the informational check p4.admission_wired (currently false) rather than claimed as a serving-path guarantee.",
-          "AC 'routing does not treat public priors as verified': p4.priors_not_verified asserts model_recommendation._confidence(None) returns level `unknown` with the note `no comparable benchmark profile` (tests: test_priors_are_not_treated_as_verified).",
-          "AC '24 GB pressure measured': not measured. p4.pressure only runs with --pressure-gb and samples swap before/peak/after; it is recorded `skip` in this environment and the story stays blocked. No number is invented (tests: test_pressure_probe_reports_swap_evidence, test_hardware_suite_blocks_off_target_hardware).",
-          "Model measurement path: --model-command runs a caller-supplied probe N times, records exit codes/wall time/reported metrics and swap growth, and --profile-out persists a model_calibration profile that reloads via load_profile; an impossible measurement (first token after the run ends) is stored as a failed sample instead of a fabricated throughput (tests: test_model_probe_records_each_run, test_model_profile_refuses_to_invent_a_timing).",
-          "Runtime selection fails closed: an explicitly requested `--runtime` that is not installed blocks the run instead of falling back to another backend (tests: test_an_explicit_missing_runtime_is_never_replaced_by_another_backend), and a host that has Docker but not the configured image reports unqualified/exit 1 rather than a pass (test_a_runtime_without_the_image_is_unqualified_never_qualified)."
+          "AC 'second simultaneous heavy load rejected under policy' now holds in the serving path (code + tests, not yet measured): model_admission.HeavyModelAdmission wraps resource_admission.ResourceAdmissionScheduler with local-inference policy (capacity = detected unified memory or STUDIO_HEAVY_MODEL_MEMORY_BYTES; one request = 80% of capacity; one slot; one distinct resident model) and typed denials heavy_model_slot_busy / heavy_model_memory_exceeded / heavy_model_resident carrying the policy snapshot. Evidence: tests/test_model_admission.py::test_first_request_is_admitted_and_the_second_is_refused, ::test_memory_capacity_is_enforced_independently_of_slots, ::test_a_different_model_is_refused_while_one_is_resident, ::test_concurrent_threads_admit_exactly_one_request.",
+          "Wire-in is at the single local funnel, so every path is covered (direct chat, council, debate, harness critic turns, workflows): app.stream_any_model holds the lease for the stream lifetime and releases it in finally; nested work on the same model re-enters via model_admission.hold_lease instead of deadlocking. Evidence: ::test_funnel_admits_one_local_stream_and_refuses_the_second, ::test_funnel_releases_the_lease_after_the_stream_finishes, ::test_funnel_releases_the_lease_when_the_consumer_abandons_the_stream, ::test_funnel_reuses_a_lease_held_for_the_same_model, ::test_funnel_refuses_a_second_model_while_one_is_held.",
+          "User-facing refusals happen before a stream opens: POST /api/chat/stream and POST /v1/chat/completions pre-flight 429 with detail.code/message/admission snapshot, and GET /api/models/admission exposes capacity, usage, residency and grant/denial counters. Evidence: ::test_chat_stream_endpoint_returns_429_while_a_heavy_model_is_resident, ::test_openai_gateway_returns_429_while_a_heavy_model_is_resident, ::test_admission_endpoint_reports_the_policy, ::test_preflight_ignores_models_that_do_not_route_local.",
+          "AC 'routing does not treat public priors as verified' unchanged and re-verified: model_recommendation._confidence(None) is 'unknown' with no comparable benchmark profile (qualification check p4.priors_not_verified).",
+          "Qualification tooling now proves the wiring behaviourally instead of scanning source: p4.admission_wired drives the real app.stream_any_model funnel (fake backend) and expects admitted -> refused while resident -> admitted after release; it is now a required check (tests: ::test_admission_wired_check_observes_the_real_serving_path, ::test_admission_probe_reports_a_serving_path_that_bypasses_admission).",
+          "AC '24 GB pressure measured' remains UNMEASURED: p4.pressure and p4.model_load need the owner's 24 GB Apple Silicon run (--pressure-gb N --model-command CMD). The 80% reservation is documented as policy, not a measurement (docs/model-admission.md 'What this does not claim'), and the story therefore stays blocked.",
+          "Standalone bundle stays self-contained: resource_admission and model_admission are inlined into studio.py (builder now tolerates a trailing comment on the import line), verified by tests/test_release_manager.py::test_generated_standalone_has_no_local_module_imports and ::test_the_standalone_bundle_carries_the_same_policy."
         ],
         "test_results": [
           {
             "command": ".venv/bin/python -m pytest -q",
             "exit_code": 0,
-            "result": "989 passed, 1 skipped (opt-in live container test), 1 warning in 53.09s"
+            "result": "1025 passed, 1 skipped (opt-in live container test), 1 warning in 52.78s"
+          },
+          {
+            "command": ".venv/bin/python -m pytest tests/test_model_admission.py -q",
+            "exit_code": 0,
+            "result": "35 passed"
           },
           {
             "command": ".venv/bin/python -m pytest tests/test_qualify_environment.py -q",
             "exit_code": 0,
-            "result": "43 passed (also re-run with a Docker-on-PATH simulation: same result)"
+            "result": "47 passed"
           },
           {
             "command": ".venv/bin/ruff check .",
@@ -2595,22 +2610,12 @@
           {
             "command": ".venv/bin/mypy",
             "exit_code": 0,
-            "result": "Success: no issues found in 47 source files"
+            "result": "Success: no issues found in 48 source files"
           },
           {
-            "command": ".venv/bin/python scripts/validate_docs.py",
+            "command": ".venv/bin/python scripts/validate_docs.py && scripts/validate_adrs.py && scripts/validate_governance.py",
             "exit_code": 0,
-            "result": "passed (5 required pages, 88 files scanned)"
-          },
-          {
-            "command": ".venv/bin/python scripts/validate_adrs.py",
-            "exit_code": 0,
-            "result": "passed (process, template, numbered records)"
-          },
-          {
-            "command": ".venv/bin/python scripts/validate_governance.py",
-            "exit_code": 0,
-            "result": "passed (7 required files)"
+            "result": "all passed"
           },
           {
             "command": ".venv/bin/python scripts/smoke_local.py && .venv/bin/python scripts/smoke_local.py --standalone",
@@ -2618,26 +2623,24 @@
             "result": "both passed"
           },
           {
-            "command": ".venv/bin/python scripts/qualify_environment.py --all --json /tmp/q.json --markdown /tmp/q.md",
+            "command": ".venv/bin/python scripts/qualify_environment.py --hardware --quiet",
             "exit_code": 2,
-            "result": "M5-P3-01: blocked (no container runtime), M5-P4-01: blocked (not 24 GB Apple Silicon); nothing claimed"
-          },
-          {
-            "command": "PATH=<fake docker> .venv/bin/python -m pytest -q",
-            "exit_code": 0,
-            "result": "989 passed - a host with Docker but without the image yields unqualified (exit 1), never qualified"
+            "result": "p4.single_heavy_model pass, p4.admission_wired pass, p4.machine.fingerprint blocked (not 24 GB Apple Silicon) -> suite blocked, nothing claimed"
           }
         ],
         "decisions": [
-          "Admission is verified at the primitive and reported at the serving path: a source scan of app.py is evidence of wiring only, so p4.admission_wired is non-required and non-passing rather than folded into the verdict.",
-          "The suite never allocates memory or starts a model without an explicit flag, so the default run is safe on a working machine; the 24 GB criterion is encoded as a hardware gate so a smaller machine cannot produce a misleading pass."
+          "Admission is enforced in app.stream_any_model (the single local funnel) rather than per endpoint, so council/debate/harness/workflow paths are covered by construction; endpoint pre-flight 429 exists only for client ergonomics.",
+          "A second local request is refused with a stable code and the policy snapshot rather than queued: queueing needs fairness/timeout/cancel semantics no acceptance criterion asks for, and hiding the capacity limit would misrepresent it.",
+          "Residency rule (one distinct model) is enforced on top of the single slot, so raising STUDIO_HEAVY_MODEL_SLOTS cannot introduce two resident models.",
+          "The admission probe in the qualification suite mutates module state inside a temporary directory and restores it in finally; a source scan would have been cheaper but would not prove wiring.",
+          "P4-02 owns deliberate sequential switching and load-path policy; this story refuses a second model instead of queuing or evicting it."
         ],
         "blockers": [
-          "24 GB Apple Silicon measurement environment is not available here (Linux x86_64 evidence container); no memory/swap or oMLX numbers are invented.",
-          "The serving path does not consult resource_admission yet, so the admission guarantee holds for the primitive only until that wiring exists (M5-P4-01 scope, unreviewed by a second agent)."
+          "AC '24 GB pressure measured' is unmeasured: no 24 GB Apple Silicon target in this evidence environment (Linux x86_64 container). Run scripts/qualify_environment.py --hardware --pressure-gb N --model-command CMD on the target machine.",
+          "The admission policy is per-process, consistent with the documented single-process worker-lease assumption; a second application process would enforce its own limit."
         ],
-        "handoff_note": "Tooling complete and tested; blocked on target hardware and on serving-path admission wiring. Do not flip status without a qualified record AND p4.admission_wired true.",
-        "next_action": "Owner: run `./scripts/qualify_environment.sh --hardware --pressure-gb 16 --model-command '<omlx probe>'` on the 24 GB Mac. Agent: wire app.py to resource_admission before claiming the serving-path criterion.",
+        "handoff_note": "Code for AC1 and AC2 is complete, tested and observed by the qualification suite; only the measured 24 GB pressure evidence is missing. Do not flip status without a qualified hardware record.",
+        "next_action": "Owner: run ./scripts/qualify_environment.sh --hardware --pressure-gb 16 --model-command '<omlx probe>' on the 24 GB Mac and attach the record; then this story can move to done. Agent: keep it blocked until that record exists.",
         "readme_updated": true
       }
     },

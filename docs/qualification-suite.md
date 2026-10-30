@@ -121,7 +121,7 @@ turn it into a pass.
 |---|---|
 | `p4.machine.fingerprint` | Chip, OS build, core count, total RAM and swap, bound into the record with the repository revision. `blocked` off-target (the story AC is 24 GB Apple Silicon). |
 | `p4.single_heavy_model` | `resource_admission` admits one request at 80 % of detected RAM, refuses the second, and admits again after release. |
-| `p4.admission_wired` | Informational: whether `app.py` actually consults `resource_admission`. Reported, never assumed — a module-tested primitive is not a serving-path guarantee. |
+| `p4.admission_wired` | Drives the real `app.stream_any_model` funnel: the first stream is admitted, a second is refused while the slot is held, and a stream succeeds again after release. A module-tested primitive is not a serving-path guarantee, so this is observed rather than assumed. |
 | `p4.priors_not_verified` | Routing confidence with no measured profile is `unknown` with the note `no comparable benchmark profile`. |
 | `p4.pressure` | With `--pressure-gb`: touches that much anonymous memory while sampling swap; records before/peak/after and the growth. |
 | `p4.model_load` | With `--model-command`: runs the command N times, records each exit code, wall time and reported metrics, plus swap growth. |
@@ -166,13 +166,16 @@ Verdicts mean exactly this:
    `blocked` only when the sandbox suite is `qualified`, and `M5-P4-01` only when
    the hardware suite is `qualified` **and** `p4.admission_wired` is true — the
    acceptance criterion "second simultaneous heavy load rejected under policy"
-   is about the serving path, not only the primitive.
+   is about the serving path, not only the primitive. Both halves now have code:
+   the serving path refuses a second heavy local model
+   ([`model-admission.md`](model-admission.md), ADR-0011), and only the measured
+   24 GB evidence is still missing.
 4. If a check fails, the honest outcome is `unqualified` plus a fix, not a
    re-run until it passes.
 
 ## Tests
 
-`tests/test_qualify_environment.py` (46 tests) pins the properties above without a
+`tests/test_qualify_environment.py` (47 tests) pins the properties above without a
 container runtime: verdict semantics, required-versus-optional checks, argv
 parity with the product, the blocked path when no runtime exists, the failure
 path when a leak is observed, host-execution detection, the record and Markdown

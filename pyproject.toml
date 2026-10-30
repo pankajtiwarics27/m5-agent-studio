@@ -67,6 +67,7 @@ files = [
   "model_diagnostics.py",
   "model_discovery.py",
   "model_recommendation.py",
+  "model_admission.py",
   "model_registry.py",
   "model_switching.py",
   "model_updates.py",
@@ -98,4 +99,4 @@ warn_unused_ignores = true
 check_untyped_defs = true
 
 [tool.setuptools]
-py-modules = ["app", "benchmark_import", "benchmark_publication", "context_store", "demo_tour", "history_privacy", "mcp_client", "onboarding_preflight", "release_manager", "runtime_persistence", "supply_chain", "workflow_orchestration", "hardware_capabilities", "macos_hardware_profiler", "model_registry", "resource_admission", "capability_negotiation", "local_runtime_lifecycle", "local_provider_adapters", "routing_policy", "model_diagnostics", "hardware_validation", "private_network_gateway", "sandbox_boundary", "session_trust", "workflow_state", "workflow_checkpoints", "side_effect_ledger", "execution_budget", "execution_spine", "edit_transactions", "workflow_tracing", "failure_injection", "task_events", "workspace_snapshots", "model_switching", "provider_switching", "model_discovery", "context_reassembly", "model_comparison", "model_updates", "model_calibration", "performance_profiles", "comparison_board", "model_recommendation", "workflow_evaluation"]
+py-modules = ["app", "model_admission", "benchmark_import", "benchmark_publication", "context_store", "demo_tour", "history_privacy", "mcp_client", "onboarding_preflight", "release_manager", "runtime_persistence", "supply_chain", "workflow_orchestration", "hardware_capabilities", "macos_hardware_profiler", "model_registry", "resource_admission", "capability_negotiation", "local_runtime_lifecycle", "local_provider_adapters", "routing_policy", "model_diagnostics", "hardware_validation", "private_network_gateway", "sandbox_boundary", "session_trust", "workflow_state", "workflow_checkpoints", "side_effect_ledger", "execution_budget", "execution_spine", "edit_transactions", "workflow_tracing", "failure_injection", "task_events", "workspace_snapshots", "model_switching", "provider_switching", "model_discovery", "context_reassembly", "model_comparison", "model_updates", "model_calibration", "performance_profiles", "comparison_board", "model_recommendation", "workflow_evaluation"]

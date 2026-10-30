@@ -392,15 +392,29 @@ def test_priors_are_not_treated_as_verified() -> None:
     assert "unknown" in detail
 
 
-def test_admission_wired_check_is_honest_about_the_serving_path() -> None:
+def test_admission_wired_check_observes_the_real_serving_path() -> None:
+    """The probe must report the wiring it can actually see, not a source scan."""
     ok, detail = qe._admission_wired()
-    # The primitive is module-tested; whether the serving path consults it is
-    # reported, never assumed.
-    assert isinstance(ok, bool)
-    assert detail
+    assert ok is True, detail
+    assert "refused while resident=True" in detail
+
+
+def test_admission_probe_reports_a_serving_path_that_bypasses_admission(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    studio = pytest.importorskip("app")
+
+    async def _bypass(*_args: object, **_kwargs: object):
+        yield {"type": "content", "text": "probe"}
+
+    monkeypatch.setattr(studio, "stream_any_model", _bypass)
+    ok, detail = qe._admission_wired()
+    assert ok is False
+    assert "does not enforce" in detail
 
 
 def test_hardware_suite_blocks_off_target_hardware(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(qe, "_admission_wired", lambda: (True, "stub"))
     recorder = qe.Recorder()
     qe.hardware_suite(
         recorder,
@@ -427,6 +441,7 @@ def test_hardware_suite_qualifies_on_target_hardware(monkeypatch: pytest.MonkeyP
         qe, "_model_probe",
         lambda command, runs, timeout, out: (True, "1/1 runs exited 0", {"runs": []}),
     )
+    monkeypatch.setattr(qe, "_admission_wired", lambda: (True, "confirmed by the stub"))
     recorder = qe.Recorder()
     qe.hardware_suite(
         recorder,
