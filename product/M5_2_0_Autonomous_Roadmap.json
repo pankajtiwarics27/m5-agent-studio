@@ -124,21 +124,20 @@
   },
   "session_state": {
     "active_story": null,
-    "last_completed_story": "M5-P0-07",
-    "last_checkpoint": "2026-10-30T10:36:06Z",
-    "last_session_id": "arena/a396d067-m5-agent-studio",
-    "next_recommended_story": "M5-P0-03",
+    "last_completed_story": "M5-P0-03",
+    "last_checkpoint": "2026-10-30T11:01:49Z",
+    "last_session_id": "arena/f1d4a766-m5-agent-studio",
+    "next_recommended_story": "M5-P0-04",
     "open_risks": [
-      "Ungated skill-script subprocess app.py:8645 (_fetch_online_inspiration) runs repository skill code with no STUDIO_ALLOW_SKILL_CODE check and no sandbox routing — containment target for M5-P0-03",
-      "Skill-script subprocess app.py:1831 (build_skills_context) is flag-gated (default off) but bypasses _start_code_process when enabled — containment target for M5-P0-03",
-      "Live container isolation unqualified: no Docker/Podman in evidence environment; tests/test_live_sandbox.py skipped (opt-in only)",
+      "Skill-script containment landed (M5-P0-03): residual risk is sandbox isolation itself remaining unqualified until a live container runtime proves the denials (M5-P0-04 / M5-P3-01)",
+      "Live container isolation unqualified: no Docker/Podman in the evidence environment; tests/test_live_sandbox.py skipped (opt-in only)",
       "24 GB Apple Silicon memory/swap and oMLX task measurements blocked in Linux evidence environment (M5-P4-01 to measure on target hardware)",
       "side_effect_ledger.py and sandbox_boundary.py unit-tested but not integrated into app.py (M5-P0-06 / M5-P1-03)",
-      "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1); runtime dependencies clean",
-      "Multi-agent parallel work active: product/M5_2_0_Autonomous_Roadmap.json tracking blocks are the shared claim ledger; claim protocol and PR/merge rules live in M5_2_0_AGENT_PROMPT.md"
+      "Multi-agent parallel work active: product/M5_2_0_Autonomous_Roadmap.json tracking blocks are the shared claim ledger; claim protocol and PR/merge rules live in M5_2_0_AGENT_PROMPT.md",
+      "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1); runtime dependencies clean"
     ],
     "last_readme_sync": "2026-10-30T10:17:37Z",
-    "last_verified_commit": "31656a9846e5f3a3b78f421ed0d267e2d063c3fc",
+    "last_verified_commit": "3d84766b7f62c0e498feb54df9a5ec28e9f26988",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md"
   },
   "delivery_phases": [
@@ -156,7 +155,7 @@
       ],
       "status": "in_progress",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
-      "progress_percent": 57
+      "progress_percent": 71
     },
     {
       "id": "P1",
@@ -425,22 +424,72 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P0-03: Immediate unsafe host-execution containment. Objective: Prevent unverified sandbox bypasses before further autonomous execution. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Confirm STUDIO_ALLOW_HOST_EXECUTION and direct skill subprocess paths; Gate or disable bypasses while preserving safe operations; Add regression tests for all discovered entry points; Do not advertise container isolation without live proof. Acceptance: No unapproved host-execution bypass through any discovered tool/skill path; Fail-closed behavior tested; Existing safe operations still work. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-10-30T10:51:46Z",
+        "updated_at": "2026-10-30T11:01:49Z",
+        "completed_at": "2026-10-30T11:00:53Z",
+        "owner_session": "arena/f1d4a766-m5-agent-studio",
+        "commit_sha": "3d84766b7f62c0e498feb54df9a5ec28e9f26988",
+        "changed_files": [
+          "app.py",
+          "tests/test_skill_execution_containment.py",
+          "scripts/generate_subsystem_inventory.py",
+          "studio.py",
+          "docs/subsystem-dependency-inventory.md",
+          "docs/m5-2-0-integration-audit.md",
+          "README.md",
+          "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "AC1 (no unapproved host-execution bypass): both discovered skill-script paths (build_skills_context, _fetch_online_inspiration) now run only via app._run_skill_script, which enforces STUDIO_ALLOW_SKILL_CODE=1 AND _execution_mode(): disabled -> never executes; host -> requires STUDIO_ALLOW_HOST_EXECUTION=1 (argv exec, no shell); sandbox -> container boundary via _execute_limited. The ungated ui-ux-pro-max path (audit section 5.1) is closed.",
+          "AC2 (fail-closed behavior tested): tests/test_skill_execution_containment.py - 9 tests covering both call sites across {default-off, execution disabled, host without opt-in, sandbox with no runtime -> no host fallback} plus host-mode positive runs.",
+          "AC3 (existing safe operations still work): full suite 726 passed / 1 skipped (717 pre-existing + 9 new); smoke_local.py x2 pass; skipped scripts degrade to the skill's static text (asserted).",
+          "Scope note: MCP stdio (STUDIO_ALLOW_MCP_STDIO, default off) and the authenticated skill-install git clone were already gated and are unchanged; container isolation is NOT advertised as proven (no live container runtime here; audit items 3-5 unchanged)."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "726 passed, 1 skipped, 1 warning in 15.59s"
+          },
+          {
+            "command": ".venv/bin/ruff check .",
+            "exit_code": 0,
+            "result": "clean"
+          },
+          {
+            "command": ".venv/bin/mypy",
+            "exit_code": 0,
+            "result": "clean (40 files)"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py",
+            "exit_code": 0,
+            "result": "passed"
+          },
+          {
+            "command": ".venv/bin/python scripts/smoke_local.py && .venv/bin/python scripts/smoke_local.py --standalone",
+            "exit_code": 0,
+            "result": "both pass"
+          },
+          {
+            "command": ".venv/bin/python scripts/demo_tour.py --check",
+            "exit_code": 0,
+            "result": "transcript unchanged (demo env has skill code disabled)"
+          }
+        ],
+        "decisions": [
+          "Consolidated skill-script execution into one helper (_run_skill_script) so both call sites share the same gate; host mode keeps argv exec (no shell interpolation of task-derived keywords).",
+          "Sandbox mode mounts the skill directory as the workspace root and runs python3 /workspace/<rel-script> through the existing container boundary; when no container runtime exists the call fails closed and the script output is skipped.",
+          "Timed-out skill scripts are now killed and reaped (the previous code leaked timed-out processes).",
+          "Reviewed addition of the _run_skill_script boundary row in scripts/generate_subsystem_inventory.py per that generator's exact-inventory rule; retained the pinned remote-search observation."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Ready: dependency M5-P0-02 done. Contain the two skill-code subprocess bypasses documented in docs/m5-2-0-integration-audit.md section 5 (app.py:8645 ungated; app.py:1831 bypasses sandbox mode). Add regression tests; fail closed.",
-        "readme_updated": false
+        "handoff_note": "M5-P0-03 complete: skill-code subprocess containment landed with 9 regression tests and full-suite green (726 passed). Residual: sandbox isolation itself is still unqualified - no live container runtime in the evidence environment. Next ready story M5-P0-04 (Live isolation smoke test): if no Docker/Podman is available, record the environment fingerprint, prove the default-off gates, mark isolation unqualified and block dependent execution per its acceptance criteria - never advertise container isolation without live proof.",
+        "next_action": "None - done. Next ready story: M5-P0-04.",
+        "readme_updated": true
       }
     },
     {

@@ -43,6 +43,11 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
 - **Tool calls go through a central authorize → audit → execute boundary**
   (`_run_authorized_tool`, `app.py` L7592) with durable `tool_audit_events`
   rows and fail-closed policy evaluation.
+- **Skill-code execution is deny-by-default and boundary-routed** (since
+  `M5-P0-03`): skill scripts run only with `STUDIO_ALLOW_SKILL_CODE=1` and a
+  live execution mode, through the same execution boundary as tool code —
+  pinned by 9 regression tests
+  (`tests/test_skill_execution_containment.py`).
 - **Only 5 of 42 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`). The other 37 — including `sandbox_boundary.py`
@@ -230,12 +235,16 @@ requires `STUDIO_ALLOW_SKILL_CODE=1`; private-URL access requires
 **Known limitations and open containment work** (details:
 [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §5):
 
-1. **Two skill-code subprocess paths bypass the sandbox boundary.**
-   `_fetch_online_inspiration` runs a repository skill script
-   (`app.py` L8645) gated only by file existence — no `STUDIO_ALLOW_SKILL_CODE`
-   check. `build_skills_context` (`app.py` L1831) is flag-gated (default off)
-   but executes on the host even in `sandbox` mode. Containment is roadmap
-   story `M5-P0-03`; until it lands, treat these paths as host execution.
+1. **Skill-code execution is contained (closed 2026-10-30 by `M5-P0-03`).**
+   The two skill-script subprocess paths (`build_skills_context`,
+   `_fetch_online_inspiration`) now run only through `_run_skill_script`
+   (`app.py`), which requires the `STUDIO_ALLOW_SKILL_CODE` opt-in **and** a
+   live execution mode: `sandbox` routes through the container boundary,
+   `host` requires `STUDIO_ALLOW_HOST_EXECUTION=1`, and `disabled` (default)
+   never executes skill code — with **no silent host fallback** (the skill's
+   static text still applies). Nine regression tests pin this contract
+   (`tests/test_skill_execution_containment.py`). The earlier ungated
+   `ui-ux-pro-max` path is no longer reachable without both opt-ins.
 2. **Host mode is unrestricted by design.** `STUDIO_EXECUTION_MODE=host`
    (with `STUDIO_ALLOW_HOST_EXECUTION=1`) runs shell/Python as the Studio OS
    user with no filesystem/network/credential isolation (also stated in
