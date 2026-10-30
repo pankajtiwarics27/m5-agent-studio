@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import sqlite3
+import subprocess
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, Sequence
 
@@ -47,6 +50,183 @@ class WorkflowStateError(ValueError):
 
 class WorkflowTransitionRejected(RuntimeError):
     """Raised when a requested transition is not legal for current state."""
+
+
+class FalseCompletionRejected(WorkflowTransitionRejected):
+    """Raised when a task claims completion without verified patch/test/ledger evidence."""
+
+
+_SAFE_VERIFY_ENV_KEYS: frozenset[str] = frozenset(
+    {"PATH", "HOME", "TMPDIR", "TEMP", "TMP", "LANG", "LC_ALL", "PYTHONPATH", "VIRTUAL_ENV", "SYSTEMROOT"}
+)
+
+
+def _normalize_workspace_rel_path(raw_path: str, field_name: str = "path") -> str:
+    if not isinstance(raw_path, str) or not raw_path.strip() or "\x00" in raw_path:
+        raise WorkflowStateError(f"{field_name} must be a non-empty relative path without NUL characters.")
+    cleaned = raw_path.strip().replace("\\", "/")
+    p = Path(cleaned)
+    if p.is_absolute():
+        raise WorkflowStateError(f"{field_name} must be relative to workspace_dir: {raw_path!r}")
+    parts = [pt for pt in p.parts if pt not in ("", ".")]
+    if not parts or any(pt == ".." for pt in parts):
+        raise WorkflowStateError(f"{field_name} must stay within workspace_dir without '..': {raw_path!r}")
+    return "/".join(parts)
+
+
+def _resolve_safe_workspace_target(workspace_dir: Path, rel_path: str) -> Path:
+    ws_root = workspace_dir.resolve()
+    norm = _normalize_workspace_rel_path(rel_path)
+    cursor = ws_root
+    for part in Path(norm).parts:
+        cursor = cursor / part
+        if cursor.is_symlink():
+            raise WorkflowStateError(f"Symlink escape rejected in verification path: {rel_path!r}")
+    resolved = cursor.resolve()
+    if resolved != ws_root and ws_root not in resolved.parents:
+        raise WorkflowStateError(f"Verification path escapes workspace_dir: {rel_path!r}")
+    return resolved
+
+
+def compute_workspace_file_sha256(workspace_dir: Path, rel_path: str) -> str | None:
+    """Return SHA-256 hex digest of ``workspace_dir / rel_path`` or ``None`` if absent."""
+    target = _resolve_safe_workspace_target(workspace_dir, rel_path)
+    if not target.exists():
+        return None
+    if not target.is_file():
+        raise WorkflowStateError(f"Verification target is not a regular file: {rel_path!r}")
+    return hashlib.sha256(target.read_bytes()).hexdigest()
+
+
+@dataclass(frozen=True, slots=True)
+class TaskVerificationSpec:
+    """Authoritative patch, protected-file, ledger, and test verification contract (M5-P1-06)."""
+
+    require_managed_edit: bool = True
+    require_git_diff: bool = False
+    required_modified_files: tuple[str, ...] = ()
+    required_files: tuple[str, ...] = ()
+    protected_files: dict[str, str] = field(default_factory=dict)
+    baseline_file_digests: dict[str, str | None] = field(default_factory=dict)
+    require_agent_test_action: bool = False
+    test_command: tuple[str, ...] = ()
+    expected_test_output_contains: tuple[str, ...] = ()
+    timeout_s: float = 30.0
+
+    def __post_init__(self) -> None:
+        norm_mod = tuple(_normalize_workspace_rel_path(p, "required_modified_files") for p in self.required_modified_files)
+        norm_req = tuple(_normalize_workspace_rel_path(p, "required_files") for p in self.required_files)
+        norm_prot: dict[str, str] = {}
+        for k, v in self.protected_files.items():
+            nk = _normalize_workspace_rel_path(k, "protected_files")
+            if not isinstance(v, str) or len(v.strip()) != 64:
+                raise WorkflowStateError(f"protected_files[{nk!r}] must be a 64-char SHA-256 hex digest.")
+            norm_prot[nk] = v.strip().lower()
+        norm_base: dict[str, str | None] = {}
+        for k, bval in self.baseline_file_digests.items():
+            nk = _normalize_workspace_rel_path(k, "baseline_file_digests")
+            if bval is not None:
+                if not isinstance(bval, str) or len(bval.strip()) != 64:
+                    raise WorkflowStateError(f"baseline_file_digests[{nk!r}] must be None or a 64-char SHA-256 hex digest.")
+                norm_base[nk] = bval.strip().lower()
+            else:
+                norm_base[nk] = None
+        cmd_tuple = tuple(str(tok) for tok in self.test_command)
+        if any((not tok or "\x00" in tok) for tok in cmd_tuple):
+            raise WorkflowStateError("test_command tokens must be non-empty strings without NUL.")
+        exp_sub = tuple(str(s) for s in self.expected_test_output_contains if str(s))
+        if isinstance(self.timeout_s, bool) or not isinstance(self.timeout_s, (int, float)) or self.timeout_s <= 0 or self.timeout_s > 120.0:
+            raise WorkflowStateError("timeout_s must be in (0, 120].")
+        object.__setattr__(self, "required_modified_files", norm_mod)
+        object.__setattr__(self, "required_files", norm_req)
+        object.__setattr__(self, "protected_files", norm_prot)
+        object.__setattr__(self, "baseline_file_digests", norm_base)
+        object.__setattr__(self, "test_command", cmd_tuple)
+        object.__setattr__(self, "expected_test_output_contains", exp_sub)
+        object.__setattr__(self, "timeout_s", float(self.timeout_s))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "require_managed_edit": self.require_managed_edit,
+            "require_git_diff": self.require_git_diff,
+            "required_modified_files": list(self.required_modified_files),
+            "required_files": list(self.required_files),
+            "protected_files": dict(sorted(self.protected_files.items())),
+            "baseline_file_digests": dict(sorted(self.baseline_file_digests.items())),
+            "require_agent_test_action": self.require_agent_test_action,
+            "test_command": list(self.test_command),
+            "expected_test_output_contains": list(self.expected_test_output_contains),
+            "timeout_s": round(self.timeout_s, 4),
+        }
+
+    def sha256(self) -> str:
+        canonical = json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> TaskVerificationSpec:
+        if not isinstance(data, dict):
+            raise WorkflowStateError("TaskVerificationSpec data must be a dict.")
+        raw_mod = data.get("required_modified_files") or ()
+        raw_req = data.get("required_files") or ()
+        raw_prot = data.get("protected_files") or {}
+        raw_base = data.get("baseline_file_digests") or {}
+        raw_cmd = data.get("test_command") or ()
+        raw_exp = data.get("expected_test_output_contains") or ()
+        if not isinstance(raw_mod, (list, tuple)) or not isinstance(raw_req, (list, tuple)):
+            raise WorkflowStateError("required_modified_files and required_files must be sequences.")
+        if not isinstance(raw_prot, dict) or not isinstance(raw_base, dict):
+            raise WorkflowStateError("protected_files and baseline_file_digests must be dicts.")
+        if isinstance(raw_cmd, str) or not isinstance(raw_cmd, (list, tuple)):
+            raise WorkflowStateError("test_command must be an argv list/tuple of strings.")
+        if isinstance(raw_exp, str) or not isinstance(raw_exp, (list, tuple)):
+            raise WorkflowStateError("expected_test_output_contains must be a list/tuple of strings.")
+        return cls(
+            require_managed_edit=bool(data.get("require_managed_edit", True)),
+            require_git_diff=bool(data.get("require_git_diff", False)),
+            required_modified_files=tuple(str(x) for x in raw_mod),
+            required_files=tuple(str(x) for x in raw_req),
+            protected_files={str(k): str(v) for k, v in raw_prot.items()},
+            baseline_file_digests={str(k): (None if v is None else str(v)) for k, v in raw_base.items()},
+            require_agent_test_action=bool(data.get("require_agent_test_action", False)),
+            test_command=tuple(str(x) for x in raw_cmd),
+            expected_test_output_contains=tuple(str(x) for x in raw_exp),
+            timeout_s=float(data.get("timeout_s", 30.0)),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class TaskVerificationReport:
+    """Auditable outcome of authoritative patch + test + ledger completion verification."""
+
+    verified: bool
+    spec_sha256: str = ""
+    failure_code: str = ""
+    failure_detail: str = ""
+    modified_files: tuple[str, ...] = ()
+    patch_sha256: str = ""
+    test_exit_code: int | None = None
+    test_output_excerpt: str = ""
+    test_sha256: str = ""
+    committed_edit_action_ids: tuple[str, ...] = ()
+    committed_test_action_ids: tuple[str, ...] = ()
+    evidence_refs: tuple[workflow_checkpoints.EvidenceRef, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "verified": self.verified,
+            "spec_sha256": self.spec_sha256,
+            "failure_code": self.failure_code,
+            "failure_detail": self.failure_detail,
+            "modified_files": list(self.modified_files),
+            "patch_sha256": self.patch_sha256,
+            "test_exit_code": self.test_exit_code,
+            "test_output_excerpt": self.test_output_excerpt,
+            "test_sha256": self.test_sha256,
+            "committed_edit_action_ids": list(self.committed_edit_action_ids),
+            "committed_test_action_ids": list(self.committed_test_action_ids),
+            "evidence_refs": [ref.to_dict() for ref in self.evidence_refs],
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -597,6 +777,7 @@ class DurableTaskStateMachine:
                     pause_requested=True,
                     cancel_requested=budget.cancel_requested,
                     exhausted_reason=budget.exhausted_reason,
+                    verification_contract=budget.verification_contract,
                 )
                 conn.execute(
                     "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
@@ -633,6 +814,7 @@ class DurableTaskStateMachine:
                 pause_requested=False,
                 cancel_requested=False,
                 exhausted_reason=budget.exhausted_reason,
+                verification_contract=budget.verification_contract,
             )
             ckpt_ref = str(row["checkpoint_ref"] or "").strip()
             if ckpt_ref:
@@ -764,6 +946,7 @@ class DurableTaskStateMachine:
                 pause_requested=False,
                 cancel_requested=False,
                 exhausted_reason=budget.exhausted_reason,
+                verification_contract=budget.verification_contract,
             )
             from_state = str(row["state"])
             seq_row = conn.execute(
@@ -900,6 +1083,7 @@ class DurableTaskStateMachine:
                 pause_requested=False,
                 cancel_requested=True,
                 exhausted_reason=budget.exhausted_reason,
+                verification_contract=budget.verification_contract,
             )
             evidence_json = _encode_evidence_json(
                 checkpoint_id=ckpt_ref,
@@ -1048,6 +1232,362 @@ class DurableTaskStateMachine:
             completed_milestone_ids=completed_ms,
         )
 
+    def set_verification_spec(
+        self,
+        task_id: str,
+        spec: TaskVerificationSpec | None,
+        *,
+        now: float | None = None,
+    ) -> None:
+        """Durably bind or clear a ``TaskVerificationSpec`` for ``task_id``."""
+        tid = _validate_identifier(task_id, "task_id")
+        self.budgets.set_verification_contract(
+            tid,
+            spec.to_dict() if spec is not None else None,
+            now=now,
+        )
+
+    def get_verification_spec(self, task_id: str) -> TaskVerificationSpec | None:
+        """Return the persisted ``TaskVerificationSpec`` for ``task_id``, if configured."""
+        tid = _validate_identifier(task_id, "task_id")
+        budget = self.budgets.get_budget(tid)
+        if budget.verification_contract is None:
+            return None
+        return TaskVerificationSpec.from_dict(budget.verification_contract)
+
+    def verify_task_completion(
+        self,
+        task_id: str,
+        *,
+        workspace_dir: Path,
+        spec: TaskVerificationSpec | None = None,
+    ) -> TaskVerificationReport:
+        """Authoritatively verify ledger, patch, protected-file, and test evidence outside write locks."""
+        runtime_persistence.assert_no_active_write_transaction("task_verification")
+        tid = _validate_identifier(task_id, "task_id")
+        ws_root = Path(workspace_dir).resolve()
+        effective_spec = spec if spec is not None else self.get_verification_spec(tid)
+        spec_digest = effective_spec.sha256() if effective_spec is not None else ""
+
+        actions = sorted(
+            self.store.list_task_actions(tid),
+            key=lambda a: (a.updated_at, a.created_at),
+        )
+        unresolved = [
+            a.action_id
+            for a in actions
+            if a.status in ("in_flight", "uncertain") and a.action_class != "read_only"
+        ]
+        if unresolved:
+            return TaskVerificationReport(
+                verified=False,
+                spec_sha256=spec_digest,
+                failure_code="unresolved_consequential_actions",
+                failure_detail=f"Unresolved consequential actions prevent completion: {', '.join(unresolved)}.",
+            )
+
+        committed_edits = [
+            a for a in actions if a.action_class == "managed_edit" and a.status == "committed" and a.ok == 1
+        ]
+        shell_actions = [
+            a for a in actions if a.tool_name == "run_bash" and a.status in ("committed", "failed")
+        ]
+        committed_tests = [a for a in shell_actions if a.status == "committed" and a.ok == 1]
+
+        # Universal false-completion guard: if the latest shell/test action failed (`ok == 0`) with no
+        # subsequent passing shell/test run, reject false completion even without an explicit contract.
+        if shell_actions and shell_actions[-1].status == "failed":
+            last_failed = shell_actions[-1]
+            return TaskVerificationReport(
+                verified=False,
+                spec_sha256=spec_digest,
+                failure_code="latest_shell_or_test_failed",
+                failure_detail=(
+                    f"Latest `run_bash` action `{last_failed.action_id}` failed (`ok=0`); "
+                    "cannot claim completion without a subsequent passing verification run."
+                ),
+                committed_edit_action_ids=tuple(a.action_id for a in committed_edits),
+                committed_test_action_ids=tuple(a.action_id for a in committed_tests),
+            )
+
+        if effective_spec is None:
+            return TaskVerificationReport(
+                verified=True,
+                spec_sha256="",
+                committed_edit_action_ids=tuple(a.action_id for a in committed_edits),
+                committed_test_action_ids=tuple(a.action_id for a in committed_tests),
+            )
+
+        # 1. Protected user files must remain untouched (`sha256` identical to baseline).
+        for prot_rel, expected_sha in sorted(effective_spec.protected_files.items()):
+            try:
+                actual_sha = compute_workspace_file_sha256(ws_root, prot_rel)
+            except WorkflowStateError as exc:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="protected_file_invalid",
+                    failure_detail=str(exc),
+                )
+            if actual_sha is None:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="protected_file_missing",
+                    failure_detail=f"Protected user file `{prot_rel}` was deleted during task execution.",
+                )
+            if actual_sha != expected_sha:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="protected_file_modified",
+                    failure_detail=(
+                        f"Protected user file `{prot_rel}` was modified "
+                        f"(expected sha256={expected_sha[:12]}..., got {actual_sha[:12]}...)."
+                    ),
+                )
+
+        # 2. Managed-edit provenance in durable `runtime_actions`.
+        if effective_spec.require_managed_edit and not committed_edits:
+            return TaskVerificationReport(
+                verified=False,
+                spec_sha256=spec_digest,
+                failure_code="missing_managed_edit",
+                failure_detail="Completion rejected: zero committed `managed_edit` actions exist in `runtime_actions`.",
+            )
+
+        # 3. Required modified files must exist and differ from pre-task baseline digest.
+        patch_entries: list[dict[str, str]] = []
+        modified_paths: list[str] = []
+        for mod_rel in effective_spec.required_modified_files:
+            try:
+                cur_sha = compute_workspace_file_sha256(ws_root, mod_rel)
+            except WorkflowStateError as exc:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="invalid_modified_file_path",
+                    failure_detail=str(exc),
+                )
+            if cur_sha is None:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="missing_required_file",
+                    failure_detail=f"Required modified file `{mod_rel}` does not exist in workspace.",
+                )
+            if mod_rel in effective_spec.baseline_file_digests:
+                base_sha = effective_spec.baseline_file_digests[mod_rel]
+                if base_sha is not None and cur_sha == base_sha:
+                    return TaskVerificationReport(
+                        verified=False,
+                        spec_sha256=spec_digest,
+                        failure_code="unmodified_required_file",
+                        failure_detail=f"Required target file `{mod_rel}` is unchanged from its pre-task digest.",
+                    )
+            modified_paths.append(mod_rel)
+            patch_entries.append({"path": mod_rel, "sha256": cur_sha})
+
+        for req_rel in effective_spec.required_files:
+            try:
+                target_fp = _resolve_safe_workspace_target(ws_root, req_rel)
+            except WorkflowStateError as exc:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="invalid_required_file_path",
+                    failure_detail=str(exc),
+                )
+            if not target_fp.is_file() or target_fp.stat().st_size == 0:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="missing_required_file",
+                    failure_detail=f"Required artifact file `{req_rel}` is missing or empty.",
+                )
+            req_sha = hashlib.sha256(target_fp.read_bytes()).hexdigest()
+            if req_rel not in modified_paths:
+                modified_paths.append(req_rel)
+                patch_entries.append({"path": req_rel, "sha256": req_sha})
+
+        # 4. Optional Git diff verification.
+        git_diff_text = ""
+        if effective_spec.require_git_diff:
+            if not (ws_root / ".git").exists():
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="missing_git_repository",
+                    failure_detail="require_git_diff=True but workspace is not a Git repository.",
+                )
+            git_env = {k: v for k, v in os.environ.items() if k in _SAFE_VERIFY_ENV_KEYS}
+            git_env["GIT_TERMINAL_PROMPT"] = "0"
+            st_proc = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=ws_root,
+                capture_output=True,
+                text=True,
+                timeout=10.0,
+                check=False,
+                env=git_env,
+            )
+            diff_proc = subprocess.run(
+                ["git", "diff", "HEAD"],
+                cwd=ws_root,
+                capture_output=True,
+                text=True,
+                timeout=10.0,
+                check=False,
+                env=git_env,
+            )
+            git_status_out = (st_proc.stdout or "").strip()
+            git_diff_text = (diff_proc.stdout or "").strip()
+            if st_proc.returncode != 0 or (not git_status_out and not git_diff_text):
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="missing_git_diff",
+                    failure_detail="Completion rejected: Git working tree shows zero diff against HEAD.",
+                )
+
+        # 5. Post-edit agent test action ordering in `runtime_actions`.
+        if effective_spec.require_agent_test_action:
+            if not committed_tests:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="missing_agent_test_execution",
+                    failure_detail="Completion rejected: agent never committed a passing `run_bash` test execution.",
+                )
+            if committed_edits and committed_tests[-1].updated_at < committed_edits[-1].updated_at:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="stale_test_before_latest_edit",
+                    failure_detail=(
+                        "Completion rejected: managed file edit occurred AFTER the last passing test action; "
+                        "tests were not re-run on the final workspace state."
+                    ),
+                )
+
+        patch_payload = json.dumps(
+            {
+                "files": patch_entries,
+                "git_diff_sha256": hashlib.sha256(git_diff_text.encode("utf-8")).hexdigest() if git_diff_text else "",
+                "edit_actions": [a.action_id for a in committed_edits],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        patch_sha = hashlib.sha256(patch_payload.encode("utf-8")).hexdigest()
+        refs: list[workflow_checkpoints.EvidenceRef] = [
+            workflow_checkpoints.EvidenceRef(
+                kind="patch_verification",
+                ref_id=",".join(modified_paths)[:120] or "workspace_patch",
+                sha256=patch_sha,
+                summary=f"verified {len(modified_paths)} file(s), {len(committed_edits)} edit action(s)"[:240],
+            )
+        ]
+
+        # 6. Authoritative independent test command execution.
+        test_exit: int | None = None
+        test_excerpt = ""
+        test_sha = ""
+        if effective_spec.test_command:
+            sanitized_env = {k: v for k, v in os.environ.items() if k in _SAFE_VERIFY_ENV_KEYS}
+            sanitized_env["PYTHONDONTWRITEBYTECODE"] = "1"
+            sanitized_env["GIT_TERMINAL_PROMPT"] = "0"
+            try:
+                proc = subprocess.run(
+                    list(effective_spec.test_command),
+                    cwd=ws_root,
+                    capture_output=True,
+                    text=True,
+                    timeout=effective_spec.timeout_s,
+                    check=False,
+                    env=sanitized_env,
+                )
+            except subprocess.TimeoutExpired:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="verification_test_timeout",
+                    failure_detail=f"Authoritative verification command timed out after {effective_spec.timeout_s}s.",
+                    modified_files=tuple(modified_paths),
+                    patch_sha256=patch_sha,
+                )
+            except OSError as exc:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="verification_test_exec_error",
+                    failure_detail=f"Authoritative verification command failed to start: {exc}",
+                    modified_files=tuple(modified_paths),
+                    patch_sha256=patch_sha,
+                )
+            test_exit = int(proc.returncode)
+            combined_out = f"{proc.stdout or ''}\n{proc.stderr or ''}".strip()
+            test_excerpt = combined_out[:500]
+            test_transcript = json.dumps(
+                {
+                    "cmd": list(effective_spec.test_command),
+                    "exit_code": test_exit,
+                    "output": combined_out,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            test_sha = hashlib.sha256(test_transcript.encode("utf-8")).hexdigest()
+            if test_exit != 0:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="verification_test_failed",
+                    failure_detail=f"Authoritative test command exited with code {test_exit}: {test_excerpt[:240]}",
+                    modified_files=tuple(modified_paths),
+                    patch_sha256=patch_sha,
+                    test_exit_code=test_exit,
+                    test_output_excerpt=test_excerpt,
+                    test_sha256=test_sha,
+                    committed_edit_action_ids=tuple(a.action_id for a in committed_edits),
+                    committed_test_action_ids=tuple(a.action_id for a in committed_tests),
+                )
+            for needle in effective_spec.expected_test_output_contains:
+                if needle not in combined_out:
+                    return TaskVerificationReport(
+                        verified=False,
+                        spec_sha256=spec_digest,
+                        failure_code="verification_test_output_mismatch",
+                        failure_detail=f"Authoritative test output did not contain required marker {needle!r}.",
+                        modified_files=tuple(modified_paths),
+                        patch_sha256=patch_sha,
+                        test_exit_code=test_exit,
+                        test_output_excerpt=test_excerpt,
+                        test_sha256=test_sha,
+                    )
+            cmd_label = " ".join(effective_spec.test_command)[:100]
+            refs.append(
+                workflow_checkpoints.EvidenceRef(
+                    kind="test_verification",
+                    ref_id=cmd_label or "test_command",
+                    sha256=test_sha,
+                    summary=f"exit_code=0; {test_excerpt.splitlines()[-1] if test_excerpt else 'passed'}"[:240],
+                )
+            )
+
+        return TaskVerificationReport(
+            verified=True,
+            spec_sha256=spec_digest,
+            modified_files=tuple(modified_paths),
+            patch_sha256=patch_sha,
+            test_exit_code=test_exit,
+            test_output_excerpt=test_excerpt,
+            test_sha256=test_sha,
+            committed_edit_action_ids=tuple(a.action_id for a in committed_edits),
+            committed_test_action_ids=tuple(a.action_id for a in committed_tests),
+            evidence_refs=tuple(refs),
+        )
+
     def complete_task(
         self,
         task_id: str,
@@ -1057,11 +1597,12 @@ class DurableTaskStateMachine:
         step: int = 0,
         checkpoint_payload: dict[str, Any] | None = None,
         evidence_refs: Sequence[workflow_checkpoints.EvidenceRef | dict[str, Any]] = (),
+        verification_report: TaskVerificationReport | Any | None = None,
         abort_requested: bool = False,
         reason: str = "task_completed",
         now: float | None = None,
     ) -> runtime_persistence.TaskRecord:
-        """Complete a running root task only when all milestones, boundaries, and actions are clean."""
+        """Complete a running root task only when all milestones, boundaries, actions, and verifications pass."""
         tid = _validate_identifier(task_id, "task_id")
         if abort_requested:
             raise WorkflowTransitionRejected(
@@ -1069,7 +1610,7 @@ class DurableTaskStateMachine:
             )
         ts = time.time() if now is None else float(now)
 
-        # Pre-check state, control flags, milestones, and unresolved actions before writing final checkpoint.
+        # Pre-check state, control flags, milestones, unresolved actions, and verification contract.
         current_task = self.store.get_task(tid)
         if current_task is None:
             raise WorkflowStateError(f"Task {tid!r} does not exist.")
@@ -1089,15 +1630,58 @@ class DurableTaskStateMachine:
             raise WorkflowTransitionRejected(
                 f"Task {tid!r} cannot complete while milestone(s) remain incomplete: {', '.join(incomplete_ms)}."
             )
+        all_actions = sorted(
+            self.store.list_task_actions(tid),
+            key=lambda a: (a.updated_at, a.created_at),
+        )
         unresolved = [
             act.action_id
-            for act in self.store.list_task_actions(tid, statuses=("in_flight", "uncertain"))
-            if act.action_class != "read_only"
+            for act in all_actions
+            if act.status in ("in_flight", "uncertain") and act.action_class != "read_only"
         ]
         if unresolved:
             raise WorkflowTransitionRejected(
                 f"Task {tid!r} cannot complete with unresolved consequential action(s): {', '.join(unresolved)}."
             )
+        shell_actions = [
+            act for act in all_actions if act.tool_name == "run_bash" and act.status in ("committed", "failed")
+        ]
+        if shell_actions and shell_actions[-1].status == "failed":
+            raise FalseCompletionRejected(
+                f"Task {tid!r} cannot claim completion: latest `run_bash` action "
+                f"`{shell_actions[-1].action_id}` failed (`ok=0`)."
+            )
+
+        persisted_spec = (
+            TaskVerificationSpec.from_dict(current_budget.verification_contract)
+            if current_budget.verification_contract is not None
+            else None
+        )
+        merged_refs: list[workflow_checkpoints.EvidenceRef | dict[str, Any]] = list(evidence_refs)
+        verification_extra: dict[str, Any] | None = None
+        if persisted_spec is not None:
+            if verification_report is None:
+                raise FalseCompletionRejected(
+                    f"Task {tid!r} has an active verification contract and cannot complete without a verification_report."
+                )
+            if not bool(getattr(verification_report, "verified", False)):
+                detail = str(getattr(verification_report, "failure_detail", "") or "verification failed")
+                raise FalseCompletionRejected(f"Task {tid!r} false completion rejected: {detail}")
+            rep_spec_sha = str(getattr(verification_report, "spec_sha256", ""))
+            if rep_spec_sha != persisted_spec.sha256():
+                raise FalseCompletionRejected(
+                    f"Task {tid!r} verification_report spec_sha256 mismatch against persisted contract."
+                )
+            for vref in getattr(verification_report, "evidence_refs", ()):
+                merged_refs.append(vref)
+            if hasattr(verification_report, "to_dict"):
+                verification_extra = {"verification": verification_report.to_dict()}
+        elif verification_report is not None:
+            if not bool(getattr(verification_report, "verified", False)):
+                detail = str(getattr(verification_report, "failure_detail", "") or "verification failed")
+                raise FalseCompletionRejected(f"Task {tid!r} false completion rejected: {detail}")
+            for vref in getattr(verification_report, "evidence_refs", ()):
+                merged_refs.append(vref)
 
         ckpt: workflow_checkpoints.TaskCheckpointRecord | None = None
         if checkpoint_payload is not None:
@@ -1105,7 +1689,7 @@ class DurableTaskStateMachine:
                 tid,
                 step=step,
                 payload=checkpoint_payload,
-                evidence_refs=evidence_refs,
+                evidence_refs=merged_refs,
                 epoch=epoch,
                 status="committed",
                 require_active_epoch=epoch is not None and epoch > 0,
@@ -1114,7 +1698,8 @@ class DurableTaskStateMachine:
 
         evidence_json = _encode_evidence_json(
             checkpoint_id=ckpt.checkpoint_id if ckpt else current_task.checkpoint_ref,
-            evidence_refs=evidence_refs,
+            evidence_refs=merged_refs,
+            extra=verification_extra,
         )
 
         def _tx(conn: sqlite3.Connection) -> runtime_persistence.TaskRecord:
@@ -1131,6 +1716,16 @@ class DurableTaskStateMachine:
                 raise WorkflowTransitionRejected(
                     f"Task {tid!r} received pause/cancel before completion committed."
                 )
+            if budget.verification_contract is not None:
+                tx_spec = TaskVerificationSpec.from_dict(budget.verification_contract)
+                if verification_report is None or not bool(getattr(verification_report, "verified", False)):
+                    raise FalseCompletionRejected(
+                        f"Task {tid!r} cannot commit completion without a verified report."
+                    )
+                if str(getattr(verification_report, "spec_sha256", "")) != tx_spec.sha256():
+                    raise FalseCompletionRejected(
+                        f"Task {tid!r} verification contract changed before completion committed."
+                    )
             current_epoch = int(row["current_epoch"])
             if epoch is not None and current_epoch != int(epoch):
                 raise runtime_persistence.StaleEpochError(
@@ -1379,6 +1974,7 @@ class DurableTaskStateMachine:
                         pause_requested=False,
                         cancel_requested=(target_state == "cancelled"),
                         exhausted_reason=budget.exhausted_reason,
+                        verification_contract=budget.verification_contract,
                     )
                     seq_row = conn.execute(
                         "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",

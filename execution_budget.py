@@ -179,6 +179,7 @@ class TaskBudgetState:
     pause_requested: bool = False
     cancel_requested: bool = False
     exhausted_reason: str = ""
+    verification_contract: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -194,7 +195,10 @@ class TaskBudgetState:
         }
 
     def to_json(self) -> str:
-        return json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        payload = self.to_dict()
+        if self.verification_contract is not None:
+            payload["verification_contract"] = self.verification_contract
+        return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
     @classmethod
     def from_json(
@@ -224,6 +228,8 @@ class TaskBudgetState:
                 max_elapsed_s=float(parsed.get("max_elapsed_s", fallback.max_elapsed_s)),
                 max_recoveries=int(parsed.get("max_recoveries", fallback.max_recoveries)),
             )
+        vc_raw = parsed.get("verification_contract")
+        vc_dict = dict(vc_raw) if isinstance(vc_raw, dict) else None
         return cls(
             spec=spec,
             steps_used=_non_neg_int(int(parsed.get("steps_used", 0)), "steps_used"),
@@ -234,6 +240,7 @@ class TaskBudgetState:
             pause_requested=bool(parsed.get("pause_requested", False)),
             cancel_requested=bool(parsed.get("cancel_requested", False)),
             exhausted_reason=str(parsed.get("exhausted_reason", "")),
+            verification_contract=vc_dict,
         )
 
     def violation_reason(self, *, check_recovery: bool = False) -> str:
@@ -316,6 +323,7 @@ class DurableTaskBudgetManager:
                 pause_requested=current.pause_requested,
                 cancel_requested=current.cancel_requested,
                 exhausted_reason=current.exhausted_reason,
+                verification_contract=current.verification_contract,
             )
             encoded = updated.to_json()
             if encoded != raw:
@@ -359,6 +367,7 @@ class DurableTaskBudgetManager:
                 pause_requested=current.pause_requested if pause_requested is None else bool(pause_requested),
                 cancel_requested=current.cancel_requested if cancel_requested is None else bool(cancel_requested),
                 exhausted_reason=current.exhausted_reason,
+                verification_contract=current.verification_contract,
             )
             conn.execute(
                 "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
@@ -415,6 +424,7 @@ class DurableTaskBudgetManager:
                 pause_requested=current.pause_requested,
                 cancel_requested=current.cancel_requested,
                 exhausted_reason=current.exhausted_reason,
+                verification_contract=current.verification_contract,
             )
             violation = candidate.violation_reason(check_recovery=False)
             final_state = (
@@ -428,6 +438,7 @@ class DurableTaskBudgetManager:
                     pause_requested=candidate.pause_requested,
                     cancel_requested=candidate.cancel_requested,
                     exhausted_reason=violation or candidate.exhausted_reason,
+                    verification_contract=candidate.verification_contract,
                 )
                 if violation
                 else candidate
@@ -480,6 +491,7 @@ class DurableTaskBudgetManager:
                 pause_requested=False if not violation else current.pause_requested,
                 cancel_requested=current.cancel_requested,
                 exhausted_reason=violation or current.exhausted_reason,
+                verification_contract=current.verification_contract,
             )
             conn.execute(
                 "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
@@ -496,3 +508,47 @@ class DurableTaskBudgetManager:
         if violation:
             raise BudgetExceeded(violation)
         return state
+
+    def set_verification_contract(
+        self,
+        task_id: str,
+        contract: dict[str, Any] | None,
+        *,
+        now: float | None = None,
+    ) -> TaskBudgetState:
+        """Persist or clear the authoritative task verification contract inside ``budget_json``."""
+        tid = self._validate_task_id(task_id)
+        if contract is not None and not isinstance(contract, dict):
+            raise BudgetError("verification_contract must be a dict or None.")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> TaskBudgetState:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT budget_json FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if row is None:
+                raise KeyError(f"Runtime task {tid!r} does not exist.")
+            current = TaskBudgetState.from_json(str(row["budget_json"]))
+            updated = TaskBudgetState(
+                spec=current.spec,
+                steps_used=current.steps_used,
+                tool_calls_used=current.tool_calls_used,
+                tokens_used=current.tokens_used,
+                elapsed_s=current.elapsed_s,
+                recoveries_used=current.recoveries_used,
+                pause_requested=current.pause_requested,
+                cancel_requested=current.cancel_requested,
+                exhausted_reason=current.exhausted_reason,
+                verification_contract=dict(contract) if contract is not None else None,
+            )
+            conn.execute(
+                "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                (updated.to_json(), ts, tid),
+            )
+            return updated
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )

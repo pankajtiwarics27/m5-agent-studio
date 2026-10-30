@@ -66,6 +66,7 @@ from history_privacy import HistoryPrivacyError, apply_retention, export_history
 import context_store
 import execution_budget
 import execution_spine
+import failure_injection
 import mcp_client
 import onboarding_preflight
 import runtime_persistence
@@ -1334,6 +1335,15 @@ def init_db() -> None:
     )
     _affected_tasks = {r.task_id for r in _swept_startup if r.task_id}
     for _tid in sorted(_affected_tasks):
+        _t = _rp_store.get_task(_tid)
+        _known_args = _extract_session_known_action_args(_tid)
+        if _t is not None and _known_args:
+            _wt_raw = str(_t.workspace_dir or "").strip()
+            _wt_root = Path(_wt_raw).resolve() if _wt_raw else None
+            get_worker_lease_coordinator(_wt_root).reconcile_task_effects(
+                _tid,
+                known_action_args=_known_args,
+            )
         if _startup_ledger.list_unresolved_consequential_actions(_tid):
             _t = _rp_store.get_task(_tid)
             if _t is not None and _t.state not in {"blocked", "cancelled"}:
@@ -8078,6 +8088,8 @@ def _reconcile_app_action(
             if _is_secret_path(fp):
                 return "unresolved"
             current_text, _info = _read_workspace_text(root_res, Path(*relative_parts), errors="strict")
+        except FileNotFoundError:
+            return "verified_not_applied"
         except Exception:
             return "unresolved"
         target_content = str(args.get("content") if args.get("content") is not None else "")
@@ -8194,6 +8206,37 @@ def get_task_state_machine() -> workflow_state.DurableTaskStateMachine:
     return workflow_state.DurableTaskStateMachine(STORAGE, DB_PATH)
 
 
+def _extract_session_known_action_args(session_id: str) -> dict[str, dict[str, Any]]:
+    """Extract persisted ``action_id -> tool_args`` mappings from a session's event log for crash reconciliation."""
+    known: dict[str, dict[str, Any]] = {}
+    for ev in _read_harness_events(session_id):
+        if ev.get("type") != "assistant/message":
+            continue
+        step_val = ev.get("step")
+        raw_tcs = ev.get("tool_calls")
+        if not isinstance(raw_tcs, list):
+            continue
+        for tc_idx, tc in enumerate(raw_tcs):
+            if not isinstance(tc, dict):
+                continue
+            tname = str(tc.get("name") or "").strip()
+            targs = tc.get("arguments")
+            if not tname or not isinstance(targs, dict):
+                continue
+            try:
+                aid = side_effect_ledger.derive_action_id(
+                    session_id,
+                    tname,
+                    targs,
+                    step_id=step_val if isinstance(step_val, (int, str)) else None,
+                    call_index=tc_idx,
+                )
+            except Exception:
+                continue
+            known[aid] = dict(targs)
+    return known
+
+
 def _parse_task_budget_spec(raw: Any) -> execution_budget.TaskBudgetSpec | None:
     """Parse optional caller-supplied ``budget`` object or fail closed with HTTP 400."""
     if raw is None:
@@ -8204,6 +8247,69 @@ def _parse_task_budget_spec(raw: Any) -> execution_budget.TaskBudgetSpec | None:
         return execution_budget.TaskBudgetSpec.from_dict(raw)
     except (TypeError, ValueError, execution_budget.BudgetError) as exc:
         raise HTTPException(status_code=400, detail=f"Invalid task budget: {exc}") from exc
+
+
+def _parse_task_verification_spec(
+    raw: Any,
+    *,
+    workspace_dir: Path,
+) -> workflow_state.TaskVerificationSpec | None:
+    """Parse optional caller-supplied ``verification`` contract and snapshot baseline digests."""
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise HTTPException(status_code=400, detail="verification must be a JSON object when supplied.")
+    try:
+        raw_mod = raw.get("required_modified_files") or []
+        raw_req = raw.get("required_files") or []
+        if not isinstance(raw_mod, list) or not isinstance(raw_req, list):
+            raise ValueError("required_modified_files and required_files must be JSON arrays.")
+        raw_prot = raw.get("protected_files") or {}
+        prot_digests: dict[str, str] = {}
+        if isinstance(raw_prot, list):
+            for p_str in raw_prot:
+                sha = workflow_state.compute_workspace_file_sha256(workspace_dir, str(p_str))
+                if sha is None:
+                    raise ValueError(f"protected_files entry {p_str!r} does not exist in workspace.")
+                norm_p = workflow_state._normalize_workspace_rel_path(str(p_str), "protected_files")
+                prot_digests[norm_p] = sha
+        elif isinstance(raw_prot, dict):
+            prot_digests = {str(k): str(v) for k, v in raw_prot.items()}
+        else:
+            raise ValueError("protected_files must be a list of relative paths or a path->sha256 map.")
+
+        raw_base = raw.get("baseline_file_digests")
+        if raw_base is None:
+            base_digests: dict[str, str | None] = {}
+            for m_str in raw_mod:
+                norm_m = workflow_state._normalize_workspace_rel_path(str(m_str), "required_modified_files")
+                base_digests[norm_m] = workflow_state.compute_workspace_file_sha256(workspace_dir, norm_m)
+        elif isinstance(raw_base, dict):
+            base_digests = {str(k): (None if v is None else str(v)) for k, v in raw_base.items()}
+        else:
+            raise ValueError("baseline_file_digests must be an object when supplied.")
+
+        raw_cmd = raw.get("test_command") or []
+        if isinstance(raw_cmd, str) or not isinstance(raw_cmd, list):
+            raise ValueError("test_command must be an argv array of strings.")
+        raw_exp = raw.get("expected_test_output_contains") or []
+        if isinstance(raw_exp, str) or not isinstance(raw_exp, list):
+            raise ValueError("expected_test_output_contains must be an array of strings.")
+
+        return workflow_state.TaskVerificationSpec(
+            require_managed_edit=bool(raw.get("require_managed_edit", True)),
+            require_git_diff=bool(raw.get("require_git_diff", False)),
+            required_modified_files=tuple(str(x) for x in raw_mod),
+            required_files=tuple(str(x) for x in raw_req),
+            protected_files=prot_digests,
+            baseline_file_digests=base_digests,
+            require_agent_test_action=bool(raw.get("require_agent_test_action", False)),
+            test_command=tuple(str(x) for x in raw_cmd),
+            expected_test_output_contains=tuple(str(x) for x in raw_exp),
+            timeout_s=float(raw.get("timeout_s", 30.0)),
+        )
+    except (TypeError, ValueError, workflow_state.WorkflowStateError) as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid task verification contract: {exc}") from exc
 
 
 def _collect_step_evidence_refs(
@@ -8305,6 +8411,21 @@ def _acquire_turn_plan_and_lease_or_409(
     if task_rec.state == "cancelled" or budget_state.cancel_requested:
         raise HTTPException(status_code=409, detail=f"Task {sid!r} is cancelled and cannot execute.")
 
+    known_args = _extract_session_known_action_args(sid)
+    if known_args and task_rec.current_epoch > 0:
+        coord.store.expire_stale_leases(now=now_ts)
+        ep_cur = sm.store.get_epoch(sid, task_rec.current_epoch)
+        if ep_cur is None or ep_cur.status != "active":
+            rec_rep = coord.reconcile_task_effects(sid, known_action_args=known_args, now=now_ts)
+            if task_rec.state == "blocked" and not rec_rep.unresolved_action_ids:
+                task_rec = sm.transition_task(
+                    sid,
+                    "paused",
+                    allow_inactive_epoch=True,
+                    reason="reconciled_before_resume",
+                    now=now_ts,
+                )
+
     resumed_plan: workflow_state.ResumedTaskPlan | None = None
     should_prepare_resume = bool(resume)
     already_prepared = False
@@ -8352,6 +8473,7 @@ def _acquire_turn_plan_and_lease_or_409(
             workspace_dir=wt_raw,
             policy=str(sess.get("policy") or "standard"),
             lease_ttl_s=ttl,
+            known_action_args=known_args,
         )
     except (
         runtime_persistence.LeaseOwnershipConflictError,
@@ -9062,10 +9184,12 @@ async def api_get_harness_task_state(session_id: str) -> JSONResponse:
     milestones = sm.list_milestones(session_id)
     transitions = sm.store.list_transitions(session_id)
     checkpoints = sm.checkpoints.list_checkpoints(session_id, verify_integrity=False)
+    ver_spec = sm.get_verification_spec(session_id)
     return JSONResponse(
         {
             "task": _serialize_task_record(task),
             "budget": budget.to_dict(),
+            "verification_spec": ver_spec.to_dict() if ver_spec is not None else None,
             "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
             "checkpoint_integrity_error": integrity_error,
             "checkpoints": [ck.to_dict() for ck in checkpoints],
@@ -9169,10 +9293,29 @@ async def api_cancel_harness_session(session_id: str, request: Request) -> JSONR
 async def api_resume_harness_session(session_id: str) -> JSONResponse:
     """Validate checkpoint integrity, unresolved side effects, and recovery budget before resume."""
     try:
-        get_harness_session_db(session_id)
+        sess = get_harness_session_db(session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
     sm = get_task_state_machine()
+    wt_raw = str(sess.get("worktree_dir") or "").strip()
+    wt_root = Path(wt_raw).resolve() if wt_raw else None
+    coord = get_worker_lease_coordinator(wt_root)
+    now_ts = time.time()
+    t_cur = sm.store.get_task(session_id)
+    known_args = _extract_session_known_action_args(session_id)
+    if t_cur is not None and known_args and t_cur.current_epoch > 0:
+        coord.store.expire_stale_leases(now=now_ts)
+        ep_cur = sm.store.get_epoch(session_id, t_cur.current_epoch)
+        if ep_cur is None or ep_cur.status != "active":
+            rec_rep = coord.reconcile_task_effects(session_id, known_action_args=known_args, now=now_ts)
+            if t_cur.state == "blocked" and not rec_rep.unresolved_action_ids:
+                sm.transition_task(
+                    session_id,
+                    "paused",
+                    allow_inactive_epoch=True,
+                    reason="reconciled_before_resume",
+                    now=now_ts,
+                )
     try:
         plan = sm.prepare_resume(session_id, consume_recovery_budget=True)
     except (
@@ -9219,6 +9362,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
     efficiency_mode = str(body.get("efficiency_mode") or "ponytail")
     resume_requested = bool(body.get("resume", False))
     budget_spec = _parse_task_budget_spec(body.get("budget"))
+    raw_verification = body.get("verification")
 
     if not prompt:
         raise HTTPException(status_code=400, detail="Task prompt is required.")
@@ -9250,11 +9394,25 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
             )
             sess = get_harness_session_db(session_id)
 
+    wt_dir_resolved = Path(sess["worktree_dir"]).resolve()
+    pre_existing_verification = (
+        get_task_state_machine().get_verification_spec(session_id)
+        if get_task_state_machine().store.get_task(session_id) is not None
+        else None
+    )
+    parsed_verification = (
+        _parse_task_verification_spec(raw_verification, workspace_dir=wt_dir_resolved)
+        if (raw_verification is not None and (not resume_requested or pre_existing_verification is None))
+        else None
+    )
+
     coord, claim, worker_id, sm, resumed_plan = _acquire_turn_plan_and_lease_or_409(
         sess,
         budget_spec=budget_spec,
         resume=resume_requested,
     )
+    if parsed_verification is not None:
+        sm.set_verification_spec(session_id, parsed_verification)
     lease_epoch = claim.epoch_record.epoch
     lease_released = False
     lease_final_state = "paused"
@@ -9308,6 +9466,16 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                 messages = [{"role": "system", "content": sys_prompt}]
             else:
                 messages[0] = {"role": "system", "content": sys_prompt}
+                if (
+                    resumed_plan is not None
+                    and resumed_plan.checkpoint is not None
+                    and resumed_plan.checkpoint.payload.get("workflow") == "harness"
+                    and isinstance(resumed_plan.checkpoint.payload.get("messages_len"), int)
+                ):
+                    ckpt_msg_len = int(resumed_plan.checkpoint.payload["messages_len"])
+                    if 1 <= ckpt_msg_len < len(messages):
+                        messages = messages[:ckpt_msg_len]
+                        _save_harness_messages(session_id, messages)
                 if context_mode and sum(len(m.get("content") or "") for m in messages) > CTX_AUTO_COMPACT_CHARS:
                     comp_res = compact_harness_session_messages(session_id, wt_dir)
                     if comp_res.get("compacted"):
@@ -9315,7 +9483,11 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         messages[0] = {"role": "system", "content": sys_prompt}
                         yield _sse("context_compacted", comp_res)
 
-            if start_step == 1 or not resume_requested:
+            if resume_requested and start_step == 1 and len(messages) >= 2 and messages[1].get("role") == "user":
+                if len(messages) > 2:
+                    messages = messages[:2]
+                    _save_harness_messages(session_id, messages)
+            elif start_step == 1 or not resume_requested:
                 messages.append({"role": "user", "content": prompt})
                 _save_harness_messages(session_id, messages)
 
@@ -9680,24 +9852,55 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         yield _sse("aborted", {"step": completed_step})
                     yield _sse("paused", {"step": completed_step, "reason": halt_reason})
             else:
-                sm.complete_task(
+                verification_report = sm.verify_task_completion(
                     session_id,
-                    worker_id=worker_id,
-                    epoch=lease_epoch,
-                    step=max(0, completed_step),
-                    checkpoint_payload={
-                        "workflow": "harness",
-                        "completed_step": max(0, completed_step),
-                        "messages_len": len(messages),
-                        "terminal": True,
-                    },
-                    evidence_refs=final_refs,
-                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
-                    reason="turn_completed",
+                    workspace_dir=wt_dir,
                 )
-                lease_final_state = "completed"
-                lease_released = True
-                _update_harness_session_state(session_id, status="completed")
+                if not verification_report.verified:
+                    lease_final_state = "failed"
+                    lease_released = True
+                    rej_reason = f"false_completion_rejected:{verification_report.failure_code or 'unverified'}"[:240]
+                    did_rel_ver = coord.release(
+                        session_id,
+                        lease_epoch,
+                        worker_id,
+                        next_state="failed",
+                        reason=rej_reason,
+                    )
+                    if did_rel_ver:
+                        _update_harness_session_state(session_id, status="error")
+                    ver_payload = verification_report.to_dict()
+                    _append_harness_event(session_id, "turn/verification_failed", ver_payload)
+                    yield _sse("verification_failed", ver_payload)
+                else:
+                    failure_injection.check_action_boundary(
+                        "before_task_completion",
+                        task_id=session_id,
+                        step_id=completed_step,
+                    )
+                    sm.complete_task(
+                        session_id,
+                        worker_id=worker_id,
+                        epoch=lease_epoch,
+                        step=max(0, completed_step),
+                        checkpoint_payload={
+                            "workflow": "harness",
+                            "completed_step": max(0, completed_step),
+                            "messages_len": len(messages),
+                            "terminal": True,
+                        },
+                        evidence_refs=final_refs,
+                        verification_report=verification_report,
+                        abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                        reason="turn_completed",
+                    )
+                    lease_final_state = "completed"
+                    lease_released = True
+                    _update_harness_session_state(session_id, status="completed")
+                    if verification_report.spec_sha256:
+                        ver_ok_payload = verification_report.to_dict()
+                        _append_harness_event(session_id, "turn/verified", ver_ok_payload)
+                        yield _sse("verification_passed", ver_ok_payload)
 
             diff_summary = _compute_git_diff(wt_dir)
             _append_harness_event(
@@ -9720,6 +9923,11 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     "state": lease_final_state,
                 },
             )
+        except failure_injection.InjectedBoundaryCrashError:
+            # Simulate abrupt process termination: do NOT gracefully release the worker lease
+            # or overwrite `in_flight` action rows; startup/TTL recovery must fence & reconcile.
+            lease_released = True
+            raise
         except runtime_persistence.StaleEpochError:
             lease_released = True
             current_t = sm.store.get_task(session_id)

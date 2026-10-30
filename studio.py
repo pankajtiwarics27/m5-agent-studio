@@ -1323,6 +1323,15 @@ def init_db() -> None:
     )
     _affected_tasks = {r.task_id for r in _swept_startup if r.task_id}
     for _tid in sorted(_affected_tasks):
+        _t = _rp_store.get_task(_tid)
+        _known_args = _extract_session_known_action_args(_tid)
+        if _t is not None and _known_args:
+            _wt_raw = str(_t.workspace_dir or "").strip()
+            _wt_root = Path(_wt_raw).resolve() if _wt_raw else None
+            get_worker_lease_coordinator(_wt_root).reconcile_task_effects(
+                _tid,
+                known_action_args=_known_args,
+            )
         if _startup_ledger.list_unresolved_consequential_actions(_tid):
             _t = _rp_store.get_task(_tid)
             if _t is not None and _t.state not in {"blocked", "cancelled"}:
@@ -12298,6 +12307,8 @@ def _reconcile_app_action(
             if _is_secret_path(fp):
                 return "unresolved"
             current_text, _info = _read_workspace_text(root_res, Path(*relative_parts), errors="strict")
+        except FileNotFoundError:
+            return "verified_not_applied"
         except Exception:
             return "unresolved"
         target_content = str(args.get("content") if args.get("content") is not None else "")
@@ -12414,6 +12425,37 @@ def get_task_state_machine() -> workflow_state.DurableTaskStateMachine:
     return workflow_state.DurableTaskStateMachine(STORAGE, DB_PATH)
 
 
+def _extract_session_known_action_args(session_id: str) -> dict[str, dict[str, Any]]:
+    """Extract persisted ``action_id -> tool_args`` mappings from a session's event log for crash reconciliation."""
+    known: dict[str, dict[str, Any]] = {}
+    for ev in _read_harness_events(session_id):
+        if ev.get("type") != "assistant/message":
+            continue
+        step_val = ev.get("step")
+        raw_tcs = ev.get("tool_calls")
+        if not isinstance(raw_tcs, list):
+            continue
+        for tc_idx, tc in enumerate(raw_tcs):
+            if not isinstance(tc, dict):
+                continue
+            tname = str(tc.get("name") or "").strip()
+            targs = tc.get("arguments")
+            if not tname or not isinstance(targs, dict):
+                continue
+            try:
+                aid = side_effect_ledger.derive_action_id(
+                    session_id,
+                    tname,
+                    targs,
+                    step_id=step_val if isinstance(step_val, (int, str)) else None,
+                    call_index=tc_idx,
+                )
+            except Exception:
+                continue
+            known[aid] = dict(targs)
+    return known
+
+
 def _parse_task_budget_spec(raw: Any) -> execution_budget.TaskBudgetSpec | None:
     """Parse optional caller-supplied ``budget`` object or fail closed with HTTP 400."""
     if raw is None:
@@ -12424,6 +12466,69 @@ def _parse_task_budget_spec(raw: Any) -> execution_budget.TaskBudgetSpec | None:
         return execution_budget.TaskBudgetSpec.from_dict(raw)
     except (TypeError, ValueError, execution_budget.BudgetError) as exc:
         raise HTTPException(status_code=400, detail=f"Invalid task budget: {exc}") from exc
+
+
+def _parse_task_verification_spec(
+    raw: Any,
+    *,
+    workspace_dir: Path,
+) -> workflow_state.TaskVerificationSpec | None:
+    """Parse optional caller-supplied ``verification`` contract and snapshot baseline digests."""
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise HTTPException(status_code=400, detail="verification must be a JSON object when supplied.")
+    try:
+        raw_mod = raw.get("required_modified_files") or []
+        raw_req = raw.get("required_files") or []
+        if not isinstance(raw_mod, list) or not isinstance(raw_req, list):
+            raise ValueError("required_modified_files and required_files must be JSON arrays.")
+        raw_prot = raw.get("protected_files") or {}
+        prot_digests: dict[str, str] = {}
+        if isinstance(raw_prot, list):
+            for p_str in raw_prot:
+                sha = workflow_state.compute_workspace_file_sha256(workspace_dir, str(p_str))
+                if sha is None:
+                    raise ValueError(f"protected_files entry {p_str!r} does not exist in workspace.")
+                norm_p = workflow_state._normalize_workspace_rel_path(str(p_str), "protected_files")
+                prot_digests[norm_p] = sha
+        elif isinstance(raw_prot, dict):
+            prot_digests = {str(k): str(v) for k, v in raw_prot.items()}
+        else:
+            raise ValueError("protected_files must be a list of relative paths or a path->sha256 map.")
+
+        raw_base = raw.get("baseline_file_digests")
+        if raw_base is None:
+            base_digests: dict[str, str | None] = {}
+            for m_str in raw_mod:
+                norm_m = workflow_state._normalize_workspace_rel_path(str(m_str), "required_modified_files")
+                base_digests[norm_m] = workflow_state.compute_workspace_file_sha256(workspace_dir, norm_m)
+        elif isinstance(raw_base, dict):
+            base_digests = {str(k): (None if v is None else str(v)) for k, v in raw_base.items()}
+        else:
+            raise ValueError("baseline_file_digests must be an object when supplied.")
+
+        raw_cmd = raw.get("test_command") or []
+        if isinstance(raw_cmd, str) or not isinstance(raw_cmd, list):
+            raise ValueError("test_command must be an argv array of strings.")
+        raw_exp = raw.get("expected_test_output_contains") or []
+        if isinstance(raw_exp, str) or not isinstance(raw_exp, list):
+            raise ValueError("expected_test_output_contains must be an array of strings.")
+
+        return workflow_state.TaskVerificationSpec(
+            require_managed_edit=bool(raw.get("require_managed_edit", True)),
+            require_git_diff=bool(raw.get("require_git_diff", False)),
+            required_modified_files=tuple(str(x) for x in raw_mod),
+            required_files=tuple(str(x) for x in raw_req),
+            protected_files=prot_digests,
+            baseline_file_digests=base_digests,
+            require_agent_test_action=bool(raw.get("require_agent_test_action", False)),
+            test_command=tuple(str(x) for x in raw_cmd),
+            expected_test_output_contains=tuple(str(x) for x in raw_exp),
+            timeout_s=float(raw.get("timeout_s", 30.0)),
+        )
+    except (TypeError, ValueError, workflow_state.WorkflowStateError) as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid task verification contract: {exc}") from exc
 
 
 def _collect_step_evidence_refs(
@@ -12525,6 +12630,21 @@ def _acquire_turn_plan_and_lease_or_409(
     if task_rec.state == "cancelled" or budget_state.cancel_requested:
         raise HTTPException(status_code=409, detail=f"Task {sid!r} is cancelled and cannot execute.")
 
+    known_args = _extract_session_known_action_args(sid)
+    if known_args and task_rec.current_epoch > 0:
+        coord.store.expire_stale_leases(now=now_ts)
+        ep_cur = sm.store.get_epoch(sid, task_rec.current_epoch)
+        if ep_cur is None or ep_cur.status != "active":
+            rec_rep = coord.reconcile_task_effects(sid, known_action_args=known_args, now=now_ts)
+            if task_rec.state == "blocked" and not rec_rep.unresolved_action_ids:
+                task_rec = sm.transition_task(
+                    sid,
+                    "paused",
+                    allow_inactive_epoch=True,
+                    reason="reconciled_before_resume",
+                    now=now_ts,
+                )
+
     resumed_plan: workflow_state.ResumedTaskPlan | None = None
     should_prepare_resume = bool(resume)
     already_prepared = False
@@ -12572,6 +12692,7 @@ def _acquire_turn_plan_and_lease_or_409(
             workspace_dir=wt_raw,
             policy=str(sess.get("policy") or "standard"),
             lease_ttl_s=ttl,
+            known_action_args=known_args,
         )
     except (
         runtime_persistence.LeaseOwnershipConflictError,
@@ -13282,10 +13403,12 @@ async def api_get_harness_task_state(session_id: str) -> JSONResponse:
     milestones = sm.list_milestones(session_id)
     transitions = sm.store.list_transitions(session_id)
     checkpoints = sm.checkpoints.list_checkpoints(session_id, verify_integrity=False)
+    ver_spec = sm.get_verification_spec(session_id)
     return JSONResponse(
         {
             "task": _serialize_task_record(task),
             "budget": budget.to_dict(),
+            "verification_spec": ver_spec.to_dict() if ver_spec is not None else None,
             "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
             "checkpoint_integrity_error": integrity_error,
             "checkpoints": [ck.to_dict() for ck in checkpoints],
@@ -13389,10 +13512,29 @@ async def api_cancel_harness_session(session_id: str, request: Request) -> JSONR
 async def api_resume_harness_session(session_id: str) -> JSONResponse:
     """Validate checkpoint integrity, unresolved side effects, and recovery budget before resume."""
     try:
-        get_harness_session_db(session_id)
+        sess = get_harness_session_db(session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
     sm = get_task_state_machine()
+    wt_raw = str(sess.get("worktree_dir") or "").strip()
+    wt_root = Path(wt_raw).resolve() if wt_raw else None
+    coord = get_worker_lease_coordinator(wt_root)
+    now_ts = time.time()
+    t_cur = sm.store.get_task(session_id)
+    known_args = _extract_session_known_action_args(session_id)
+    if t_cur is not None and known_args and t_cur.current_epoch > 0:
+        coord.store.expire_stale_leases(now=now_ts)
+        ep_cur = sm.store.get_epoch(session_id, t_cur.current_epoch)
+        if ep_cur is None or ep_cur.status != "active":
+            rec_rep = coord.reconcile_task_effects(session_id, known_action_args=known_args, now=now_ts)
+            if t_cur.state == "blocked" and not rec_rep.unresolved_action_ids:
+                sm.transition_task(
+                    session_id,
+                    "paused",
+                    allow_inactive_epoch=True,
+                    reason="reconciled_before_resume",
+                    now=now_ts,
+                )
     try:
         plan = sm.prepare_resume(session_id, consume_recovery_budget=True)
     except (
@@ -13439,6 +13581,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
     efficiency_mode = str(body.get("efficiency_mode") or "ponytail")
     resume_requested = bool(body.get("resume", False))
     budget_spec = _parse_task_budget_spec(body.get("budget"))
+    raw_verification = body.get("verification")
 
     if not prompt:
         raise HTTPException(status_code=400, detail="Task prompt is required.")
@@ -13470,11 +13613,25 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
             )
             sess = get_harness_session_db(session_id)
 
+    wt_dir_resolved = Path(sess["worktree_dir"]).resolve()
+    pre_existing_verification = (
+        get_task_state_machine().get_verification_spec(session_id)
+        if get_task_state_machine().store.get_task(session_id) is not None
+        else None
+    )
+    parsed_verification = (
+        _parse_task_verification_spec(raw_verification, workspace_dir=wt_dir_resolved)
+        if (raw_verification is not None and (not resume_requested or pre_existing_verification is None))
+        else None
+    )
+
     coord, claim, worker_id, sm, resumed_plan = _acquire_turn_plan_and_lease_or_409(
         sess,
         budget_spec=budget_spec,
         resume=resume_requested,
     )
+    if parsed_verification is not None:
+        sm.set_verification_spec(session_id, parsed_verification)
     lease_epoch = claim.epoch_record.epoch
     lease_released = False
     lease_final_state = "paused"
@@ -13528,6 +13685,16 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                 messages = [{"role": "system", "content": sys_prompt}]
             else:
                 messages[0] = {"role": "system", "content": sys_prompt}
+                if (
+                    resumed_plan is not None
+                    and resumed_plan.checkpoint is not None
+                    and resumed_plan.checkpoint.payload.get("workflow") == "harness"
+                    and isinstance(resumed_plan.checkpoint.payload.get("messages_len"), int)
+                ):
+                    ckpt_msg_len = int(resumed_plan.checkpoint.payload["messages_len"])
+                    if 1 <= ckpt_msg_len < len(messages):
+                        messages = messages[:ckpt_msg_len]
+                        _save_harness_messages(session_id, messages)
                 if context_mode and sum(len(m.get("content") or "") for m in messages) > CTX_AUTO_COMPACT_CHARS:
                     comp_res = compact_harness_session_messages(session_id, wt_dir)
                     if comp_res.get("compacted"):
@@ -13535,7 +13702,11 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         messages[0] = {"role": "system", "content": sys_prompt}
                         yield _sse("context_compacted", comp_res)
 
-            if start_step == 1 or not resume_requested:
+            if resume_requested and start_step == 1 and len(messages) >= 2 and messages[1].get("role") == "user":
+                if len(messages) > 2:
+                    messages = messages[:2]
+                    _save_harness_messages(session_id, messages)
+            elif start_step == 1 or not resume_requested:
                 messages.append({"role": "user", "content": prompt})
                 _save_harness_messages(session_id, messages)
 
@@ -13900,24 +14071,55 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         yield _sse("aborted", {"step": completed_step})
                     yield _sse("paused", {"step": completed_step, "reason": halt_reason})
             else:
-                sm.complete_task(
+                verification_report = sm.verify_task_completion(
                     session_id,
-                    worker_id=worker_id,
-                    epoch=lease_epoch,
-                    step=max(0, completed_step),
-                    checkpoint_payload={
-                        "workflow": "harness",
-                        "completed_step": max(0, completed_step),
-                        "messages_len": len(messages),
-                        "terminal": True,
-                    },
-                    evidence_refs=final_refs,
-                    abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
-                    reason="turn_completed",
+                    workspace_dir=wt_dir,
                 )
-                lease_final_state = "completed"
-                lease_released = True
-                _update_harness_session_state(session_id, status="completed")
+                if not verification_report.verified:
+                    lease_final_state = "failed"
+                    lease_released = True
+                    rej_reason = f"false_completion_rejected:{verification_report.failure_code or 'unverified'}"[:240]
+                    did_rel_ver = coord.release(
+                        session_id,
+                        lease_epoch,
+                        worker_id,
+                        next_state="failed",
+                        reason=rej_reason,
+                    )
+                    if did_rel_ver:
+                        _update_harness_session_state(session_id, status="error")
+                    ver_payload = verification_report.to_dict()
+                    _append_harness_event(session_id, "turn/verification_failed", ver_payload)
+                    yield _sse("verification_failed", ver_payload)
+                else:
+                    failure_injection.check_action_boundary(
+                        "before_task_completion",
+                        task_id=session_id,
+                        step_id=completed_step,
+                    )
+                    sm.complete_task(
+                        session_id,
+                        worker_id=worker_id,
+                        epoch=lease_epoch,
+                        step=max(0, completed_step),
+                        checkpoint_payload={
+                            "workflow": "harness",
+                            "completed_step": max(0, completed_step),
+                            "messages_len": len(messages),
+                            "terminal": True,
+                        },
+                        evidence_refs=final_refs,
+                        verification_report=verification_report,
+                        abort_requested=(session_id in _HARNESS_ABORT_FLAGS),
+                        reason="turn_completed",
+                    )
+                    lease_final_state = "completed"
+                    lease_released = True
+                    _update_harness_session_state(session_id, status="completed")
+                    if verification_report.spec_sha256:
+                        ver_ok_payload = verification_report.to_dict()
+                        _append_harness_event(session_id, "turn/verified", ver_ok_payload)
+                        yield _sse("verification_passed", ver_ok_payload)
 
             diff_summary = _compute_git_diff(wt_dir)
             _append_harness_event(
@@ -13940,6 +14142,11 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     "state": lease_final_state,
                 },
             )
+        except failure_injection.InjectedBoundaryCrashError:
+            # Simulate abrupt process termination: do NOT gracefully release the worker lease
+            # or overwrite `in_flight` action rows; startup/TTL recovery must fence & reconcile.
+            lease_released = True
+            raise
         except runtime_persistence.StaleEpochError:
             lease_released = True
             current_t = sm.store.get_task(session_id)
@@ -18876,7 +19083,9 @@ class DurableActionLedger:
         if allowed and resolved_replay == "reconcilable" and self._reconciler is not None:
             prior = self.get_action(aid)
             if prior is not None and prior.tool_name == tname and prior.args_sha256 == digest:
-                if prior.status in ("uncertain", "in_flight"):
+                if prior.status in ("uncertain", "in_flight") or (
+                    prior.status == "committed" and prior.error_code == "pre_takeover_verified_committed"
+                ):
                     try:
                         reconcile_verdict = self._reconciler(prior, tname, safe_args)
                     except Exception:
@@ -19141,6 +19350,36 @@ class DurableActionLedger:
                         status="in_flight",
                         replay_policy=resolved_replay,
                         record=_sel_row_to_action(upd),
+                    )
+                if (
+                    resolved_replay == "reconcilable"
+                    and existing.error_code == "pre_takeover_verified_committed"
+                    and reconcile_verdict == "verified_committed"
+                ):
+                    conn.execute(
+                        """
+                        UPDATE runtime_actions
+                        SET epoch = ?, error_code = '', updated_at = ?
+                        WHERE action_id = ?
+                        """,
+                        (clean_epoch, ts, aid),
+                    )
+                    rec_upd = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+                    assert rec_upd is not None
+                    return LedgerBeginOutcome(
+                        proceed=False,
+                        action_id=aid,
+                        attempt=existing.attempt,
+                        attempt_id=format_attempt_id(aid, existing.attempt),
+                        status="committed",
+                        replay_policy=resolved_replay,
+                        record=_sel_row_to_action(rec_upd),
+                        already_committed=True,
+                        reconciled=True,
+                        reason=(
+                            f"Reconciled `{tname}` (`{aid}`): target state already matches intent; "
+                            "skipping duplicate side effect."
+                        ),
                     )
                 err_c = CommittedActionReplayError(
                     f"Replay blocked: consequential action `{aid}` (`{tname}`) is already `committed` "
@@ -20018,6 +20257,7 @@ class TaskBudgetState:
     pause_requested: bool = False
     cancel_requested: bool = False
     exhausted_reason: str = ""
+    verification_contract: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -20033,7 +20273,10 @@ class TaskBudgetState:
         }
 
     def to_json(self) -> str:
-        return json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        payload = self.to_dict()
+        if self.verification_contract is not None:
+            payload["verification_contract"] = self.verification_contract
+        return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
     @classmethod
     def from_json(
@@ -20063,6 +20306,8 @@ class TaskBudgetState:
                 max_elapsed_s=float(parsed.get("max_elapsed_s", fallback.max_elapsed_s)),
                 max_recoveries=int(parsed.get("max_recoveries", fallback.max_recoveries)),
             )
+        vc_raw = parsed.get("verification_contract")
+        vc_dict = dict(vc_raw) if isinstance(vc_raw, dict) else None
         return cls(
             spec=spec,
             steps_used=_non_neg_int(int(parsed.get("steps_used", 0)), "steps_used"),
@@ -20073,6 +20318,7 @@ class TaskBudgetState:
             pause_requested=bool(parsed.get("pause_requested", False)),
             cancel_requested=bool(parsed.get("cancel_requested", False)),
             exhausted_reason=str(parsed.get("exhausted_reason", "")),
+            verification_contract=vc_dict,
         )
 
     def violation_reason(self, *, check_recovery: bool = False) -> str:
@@ -20155,6 +20401,7 @@ class DurableTaskBudgetManager:
                 pause_requested=current.pause_requested,
                 cancel_requested=current.cancel_requested,
                 exhausted_reason=current.exhausted_reason,
+                verification_contract=current.verification_contract,
             )
             encoded = updated.to_json()
             if encoded != raw:
@@ -20198,6 +20445,7 @@ class DurableTaskBudgetManager:
                 pause_requested=current.pause_requested if pause_requested is None else bool(pause_requested),
                 cancel_requested=current.cancel_requested if cancel_requested is None else bool(cancel_requested),
                 exhausted_reason=current.exhausted_reason,
+                verification_contract=current.verification_contract,
             )
             conn.execute(
                 "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
@@ -20254,6 +20502,7 @@ class DurableTaskBudgetManager:
                 pause_requested=current.pause_requested,
                 cancel_requested=current.cancel_requested,
                 exhausted_reason=current.exhausted_reason,
+                verification_contract=current.verification_contract,
             )
             violation = candidate.violation_reason(check_recovery=False)
             final_state = (
@@ -20267,6 +20516,7 @@ class DurableTaskBudgetManager:
                     pause_requested=candidate.pause_requested,
                     cancel_requested=candidate.cancel_requested,
                     exhausted_reason=violation or candidate.exhausted_reason,
+                    verification_contract=candidate.verification_contract,
                 )
                 if violation
                 else candidate
@@ -20319,6 +20569,7 @@ class DurableTaskBudgetManager:
                 pause_requested=False if not violation else current.pause_requested,
                 cancel_requested=current.cancel_requested,
                 exhausted_reason=violation or current.exhausted_reason,
+                verification_contract=current.verification_contract,
             )
             conn.execute(
                 "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
@@ -20335,6 +20586,50 @@ class DurableTaskBudgetManager:
         if violation:
             raise BudgetExceeded(violation)
         return state
+
+    def set_verification_contract(
+        self,
+        task_id: str,
+        contract: dict[str, Any] | None,
+        *,
+        now: float | None = None,
+    ) -> TaskBudgetState:
+        """Persist or clear the authoritative task verification contract inside ``budget_json``."""
+        tid = self._validate_task_id(task_id)
+        if contract is not None and not isinstance(contract, dict):
+            raise BudgetError("verification_contract must be a dict or None.")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> TaskBudgetState:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT budget_json FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if row is None:
+                raise KeyError(f"Runtime task {tid!r} does not exist.")
+            current = TaskBudgetState.from_json(str(row["budget_json"]))
+            updated = TaskBudgetState(
+                spec=current.spec,
+                steps_used=current.steps_used,
+                tool_calls_used=current.tool_calls_used,
+                tokens_used=current.tokens_used,
+                elapsed_s=current.elapsed_s,
+                recoveries_used=current.recoveries_used,
+                pause_requested=current.pause_requested,
+                cancel_requested=current.cancel_requested,
+                exhausted_reason=current.exhausted_reason,
+                verification_contract=dict(contract) if contract is not None else None,
+            )
+            conn.execute(
+                "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                (updated.to_json(), ts, tid),
+            )
+            return updated
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
 
 execution_budget = sys.modules[__name__]
 
@@ -21066,10 +21361,13 @@ workflow_checkpoints = sys.modules[__name__]
 """Persisted workflow and durable root-task/milestone state machine (M5-P1-05)."""
 
 
+import hashlib
 import json
+import os
 import sqlite3
+import subprocess
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, Sequence
 
@@ -21108,6 +21406,183 @@ class WorkflowStateError(ValueError):
 
 class WorkflowTransitionRejected(RuntimeError):
     """Raised when a requested transition is not legal for current state."""
+
+
+class FalseCompletionRejected(WorkflowTransitionRejected):
+    """Raised when a task claims completion without verified patch/test/ledger evidence."""
+
+
+_SAFE_VERIFY_ENV_KEYS: frozenset[str] = frozenset(
+    {"PATH", "HOME", "TMPDIR", "TEMP", "TMP", "LANG", "LC_ALL", "PYTHONPATH", "VIRTUAL_ENV", "SYSTEMROOT"}
+)
+
+
+def _normalize_workspace_rel_path(raw_path: str, field_name: str = "path") -> str:
+    if not isinstance(raw_path, str) or not raw_path.strip() or "\x00" in raw_path:
+        raise WorkflowStateError(f"{field_name} must be a non-empty relative path without NUL characters.")
+    cleaned = raw_path.strip().replace("\\", "/")
+    p = Path(cleaned)
+    if p.is_absolute():
+        raise WorkflowStateError(f"{field_name} must be relative to workspace_dir: {raw_path!r}")
+    parts = [pt for pt in p.parts if pt not in ("", ".")]
+    if not parts or any(pt == ".." for pt in parts):
+        raise WorkflowStateError(f"{field_name} must stay within workspace_dir without '..': {raw_path!r}")
+    return "/".join(parts)
+
+
+def _resolve_safe_workspace_target(workspace_dir: Path, rel_path: str) -> Path:
+    ws_root = workspace_dir.resolve()
+    norm = _normalize_workspace_rel_path(rel_path)
+    cursor = ws_root
+    for part in Path(norm).parts:
+        cursor = cursor / part
+        if cursor.is_symlink():
+            raise WorkflowStateError(f"Symlink escape rejected in verification path: {rel_path!r}")
+    resolved = cursor.resolve()
+    if resolved != ws_root and ws_root not in resolved.parents:
+        raise WorkflowStateError(f"Verification path escapes workspace_dir: {rel_path!r}")
+    return resolved
+
+
+def compute_workspace_file_sha256(workspace_dir: Path, rel_path: str) -> str | None:
+    """Return SHA-256 hex digest of ``workspace_dir / rel_path`` or ``None`` if absent."""
+    target = _resolve_safe_workspace_target(workspace_dir, rel_path)
+    if not target.exists():
+        return None
+    if not target.is_file():
+        raise WorkflowStateError(f"Verification target is not a regular file: {rel_path!r}")
+    return hashlib.sha256(target.read_bytes()).hexdigest()
+
+
+@dataclass(frozen=True, slots=True)
+class TaskVerificationSpec:
+    """Authoritative patch, protected-file, ledger, and test verification contract (M5-P1-06)."""
+
+    require_managed_edit: bool = True
+    require_git_diff: bool = False
+    required_modified_files: tuple[str, ...] = ()
+    required_files: tuple[str, ...] = ()
+    protected_files: dict[str, str] = field(default_factory=dict)
+    baseline_file_digests: dict[str, str | None] = field(default_factory=dict)
+    require_agent_test_action: bool = False
+    test_command: tuple[str, ...] = ()
+    expected_test_output_contains: tuple[str, ...] = ()
+    timeout_s: float = 30.0
+
+    def __post_init__(self) -> None:
+        norm_mod = tuple(_normalize_workspace_rel_path(p, "required_modified_files") for p in self.required_modified_files)
+        norm_req = tuple(_normalize_workspace_rel_path(p, "required_files") for p in self.required_files)
+        norm_prot: dict[str, str] = {}
+        for k, v in self.protected_files.items():
+            nk = _normalize_workspace_rel_path(k, "protected_files")
+            if not isinstance(v, str) or len(v.strip()) != 64:
+                raise WorkflowStateError(f"protected_files[{nk!r}] must be a 64-char SHA-256 hex digest.")
+            norm_prot[nk] = v.strip().lower()
+        norm_base: dict[str, str | None] = {}
+        for k, bval in self.baseline_file_digests.items():
+            nk = _normalize_workspace_rel_path(k, "baseline_file_digests")
+            if bval is not None:
+                if not isinstance(bval, str) or len(bval.strip()) != 64:
+                    raise WorkflowStateError(f"baseline_file_digests[{nk!r}] must be None or a 64-char SHA-256 hex digest.")
+                norm_base[nk] = bval.strip().lower()
+            else:
+                norm_base[nk] = None
+        cmd_tuple = tuple(str(tok) for tok in self.test_command)
+        if any((not tok or "\x00" in tok) for tok in cmd_tuple):
+            raise WorkflowStateError("test_command tokens must be non-empty strings without NUL.")
+        exp_sub = tuple(str(s) for s in self.expected_test_output_contains if str(s))
+        if isinstance(self.timeout_s, bool) or not isinstance(self.timeout_s, (int, float)) or self.timeout_s <= 0 or self.timeout_s > 120.0:
+            raise WorkflowStateError("timeout_s must be in (0, 120].")
+        object.__setattr__(self, "required_modified_files", norm_mod)
+        object.__setattr__(self, "required_files", norm_req)
+        object.__setattr__(self, "protected_files", norm_prot)
+        object.__setattr__(self, "baseline_file_digests", norm_base)
+        object.__setattr__(self, "test_command", cmd_tuple)
+        object.__setattr__(self, "expected_test_output_contains", exp_sub)
+        object.__setattr__(self, "timeout_s", float(self.timeout_s))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "require_managed_edit": self.require_managed_edit,
+            "require_git_diff": self.require_git_diff,
+            "required_modified_files": list(self.required_modified_files),
+            "required_files": list(self.required_files),
+            "protected_files": dict(sorted(self.protected_files.items())),
+            "baseline_file_digests": dict(sorted(self.baseline_file_digests.items())),
+            "require_agent_test_action": self.require_agent_test_action,
+            "test_command": list(self.test_command),
+            "expected_test_output_contains": list(self.expected_test_output_contains),
+            "timeout_s": round(self.timeout_s, 4),
+        }
+
+    def sha256(self) -> str:
+        canonical = json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> TaskVerificationSpec:
+        if not isinstance(data, dict):
+            raise WorkflowStateError("TaskVerificationSpec data must be a dict.")
+        raw_mod = data.get("required_modified_files") or ()
+        raw_req = data.get("required_files") or ()
+        raw_prot = data.get("protected_files") or {}
+        raw_base = data.get("baseline_file_digests") or {}
+        raw_cmd = data.get("test_command") or ()
+        raw_exp = data.get("expected_test_output_contains") or ()
+        if not isinstance(raw_mod, (list, tuple)) or not isinstance(raw_req, (list, tuple)):
+            raise WorkflowStateError("required_modified_files and required_files must be sequences.")
+        if not isinstance(raw_prot, dict) or not isinstance(raw_base, dict):
+            raise WorkflowStateError("protected_files and baseline_file_digests must be dicts.")
+        if isinstance(raw_cmd, str) or not isinstance(raw_cmd, (list, tuple)):
+            raise WorkflowStateError("test_command must be an argv list/tuple of strings.")
+        if isinstance(raw_exp, str) or not isinstance(raw_exp, (list, tuple)):
+            raise WorkflowStateError("expected_test_output_contains must be a list/tuple of strings.")
+        return cls(
+            require_managed_edit=bool(data.get("require_managed_edit", True)),
+            require_git_diff=bool(data.get("require_git_diff", False)),
+            required_modified_files=tuple(str(x) for x in raw_mod),
+            required_files=tuple(str(x) for x in raw_req),
+            protected_files={str(k): str(v) for k, v in raw_prot.items()},
+            baseline_file_digests={str(k): (None if v is None else str(v)) for k, v in raw_base.items()},
+            require_agent_test_action=bool(data.get("require_agent_test_action", False)),
+            test_command=tuple(str(x) for x in raw_cmd),
+            expected_test_output_contains=tuple(str(x) for x in raw_exp),
+            timeout_s=float(data.get("timeout_s", 30.0)),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class TaskVerificationReport:
+    """Auditable outcome of authoritative patch + test + ledger completion verification."""
+
+    verified: bool
+    spec_sha256: str = ""
+    failure_code: str = ""
+    failure_detail: str = ""
+    modified_files: tuple[str, ...] = ()
+    patch_sha256: str = ""
+    test_exit_code: int | None = None
+    test_output_excerpt: str = ""
+    test_sha256: str = ""
+    committed_edit_action_ids: tuple[str, ...] = ()
+    committed_test_action_ids: tuple[str, ...] = ()
+    evidence_refs: tuple[workflow_checkpoints.EvidenceRef, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "verified": self.verified,
+            "spec_sha256": self.spec_sha256,
+            "failure_code": self.failure_code,
+            "failure_detail": self.failure_detail,
+            "modified_files": list(self.modified_files),
+            "patch_sha256": self.patch_sha256,
+            "test_exit_code": self.test_exit_code,
+            "test_output_excerpt": self.test_output_excerpt,
+            "test_sha256": self.test_sha256,
+            "committed_edit_action_ids": list(self.committed_edit_action_ids),
+            "committed_test_action_ids": list(self.committed_test_action_ids),
+            "evidence_refs": [ref.to_dict() for ref in self.evidence_refs],
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -21658,6 +22133,7 @@ class DurableTaskStateMachine:
                     pause_requested=True,
                     cancel_requested=budget.cancel_requested,
                     exhausted_reason=budget.exhausted_reason,
+                    verification_contract=budget.verification_contract,
                 )
                 conn.execute(
                     "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
@@ -21694,6 +22170,7 @@ class DurableTaskStateMachine:
                 pause_requested=False,
                 cancel_requested=False,
                 exhausted_reason=budget.exhausted_reason,
+                verification_contract=budget.verification_contract,
             )
             ckpt_ref = str(row["checkpoint_ref"] or "").strip()
             if ckpt_ref:
@@ -21825,6 +22302,7 @@ class DurableTaskStateMachine:
                 pause_requested=False,
                 cancel_requested=False,
                 exhausted_reason=budget.exhausted_reason,
+                verification_contract=budget.verification_contract,
             )
             from_state = str(row["state"])
             seq_row = conn.execute(
@@ -21961,6 +22439,7 @@ class DurableTaskStateMachine:
                 pause_requested=False,
                 cancel_requested=True,
                 exhausted_reason=budget.exhausted_reason,
+                verification_contract=budget.verification_contract,
             )
             evidence_json = _encode_evidence_json(
                 checkpoint_id=ckpt_ref,
@@ -22109,6 +22588,362 @@ class DurableTaskStateMachine:
             completed_milestone_ids=completed_ms,
         )
 
+    def set_verification_spec(
+        self,
+        task_id: str,
+        spec: TaskVerificationSpec | None,
+        *,
+        now: float | None = None,
+    ) -> None:
+        """Durably bind or clear a ``TaskVerificationSpec`` for ``task_id``."""
+        tid = _validate_identifier(task_id, "task_id")
+        self.budgets.set_verification_contract(
+            tid,
+            spec.to_dict() if spec is not None else None,
+            now=now,
+        )
+
+    def get_verification_spec(self, task_id: str) -> TaskVerificationSpec | None:
+        """Return the persisted ``TaskVerificationSpec`` for ``task_id``, if configured."""
+        tid = _validate_identifier(task_id, "task_id")
+        budget = self.budgets.get_budget(tid)
+        if budget.verification_contract is None:
+            return None
+        return TaskVerificationSpec.from_dict(budget.verification_contract)
+
+    def verify_task_completion(
+        self,
+        task_id: str,
+        *,
+        workspace_dir: Path,
+        spec: TaskVerificationSpec | None = None,
+    ) -> TaskVerificationReport:
+        """Authoritatively verify ledger, patch, protected-file, and test evidence outside write locks."""
+        runtime_persistence.assert_no_active_write_transaction("task_verification")
+        tid = _validate_identifier(task_id, "task_id")
+        ws_root = Path(workspace_dir).resolve()
+        effective_spec = spec if spec is not None else self.get_verification_spec(tid)
+        spec_digest = effective_spec.sha256() if effective_spec is not None else ""
+
+        actions = sorted(
+            self.store.list_task_actions(tid),
+            key=lambda a: (a.updated_at, a.created_at),
+        )
+        unresolved = [
+            a.action_id
+            for a in actions
+            if a.status in ("in_flight", "uncertain") and a.action_class != "read_only"
+        ]
+        if unresolved:
+            return TaskVerificationReport(
+                verified=False,
+                spec_sha256=spec_digest,
+                failure_code="unresolved_consequential_actions",
+                failure_detail=f"Unresolved consequential actions prevent completion: {', '.join(unresolved)}.",
+            )
+
+        committed_edits = [
+            a for a in actions if a.action_class == "managed_edit" and a.status == "committed" and a.ok == 1
+        ]
+        shell_actions = [
+            a for a in actions if a.tool_name == "run_bash" and a.status in ("committed", "failed")
+        ]
+        committed_tests = [a for a in shell_actions if a.status == "committed" and a.ok == 1]
+
+        # Universal false-completion guard: if the latest shell/test action failed (`ok == 0`) with no
+        # subsequent passing shell/test run, reject false completion even without an explicit contract.
+        if shell_actions and shell_actions[-1].status == "failed":
+            last_failed = shell_actions[-1]
+            return TaskVerificationReport(
+                verified=False,
+                spec_sha256=spec_digest,
+                failure_code="latest_shell_or_test_failed",
+                failure_detail=(
+                    f"Latest `run_bash` action `{last_failed.action_id}` failed (`ok=0`); "
+                    "cannot claim completion without a subsequent passing verification run."
+                ),
+                committed_edit_action_ids=tuple(a.action_id for a in committed_edits),
+                committed_test_action_ids=tuple(a.action_id for a in committed_tests),
+            )
+
+        if effective_spec is None:
+            return TaskVerificationReport(
+                verified=True,
+                spec_sha256="",
+                committed_edit_action_ids=tuple(a.action_id for a in committed_edits),
+                committed_test_action_ids=tuple(a.action_id for a in committed_tests),
+            )
+
+        # 1. Protected user files must remain untouched (`sha256` identical to baseline).
+        for prot_rel, expected_sha in sorted(effective_spec.protected_files.items()):
+            try:
+                actual_sha = compute_workspace_file_sha256(ws_root, prot_rel)
+            except WorkflowStateError as exc:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="protected_file_invalid",
+                    failure_detail=str(exc),
+                )
+            if actual_sha is None:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="protected_file_missing",
+                    failure_detail=f"Protected user file `{prot_rel}` was deleted during task execution.",
+                )
+            if actual_sha != expected_sha:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="protected_file_modified",
+                    failure_detail=(
+                        f"Protected user file `{prot_rel}` was modified "
+                        f"(expected sha256={expected_sha[:12]}..., got {actual_sha[:12]}...)."
+                    ),
+                )
+
+        # 2. Managed-edit provenance in durable `runtime_actions`.
+        if effective_spec.require_managed_edit and not committed_edits:
+            return TaskVerificationReport(
+                verified=False,
+                spec_sha256=spec_digest,
+                failure_code="missing_managed_edit",
+                failure_detail="Completion rejected: zero committed `managed_edit` actions exist in `runtime_actions`.",
+            )
+
+        # 3. Required modified files must exist and differ from pre-task baseline digest.
+        patch_entries: list[dict[str, str]] = []
+        modified_paths: list[str] = []
+        for mod_rel in effective_spec.required_modified_files:
+            try:
+                cur_sha = compute_workspace_file_sha256(ws_root, mod_rel)
+            except WorkflowStateError as exc:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="invalid_modified_file_path",
+                    failure_detail=str(exc),
+                )
+            if cur_sha is None:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="missing_required_file",
+                    failure_detail=f"Required modified file `{mod_rel}` does not exist in workspace.",
+                )
+            if mod_rel in effective_spec.baseline_file_digests:
+                base_sha = effective_spec.baseline_file_digests[mod_rel]
+                if base_sha is not None and cur_sha == base_sha:
+                    return TaskVerificationReport(
+                        verified=False,
+                        spec_sha256=spec_digest,
+                        failure_code="unmodified_required_file",
+                        failure_detail=f"Required target file `{mod_rel}` is unchanged from its pre-task digest.",
+                    )
+            modified_paths.append(mod_rel)
+            patch_entries.append({"path": mod_rel, "sha256": cur_sha})
+
+        for req_rel in effective_spec.required_files:
+            try:
+                target_fp = _resolve_safe_workspace_target(ws_root, req_rel)
+            except WorkflowStateError as exc:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="invalid_required_file_path",
+                    failure_detail=str(exc),
+                )
+            if not target_fp.is_file() or target_fp.stat().st_size == 0:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="missing_required_file",
+                    failure_detail=f"Required artifact file `{req_rel}` is missing or empty.",
+                )
+            req_sha = hashlib.sha256(target_fp.read_bytes()).hexdigest()
+            if req_rel not in modified_paths:
+                modified_paths.append(req_rel)
+                patch_entries.append({"path": req_rel, "sha256": req_sha})
+
+        # 4. Optional Git diff verification.
+        git_diff_text = ""
+        if effective_spec.require_git_diff:
+            if not (ws_root / ".git").exists():
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="missing_git_repository",
+                    failure_detail="require_git_diff=True but workspace is not a Git repository.",
+                )
+            git_env = {k: v for k, v in os.environ.items() if k in _SAFE_VERIFY_ENV_KEYS}
+            git_env["GIT_TERMINAL_PROMPT"] = "0"
+            st_proc = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=ws_root,
+                capture_output=True,
+                text=True,
+                timeout=10.0,
+                check=False,
+                env=git_env,
+            )
+            diff_proc = subprocess.run(
+                ["git", "diff", "HEAD"],
+                cwd=ws_root,
+                capture_output=True,
+                text=True,
+                timeout=10.0,
+                check=False,
+                env=git_env,
+            )
+            git_status_out = (st_proc.stdout or "").strip()
+            git_diff_text = (diff_proc.stdout or "").strip()
+            if st_proc.returncode != 0 or (not git_status_out and not git_diff_text):
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="missing_git_diff",
+                    failure_detail="Completion rejected: Git working tree shows zero diff against HEAD.",
+                )
+
+        # 5. Post-edit agent test action ordering in `runtime_actions`.
+        if effective_spec.require_agent_test_action:
+            if not committed_tests:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="missing_agent_test_execution",
+                    failure_detail="Completion rejected: agent never committed a passing `run_bash` test execution.",
+                )
+            if committed_edits and committed_tests[-1].updated_at < committed_edits[-1].updated_at:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="stale_test_before_latest_edit",
+                    failure_detail=(
+                        "Completion rejected: managed file edit occurred AFTER the last passing test action; "
+                        "tests were not re-run on the final workspace state."
+                    ),
+                )
+
+        patch_payload = json.dumps(
+            {
+                "files": patch_entries,
+                "git_diff_sha256": hashlib.sha256(git_diff_text.encode("utf-8")).hexdigest() if git_diff_text else "",
+                "edit_actions": [a.action_id for a in committed_edits],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        patch_sha = hashlib.sha256(patch_payload.encode("utf-8")).hexdigest()
+        refs: list[workflow_checkpoints.EvidenceRef] = [
+            workflow_checkpoints.EvidenceRef(
+                kind="patch_verification",
+                ref_id=",".join(modified_paths)[:120] or "workspace_patch",
+                sha256=patch_sha,
+                summary=f"verified {len(modified_paths)} file(s), {len(committed_edits)} edit action(s)"[:240],
+            )
+        ]
+
+        # 6. Authoritative independent test command execution.
+        test_exit: int | None = None
+        test_excerpt = ""
+        test_sha = ""
+        if effective_spec.test_command:
+            sanitized_env = {k: v for k, v in os.environ.items() if k in _SAFE_VERIFY_ENV_KEYS}
+            sanitized_env["PYTHONDONTWRITEBYTECODE"] = "1"
+            sanitized_env["GIT_TERMINAL_PROMPT"] = "0"
+            try:
+                proc = subprocess.run(
+                    list(effective_spec.test_command),
+                    cwd=ws_root,
+                    capture_output=True,
+                    text=True,
+                    timeout=effective_spec.timeout_s,
+                    check=False,
+                    env=sanitized_env,
+                )
+            except subprocess.TimeoutExpired:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="verification_test_timeout",
+                    failure_detail=f"Authoritative verification command timed out after {effective_spec.timeout_s}s.",
+                    modified_files=tuple(modified_paths),
+                    patch_sha256=patch_sha,
+                )
+            except OSError as exc:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="verification_test_exec_error",
+                    failure_detail=f"Authoritative verification command failed to start: {exc}",
+                    modified_files=tuple(modified_paths),
+                    patch_sha256=patch_sha,
+                )
+            test_exit = int(proc.returncode)
+            combined_out = f"{proc.stdout or ''}\n{proc.stderr or ''}".strip()
+            test_excerpt = combined_out[:500]
+            test_transcript = json.dumps(
+                {
+                    "cmd": list(effective_spec.test_command),
+                    "exit_code": test_exit,
+                    "output": combined_out,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            test_sha = hashlib.sha256(test_transcript.encode("utf-8")).hexdigest()
+            if test_exit != 0:
+                return TaskVerificationReport(
+                    verified=False,
+                    spec_sha256=spec_digest,
+                    failure_code="verification_test_failed",
+                    failure_detail=f"Authoritative test command exited with code {test_exit}: {test_excerpt[:240]}",
+                    modified_files=tuple(modified_paths),
+                    patch_sha256=patch_sha,
+                    test_exit_code=test_exit,
+                    test_output_excerpt=test_excerpt,
+                    test_sha256=test_sha,
+                    committed_edit_action_ids=tuple(a.action_id for a in committed_edits),
+                    committed_test_action_ids=tuple(a.action_id for a in committed_tests),
+                )
+            for needle in effective_spec.expected_test_output_contains:
+                if needle not in combined_out:
+                    return TaskVerificationReport(
+                        verified=False,
+                        spec_sha256=spec_digest,
+                        failure_code="verification_test_output_mismatch",
+                        failure_detail=f"Authoritative test output did not contain required marker {needle!r}.",
+                        modified_files=tuple(modified_paths),
+                        patch_sha256=patch_sha,
+                        test_exit_code=test_exit,
+                        test_output_excerpt=test_excerpt,
+                        test_sha256=test_sha,
+                    )
+            cmd_label = " ".join(effective_spec.test_command)[:100]
+            refs.append(
+                workflow_checkpoints.EvidenceRef(
+                    kind="test_verification",
+                    ref_id=cmd_label or "test_command",
+                    sha256=test_sha,
+                    summary=f"exit_code=0; {test_excerpt.splitlines()[-1] if test_excerpt else 'passed'}"[:240],
+                )
+            )
+
+        return TaskVerificationReport(
+            verified=True,
+            spec_sha256=spec_digest,
+            modified_files=tuple(modified_paths),
+            patch_sha256=patch_sha,
+            test_exit_code=test_exit,
+            test_output_excerpt=test_excerpt,
+            test_sha256=test_sha,
+            committed_edit_action_ids=tuple(a.action_id for a in committed_edits),
+            committed_test_action_ids=tuple(a.action_id for a in committed_tests),
+            evidence_refs=tuple(refs),
+        )
+
     def complete_task(
         self,
         task_id: str,
@@ -22118,11 +22953,12 @@ class DurableTaskStateMachine:
         step: int = 0,
         checkpoint_payload: dict[str, Any] | None = None,
         evidence_refs: Sequence[workflow_checkpoints.EvidenceRef | dict[str, Any]] = (),
+        verification_report: TaskVerificationReport | Any | None = None,
         abort_requested: bool = False,
         reason: str = "task_completed",
         now: float | None = None,
     ) -> runtime_persistence.TaskRecord:
-        """Complete a running root task only when all milestones, boundaries, and actions are clean."""
+        """Complete a running root task only when all milestones, boundaries, actions, and verifications pass."""
         tid = _validate_identifier(task_id, "task_id")
         if abort_requested:
             raise WorkflowTransitionRejected(
@@ -22130,7 +22966,7 @@ class DurableTaskStateMachine:
             )
         ts = time.time() if now is None else float(now)
 
-        # Pre-check state, control flags, milestones, and unresolved actions before writing final checkpoint.
+        # Pre-check state, control flags, milestones, unresolved actions, and verification contract.
         current_task = self.store.get_task(tid)
         if current_task is None:
             raise WorkflowStateError(f"Task {tid!r} does not exist.")
@@ -22150,15 +22986,58 @@ class DurableTaskStateMachine:
             raise WorkflowTransitionRejected(
                 f"Task {tid!r} cannot complete while milestone(s) remain incomplete: {', '.join(incomplete_ms)}."
             )
+        all_actions = sorted(
+            self.store.list_task_actions(tid),
+            key=lambda a: (a.updated_at, a.created_at),
+        )
         unresolved = [
             act.action_id
-            for act in self.store.list_task_actions(tid, statuses=("in_flight", "uncertain"))
-            if act.action_class != "read_only"
+            for act in all_actions
+            if act.status in ("in_flight", "uncertain") and act.action_class != "read_only"
         ]
         if unresolved:
             raise WorkflowTransitionRejected(
                 f"Task {tid!r} cannot complete with unresolved consequential action(s): {', '.join(unresolved)}."
             )
+        shell_actions = [
+            act for act in all_actions if act.tool_name == "run_bash" and act.status in ("committed", "failed")
+        ]
+        if shell_actions and shell_actions[-1].status == "failed":
+            raise FalseCompletionRejected(
+                f"Task {tid!r} cannot claim completion: latest `run_bash` action "
+                f"`{shell_actions[-1].action_id}` failed (`ok=0`)."
+            )
+
+        persisted_spec = (
+            TaskVerificationSpec.from_dict(current_budget.verification_contract)
+            if current_budget.verification_contract is not None
+            else None
+        )
+        merged_refs: list[workflow_checkpoints.EvidenceRef | dict[str, Any]] = list(evidence_refs)
+        verification_extra: dict[str, Any] | None = None
+        if persisted_spec is not None:
+            if verification_report is None:
+                raise FalseCompletionRejected(
+                    f"Task {tid!r} has an active verification contract and cannot complete without a verification_report."
+                )
+            if not bool(getattr(verification_report, "verified", False)):
+                detail = str(getattr(verification_report, "failure_detail", "") or "verification failed")
+                raise FalseCompletionRejected(f"Task {tid!r} false completion rejected: {detail}")
+            rep_spec_sha = str(getattr(verification_report, "spec_sha256", ""))
+            if rep_spec_sha != persisted_spec.sha256():
+                raise FalseCompletionRejected(
+                    f"Task {tid!r} verification_report spec_sha256 mismatch against persisted contract."
+                )
+            for vref in getattr(verification_report, "evidence_refs", ()):
+                merged_refs.append(vref)
+            if hasattr(verification_report, "to_dict"):
+                verification_extra = {"verification": verification_report.to_dict()}
+        elif verification_report is not None:
+            if not bool(getattr(verification_report, "verified", False)):
+                detail = str(getattr(verification_report, "failure_detail", "") or "verification failed")
+                raise FalseCompletionRejected(f"Task {tid!r} false completion rejected: {detail}")
+            for vref in getattr(verification_report, "evidence_refs", ()):
+                merged_refs.append(vref)
 
         ckpt: workflow_checkpoints.TaskCheckpointRecord | None = None
         if checkpoint_payload is not None:
@@ -22166,7 +23045,7 @@ class DurableTaskStateMachine:
                 tid,
                 step=step,
                 payload=checkpoint_payload,
-                evidence_refs=evidence_refs,
+                evidence_refs=merged_refs,
                 epoch=epoch,
                 status="committed",
                 require_active_epoch=epoch is not None and epoch > 0,
@@ -22175,7 +23054,8 @@ class DurableTaskStateMachine:
 
         evidence_json = _encode_evidence_json(
             checkpoint_id=ckpt.checkpoint_id if ckpt else current_task.checkpoint_ref,
-            evidence_refs=evidence_refs,
+            evidence_refs=merged_refs,
+            extra=verification_extra,
         )
 
         def _tx(conn: sqlite3.Connection) -> runtime_persistence.TaskRecord:
@@ -22192,6 +23072,16 @@ class DurableTaskStateMachine:
                 raise WorkflowTransitionRejected(
                     f"Task {tid!r} received pause/cancel before completion committed."
                 )
+            if budget.verification_contract is not None:
+                tx_spec = TaskVerificationSpec.from_dict(budget.verification_contract)
+                if verification_report is None or not bool(getattr(verification_report, "verified", False)):
+                    raise FalseCompletionRejected(
+                        f"Task {tid!r} cannot commit completion without a verified report."
+                    )
+                if str(getattr(verification_report, "spec_sha256", "")) != tx_spec.sha256():
+                    raise FalseCompletionRejected(
+                        f"Task {tid!r} verification contract changed before completion committed."
+                    )
             current_epoch = int(row["current_epoch"])
             if epoch is not None and current_epoch != int(epoch):
                 raise runtime_persistence.StaleEpochError(
@@ -22440,6 +23330,7 @@ class DurableTaskStateMachine:
                         pause_requested=False,
                         cancel_requested=(target_state == "cancelled"),
                         exhausted_reason=budget.exhausted_reason,
+                        verification_contract=budget.verification_contract,
                     )
                     seq_row = conn.execute(
                         "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
@@ -23429,6 +24320,280 @@ def build_report(inputs: PreflightInputs) -> PreflightReport:
 
 onboarding_preflight = sys.modules[__name__]
 
+"""Deterministic failure-injection harness for workflow and action-boundary resilience tests."""
+
+
+import asyncio
+from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import dataclass
+import threading
+import time
+import uuid
+from typing import Literal
+
+FailureKind = Literal["crash", "timeout", "provider_loss", "disconnect"]
+_KINDS = frozenset({"crash", "timeout", "provider_loss", "disconnect"})
+
+ActionBoundary = Literal[
+    "before_intent",
+    "after_intent_before_effect",
+    "after_effect_before_result_commit",
+    "before_task_completion",
+]
+ACTION_BOUNDARIES: frozenset[str] = frozenset(
+    {
+        "before_intent",
+        "after_intent_before_effect",
+        "after_effect_before_result_commit",
+        "before_task_completion",
+    }
+)
+
+
+class FailureInjectionError(ValueError):
+    """Raised when a failure scenario or boundary fault specification is malformed."""
+
+
+class InjectedBoundaryCrashError(RuntimeError):
+    """Hard-crash fault injected at a deterministic execution boundary.
+
+    Explicitly re-raised past ``except Exception:`` soft-failure handlers in
+    ``execution_spine`` and ``app.py`` so durable ``in_flight`` ledger rows and
+    active worker leases remain in authentic post-SIGKILL state while ASGI test
+    portals remain healthy.
+    """
+
+    def __init__(
+        self,
+        detail: str,
+        *,
+        boundary: ActionBoundary,
+        tool_name: str = "",
+        action_id: str = "",
+        task_id: str = "",
+        step_id: str = "",
+    ) -> None:
+        super().__init__(detail)
+        self.detail = detail
+        self.boundary: ActionBoundary = boundary
+        self.tool_name = tool_name
+        self.action_id = action_id
+        self.task_id = task_id
+        self.step_id = step_id
+
+
+@dataclass(frozen=True, slots=True)
+class ActionBoundaryFaultSpec:
+    """Deterministic specification for injecting crashes at an action boundary."""
+
+    boundary: ActionBoundary
+    tool_name: str = ""
+    task_id: str = ""
+    step_id: str | int | None = None
+    max_fires: int = 1
+    detail: str = "injected action-boundary crash"
+
+    def __post_init__(self) -> None:
+        if self.boundary not in ACTION_BOUNDARIES:
+            raise FailureInjectionError(f"unknown action boundary: {self.boundary!r}")
+        if "\x00" in self.tool_name or "\x00" in self.task_id or "\x00" in self.detail:
+            raise FailureInjectionError("boundary fault text fields must not contain NUL.")
+        if isinstance(self.max_fires, bool) or not isinstance(self.max_fires, int) or self.max_fires < 1:
+            raise FailureInjectionError("max_fires must be an integer >= 1.")
+
+
+@dataclass(frozen=True, slots=True)
+class ActionBoundaryTriggerEvent:
+    """Auditable record of a fired action-boundary fault."""
+
+    rule_id: str
+    boundary: ActionBoundary
+    tool_name: str
+    action_id: str
+    task_id: str
+    step_id: str
+    fired_at: float
+    detail: str
+
+
+class _ArmedBoundaryRule:
+    __slots__ = ("rule_id", "spec", "fires_count")
+
+    def __init__(self, rule_id: str, spec: ActionBoundaryFaultSpec) -> None:
+        self.rule_id = rule_id
+        self.spec = spec
+        self.fires_count = 0
+
+
+class ActionBoundaryFaultInjector:
+    """Thread-safe deterministic injector for execution-spine and completion boundaries."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._rules: list[_ArmedBoundaryRule] = []
+        self._events: list[ActionBoundaryTriggerEvent] = []
+
+    @property
+    def is_armed(self) -> bool:
+        return bool(self._rules)
+
+    def arm(self, spec: ActionBoundaryFaultSpec) -> str:
+        rule_id = f"fault-{uuid.uuid4().hex[:10]}"
+        with self._lock:
+            self._rules.append(_ArmedBoundaryRule(rule_id, spec))
+        return rule_id
+
+    def disarm(self, rule_id: str) -> bool:
+        with self._lock:
+            before = len(self._rules)
+            self._rules = [r for r in self._rules if r.rule_id != rule_id]
+            return len(self._rules) < before
+
+    def clear(self) -> None:
+        with self._lock:
+            self._rules.clear()
+            self._events.clear()
+
+    def events(self) -> tuple[ActionBoundaryTriggerEvent, ...]:
+        with self._lock:
+            return tuple(self._events)
+
+    def check_boundary(
+        self,
+        boundary: ActionBoundary,
+        *,
+        tool_name: str = "",
+        action_id: str = "",
+        task_id: str = "",
+        step_id: str | int | None = None,
+    ) -> None:
+        if not self._rules:
+            return
+        step_str = "" if step_id is None else str(step_id)
+        matched_spec: ActionBoundaryFaultSpec | None = None
+        with self._lock:
+            for idx, rule in enumerate(self._rules):
+                spec = rule.spec
+                if spec.boundary != boundary:
+                    continue
+                if spec.tool_name and spec.tool_name != tool_name:
+                    continue
+                if spec.task_id and spec.task_id != task_id:
+                    continue
+                if spec.step_id is not None and str(spec.step_id) != step_str:
+                    continue
+                rule.fires_count += 1
+                matched_spec = spec
+                event = ActionBoundaryTriggerEvent(
+                    rule_id=rule.rule_id,
+                    boundary=boundary,
+                    tool_name=tool_name,
+                    action_id=action_id,
+                    task_id=task_id,
+                    step_id=step_str,
+                    fired_at=time.time(),
+                    detail=spec.detail,
+                )
+                self._events.append(event)
+                if rule.fires_count >= spec.max_fires:
+                    self._rules.pop(idx)
+                break
+        if matched_spec is not None:
+            raise InjectedBoundaryCrashError(
+                matched_spec.detail,
+                boundary=boundary,
+                tool_name=tool_name,
+                action_id=action_id,
+                task_id=task_id,
+                step_id=step_str,
+            )
+
+
+DEFAULT_BOUNDARY_INJECTOR = ActionBoundaryFaultInjector()
+
+
+def check_action_boundary(
+    boundary: ActionBoundary,
+    *,
+    tool_name: str = "",
+    action_id: str = "",
+    task_id: str = "",
+    step_id: str | int | None = None,
+    injector: ActionBoundaryFaultInjector | None = None,
+) -> None:
+    """Trigger any matching armed crash fault on ``injector`` or ``DEFAULT_BOUNDARY_INJECTOR``."""
+    target = DEFAULT_BOUNDARY_INJECTOR if injector is None else injector
+    if not target.is_armed:
+        return
+    target.check_boundary(
+        boundary,
+        tool_name=tool_name,
+        action_id=action_id,
+        task_id=task_id,
+        step_id=step_id,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class FailureScenario:
+    name: str
+    kind: FailureKind
+    timeout_seconds: float = 0.05
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.name, str) or not self.name.strip() or "\x00" in self.name:
+            raise FailureInjectionError("scenario name must be non-empty and contain no NUL.")
+        if self.kind not in _KINDS:
+            raise FailureInjectionError(f"unknown failure kind: {self.kind}")
+        if self.timeout_seconds <= 0:
+            raise FailureInjectionError("timeout_seconds must be positive.")
+
+
+@dataclass(frozen=True, slots=True)
+class FailureOutcome:
+    name: str
+    kind: FailureKind
+    observed: bool
+    recovered: bool
+    detail: str
+
+
+AsyncOperation = Callable[[FailureScenario], Awaitable[None]]
+
+
+async def run_failure_scenario(scenario: FailureScenario, operation: AsyncOperation) -> FailureOutcome:
+    """Run one injected scenario and classify only expected failure boundaries."""
+    try:
+        await asyncio.wait_for(operation(scenario), timeout=scenario.timeout_seconds)
+    except TimeoutError:
+        if scenario.kind != "timeout":
+            return FailureOutcome(scenario.name, scenario.kind, False, False, "unexpected timeout")
+        return FailureOutcome(scenario.name, scenario.kind, True, True, "operation cancelled at timeout boundary")
+    except asyncio.CancelledError:
+        if scenario.kind != "disconnect":
+            raise
+        return FailureOutcome(scenario.name, scenario.kind, True, True, "disconnect cancellation propagated")
+    except ConnectionError:
+        if scenario.kind != "provider_loss":
+            return FailureOutcome(scenario.name, scenario.kind, False, False, "unexpected provider loss")
+        return FailureOutcome(scenario.name, scenario.kind, True, True, "provider loss classified for retry/recovery")
+    except RuntimeError:
+        if scenario.kind != "crash":
+            return FailureOutcome(scenario.name, scenario.kind, False, False, "unexpected runtime failure")
+        return FailureOutcome(scenario.name, scenario.kind, True, True, "crash isolated without process termination")
+    else:
+        return FailureOutcome(scenario.name, scenario.kind, False, False, "failure was not observed")
+
+
+async def run_failure_suite(scenarios: Sequence[FailureScenario], operation: AsyncOperation) -> tuple[FailureOutcome, ...]:
+    """Run an ordered suite and return one auditable outcome per scenario."""
+    if not scenarios:
+        raise FailureInjectionError("scenarios must not be empty.")
+    outcomes = [await run_failure_scenario(scenario, operation) for scenario in scenarios]
+    return tuple(outcomes)
+
+failure_injection = sys.modules[__name__]
+
 """Authoritative execution-spine admission gate, action classes, and anti-bypass scope (M5-P0-06 / M5-P1-02).
 
 This stdlib-only module defines the authoritative admission boundary between the
@@ -23461,6 +24626,7 @@ import time
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol
+
 
 ActionClass = Literal["read_only", "managed_edit", "consequential", "external"]
 
@@ -23987,12 +25153,14 @@ class DurableActionBoundary:
         pre_execute_guard: Callable[[], None] | None = None,
         task_context_resolver: TaskContextResolver | None = None,
         intent_ledger: IntentLedger | None = None,
+        boundary_injector: failure_injection.ActionBoundaryFaultInjector | None = None,
     ) -> None:
         self._policy = policy
         self._ledger = ledger
         self._pre_execute_guard = pre_execute_guard
         self._task_context_resolver = task_context_resolver
         self._intent_ledger = intent_ledger
+        self._boundary_injector = boundary_injector
 
     async def admit_and_execute(self, request: ActionRequest, executor: Executor) -> dict[str, Any]:
         effective = self._policy.effective_policy(request.policy)
@@ -24048,6 +25216,16 @@ class DurableActionBoundary:
                 request.additional_denial,
                 False,
                 action_class,
+            )
+
+        if decision.allowed:
+            failure_injection.check_action_boundary(
+                "before_intent",
+                tool_name=request.tool_name,
+                action_id=str(request.action_id or ""),
+                task_id=str(request.task_id or request.session_id or ""),
+                step_id=request.step_id,
+                injector=self._boundary_injector,
             )
 
         explicit_approval = bool(effective_approved and decision.requires_approval)
@@ -24182,6 +25360,17 @@ class DurableActionBoundary:
                     pass
                 raise
 
+        resolved_action_id = intent_decision.action_id if intent_decision is not None else str(request.action_id or "")
+        resolved_task_key = str(request.task_id or request.session_id or "")
+        failure_injection.check_action_boundary(
+            "after_intent_before_effect",
+            tool_name=request.tool_name,
+            action_id=resolved_action_id,
+            task_id=resolved_task_key,
+            step_id=request.step_id,
+            injector=self._boundary_injector,
+        )
+
         scope = ActiveAdmissionScope(
             tool_name=request.tool_name,
             action_class=action_class,
@@ -24203,6 +25392,8 @@ class DurableActionBoundary:
                 result = await executor()
             finally:
                 _ACTIVE_ADMISSION_SCOPE.reset(scope_token)
+        except failure_injection.InjectedBoundaryCrashError:
+            raise
         except Exception as exc:
             err_ms = round((time.perf_counter() - started) * 1000)
             err_ledger_status = "failed"
@@ -24225,6 +25416,14 @@ class DurableActionBoundary:
             except Exception:
                 pass  # The durable started row still proves that execution was attempted.
             raise
+        failure_injection.check_action_boundary(
+            "after_effect_before_result_commit",
+            tool_name=request.tool_name,
+            action_id=resolved_action_id,
+            task_id=resolved_task_key,
+            step_id=request.step_id,
+            injector=self._boundary_injector,
+        )
         elapsed = int(result.get("elapsed_ms") or round((time.perf_counter() - started) * 1000))
         if intent_decision is not None and self._intent_ledger is not None:
             try:

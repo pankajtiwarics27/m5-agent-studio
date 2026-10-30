@@ -124,10 +124,10 @@
   },
   "session_state": {
     "active_story": null,
-    "last_completed_story": "M5-P1-05",
-    "last_checkpoint": "2026-10-30T15:32:00Z",
-    "last_session_id": "arena/d02f32a0-m5-agent-studio",
-    "next_recommended_story": "M5-P1-06",
+    "last_completed_story": "M5-P1-06",
+    "last_checkpoint": "2026-10-30T16:28:00Z",
+    "last_session_id": "arena/acf221e1-m5-agent-studio",
+    "next_recommended_story": "M5-P1-07",
     "open_risks": [
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
       "24 GB Apple Silicon memory/swap and oMLX task measurements blocked in Linux evidence environment (M5-P4-01 to measure on target hardware)",
@@ -135,8 +135,8 @@
       "Multi-agent parallel work active: product/M5_2_0_Autonomous_Roadmap.json tracking blocks are the shared claim ledger; claim protocol and PR/merge rules live in M5_2_0_AGENT_PROMPT.md",
       "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1); runtime dependencies clean"
     ],
-    "last_readme_sync": "2026-10-30T15:32:00Z",
-    "last_verified_commit": "dcc246f53b640538547a80b3a0baf6968bca314e",
+    "last_readme_sync": "2026-10-30T16:28:00Z",
+    "last_verified_commit": "0a613d2d13c4c264f6092419a194fd49847b5245",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md"
   },
   "delivery_phases": [
@@ -170,7 +170,7 @@
       ],
       "status": "in_progress",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
-      "progress_percent": 71
+      "progress_percent": 86
     },
     {
       "id": "P2",
@@ -1419,22 +1419,70 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P1-06: Single-agent verified vertical slice. Objective: Complete one representative real coding task with managed edits and tests. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Choose reproducible fixture and acceptance criteria; Run harness through admission/ledger; Verify patch and test evidence; Inject crash at key action boundaries. Acceptance: One end-to-end coding task completes with evidence; Crash injection does not lose user work or duplicate side effects; False completion rejected. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-10-30T15:39:00Z",
+        "updated_at": "2026-10-30T16:28:00Z",
+        "completed_at": "2026-10-30T16:28:00Z",
+        "owner_session": "arena/acf221e1-m5-agent-studio",
+        "commit_sha": "0a613d2d13c4c264f6092419a194fd49847b5245",
+        "changed_files": [
+          "failure_injection.py",
+          "execution_spine.py",
+          "side_effect_ledger.py",
+          "execution_budget.py",
+          "workflow_state.py",
+          "app.py",
+          "studio.py",
+          "scripts/build_studio.py",
+          "docs/subsystem-dependency-inventory.md",
+          "README.md",
+          "tests/test_failure_injection.py",
+          "tests/test_single_agent_vertical_slice.py",
+          "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "AC1 (One end-to-end coding task completes with evidence): Seeded a reproducible Git-initialized Python billing fixture (billing/invoice.py with a 100x basis-point discount bug + failing tests/test_invoice.py + dirty tracked notes/operator_wip.md and untracked scratch/local_draft.py) and drove /api/harness/run under standard policy with live /api/harness/approve operator approval through DurableActionBoundary, WorkerLeaseCoordinator, DurableActionLedger, and DurableTaskStateMachine.verify_task_completion + complete_task, producing committed runtime_actions rows (read_file, edit_file, write_file, approved run_bash), terminal committed TaskCheckpointRecord with cryptographic SHA-256 EvidenceRefs across action, git_diff, patch_verification, and test_verification, and verified preservation of pre-existing operator files (tests/test_single_agent_vertical_slice.py::test_single_agent_vertical_slice_completes_coding_task_with_approval_ledger_and_evidence + standalone studio.py isolation test).",
+          "AC2 (Crash injection does not lose user work or duplicate side effects): Extended failure_injection.py with ActionBoundaryFaultSpec, ActionBoundaryFaultInjector, and InjectedBoundaryCrashError, wired into execution_spine.DurableActionBoundary and app.py (before_intent, after_intent_before_effect, after_effect_before_result_commit, before_task_completion) and inlined into studio.py; added _extract_session_known_action_args pre-takeover reconciliation in init_db(), api_resume_harness_session, and _acquire_turn_plan_and_lease_or_409 plus one-shot pre_takeover_verified_committed deduplication in DurableActionLedger.begin and uncommitted-message trimming on checkpoint resume. Verified across all 4 crash boundaries that dirty/untracked user files remain byte-identical, each tool executes on the host at most once (execution_counts == 1 even after after_effect_before_result_commit crash), write_file targeting user-modified files fails closed into blocked without clobbering user edits, and non_idempotent run_bash crashes hold in blocked without blind replay (tests/test_single_agent_vertical_slice.py).",
+          "AC3 (False completion rejected): Implemented universal unrecovered-shell/test failure rejection plus TaskVerificationSpec / TaskVerificationReport / FalseCompletionRejected in workflow_state.py and api_run_harness_turn, rejecting prose-only bluffs with zero committed managed edits (missing_managed_edit), broken patches with failing pytest runs followed by deceptive completion prose even without a caller verification contract (latest_shell_or_test_failed), stale passing commands preceding untested broken edits (stale_test_before_latest_edit), patches that pass pytest while modifying protected user files (protected_file_modified), and direct complete_task() state-machine bypass attempts (tests/test_single_agent_vertical_slice.py::test_false_completions_are_rejected_across_prose_bluff_failed_tests_stale_tests_and_collateral_edits)."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/pytest tests/test_failure_injection.py tests/test_single_agent_vertical_slice.py -v",
+            "exit_code": 0,
+            "result": "13 passed (5 in test_failure_injection.py + 8 in test_single_agent_vertical_slice.py covering AC1, 4 parametrized crash boundaries + diverged-file/bash hold for AC2, 5 false-completion modes for AC3, and standalone studio.py isolation)"
+          },
+          {
+            "command": ".venv/bin/pytest -q",
+            "exit_code": 0,
+            "result": "811 passed, 1 skipped (10 new M5-P1-06 tests; zero regressions)"
+          },
+          {
+            "command": ".venv/bin/ruff check . && .venv/bin/mypy",
+            "exit_code": 0,
+            "result": "ruff clean; mypy clean across 42 source files"
+          },
+          {
+            "command": ".venv/bin/python scripts/smoke_local.py && .venv/bin/python scripts/smoke_local.py --standalone",
+            "exit_code": 0,
+            "result": "both app.py and standalone studio.py pass loopback startup, auth, Origin rejection, and isolated DB smoke checks"
+          },
+          {
+            "command": "scripts/build_studio.py + generate_route_matrix.py + generate_subsystem_inventory.py + generate_roadmap_status.py --check + demo_tour.py --check + validate_docs.py + validate_adrs.py + validate_governance.py + validate_threat_model.py + validate_security_signoff.py + verify_baseline.py",
+            "exit_code": 0,
+            "result": "all artifact generation, inventory, route matrix, demo transcript, documentation, ADR, governance, threat-model, security-signoff, and baseline checks pass"
+          }
+        ],
+        "decisions": [
+          "Wired stdlib-only failure_injection.py into execution_spine.py, app.py, and scripts/build_studio.py (INLINED_MODULES), raising integrated modules from 11/44 to 12/44 while keeping existing FailureScenario/run_failure_suite contracts intact.",
+          "Persisted TaskVerificationSpec inside runtime_tasks.budget_json (preserving Schema v3 table set without bumping SCHEMA_VERSION) and preserved verification_contract across pause, cancel, budget updates, and startup incomplete-transition recovery so post-crash resumes retain pre-task baseline digests.",
+          "Enforced two-tier false-completion protection: a universal ledger invariant rejecting completion when the latest run_bash action failed without a subsequent passing run, plus full TaskVerificationSpec verification (managed-edit provenance, modified-file SHA-256 deltas, Git diff, protected user-file digests, post-edit test ordering, and independent shell=False test execution)."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
-        "readme_updated": false
+        "handoff_note": "M5-P1-06 complete: single-agent verified vertical slice, deterministic action-boundary crash injection + session reconciliation, and false-completion rejection are integrated across app.py and standalone studio.py (811 passed, 1 skipped; 12/44 modules integrated; Phase P1 at 86% — 6/7 stories done). Ready for M5-P1-07 (Minimal task events, HTTP commands and existing UI).",
+        "next_action": "Claim and implement M5-P1-07 on a fresh branch after M5-P1-06 merges.",
+        "readme_updated": true
       }
     },
     {
