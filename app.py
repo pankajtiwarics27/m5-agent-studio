@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import contextvars
 import difflib
 import errno
 import fnmatch
@@ -54,7 +55,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from collections.abc import Awaitable, Callable, Mapping
 from pathlib import Path
-from typing import Any, AsyncIterator, Literal, Protocol
+from typing import Any, AsyncIterator, Literal, Protocol, Sequence
 from urllib.parse import parse_qsl, quote, unquote, urlsplit
 
 import httpcore
@@ -76,6 +77,7 @@ import side_effect_ledger
 import task_events
 import workflow_checkpoints
 import workflow_state
+import edit_rollback
 import edit_transactions
 import workspace_snapshots
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
@@ -6503,6 +6505,9 @@ BUILTIN_TOOL_NAMES = frozenset(
         "read_file",
         "write_file",
         "edit_file",
+        "list_edit_batches",
+        "reconcile_task_actions",
+        "rollback_edits",
         "run_bash",
         "delegate_subagent",
         "codegraph_architecture",
@@ -6520,7 +6525,15 @@ BUILTIN_TOOL_NAMES = frozenset(
     }
 )
 PLAN_DENIED_TOOLS = frozenset(
-    {"write_file", "edit_file", "run_bash", "ctx_execute_python", "oc_save_doc", "delegate_subagent"}
+    {
+        "write_file",
+        "edit_file",
+        "rollback_edits",
+        "run_bash",
+        "ctx_execute_python",
+        "oc_save_doc",
+        "delegate_subagent",
+    }
 )
 MCP_BRIDGE_TOOL_NAMES = frozenset(
     {
@@ -6693,6 +6706,14 @@ To invoke one or more tools in a step, emit a `<tool_call>` block containing val
    Arguments: `{{"command": "pytest -q", "timeout_sec": 30}}`
 7. `delegate_subagent` — Summon an independent Critic sub-agent (`{critic_model}`) in a fresh context window to audit code.
    Arguments: `{{"task": "Audit auth.py for race conditions", "context_files": ["src/auth.py"]}}`
+
+#### Edit recovery (multi-file rollback)
+`list_edit_batches` — List this session's durable managed-edit batches (`batch_id`, state, applied/total, paths).
+   Arguments: `{{"limit": 20}}`
+`reconcile_task_actions` — Show managed-edit actions whose durable outcome is unknown (`in_flight`/`uncertain`).
+   Arguments: `{{"task_id": "task-123"}}`
+`rollback_edits` — Undo a batch of managed edits without `git reset --hard`. Plans first; refuses to overwrite changes made after the batch, and refuses while an unresolved managed edit may still be writing.
+   Arguments: `{{"batch_id": "eb-9f2c1d4e5a6b7c8d", "dry_run": true}}`
 
 #### CodeGraph + Graphify v8 Structural Intelligence (`Jakedismo/codegraph-rust` + `Graphify-Labs/graphify`)
 8. `codegraph_architecture` — Map architectural hub modules, God Nodes, symbol counts, and circular import dependencies.
@@ -7070,6 +7091,202 @@ def _record_managed_edit(
         dedupe_key=f"edit-applied:{transaction.edit_id}",
     )
     return transaction.to_dict()
+
+
+# Newest-N cap for the managed-edit batch listing surfaced to the agent.
+DEFAULT_EDIT_BATCH_LIST_LIMIT = 20
+#: Action statuses whose outcome is unknown: the action may still write, so a
+#: rollback started while one exists could race bytes it cannot see.
+UNRESOLVED_EDIT_ACTION_STATUSES = ("in_flight", "uncertain")
+MANAGED_EDIT_TOOL_NAMES = frozenset({"write_file", "edit_file"})
+#: Tools that query the durable action ledger and must exclude their own in-flight row.
+LEDGER_QUERY_TOOL_NAMES = frozenset({"rollback_edits", "reconcile_task_actions"})
+#: The ledger action id of the tool call currently executing in this context.
+_CURRENT_TOOL_ACTION_ID: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "studio_current_tool_action_id", default=""
+)
+
+
+def _edit_batch_journal() -> edit_rollback.EditBatchJournal:
+    """Durable multi-file rollback journal bound to ``HARNESS_STORE_DIR`` (per-call)."""
+    _ensure_harness_dirs()
+    return edit_rollback.EditBatchJournal(HARNESS_STORE_DIR)
+
+
+def _edit_blob_store() -> workspace_snapshots.ContentAddressedBlobStore:
+    """Owner-only CAS holding the exact pre- and post-edit bytes a rollback restores."""
+    _ensure_harness_dirs()
+    return workspace_snapshots.ContentAddressedBlobStore(
+        HARNESS_STORE_DIR / "edits" / "blobs",
+        min_free_bytes=DEFAULT_SNAPSHOT_MIN_FREE_BYTES,
+    )
+
+
+def _edit_rollback_engine() -> edit_rollback.EditRollbackEngine:
+    """Return the planner/applier for durable edit batches (never a destructive Git reset)."""
+    return edit_rollback.EditRollbackEngine(
+        _edit_batch_journal(),
+        _edit_blob_store(),
+        min_free_bytes=DEFAULT_SNAPSHOT_MIN_FREE_BYTES,
+    )
+
+
+def _open_edit_batch(sess: dict[str, Any], root_res: Path) -> edit_rollback.EditBatch | None:
+    """Return the session's open edit batch for ``root_res``, opening one on demand."""
+    snap_sid = _snapshot_session_id(sess)
+    try:
+        journal = _edit_batch_journal()
+        existing = journal.current_batch(snap_sid)
+        if existing is not None and existing.workspace_root != str(root_res):
+            # A batch is only meaningful for the root it wrote to; a new root starts a new batch.
+            journal.close_batch(existing.batch_id, state="closed", note="workspace root changed")
+            existing = None
+        if existing is not None:
+            return existing
+        return journal.open_batch(
+            snap_sid,
+            root_res,
+            task_id=str(sess.get("task_id") or sess.get("id") or ""),
+        )
+    except (edit_rollback.EditRollbackError, workspace_snapshots.WorkspaceSnapshotError, OSError):
+        return None
+
+
+def _record_edit_batch_step(
+    sess: dict[str, Any],
+    root_res: Path,
+    rel_s: str,
+    *,
+    tool_name: str,
+    post_bytes: bytes,
+    pre_mode: int | None,
+) -> tuple[str, str] | None:
+    """Durably record an intended multi-file edit step *before* its bytes land.
+
+    Recording first is what makes an interrupted multi-file edit recoverable: the
+    rollback plan is decided from the bytes on disk, so a step whose write never
+    happened reads back as already being at its pre-image (a no-op restore) while
+    a step whose write did happen can be restored from the stored pre-image bytes.
+    Returns ``(batch_id, rel_path)`` or ``None`` when the step is untracked.
+    """
+    if _is_secret_path(root_res.joinpath(*rel_s.split("/"))) or workspace_snapshots.is_sensitive_rel_path(rel_s):
+        return None
+    try:
+        pre_bytes = workspace_snapshots.read_confined_target(root_res, rel_s)
+    except (workspace_snapshots.WorkspaceSnapshotError, OSError):
+        return None
+    post_sha = hashlib.sha256(post_bytes).hexdigest()
+    pre_sha = hashlib.sha256(pre_bytes).hexdigest() if pre_bytes is not None else None
+    if pre_bytes is not None and pre_sha is None:  # pragma: no cover - defensive
+        return None
+    batch = _open_edit_batch(sess, root_res)
+    if batch is None:
+        return None
+    try:
+        cas = _edit_blob_store()
+        pre_blob = cas.put_bytes(pre_bytes)[0] if pre_bytes is not None else None
+        post_blob = cas.put_bytes(post_bytes)[0]
+        _edit_batch_journal().record_step(
+            batch.batch_id,
+            rel_path=rel_s,
+            tool=tool_name,
+            pre_sha256=pre_sha,
+            post_sha256=post_sha,
+            pre_blob=pre_blob,
+            post_blob=post_blob,
+            pre_mode=pre_mode,
+        )
+    except (edit_rollback.EditRollbackError, workspace_snapshots.WorkspaceSnapshotError, OSError) as exc:
+        # The edit itself still proceeds; the snapshot store captured the pre-image,
+        # so this only narrows the batch view, and that is reported rather than hidden.
+        _safe_append_harness_event(
+            _snapshot_session_id(sess),
+            "edit/batch_untracked",
+            {"path": rel_s, "tool": tool_name, "reason": str(exc)[:300]},
+        )
+        return None
+    return (batch.batch_id, rel_s)
+
+
+def _cancel_edit_batch_step(step: tuple[str, str] | None, *, reason: str) -> None:
+    """Mark a recorded step as skipped after its write was refused (no bytes changed)."""
+    if step is None:
+        return
+    try:
+        _edit_batch_journal().mark_step(step[0], step[1], state="skipped", note=reason[:200])
+    except (edit_rollback.EditRollbackError, workspace_snapshots.WorkspaceSnapshotError, OSError):
+        pass
+
+
+def _reconcile_managed_edit_actions(
+    task_id: str,
+    *,
+    acknowledge: bool = False,
+    exclude_action_ids: Sequence[str] = (),
+) -> dict[str, Any]:
+    """Report managed-edit actions whose durable outcome is unknown, before any rollback.
+
+    An ``in_flight`` or ``uncertain`` managed edit means the runtime may still write
+    the file: undoing a batch then could race bytes nobody has seen. Rollback is
+    refused until the caller acknowledges the unresolved state, which is recorded.
+    Actions of other tools are reported as warnings: rollback only touches
+    managed-edit targets, and every restore is a compare-and-swap on the digest the
+    batch wrote, so a concurrent rewrite surfaces as a refusal rather than a loss.
+    """
+    clean_task = str(task_id or "").strip()
+    excluded = {str(item) for item in exclude_action_ids if item}
+    reported: list[dict[str, Any]] = []
+    blocked: list[str] = []
+    warnings: list[str] = []
+    if clean_task:
+        try:
+            rows = get_durable_action_ledger().list_task_actions(
+                clean_task, statuses=UNRESOLVED_EDIT_ACTION_STATUSES
+            )
+        except Exception as exc:  # noqa: BLE001 - fail closed on any ledger read failure
+            blocked.append(
+                f"the durable action ledger could not be read ({type(exc).__name__}: {str(exc)[:160]}), "
+                "so an unresolved managed edit cannot be excluded"
+            )
+            rows = []
+        for row in rows:
+            if row.action_id in excluded:
+                # The call asking the question is recorded in flight by the ledger
+                # boundary itself; it is not evidence of an unknown outcome.
+                continue
+            entry = {
+                "action_id": row.action_id,
+                "tool_name": row.tool_name,
+                "status": row.status,
+                "error_code": row.error_code,
+                "updated_at": row.updated_at,
+            }
+            reported.append(entry)
+            if row.tool_name in MANAGED_EDIT_TOOL_NAMES:
+                blocked.append(
+                    f"managed edit action {row.action_id} (`{row.tool_name}`) is `{row.status}`: "
+                    "its outcome is unknown, so the bytes it may still write cannot be excluded"
+                )
+            else:
+                warnings.append(
+                    f"action {row.action_id} (`{row.tool_name}`) is `{row.status}`; it does not target a "
+                    "managed edit, and each restore below is compare-and-swapped"
+                )
+    acknowledged: list[str] = []
+    if acknowledge and blocked:
+        acknowledged = [entry["action_id"] for entry in reported if entry["tool_name"] in MANAGED_EDIT_TOOL_NAMES]
+        blocked = []
+    return {
+        "task_id": clean_task,
+        "unresolved_actions": reported,
+        "blocked_reasons": blocked,
+        "acknowledged_action_ids": acknowledged,
+        "warnings": warnings,
+    }
+
+
+def _edit_rollback_denial(message: str) -> dict[str, Any]:
+    return {"ok": False, "error_code": "edit_rollback_refused", "output": message, "diff": "", "elapsed_ms": 1}
 
 
 def _snapshot_session_id(sess: Mapping[str, Any] | None, fallback: str = "adhoc-session") -> str:
@@ -8121,9 +8338,20 @@ async def _execute_harness_tool_inner(
                 write_kwargs: dict[str, Any] = {"mode": prior_mode}
                 if expected_sha is not None:
                     write_kwargs["expected_sha256"] = expected_sha
+                # Record the step before the bytes land: a crash after this point
+                # leaves a journal entry the rollback planner can verify against disk.
+                batch_step = _record_edit_batch_step(
+                    sess,
+                    root_res,
+                    rel_s,
+                    tool_name=tool_name,
+                    post_bytes=after.encode("utf-8", errors="surrogateescape"),
+                    pre_mode=prior_mode,
+                )
                 try:
                     _atomic_write_workspace_text(root_res, Path(*relative_parts), after, **write_kwargs)
                 except workspace_snapshots.SnapshotConflictError:
+                    _cancel_edit_batch_step(batch_step, reason="write refused: version conflict before the atomic replace")
                     fresh = workspace_snapshots.hash_target_in_place(root_res, rel_s)
                     return _edit_conflict_result(
                         rel_s,
@@ -8134,6 +8362,7 @@ async def _execute_harness_tool_inner(
                         detail="changed between the version check and the atomic replace",
                     )
                 except workspace_snapshots.SnapshotDiskFullError as disk_exc:
+                    _cancel_edit_batch_step(batch_step, reason="write refused: disk full")
                     _request_disk_full_safe_pause(snap_task_id, reason=str(disk_exc))
                     return {
                         "ok": False,
@@ -8226,9 +8455,20 @@ async def _execute_harness_tool_inner(
             edit_kwargs: dict[str, Any] = {"mode": stat.S_IMODE(prior_info.st_mode)}
             if expected_sha is not None:
                 edit_kwargs["expected_sha256"] = expected_sha
+            # Record the step before the bytes land: a crash after this point
+            # leaves a journal entry the rollback planner can verify against disk.
+            batch_step = _record_edit_batch_step(
+                sess,
+                root_res,
+                rel_s,
+                tool_name=tool_name,
+                post_bytes=after.encode("utf-8", errors="surrogateescape"),
+                pre_mode=stat.S_IMODE(prior_info.st_mode),
+            )
             try:
                 _atomic_write_workspace_text(root_res, Path(*relative_parts), after, **edit_kwargs)
             except workspace_snapshots.SnapshotConflictError:
+                _cancel_edit_batch_step(batch_step, reason="write refused: version conflict before the atomic replace")
                 fresh = workspace_snapshots.hash_target_in_place(root_res, rel_s)
                 return _edit_conflict_result(
                     rel_s,
@@ -8239,6 +8479,7 @@ async def _execute_harness_tool_inner(
                     detail="changed between the version check and the atomic replace",
                 )
             except workspace_snapshots.SnapshotDiskFullError as disk_exc:
+                _cancel_edit_batch_step(batch_step, reason="write refused: disk full")
                 _request_disk_full_safe_pause(snap_task_id, reason=str(disk_exc))
                 return {
                     "ok": False,
@@ -8275,6 +8516,146 @@ async def _execute_harness_tool_inner(
                 "edit_transaction": transaction,
                 "sha256": post_sha,
                 "previous_sha256": current_sha,
+            }
+
+        if tool_name == "list_edit_batches":
+            try:
+                limit = int(args.get("limit") or DEFAULT_EDIT_BATCH_LIST_LIMIT)
+            except (TypeError, ValueError):
+                limit = DEFAULT_EDIT_BATCH_LIST_LIMIT
+            limit = min(max(limit, 1), edit_rollback.MAX_LIST_LIMIT)
+            try:
+                batches = _edit_batch_journal().list_batches(_snapshot_session_id(sess), limit=limit)
+            except (edit_rollback.EditRollbackError, OSError) as exc:
+                return {"ok": False, "output": f"Cannot read the edit journal: {exc}", "diff": "", "elapsed_ms": 1}
+            if not batches:
+                return {
+                    "ok": True,
+                    "output": "No managed-edit batch has been recorded for this session yet.",
+                    "diff": "",
+                    "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                    "batches": [],
+                }
+            lines = []
+            for batch in batches:
+                summary = batch.summary()
+                detail = f"- `{summary['batch_id']}` [{summary['state']}] {summary['applied']}/{summary['steps']} applied"
+                if summary["task_id"]:
+                    detail += f" task={summary['task_id']}"
+                if summary["paths"]:
+                    detail += " paths: " + ", ".join(summary["paths"])
+                lines.append(detail)
+            return {
+                "ok": True,
+                "output": "Managed-edit batches (newest first):\n" + "\n".join(lines),
+                "diff": "",
+                "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                "batches": [batch.summary() for batch in batches],
+            }
+
+        if tool_name == "reconcile_task_actions":
+            target_task = str(args.get("task_id") or sess.get("task_id") or sess.get("id") or "").strip()
+            report = _reconcile_managed_edit_actions(
+                target_task, exclude_action_ids=(_CURRENT_TOOL_ACTION_ID.get(),)
+            )
+            lines = [f"Task `{target_task or 'unknown'}`:"]
+            if report["unresolved_actions"]:
+                for entry in report["unresolved_actions"]:
+                    lines.append(
+                        f"- `{entry['action_id']}` `{entry['tool_name']}` -> {entry['status']}"
+                        + (f" ({entry['error_code']})" if entry["error_code"] else "")
+                    )
+            else:
+                lines.append("- no managed edit is in an `in_flight` or `uncertain` state")
+            for reason in report["blocked_reasons"]:
+                lines.append(f"blocked: {reason}")
+            return {
+                "ok": True,
+                "output": "\n".join(lines),
+                "diff": "",
+                "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                **report,
+            }
+
+        if tool_name == "rollback_edits":
+            if policy == "plan":
+                return _edit_rollback_denial("Denied by `plan` (read-only) policy: `rollback_edits` modifies files.")
+            snap_sid = _snapshot_session_id(sess)
+            requested = str(args.get("batch_id") or "").strip()
+            try:
+                journal = _edit_batch_journal()
+                batch = journal.load(requested) if requested else journal.current_batch(snap_sid)
+            except (edit_rollback.EditRollbackError, OSError) as exc:
+                return _edit_rollback_denial(f"Cannot load that edit batch: {exc}")
+            if batch is None:
+                return _edit_rollback_denial(
+                    "No open managed-edit batch for this session. Call `list_edit_batches` for the batch ids."
+                )
+            if batch.session_id != snap_sid:
+                return _edit_rollback_denial("That edit batch belongs to another session and is not yours to roll back.")
+            dry_run = bool(args.get("dry_run", True))
+            acknowledge = bool(args.get("acknowledge_unresolved", False))
+            target_task = str(args.get("task_id") or sess.get("task_id") or sess.get("id") or "").strip()
+            reconciliation = _reconcile_managed_edit_actions(
+                target_task,
+                acknowledge=acknowledge,
+                exclude_action_ids=(_CURRENT_TOOL_ACTION_ID.get(),),
+            )
+            try:
+                result = _edit_rollback_engine().execute(
+                    batch.batch_id,
+                    Path(batch.workspace_root),
+                    dry_run=dry_run,
+                    blocked_reasons=tuple(reconciliation["blocked_reasons"]),
+                )
+            except (edit_rollback.EditRollbackError, workspace_snapshots.WorkspaceSnapshotError, OSError) as exc:
+                return _edit_rollback_denial(f"Rollback refused: {exc}")
+            payload = result.to_dict()
+            acknowledged = reconciliation["acknowledged_action_ids"]
+            if acknowledged:
+                try:
+                    reloaded = _edit_batch_journal().load(batch.batch_id)
+                    reloaded.notes.append("rollback acknowledged unresolved actions: " + ", ".join(acknowledged))
+                    _edit_batch_journal().save(reloaded)
+                except (edit_rollback.EditRollbackError, OSError):
+                    pass
+            _safe_append_harness_event(
+                snap_sid,
+                "edit/rollback",
+                {
+                    "batch_id": batch.batch_id,
+                    "state": result.state,
+                    "dry_run": dry_run,
+                    "applied": list(result.applied),
+                    "failed": list(result.failed),
+                    "blocked_reasons": list(reconciliation["blocked_reasons"]),
+                    "acknowledged_action_ids": acknowledged,
+                },
+            )
+            step_lines = [
+                f"- `{decision.rel_path}`: {decision.decision}"
+                + (f" ({decision.reason})" if decision.reason else "")
+                for decision in result.plan.decisions
+            ]
+            if dry_run:
+                verdict = (
+                    "Rollback is safe; re-run with `dry_run: false` to apply it."
+                    if result.plan.safe
+                    else "Rollback is NOT safe; nothing would be written."
+                )
+            elif result.state == "rolled_back":
+                verdict = f"Rolled back {len(result.applied)} path(s)."
+            else:
+                verdict = f"Rollback left the batch `{result.state}`; inspect the reasons before retrying."
+            details = "\n".join(step_lines) if step_lines else "- (no applied steps to undo)"
+            reasons = "\n".join(f"reason: {reason}" for reason in result.reasons)
+            return {
+                "ok": result.state in {"rolled_back", "closed"} or (dry_run and result.plan.safe),
+                "output": f"{verdict}\n{details}" + (f"\n{reasons}" if reasons else ""),
+                "diff": "",
+                "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                "rollback": payload,
+                "reconciliation": reconciliation,
             }
 
         if tool_name == "run_bash":
@@ -9235,14 +9616,36 @@ async def _execute_harness_tool(
         if grant_source != "unspecified"
         else ("operator_approval" if approved else "policy")
     )
+    session_scope = str(sess.get("id") or "unknown")
+    resolved_action_id = action_id
+    if resolved_action_id is None and tool_name in LEDGER_QUERY_TOOL_NAMES:
+        # These two tools read the durable action ledger *while their own intent is
+        # already recorded as in_flight*; they must be able to recognise that row as
+        # themselves. The id is derived exactly as the ledger would derive it.
+        scope_key = str(resolved_task_id or session_scope or "default")
+        if step_id is not None or call_index is not None:
+            resolved_action_id = side_effect_ledger.derive_action_id(
+                scope_key, tool_name, args, step_id=step_id, call_index=call_index
+            )
+        else:
+            resolved_action_id = side_effect_ledger.mint_unique_action_id(scope_key, tool_name, args)
     sess_root = Path(sess["worktree_dir"]) if sess.get("worktree_dir") else WORKSPACE_ROOT
+
+    async def _executor() -> dict[str, Any]:
+        """Run the tool with its own ledger action id visible to ledger-querying tools."""
+        token = _CURRENT_TOOL_ACTION_ID.set(resolved_action_id or "")
+        try:
+            return await _execute_harness_tool_inner(client, sess, tool_name, args, approved=approved)
+        finally:
+            _CURRENT_TOOL_ACTION_ID.reset(token)
+
     return await _run_authorized_tool(
         tool_name,
         args,
         policy,
         approved=approved,
-        session_id=str(sess.get("id") or "unknown"),
-        executor=lambda: _execute_harness_tool_inner(client, sess, tool_name, args, approved=approved),
+        session_id=session_scope,
+        executor=_executor,
         additional_denial=policy_denial,
         grant_source=effective_grant,
         approval_id=approval_id,
@@ -9250,7 +9653,7 @@ async def _execute_harness_tool(
         task_state=resolved_task_state,
         epoch=resolved_epoch,
         worker_id=resolved_worker_id,
-        action_id=action_id,
+        action_id=resolved_action_id,
         step_id=step_id,
         call_index=call_index,
         replay_policy=replay_policy,

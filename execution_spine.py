@@ -53,6 +53,8 @@ MANAGED_READ_TOOLS: frozenset[str] = frozenset(
         "ctx_search",
         "oc_search",
         "oc_read",
+        "list_edit_batches",
+        "reconcile_task_actions",
         "mcp_bridge__get_current_session_data",
         "mcp_bridge__get_harness_diff",
         "mcp_bridge__oc_search",
@@ -65,7 +67,7 @@ MANAGED_READ_BLOCKS: frozenset[str] = frozenset({"json-peek", "csv-peek", "short
 CONSEQUENTIAL_BLOCKS: frozenset[str] = frozenset({"test-summary", "first-error"})
 ALL_REUSABLE_BLOCKS: frozenset[str] = MANAGED_READ_BLOCKS | CONSEQUENTIAL_BLOCKS
 
-MANAGED_EDIT_TOOLS: frozenset[str] = frozenset({"write_file", "edit_file", "oc_save_doc"})
+MANAGED_EDIT_TOOLS: frozenset[str] = frozenset({"write_file", "edit_file", "rollback_edits", "oc_save_doc"})
 
 CONSEQUENTIAL_TOOLS: frozenset[str] = frozenset(
     {

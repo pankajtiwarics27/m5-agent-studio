@@ -470,6 +470,36 @@ def hash_confined_child(parent_fd: int, leaf: str) -> str | None:
             os.close(file_fd)
 
 
+def read_confined_target(root: Path, raw_rel_path: str, *, max_bytes: int = DEFAULT_MAX_SNAPSHOT_FILE_BYTES) -> bytes | None:
+    """Exact bytes of a confined regular file, or ``None`` when it does not exist.
+
+    Used to keep the bytes an edit is about to replace (for inverse patching).
+    Symlinks are refused rather than followed, and the read is anchored on a
+    directory descriptor with ``O_NOFOLLOW``, so the bytes returned are the bytes
+    at the path the caller named.
+    """
+    root_res = Path(root).expanduser().resolve(strict=True)
+    rel_parts = _wsnap_lexical_parts(raw_rel_path)
+    parent = root_res
+    for part in rel_parts[:-1]:
+        parent = parent / part
+        if parent.is_symlink():
+            raise SnapshotConflictError(f"Refusing to read through symlinked directory {str(parent)!r}.")
+        if not parent.is_dir():
+            return None
+    leaf = root_res.joinpath(*rel_parts)
+    try:
+        entry_st = os.lstat(leaf)
+    except FileNotFoundError:
+        return None
+    if stat.S_ISLNK(entry_st.st_mode):
+        raise SnapshotConflictError(f"Refusing to follow symlink at {'/'.join(rel_parts)!r}.")
+    if not stat.S_ISREG(entry_st.st_mode):
+        raise SnapshotConflictError(f"{'/'.join(rel_parts)!r} is not a regular file.")
+    data, _info = _wsnap_read_confined_bytes(root_res, rel_parts, max_bytes=max_bytes)
+    return data
+
+
 def hash_target_in_place(root: Path, raw_rel_path: str) -> tuple[str, int, int] | None:
     """``(sha256, size_bytes, mode)`` for a confined regular file, or ``None`` when it does not exist.
 
@@ -611,6 +641,31 @@ def atomic_write_confined_bytes(
         return hashlib.sha256(data).hexdigest()
     finally:
         os.close(parent_fd)
+
+
+def remove_confined_target(root: Path, raw_rel_path: str) -> bool:
+    """Remove one confined regular file (never a symlink or directory); True if removed.
+
+    Used by rollback to undo a file the runtime created. The leaf is unlinked
+    through an anchored parent descriptor after an ``O_NOFOLLOW`` ``lstat``
+    confirms it is a regular file, so a link swapped in at the last moment is
+    refused instead of followed.
+    """
+    root_res = Path(root).expanduser().resolve(strict=True)
+    rel_parts = _wsnap_lexical_parts(raw_rel_path)
+    parent = root_res
+    for part in rel_parts[:-1]:
+        parent = parent / part
+        if parent.is_symlink() or not parent.is_dir():
+            return False
+    leaf = root_res.joinpath(*rel_parts)
+    try:
+        entry_st = os.lstat(leaf)
+    except FileNotFoundError:
+        return False
+    if not stat.S_ISREG(entry_st.st_mode):
+        raise SnapshotConflictError(f"Refusing to remove non-regular file {'/'.join(rel_parts)!r}.")
+    return _wsnap_unlink_confined_file(root_res, raw_rel_path)
 
 
 def _wsnap_unlink_confined_file(root: Path, raw_rel_path: str) -> bool:
