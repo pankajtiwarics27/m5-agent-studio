@@ -123,12 +123,13 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": "M5-P2-05",
-    "last_completed_story": "M5-P2-04",
-    "last_checkpoint": "2026-10-30T19:09:30Z",
+    "active_story": null,
+    "last_completed_story": "M5-P2-05",
+    "last_checkpoint": "2026-10-30T19:16:00Z",
     "last_session_id": "arena/e2bde3ff-m5-agent-studio",
-    "next_recommended_story": "M5-P2-05",
+    "next_recommended_story": "M5-P3-01",
     "open_risks": [
+      "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). Qualify via scripts/isolation_smoke.py --live + tests/test_live_sandbox.py on target hardware (M5-P3-01 then unblocks).",
       "24 GB Apple Silicon memory/swap and oMLX task measurements blocked in Linux evidence environment (M5-P4-01 to measure on target hardware)",
       "sandbox_boundary.confined_path is integrated into app.py and workspace_snapshots.py (M5-P2-01), while sandbox_boundary.sandbox_command remains separate from app.py inline _sandbox_command (assigned to M5-P3-01/M5-P3-02)",
@@ -185,9 +186,9 @@
         "M5-P2-04",
         "M5-P2-05"
       ],
-      "status": "in_progress",
+      "status": "complete",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
-      "progress_percent": 80
+      "progress_percent": 100
     },
     {
       "id": "P3",
@@ -2050,22 +2051,60 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P2-05: Bounded recovery and stagnation detection. Objective: Prevent repeated failed strategies and uncontrolled retries. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Track evidence deltas and failure fingerprints; Bound retry/replan/rollback budgets; Escalate repeated patch oscillation to safe pause; Preserve history across restart. Acceptance: No infinite retry loop; Failure memory and budgets survive crash; Recovery action requires changed evidence or conditions. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 5,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-30T19:09:30Z",
-        "updated_at": "2026-10-30T19:09:30Z",
-        "completed_at": null,
+        "updated_at": "2026-10-30T19:16:00Z",
+        "completed_at": "2026-10-30T19:16:00Z",
         "owner_session": "arena/e2bde3ff-m5-agent-studio",
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "commit_sha": "b7afeb5",
+        "changed_files": [
+          "recovery_guard.py",
+          "workflow_state.py",
+          "app.py",
+          "pyproject.toml",
+          "scripts/build_studio.py",
+          "studio.py",
+          "tests/test_recovery_guard.py",
+          "docs/recovery-guard.md",
+          "docs/adr/0009-durable-recovery-memory-and-stagnation.md",
+          "docs/README.md",
+          "docs/subsystem-dependency-inventory.md",
+          "README.md",
+          "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "Task 1 (track evidence deltas and failure fingerprints): recovery_guard.EvidenceSnapshot stores revision_digest, transcript_sha256, failure_fingerprint (canonical digest of failure code + sorted failing test ids), failure_code, failure_ids and environment_digest; conditions_digest and evidence_key derive the two comparison keys, and evidence_delta reports revision/transcript/conditions/code changes plus failures_added and failures_removed. verify_task_completion records one attempt per call from the report, so the stored revision is the one the authoritative command ran against. Evidence: tests/test_recovery_guard.py::test_failure_fingerprint_is_order_independent_and_code_sensitive, ::test_evidence_key_separates_conditions_from_failures, ::test_evidence_delta_reports_exactly_what_changed, ::test_failed_verification_is_recorded_with_its_evidence.",
+          "Task 2 (bound retry/replan/rollback budgets): RecoveryBudgetState holds max_retries/max_replans/max_rollbacks (3 each) and max_identical_attempts (2) in the same document as the attempts, incremented by consume() in the same atomic write; exhaustion is persisted with pause_requested before RecoveryRejected is raised. Resumed turns spend retry, or replan when the latest verdict escalated, only after the worker lease is held (app._consume_recovery_attempt_budget), and rollback_edits spends rollback before writing. Evidence: ::test_budgets_count_independently_and_persist, ::test_exhausted_budget_is_persisted_before_refusing, ::test_resumed_turn_consumes_retry_then_replan_after_stagnation, ::test_exhausted_retry_budget_surfaces_as_http_409, ::test_rollback_spends_the_rollback_budget_and_refuses_when_exhausted.",
+          "Task 3 (escalate repeated patch oscillation to safe pause): detect_stagnation returns first/progress/stagnant/oscillating; stagnant escalates at max_identical_attempts and oscillating escalates immediately; escalation sets pause_requested in the recovery document and in the task budget (the mechanism the execution boundary already treats as paused), and a harness turn whose verification failed releases its lease into paused with reason stagnation_detected and emits turn/stagnation_paused. Evidence: ::test_first_attempt_is_not_stagnation_and_repeat_is, ::test_revisiting_an_abandoned_state_is_oscillation, ::test_escalation_requests_a_durable_safe_pause, ::test_escalated_stagnation_requests_a_safe_pause_on_the_task, ::test_identical_attempt_tolerance_is_configurable.",
+          "Task 4 (preserve history across restart): one atomically replaced JSON document per task (<harness store>/recovery/<task_id>.json, 0700 dirs, 0600 files, fsync then os.replace), attempts pruned to the newest 100, counters never pruned; a fresh RecoveryGuard reads the same history and pause flag back. Corrupt, oversized, wrong-schema, foreign-task and symlinked records are refused. Evidence: ::test_attempt_history_is_durable_across_a_restart, ::test_records_are_private_and_atomic, ::test_history_is_pruned_to_the_bound, ::test_unsafe_task_ids_corrupt_records_and_symlinks_are_refused.",
+          "AC1 (no infinite retry loop): identical failure evidence is detected after max_identical_attempts, oscillation is detected on the first revisit, both escalate into a durable pause that blocks further consequential tool calls, and retry/replan/rollback budgets refuse once spent. Evidence: ::test_first_attempt_is_not_stagnation_and_repeat_is, ::test_revisiting_an_abandoned_state_is_oscillation, ::test_escalated_stagnation_requests_a_safe_pause_on_the_task, ::test_exhausted_retry_budget_surfaces_as_http_409.",
+          "AC2 (failure memory and budgets survive crash): counters and attempts are written in one atomic document, exhaustion is persisted before the refusal, and both are read back by a new process. Evidence: ::test_attempt_history_is_durable_across_a_restart, ::test_exhausted_budget_is_persisted_before_refusing, ::test_escalated_stagnation_requests_a_safe_pause_on_the_task (reopens the store), ::test_budgets_count_independently_and_persist.",
+          "AC3 (recovery action requires changed evidence or conditions): prepare_resume compares the current conditions digest with the recorded failure and refuses with WorkflowTransitionRejected plus a recovery_requires_new_evidence transition when nothing changed; a changed workspace revision is allowed and consumes recovery budget. Evidence: ::test_resume_is_refused_while_the_workspace_is_unchanged, ::test_resume_is_allowed_after_the_workspace_changed, ::test_recovery_with_unchanged_evidence_is_refused_and_pauses, ::test_recovery_with_changed_conditions_is_allowed.",
+          "Wiring: recovery_guard is inlined into studio.py (scripts/build_studio.py INLINED_MODULES) and added to the mypy file list; DurableTaskStateMachine accepts recovery_memory and defaults to <db dir>/recovery; app.get_recovery_guard() binds HARNESS_STORE_DIR for init_db, get_task_state_machine and the turn path; GET /api/harness/sessions/{session_id}/task returns the read-only recovery summary. Evidence: ::test_recovery_guard_is_inlined_without_namespace_collisions (also asserts no top-level name collides with the other inlined modules), ::test_task_state_endpoint_exposes_recovery_memory."
+        ],
+        "test_results": [
+          "python -m pytest -q -> 946 passed, 1 skipped in 47.51s (skip: tests/test_live_sandbox.py needs explicit live container-runtime opt-in); exit 0",
+          "python -m pytest -q tests/test_recovery_guard.py -> 34 passed; exit 0",
+          "ruff check . -> All checks passed!; exit 0",
+          "mypy -> Success: no issues found in 47 source files; exit 0",
+          "python scripts/smoke_local.py and --standalone -> Local smoke test passed (loopback startup, health, token permissions, protected API, Origin rejection, isolated DB path, UI auth helper); exit 0",
+          "python scripts/verify_baseline.py -> Baseline verified: 7904892d759bb66b817bb17b6f4f377874bd6e25; exit 0",
+          "python scripts/validate_docs.py, validate_adrs.py, validate_governance.py, validate_security_signoff.py, validate_screenshots.py, check_frontend_syntax.py, demo_tour.py --check -> all exit 0",
+          "python scripts/build_studio.py -> Built studio.py: 1,571,349 bytes; generate_route_matrix.py / generate_subsystem_inventory.py / generate_roadmap_status.py -> no git diff drift; exit 0"
+        ],
+        "decisions": [
+          "Failure memory and recovery counters live in one per-task JSON document under the harness store rather than in runtime_tasks.budget_json: TaskBudgetState is reconstructed field-by-field in eight places, so a missed site would silently drop a counter, and one document makes 'spend a budget' and 'record the attempt' atomic.",
+          "Two comparison keys: conditions_digest (revision + environment) judges a recovery action that has not produced a transcript yet, while evidence_key also covers transcript and failure fingerprint for a fresh verification attempt.",
+          "Escalation reuses the existing pause_requested flag instead of raising on the next tool call, so the safe-pause and operator-resume paths stay the ones already implemented and tested.",
+          "Recovery gate is skipped when no conditions can be captured (no workspace), because refusing without comparable evidence would be guessing; the recovery budget remains the bound.",
+          "An unwritable memory store fails a failed verification closed (annotated 'recovery memory unavailable' with an escalation) rather than silently allowing unbounded retries."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Track failure fingerprints and evidence deltas per attempt, bound retry/replan/rollback budgets durably (survive restart), and escalate repeated patch oscillation to a safe pause before the next mutation instead of retrying the same strategy.",
-        "readme_updated": false
+        "handoff_note": "M5-P2-05 complete at b7afeb5; phase P2 is now 100% (5 of 5). Honest limits in docs/recovery-guard.md: memory is keyed by task id (a new session in the same workspace starts fresh), exact-match fingerprints are defeated by trivially different output (only the counters bound that case), per-task writes rely on the single-owner worker lease rather than a file lock, and unreadable records are treated as no history at admission. P3-01 remains blocked on a live container runtime; P4-01 needs 24 GB Apple Silicon measurements.",
+        "next_action": "Done. Next ready story: M5-P3-01 (container isolation qualification) is blocked on a live Docker/Podman runtime; M5-P4-01 needs target hardware. Claim via the coordination protocol before coding.",
+        "readme_updated": true
       }
     },
     {
