@@ -40,7 +40,8 @@ Violating any of these is a rejected change, regardless of tests passing:
 
 | Artifact | Role |
 |---|---|
-| [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json) | **Source of truth for the product plan and per-story status** — 63 stories (`AS-001`…`AS-063`) across 7 milestones, each with priority, dependencies, acceptance criteria, an implementation prompt, and a `status` field (`planned` / `in_progress` / `completed` / `verified`) with `status_evidence`. |
+| [`product/M5_2_0_Autonomous_Roadmap.json`](product/M5_2_0_Autonomous_Roadmap.json) | **Authoritative execution ledger for the M5 2.0 autonomous-runtime program** (stories `M5-P0-01`…`M5-P6-03`, with per-story tracking). Mapping to the AS program: [`docs/m5-2-0-roadmap-reconciliation.md`](docs/m5-2-0-roadmap-reconciliation.md) (full authority consolidation pending owner confirmation). |
+| [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json) | **Source of truth for the AS product plan and per-story status** — 63 stories (`AS-001`…`AS-063`) across 7 milestones, each with priority, dependencies, acceptance criteria, an implementation prompt, and a `status` field (`planned` / `in_progress` / `completed` / `verified`) with `status_evidence`. |
 | [`docs/product-roadmap-status.md`](docs/product-roadmap-status.md) | Human-readable dashboard generated from the JSON. **Generated file — never hand-edit.** |
 | [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) | Security-remediation depth beyond story status (what is validated, what remains). |
 | [`docs/security-review-signoff.md`](docs/security-review-signoff.md) | The AS-031 independent-review record and release gate. Only an independent human reviewer signs it; `scripts/validate_security_signoff.py` fails CI if the record and the roadmap story disagree (a deferral requires `completed`, `verified` requires a signed accepted review). |
@@ -183,7 +184,7 @@ four artifacts and fails on any drift, byte-for-byte.
   runtime test is opt-in and stays skipped in normal CI.
 - `GET /healthz` is the only unauthenticated route; everything under `/api/*`
   and `/v1/*` requires the bearer token. Keep it that way.
-- Preserve the runtime invariants in [`README.md` § Critical invariants](README.md#8-critical-invariants--hard-won-gotchas)
+- Preserve the runtime invariants in [`README.md` § Critical invariants](README.md#critical-invariants)
   (oMLX unload semantics, MCP `Accept` headers, tool-call dialects, secret-read
   guards, and the rest).
 - Keep generated artifacts, `.harnesses/`, databases, tokens, and credentials
