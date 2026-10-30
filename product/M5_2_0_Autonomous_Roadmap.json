@@ -125,7 +125,7 @@
   "session_state": {
     "active_story": null,
     "last_completed_story": "M5-P1-07",
-    "last_checkpoint": "2026-10-30T17:17:27Z",
+    "last_checkpoint": "2026-10-30T17:24:00Z",
     "last_session_id": "arena/bbbb85ed-m5-agent-studio",
     "next_recommended_story": "M5-P2-01",
     "open_risks": [
@@ -136,8 +136,8 @@
       "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1) recorded in the M5-P0-05 baseline evidence; runtime dependencies clean. The M5-P1-07 verification environment installed only extras [dev], so the supply-chain scan was not re-run.",
       "Harness task-event store (task_events.py, M5-P1-07) assumes a single application process per session, matching the worker-lease model; cross-process concurrent appends are unsupported and not claimed safe. Dedupe keys are only guaranteed over the retained log (8 MiB / 4000 events)."
     ],
-    "last_readme_sync": "2026-10-30T17:17:27Z",
-    "last_verified_commit": "9940a083a7f17485955c891d31695a31380cdb7f",
+    "last_readme_sync": "2026-10-30T17:24:00Z",
+    "last_verified_commit": "3f73d2db4ae6064ac557d2022b617dfa661d44fd",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md"
   },
   "delivery_phases": [
@@ -1526,7 +1526,7 @@
         "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-30T16:42:00Z",
-        "updated_at": "2026-10-30T17:17:27Z",
+        "updated_at": "2026-10-30T17:24:00Z",
         "completed_at": "2026-10-30T17:17:27Z",
         "owner_session": "arena/bbbb85ed-m5-agent-studio",
         "commit_sha": "9940a083a7f17485955c891d31695a31380cdb7f",
@@ -1593,6 +1593,11 @@
             "command": ".venv/bin/python scripts/release_supply_chain.py build",
             "exit_code": null,
             "result": "not run: the supply-chain extra (pip-audit) is not installed in this environment; no SBOM/scan result is claimed"
+          },
+          {
+            "command": "CI: .github/workflows/ci.yml on PR #41 (Python 3.11, 3.12, 3.13)",
+            "exit_code": 0,
+            "result": "all three legs pass (1m24s / 1m15s / 1m17s) before the merge commit 3f73d2d"
           }
         ],
         "decisions": [
@@ -1607,7 +1612,10 @@
         "blockers": [],
         "handoff_note": "M5-P1-07 complete: durable cursor-addressed task events (task_events.py), the /events, /events/stream and /state routes, durable approval replay rejection, and the vanilla-JS reload/resync/gap handling are integrated in app.py and the standalone studio.py (827 passed, 1 skipped; 13/44 modules integrated; Phase P1 at 100%). The event store assumes one application process per session, and its dedupe window is the retained log (8 MiB / 4000 events) - both documented in docs/task-events.md and ADR-0005. Ready for M5-P2-01 (pre-edit Git baseline and selective user snapshots).",
         "next_action": "Claim and implement M5-P2-01 on a fresh branch after M5-P1-07 merges.",
-        "readme_updated": true
+        "readme_updated": true,
+        "merge_commit_sha": "3f73d2db4ae6064ac557d2022b617dfa661d44fd",
+        "merged_at": "2026-10-30T17:21:47Z",
+        "pull_request": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/41"
       }
     },
     {
