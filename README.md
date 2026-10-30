@@ -232,7 +232,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   container-isolation or 24 GB claim is made anywhere in this repository**, both
   stories stay `blocked` in the roadmap until the owner produces a qualified record
   on the target machine, and `M5-P4-01` additionally requires the serving path to
-  consult admission. Pinned by 43 tests (`tests/test_qualify_environment.py`) and
+  consult admission. Pinned by 46 tests (`tests/test_qualify_environment.py`) and
   documented in [`docs/qualification-suite.md`](docs/qualification-suite.md)
   (ADR-0010).
 

@@ -102,7 +102,7 @@ Note that `ExecStartPre` refusal (exit `1`/`2`) stops the service. Use `-` as th
 | `p3.runtime.available` | The runtime CLI answers `--version` and its daemon answers `info`. |
 | `p3.image.local` | The configured image is already present (`image inspect`); nothing is pulled. |
 | `p3.positive.execute` | Positive compatibility: code runs and its write lands in the mounted workspace. |
-| `p3.adversarial.escape_matrix` | Inside the container: `/etc/hostname` via three paths, a workspace symlink pointing outside, a direct TCP connect, an inherited host environment sentinel, and a raw socket are all refused. |
+| `p3.adversarial.escape_matrix` | Inside the container: a host-only canary file via direct path, `/workspace/..` traversal, and `/proc/1/root`, read-only rootfs write attempts (`/` and `/etc/hostname`), a workspace symlink pointing outside, direct and host-loopback TCP egress, an inherited host environment sentinel, and a raw socket are all refused. |
 | `p3.adversarial.memory_limit` | A 3 GiB allocation dies under `--memory 512m`. |
 | `p3.adversarial.descendants` | A background `sleep` descendant does not survive the container (`docker ps --filter name=`). |
 | `p3.product.argv` | The **product's** `_sandbox_command` still carries `--network=none`, `--read-only`, `--cap-drop=ALL`, `--security-opt=no-new-privileges`, `--pull=never`, the pids/memory/cpu limits, exactly one bind mount, and no `--privileged`. |
@@ -172,7 +172,7 @@ Verdicts mean exactly this:
 
 ## Tests
 
-`tests/test_qualify_environment.py` (43 tests) pins the properties above without a
+`tests/test_qualify_environment.py` (46 tests) pins the properties above without a
 container runtime: verdict semantics, required-versus-optional checks, argv
 parity with the product, the blocked path when no runtime exists, the failure
 path when a leak is observed, host-execution detection, the record and Markdown
