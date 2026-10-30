@@ -123,9 +123,9 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "M5-P2-05",
     "last_completed_story": "M5-P2-04",
-    "last_checkpoint": "2026-10-30T20:05:00Z",
+    "last_checkpoint": "2026-10-30T19:09:30Z",
     "last_session_id": "arena/e2bde3ff-m5-agent-studio",
     "next_recommended_story": "M5-P2-05",
     "open_risks": [
@@ -2050,13 +2050,13 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P2-05: Bounded recovery and stagnation detection. Objective: Prevent repeated failed strategies and uncontrolled retries. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Track evidence deltas and failure fingerprints; Bound retry/replan/rollback budgets; Escalate repeated patch oscillation to safe pause; Preserve history across restart. Acceptance: No infinite retry loop; Failure memory and budgets survive crash; Recovery action requires changed evidence or conditions. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 5,
+        "attempts": 1,
+        "started_at": "2026-10-30T19:09:30Z",
+        "updated_at": "2026-10-30T19:09:30Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/e2bde3ff-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -2064,7 +2064,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "next_action": "Track failure fingerprints and evidence deltas per attempt, bound retry/replan/rollback budgets durably (survive restart), and escalate repeated patch oscillation to a safe pause before the next mutation instead of retrying the same strategy.",
         "readme_updated": false
       }
     },
