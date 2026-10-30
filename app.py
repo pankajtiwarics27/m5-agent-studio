@@ -46,6 +46,7 @@ import threading
 from collections import deque
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -72,6 +73,7 @@ import onboarding_preflight
 import runtime_persistence
 import side_effect_ledger
 import task_events
+import workspace_baseline
 import workflow_checkpoints
 import workflow_state
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
@@ -6346,6 +6348,7 @@ def compact_harness_session_messages(session_id: str, worktree_dir: Path) -> dic
 # =============================================================================
 
 HARNESS_STORE_DIR = BASE_DIR / ".harnesses" / "sessions"
+
 _PENDING_APPROVALS: dict[str, dict[str, Any]] = {}
 _RESOLVED_APPROVALS: dict[str, str] = {}
 _RESOLVED_APPROVALS_TS: dict[str, float] = {}
@@ -7399,6 +7402,203 @@ def _atomic_write_workspace_text(
             os.close(parent_fd)
 
 
+def _baseline_store_root() -> Path:
+    """Baseline store directory: `.harnesses/baselines`, overridable, never inside Git.
+
+    Derived per call from `HARNESS_STORE_DIR` so relocating the harness store (or
+    a test isolating it) relocates the snapshots too; `.harnesses/` is ignored by
+    `.gitignore`, so captured user bytes never reach a commit.
+    """
+    override = os.environ.get("STUDIO_BASELINE_DIR", "").strip()
+    if override:
+        return Path(override).expanduser()
+    return Path(HARNESS_STORE_DIR).parent / "baselines"
+
+
+def _baseline_store(workspace_root: Path) -> workspace_baseline.WorkspaceBaselineStore:
+    """Bind a baseline store to this process's store dir and the safe workspace reader."""
+
+    def _read_bytes(path: Path, limit: int) -> tuple[bytes, os.stat_result]:
+        root_res, parts = _workspace_relative_parts(workspace_root, path)
+        fd, info = _open_workspace_entry_fd(root_res, parts)
+        try:
+            if not stat.S_ISREG(info.st_mode):
+                raise IsADirectoryError(str(path))
+            if info.st_size > limit:
+                raise ValueError("Workspace file exceeds the snapshot size limit.")
+            with os.fdopen(fd, "rb") as stream:
+                fd = -1
+                data = stream.read(limit + 1)
+        finally:
+            if fd >= 0:
+                os.close(fd)
+        return data, info
+
+    return workspace_baseline.WorkspaceBaselineStore(_baseline_store_root(), read_bytes=_read_bytes)
+
+
+def _workspace_file_digest(root_res: Path, relative_parts: tuple[str, ...]) -> str | None:
+    """SHA-256 of one workspace file, or None when it does not exist."""
+    try:
+        text, _info = _read_workspace_text(root_res, Path(*relative_parts), errors="surrogateescape")
+    except FileNotFoundError:
+        return None
+    except (OSError, PermissionError, RuntimeError, ValueError, IsADirectoryError):
+        return "unreadable"
+    return hashlib.sha256(text.encode("utf-8", errors="surrogateescape")).hexdigest()
+
+
+_BASELINE_MANAGED_WRITES: dict[tuple[str, str], str] = {}
+
+
+def _note_managed_write(sess: dict[str, Any], root_res: Path, relative_parts: tuple[str, ...]) -> None:
+    """Remember the bytes our own managed write left behind.
+
+    A later edit of that same, untouched content must not churn a fresh baseline:
+    nothing the user authored is at risk there, and snapshotting every managed
+    write would grow the store without preserving any additional user work. The
+    note is process-local and advisory only — a restart simply means one extra
+    capture, never a missed one.
+    """
+    session_id = str(sess.get("id") or "")
+    digest = _workspace_file_digest(root_res, relative_parts)
+    if not session_id or not digest or digest == "unreadable":
+        return
+    if len(_BASELINE_MANAGED_WRITES) > 4096:
+        _BASELINE_MANAGED_WRITES.clear()
+    _BASELINE_MANAGED_WRITES[(session_id, Path(*relative_parts).as_posix())] = digest
+
+
+def _pause_for_baseline_failure(session_id: str, reason: str) -> None:
+    """Defer to a safe boundary instead of continuing to edit unprotected work."""
+    try:
+        sm = get_task_state_machine()
+        if sm.store.get_task(session_id) is not None:
+            sm.request_pause(session_id, reason=reason)
+    except Exception:
+        pass
+    try:
+        _update_harness_session_state(session_id, status="paused")
+    except Exception:
+        pass
+
+
+def _ensure_pre_edit_baseline(
+    sess: dict[str, Any],
+    root_res: Path,
+    relative_parts: tuple[str, ...],
+) -> dict[str, Any] | None:
+    """Capture a pre-edit baseline before a managed edit; return a denial or None.
+
+    A fresh capture is taken when the session has no baseline yet, or when the
+    target's current bytes differ from the recorded baseline (the user changed it
+    since we last looked). Every failure mode that could mean "we would overwrite
+    bytes we cannot restore" fails closed: the edit is refused and the task is
+    paused at a safe boundary rather than proceeding.
+    """
+    session_id = str(sess.get("id") or "")
+    rel_path = Path(*relative_parts).as_posix()
+    store = _baseline_store(root_res)
+    latest: workspace_baseline.BaselineRecord | None = None
+    try:
+        latest = store.latest(root_res, session_id=session_id)
+    except workspace_baseline.BaselineError:
+        latest = None
+    current_digest = _workspace_file_digest(root_res, relative_parts)
+    if latest is not None:
+        recorded = latest.file(rel_path)
+        if recorded is not None and (recorded.digest == current_digest or (current_digest is None and recorded.change == "deleted")):
+            return None
+        if _BASELINE_MANAGED_WRITES.get((session_id, rel_path)) == current_digest:
+            # These exact bytes came out of our own managed write, so the newest
+            # baseline still covers all user-authored content at this path.
+            return None
+    if current_digest is None:
+        # The target does not exist yet: there is no user work at this path to lose.
+        return None
+    if current_digest == "unreadable":
+        return {
+            "ok": False,
+            "output": (
+                f"Blocked: `{rel_path}` exists but could not be read, so its current contents cannot be "
+                "snapshotted. Refusing to edit a file whose user work cannot be preserved."
+            ),
+            "diff": "",
+            "elapsed_ms": 1,
+            "baseline_blocked": True,
+        }
+    try:
+        record = store.capture(root_res, session_id=session_id, reason="pre_edit", focus_paths=[rel_path])
+    except workspace_baseline.BaselineStorageExhausted as exc:
+        _append_harness_event(
+            session_id,
+            "baseline/storage_exhausted",
+            {"path": rel_path, "reason": str(exc)},
+            dedupe_key=f"baseline-exhausted:{session_id}",
+        )
+        _pause_for_baseline_failure(session_id, "baseline_storage_exhausted")
+        return {
+            "ok": False,
+            "output": (
+                f"Paused: {exc} The edit to `{rel_path}` was refused so no unprotected user work is overwritten. "
+                "Free disk space, then resume."
+            ),
+            "diff": "",
+            "elapsed_ms": 1,
+            "baseline_blocked": True,
+        }
+    except (workspace_baseline.BaselineError, OSError, ValueError) as exc:
+        _append_harness_event(
+            session_id,
+            "baseline/failed",
+            {"path": rel_path, "reason": str(exc)},
+            dedupe_key=f"baseline-failed:{session_id}:{rel_path}",
+        )
+        _pause_for_baseline_failure(session_id, "baseline_capture_failed")
+        return {
+            "ok": False,
+            "output": (
+                f"Blocked: the pre-edit baseline for `{rel_path}` could not be captured ({exc}). "
+                "Refusing to edit without a restorable snapshot."
+            ),
+            "diff": "",
+            "elapsed_ms": 1,
+            "baseline_blocked": True,
+        }
+    entry = record.file(rel_path)
+    if entry is not None and not entry.restorable:
+        _append_harness_event(
+            session_id,
+            "baseline/path_unrestorable",
+            {"path": rel_path, "baseline_id": record.baseline_id, "reason": entry.capture_reason},
+            dedupe_key=f"baseline-unrestorable:{session_id}:{rel_path}",
+        )
+        return {
+            "ok": False,
+            "output": (
+                f"Blocked: `{rel_path}` exists but was not snapshotted ({entry.capture_reason}), so its current "
+                "contents could not be preserved before editing. Move or shrink the file, or edit it yourself."
+            ),
+            "diff": "",
+            "elapsed_ms": 1,
+            "baseline_blocked": True,
+        }
+    _append_harness_event(
+        session_id,
+        "baseline/captured",
+        {
+            "baseline_id": record.baseline_id,
+            "reason": record.reason,
+            "path": rel_path,
+            "files": len(record.files),
+            "restorable": len([f for f in record.files if f.restorable]),
+            "bytes": record.total_bytes,
+            "head": record.head_commit[:12],
+        },
+    )
+    return None
+
+
 def _is_secret_path(path: Path) -> bool:
     """Apply secret-name checks to every component of a no-follow workspace path."""
     return any(_is_secret_filename(part) for part in path.parts)
@@ -7767,6 +7967,9 @@ async def _execute_harness_tool_inner(
             if _is_secret_path(fp):
                 return {"ok": False, "output": _check_gsd_secret_guard(str(fp)) or "Blocked secret file.", "diff": "", "elapsed_ms": 1}
             rel_s = str(Path(*relative_parts))
+            baseline_denial = _ensure_pre_edit_baseline(sess, root_res, relative_parts)
+            if baseline_denial is not None:
+                return baseline_denial
             if tool_name == "write_file":
                 try:
                     before, prior_info = _read_workspace_text(root_res, Path(*relative_parts), errors="replace")
@@ -7776,6 +7979,7 @@ async def _execute_harness_tool_inner(
                     prior_mode = None
                 after = str(args.get("content") if args.get("content") is not None else "")
                 _atomic_write_workspace_text(root_res, Path(*relative_parts), after, mode=prior_mode)
+                _note_managed_write(sess, root_res, relative_parts)
                 diff_txt = _unified_diff_snippet(rel_s, before, after)
                 return {
                     "ok": True,
@@ -7815,6 +8019,7 @@ async def _execute_harness_tool_inner(
                 replaced_lines = b_lines[:match_idx] + new_text.splitlines() + b_lines[match_idx + len(o_lines):]
                 after = "\n".join(replaced_lines) + ("\n" if before.endswith("\n") else "")
             _atomic_write_workspace_text(root_res, Path(*relative_parts), after, mode=stat.S_IMODE(prior_info.st_mode))
+            _note_managed_write(sess, root_res, relative_parts)
             diff_txt = _unified_diff_snippet(rel_s, before, after)
             return {
                 "ok": True,
@@ -9305,6 +9510,144 @@ def _harness_session_state_snapshot(session_id: str) -> dict[str, Any]:
         "last_turn_state": event_stream.last_turn_state,
         "generated_at": round(time.time(), 3),
     }
+
+
+def _baseline_workspace_for_session(session_id: str) -> tuple[dict[str, Any], Path]:
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    raw = str(sess.get("worktree_dir") or "").strip()
+    if not raw:
+        raise HTTPException(status_code=409, detail=f"Harness session {session_id!r} has no workspace directory.")
+    workspace = Path(raw).resolve()
+    if not workspace.is_dir():
+        raise HTTPException(status_code=409, detail=f"Workspace {str(workspace)!r} is not a directory.")
+    return sess, workspace
+
+
+@app.post("/api/harness/sessions/{session_id}/baseline")
+async def api_capture_harness_baseline(session_id: str, request: Request) -> JSONResponse:
+    """Capture a pre-edit baseline for the session workspace and prove it restores.
+
+    The restore is verified by materializing every captured blob into a
+    throwaway directory and re-hashing it; the workspace itself is never written.
+    """
+    sess, workspace = _baseline_workspace_for_session(session_id)
+    body: dict[str, Any] = {}
+    try:
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    except Exception:
+        body = {}
+    focus = body.get("focus_paths") or []
+    protected = body.get("protected_ignored") or []
+    if not isinstance(focus, list) or not all(isinstance(p, str) for p in focus):
+        raise HTTPException(status_code=400, detail="focus_paths must be a list of workspace-relative strings.")
+    if not isinstance(protected, list) or not all(isinstance(p, str) for p in protected):
+        raise HTTPException(status_code=400, detail="protected_ignored must be a list of workspace-relative strings.")
+    store = _baseline_store(workspace)
+    try:
+        record = store.capture(
+            workspace,
+            session_id=session_id,
+            reason=str(body.get("reason") or "manual"),
+            focus_paths=focus[:64],
+            protected_ignored=protected[:64],
+        )
+    except workspace_baseline.BaselineStorageExhausted as exc:
+        _append_harness_event(session_id, "baseline/storage_exhausted", {"reason": str(exc)})
+        _pause_for_baseline_failure(session_id, "baseline_storage_exhausted")
+        raise HTTPException(status_code=507, detail=str(exc)) from exc
+    except workspace_baseline.BaselineUnsafePathError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except (workspace_baseline.BaselineError, OSError, ValueError) as exc:
+        raise HTTPException(status_code=409, detail=f"Baseline capture failed: {exc}") from exc
+    with tempfile.TemporaryDirectory(prefix="m5-baseline-verify-") as scratch:
+        verification = store.verify(workspace, record.baseline_id, scratch_dir=Path(scratch))
+    _append_harness_event(
+        session_id,
+        "baseline/captured",
+        {
+            "baseline_id": record.baseline_id,
+            "reason": record.reason,
+            "files": len(record.files),
+            "restorable": len([f for f in record.files if f.restorable]),
+            "bytes": record.total_bytes,
+            "head": record.head_commit[:12],
+            "verified": verification.ok,
+        },
+    )
+    return JSONResponse(
+        {
+            "status": "captured",
+            "session_id": session_id,
+            "baseline": store.describe(workspace, record.baseline_id),
+            "verification": verification.to_dict(),
+        }
+    )
+
+
+@app.get("/api/harness/sessions/{session_id}/baseline")
+async def api_get_harness_baseline(session_id: str, limit: int = 10) -> JSONResponse:
+    """Return the latest pre-edit baseline and recent baseline history."""
+    _sess, workspace = _baseline_workspace_for_session(session_id)
+    store = _baseline_store(workspace)
+    try:
+        records = store.list_baselines(workspace, limit=max(1, min(int(limit), 50)))
+    except workspace_baseline.BaselineError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    session_records = [r for r in records if r.session_id == session_id]
+    latest = session_records[0] if session_records else None
+    return JSONResponse(
+        {
+            "session_id": session_id,
+            "workspace": str(workspace),
+            "latest": store.describe(workspace, latest.baseline_id) if latest is not None else None,
+            "baselines": [
+                {
+                    "baseline_id": r.baseline_id,
+                    "captured_at": r.captured_at,
+                    "reason": r.reason,
+                    "files": len(r.files),
+                    "restorable": len([f for f in r.files if f.restorable]),
+                    "total_bytes": r.total_bytes,
+                    "head": r.head_commit[:12],
+                }
+                for r in session_records
+            ],
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/baseline/{baseline_id}/verify")
+async def api_verify_harness_baseline(session_id: str, baseline_id: str) -> JSONResponse:
+    """Prove a stored baseline can be reconstructed, without touching the workspace."""
+    _sess, workspace = _baseline_workspace_for_session(session_id)
+    store = _baseline_store(workspace)
+    try:
+        with tempfile.TemporaryDirectory(prefix="m5-baseline-verify-") as scratch:
+            verification = store.verify(workspace, baseline_id, scratch_dir=Path(scratch))
+    except workspace_baseline.BaselineNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except workspace_baseline.BaselineCorruptError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except workspace_baseline.BaselineError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _append_harness_event(
+        session_id,
+        "baseline/verified" if verification.ok else "baseline/verification_failed",
+        {"baseline_id": baseline_id, "verified": verification.ok, "checked_bytes": verification.checked_bytes},
+    )
+    return JSONResponse(
+        {
+            "session_id": session_id,
+            "baseline_id": baseline_id,
+            "ok": verification.ok,
+            "verification": verification.to_dict(),
+        }
+    )
 
 
 @app.get("/api/harness/sessions/{session_id}/state")

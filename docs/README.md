@@ -49,7 +49,10 @@ contain placeholder text, and every relative link must resolve.
 ## Subsystem contracts
 
 Harness runtime: [`task-events.md`](task-events.md) (durable task events, cursors,
-SSE replay, reload/resync, approval reconciliation), [`workflow-checkpoints.md`](workflow-checkpoints.md),
+SSE replay, reload/resync, approval reconciliation),
+[`workspace-baselines.md`](workspace-baselines.md) (pre-edit baselines, selective
+snapshots, restore verification, fail-closed edit path),
+[`workflow-checkpoints.md`](workflow-checkpoints.md),
 [`execution-budgets.md`](execution-budgets.md), [`side-effect-idempotency.md`](side-effect-idempotency.md).
 
 Model and provider: [`provider-adapters.md`](provider-adapters.md),

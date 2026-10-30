@@ -23,13 +23,13 @@
 ## What is verified today
 
 Verified in this checkout (commit `1e2e0bd876409a9e4eeb4b0128b403422bac7013`
-plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
+plus the M5 2.0 change-sets through `M5-P2-01`, Linux x86_64, Python 3.11.2):
 
 - **The application runs and its local auth path works.** `scripts/smoke_local.py`
   launches a disposable loopback instance of both `app.py` and the generated
   `studio.py` and verifies the token/security path — both exit 0.
-- **The test suite passes:** **827 passed, 1 skipped** (the skip is the opt-in
-  live container-runtime test, see below). `ruff`, `mypy` over 43 typed modules,
+- **The test suite passes:** **842 passed, 1 skipped** (the skip is the opt-in
+  live container-runtime test, see below). `ruff`, `mypy` over 44 typed modules,
   `compileall`, and the Node-based frontend syntax check all pass.
 - **Generated artifacts are reproducible:** `studio.py`,
   `docs/route-security-matrix.md`, `docs/subsystem-dependency-inventory.md`
@@ -114,6 +114,26 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   is rejected with `409` even after a restart. Pinned by 16 tests
   (`tests/test_task_events.py`) and documented in
   [`docs/task-events.md`](docs/task-events.md) (ADR-0005).
+- **Managed edits are protected by a verified pre-edit workspace baseline
+  (`M5-P2-01`):** `workspace_baseline.py` (stdlib only, inlined into `studio.py`)
+  snapshots the Git `HEAD`, the index blob ids, and every changed path (unstaged,
+  staged, untracked, deleted) into a per-workspace content-addressed store under
+  `.harnesses/baselines` before `write_file`/`edit_file` mutates anything. Blobs
+  are written atomically and `fsync`ed, the manifest carries `manifest_sha256`,
+  and `verify()` proves a restore by materializing every blob into a throwaway
+  directory and re-hashing it — never by rewriting the user's tree. Ignored files
+  are never enumerated in bulk, and secret-named files (`.env*`, `id_*`, `*.pem`,
+  `*.key`, `credentials*`) are recorded as metadata only. The edit path fails
+  closed: a changed target is re-snapshotted, a path whose bytes cannot be
+  restored is refused, and disk exhaustion (`ENOSPC`/quota, or under 8 MiB of
+  headroom) answers `507`, pauses the task, and skips the write. Git is used
+  read-only through an allowlist — `reset`, `clean`, `checkout`, `stash` and the
+  rest of the mutating subcommands are refused. Three authenticated routes expose
+  capture, history, and re-verification (`POST`/`GET
+  /api/harness/sessions/{session_id}/baseline`, `POST
+  …/baseline/{baseline_id}/verify`), backed by 15 tests
+  (`tests/test_workspace_baseline.py`) and documented in
+  [`docs/workspace-baselines.md`](docs/workspace-baselines.md) (ADR-0006).
 - **The execution boundary is extracted and its coverage is inventoried
   (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`–`M5-P1-04`):**
   `execution_spine.py` and `side_effect_ledger.py` form a stdlib-only seam
@@ -182,7 +202,7 @@ python3 -m venv .venv
 .venv/bin/mypy                                  # typed contract modules
 .venv/bin/python -m compileall -q app.py scripts tests
 .venv/bin/python scripts/check_frontend_syntax.py
-.venv/bin/python -m pytest -q                   # 811 passed, 1 skipped
+.venv/bin/python -m pytest -q                   # 842 passed, 1 skipped
 .venv/bin/python scripts/smoke_local.py         # loopback app, auth verified
 .venv/bin/python scripts/smoke_local.py --standalone
 ```
@@ -202,7 +222,7 @@ are not guarantees):
 
 ## Verified usage
 
-- **Run the test suite:** `.venv/bin/python -m pytest -q` → 827 passed,
+- **Run the test suite:** `.venv/bin/python -m pytest -q` → 842 passed,
   1 skipped, 1 warning.
 - **Start a disposable authenticated instance (verified):**
   `.venv/bin/python scripts/smoke_local.py` starts `app.py` on a free loopback
@@ -316,7 +336,7 @@ Summary (2026-10-30, Linux x86_64 container, 2 vCPU, ~4 GB RAM, Python 3.11.2):
 
 | Check | Result |
 |---|---|
-| `pytest -q` | 811 passed, 1 skipped (opt-in live container test), 1 warning |
+| `pytest -q` | 842 passed, 1 skipped (opt-in live container test), 1 warning |
 | `ruff check .` | clean |
 | `mypy` | clean (typed contract modules) |
 | `check_frontend_syntax.py` (Node) | pass |
