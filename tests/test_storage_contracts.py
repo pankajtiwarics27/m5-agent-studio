@@ -51,8 +51,8 @@ def test_schema_upgrade_preserves_rows_and_is_idempotent(tmp_path: Path, monkeyp
     studio.init_db()
     with sqlite3.connect(database) as conn:
         assert conn.execute("SELECT title FROM runs WHERE id = 7").fetchone()[0] == "kept"
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == studio.SCHEMA_VERSION == 2
-        assert conn.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall() == [(1,), (2,)]
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == studio.SCHEMA_VERSION == 3
+        assert conn.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall() == [(1,), (2,), (3,)]
 
 
 def test_schema_failure_rolls_back_partial_ddl(tmp_path: Path) -> None:

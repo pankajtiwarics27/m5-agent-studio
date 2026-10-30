@@ -333,8 +333,8 @@ def test_versioned_schema_upgrade_adds_columns_to_legacy_tables(tmp_path: Path, 
         auth_token = conn.execute("SELECT auth_token FROM mcp_servers WHERE alias='old'").fetchone()[0]
         recorded = conn.execute("SELECT version FROM schema_migrations").fetchall()
     assert version == studio.SCHEMA_VERSION
-    assert recorded == [(1,), (studio.SCHEMA_VERSION,)]
-    assert studio.SCHEMA_VERSION == 2
+    assert recorded == [(1,), (2,), (studio.SCHEMA_VERSION,)]
+    assert studio.SCHEMA_VERSION == 3
     assert {"auth_token", "approval_policy", "headers_json", "env_json", "enabled_tools_json"} <= columns
     assert auth_token == ""
 

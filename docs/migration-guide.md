@@ -66,10 +66,12 @@ backup taken before the upgrade. Plan that before you upgrade.
 ## Database schema
 
 - Version lives in `PRAGMA user_version`; applied versions are recorded in
-  `schema_migrations`. Current `SCHEMA_VERSION` is `2`.
-- Migrations are **additive and transactional**: `ALTER TABLE … ADD COLUMN`
-  inside `BEGIN IMMEDIATE`, with a rollback on failure. No destructive rewrites,
-  and no rows are dropped.
+  `schema_migrations`. Current `SCHEMA_VERSION` is `3` (`runtime_persistence.py`,
+  [ADR-0003](adr/0003-sqlite-schema-v3-and-persistence-discipline.md)).
+- Migrations are **additive and transactional**: `ALTER TABLE … ADD COLUMN` and
+  Schema v2/v3 table definitions run inside `BEGIN IMMEDIATE` after an ephemeral
+  owner-only (`0600`) pre-migration snapshot, with rollback and snapshot
+  verification on failure. No destructive rewrites, and no rows are dropped.
 - New columns get defaults, so old rows keep working.
 - WAL mode and FTS5 indexes are recreated idempotently; FTS rows are cleaned up
   when their source rows are deleted.

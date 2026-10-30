@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP_SOURCE = ROOT / "app.py"
+RUNTIME_PERSISTENCE_SOURCE = ROOT / "runtime_persistence.py"
 OUT = ROOT / "docs" / "subsystem-dependency-inventory.md"
 sys.path.insert(0, str(ROOT))
 import app  # noqa: E402
@@ -47,6 +48,10 @@ TABLES: dict[str, str] = {
     "ctx_session_metrics": "Raw/sent byte and compaction counters per session.",
     "schema_migrations": "Applied SQLite schema version history.",
     "tool_audit_events": "Tool execution metadata, approval state, and argument/output hashes; no raw argument/output fields.",
+    "runtime_tasks": "Durable runtime task state, monotonic epoch counter, budget snapshot, and terminal outcome.",
+    "runtime_task_epochs": "Append-only runtime task execution epochs and stale-writer fencing metadata.",
+    "runtime_task_transitions": "Append-only durable state transitions per runtime task and epoch.",
+    "runtime_actions": "Durable action/effect records with idempotency keys, request/result digests, and execution status.",
 }
 
 # Function references are resolved from app.py on every generation, so line anchors stay current.
@@ -100,11 +105,17 @@ def _source_functions(source: str) -> dict[str, int]:
     }
 
 
-def _table_lines(source: str) -> dict[str, int]:
-    found: dict[str, int] = {}
-    for match in _TABLE_RE.finditer(source):
-        name = match.group(1)
-        found.setdefault(name, source.count("\n", 0, match.start()) + 1)
+def _table_lines(source: str, persistence_source: str | None = None) -> dict[str, tuple[str, int]]:
+    persistence_text = (
+        RUNTIME_PERSISTENCE_SOURCE.read_text(encoding="utf-8")
+        if persistence_source is None
+        else persistence_source
+    )
+    found: dict[str, tuple[str, int]] = {}
+    for filename, text in (("app.py", source), ("runtime_persistence.py", persistence_text)):
+        for match in _TABLE_RE.finditer(text):
+            name = match.group(1)
+            found.setdefault(name, (filename, text.count("\n", 0, match.start()) + 1))
     missing = sorted(TABLES.keys() - found.keys())
     undocumented = sorted(found.keys() - TABLES.keys())
     if missing or undocumented:
@@ -260,7 +271,7 @@ def render(source: str | None = None, routes: Iterable[Any] | None = None) -> st
         "",
         "## SQLite tables and schema contracts",
         "",
-        f"`DB_PATH` is local SQLite; initialization and additive schema upgrades are implemented by `init_db` and `_apply_schema_migrations` ({_ref('init_db', functions)}, {_ref('_apply_schema_migrations', functions)}). Current `SCHEMA_VERSION` is 2. Credential values are migrated to the OS keyring; history/context remains local SQLite data.",
+        f"`DB_PATH` is local SQLite; initialization and additive schema upgrades are implemented by `init_db` and `_apply_schema_migrations` ({_ref('init_db', functions)}, {_ref('_apply_schema_migrations', functions)}) delegating to `runtime_persistence.py`. Current `SCHEMA_VERSION` is {app.SCHEMA_VERSION}. Credential values are migrated to the OS keyring; history/context remains local SQLite data.",
         "",
         "| Table | Kind | Responsibility | Declaration source |",
         "|---|---|---|---|",
@@ -268,8 +279,8 @@ def render(source: str | None = None, routes: Iterable[Any] | None = None) -> st
     virtual_tables = {"opencontext_fts", "ctx_vault_fts"}
     for name in sorted(TABLES):
         kind = "FTS5 virtual table" if name in virtual_tables else "table"
-        line = tables[name]
-        lines.append(f"| `{name}` | {kind} | {TABLES[name]} | [`app.py:L{line}`](../app.py#L{line}) |")
+        filename, line = tables[name]
+        lines.append(f"| `{name}` | {kind} | {TABLES[name]} | [`{filename}:L{line}`](../{filename}#L{line}) |")
 
     lines.extend([
         "",
@@ -300,7 +311,7 @@ def render(source: str | None = None, routes: Iterable[Any] | None = None) -> st
         "## Evidence and limitations",
         "",
         "- API routes are enumerated from FastAPI's live registered route objects; endpoint source anchors are resolved from `app.py` on each generation.",
-        "- SQLite declarations are scanned from `app.py`. Generation fails on an undocumented or missing table and on an endpoint without subsystem/auth/source mapping.",
+        "- SQLite declarations are scanned from `app.py` and `runtime_persistence.py`. Generation fails on an undocumented or missing table and on an endpoint without subsystem/auth/source mapping.",
         "- The HTTP auth column records shared boundary coverage plus notable route-specific policy; it does not assert per-user authorization, which the code does not implement.",
         "- External destinations and process launches are documented as possible code paths. This generator does not contact them, and integration tests use local/mocked fixtures.",
         "",

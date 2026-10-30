@@ -17,6 +17,8 @@ import uuid
 from pathlib import Path
 from typing import Any, Protocol
 
+import runtime_persistence
+
 
 class StorageLike(Protocol):
     """Minimal storage seam (structurally compatible with app.SQLiteStorage)."""
@@ -44,25 +46,33 @@ def _row_to_doc(row: sqlite3.Row) -> dict[str, Any]:
 
 
 def list_docs(storage: StorageLike, db_path: Path, folder: str = "") -> list[dict[str, Any]]:
-    with storage.connect(db_path) as conn:
+    def _read(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
         if folder:
-            rows = conn.execute(
+            return conn.execute(
                 "SELECT * FROM opencontext_docs WHERE folder = ? ORDER BY pinned DESC, updated_at DESC",
                 (folder,),
             ).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT * FROM opencontext_docs ORDER BY pinned DESC, updated_at DESC"
-            ).fetchall()
+        return conn.execute(
+            "SELECT * FROM opencontext_docs ORDER BY pinned DESC, updated_at DESC"
+        ).fetchall()
+
+    rows = runtime_persistence.run_read(storage, db_path, _read)
     return [_row_to_doc(r) for r in rows]
 
 
 def get_doc(storage: StorageLike, db_path: Path, doc_id_or_uri: str) -> dict[str, Any]:
     clean_id = (doc_id_or_uri or "").strip().replace("oc://doc/", "").strip("/")
-    with storage.connect(db_path) as conn:
+
+    def _read(conn: sqlite3.Connection) -> sqlite3.Row | None:
         conn.row_factory = sqlite3.Row
-        row = conn.execute("SELECT * FROM opencontext_docs WHERE id = ?", (clean_id,)).fetchone()
+        row: sqlite3.Row | None = conn.execute(
+            "SELECT * FROM opencontext_docs WHERE id = ?",
+            (clean_id,),
+        ).fetchone()
+        return row
+
+    row = runtime_persistence.run_read(storage, db_path, _read)
     if not row:
         raise KeyError(f"OpenContext doc `{clean_id}` not found.")
     return _row_to_doc(row)
@@ -85,7 +95,8 @@ def upsert_doc(
     did = (doc_id or "").strip().replace("oc://doc/", "") or f"oc-{uuid.uuid4().hex[:8]}"
     desc = (description or content.splitlines()[0] if content else "").strip()[:240]
     now = time.time()
-    with storage.connect(db_path) as conn:
+
+    def _write(conn: sqlite3.Connection) -> None:
         conn.execute(
             """
             INSERT INTO opencontext_docs (id, folder, title, description, content, pinned, updated_at)
@@ -101,25 +112,29 @@ def upsert_doc(
             "INSERT INTO opencontext_fts (doc_id, folder, title, description, content) VALUES (?, ?, ?, ?, ?)",
             (did, clean_folder, clean_title, desc, content),
         )
-        conn.commit()
+
+    runtime_persistence.run_write_transaction(storage, db_path, _write)
     return get_doc(storage, db_path, did)
 
 
 def delete_doc(storage: StorageLike, db_path: Path, doc_id: str) -> None:
     clean_id = (doc_id or "").strip().replace("oc://doc/", "")
-    with storage.connect(db_path) as conn:
+
+    def _write(conn: sqlite3.Connection) -> None:
         conn.execute("DELETE FROM opencontext_docs WHERE id = ?", (clean_id,))
         conn.execute("DELETE FROM opencontext_fts WHERE doc_id = ?", (clean_id,))
-        conn.commit()
+
+    runtime_persistence.run_write_transaction(storage, db_path, _write)
 
 
 def search_docs(storage: StorageLike, db_path: Path, query: str, limit: int = 8) -> list[dict[str, Any]]:
     fts_q = sanitize_fts5_query(query)
     if not fts_q:
         return list_docs(storage, db_path)[:limit]
-    with storage.connect(db_path) as conn:
+
+    def _read(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
-        rows = conn.execute(
+        return conn.execute(
             """
             SELECT d.*, bm25(opencontext_fts) AS rank_score
             FROM opencontext_fts
@@ -130,6 +145,8 @@ def search_docs(storage: StorageLike, db_path: Path, query: str, limit: int = 8)
             """,
             (fts_q, limit),
         ).fetchall()
+
+    rows = runtime_persistence.run_read(storage, db_path, _read)
     return [_row_to_doc(r) for r in rows]
 
 

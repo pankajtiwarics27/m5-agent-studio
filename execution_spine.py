@@ -102,11 +102,21 @@ class DurableActionBoundary:
        exists (a failed finalization is swallowed for the failure path only).
     5. No permission is inferred from caller or model text: approval is an
        explicit boolean resolved against the policy decision.
+    6. Optional ``pre_execute_guard`` (e.g. asserting no active SQLite write
+       transaction spans tool dispatch, M5-P1-01) fails closed before
+       ``executor`` runs, finalizing the attempt as ``failed`` and re-raising.
     """
 
-    def __init__(self, policy: Policy, ledger: ActionLedger) -> None:
+    def __init__(
+        self,
+        policy: Policy,
+        ledger: ActionLedger,
+        *,
+        pre_execute_guard: Callable[[], None] | None = None,
+    ) -> None:
         self._policy = policy
         self._ledger = ledger
+        self._pre_execute_guard = pre_execute_guard
 
     async def admit_and_execute(self, request: ActionRequest, executor: Executor) -> dict[str, Any]:
         effective = self._policy.effective_policy(request.policy)
@@ -139,6 +149,8 @@ class DurableActionBoundary:
                 raise PermissionError(result["output"])
             return result
         try:
+            if self._pre_execute_guard is not None:
+                self._pre_execute_guard()
             result = await executor()
         except Exception as exc:
             failure: dict[str, Any] = {
