@@ -123,10 +123,10 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "M5-P0-03",
     "last_completed_story": "M5-P0-07",
-    "last_checkpoint": "2026-10-30T10:36:06Z",
-    "last_session_id": "arena/a396d067-m5-agent-studio",
+    "last_checkpoint": "2026-10-30T10:51:46Z",
+    "last_session_id": "arena/f1d4a766-m5-agent-studio",
     "next_recommended_story": "M5-P0-03",
     "open_risks": [
       "Ungated skill-script subprocess app.py:8645 (_fetch_online_inspiration) runs repository skill code with no STUDIO_ALLOW_SKILL_CODE check and no sandbox routing — containment target for M5-P0-03",
@@ -425,13 +425,13 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P0-03: Immediate unsafe host-execution containment. Objective: Prevent unverified sandbox bypasses before further autonomous execution. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Confirm STUDIO_ALLOW_HOST_EXECUTION and direct skill subprocess paths; Gate or disable bypasses while preserving safe operations; Add regression tests for all discovered entry points; Do not advertise container isolation without live proof. Acceptance: No unapproved host-execution bypass through any discovered tool/skill path; Fail-closed behavior tested; Existing safe operations still work. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-30T10:51:46Z",
+        "updated_at": "2026-10-30T10:51:46Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/f1d4a766-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -439,7 +439,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Ready: dependency M5-P0-02 done. Contain the two skill-code subprocess bypasses documented in docs/m5-2-0-integration-audit.md section 5 (app.py:8645 ungated; app.py:1831 bypasses sandbox mode). Add regression tests; fail closed.",
+        "next_action": "Contain the two skill-code subprocess bypasses documented in docs/m5-2-0-integration-audit.md section 5: app.py L8645 (_fetch_online_inspiration) ungated; app.py L1831 (build_skills_context) host-executes when STUDIO_ALLOW_SKILL_CODE=1 regardless of STUDIO_EXECUTION_MODE. Add regression tests; fail closed.",
         "readme_updated": false
       }
     },
