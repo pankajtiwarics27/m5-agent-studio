@@ -71,6 +71,7 @@ files = [
   "model_switching.py",
   "model_updates.py",
   "onboarding_preflight.py",
+  "recovery_guard.py",
   "performance_profiles.py",
   "release_manager.py",
   "supply_chain.py",

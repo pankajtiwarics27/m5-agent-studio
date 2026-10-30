@@ -190,6 +190,24 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   a read-only revision preview. Pinned by 31 tests
   (`tests/test_verification_evidence.py`) and documented in
   [`docs/verification-evidence.md`](docs/verification-evidence.md) (ADR-0008).
+- **Repeated failures are remembered and bounded instead of retried forever
+  (`M5-P2-05`):** `recovery_guard.py` (stdlib only, inlined into `studio.py`) keeps
+  one durable record per task (`.harnesses/sessions/recovery/`, `0700`/`0600`,
+  atomic replace) holding every verification/recovery/rollback attempt with an
+  evidence snapshot — source revision, transcript hash, failure fingerprint, failure
+  code, environment — plus retry/replan/rollback counters. An attempt whose evidence
+  repeats the latest failure is classified `stagnant` and, after
+  `max_identical_attempts` (default 2), escalates; a revisited abandoned state is
+  `oscillating` and escalates immediately. Escalation sets `pause_requested` on the
+  task budget, so the execution boundary treats the task as paused and a harness
+  turn that fails verification releases its lease into `paused` with reason
+  `stagnation_detected` instead of `failed`. `prepare_resume` refuses a resume whose
+  workspace conditions equal the recorded failure's (`409`), resumed turns spend
+  `retry` (or `replan` after escalation) only once the worker lease is held, and
+  `rollback_edits` spends `rollback` before writing; exhaustion is persisted before
+  the refusal. `GET /api/harness/sessions/{session_id}/task` exposes the read-only
+  `recovery` summary. Pinned by 34 tests (`tests/test_recovery_guard.py`) and
+  documented in [`docs/recovery-guard.md`](docs/recovery-guard.md) (ADR-0009).
 
 - **The execution boundary is extracted and its coverage is inventoried
   (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`–`M5-P1-04`):**
@@ -210,7 +228,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
   pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
   plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
-- **18 of 48 shipped Python modules are wired into the served app**
+- **19 of 49 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`, `execution_spine` since `M5-P0-06`,
   `runtime_persistence` since `M5-P1-01`, `side_effect_ledger` since `M5-P1-03`,
@@ -218,8 +236,8 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   `M5-P1-05`, `failure_injection` since `M5-P1-06`, `task_events` since
   `M5-P1-07`, `sandbox_boundary` + `workspace_snapshots` since `M5-P2-01`, and
   `edit_transactions` since `M5-P2-02`, `edit_rollback` since `M5-P2-03`, and
-  `verification_evidence` since `M5-P2-04`; 5 of 42 at the time of the audit
-  table). Together they govern
+  `verification_evidence` since `M5-P2-04`, and `recovery_guard` since
+  `M5-P2-05`; 5 of 42 at the time of the audit table). Together they govern
   schema upgrades, SQLite transactions, authoritative task-state / lease-epoch
   checks at admission (`M5-P1-02`), durable `runtime_actions`
   intent/result/replay tracking (`M5-P1-03`), single-owner worker leases,
@@ -233,7 +251,9 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   non-destructive baseline restore (`M5-P2-01`), version-aware managed edits
   with durable edit transactions (`M5-P2-02`), durable multi-file edit batches
   with version-checked rollback (`M5-P2-03`), and revision-anchored verification
-  evidence with baseline-aware failure classification (`M5-P2-04`).
+  evidence with baseline-aware failure classification (`M5-P2-04`), and durable
+  failure memory with bounded retry/replan/rollback budgets and safe pause
+  (`M5-P2-05`).
   The other 30 modules have passing unit tests but **no `app.py` call path**.
   Module presence is not integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
@@ -546,9 +566,12 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
   before rollback, and resumable interrupted recovery), **and `M5-P2-04`**
   (revision-anchored verification evidence, staged targeted-then-broader checks,
   baseline-aware pre-existing/environmental/introduced failure classification,
-  denial-is-not-a-result, and declared acceptance coverage that fails closed;
-  phase P2 80%). Next ready story: `M5-P2-05` — claim via the coordination
-  protocol before coding.
+  denial-is-not-a-result, and declared acceptance coverage that fails closed),
+  **and `M5-P2-05`** (durable failure memory with evidence fingerprints,
+  stagnation/oscillation detection, bounded retry/replan/rollback budgets that
+  survive a crash, and recovery that requires changed evidence or conditions;
+  phase P2 100%). Next ready story: `M5-P3-01` — blocked on a live container
+  runtime; claim via the coordination protocol before coding.
   Planned work is not implemented product behavior.
 - **AS program (Adaptive Runtime)** —
   [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json)
