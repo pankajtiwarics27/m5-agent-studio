@@ -28,7 +28,7 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
 - **The application runs and its local auth path works.** `scripts/smoke_local.py`
   launches a disposable loopback instance of both `app.py` and the generated
   `studio.py` and verifies the token/security path — both exit 0.
-- **The test suite passes:** **717 passed, 1 skipped** (the skip is the opt-in
+- **The test suite passes:** **740 passed, 1 skipped** (the skip is the opt-in
   live container-runtime test, see below). `ruff`, `mypy`, `compileall`, and the
   Node-based frontend syntax check all pass.
 - **Generated artifacts are reproducible:** `studio.py`,
@@ -41,16 +41,24 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
 - **The frontend is a single-file vanilla JS UI** (`static/index.html`,
   4,228 lines; no framework build step).
 - **Tool calls go through a central authorize → audit → execute boundary**
-  (`_run_authorized_tool`, `app.py` L7592) with durable `tool_audit_events`
-  rows and fail-closed policy evaluation.
+  (`_run_authorized_tool` delegates to `execution_spine.DurableActionBoundary`)
+  with durable `tool_audit_events` rows and fail-closed policy evaluation.
+- **The execution boundary is extracted and its coverage is inventoried
+  (ADR-0002, since `M5-P0-06`):** `execution_spine.py` is a stdlib-only seam
+  (policy → intent record → execute → outcome record) with 11 contract tests
+  (`tests/test_execution_spine.py`). Coverage is **partial** —
+  [`docs/m5-2-0-bypass-inventory.md`](docs/m5-2-0-bypass-inventory.md) is the
+  maintained inventory of which entry points are outside the boundary; no
+  complete security guarantee is claimed.
 - **Skill-code execution is deny-by-default and boundary-routed** (since
   `M5-P0-03`): skill scripts run only with `STUDIO_ALLOW_SKILL_CODE=1` and a
   live execution mode, through the same execution boundary as tool code —
   pinned by 9 regression tests
   (`tests/test_skill_execution_containment.py`).
-- **Only 5 of 42 shipped Python modules are wired into the served app**
+- **Only 6 of 43 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
-  `workflow_orchestration`). The other 37 — including `sandbox_boundary.py`
+  `workflow_orchestration`, and — since `M5-P0-06` — `execution_spine`; 5 of 42
+  at the time of the audit table). The other 37 — including `sandbox_boundary.py`
   and `side_effect_ledger.py` — have passing unit tests but **no `app.py` call
   path**. Module presence is not integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
@@ -82,7 +90,7 @@ python3 -m venv .venv
 .venv/bin/mypy                                  # typed contract modules
 .venv/bin/python -m compileall -q app.py scripts tests
 .venv/bin/python scripts/check_frontend_syntax.py
-.venv/bin/python -m pytest -q                   # 717 passed, 1 skipped
+.venv/bin/python -m pytest -q                   # 740 passed, 1 skipped
 .venv/bin/python scripts/smoke_local.py         # loopback app, auth verified
 .venv/bin/python scripts/smoke_local.py --standalone
 ```
@@ -102,7 +110,7 @@ are not guarantees):
 
 ## Verified usage
 
-- **Run the test suite:** `.venv/bin/python -m pytest -q` → 717 passed,
+- **Run the test suite:** `.venv/bin/python -m pytest -q` → 740 passed,
   1 skipped, 1 warning (19.13 s in the review environment).
 - **Start a disposable authenticated instance (verified):**
   `.venv/bin/python scripts/smoke_local.py` starts `app.py` on a free loopback
@@ -207,7 +215,7 @@ Summary (2026-10-30, Linux x86_64 container, 2 vCPU, ~4 GB RAM, Python 3.11.2):
 
 | Check | Result |
 |---|---|
-| `pytest -q` | 717 passed, 1 skipped (opt-in live container test), 1 warning |
+| `pytest -q` | 740 passed, 1 skipped (opt-in live container test), 1 warning |
 | `ruff check .` | clean |
 | `mypy` | clean (typed contract modules) |
 | `check_frontend_syntax.py` (Node) | pass |
@@ -276,6 +284,15 @@ requires `STUDIO_ALLOW_SKILL_CODE=1`; private-URL access requires
    release remains blocked until an authorized reviewer signs the record
    ([`docs/security-review-signoff.md`](docs/security-review-signoff.md)).
    Never self-certify that gate.
+8. **The execution boundary covers tool invocation and skill-script
+   execution, not every effectful path (since `M5-P0-06`).** The maintained
+   known-bypass inventory
+   [`docs/m5-2-0-bypass-inventory.md`](docs/m5-2-0-bypass-inventory.md) lists
+   what routes through the boundary, what is gated elsewhere, what is
+   read-only, and what is still outside it (worktree git effects, database
+   writes, MCP registries, session/bootstrap files). Completing coverage is
+   follow-up work (`M5-P1-03`, `M5-P2-01`…`M5-P2-03`); partial coverage is
+   never advertised as complete.
 
 ## Current implementation status
 

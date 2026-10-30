@@ -64,6 +64,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from history_privacy import HistoryPrivacyError, apply_retention, export_history
 import context_store
+import execution_spine
 import mcp_client
 import onboarding_preflight
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
@@ -7643,6 +7644,38 @@ def _audit_tool_finish(event_id: int, result: dict[str, Any], elapsed_ms: int, *
         conn.commit()
 
 
+class _AppToolPolicy:
+    """Policy seam adapter (M5-P0-06): the inline authorization policy behind
+    ``execution_spine.Policy``. Kept in app.py because it reads app-level state;
+    the decision algorithm lives in ``authorize_tool_invocation``."""
+
+    def effective_policy(self, requested: str) -> str:
+        return _effective_harness_policy(requested, {})
+
+    def authorize(
+        self, tool_name: str, args: dict[str, Any], policy: str, *, approved: bool
+    ) -> execution_spine.AdmissionDecision:
+        decision = authorize_tool_invocation(tool_name, args, policy, approved=approved)
+        return execution_spine.AdmissionDecision(
+            bool(decision.allowed), str(decision.reason or ""), bool(decision.requires_approval)
+        )
+
+
+class _AppActionLedger:
+    """Persistence seam adapter (M5-P0-06): the durable ``tool_audit_events``
+    records behind ``execution_spine.ActionLedger``."""
+
+    def start(
+        self, session_id: str, tool_name: str, policy: str, explicit_approval: bool, args: dict[str, Any]
+    ) -> int:
+        return _audit_tool_start(session_id, tool_name, policy, explicit_approval, args)
+
+    def finish(
+        self, event_id: int, result: dict[str, Any], elapsed_ms: int, *, status: str = "completed"
+    ) -> None:
+        _audit_tool_finish(event_id, result, elapsed_ms, status=status)
+
+
 async def _run_authorized_tool(
     tool_name: str,
     args: dict[str, Any],
@@ -7654,56 +7687,26 @@ async def _run_authorized_tool(
     denial_as_exception: bool = False,
     additional_denial: str | None = None,
 ) -> dict[str, Any]:
-    """Authorize, durably audit, and then execute exactly one tool attempt."""
-    effective_policy = _effective_harness_policy(policy, {})
-    try:
-        decision = authorize_tool_invocation(tool_name, args, effective_policy, approved=approved)
-    except Exception:
-        # Policy evaluation errors are not permission to execute.
-        decision = ToolAuthorization(False, reason="Authorization policy evaluation failed; invocation denied.")
-    if additional_denial:
-        decision = ToolAuthorization(False, reason=additional_denial)
-    explicit_approval = bool(approved and decision.requires_approval)
-    event_id = _audit_tool_start(session_id, tool_name, effective_policy, explicit_approval, args)
-    started = time.perf_counter()
+    """Authorize, durably audit, and then execute exactly one tool attempt.
 
-    if not decision.allowed:
-        result: dict[str, Any] = {
-            "ok": False,
-            "output": f"Denied: {decision.reason}",
-            "diff": "",
-            "elapsed_ms": 1,
-        }
-        try:
-            _audit_tool_finish(event_id, result, 1, status="denied")
-        except Exception:
-            result["audit_warning"] = "Denial could not be finalized in the local audit log."
-        if denial_as_exception:
-            raise PermissionError(result["output"])
-        return result
-
-    try:
-        result = await executor()
-    except Exception as exc:
-        failure: dict[str, Any] = {
-            "ok": False,
-            "output": f"Tool `{tool_name}` failed: {exc}",
-            "diff": "",
-            "elapsed_ms": round((time.perf_counter() - started) * 1000),
-        }
-        try:
-            _audit_tool_finish(event_id, failure, failure["elapsed_ms"], status="failed")
-        except Exception:
-            pass  # The durable started row still proves that execution was attempted.
-        raise
-
-    elapsed = int(result.get("elapsed_ms") or round((time.perf_counter() - started) * 1000))
-    try:
-        _audit_tool_finish(event_id, result, elapsed)
-    except Exception:
-        # The durable `started` event still records the action attempt; don't erase its outcome in memory.
-        result = {**result, "audit_warning": "Tool result could not be finalized in the local audit log."}
-    return result
+    Thin adapter over the extracted execution-spine boundary
+    (``execution_spine.DurableActionBoundary``; see ADR-0002): the
+    authorize -> record-intent -> execute -> record-outcome algorithm and its
+    fail-closed guarantees live there and are pinned by
+    ``tests/test_execution_spine.py``."""
+    boundary = execution_spine.DurableActionBoundary(_AppToolPolicy(), _AppActionLedger())
+    return await boundary.admit_and_execute(
+        execution_spine.ActionRequest(
+            tool_name=tool_name,
+            args=args,
+            policy=policy,
+            approved=approved,
+            session_id=session_id,
+            additional_denial=additional_denial,
+            denial_as_exception=denial_as_exception,
+        ),
+        executor,
+    )
 
 
 async def execute_mcp_tool_call(
