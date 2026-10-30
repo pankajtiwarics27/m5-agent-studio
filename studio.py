@@ -5601,6 +5601,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function startFreshHarnessDraft() {
     activeHarnessId = null;
     activeHarnessSession = null;
+    harnessResetEventCache();
+    harnessSnapshot = null;
+    closeHarnessEventStream();
     document.getElementById("harnessActiveLabel").textContent = "New Harness Draft — choose workspace, worktree isolation, & policy, then run your task below.";
     const b = document.getElementById("harnessActiveStatusBadge");
     b.className = "badge cyan"; b.textContent = "NEW DRAFT";
@@ -5727,13 +5730,20 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   async function selectHarnessSession(id) {
+    // Reload is a first-class path: rebuild from the authoritative task snapshot
+    // and the durable event log, never from whatever DOM happened to survive.
     activeHarnessId = id;
-    const r = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}`);
-    if (!r.ok) return;
-    const sess = await r.json();
-    updateHarnessHeaderBanner(sess);
+    harnessResetEventCache();
+    harnessSnapshot = null;
+    await closeHarnessEventStream();
+    try {
+      const r = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}`);
+      if (!r.ok) return;
+      updateHarnessHeaderBanner(await r.json());
+    } catch (e) {}
     renderHarnessSidebar();
-    renderStoredHarnessEvents(sess.events || []);
+    await harnessResyncFromSnapshot("select");
+    if (!harnessRunActive) openHarnessEventStream();
   }
 
   async function patchActiveHarnessSettings() {
@@ -5794,33 +5804,355 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       </div>`;
   }
 
+  // ================= M5-P1-07: DURABLE TASK EVENTS (CURSOR, REPLAY, RESYNC) =================
+  // The durable per-session event log is authoritative. The live POST stream is a
+  // convenience view: when it drops events (backgrounded tab, reload mid-run, gap
+  // in seq) the UI reloads the snapshot instead of pretending it saw everything.
+  let harnessEventCache = new Map();      // seq -> durable event, rendered ascending
+  let harnessCursor = 0;                  // highest seq applied to the UI
+  let harnessSnapshot = null;             // last authoritative /state payload
+  let harnessEventStreamAbort = null;     // live follow stream (GET SSE) abort handle
+  let harnessStreamRetryTimer = null;
+  let harnessRunActive = false;           // a POST run stream owns the transcript
+  let harnessLastResyncAt = 0;
+
+  /* M5-P1-07-PURE-BEGIN */
+  function harnessEventCursor(events) {
+    let cursor = 0;
+    for (const ev of events || []) {
+      const seq = Number(ev && ev.seq);
+      if (Number.isInteger(seq) && seq > cursor) cursor = seq;
+    }
+    return cursor;
+  }
+
+  function harnessEventGap(page, cursor) {
+    // Can this page extend `cursor`, or must the UI reload from a snapshot?
+    if (!page) return { gap: true, reason: "no_page" };
+    if (page.snapshot_required) return { gap: true, reason: page.resync_reason || "snapshot_required" };
+    const start = Number.isInteger(Number(cursor)) ? Number(cursor) : 0;
+    const latest = Number(page.latest_seq || 0);
+    const retained = Number(page.retained_from_seq || 0);
+    if (latest < start) return { gap: true, reason: "cursor_ahead" };
+    if (start > 0 && retained && start + 1 < retained) return { gap: true, reason: "events_pruned" };
+    const seqs = (page.events || []).map(ev => Number(ev && ev.seq)).filter(s => Number.isInteger(s) && s > 0).sort((a, b) => a - b);
+    let expected = start > 0 ? start + 1 : (retained || 1);
+    for (const seq of seqs) {
+      if (seq > expected) return { gap: true, reason: "sequence_gap" };
+      expected = seq + 1;
+    }
+    if (!seqs.length && start < latest) return { gap: true, reason: "missing_events" };
+    return { gap: false, reason: "" };
+  }
+
+  function harnessMergeEvents(existing, incoming) {
+    // Sequence-keyed merge: a replayed or duplicated record renders at most once.
+    const bySeq = new Map();
+    for (const ev of existing || []) {
+      const seq = Number(ev && ev.seq);
+      if (Number.isInteger(seq) && seq > 0) bySeq.set(seq, ev);
+    }
+    for (const ev of incoming || []) {
+      const seq = Number(ev && ev.seq);
+      if (Number.isInteger(seq) && seq > 0 && !bySeq.has(seq)) bySeq.set(seq, ev);
+    }
+    return [...bySeq.keys()].sort((a, b) => a - b).map(seq => bySeq.get(seq));
+  }
+
+  function harnessStatusBadge(state) {
+    const status = String((state && (state.status || state.task_status)) || "idle").toLowerCase();
+    const map = {
+      waiting_approval: ["amber", "WAITING APPROVAL"],
+      running: ["cyan", "WORKFLOW RUNNING"],
+      paused: ["amber", "PAUSED"],
+      blocked: ["amber", "BLOCKED"],
+      pending: ["cyan", "READY"],
+      idle: ["cyan", "READY"],
+      completed: ["green", "COMPLETED"],
+      cancelled: ["amber", "CANCELLED"],
+      failed: ["amber", "FAILED"],
+      error: ["amber", "ERROR"],
+    };
+    const hit = map[status] || ["cyan", status.toUpperCase()];
+    return { cls: hit[0], label: hit[1] };
+  }
+  /* M5-P1-07-PURE-END */
+
+  function harnessResetEventCache() { harnessEventCache = new Map(); harnessCursor = 0; }
+
+  function harnessCachedEvents() {
+    return [...harnessEventCache.keys()].sort((a, b) => a - b).map(seq => harnessEventCache.get(seq));
+  }
+
+  function harnessRememberEvents(events) {
+    for (const ev of events || []) {
+      const seq = Number(ev && ev.seq);
+      if (!Number.isInteger(seq) || seq <= 0) continue;
+      if (!harnessEventCache.has(seq)) harnessEventCache.set(seq, ev);
+      if (seq > harnessCursor) harnessCursor = seq;
+    }
+  }
+
+  async function harnessFetchEventPage(sessionId, cursor, limit) {
+    const r = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/events?cursor=${cursor}&limit=${limit || 500}`);
+    if (!r.ok) throw new Error(`task event page HTTP ${r.status}`);
+    return await r.json();
+  }
+
+  async function loadHarnessEvents(opts) {
+    // Pull the durable log into the cache from `cursor` (or from the start).
+    const sessionId = activeHarnessId;
+    if (!sessionId) return { gap: false, reason: "" };
+    if (opts && opts.full) harnessResetEventCache();
+    let cursor = harnessCursor;
+    let verdict = { gap: false, reason: "" };
+    for (let page = 0; page < 40; page++) {
+      let payload;
+      try { payload = await harnessFetchEventPage(sessionId, cursor); } catch (e) { return { gap: true, reason: "fetch_error" }; }
+      if (activeHarnessId !== sessionId) return { gap: true, reason: "session_changed" };
+      verdict = harnessEventGap(payload, cursor);
+      if (verdict.gap) return verdict;
+      harnessRememberEvents(payload.events || []);
+      cursor = Number(payload.next_cursor || cursor);
+      if (!payload.has_more) break;
+    }
+    return verdict;
+  }
+
+  function applyHarnessSnapshotState(state) {
+    if (!state) return;
+    const badge = document.getElementById("harnessActiveStatusBadge");
+    const b = harnessStatusBadge(state);
+    if (badge) { badge.className = "badge " + b.cls; badge.textContent = b.label; }
+    const label = document.getElementById("harnessActiveLabel");
+    if (label && state.session) {
+      const approvals = state.approvals || {};
+      const parts = [
+        `${state.session.id} • task ${state.task_status || "pending"}`,
+        `${Number(state.turns_completed || 0)}/${Number(state.turns_started || 0)} turns completed`,
+      ];
+      const pending = (approvals.pending || []).length;
+      const expired = (approvals.expired || []).length;
+      if (pending) parts.push(`${pending} approval pending`);
+      if (expired) parts.push(`${expired} approval expired`);
+      const stream = state.event_stream || {};
+      if (stream.retained_from_seq > 1) parts.push(`event log truncated at seq ${stream.retained_from_seq}`);
+      label.textContent = parts.join(" • ");
+    }
+  }
+
+  async function harnessResyncFromSnapshot(reason) {
+    // Authoritative reload: task state + approval state + the durable event log.
+    const sessionId = activeHarnessId;
+    if (!sessionId) return;
+    harnessLastResyncAt = Date.now();
+    let state;
+    try {
+      const r = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`);
+      if (!r.ok) return;
+      state = await r.json();
+    } catch (e) { return; }
+    if (activeHarnessId !== sessionId) return;
+    harnessSnapshot = state;
+    if (state.session) updateHarnessHeaderBanner(state.session);
+    applyHarnessSnapshotState(state);
+    const verdict = await loadHarnessEvents({ full: true });
+    if (activeHarnessId !== sessionId) return;
+    renderStoredHarnessEvents(harnessCachedEvents());
+    if (verdict.gap && verdict.reason !== "session_changed") {
+      showToast(`Task event resync: ${verdict.reason}. Showing the authoritative snapshot.`, "warn");
+    }
+    // Re-anchored: reopen the follow stream from the new cursor (missing run
+    // leaves it closed, so a resync must restore live updates).
+    scheduleHarnessEventStreamRetry();
+  }
+
+  async function closeHarnessEventStream() {
+    if (harnessStreamRetryTimer) { clearTimeout(harnessStreamRetryTimer); harnessStreamRetryTimer = null; }
+    if (harnessEventStreamAbort) {
+      try { harnessEventStreamAbort.abort(); } catch (e) {}
+      harnessEventStreamAbort = null;
+    }
+  }
+
+  function scheduleHarnessEventStreamRetry() {
+    if (harnessStreamRetryTimer || !activeHarnessId || harnessRunActive) return;
+    harnessStreamRetryTimer = setTimeout(() => { harnessStreamRetryTimer = null; openHarnessEventStream(); }, 4000);
+  }
+
+  async function openHarnessEventStream() {
+    await closeHarnessEventStream();
+    const sessionId = activeHarnessId;
+    if (!sessionId || harnessRunActive || document.hidden) return;
+    const ctrl = new AbortController();
+    harnessEventStreamAbort = ctrl;
+    try {
+      const resp = await fetch(
+        `/api/harness/sessions/${encodeURIComponent(sessionId)}/events/stream?cursor=${harnessCursor}`,
+        { method: "GET", headers: { Accept: "text/event-stream" }, signal: ctrl.signal },
+      );
+      if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+      const reader = resp.body.getReader(), dec = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let idx;
+        while ((idx = buf.indexOf("\n\n")) !== -1) {
+          const frame = buf.slice(0, idx);
+          buf = buf.slice(idx + 2);
+          let frameEvent = "message", dataStr = "";
+          for (const line of frame.split("\n")) {
+            if (line.startsWith("event:")) frameEvent = line.slice(6).trim();
+            else if (line.startsWith("data:")) dataStr += line.slice(5).trim();
+          }
+          if (!dataStr) continue;
+          let data;
+          try { data = JSON.parse(dataStr); } catch (e) { continue; }
+          if (activeHarnessId !== sessionId) return;
+          if (frameEvent === "task_event") {
+            const verdict = harnessEventGap(
+              { events: [data], next_cursor: Number(data.seq), latest_seq: Number(data.seq), retained_from_seq: 0, snapshot_required: false },
+              harnessCursor,
+            );
+            if (verdict.gap) { await harnessResyncFromSnapshot(verdict.reason || "stream_gap"); return; }
+            harnessRememberEvents([data]);
+            renderStoredHarnessEvents(harnessCachedEvents());
+            if (data.type && (data.type === "turn/end" || data.type === "turn/verified" || data.type === "turn/cancelled")) {
+              // A turn reached a durable outcome: re-anchor status to the runtime.
+              fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`)
+                .then(r => (r.ok ? r.json() : null))
+                .then(state => { if (state && activeHarnessId === sessionId) { harnessSnapshot = state; applyHarnessSnapshotState(state); renderStoredHarnessEvents(harnessCachedEvents()); } })
+                .catch(() => {});
+            }
+          } else if (frameEvent === "resync_required") {
+            await harnessResyncFromSnapshot(data.reason || "stream_gap");
+            return;
+          } else if (frameEvent === "stream_error") {
+            showToast(data.message || "Task event stream error", "warn");
+            return;
+          }
+        }
+      }
+      if (activeHarnessId === sessionId) scheduleHarnessEventStreamRetry();
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+      scheduleHarnessEventStreamRetry();
+    }
+  }
+
+  function setHarnessRunActive(active) {
+    harnessRunActive = !!active;
+    if (!harnessRunActive && activeHarnessId) {
+      harnessResyncFromSnapshot("turn_end");
+      openHarnessEventStream();
+    }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (!activeHarnessId) return;
+    if (document.hidden) { closeHarnessEventStream(); return; }
+    if (harnessRunActive) return;
+    if (Date.now() - harnessLastResyncAt > 2000) harnessResyncFromSnapshot("visible");
+    openHarnessEventStream();
+  });
+  window.addEventListener("focus", () => {
+    if (!activeHarnessId || harnessRunActive) return;
+    if (Date.now() - harnessLastResyncAt < 5000) return;
+    harnessResyncFromSnapshot("focus");
+  });
+
+  function renderStoredHarnessEventHtml(ev, decisions, livePending) {
+    if (!ev || !ev.type) return "";
+    if (ev.type === "turn/start") {
+      const resumed = ev.resumed_from_step ? ` resuming from step ${ev.resumed_from_step}` : "";
+      return `<div class="h-turn-user"><div style="font-size:10.8px; color:#c7d2fe; font-weight:700; margin-bottom:3px;">USER TASK (${escapeHtml(ev.policy || '')}${escapeHtml(resumed)})</div>${renderMarkdown(ev.prompt || "")}</div>`;
+    }
+    if (ev.type === "gsd/wave") {
+      return `<div style="font-family:var(--mono); font-size:11.4px; color:#fde68a; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.42); border-radius:8px; padding:7px 12px;">${UI_ICONS.bolt} GSD Fresh-Context Wave ${escapeHtml(String(ev.wave || ""))}/3: <strong>${escapeHtml(ev.name || '')}</strong> (${escapeHtml(ev.model || '')})</div>`;
+    }
+    if (ev.type === "context/compacted") {
+      return `<div style="font-family:var(--mono); font-size:11.3px; color:#e9d5ff; background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.4); border-radius:8px; padding:6px 11px;">${UI_ICONS.bolt} Context-Mode Compacted: ${escapeHtml(String(ev.before_chars || 0))} -&gt; ${escapeHtml(String(ev.after_chars || 0))} chars (archived in FTS5 <code>${escapeHtml(ev.vault_id || '')}</code>)</div>`;
+    }
+    if (ev.type === "step/start") {
+      return `<div class="mono" style="font-size:10.9px; color:var(--text-faint);">step #${escapeHtml(String(ev.step || ""))} • ${escapeHtml(ev.model || "")}</div>`;
+    }
+    if (ev.type === "assistant/message") {
+      const u = ev.usage || {};
+      const uBadge = u.decode_tps ? `<span class="badge green">${escapeHtml(String(u.decode_tps))} tok/s • ${escapeHtml(String(u.completion_tokens || 0))} tok</span>` : "";
+      const think = ev.reasoning ? `<details class="think-box"><summary>Reasoning Trace</summary><pre>${escapeHtml(ev.reasoning)}</pre></details>` : "";
+      const bodyMd = ev.content ? renderMarkdown(ev.content) : (ev.tool_calls && ev.tool_calls.length ? `<div style="font-size:12px; color:var(--text-dim);">Invoking ${escapeHtml(String(ev.tool_calls.length))} tool(s)...</div>` : "");
+      return `<div class="h-step-card"><div class="h-step-head"><div><strong>Step #${escapeHtml(String(ev.step || ""))}</strong> <span class="mono" style="color:var(--text-dim); margin-left:6px;">${escapeHtml(ev.model || "")}</span></div>${uBadge}</div>${think}${bodyMd}</div>`;
+    }
+    if (ev.type === "tool/result") return renderToolResultCardHtml(ev);
+    if (ev.type === "approval/request") {
+      const approvalId = String(ev.approval_id || "");
+      const decided = decisions[approvalId];
+      const isLive = !decided && livePending.has(approvalId);
+      const badgeHtml = decided
+        ? `<span class="badge ${decided === "approve" ? "green" : "amber"}">${decided === "approve" ? "Approved" : "Rejected"}</span>`
+        : (isLive ? `<span class="badge amber">Awaiting decision</span>` : `<span class="badge amber">Expired — re-run the turn</span>`);
+      const controls = isLive
+        ? `<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:6px;"><button class="btn btn-emerald btn-xs" onclick="resolveHarnessApproval('${escapeHtml(approvalId)}','approve','${escapeHtml(activeHarnessId || '')}')">${UI_ICONS.check} Approve &amp; Run</button><button class="btn btn-danger btn-xs" onclick="resolveHarnessApproval('${escapeHtml(approvalId)}','reject','${escapeHtml(activeHarnessId || '')}')">${UI_ICONS.close} Reject</button><input type="text" id="apr-note-${escapeHtml(approvalId)}" placeholder="Optional rejection guidance" style="flex:1;min-width:160px;font-size:11.5px;padding:4px 8px;" /></div>`
+        : "";
+      return `<div class="h-tool-card wait" id="apr-card-${escapeHtml(approvalId)}"><div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;flex-wrap:wrap;"><strong style="color:#fde68a;">${UI_ICONS.warn} Approval required: <code>${escapeHtml(ev.tool || "")}</code></strong>${badgeHtml}</div><pre style="padding:7px 9px;background:#06090e;border-radius:6px;font-family:var(--mono);font-size:11.6px;color:#fff;overflow-x:auto;margin-bottom:6px;">${escapeHtml(formatToolArgsSummary(ev.tool, ev.args))}</pre>${controls}</div>`;
+    }
+    if (ev.type === "approval/decision") {
+      const approved = ev.decision === "approve";
+      const note = ev.note ? ` • ${escapeHtml(ev.note)}` : "";
+      return `<div class="mono" style="font-size:11px; color:${approved ? '#6ee7b7' : '#fda4af'};">approval ${escapeHtml(String(ev.approval_id || ""))}: ${approved ? "approved" : "rejected"}${note}</div>`;
+    }
+    if (ev.type === "turn/end") {
+      const state = ev.state ? ` • ${escapeHtml(String(ev.state))}` : "";
+      const ok = !ev.state || ev.state === "completed";
+      return `<div style="font-family:var(--mono); font-size:11.2px; color:${ok ? '#6ee7b7' : '#fde68a'}; text-align:right; padding:2px 4px;">[${ok ? 'OK' : 'END'}] Turn complete in ${escapeHtml(String(ev.elapsed_s || 0))}s (${escapeHtml(String(ev.steps || 0))} step${Number(ev.steps) === 1 ? '' : 's'})${state}</div>`;
+    }
+    if (ev.type === "turn/verified") {
+      return `<div style="font-family:var(--mono); font-size:11.2px; color:#6ee7b7; padding:2px 4px;">${UI_ICONS.check} Completion verified (${escapeHtml(String(ev.spec_sha256 || "spec").slice(0, 12))})</div>`;
+    }
+    if (ev.type === "turn/verification_failed") {
+      return `<div class="h-tool-card err"><strong>Completion rejected:</strong> ${escapeHtml(String(ev.failure_code || "unverified"))} — ${escapeHtml(String(ev.reason || ev.detail || ""))}</div>`;
+    }
+    if (ev.type === "turn/paused") {
+      return `<div style="font-family:var(--mono); font-size:11.2px; color:#fde68a; padding:2px 4px;">Paused at step ${escapeHtml(String(ev.step || 0))} — ${escapeHtml(String(ev.reason || ""))}</div>`;
+    }
+    if (ev.type === "turn/cancelled") {
+      return `<div style="font-family:var(--mono); font-size:11.2px; color:#fda4af; padding:2px 4px;">Cancelled — ${escapeHtml(String(ev.reason || ""))}</div>`;
+    }
+    if (ev.type === "turn/budget_exceeded") {
+      return `<div style="font-family:var(--mono); font-size:11.2px; color:#fde68a; padding:2px 4px;">Budget exhausted at step ${escapeHtml(String(ev.step || 0))} — ${escapeHtml(String(ev.reason || ""))}</div>`;
+    }
+    if (ev.type === "turn/max_steps_reached") {
+      return `<div style="font-family:var(--mono); font-size:11.2px; color:#fde68a; padding:2px 4px;">Max steps reached (${escapeHtml(String(ev.max_steps || 0))})</div>`;
+    }
+    if (ev.type === "turn/resume_prepared") {
+      return `<div style="font-family:var(--mono); font-size:11.2px; color:#a7f3d0; padding:2px 4px;">Resume prepared — next step ${escapeHtml(String(ev.next_step || ""))} (recoveries used ${escapeHtml(String(ev.recoveries_used || 0))})</div>`;
+    }
+    if (ev.type === "turn/error") {
+      return `<div class="h-tool-card err"><strong>Error:</strong> ${escapeHtml(ev.message || "")}</div>`;
+    }
+    if (ev.type === "worktree/applied") {
+      return `<div style="font-family:var(--mono); font-size:11.4px; color:#a7f3d0; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.4); border-radius:8px; padding:7px 11px;">${UI_ICONS.check} ${escapeHtml(ev.message || "Worktree applied.")}</div>`;
+    }
+    return "";
+  }
+
   function renderStoredHarnessEvents(events) {
     const stream = document.getElementById("harnessStream");
-    if (!events.length) { renderHarnessStarter(); return; }
-    const htmlParts = [];
-    for (const ev of events) {
-      if (ev.type === "turn/start") {
-        htmlParts.push(`<div class="h-turn-user"><div style="font-size:10.8px; color:#c7d2fe; font-weight:700; margin-bottom:3px;">USER TASK (${escapeHtml(ev.policy || '')})</div>${renderMarkdown(ev.prompt || "")}</div>`);
-      } else if (ev.type === "gsd/wave") {
-        htmlParts.push(`<div style="font-family:var(--mono); font-size:11.4px; color:#fde68a; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.42); border-radius:8px; padding:7px 12px;">${UI_ICONS.bolt} GSD Fresh-Context Wave ${ev.wave}/3: <strong>${escapeHtml(ev.name || '')}</strong> (${escapeHtml(ev.model || '')})</div>`);
-      } else if (ev.type === "context/compacted") {
-        htmlParts.push(`<div style="font-family:var(--mono); font-size:11.3px; color:#e9d5ff; background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.4); border-radius:8px; padding:6px 11px;">${UI_ICONS.bolt} Context-Mode Compacted: ${ev.before_chars} -&gt; ${ev.after_chars} chars (archived in FTS5 <code>${escapeHtml(ev.vault_id || '')}</code>)</div>`);
-      } else if (ev.type === "assistant/message") {
-        const u = ev.usage || {};
-        const uBadge = u.decode_tps ? `<span class="badge green">${u.decode_tps} tok/s • ${u.completion_tokens || 0} tok</span>` : "";
-        const think = ev.reasoning ? `<details class="think-box"><summary>Reasoning Trace</summary><pre>${escapeHtml(ev.reasoning)}</pre></details>` : "";
-        const bodyMd = ev.content ? renderMarkdown(ev.content) : (ev.tool_calls && ev.tool_calls.length ? `<div style="font-size:12px; color:var(--text-dim);">Invoking ${ev.tool_calls.length} tool(s)...</div>` : "");
-        htmlParts.push(`<div class="h-step-card"><div class="h-step-head"><div><strong>Step #${ev.step}</strong> <span class="mono" style="color:var(--text-dim); margin-left:6px;">${escapeHtml(ev.model || "")}</span></div>${uBadge}</div>${think}${bodyMd}</div>`);
-      } else if (ev.type === "tool/result") {
-        htmlParts.push(renderToolResultCardHtml(ev));
-      } else if (ev.type === "turn/end") {
-        htmlParts.push(`<div style="font-family:var(--mono); font-size:11.2px; color:#6ee7b7; text-align:right; padding:2px 4px;">[OK] Turn complete in ${ev.elapsed_s}s (${ev.steps} step${ev.steps === 1 ? '' : 's'})</div>`);
-      } else if (ev.type === "worktree/applied") {
-        htmlParts.push(`<div style="font-family:var(--mono); font-size:11.4px; color:#a7f3d0; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.4); border-radius:8px; padding:7px 11px;">${UI_ICONS.check} ${escapeHtml(ev.message || "Worktree applied.")}</div>`);
-      } else if (ev.type === "turn/error") {
-        htmlParts.push(`<div class="h-tool-card err"><strong>Error:</strong> ${escapeHtml(ev.message || "")}</div>`);
-      }
+    const ordered = harnessMergeEvents([], events || []);
+    if (!ordered.length) { renderHarnessStarter(); return; }
+    const decisions = {};
+    for (const ev of ordered) {
+      if (ev.type === "approval/decision" && ev.approval_id) decisions[ev.approval_id] = ev.decision || "";
     }
+    const livePending = new Set((((harnessSnapshot || {}).approvals || {}).pending || []).map(a => a.approval_id));
+    const htmlParts = [];
+    const streamState = (harnessSnapshot || {}).event_stream || {};
+    if (Number(streamState.retained_from_seq || 0) > 1) {
+      htmlParts.push(`<div class="mono" style="font-size:11px; color:var(--text-faint);">Earlier events were pruned; showing the retained log from seq ${escapeHtml(String(streamState.retained_from_seq))}. Task status above is authoritative.</div>`);
+    }
+    for (const ev of ordered) htmlParts.push(renderStoredHarnessEventHtml(ev, decisions, livePending));
     stream.innerHTML = htmlParts.join("");
     stream.scrollTop = stream.scrollHeight;
   }
@@ -5860,8 +6192,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       try { msg = (await res.json()).detail || msg; } catch (_) {}
       if (card) card.querySelectorAll("button").forEach(b => (b.disabled = false));
       showToast(msg, "error");
+      // A rejected replay (409) means the durable decision already exists: reload
+      // it instead of leaving an actionable stale card on screen.
+      await harnessResyncFromSnapshot("approval_rejected");
       return;
     }
+    await harnessResyncFromSnapshot("approval_decision");
   }
 
   async function abortHarnessRun() {
@@ -5936,6 +6272,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       return liveSteps[step];
     }
 
+    setHarnessRunActive(true);
     consumeSSE("/api/harness/run", {
       session_id: activeHarnessId || "",
       prompt,
@@ -5950,7 +6287,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       skills: [...selectedSkills],
     }, {
       turn_start(d) {
-        activeHarnessId = d.session.id;
+        if (activeHarnessId !== d.session.id) {
+          activeHarnessId = d.session.id;
+          harnessResetEventCache();
+          harnessSnapshot = null;
+        }
         updateHarnessHeaderBanner(d.session);
         loadHarnessSessions();
       },
@@ -6032,6 +6373,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     }, () => {
       document.getElementById("harnessRunBtn").disabled = false;
       document.getElementById("harnessAbortBtn").style.display = "none";
+      // The turn is over: re-render from the durable log so missed live frames can
+      // never leave a duplicate or a missing completion on screen.
+      setHarnessRunActive(false);
     });
   }
 
@@ -6404,6 +6748,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       return liveSteps[step];
     }
 
+    setHarnessRunActive(true);
     consumeSSE("/api/harness/gsd-wave", {
       session_id: activeHarnessId || "",
       prompt,
@@ -6479,6 +6824,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const gsdBtn = document.getElementById("harnessGsdBtn");
       if (gsdBtn) gsdBtn.disabled = false;
       document.getElementById("harnessAbortBtn").style.display = "none";
+      setHarnessRunActive(false);
     });
   }
 
@@ -6708,6 +7054,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     document.getElementById("harnessAbortBtn").style.display = "inline-flex";
     document.getElementById("harnessActiveStatusBadge").textContent = "SDLC RUNNING";
 
+    setHarnessRunActive(true);
     consumeSSE(url, payload, {
       turn_init(d) {
         activeHarnessId = d.session.id;
@@ -6744,6 +7091,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       if (gsdBtn) gsdBtn.disabled = false;
       if (sdlcBtn) sdlcBtn.disabled = false;
       document.getElementById("harnessAbortBtn").style.display = "none";
+      setHarnessRunActive(false);
     });
   }
 
@@ -10623,6 +10971,7 @@ def _resolve_pending_tool_approval(
             scoping_session,
             "approval/decision",
             {"approval_id": approval_id, "decision": decision, "note": slot.get("note") or ""},
+            dedupe_key=f"approval-decision:{approval_id}",
         )
 
 
@@ -10690,7 +11039,12 @@ async def _await_tool_approval(pending: dict[str, Any], timeout: float = 600.0) 
     )
     approved = slot.get("decision") == "approve"
     decision = {"approved": approved, "note": slot.get("note") or "", "approval_id": approval_id, "decision": "approve" if approved else "reject"}
-    _append_harness_event(session_id, "approval/decision", {"step": pending["step"], **decision})
+    _append_harness_event(
+        session_id,
+        "approval/decision",
+        {"step": pending["step"], **decision},
+        dedupe_key=f"approval-decision:{approval_id}",
+    )
     return decision
 
 
@@ -11087,40 +11441,60 @@ def _remove_harness_worktree(workspace_dir: Path, worktree_dir: Path, branch_nam
         return
 
 
-def _append_harness_event(session_id: str, event_type: str, payload: dict[str, Any]) -> dict[str, Any]:
+def _task_event_log() -> task_events.TaskEventLog:
+    """Return a durable task-event log bound to the current harness store directory.
+
+    Deliberately constructed per call rather than cached at import time: the
+    store directory is configuration (and is relocated by tests and embedded
+    launches), so a module-level cache would address the wrong store.
+    """
     _ensure_harness_dirs()
-    log_path = HARNESS_STORE_DIR / f"{session_id}.jsonl"
-    seq = 1
-    if log_path.exists():
-        try:
-            with log_path.open("rb") as f:
-                seq = sum(1 for _ in f) + 1
-        except OSError:
-            seq = 1
-    record = {"seq": seq, "ts": round(time.time(), 3), "type": event_type, **payload}
-    with log_path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    return task_events.TaskEventLog(HARNESS_STORE_DIR)
+
+
+def _append_harness_event(
+    session_id: str,
+    event_type: str,
+    payload: dict[str, Any],
+    *,
+    dedupe_key: str | None = None,
+) -> dict[str, Any]:
+    """Append one durable task event and return the durable record.
+
+    With `dedupe_key` the append is idempotent: a retried or concurrently
+    resumed turn returns the record that already exists instead of emitting a
+    second copy of a terminal outcome or approval decision.
+    """
     try:
-        log_path.chmod(0o600)
-    except OSError:
-        pass
-    return record
+        return _task_event_log().append(session_id, event_type, payload, dedupe_key=dedupe_key)
+    except task_events.TaskEventError as exc:
+        raise ValueError(str(exc)) from exc
 
 
 def _read_harness_events(session_id: str) -> list[dict[str, Any]]:
-    log_path = HARNESS_STORE_DIR / f"{session_id}.jsonl"
-    if not log_path.exists():
-        return []
-    events: list[dict[str, Any]] = []
-    for line in log_path.read_text(encoding="utf-8", errors="ignore").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            events.append(json.loads(line))
-        except json.JSONDecodeError:
-            continue
-    return events
+    """Every retained event for a session, in sequence order."""
+    try:
+        return _task_event_log().all_events(session_id)
+    except task_events.TaskEventError as exc:
+        raise ValueError(str(exc)) from exc
+
+
+def _read_harness_event_page(
+    session_id: str,
+    *,
+    cursor: int = 0,
+    limit: int = 200,  # task_events.DEFAULT_READ_LIMIT (see the note in api_get_harness_session_events)
+) -> task_events.TaskEventPage:
+    """Cursor read over the durable event log, including its resync verdict."""
+    try:
+        return _task_event_log().read(session_id, cursor=cursor, limit=limit)
+    except task_events.TaskEventError as exc:
+        raise ValueError(str(exc)) from exc
+
+
+def _harness_event_snapshot(session_id: str) -> task_events.TaskEventSnapshot:
+    """Event-derived session facts used to reconstruct state after a reload."""
+    return _task_event_log().reconstruct(session_id)
 
 
 def _load_harness_messages(session_id: str) -> list[dict[str, str]]:
@@ -13303,6 +13677,15 @@ async def api_approve_harness_tool(request: Request) -> JSONResponse:
             detail="Approval already resolved; re-submission (replay) rejected.",
         )
 
+    # Durable replay detection: the decision is also recorded in the session's
+    # append-only event log, so a stale approval id stays rejected after a
+    # process restart, when the in-memory tombstone no longer exists.
+    if _durable_approval_decision(request_session, aid):
+        raise HTTPException(
+            status_code=409,
+            detail="Approval already resolved (durable decision record); re-submission rejected.",
+        )
+
     slot = _PENDING_APPROVALS.get(aid)
     if not slot:
         # Never existed or already consumed out-of-band; fail closed.
@@ -13373,6 +13756,234 @@ def _serialize_transition_record(tr: runtime_persistence.TaskTransitionRecord) -
         "evidence": ev,
         "created_at": tr.created_at,
     }
+
+
+def _serialize_harness_session_row(sess: dict[str, Any]) -> dict[str, Any]:
+    """Session row without the event log (the log has its own cursor endpoint)."""
+    return {k: v for k, v in sess.items() if k != "events"}
+
+
+def _harness_approval_state(session_id: str) -> dict[str, Any]:
+    """Reconcile pending intent (in-memory approval slots) with durable outcomes.
+
+    The durable `approval/request` events carry the tool, args, and step, so a
+    reload can re-render the approval card. Only a request whose in-memory slot
+    is still waiting can be approved; an undecided request whose slot is gone
+    (process restart, aborted run) is reported as `expired`, never pending.
+    """
+    snapshot = _harness_event_snapshot(session_id)
+    decided = {aid: decision for aid, decision in snapshot.approval_decisions}
+    requests: dict[str, dict[str, Any]] = {}
+    for event in reversed(_read_harness_events(session_id)):
+        if event.get("type") != "approval/request":
+            continue
+        approval_id = str(event.get("approval_id") or "")
+        if approval_id and approval_id not in requests:
+            requests[approval_id] = {
+                "approval_id": approval_id,
+                "step": event.get("step"),
+                "tool": event.get("tool"),
+                "args": event.get("args") or {},
+                "requested_at": event.get("ts"),
+            }
+    pending: list[dict[str, Any]] = []
+    expired: list[dict[str, Any]] = []
+    for approval_id, info in requests.items():
+        if approval_id in decided:
+            continue
+        slot = _PENDING_APPROVALS.get(approval_id)
+        live = slot is not None and not slot["event"].is_set()
+        (pending if live else expired).append({**info, "live": live, "decision": "pending"})
+    recent = [
+        {"approval_id": approval_id, "decision": decision}
+        for approval_id, decision in snapshot.approval_decisions[-10:]
+    ]
+    return {"pending": pending, "expired": expired, "recent_decisions": recent}
+
+
+def _durable_approval_decision(session_id: str, approval_id: str) -> str:
+    """Durable decision record for an approval id (survives process restarts)."""
+    if not session_id or not approval_id:
+        return ""
+    try:
+        return _task_event_log().approval_decision(session_id, approval_id)
+    except (task_events.TaskEventError, ValueError, OSError):
+        return ""
+
+
+def _harness_session_state_snapshot(session_id: str) -> dict[str, Any]:
+    """Authoritative state for a harness session: task, events, and approvals.
+
+    This is what a reload or an event-stream gap resynchronizes against. It is
+    reconstructed from durable stores only (SQLite task/checkpoint rows plus the
+    session event log) so it never depends on a live in-flight coroutine.
+    """
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    sm = get_task_state_machine()
+    task = sm.store.get_task(session_id)
+    if task is None:
+        task, budget = sm.ensure_root_task(
+            session_id,
+            session_id=session_id,
+            title=str(sess.get("title") or ""),
+            workspace_dir=str(sess.get("worktree_dir") or ""),
+            policy=str(sess.get("policy") or "standard"),
+        )
+    else:
+        budget = sm.budgets.get_budget(session_id)
+    integrity_error = ""
+    latest_ckpt: workflow_checkpoints.TaskCheckpointRecord | None = None
+    try:
+        latest_ckpt = sm.checkpoints.load_latest_checkpoint(session_id, verify_integrity=True)
+    except workflow_checkpoints.ResumeRejected as exc:
+        integrity_error = str(exc)
+    try:
+        event_stream = _harness_event_snapshot(session_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    approvals = _harness_approval_state(session_id)
+    # The task state machine is authoritative. A live approval gate is the one
+    # overlay: the runtime is waiting on the operator, not on the model.
+    status = "waiting_approval" if approvals["pending"] else task.state
+    milestones = sm.list_milestones(session_id)
+    verification_spec = sm.get_verification_spec(session_id)
+    return {
+        "session_id": session_id,
+        "status": status,
+        "task_status": task.state,
+        "terminal": task.state in {"completed", "cancelled", "failed"},
+        "session": _serialize_harness_session_row(sess),
+        "task": _serialize_task_record(task),
+        "budget": budget.to_dict(),
+        "verification_spec": verification_spec.to_dict() if verification_spec is not None else None,
+        "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
+        "checkpoint_integrity_error": integrity_error,
+        "checkpoints": [ck.to_dict() for ck in sm.checkpoints.list_checkpoints(session_id, verify_integrity=False)],
+        "milestones": [_serialize_task_record(ms) for ms in milestones],
+        "transitions": [_serialize_transition_record(tr) for tr in sm.store.list_transitions(session_id)],
+        "event_stream": event_stream.to_dict(),
+        "approvals": approvals,
+        "turns_started": event_stream.turns_started,
+        "turns_completed": event_stream.turns_completed,
+        "last_turn_state": event_stream.last_turn_state,
+        "generated_at": round(time.time(), 3),
+    }
+
+
+@app.get("/api/harness/sessions/{session_id}/state")
+async def api_get_harness_session_state(session_id: str) -> JSONResponse:
+    """Authoritative task/event/approval snapshot used to rebuild the UI on reload."""
+    return JSONResponse(_harness_session_state_snapshot(session_id))
+
+
+@app.get("/api/harness/sessions/{session_id}/events")
+async def api_get_harness_session_events(
+    session_id: str,
+    cursor: int = 0,
+    # Literal, not task_events.DEFAULT_READ_LIMIT: this default is evaluated at
+    # import time, before scripts/build_studio.py installs the inlined module
+    # alias in the standalone artifact.
+    limit: int = 200,
+) -> JSONResponse:
+    """Cursor read over the durable task event log.
+
+    `snapshot_required` is the server's verdict on whether the caller's cursor
+    can be resumed from (false) or whether only a full snapshot is faithful
+    (true: pruned history, cursor ahead of the store, or a sequence gap).
+    """
+    try:
+        get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    try:
+        page = _read_harness_event_page(session_id, cursor=cursor, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(page.to_dict())
+
+
+@app.get("/api/harness/sessions/{session_id}/events/stream")
+async def api_stream_harness_session_events(
+    session_id: str,
+    request: Request,
+    cursor: int = -1,
+    limit: int = 200,  # task_events.DEFAULT_READ_LIMIT (import-time safe)
+    poll_interval: float = 0.5,
+    max_seconds: float = 120.0,
+    drain: bool = False,
+) -> StreamingResponse:
+    """Server-sent task events with cursor replay, gap signalling, and heartbeats.
+
+    Each frame carries the event `seq` as its SSE `id`, so a reconnecting client
+    can resume from `Last-Event-ID`. When the requested cursor cannot be
+    resumed (`snapshot_required`), the stream emits `resync_required` and closes:
+    the client must reload the snapshot rather than silently continue with a
+    partial history. `drain=true` closes as soon as the client is caught up,
+    which is what scripted verification uses; the browser uses the default
+    follow mode with a bounded lifetime.
+    """
+    try:
+        get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    header_cursor = task_events.parse_cursor(request.headers.get("last-event-id"), default=0)
+    start_cursor = cursor if cursor >= 0 else header_cursor
+    safe_limit = max(1, min(int(limit), task_events.MAX_READ_LIMIT))
+    safe_interval = max(0.05, min(float(poll_interval), 5.0))
+    safe_max_seconds = max(0.0, min(float(max_seconds), 900.0))
+
+    async def event_gen() -> AsyncIterator[str]:
+        stream_cursor = start_cursor
+        deadline = time.monotonic() + safe_max_seconds
+        last_heartbeat = time.monotonic()
+        while True:
+            if await request.is_disconnected():
+                return
+            try:
+                page = _read_harness_event_page(session_id, cursor=stream_cursor, limit=safe_limit)
+            except ValueError as exc:
+                yield _sse("stream_error", {"session_id": session_id, "message": str(exc)})
+                return
+            if page.snapshot_required:
+                yield _sse(
+                    "resync_required",
+                    {
+                        "session_id": session_id,
+                        "reason": page.resync_reason,
+                        "cursor": stream_cursor,
+                        "latest_seq": page.latest_seq,
+                        "retained_from_seq": page.retained_from_seq,
+                        "missing_ranges": [{"from_seq": a, "to_seq": b} for a, b in page.missing_ranges],
+                    },
+                )
+                return
+            for event in page.events:
+                stream_cursor = int(event["seq"])
+                yield f"id: {stream_cursor}\nevent: task_event\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
+            if drain:
+                yield _sse(
+                    "stream_caught_up",
+                    {"session_id": session_id, "cursor": stream_cursor, "latest_seq": page.latest_seq},
+                )
+                return
+            now = time.monotonic()
+            if not page.events and now - last_heartbeat >= task_events.STREAM_HEARTBEAT_SECONDS:
+                yield _sse(
+                    "heartbeat",
+                    {"session_id": session_id, "cursor": stream_cursor, "latest_seq": page.latest_seq},
+                )
+                last_heartbeat = now
+            if now >= deadline:
+                yield _sse("stream_timeout", {"session_id": session_id, "cursor": stream_cursor})
+                return
+            if page.has_more:
+                continue
+            await asyncio.sleep(safe_interval)
+
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
 
 
 @app.get("/api/harness/sessions/{session_id}/task")
@@ -13496,6 +14107,7 @@ async def api_cancel_harness_session(session_id: str, request: Request) -> JSONR
         session_id,
         "turn/cancelled",
         {"reason": reason, "unresolved_action_ids": list(outcome.unresolved_action_ids)},
+        dedupe_key=f"turn-cancelled:{outcome.task.current_epoch}",
     )
     return JSONResponse(
         {
@@ -14038,7 +14650,12 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                 lease_released = True
                 sm.cancel_task(session_id, reason=halt_reason or "turn_cancelled", evidence_refs=final_refs)
                 _update_harness_session_state(session_id, status="cancelled")
-                _append_harness_event(session_id, "turn/cancelled", {"step": completed_step, "reason": halt_reason})
+                _append_harness_event(
+                    session_id,
+                    "turn/cancelled",
+                    {"step": completed_step, "reason": halt_reason},
+                    dedupe_key=f"turn-cancelled:{lease_epoch}:{completed_step}",
+                )
                 yield _sse("cancelled", {"step": completed_step, "reason": halt_reason})
             elif halt_mode in {"paused", "budget_exceeded", "max_steps"}:
                 lease_final_state = "paused"
@@ -14089,7 +14706,12 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     if did_rel_ver:
                         _update_harness_session_state(session_id, status="error")
                     ver_payload = verification_report.to_dict()
-                    _append_harness_event(session_id, "turn/verification_failed", ver_payload)
+                    _append_harness_event(
+                        session_id,
+                        "turn/verification_failed",
+                        ver_payload,
+                        dedupe_key=f"turn-verification-failed:{lease_epoch}",
+                    )
                     yield _sse("verification_failed", ver_payload)
                 else:
                     failure_injection.check_action_boundary(
@@ -14118,7 +14740,12 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     _update_harness_session_state(session_id, status="completed")
                     if verification_report.spec_sha256:
                         ver_ok_payload = verification_report.to_dict()
-                        _append_harness_event(session_id, "turn/verified", ver_ok_payload)
+                        _append_harness_event(
+                            session_id,
+                            "turn/verified",
+                            ver_ok_payload,
+                            dedupe_key=f"turn-verified:{lease_epoch}",
+                        )
                         yield _sse("verification_passed", ver_ok_payload)
 
             diff_summary = _compute_git_diff(wt_dir)
@@ -14131,6 +14758,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     "git_status": diff_summary.get("status", ""),
                     "state": lease_final_state,
                 },
+                dedupe_key=f"turn-end:{lease_epoch}:{lease_final_state}",
             )
             yield _sse(
                 "turn_done",
@@ -14168,7 +14796,12 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
             )
             if did_release_err:
                 _update_harness_session_state(session_id, status="error")
-            _append_harness_event(session_id, "turn/error", {"message": str(exc)})
+            _append_harness_event(
+                session_id,
+                "turn/error",
+                {"message": str(exc)},
+                dedupe_key=f"turn-error:{lease_epoch}",
+            )
             yield _sse("error", {"message": str(exc)})
         finally:
             _release_turn_lease()
@@ -14807,6 +15440,7 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                     "git_status": diff_final.get("status", ""),
                     "state": lease_final_state,
                 },
+                dedupe_key=f"turn-end:{lease_epoch}:{lease_final_state}",
             )
             yield _sse(
                 "turn_done",
@@ -14832,7 +15466,12 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
             lease_released = True
             if coord.release(session_id, lease_epoch, worker_id, next_state="failed", reason="gsd_failed"):
                 _update_harness_session_state(session_id, status="error")
-            _append_harness_event(session_id, "turn/error", {"message": str(exc)})
+            _append_harness_event(
+                session_id,
+                "turn/error",
+                {"message": str(exc)},
+                dedupe_key=f"turn-error:{lease_epoch}",
+            )
             yield _sse("error", {"message": str(exc)})
         finally:
             _release_gsd_lease()
@@ -15705,7 +16344,12 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
             elapsed_s = round(time.perf_counter() - t0, 2)
             diff_final = _compute_git_diff(wt_dir)
             stories_final = _read_sdlc_backlog(sdlc_dir)
-            _append_harness_event(session_id, "turn/end", {"steps": get_harness_session_db(session_id)["step_count"], "elapsed_s": elapsed_s, "git_status": diff_final.get("status", "")})
+            _append_harness_event(
+                session_id,
+                "turn/end",
+                {"steps": get_harness_session_db(session_id)["step_count"], "elapsed_s": elapsed_s, "git_status": diff_final.get("status", "")},
+                dedupe_key=f"turn-end:{lease_epoch}:{lease_final_state}",
+            )
             yield _sse(
                 "turn_done",
                 {
@@ -15723,7 +16367,12 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
             lease_released = True
             if coord.release(session_id, lease_epoch, worker_id, next_state="failed", reason="sdlc_failed"):
                 _update_harness_session_state(session_id, status="error")
-            _append_harness_event(session_id, "turn/error", {"message": str(exc)})
+            _append_harness_event(
+                session_id,
+                "turn/error",
+                {"message": str(exc)},
+                dedupe_key=f"turn-error:{lease_epoch}",
+            )
             yield _sse("error", {"message": str(exc)})
         finally:
             _release_sdlc_lease()
@@ -15934,7 +16583,12 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
             elapsed_s = round(time.perf_counter() - t0, 2)
             diff_final = _compute_git_diff(wt_dir)
             stories_final = _read_sdlc_backlog(sdlc_dir)
-            _append_harness_event(session_id, "turn/end", {"steps": get_harness_session_db(session_id)["step_count"], "elapsed_s": elapsed_s, "git_status": diff_final.get("status", "")})
+            _append_harness_event(
+                session_id,
+                "turn/end",
+                {"steps": get_harness_session_db(session_id)["step_count"], "elapsed_s": elapsed_s, "git_status": diff_final.get("status", "")},
+                dedupe_key=f"turn-end:{lease_epoch_fb}:{lease_final_state_fb}",
+            )
             yield _sse(
                 "turn_done",
                 {
@@ -15952,7 +16606,12 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
             lease_released_fb = True
             if coord_fb.release(session_id, lease_epoch_fb, worker_id_fb, next_state="failed", reason="sdlc_feedback_failed"):
                 _update_harness_session_state(session_id, status="error")
-            _append_harness_event(session_id, "turn/error", {"message": str(exc)})
+            _append_harness_event(
+                session_id,
+                "turn/error",
+                {"message": str(exc)},
+                dedupe_key=f"turn-error:{lease_epoch_fb}",
+            )
             yield _sse("error", {"message": str(exc)})
         finally:
             _release_fb_lease()
@@ -25455,6 +26114,511 @@ class DurableActionBoundary:
         return result
 
 execution_spine = sys.modules[__name__]
+
+"""Durable, cursor-addressable task event stream for harness sessions (M5-P1-07).
+
+The runtime already writes one append-only JSONL log per harness session under
+``.harnesses/sessions/<session_id>.jsonl``. That log is the source the UI
+re-renders after a reload, so it has to behave like a durable event stream
+rather than a debug trace:
+
+* **Monotonic, gap-detectable sequence numbers.** Every record carries a ``seq``
+  that strictly increases per session. A reader that remembers ``seq = N`` can
+  ask for ``> N`` and can *prove* whether it missed anything: a pruned history,
+  a counter rollback after a restore, or a crash between counter allocation and
+  append all show up as a discontinuity instead of silently vanishing.
+* **At-most-once terminal records.** Terminal turn outcomes and approval
+  decisions can be appended with a ``dedupe_key``. Re-appending the same key
+  returns the record that is already durable instead of writing a second one, so
+  a retried or concurrently resumed turn cannot emit two "turn completed" or two
+  "approval decided" records.
+* **Bounded storage.** Logs are pruned to a byte budget, keeping the newest
+  events. Pruning is visible to readers through ``retained_from_seq`` so an old
+  cursor is answered with ``snapshot_required`` instead of a half history.
+* **Explicit truncation.** A torn or non-JSON line is skipped and counted; it is
+  never invented or repaired into a fake event.
+
+Durability contract: appends use ``O_APPEND`` + ``fsync`` of the record, and the
+sequence sidecar (``<session>.seq``) is replaced atomically. The store assumes a
+single application process owns a session at a time, which matches the runtime's
+own worker-lease model; concurrent appends from separate processes are not
+supported and are not claimed to be.
+
+This module is standard-library only and does no I/O outside the store directory
+it is given. It never invents events, never deletes a session directory, and
+never mutates a record after it is written.
+"""
+
+
+import json
+import os
+import threading
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Iterable
+
+TASK_EVENT_STREAM_VERSION = 1
+
+DEFAULT_READ_LIMIT = 200
+MAX_READ_LIMIT = 1000
+#: Roll the log over once it grows past this size, keeping the newest events.
+DEFAULT_MAX_LOG_BYTES = 8 * 1024 * 1024
+DEFAULT_RETAIN_EVENTS = 4000
+#: How often a live stream emits a heartbeat frame while idle.
+STREAM_HEARTBEAT_SECONDS = 10.0
+
+#: Turn outcomes that end a turn; the newest one decides the reconstructed state.
+TERMINAL_TURN_EVENTS = frozenset({"turn/end"})
+#: Turn-end states that mean the turn reached a final outcome.
+TERMINAL_TURN_STATES = frozenset({"completed", "cancelled", "failed"})
+
+_APPEND_LOCK = threading.Lock()
+_DEDUPE_CACHE: dict[str, dict[str, dict[str, Any]]] = {}
+_DEDUPE_CACHE_SESSIONS: dict[str, str] = {}
+
+
+class TaskEventError(Exception):
+    """Raised when a session id or cursor cannot address the event store safely."""
+
+
+def _safe_session_id(session_id: str) -> str:
+    """Return a store-safe session id or raise.
+
+    Session ids become file names, so anything that can escape the store
+    directory is rejected rather than sanitized (a sanitized id would silently
+    point at a different session).
+    """
+    sid = (session_id or "").strip()
+    if not sid or len(sid) > 128:
+        raise TaskEventError("Task event session id must be 1-128 characters.")
+    if ".." in sid or "/" in sid or "\\" in sid:
+        raise TaskEventError(f"Unsafe task event session id: {session_id!r}")
+    if not all(ch.isalnum() or ch in "-_." for ch in sid):
+        raise TaskEventError(f"Unsafe task event session id: {session_id!r}")
+    return sid
+
+
+@dataclass(frozen=True)
+class TaskEventSnapshot:
+    """Event-derived view of a session, used for reload reconstruction."""
+
+    session_id: str
+    latest_seq: int
+    retained_from_seq: int
+    event_count: int
+    turns_started: int
+    turns_completed: int
+    last_turn_state: str
+    terminal: bool
+    undecided_approvals: tuple[str, ...]
+    approval_decisions: tuple[tuple[str, str], ...]
+    last_event_type: str
+    last_event_ts: float
+    skipped_records: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "stream_version": TASK_EVENT_STREAM_VERSION,
+            "latest_seq": self.latest_seq,
+            "retained_from_seq": self.retained_from_seq,
+            "event_count": self.event_count,
+            "turns_started": self.turns_started,
+            "turns_completed": self.turns_completed,
+            "last_turn_state": self.last_turn_state,
+            "terminal": self.terminal,
+            "undecided_approvals": list(self.undecided_approvals),
+            "approval_decisions": [
+                {"approval_id": aid, "decision": decision} for aid, decision in self.approval_decisions
+            ],
+            "last_event_type": self.last_event_type,
+            "last_event_ts": self.last_event_ts,
+            "skipped_records": self.skipped_records,
+        }
+
+
+@dataclass(frozen=True)
+class TaskEventPage:
+    """One cursor read over a session's event log."""
+
+    session_id: str
+    events: tuple[dict[str, Any], ...]
+    next_cursor: int
+    latest_seq: int
+    retained_from_seq: int
+    has_more: bool
+    truncated: bool
+    snapshot_required: bool
+    resync_reason: str
+    missing_ranges: tuple[tuple[int, int], ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "stream_version": TASK_EVENT_STREAM_VERSION,
+            "events": list(self.events),
+            "next_cursor": self.next_cursor,
+            "latest_seq": self.latest_seq,
+            "retained_from_seq": self.retained_from_seq,
+            "has_more": self.has_more,
+            "truncated": self.truncated,
+            "snapshot_required": self.snapshot_required,
+            "resync_reason": self.resync_reason,
+            "missing_ranges": [{"from_seq": start, "to_seq": end} for start, end in self.missing_ranges],
+        }
+
+
+def _valid_record(record: Any) -> bool:
+    return (
+        isinstance(record, dict)
+        and isinstance(record.get("seq"), int)
+        and not isinstance(record.get("seq"), bool)
+        and int(record["seq"]) > 0
+        and isinstance(record.get("type"), str)
+    )
+
+
+class TaskEventLog:
+    """Append-only per-session event log with cursors, dedupe, and pruning."""
+
+    def __init__(
+        self,
+        store_dir: Path,
+        *,
+        max_log_bytes: int = DEFAULT_MAX_LOG_BYTES,
+        retain_events: int = DEFAULT_RETAIN_EVENTS,
+    ) -> None:
+        self.store_dir = Path(store_dir)
+        self.max_log_bytes = max(64 * 1024, int(max_log_bytes))
+        self.retain_events = max(16, int(retain_events))
+
+    # -- paths ------------------------------------------------------------
+
+    def log_path(self, session_id: str) -> Path:
+        return self.store_dir / f"{_safe_session_id(session_id)}.jsonl"
+
+    def cursor_path(self, session_id: str) -> Path:
+        return self.store_dir / f"{_safe_session_id(session_id)}.seq"
+
+    # -- reading ----------------------------------------------------------
+
+    def load(self, session_id: str) -> tuple[list[dict[str, Any]], int]:
+        """Return ``(valid_records, skipped_line_count)`` in file order."""
+        path = self.log_path(session_id)
+        if not path.exists():
+            return [], 0
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            return [], 0
+        records: list[dict[str, Any]] = []
+        skipped = 0
+        for line in text.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                parsed = json.loads(line)
+            except json.JSONDecodeError:
+                skipped += 1
+                continue
+            if _valid_record(parsed):
+                records.append(parsed)
+            else:
+                skipped += 1
+        return records, skipped
+
+    def all_events(self, session_id: str) -> list[dict[str, Any]]:
+        """Every retained event, in sequence order (backward-compatible list view)."""
+        records, _ = self.load(session_id)
+        return sorted(records, key=lambda rec: int(rec["seq"]))
+
+    def latest_seq(self, session_id: str) -> int:
+        records, _ = self.load(session_id)
+        if not records:
+            return 0
+        return max(int(rec["seq"]) for rec in records)
+
+    def retained_from_seq(self, session_id: str) -> int:
+        records, _ = self.load(session_id)
+        if not records:
+            return 0
+        return min(int(rec["seq"]) for rec in records)
+
+    def read(self, session_id: str, *, cursor: int = 0, limit: int = DEFAULT_READ_LIMIT) -> TaskEventPage:
+        """Return the events after ``cursor`` plus an explicit resync verdict."""
+        safe_start = max(0, int(cursor))
+        safe_limit = max(1, min(int(limit), MAX_READ_LIMIT))
+        records, _ = self.load(session_id)
+        records.sort(key=lambda rec: int(rec["seq"]))
+        latest = int(records[-1]["seq"]) if records else 0
+        retained = int(records[0]["seq"]) if records else 0
+
+        truncated = bool(records) and retained > 1
+
+        def _empty(reason: str, missing: tuple[tuple[int, int], ...] = ()) -> TaskEventPage:
+            return TaskEventPage(
+                session_id=session_id,
+                events=(),
+                next_cursor=safe_start,
+                latest_seq=latest,
+                retained_from_seq=retained,
+                has_more=False,
+                truncated=truncated,
+                snapshot_required=bool(reason),
+                resync_reason=reason,
+                missing_ranges=missing,
+            )
+
+        if safe_start > latest:
+            # The reader is ahead of the store: a different database, a restored
+            # backup, or a brand-new store. Only a snapshot can re-anchor it.
+            return _empty("cursor_ahead")
+        if safe_start > 0 and records and safe_start + 1 < retained:
+            # A reader that had already applied events is missing pruned history:
+            # never let it continue as if the log were complete. A reader at
+            # cursor 0 has no prior state to contradict, so it gets the retained
+            # tail (with `truncated` set) instead of a refusal.
+            return _empty("events_pruned", ((safe_start + 1, retained - 1),))
+
+        selected = [rec for rec in records if int(rec["seq"]) > safe_start][:safe_limit]
+        missing: list[tuple[int, int]] = []
+        # A fresh reader (cursor 0) starts at the oldest retained event: history
+        # pruned before that is `truncated`, not an unrecoverable gap in what the
+        # reader was promised. Gaps after that point are real.
+        expected = safe_start + 1 if safe_start > 0 else (retained or 1)
+        for rec in selected:
+            seq = int(rec["seq"])
+            if seq > expected:
+                missing.append((expected, seq - 1))
+            expected = seq + 1
+        if not selected and safe_start < latest:
+            missing.append((safe_start + 1, latest))
+        next_cursor = int(selected[-1]["seq"]) if selected else safe_start
+        return TaskEventPage(
+            session_id=session_id,
+            events=tuple(selected),
+            next_cursor=next_cursor,
+            latest_seq=latest,
+            retained_from_seq=retained,
+            has_more=bool(selected) and next_cursor < latest,
+            truncated=truncated,
+            snapshot_required=bool(missing),
+            resync_reason="sequence_gap" if missing else "",
+            missing_ranges=tuple(missing),
+        )
+
+    # -- writing ----------------------------------------------------------
+
+    def _next_seq(self, session_id: str, records: Iterable[dict[str, Any]]) -> int:
+        """Allocate the next sequence number, durably and monotonically."""
+        cursor_file = self.cursor_path(session_id)
+        recorded = 0
+        if cursor_file.exists():
+            try:
+                recorded = int(cursor_file.read_text(encoding="utf-8").strip() or "0")
+            except (OSError, ValueError):
+                recorded = 0
+        existing = max((int(rec["seq"]) for rec in records), default=0)
+        return max(recorded, existing) + 1
+
+    def _write_cursor(self, session_id: str, seq: int) -> None:
+        cursor_file = self.cursor_path(session_id)
+        tmp = cursor_file.with_name(cursor_file.name + ".tmp")
+        tmp.write_text(str(seq), encoding="utf-8")
+        try:
+            tmp.chmod(0o600)
+        except OSError:
+            pass
+        os.replace(tmp, cursor_file)
+
+    def _dedupe_index(self, session_id: str, records: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        key = str(self.log_path(session_id).resolve())
+        cached = _DEDUPE_CACHE.get(key)
+        if cached is None or _DEDUPE_CACHE_SESSIONS.get(key) != session_id:
+            cached = {}
+            for rec in records:
+                dedupe_key = rec.get("dedupe_key")
+                if isinstance(dedupe_key, str) and dedupe_key and dedupe_key not in cached:
+                    cached[dedupe_key] = rec
+            _DEDUPE_CACHE[key] = cached
+            _DEDUPE_CACHE_SESSIONS[key] = session_id
+        return cached
+
+    def find_by_dedupe_key(self, session_id: str, dedupe_key: str) -> dict[str, Any] | None:
+        if not dedupe_key:
+            return None
+        records, _ = self.load(session_id)
+        return self._dedupe_index(session_id, records).get(dedupe_key)
+
+    def append(
+        self,
+        session_id: str,
+        event_type: str,
+        payload: dict[str, Any] | None = None,
+        *,
+        dedupe_key: str | None = None,
+        ts: float | None = None,
+    ) -> dict[str, Any]:
+        """Append one event and return the durable record.
+
+        With a ``dedupe_key`` the append is idempotent: if a record with that key
+        is already retained, it is returned unchanged and nothing is written.
+        """
+        safe_id = _safe_session_id(session_id)
+        if not isinstance(event_type, str) or not event_type.strip():
+            raise TaskEventError("Task event type must be a non-empty string.")
+        body = dict(payload or {})
+        body.pop("seq", None)
+        body.pop("ts", None)
+        body.pop("type", None)
+        body.pop("dedupe_key", None)
+        with _APPEND_LOCK:
+            self.store_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+            records, _ = self.load(safe_id)
+            if dedupe_key:
+                existing = self._dedupe_index(safe_id, records).get(dedupe_key)
+                if existing is not None:
+                    return dict(existing)
+            seq = self._next_seq(safe_id, records)
+            record: dict[str, Any] = {**body, "seq": seq, "ts": round(time.time() if ts is None else ts, 3), "type": event_type}
+            if dedupe_key:
+                record["dedupe_key"] = dedupe_key
+            self._write_cursor(safe_id, seq)
+            line = json.dumps(record, ensure_ascii=False) + "\n"
+            fd = os.open(self.log_path(safe_id), os.O_APPEND | os.O_CREAT | os.O_WRONLY, 0o600)
+            try:
+                os.write(fd, line.encode("utf-8"))
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+            if dedupe_key:
+                self._dedupe_index(safe_id, records)[dedupe_key] = record
+            self._maybe_prune(safe_id)
+            return record
+
+    def _maybe_prune(self, session_id: str) -> None:
+        path = self.log_path(session_id)
+        try:
+            size = path.stat().st_size
+        except OSError:
+            return
+        if size <= self.max_log_bytes:
+            return
+        self.prune(session_id, retain=self.retain_events)
+
+    def prune(self, session_id: str, *, retain: int = DEFAULT_RETAIN_EVENTS) -> int:
+        """Keep the newest ``retain`` events; return how many were dropped."""
+        safe_id = _safe_session_id(session_id)
+        records, _ = self.load(safe_id)
+        keep = max(1, int(retain))
+        if len(records) <= keep:
+            return 0
+        dropped = records[: -keep]
+        kept = records[-keep:]
+        path = self.log_path(safe_id)
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(
+            "".join(json.dumps(rec, ensure_ascii=False) + "\n" for rec in kept),
+            encoding="utf-8",
+        )
+        try:
+            tmp.chmod(0o600)
+        except OSError:
+            pass
+        os.replace(tmp, path)
+        # The dedupe index must forget pruned keys; rebuild it from kept records.
+        _DEDUPE_CACHE.pop(str(path.resolve()), None)
+        _DEDUPE_CACHE_SESSIONS.pop(str(path.resolve()), None)
+        self._dedupe_index(safe_id, kept)
+        return len(dropped)
+
+    # -- reconstruction ---------------------------------------------------
+
+    def reconstruct(self, session_id: str) -> TaskEventSnapshot:
+        """Recompute session facts from the durable log alone."""
+        safe_id = _safe_session_id(session_id)
+        records, skipped = self.load(safe_id)
+        records.sort(key=lambda rec: int(rec["seq"]))
+        latest = int(records[-1]["seq"]) if records else 0
+        retained = int(records[0]["seq"]) if records else 0
+        turns_started = 0
+        turns_completed = 0
+        last_turn_state = ""
+        undecided: list[str] = []
+        decisions: dict[str, str] = {}
+        for rec in records:
+            event_type = rec.get("type")
+            if event_type == "turn/start":
+                turns_started += 1
+            elif event_type == "turn/end":
+                state = str(rec.get("state") or "")
+                if state:
+                    last_turn_state = state
+                if state == "completed":
+                    turns_completed += 1
+            elif event_type == "approval/request":
+                approval_id = rec.get("approval_id")
+                if isinstance(approval_id, str) and approval_id and approval_id not in decisions:
+                    if approval_id not in undecided:
+                        undecided.append(approval_id)
+            elif event_type == "approval/decision":
+                approval_id = rec.get("approval_id")
+                if isinstance(approval_id, str) and approval_id:
+                    decisions[approval_id] = str(rec.get("decision") or "")
+                    if approval_id in undecided:
+                        undecided.remove(approval_id)
+        return TaskEventSnapshot(
+            session_id=safe_id,
+            latest_seq=latest,
+            retained_from_seq=retained,
+            event_count=len(records),
+            turns_started=turns_started,
+            turns_completed=turns_completed,
+            last_turn_state=last_turn_state,
+            terminal=last_turn_state in TERMINAL_TURN_STATES,
+            undecided_approvals=tuple(undecided),
+            approval_decisions=tuple(decisions.items()),
+            last_event_type=str(records[-1].get("type") or "") if records else "",
+            last_event_ts=float(records[-1].get("ts") or 0.0) if records else 0.0,
+            skipped_records=skipped,
+        )
+
+    def approval_decision(self, session_id: str, approval_id: str) -> str:
+        """Return the durable decision for an approval id, or ``""`` if undecided."""
+        if not approval_id:
+            return ""
+        for approval, decision in self.reconstruct(session_id).approval_decisions:
+            if approval == approval_id:
+                return decision
+        return ""
+
+
+def parse_cursor(value: Any, *, default: int = 0) -> int:
+    """Parse a cursor from a query string, header, or JSON value without raising."""
+    try:
+        parsed = int(str(value).strip())
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed >= 0 else default
+
+
+__all__ = [
+    "DEFAULT_MAX_LOG_BYTES",
+    "DEFAULT_READ_LIMIT",
+    "DEFAULT_RETAIN_EVENTS",
+    "MAX_READ_LIMIT",
+    "STREAM_HEARTBEAT_SECONDS",
+    "TASK_EVENT_STREAM_VERSION",
+    "TaskEventError",
+    "TaskEventLog",
+    "TaskEventPage",
+    "TaskEventSnapshot",
+    "parse_cursor",
+]
+
+task_events = sys.modules[__name__]
 
 """Provider-neutral orchestration primitives for streamed Studio workflows.
 

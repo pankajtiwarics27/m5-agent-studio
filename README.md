@@ -23,14 +23,14 @@
 ## What is verified today
 
 Verified in this checkout (commit `1e2e0bd876409a9e4eeb4b0128b403422bac7013`
-plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
+plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
 
 - **The application runs and its local auth path works.** `scripts/smoke_local.py`
   launches a disposable loopback instance of both `app.py` and the generated
   `studio.py` and verifies the token/security path — both exit 0.
-- **The test suite passes:** **811 passed, 1 skipped** (the skip is the opt-in
-  live container-runtime test, see below). `ruff`, `mypy`, `compileall`, and the
-  Node-based frontend syntax check all pass.
+- **The test suite passes:** **827 passed, 1 skipped** (the skip is the opt-in
+  live container-runtime test, see below). `ruff`, `mypy` over 43 typed modules,
+  `compileall`, and the Node-based frontend syntax check all pass.
 - **Generated artifacts are reproducible:** `studio.py`,
   `docs/route-security-matrix.md`, `docs/subsystem-dependency-inventory.md`
   regenerate byte-for-byte; the roadmap dashboard matches its JSON.
@@ -97,6 +97,23 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
   `require_active_admission` anti-bypass enforcement on inner executors
   (`tests/test_action_admission_gate.py`, `tests/test_durable_intent_ledger.py`,
   `tests/test_worker_leases_and_fencing.py`).
+- **Task events are a durable, cursor-addressable stream and the UI reloads from
+  it (`M5-P1-07`):** `task_events.py` (stdlib only, inlined into `studio.py`)
+  gives each session a monotonic `seq` with a durable sidecar, idempotent
+  terminal/approval records (`dedupe_key`), atomic pruning, and reads that answer
+  with an explicit verdict (`snapshot_required`, `resync_reason`,
+  `missing_ranges`, `truncated`). Three authenticated routes expose it:
+  `GET /api/harness/sessions/{session_id}/events?cursor=`,
+  `GET /api/harness/sessions/{session_id}/events/stream` (SSE frames whose `id` is
+  the sequence, `Last-Event-ID` resume, `resync_required` when a cursor cannot be
+  resumed), and `GET /api/harness/sessions/{session_id}/state` (task row, budget,
+  hash-verified checkpoint, event summary, and `pending`/`expired`/`recent`
+  approval reconciliation). The UI rebuilds every selected session from that
+  snapshot, re-renders sequence-keyed so a replay cannot duplicate a completion,
+  and forces a snapshot reload on any gap; an approval id with a durable decision
+  is rejected with `409` even after a restart. Pinned by 16 tests
+  (`tests/test_task_events.py`) and documented in
+  [`docs/task-events.md`](docs/task-events.md) (ADR-0005).
 - **The execution boundary is extracted and its coverage is inventoried
   (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`–`M5-P1-04`):**
   `execution_spine.py` and `side_effect_ledger.py` form a stdlib-only seam
@@ -116,27 +133,30 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
   execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
   pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
   plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
-- **12 of 44 shipped Python modules are wired into the served app**
+- **13 of 44 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`, `execution_spine` since `M5-P0-06`,
   `runtime_persistence` since `M5-P1-01`, `side_effect_ledger` since `M5-P1-03`,
   `execution_budget`, `workflow_checkpoints`, `workflow_state` since
-  `M5-P1-05`, and `failure_injection` since `M5-P1-06`; 5 of 42 at the time of
-  the audit table). Together they govern
+  `M5-P1-05`, `failure_injection` since `M5-P1-06`, and `task_events` since
+  `M5-P1-07`; 5 of 42 at the time of the audit table). Together they govern
   schema upgrades, SQLite transactions, authoritative task-state / lease-epoch
   checks at admission (`M5-P1-02`), durable `runtime_actions`
   intent/result/replay tracking (`M5-P1-03`), single-owner worker leases,
   fencing, and pre-takeover reconciliation (`M5-P1-04`), durable root/child
   task state machines, safe pause/resume/cancel boundaries, hash-verified
   checkpoints with evidence refs, and persistent task/recovery budgets
-  (`M5-P1-05`), and verified coding-task completion gates plus deterministic
-  action-boundary crash injection (`M5-P1-06`). The other 32 modules — including
+  (`M5-P1-05`), verified coding-task completion gates plus deterministic
+  action-boundary crash injection (`M5-P1-06`), and the durable cursor-addressed
+  task-event stream with reload/resync and approval reconciliation (`M5-P1-07`).
+  The other 31 modules — including
   `sandbox_boundary.py` — have passing unit tests but **no `app.py` call path**.
   Module presence is not integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
 
 Reported claims that this review **refuted**: `app.py` is ~2,200 lines
-(actual: **9,627**), and `mcp_client` has no call sites (it is invoked at
+(actual at the `M5-P0-02` audit: **9,627**; **12,255** at the `M5-P1-07`
+change-set), and `mcp_client` has no call sites (it is invoked at
 `app.py` L4643 via `mcp_client.adaptive_call`).
 
 ## Requirements and verified setup
@@ -182,7 +202,7 @@ are not guarantees):
 
 ## Verified usage
 
-- **Run the test suite:** `.venv/bin/python -m pytest -q` → 811 passed,
+- **Run the test suite:** `.venv/bin/python -m pytest -q` → 827 passed,
   1 skipped, 1 warning.
 - **Start a disposable authenticated instance (verified):**
   `.venv/bin/python scripts/smoke_local.py` starts `app.py` on a free loopback
@@ -198,6 +218,12 @@ are not guarantees):
 - **History and privacy endpoints (verified in code):** `GET /api/history/export`,
   `POST /api/history/retention/run` backed by the integrated
   `history_privacy` module.
+- **Durable harness task events (verified by tests):**
+  `GET /api/harness/sessions/{session_id}/events?cursor=&limit=`,
+  `GET /api/harness/sessions/{session_id}/events/stream` (SSE), and
+  `GET /api/harness/sessions/{session_id}/state`. All require the bearer token
+  like every other `/api/*` route. Behaviour, guarantees, and the single-process
+  limitation are in [`docs/task-events.md`](docs/task-events.md).
 - **OpenAI-compatible gateway:** `/v1/models`, `/v1/chat/completions`
   (routes at `app.py` L3275/L3363).
 - The previous README's full configuration table (environment variables),

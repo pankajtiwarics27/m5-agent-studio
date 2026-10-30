@@ -2969,6 +2969,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function startFreshHarnessDraft() {
     activeHarnessId = null;
     activeHarnessSession = null;
+    harnessResetEventCache();
+    harnessSnapshot = null;
+    closeHarnessEventStream();
     document.getElementById("harnessActiveLabel").textContent = "New Harness Draft — choose workspace, worktree isolation, & policy, then run your task below.";
     const b = document.getElementById("harnessActiveStatusBadge");
     b.className = "badge cyan"; b.textContent = "NEW DRAFT";
@@ -3095,13 +3098,20 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   async function selectHarnessSession(id) {
+    // Reload is a first-class path: rebuild from the authoritative task snapshot
+    // and the durable event log, never from whatever DOM happened to survive.
     activeHarnessId = id;
-    const r = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}`);
-    if (!r.ok) return;
-    const sess = await r.json();
-    updateHarnessHeaderBanner(sess);
+    harnessResetEventCache();
+    harnessSnapshot = null;
+    await closeHarnessEventStream();
+    try {
+      const r = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}`);
+      if (!r.ok) return;
+      updateHarnessHeaderBanner(await r.json());
+    } catch (e) {}
     renderHarnessSidebar();
-    renderStoredHarnessEvents(sess.events || []);
+    await harnessResyncFromSnapshot("select");
+    if (!harnessRunActive) openHarnessEventStream();
   }
 
   async function patchActiveHarnessSettings() {
@@ -3162,33 +3172,355 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       </div>`;
   }
 
+  // ================= M5-P1-07: DURABLE TASK EVENTS (CURSOR, REPLAY, RESYNC) =================
+  // The durable per-session event log is authoritative. The live POST stream is a
+  // convenience view: when it drops events (backgrounded tab, reload mid-run, gap
+  // in seq) the UI reloads the snapshot instead of pretending it saw everything.
+  let harnessEventCache = new Map();      // seq -> durable event, rendered ascending
+  let harnessCursor = 0;                  // highest seq applied to the UI
+  let harnessSnapshot = null;             // last authoritative /state payload
+  let harnessEventStreamAbort = null;     // live follow stream (GET SSE) abort handle
+  let harnessStreamRetryTimer = null;
+  let harnessRunActive = false;           // a POST run stream owns the transcript
+  let harnessLastResyncAt = 0;
+
+  /* M5-P1-07-PURE-BEGIN */
+  function harnessEventCursor(events) {
+    let cursor = 0;
+    for (const ev of events || []) {
+      const seq = Number(ev && ev.seq);
+      if (Number.isInteger(seq) && seq > cursor) cursor = seq;
+    }
+    return cursor;
+  }
+
+  function harnessEventGap(page, cursor) {
+    // Can this page extend `cursor`, or must the UI reload from a snapshot?
+    if (!page) return { gap: true, reason: "no_page" };
+    if (page.snapshot_required) return { gap: true, reason: page.resync_reason || "snapshot_required" };
+    const start = Number.isInteger(Number(cursor)) ? Number(cursor) : 0;
+    const latest = Number(page.latest_seq || 0);
+    const retained = Number(page.retained_from_seq || 0);
+    if (latest < start) return { gap: true, reason: "cursor_ahead" };
+    if (start > 0 && retained && start + 1 < retained) return { gap: true, reason: "events_pruned" };
+    const seqs = (page.events || []).map(ev => Number(ev && ev.seq)).filter(s => Number.isInteger(s) && s > 0).sort((a, b) => a - b);
+    let expected = start > 0 ? start + 1 : (retained || 1);
+    for (const seq of seqs) {
+      if (seq > expected) return { gap: true, reason: "sequence_gap" };
+      expected = seq + 1;
+    }
+    if (!seqs.length && start < latest) return { gap: true, reason: "missing_events" };
+    return { gap: false, reason: "" };
+  }
+
+  function harnessMergeEvents(existing, incoming) {
+    // Sequence-keyed merge: a replayed or duplicated record renders at most once.
+    const bySeq = new Map();
+    for (const ev of existing || []) {
+      const seq = Number(ev && ev.seq);
+      if (Number.isInteger(seq) && seq > 0) bySeq.set(seq, ev);
+    }
+    for (const ev of incoming || []) {
+      const seq = Number(ev && ev.seq);
+      if (Number.isInteger(seq) && seq > 0 && !bySeq.has(seq)) bySeq.set(seq, ev);
+    }
+    return [...bySeq.keys()].sort((a, b) => a - b).map(seq => bySeq.get(seq));
+  }
+
+  function harnessStatusBadge(state) {
+    const status = String((state && (state.status || state.task_status)) || "idle").toLowerCase();
+    const map = {
+      waiting_approval: ["amber", "WAITING APPROVAL"],
+      running: ["cyan", "WORKFLOW RUNNING"],
+      paused: ["amber", "PAUSED"],
+      blocked: ["amber", "BLOCKED"],
+      pending: ["cyan", "READY"],
+      idle: ["cyan", "READY"],
+      completed: ["green", "COMPLETED"],
+      cancelled: ["amber", "CANCELLED"],
+      failed: ["amber", "FAILED"],
+      error: ["amber", "ERROR"],
+    };
+    const hit = map[status] || ["cyan", status.toUpperCase()];
+    return { cls: hit[0], label: hit[1] };
+  }
+  /* M5-P1-07-PURE-END */
+
+  function harnessResetEventCache() { harnessEventCache = new Map(); harnessCursor = 0; }
+
+  function harnessCachedEvents() {
+    return [...harnessEventCache.keys()].sort((a, b) => a - b).map(seq => harnessEventCache.get(seq));
+  }
+
+  function harnessRememberEvents(events) {
+    for (const ev of events || []) {
+      const seq = Number(ev && ev.seq);
+      if (!Number.isInteger(seq) || seq <= 0) continue;
+      if (!harnessEventCache.has(seq)) harnessEventCache.set(seq, ev);
+      if (seq > harnessCursor) harnessCursor = seq;
+    }
+  }
+
+  async function harnessFetchEventPage(sessionId, cursor, limit) {
+    const r = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/events?cursor=${cursor}&limit=${limit || 500}`);
+    if (!r.ok) throw new Error(`task event page HTTP ${r.status}`);
+    return await r.json();
+  }
+
+  async function loadHarnessEvents(opts) {
+    // Pull the durable log into the cache from `cursor` (or from the start).
+    const sessionId = activeHarnessId;
+    if (!sessionId) return { gap: false, reason: "" };
+    if (opts && opts.full) harnessResetEventCache();
+    let cursor = harnessCursor;
+    let verdict = { gap: false, reason: "" };
+    for (let page = 0; page < 40; page++) {
+      let payload;
+      try { payload = await harnessFetchEventPage(sessionId, cursor); } catch (e) { return { gap: true, reason: "fetch_error" }; }
+      if (activeHarnessId !== sessionId) return { gap: true, reason: "session_changed" };
+      verdict = harnessEventGap(payload, cursor);
+      if (verdict.gap) return verdict;
+      harnessRememberEvents(payload.events || []);
+      cursor = Number(payload.next_cursor || cursor);
+      if (!payload.has_more) break;
+    }
+    return verdict;
+  }
+
+  function applyHarnessSnapshotState(state) {
+    if (!state) return;
+    const badge = document.getElementById("harnessActiveStatusBadge");
+    const b = harnessStatusBadge(state);
+    if (badge) { badge.className = "badge " + b.cls; badge.textContent = b.label; }
+    const label = document.getElementById("harnessActiveLabel");
+    if (label && state.session) {
+      const approvals = state.approvals || {};
+      const parts = [
+        `${state.session.id} • task ${state.task_status || "pending"}`,
+        `${Number(state.turns_completed || 0)}/${Number(state.turns_started || 0)} turns completed`,
+      ];
+      const pending = (approvals.pending || []).length;
+      const expired = (approvals.expired || []).length;
+      if (pending) parts.push(`${pending} approval pending`);
+      if (expired) parts.push(`${expired} approval expired`);
+      const stream = state.event_stream || {};
+      if (stream.retained_from_seq > 1) parts.push(`event log truncated at seq ${stream.retained_from_seq}`);
+      label.textContent = parts.join(" • ");
+    }
+  }
+
+  async function harnessResyncFromSnapshot(reason) {
+    // Authoritative reload: task state + approval state + the durable event log.
+    const sessionId = activeHarnessId;
+    if (!sessionId) return;
+    harnessLastResyncAt = Date.now();
+    let state;
+    try {
+      const r = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`);
+      if (!r.ok) return;
+      state = await r.json();
+    } catch (e) { return; }
+    if (activeHarnessId !== sessionId) return;
+    harnessSnapshot = state;
+    if (state.session) updateHarnessHeaderBanner(state.session);
+    applyHarnessSnapshotState(state);
+    const verdict = await loadHarnessEvents({ full: true });
+    if (activeHarnessId !== sessionId) return;
+    renderStoredHarnessEvents(harnessCachedEvents());
+    if (verdict.gap && verdict.reason !== "session_changed") {
+      showToast(`Task event resync: ${verdict.reason}. Showing the authoritative snapshot.`, "warn");
+    }
+    // Re-anchored: reopen the follow stream from the new cursor (missing run
+    // leaves it closed, so a resync must restore live updates).
+    scheduleHarnessEventStreamRetry();
+  }
+
+  async function closeHarnessEventStream() {
+    if (harnessStreamRetryTimer) { clearTimeout(harnessStreamRetryTimer); harnessStreamRetryTimer = null; }
+    if (harnessEventStreamAbort) {
+      try { harnessEventStreamAbort.abort(); } catch (e) {}
+      harnessEventStreamAbort = null;
+    }
+  }
+
+  function scheduleHarnessEventStreamRetry() {
+    if (harnessStreamRetryTimer || !activeHarnessId || harnessRunActive) return;
+    harnessStreamRetryTimer = setTimeout(() => { harnessStreamRetryTimer = null; openHarnessEventStream(); }, 4000);
+  }
+
+  async function openHarnessEventStream() {
+    await closeHarnessEventStream();
+    const sessionId = activeHarnessId;
+    if (!sessionId || harnessRunActive || document.hidden) return;
+    const ctrl = new AbortController();
+    harnessEventStreamAbort = ctrl;
+    try {
+      const resp = await fetch(
+        `/api/harness/sessions/${encodeURIComponent(sessionId)}/events/stream?cursor=${harnessCursor}`,
+        { method: "GET", headers: { Accept: "text/event-stream" }, signal: ctrl.signal },
+      );
+      if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+      const reader = resp.body.getReader(), dec = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let idx;
+        while ((idx = buf.indexOf("\n\n")) !== -1) {
+          const frame = buf.slice(0, idx);
+          buf = buf.slice(idx + 2);
+          let frameEvent = "message", dataStr = "";
+          for (const line of frame.split("\n")) {
+            if (line.startsWith("event:")) frameEvent = line.slice(6).trim();
+            else if (line.startsWith("data:")) dataStr += line.slice(5).trim();
+          }
+          if (!dataStr) continue;
+          let data;
+          try { data = JSON.parse(dataStr); } catch (e) { continue; }
+          if (activeHarnessId !== sessionId) return;
+          if (frameEvent === "task_event") {
+            const verdict = harnessEventGap(
+              { events: [data], next_cursor: Number(data.seq), latest_seq: Number(data.seq), retained_from_seq: 0, snapshot_required: false },
+              harnessCursor,
+            );
+            if (verdict.gap) { await harnessResyncFromSnapshot(verdict.reason || "stream_gap"); return; }
+            harnessRememberEvents([data]);
+            renderStoredHarnessEvents(harnessCachedEvents());
+            if (data.type && (data.type === "turn/end" || data.type === "turn/verified" || data.type === "turn/cancelled")) {
+              // A turn reached a durable outcome: re-anchor status to the runtime.
+              fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`)
+                .then(r => (r.ok ? r.json() : null))
+                .then(state => { if (state && activeHarnessId === sessionId) { harnessSnapshot = state; applyHarnessSnapshotState(state); renderStoredHarnessEvents(harnessCachedEvents()); } })
+                .catch(() => {});
+            }
+          } else if (frameEvent === "resync_required") {
+            await harnessResyncFromSnapshot(data.reason || "stream_gap");
+            return;
+          } else if (frameEvent === "stream_error") {
+            showToast(data.message || "Task event stream error", "warn");
+            return;
+          }
+        }
+      }
+      if (activeHarnessId === sessionId) scheduleHarnessEventStreamRetry();
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+      scheduleHarnessEventStreamRetry();
+    }
+  }
+
+  function setHarnessRunActive(active) {
+    harnessRunActive = !!active;
+    if (!harnessRunActive && activeHarnessId) {
+      harnessResyncFromSnapshot("turn_end");
+      openHarnessEventStream();
+    }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (!activeHarnessId) return;
+    if (document.hidden) { closeHarnessEventStream(); return; }
+    if (harnessRunActive) return;
+    if (Date.now() - harnessLastResyncAt > 2000) harnessResyncFromSnapshot("visible");
+    openHarnessEventStream();
+  });
+  window.addEventListener("focus", () => {
+    if (!activeHarnessId || harnessRunActive) return;
+    if (Date.now() - harnessLastResyncAt < 5000) return;
+    harnessResyncFromSnapshot("focus");
+  });
+
+  function renderStoredHarnessEventHtml(ev, decisions, livePending) {
+    if (!ev || !ev.type) return "";
+    if (ev.type === "turn/start") {
+      const resumed = ev.resumed_from_step ? ` resuming from step ${ev.resumed_from_step}` : "";
+      return `<div class="h-turn-user"><div style="font-size:10.8px; color:#c7d2fe; font-weight:700; margin-bottom:3px;">USER TASK (${escapeHtml(ev.policy || '')}${escapeHtml(resumed)})</div>${renderMarkdown(ev.prompt || "")}</div>`;
+    }
+    if (ev.type === "gsd/wave") {
+      return `<div style="font-family:var(--mono); font-size:11.4px; color:#fde68a; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.42); border-radius:8px; padding:7px 12px;">${UI_ICONS.bolt} GSD Fresh-Context Wave ${escapeHtml(String(ev.wave || ""))}/3: <strong>${escapeHtml(ev.name || '')}</strong> (${escapeHtml(ev.model || '')})</div>`;
+    }
+    if (ev.type === "context/compacted") {
+      return `<div style="font-family:var(--mono); font-size:11.3px; color:#e9d5ff; background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.4); border-radius:8px; padding:6px 11px;">${UI_ICONS.bolt} Context-Mode Compacted: ${escapeHtml(String(ev.before_chars || 0))} -&gt; ${escapeHtml(String(ev.after_chars || 0))} chars (archived in FTS5 <code>${escapeHtml(ev.vault_id || '')}</code>)</div>`;
+    }
+    if (ev.type === "step/start") {
+      return `<div class="mono" style="font-size:10.9px; color:var(--text-faint);">step #${escapeHtml(String(ev.step || ""))} • ${escapeHtml(ev.model || "")}</div>`;
+    }
+    if (ev.type === "assistant/message") {
+      const u = ev.usage || {};
+      const uBadge = u.decode_tps ? `<span class="badge green">${escapeHtml(String(u.decode_tps))} tok/s • ${escapeHtml(String(u.completion_tokens || 0))} tok</span>` : "";
+      const think = ev.reasoning ? `<details class="think-box"><summary>Reasoning Trace</summary><pre>${escapeHtml(ev.reasoning)}</pre></details>` : "";
+      const bodyMd = ev.content ? renderMarkdown(ev.content) : (ev.tool_calls && ev.tool_calls.length ? `<div style="font-size:12px; color:var(--text-dim);">Invoking ${escapeHtml(String(ev.tool_calls.length))} tool(s)...</div>` : "");
+      return `<div class="h-step-card"><div class="h-step-head"><div><strong>Step #${escapeHtml(String(ev.step || ""))}</strong> <span class="mono" style="color:var(--text-dim); margin-left:6px;">${escapeHtml(ev.model || "")}</span></div>${uBadge}</div>${think}${bodyMd}</div>`;
+    }
+    if (ev.type === "tool/result") return renderToolResultCardHtml(ev);
+    if (ev.type === "approval/request") {
+      const approvalId = String(ev.approval_id || "");
+      const decided = decisions[approvalId];
+      const isLive = !decided && livePending.has(approvalId);
+      const badgeHtml = decided
+        ? `<span class="badge ${decided === "approve" ? "green" : "amber"}">${decided === "approve" ? "Approved" : "Rejected"}</span>`
+        : (isLive ? `<span class="badge amber">Awaiting decision</span>` : `<span class="badge amber">Expired — re-run the turn</span>`);
+      const controls = isLive
+        ? `<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:6px;"><button class="btn btn-emerald btn-xs" onclick="resolveHarnessApproval('${escapeHtml(approvalId)}','approve','${escapeHtml(activeHarnessId || '')}')">${UI_ICONS.check} Approve &amp; Run</button><button class="btn btn-danger btn-xs" onclick="resolveHarnessApproval('${escapeHtml(approvalId)}','reject','${escapeHtml(activeHarnessId || '')}')">${UI_ICONS.close} Reject</button><input type="text" id="apr-note-${escapeHtml(approvalId)}" placeholder="Optional rejection guidance" style="flex:1;min-width:160px;font-size:11.5px;padding:4px 8px;" /></div>`
+        : "";
+      return `<div class="h-tool-card wait" id="apr-card-${escapeHtml(approvalId)}"><div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;flex-wrap:wrap;"><strong style="color:#fde68a;">${UI_ICONS.warn} Approval required: <code>${escapeHtml(ev.tool || "")}</code></strong>${badgeHtml}</div><pre style="padding:7px 9px;background:#06090e;border-radius:6px;font-family:var(--mono);font-size:11.6px;color:#fff;overflow-x:auto;margin-bottom:6px;">${escapeHtml(formatToolArgsSummary(ev.tool, ev.args))}</pre>${controls}</div>`;
+    }
+    if (ev.type === "approval/decision") {
+      const approved = ev.decision === "approve";
+      const note = ev.note ? ` • ${escapeHtml(ev.note)}` : "";
+      return `<div class="mono" style="font-size:11px; color:${approved ? '#6ee7b7' : '#fda4af'};">approval ${escapeHtml(String(ev.approval_id || ""))}: ${approved ? "approved" : "rejected"}${note}</div>`;
+    }
+    if (ev.type === "turn/end") {
+      const state = ev.state ? ` • ${escapeHtml(String(ev.state))}` : "";
+      const ok = !ev.state || ev.state === "completed";
+      return `<div style="font-family:var(--mono); font-size:11.2px; color:${ok ? '#6ee7b7' : '#fde68a'}; text-align:right; padding:2px 4px;">[${ok ? 'OK' : 'END'}] Turn complete in ${escapeHtml(String(ev.elapsed_s || 0))}s (${escapeHtml(String(ev.steps || 0))} step${Number(ev.steps) === 1 ? '' : 's'})${state}</div>`;
+    }
+    if (ev.type === "turn/verified") {
+      return `<div style="font-family:var(--mono); font-size:11.2px; color:#6ee7b7; padding:2px 4px;">${UI_ICONS.check} Completion verified (${escapeHtml(String(ev.spec_sha256 || "spec").slice(0, 12))})</div>`;
+    }
+    if (ev.type === "turn/verification_failed") {
+      return `<div class="h-tool-card err"><strong>Completion rejected:</strong> ${escapeHtml(String(ev.failure_code || "unverified"))} — ${escapeHtml(String(ev.reason || ev.detail || ""))}</div>`;
+    }
+    if (ev.type === "turn/paused") {
+      return `<div style="font-family:var(--mono); font-size:11.2px; color:#fde68a; padding:2px 4px;">Paused at step ${escapeHtml(String(ev.step || 0))} — ${escapeHtml(String(ev.reason || ""))}</div>`;
+    }
+    if (ev.type === "turn/cancelled") {
+      return `<div style="font-family:var(--mono); font-size:11.2px; color:#fda4af; padding:2px 4px;">Cancelled — ${escapeHtml(String(ev.reason || ""))}</div>`;
+    }
+    if (ev.type === "turn/budget_exceeded") {
+      return `<div style="font-family:var(--mono); font-size:11.2px; color:#fde68a; padding:2px 4px;">Budget exhausted at step ${escapeHtml(String(ev.step || 0))} — ${escapeHtml(String(ev.reason || ""))}</div>`;
+    }
+    if (ev.type === "turn/max_steps_reached") {
+      return `<div style="font-family:var(--mono); font-size:11.2px; color:#fde68a; padding:2px 4px;">Max steps reached (${escapeHtml(String(ev.max_steps || 0))})</div>`;
+    }
+    if (ev.type === "turn/resume_prepared") {
+      return `<div style="font-family:var(--mono); font-size:11.2px; color:#a7f3d0; padding:2px 4px;">Resume prepared — next step ${escapeHtml(String(ev.next_step || ""))} (recoveries used ${escapeHtml(String(ev.recoveries_used || 0))})</div>`;
+    }
+    if (ev.type === "turn/error") {
+      return `<div class="h-tool-card err"><strong>Error:</strong> ${escapeHtml(ev.message || "")}</div>`;
+    }
+    if (ev.type === "worktree/applied") {
+      return `<div style="font-family:var(--mono); font-size:11.4px; color:#a7f3d0; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.4); border-radius:8px; padding:7px 11px;">${UI_ICONS.check} ${escapeHtml(ev.message || "Worktree applied.")}</div>`;
+    }
+    return "";
+  }
+
   function renderStoredHarnessEvents(events) {
     const stream = document.getElementById("harnessStream");
-    if (!events.length) { renderHarnessStarter(); return; }
-    const htmlParts = [];
-    for (const ev of events) {
-      if (ev.type === "turn/start") {
-        htmlParts.push(`<div class="h-turn-user"><div style="font-size:10.8px; color:#c7d2fe; font-weight:700; margin-bottom:3px;">USER TASK (${escapeHtml(ev.policy || '')})</div>${renderMarkdown(ev.prompt || "")}</div>`);
-      } else if (ev.type === "gsd/wave") {
-        htmlParts.push(`<div style="font-family:var(--mono); font-size:11.4px; color:#fde68a; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.42); border-radius:8px; padding:7px 12px;">${UI_ICONS.bolt} GSD Fresh-Context Wave ${ev.wave}/3: <strong>${escapeHtml(ev.name || '')}</strong> (${escapeHtml(ev.model || '')})</div>`);
-      } else if (ev.type === "context/compacted") {
-        htmlParts.push(`<div style="font-family:var(--mono); font-size:11.3px; color:#e9d5ff; background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.4); border-radius:8px; padding:6px 11px;">${UI_ICONS.bolt} Context-Mode Compacted: ${ev.before_chars} -&gt; ${ev.after_chars} chars (archived in FTS5 <code>${escapeHtml(ev.vault_id || '')}</code>)</div>`);
-      } else if (ev.type === "assistant/message") {
-        const u = ev.usage || {};
-        const uBadge = u.decode_tps ? `<span class="badge green">${u.decode_tps} tok/s • ${u.completion_tokens || 0} tok</span>` : "";
-        const think = ev.reasoning ? `<details class="think-box"><summary>Reasoning Trace</summary><pre>${escapeHtml(ev.reasoning)}</pre></details>` : "";
-        const bodyMd = ev.content ? renderMarkdown(ev.content) : (ev.tool_calls && ev.tool_calls.length ? `<div style="font-size:12px; color:var(--text-dim);">Invoking ${ev.tool_calls.length} tool(s)...</div>` : "");
-        htmlParts.push(`<div class="h-step-card"><div class="h-step-head"><div><strong>Step #${ev.step}</strong> <span class="mono" style="color:var(--text-dim); margin-left:6px;">${escapeHtml(ev.model || "")}</span></div>${uBadge}</div>${think}${bodyMd}</div>`);
-      } else if (ev.type === "tool/result") {
-        htmlParts.push(renderToolResultCardHtml(ev));
-      } else if (ev.type === "turn/end") {
-        htmlParts.push(`<div style="font-family:var(--mono); font-size:11.2px; color:#6ee7b7; text-align:right; padding:2px 4px;">[OK] Turn complete in ${ev.elapsed_s}s (${ev.steps} step${ev.steps === 1 ? '' : 's'})</div>`);
-      } else if (ev.type === "worktree/applied") {
-        htmlParts.push(`<div style="font-family:var(--mono); font-size:11.4px; color:#a7f3d0; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.4); border-radius:8px; padding:7px 11px;">${UI_ICONS.check} ${escapeHtml(ev.message || "Worktree applied.")}</div>`);
-      } else if (ev.type === "turn/error") {
-        htmlParts.push(`<div class="h-tool-card err"><strong>Error:</strong> ${escapeHtml(ev.message || "")}</div>`);
-      }
+    const ordered = harnessMergeEvents([], events || []);
+    if (!ordered.length) { renderHarnessStarter(); return; }
+    const decisions = {};
+    for (const ev of ordered) {
+      if (ev.type === "approval/decision" && ev.approval_id) decisions[ev.approval_id] = ev.decision || "";
     }
+    const livePending = new Set((((harnessSnapshot || {}).approvals || {}).pending || []).map(a => a.approval_id));
+    const htmlParts = [];
+    const streamState = (harnessSnapshot || {}).event_stream || {};
+    if (Number(streamState.retained_from_seq || 0) > 1) {
+      htmlParts.push(`<div class="mono" style="font-size:11px; color:var(--text-faint);">Earlier events were pruned; showing the retained log from seq ${escapeHtml(String(streamState.retained_from_seq))}. Task status above is authoritative.</div>`);
+    }
+    for (const ev of ordered) htmlParts.push(renderStoredHarnessEventHtml(ev, decisions, livePending));
     stream.innerHTML = htmlParts.join("");
     stream.scrollTop = stream.scrollHeight;
   }
@@ -3228,8 +3560,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       try { msg = (await res.json()).detail || msg; } catch (_) {}
       if (card) card.querySelectorAll("button").forEach(b => (b.disabled = false));
       showToast(msg, "error");
+      // A rejected replay (409) means the durable decision already exists: reload
+      // it instead of leaving an actionable stale card on screen.
+      await harnessResyncFromSnapshot("approval_rejected");
       return;
     }
+    await harnessResyncFromSnapshot("approval_decision");
   }
 
   async function abortHarnessRun() {
@@ -3304,6 +3640,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       return liveSteps[step];
     }
 
+    setHarnessRunActive(true);
     consumeSSE("/api/harness/run", {
       session_id: activeHarnessId || "",
       prompt,
@@ -3318,7 +3655,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       skills: [...selectedSkills],
     }, {
       turn_start(d) {
-        activeHarnessId = d.session.id;
+        if (activeHarnessId !== d.session.id) {
+          activeHarnessId = d.session.id;
+          harnessResetEventCache();
+          harnessSnapshot = null;
+        }
         updateHarnessHeaderBanner(d.session);
         loadHarnessSessions();
       },
@@ -3400,6 +3741,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     }, () => {
       document.getElementById("harnessRunBtn").disabled = false;
       document.getElementById("harnessAbortBtn").style.display = "none";
+      // The turn is over: re-render from the durable log so missed live frames can
+      // never leave a duplicate or a missing completion on screen.
+      setHarnessRunActive(false);
     });
   }
 
@@ -3772,6 +4116,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       return liveSteps[step];
     }
 
+    setHarnessRunActive(true);
     consumeSSE("/api/harness/gsd-wave", {
       session_id: activeHarnessId || "",
       prompt,
@@ -3847,6 +4192,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const gsdBtn = document.getElementById("harnessGsdBtn");
       if (gsdBtn) gsdBtn.disabled = false;
       document.getElementById("harnessAbortBtn").style.display = "none";
+      setHarnessRunActive(false);
     });
   }
 
@@ -4076,6 +4422,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     document.getElementById("harnessAbortBtn").style.display = "inline-flex";
     document.getElementById("harnessActiveStatusBadge").textContent = "SDLC RUNNING";
 
+    setHarnessRunActive(true);
     consumeSSE(url, payload, {
       turn_init(d) {
         activeHarnessId = d.session.id;
@@ -4112,6 +4459,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       if (gsdBtn) gsdBtn.disabled = false;
       if (sdlcBtn) sdlcBtn.disabled = false;
       document.getElementById("harnessAbortBtn").style.display = "none";
+      setHarnessRunActive(false);
     });
   }
 

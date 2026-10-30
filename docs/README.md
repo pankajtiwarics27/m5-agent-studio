@@ -48,6 +48,10 @@ contain placeholder text, and every relative link must resolve.
 
 ## Subsystem contracts
 
+Harness runtime: [`task-events.md`](task-events.md) (durable task events, cursors,
+SSE replay, reload/resync, approval reconciliation), [`workflow-checkpoints.md`](workflow-checkpoints.md),
+[`execution-budgets.md`](execution-budgets.md), [`side-effect-idempotency.md`](side-effect-idempotency.md).
+
 Model and provider: [`provider-adapters.md`](provider-adapters.md),
 [`api-provider-contracts.md`](api-provider-contracts.md),
 [`provider-switching.md`](provider-switching.md),
