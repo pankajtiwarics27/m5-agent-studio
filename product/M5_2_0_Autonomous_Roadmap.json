@@ -121,7 +121,7 @@
   "session_state": {
     "active_story": null,
     "last_completed_story": "M5-P0-07",
-    "last_checkpoint": "2026-10-30T10:17:37Z",
+    "last_checkpoint": "2026-10-30T10:23:10Z",
     "last_session_id": "arena/a396d067-m5-agent-studio",
     "next_recommended_story": "M5-P0-03",
     "open_risks": [
@@ -134,7 +134,7 @@
       "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1); runtime dependencies clean"
     ],
     "last_readme_sync": "2026-10-30T10:17:37Z",
-    "last_verified_commit": null
+    "last_verified_commit": "31656a9846e5f3a3b78f421ed0d267e2d063c3fc"
   },
   "delivery_phases": [
     {
@@ -274,10 +274,10 @@
         "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-30T10:17:37Z",
-        "updated_at": "2026-10-30T10:17:37Z",
+        "updated_at": "2026-10-30T10:23:10Z",
         "completed_at": "2026-10-30T10:17:37Z",
         "owner_session": "arena/a396d067-m5-agent-studio",
-        "commit_sha": null,
+        "commit_sha": "31656a9846e5f3a3b78f421ed0d267e2d063c3fc",
         "changed_files": [
           "product/M5_2_0_Autonomous_Roadmap.json",
           "README_GROUND_TRUTH_DRAFT.md",
@@ -349,10 +349,10 @@
         "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-30T10:17:37Z",
-        "updated_at": "2026-10-30T10:17:37Z",
+        "updated_at": "2026-10-30T10:23:10Z",
         "completed_at": "2026-10-30T10:17:37Z",
         "owner_session": "arena/a396d067-m5-agent-studio",
-        "commit_sha": null,
+        "commit_sha": "31656a9846e5f3a3b78f421ed0d267e2d063c3fc",
         "changed_files": [
           "docs/m5-2-0-integration-audit.md",
           "README.md",
@@ -531,10 +531,10 @@
         "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-30T10:17:37Z",
-        "updated_at": "2026-10-30T10:17:37Z",
+        "updated_at": "2026-10-30T10:23:10Z",
         "completed_at": "2026-10-30T10:17:37Z",
         "owner_session": "arena/a396d067-m5-agent-studio",
-        "commit_sha": null,
+        "commit_sha": "31656a9846e5f3a3b78f421ed0d267e2d063c3fc",
         "changed_files": [
           "docs/m5-2-0-baseline-evidence.md",
           "README.md",
@@ -679,10 +679,10 @@
         "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-30T10:17:37Z",
-        "updated_at": "2026-10-30T10:17:37Z",
+        "updated_at": "2026-10-30T10:23:10Z",
         "completed_at": "2026-10-30T10:17:37Z",
         "owner_session": "arena/a396d067-m5-agent-studio",
-        "commit_sha": null,
+        "commit_sha": "31656a9846e5f3a3b78f421ed0d267e2d063c3fc",
         "changed_files": [
           "README.md",
           "docs/README.md",
