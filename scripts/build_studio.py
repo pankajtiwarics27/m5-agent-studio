@@ -27,6 +27,7 @@ INLINED_MODULES = (
     "execution_spine",
     "task_events",
     "sandbox_boundary",
+    "edit_transactions",
     "workspace_snapshots",
 )
 

@@ -308,6 +308,30 @@ def _wsnap_normalize_rel_path(root: Path, raw_path: str) -> tuple[str, tuple[str
     return "/".join(parts), parts
 
 
+def _wsnap_lexical_parts(raw_path: str) -> tuple[str, ...]:
+    """Split a workspace-relative path lexically, refusing absolute and escaping inputs.
+
+    Deliberately does not resolve symlinks: callers that hash a target need the
+    components the caller actually named, so a link can be refused rather than
+    followed into a different file.
+    """
+    cleaned = (raw_path or "").replace("\\", "/").strip()
+    if not cleaned or cleaned == ".":
+        raise SnapshotConflictError("A managed edit needs a file path inside the workspace.")
+    if cleaned.startswith("/") or re.match(r"^[A-Za-z]:", cleaned):
+        raise SnapshotConflictError(f"Path {raw_path!r} is absolute; managed edits require workspace-relative paths.")
+    parts: list[str] = []
+    for part in cleaned.split("/"):
+        if part in ("", "."):
+            continue
+        if part == "..":
+            raise SnapshotConflictError(f"Path {raw_path!r} escapes the workspace boundary.")
+        parts.append(part)
+    if not parts or parts[-1] in ("", "."):
+        raise SnapshotConflictError(f"Path {raw_path!r} does not name a file inside the workspace.")
+    return tuple(parts)
+
+
 def _wsnap_open_root_fd(root: Path) -> int:
     nofollow = getattr(os, "O_NOFOLLOW", 0)
     directory = getattr(os, "O_DIRECTORY", 0)
@@ -411,6 +435,77 @@ def _wsnap_hash_confined_file_in_place(root: Path, rel_parts: tuple[str, ...]) -
             os.close(current_fd)
 
 
+def hash_confined_child(parent_fd: int, leaf: str) -> str | None:
+    """SHA-256 of a regular file directly under an open directory fd, or ``None`` if absent.
+
+    Opened relative to the caller's directory descriptor with ``O_NOFOLLOW``, so the
+    hash describes the entry the caller is about to replace even if a symlink was
+    swapped in, and the read cannot be redirected outside the workspace.
+    """
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    file_fd: int | None = None
+    try:
+        file_fd = os.open(leaf, os.O_RDONLY | nofollow | getattr(os, "O_CLOEXEC", 0), dir_fd=parent_fd)
+    except (FileNotFoundError, NotADirectoryError):
+        return None
+    except OSError as exc:
+        if exc.errno == errno.ELOOP:
+            raise SnapshotConflictError(f"Refusing to read symlink at {leaf!r}.") from exc
+        raise
+    try:
+        info = os.fstat(file_fd)
+        if not stat.S_ISREG(info.st_mode):
+            return None
+        hasher = hashlib.sha256()
+        with os.fdopen(file_fd, "rb") as fh:
+            file_fd = None
+            while True:
+                chunk = fh.read(65536)
+                if not chunk:
+                    break
+                hasher.update(chunk)
+        return hasher.hexdigest()
+    finally:
+        if file_fd is not None:
+            os.close(file_fd)
+
+
+def hash_target_in_place(root: Path, raw_rel_path: str) -> tuple[str, int, int] | None:
+    """``(sha256, size_bytes, mode)`` for a confined regular file, or ``None`` when it does not exist.
+
+    The digest is streamed, so a large target can still be version-checked (the
+    snapshot size cap applies to *copying* bytes, not to reading a digest).
+    Symlinks are never followed: a managed edit must not be redirectable by a
+    link that appeared after the path was validated.
+    """
+    root_res = Path(root).expanduser().resolve(strict=True)
+    # Walk the *lexical* path first so a symlink component is refused instead of
+    # being resolved into a different file that the caller never named.
+    rel_parts = _wsnap_lexical_parts(raw_rel_path)
+    rel_posix = "/".join(rel_parts)
+    current = root_res
+    for part in rel_parts[:-1]:
+        current = current / part
+        if current.is_symlink():
+            raise SnapshotConflictError(f"Refusing to write through symlinked directory {str(current)!r}.")
+        if not current.is_dir():
+            return None
+    leaf = root_res.joinpath(*rel_parts)
+    try:
+        entry_st = os.lstat(leaf)
+    except FileNotFoundError:
+        return None
+    if stat.S_ISLNK(entry_st.st_mode):
+        raise SnapshotConflictError(f"Refusing to follow symlink at {rel_posix!r}.")
+    if not stat.S_ISREG(entry_st.st_mode):
+        raise SnapshotConflictError(f"{rel_posix!r} is not a regular file and cannot be edited.")
+    hashed = _wsnap_hash_confined_file_in_place(root_res, rel_parts)
+    if hashed is None:
+        return None
+    digest, info = hashed
+    return digest, int(info.st_size), stat.S_IMODE(info.st_mode)
+
+
 def atomic_write_confined_bytes(
     root: Path,
     raw_rel_path: str,
@@ -418,9 +513,19 @@ def atomic_write_confined_bytes(
     *,
     mode: int | None = None,
     min_free_bytes: int = DEFAULT_MIN_FREE_BYTES,
+    expected_sha256: str | None = None,
 ) -> str:
-    """Atomically write ``data`` to a confined workspace path via anchored ``O_NOFOLLOW`` temp file + fsync."""
+    """Atomically write ``data`` to a confined workspace path via anchored ``O_NOFOLLOW`` temp file + fsync.
+
+    With ``expected_sha256`` the write is a compare-and-swap: the current bytes are
+    re-hashed through the same directory descriptor immediately before the rename,
+    and the write is refused with :class:`SnapshotConflictError` when they differ
+    (including when the file is missing). The temporary file is unlinked, so a
+    refused write leaves the workspace exactly as it was.
+    """
     rel_posix, rel_parts = _wsnap_normalize_rel_path(root, raw_rel_path)
+    if expected_sha256 is not None and not _WSNAP_HEX64_RE.match(str(expected_sha256)):
+        raise WorkspaceSnapshotError("expected_sha256 must be 64 lowercase hexadecimal characters.")
     _wsnap_preflight_disk_space(root, needed_bytes=len(data), min_free_bytes=min_free_bytes, operation="workspace_write")
     nofollow = getattr(os, "O_NOFOLLOW", 0)
     directory = getattr(os, "O_DIRECTORY", 0)
@@ -474,6 +579,14 @@ def atomic_write_confined_bytes(
             os.fsync(tmp_fd)
             os.close(tmp_fd)
             tmp_fd = None
+            if expected_sha256 is not None:
+                current = hash_confined_child(parent_fd, leaf)
+                if current != expected_sha256:
+                    raise SnapshotConflictError(
+                        "Refusing to overwrite "
+                        f"{rel_posix!r}: expected content {expected_sha256} but found "
+                        f"{current if current is not None else 'no file'}. Nothing was written."
+                    )
             os.rename(tmp_name, leaf, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
             try:
                 os.fsync(parent_fd)

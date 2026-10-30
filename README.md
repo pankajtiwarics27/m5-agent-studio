@@ -28,7 +28,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
 - **The application runs and its local auth path works.** `scripts/smoke_local.py`
   launches a disposable loopback instance of both `app.py` and the generated
   `studio.py` and verifies the token/security path — both exit 0.
-- **The test suite passes:** **827 passed, 1 skipped** (the skip is the opt-in
+- **The test suite passes:** **854 passed, 1 skipped** (the skip is the opt-in
   live container-runtime test, see below). `ruff`, `mypy` over 43 typed modules,
   `compileall`, and the Node-based frontend syntax check all pass.
 - **Generated artifacts are reproducible:** `studio.py`,
@@ -130,8 +130,27 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   worktree `/apply` overwrites of uncommitted user edits (`409`), and
   transitioning tasks into a safe `paused` state on `ENOSPC` / disk-full without
   partial file writes — pinned by 8 tests (`tests/test_workspace_snapshots.py`).
-  Note: version-aware concurrent expected-hash conflict checks per edit and
-  multi-file inverse-patch rollback remain follow-up work (`M5-P2-02`–`M5-P2-03`).
+  Multi-file inverse-patch rollback remains follow-up work (`M5-P2-03`).
+- **Managed edits are version-aware and every applied edit is a durable
+  transaction (`M5-P2-02`):** an edit resolves exactly one expected content
+  version — the caller's `expected_sha256`, else the digest `read_file` handed
+  this session, else the bytes this runtime last wrote — and refuses with
+  `error_code: "stale_version"` instead of overwriting a file that changed
+  underneath it. The expectation is re-checked through the same directory
+  descriptor immediately before the atomic rename, so a save landing mid-edit is
+  still caught and the temporary file is discarded. `read_file` now reports the
+  digest it delivered (`sha256:` line plus a `sha256` field), and `write_file` /
+  `edit_file` return `sha256`, `previous_sha256` and the recorded
+  `edit_transaction`. `edit_transactions.py` (stdlib only, inlined into
+  `studio.py`) appends one owner-only transaction per edit to
+  `.harnesses/edits/<session>.jsonl` (`O_APPEND` + `fsync`, `edit_id`, monotonic
+  `seq`, pre/post digests, expected/observed digests, mode, size) and keeps the
+  observed versions in a bounded atomic JSON index so the expectation survives a
+  restart. Absolute, `..`-traversal, symlinked and secret paths are refused with
+  `error_code: "unauthorized_path"` before anything is written; conflicts and
+  applied edits are published as `edit/conflict` and `edit/applied` task events.
+  Pinned by 19 tests (`tests/test_edit_transactions.py`) and documented in
+  [`docs/version-aware-edits.md`](docs/version-aware-edits.md) (ADR-0006).
 - **The execution boundary is extracted and its coverage is inventoried
   (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`–`M5-P1-04`):**
   `execution_spine.py` and `side_effect_ledger.py` form a stdlib-only seam
@@ -151,14 +170,14 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
   pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
   plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
-- **15 of 45 shipped Python modules are wired into the served app**
+- **16 of 46 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`, `execution_spine` since `M5-P0-06`,
   `runtime_persistence` since `M5-P1-01`, `side_effect_ledger` since `M5-P1-03`,
   `execution_budget`, `workflow_checkpoints`, `workflow_state` since
   `M5-P1-05`, `failure_injection` since `M5-P1-06`, `task_events` since
-  `M5-P1-07`, and `sandbox_boundary` + `workspace_snapshots` since `M5-P2-01`;
-  5 of 42 at the time of the audit table). Together they govern
+  `M5-P1-07`, `sandbox_boundary` + `workspace_snapshots` since `M5-P2-01`, and
+  `edit_transactions` since `M5-P2-02`; 5 of 42 at the time of the audit table). Together they govern
   schema upgrades, SQLite transactions, authoritative task-state / lease-epoch
   checks at admission (`M5-P1-02`), durable `runtime_actions`
   intent/result/replay tracking (`M5-P1-03`), single-owner worker leases,
@@ -168,8 +187,9 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   (`M5-P1-05`), verified coding-task completion gates plus deterministic
   action-boundary crash injection (`M5-P1-06`), the durable cursor-addressed
   task-event stream with reload/resync and approval reconciliation (`M5-P1-07`),
-  and pre-edit Git baseline capture, selective CAS snapshots, path confinement,
-  and non-destructive baseline restore (`M5-P2-01`).
+  pre-edit Git baseline capture, selective CAS snapshots, path confinement, and
+  non-destructive baseline restore (`M5-P2-01`), and version-aware managed edits
+  with durable edit transactions (`M5-P2-02`).
   The other 30 modules have passing unit tests but **no `app.py` call path**.
   Module presence is not integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
@@ -202,7 +222,7 @@ python3 -m venv .venv
 .venv/bin/mypy                                  # typed contract modules
 .venv/bin/python -m compileall -q app.py scripts tests
 .venv/bin/python scripts/check_frontend_syntax.py
-.venv/bin/python -m pytest -q                   # 835 passed, 1 skipped
+.venv/bin/python -m pytest -q                   # 854 passed, 1 skipped
 .venv/bin/python scripts/smoke_local.py         # loopback app, auth verified
 .venv/bin/python scripts/smoke_local.py --standalone
 ```
@@ -222,7 +242,7 @@ are not guarantees):
 
 ## Verified usage
 
-- **Run the test suite:** `.venv/bin/python -m pytest -q` → 835 passed,
+- **Run the test suite:** `.venv/bin/python -m pytest -q` → 854 passed,
   1 skipped, 1 warning.
 - **Start a disposable authenticated instance (verified):**
   `.venv/bin/python scripts/smoke_local.py` starts `app.py` on a free loopback
@@ -346,7 +366,7 @@ Summary (2026-10-30, Linux x86_64 container, 2 vCPU, ~4 GB RAM, Python 3.11.2):
 
 | Check | Result |
 |---|---|
-| `pytest -q` | 835 passed, 1 skipped (opt-in live container test), 1 warning |
+| `pytest -q` | 854 passed, 1 skipped (opt-in live container test), 1 warning |
 | `ruff check .` | clean |
 | `mypy` | clean (typed contract modules) |
 | `check_frontend_syntax.py` (Node) | pass |
@@ -469,13 +489,16 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
   action-boundary crash injection, user-work preservation, duplicate-effect
   prevention, and false-completion rejection), **`M5-P1-07`** (phase P1 100% —
   durable cursor-addressed task-event stream, SSE replay/gap resync, and
-  approval reconciliation), **and `M5-P2-01`** (pre-edit Git baseline capture,
+  approval reconciliation), **`M5-P2-01`** (pre-edit Git baseline capture,
   selective SHA-256 CAS user snapshots, ignored/sensitive file preservation
   without indiscriminate copying, disk-full safe pause, and verified
-  non-destructive restore; phase P2 20%). Next ready story: `M5-P2-02`
-  (version-aware managed edits and conflict checks) — claim via the
-  coordination protocol before coding. Planned work is not implemented product
-  behavior.
+  non-destructive restore), **and `M5-P2-02`** (version-aware managed edits:
+  explicit/observed/last-written content expectations, compare-and-swap atomic
+  replacement so a concurrent user edit conflicts instead of being overwritten,
+  structured `unauthorized_path` refusals, and one durable edit transaction per
+  applied edit; phase P2 40%). Next ready story: `M5-P2-03` (multi-file rollback
+  and action reconciliation) — claim via the coordination protocol before coding.
+  Planned work is not implemented product behavior.
 - **AS program (Adaptive Runtime)** —
   [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json)
   with dashboard [`docs/product-roadmap-status.md`](docs/product-roadmap-status.md):

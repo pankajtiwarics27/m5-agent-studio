@@ -369,7 +369,14 @@ def test_harness_turn_and_edit_handle_disk_full_with_safe_pause_and_preserve_fil
         # Simulate disk-full (`ENOSPC`) as soon as `write_file` attempts atomic write after pre-turn snapshot
         real_atomic_write = studio._atomic_write_workspace_text
 
-        def fail_enospc_write(root: Path, raw_path: str | Path, text: str, *, mode: int | None = None) -> None:
+        def fail_enospc_write(
+            root: Path,
+            raw_path: str | Path,
+            text: str,
+            *,
+            mode: int | None = None,
+            expected_sha256: str | None = None,
+        ) -> None:
             raise workspace_snapshots.SnapshotDiskFullError(
                 "Simulated ENOSPC while writing workspace file",
                 operation="atomic_write_workspace_text",

@@ -76,6 +76,7 @@ import side_effect_ledger
 import task_events
 import workflow_checkpoints
 import workflow_state
+import edit_transactions
 import workspace_snapshots
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
 
@@ -6902,6 +6903,175 @@ def _workspace_snapshot_store() -> workspace_snapshots.WorkspaceSnapshotStore:
     )
 
 
+def _edit_ledger() -> edit_transactions.EditTransactionLedger:
+    """Durable edit-transaction ledger bound to ``HARNESS_STORE_DIR`` (per-call, like the others)."""
+    _ensure_harness_dirs()
+    return edit_transactions.EditTransactionLedger(HARNESS_STORE_DIR)
+
+
+def _observed_versions() -> edit_transactions.ObservedVersionIndex:
+    """Durable record of the file versions handed to the agent by ``read_file``."""
+    _ensure_harness_dirs()
+    return edit_transactions.ObservedVersionIndex(HARNESS_STORE_DIR)
+
+
+def _edit_conflict_result(
+    rel_s: str,
+    *,
+    expected_sha256: str | None,
+    current_sha256: str | None,
+    observed_sha256: str | None,
+    source: str,
+    detail: str = "",
+) -> dict[str, Any]:
+    """Refuse a managed edit whose version expectation no longer holds."""
+    current_txt = current_sha256 or "absent"
+    expected_txt = expected_sha256 or "absent"
+    hint = (
+        f"`{rel_s}` changed since the version this edit was based on "
+        f"(expected {expected_txt}, found {current_txt}"
+        + (f"; last version read by the agent: {observed_sha256}" if observed_sha256 else "")
+        + "). Nothing was written. Call `read_file` again, re-apply the change to the current content, "
+        "and pass the digest it reports as `expected_sha256`."
+    )
+    if detail:
+        hint = f"{hint} ({detail})"
+    return {
+        "ok": False,
+        "error_code": "stale_version",
+        "conflict": True,
+        "expected_sha256": expected_sha256,
+        "current_sha256": current_sha256,
+        "observed_sha256": observed_sha256,
+        "conflict_source": source,
+        "output": hint,
+        "diff": "",
+        "elapsed_ms": 1,
+    }
+
+
+def _resolve_edit_expectation(
+    sess: dict[str, Any],
+    root_res: Path,
+    rel_s: str,
+    args: Mapping[str, Any],
+) -> tuple[str | None, str | None, dict[str, Any] | None]:
+    """Return ``(expected_sha256, current_sha256, denial)`` for a managed edit.
+
+    The expectation is, in order of authority: the caller's explicit
+    ``expected_sha256``, the version ``read_file`` last handed this session, or the
+    bytes this runtime last wrote. A mismatch is a conflict, never an overwrite;
+    only when none of the three exists (an unread, never-written target) is the
+    edit treated as a first write.
+    """
+    snap_sid = _snapshot_session_id(sess)
+    try:
+        explicit = edit_transactions.parse_expected_sha256(args.get("expected_sha256"))
+    except edit_transactions.EditVersionError as exc:
+        return None, None, {
+            "ok": False,
+            "error_code": "invalid_expected_sha256",
+            "output": f"Invalid `expected_sha256`: {exc}",
+            "diff": "",
+            "elapsed_ms": 1,
+        }
+    observed: str | None = None
+    try:
+        observed = _observed_versions().expected_for(snap_sid, rel_s)
+    except edit_transactions.EditVersionError:
+        observed = None
+    last_written: str | None = None
+    try:
+        prior = _edit_ledger().latest_for_path(snap_sid, rel_s)
+    except edit_transactions.EditVersionError:
+        prior = None
+    if prior is not None:
+        last_written = prior.post_sha256
+
+    try:
+        current = workspace_snapshots.hash_target_in_place(root_res, rel_s)
+    except workspace_snapshots.WorkspaceSnapshotError as exc:
+        return None, None, {
+            "ok": False,
+            "error_code": "unsafe_path",
+            "output": f"Refused: {exc}",
+            "diff": "",
+            "elapsed_ms": 1,
+        }
+    current_sha = current[0] if current is not None else None
+
+    expected = explicit if explicit is not None else (observed if observed is not None else last_written)
+    if expected is not None and expected != current_sha:
+        source = "explicit" if explicit is not None else ("observed_read" if observed is not None else "last_write")
+        return expected, current_sha, _edit_conflict_result(
+            rel_s,
+            expected_sha256=expected,
+            current_sha256=current_sha,
+            observed_sha256=observed,
+            source=source,
+        )
+    return expected, current_sha, None
+
+
+def _record_managed_edit(
+    sess: dict[str, Any],
+    root_res: Path,
+    rel_s: str,
+    *,
+    tool_name: str,
+    pre_sha256: str | None,
+    post_sha256: str,
+    expected_sha256: str | None,
+    observed_sha256: str | None,
+    mode: int | None,
+    bytes_written: int,
+) -> dict[str, Any] | None:
+    """Durably record an applied edit and mark the written version as observed."""
+    snap_sid = _snapshot_session_id(sess)
+    task_id = str(sess.get("task_id") or sess.get("id") or "")
+    try:
+        transaction = _edit_ledger().record(
+            session_id=snap_sid,
+            rel_path=rel_s,
+            tool=tool_name,
+            pre_sha256=pre_sha256,
+            post_sha256=post_sha256,
+            expected_sha256=expected_sha256,
+            observed_sha256=observed_sha256,
+            mode=mode,
+            bytes_written=bytes_written,
+            task_id=task_id,
+        )
+    except (edit_transactions.EditVersionError, OSError) as exc:
+        # The bytes are already on disk; refusing to claim success would be a lie,
+        # but the missing transaction is reported so recovery can re-derive it.
+        _safe_append_harness_event(
+            snap_sid,
+            "edit/ledger_failed",
+            {"path": rel_s, "tool": tool_name, "reason": str(exc)[:300]},
+        )
+        return None
+    try:
+        _observed_versions().mark_observed(snap_sid, rel_s, post_sha256)
+    except (edit_transactions.EditVersionError, OSError):
+        pass
+    _safe_append_harness_event(
+        snap_sid,
+        "edit/applied",
+        {
+            "edit_id": transaction.edit_id,
+            "seq": transaction.seq,
+            "path": rel_s,
+            "tool": tool_name,
+            "pre_sha256": pre_sha256,
+            "post_sha256": post_sha256,
+            "bytes": bytes_written,
+        },
+        dedupe_key=f"edit-applied:{transaction.edit_id}",
+    )
+    return transaction.to_dict()
+
+
 def _snapshot_session_id(sess: Mapping[str, Any] | None, fallback: str = "adhoc-session") -> str:
     raw = str((sess or {}).get("id") or fallback).strip()
     sanitized = re.sub(r"[^A-Za-z0-9._-]+", "-", raw).strip("-._")
@@ -7438,8 +7608,17 @@ def _atomic_write_workspace_text(
     text: str,
     *,
     mode: int | None = None,
+    expected_sha256: str | None = None,
 ) -> None:
-    """Atomically replace a workspace file through an anchored parent fd."""
+    """Atomically replace a workspace file through an anchored parent fd.
+
+    With ``expected_sha256`` the replacement is a compare-and-swap: the current
+    bytes are re-hashed through the same directory descriptor immediately before
+    the rename and the write is refused with
+    :class:`workspace_snapshots.SnapshotConflictError` when they differ (or when
+    the file is gone). The temporary file is unlinked, so a refused write leaves
+    the workspace untouched — a user edit that lands mid-write is never lost.
+    """
     root_res, parts = _workspace_relative_parts(root, raw_path)
     parent_fd, leaf = _open_workspace_parent_fd(root_res, parts, create=True)
     temp_name = f".m5-studio-{uuid.uuid4().hex}.tmp"
@@ -7459,6 +7638,13 @@ def _atomic_write_workspace_text(
         os.fsync(temp_fd)
         os.close(temp_fd)
         temp_fd = None
+        if expected_sha256 is not None:
+            current = workspace_snapshots.hash_confined_child(parent_fd, leaf)
+            if current != expected_sha256:
+                raise workspace_snapshots.SnapshotConflictError(
+                    f"Refusing to overwrite {'/'.join(parts)!r}: expected content {expected_sha256} but found "
+                    f"{current if current is not None else 'no file'}. Nothing was written."
+                )
         os.rename(temp_name, leaf, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
     except OSError as exc:
         if workspace_snapshots.is_disk_full_os_error(exc):
@@ -7827,11 +8013,25 @@ async def _execute_harness_tool_inner(
             e_line = min(total, int(args.get("end_line") or (s_line + 219)))
             snippet = [f"{idx:4d} | {lines[idx - 1]}" for idx in range(s_line, e_line + 1)]
             header = f"File: {Path(*relative_parts)} (lines {s_line}-{e_line} of {total})"
+            # Hash the bytes actually on disk (not the decoded text) and remember
+            # them: this is the version the agent's edit is entitled to assume.
+            read_sha256: str | None = None
+            try:
+                read_sha256 = workspace_snapshots.hash_target_in_place(root_res, "/".join(relative_parts))[0]
+            except (workspace_snapshots.WorkspaceSnapshotError, TypeError):
+                read_sha256 = None
+            if read_sha256 is not None:
+                try:
+                    _observed_versions().mark_observed(_snapshot_session_id(sess), "/".join(relative_parts), read_sha256)
+                except (edit_transactions.EditVersionError, OSError):
+                    pass
+                header += f"\nsha256: {read_sha256}"
             return {
                 "ok": True,
                 "output": header + "\n" + "\n".join(snippet),
                 "diff": "",
                 "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                "sha256": read_sha256,
             }
 
         if tool_name in ("write_file", "edit_file"):
@@ -7845,14 +8045,50 @@ async def _execute_harness_tool_inner(
             raw_p = str(args.get("path") or "")
             sec_err = _check_gsd_secret_guard(raw_p)
             if sec_err:
-                return {"ok": False, "output": sec_err, "diff": "", "elapsed_ms": 1}
-            root_res, relative_parts = _workspace_relative_parts(root, raw_p)
+                return {"ok": False, "error_code": "unauthorized_path", "output": sec_err, "diff": "", "elapsed_ms": 1}
+            try:
+                root_res, relative_parts = _workspace_relative_parts(root, raw_p)
+            except (OSError, PermissionError, RuntimeError, ValueError) as exc:
+                # Absolute paths, `..` traversal and unresolvable roots are refusals,
+                # not crashes: the caller gets a structured denial it can act on.
+                return {
+                    "ok": False,
+                    "error_code": "unauthorized_path",
+                    "output": f"Refused: {exc}",
+                    "diff": "",
+                    "elapsed_ms": 1,
+                }
             fp = root_res.joinpath(*relative_parts)
             rel_s = "/".join(relative_parts)
             if _is_secret_path(fp) or workspace_snapshots.is_sensitive_rel_path(rel_s):
-                return {"ok": False, "output": _check_gsd_secret_guard(str(fp)) or "Blocked secret file.", "diff": "", "elapsed_ms": 1}
+                return {
+                    "ok": False,
+                    "error_code": "unauthorized_path",
+                    "output": _check_gsd_secret_guard(str(fp)) or "Blocked secret file.",
+                    "diff": "",
+                    "elapsed_ms": 1,
+                }
             snap_sid = _snapshot_session_id(sess)
             snap_task_id = str(sess.get("task_id") or sess.get("id") or "").strip() or None
+            observed_sha = None
+            try:
+                observed_sha = _observed_versions().expected_for(snap_sid, rel_s)
+            except edit_transactions.EditVersionError:
+                observed_sha = None
+            expected_sha, current_sha, denial = _resolve_edit_expectation(sess, root_res, rel_s, args)
+            if denial is not None:
+                _safe_append_harness_event(
+                    snap_sid,
+                    "edit/conflict",
+                    {
+                        "path": rel_s,
+                        "tool": tool_name,
+                        "expected_sha256": denial.get("expected_sha256"),
+                        "current_sha256": denial.get("current_sha256"),
+                        "source": denial.get("conflict_source"),
+                    },
+                )
+                return denial
             if tool_name == "write_file":
                 try:
                     before, prior_info = _read_workspace_text(root_res, Path(*relative_parts), errors="replace")
@@ -7863,12 +8099,39 @@ async def _execute_harness_tool_inner(
                 after = str(args.get("content") if args.get("content") is not None else "")
                 try:
                     _workspace_snapshot_store().capture_target_before_edit(snap_sid, root_res, rel_s)
-                    _atomic_write_workspace_text(root_res, Path(*relative_parts), after, mode=prior_mode)
-                    _workspace_snapshot_store().record_target_after_edit(
-                        snap_sid,
-                        root_res,
+                except workspace_snapshots.SnapshotDiskFullError as disk_exc:
+                    _request_disk_full_safe_pause(snap_task_id, reason=str(disk_exc))
+                    return {
+                        "ok": False,
+                        "error_code": "disk_full",
+                        "disk_full": True,
+                        "safe_pause_required": True,
+                        "output": f"Paused safely (disk full): `{rel_s}` was preserved without partial modification ({disk_exc}).",
+                        "diff": "",
+                        "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                    }
+                except workspace_snapshots.SnapshotConflictError as conflict_exc:
+                    return {
+                        "ok": False,
+                        "error_code": "unsafe_path",
+                        "output": f"Refused: {conflict_exc}",
+                        "diff": "",
+                        "elapsed_ms": 1,
+                    }
+                write_kwargs: dict[str, Any] = {"mode": prior_mode}
+                if expected_sha is not None:
+                    write_kwargs["expected_sha256"] = expected_sha
+                try:
+                    _atomic_write_workspace_text(root_res, Path(*relative_parts), after, **write_kwargs)
+                except workspace_snapshots.SnapshotConflictError:
+                    fresh = workspace_snapshots.hash_target_in_place(root_res, rel_s)
+                    return _edit_conflict_result(
                         rel_s,
-                        hashlib.sha256(after.encode("utf-8")).hexdigest(),
+                        expected_sha256=expected_sha,
+                        current_sha256=fresh[0] if fresh is not None else None,
+                        observed_sha256=observed_sha,
+                        source="write_race",
+                        detail="changed between the version check and the atomic replace",
                     )
                 except workspace_snapshots.SnapshotDiskFullError as disk_exc:
                     _request_disk_full_safe_pause(snap_task_id, reason=str(disk_exc))
@@ -7881,12 +8144,32 @@ async def _execute_harness_tool_inner(
                         "diff": "",
                         "elapsed_ms": round((time.perf_counter() - t0) * 1000),
                     }
+                post_sha = hashlib.sha256(after.encode("utf-8", errors="surrogateescape")).hexdigest()
+                try:
+                    _workspace_snapshot_store().record_target_after_edit(snap_sid, root_res, rel_s, post_sha)
+                except (workspace_snapshots.WorkspaceSnapshotError, OSError):
+                    pass
+                transaction = _record_managed_edit(
+                    sess,
+                    root_res,
+                    rel_s,
+                    tool_name=tool_name,
+                    pre_sha256=current_sha,
+                    post_sha256=post_sha,
+                    expected_sha256=expected_sha,
+                    observed_sha256=observed_sha,
+                    mode=prior_mode,
+                    bytes_written=len(after.encode("utf-8", errors="surrogateescape")),
+                )
                 diff_txt = _unified_diff_snippet(rel_s, before, after)
                 return {
                     "ok": True,
                     "output": f"Wrote `{rel_s}` ({len(after.splitlines())} lines, {len(after)} chars).",
                     "diff": diff_txt,
                     "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                    "edit_transaction": transaction,
+                    "sha256": post_sha,
+                    "previous_sha256": current_sha,
                 }
 
             # edit_file
@@ -7921,12 +8204,39 @@ async def _execute_harness_tool_inner(
                 after = "\n".join(replaced_lines) + ("\n" if before.endswith("\n") else "")
             try:
                 _workspace_snapshot_store().capture_target_before_edit(snap_sid, root_res, rel_s)
-                _atomic_write_workspace_text(root_res, Path(*relative_parts), after, mode=stat.S_IMODE(prior_info.st_mode))
-                _workspace_snapshot_store().record_target_after_edit(
-                    snap_sid,
-                    root_res,
+            except workspace_snapshots.SnapshotDiskFullError as disk_exc:
+                _request_disk_full_safe_pause(snap_task_id, reason=str(disk_exc))
+                return {
+                    "ok": False,
+                    "error_code": "disk_full",
+                    "disk_full": True,
+                    "safe_pause_required": True,
+                    "output": f"Paused safely (disk full): `{rel_s}` was preserved without partial modification ({disk_exc}).",
+                    "diff": "",
+                    "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                }
+            except workspace_snapshots.SnapshotConflictError as conflict_exc:
+                return {
+                    "ok": False,
+                    "error_code": "unsafe_path",
+                    "output": f"Refused: {conflict_exc}",
+                    "diff": "",
+                    "elapsed_ms": 1,
+                }
+            edit_kwargs: dict[str, Any] = {"mode": stat.S_IMODE(prior_info.st_mode)}
+            if expected_sha is not None:
+                edit_kwargs["expected_sha256"] = expected_sha
+            try:
+                _atomic_write_workspace_text(root_res, Path(*relative_parts), after, **edit_kwargs)
+            except workspace_snapshots.SnapshotConflictError:
+                fresh = workspace_snapshots.hash_target_in_place(root_res, rel_s)
+                return _edit_conflict_result(
                     rel_s,
-                    hashlib.sha256(after.encode("utf-8")).hexdigest(),
+                    expected_sha256=expected_sha,
+                    current_sha256=fresh[0] if fresh is not None else None,
+                    observed_sha256=observed_sha,
+                    source="edit_race",
+                    detail="changed between the version check and the atomic replace",
                 )
             except workspace_snapshots.SnapshotDiskFullError as disk_exc:
                 _request_disk_full_safe_pause(snap_task_id, reason=str(disk_exc))
@@ -7939,12 +8249,32 @@ async def _execute_harness_tool_inner(
                     "diff": "",
                     "elapsed_ms": round((time.perf_counter() - t0) * 1000),
                 }
+            post_sha = hashlib.sha256(after.encode("utf-8", errors="surrogateescape")).hexdigest()
+            try:
+                _workspace_snapshot_store().record_target_after_edit(snap_sid, root_res, rel_s, post_sha)
+            except (workspace_snapshots.WorkspaceSnapshotError, OSError):
+                pass
+            transaction = _record_managed_edit(
+                sess,
+                root_res,
+                rel_s,
+                tool_name=tool_name,
+                pre_sha256=current_sha,
+                post_sha256=post_sha,
+                expected_sha256=expected_sha,
+                observed_sha256=observed_sha,
+                mode=stat.S_IMODE(prior_info.st_mode),
+                bytes_written=len(after.encode("utf-8", errors="surrogateescape")),
+            )
             diff_txt = _unified_diff_snippet(rel_s, before, after)
             return {
                 "ok": True,
                 "output": f"Edited `{rel_s}` successfully.",
                 "diff": diff_txt,
                 "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                "edit_transaction": transaction,
+                "sha256": post_sha,
+                "previous_sha256": current_sha,
             }
 
         if tool_name == "run_bash":
