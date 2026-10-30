@@ -25,7 +25,7 @@ import json
 import sqlite3
 import time
 import uuid
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, Protocol
@@ -96,6 +96,23 @@ class UncertainActionReplayError(DuplicateSideEffect, PermissionError):
 
 class CommittedActionReplayError(DuplicateSideEffect, PermissionError):
     """Raised when an already-committed consequential action is re-submitted."""
+
+
+class UnresolvedEffectsHoldError(DuplicateSideEffect, PermissionError):
+    """Raised when lease takeover or consequential admission is held by unresolved effects (M5-P1-04)."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        task_id: str = "",
+        epoch: int = 0,
+        unresolved_action_ids: tuple[str, ...] = (),
+    ) -> None:
+        super().__init__(message)
+        self.task_id = task_id
+        self.epoch = epoch
+        self.unresolved_action_ids = unresolved_action_ids
 
 
 @dataclass(frozen=True, slots=True)
@@ -421,6 +438,10 @@ class DurableActionLedger:
         )
         self._reconciler = reconciler
 
+    @property
+    def reconciler(self) -> ActionReconciler | None:
+        return self._reconciler
+
     def get_action(self, action_id: str) -> runtime_persistence.ActionRecord | None:
         aid = _text(action_id, "action_id")
 
@@ -517,6 +538,7 @@ class DurableActionLedger:
         session_id: str,
         task_id: str | None = None,
         epoch: int | None = None,
+        worker_id: str | None = None,
         now: float | None = None,
     ) -> LedgerBeginOutcome:
         """Atomically evaluate replay safety and commit durable ``in_flight`` (or ``denied``) intent."""
@@ -540,6 +562,7 @@ class DurableActionLedger:
 
         clean_tid = _text(task_id, "task_id")[:128] if task_id else None
         clean_epoch = max(0, int(epoch or 0))
+        clean_wid = str(worker_id).strip()[:128] if worker_id and str(worker_id).strip() else None
         ts = time.time() if now is None else float(now)
 
         # Optional pre-transaction reconciliation probe for `reconcilable` actions in `uncertain` state
@@ -578,16 +601,90 @@ class DurableActionLedger:
 
             effective_tid = clean_tid
             missing_tid_code = ""
+            effective_allowed = allowed
+            tx_fence_reason = ""
+            tx_fence_error: Exception | None = None
             if effective_tid is not None:
-                t_row = conn.execute("SELECT current_epoch FROM runtime_tasks WHERE task_id = ?", (effective_tid,)).fetchone()
+                t_row = conn.execute(
+                    "SELECT state, current_epoch FROM runtime_tasks WHERE task_id = ?",
+                    (effective_tid,),
+                ).fetchone()
                 if t_row is None:
-                    if not allowed:
+                    if not effective_allowed:
                         effective_tid = None
                         missing_tid_code = "unknown_task_id"
                     else:
                         raise KeyError(f"Runtime task {effective_tid!r} does not exist.")
+                elif effective_allowed:
+                    cur_ep = int(t_row["current_epoch"])
+                    if cur_ep > 0:
+                        ep_row = conn.execute(
+                            "SELECT worker_id, status, lease_expires_at FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                            (effective_tid, clean_epoch),
+                        ).fetchone()
+                        if clean_epoch != cur_ep or ep_row is None:
+                            effective_allowed = False
+                            missing_tid_code = "stale_epoch_fenced"
+                            tx_fence_reason = (
+                                f"Denied: Stale or mismatched task epoch {clean_epoch} for task `{effective_tid}` "
+                                f"(current epoch: {cur_ep})."
+                            )
+                            tx_fence_error = runtime_persistence.StaleEpochError(tx_fence_reason)
+                        elif str(ep_row["status"]) != "active":
+                            effective_allowed = False
+                            missing_tid_code = "inactive_epoch_fenced"
+                            tx_fence_reason = (
+                                f"Denied: Task `{effective_tid}` epoch {clean_epoch} is not active "
+                                f"(status: `{ep_row['status']}`)."
+                            )
+                            tx_fence_error = runtime_persistence.StaleEpochError(tx_fence_reason)
+                        elif float(ep_row["lease_expires_at"]) <= ts:
+                            conn.execute(
+                                """
+                                UPDATE runtime_task_epochs
+                                SET status = 'expired', fenced_at = ?, fence_reason = 'lease_expired_at_admission'
+                                WHERE task_id = ? AND epoch = ? AND status = 'active'
+                                """,
+                                (ts, effective_tid, clean_epoch),
+                            )
+                            effective_allowed = False
+                            missing_tid_code = "lease_expired_fenced"
+                            tx_fence_reason = f"Denied: Task `{effective_tid}` epoch {clean_epoch} lease has expired."
+                            tx_fence_error = runtime_persistence.LeaseExpiredError(tx_fence_reason)
+                        elif clean_wid is None or clean_wid != str(ep_row["worker_id"]):
+                            effective_allowed = False
+                            missing_tid_code = "worker_mismatch_fenced"
+                            tx_fence_reason = (
+                                f"Denied: Worker `{clean_wid or ''}` does not own task `{effective_tid}` "
+                                f"epoch {clean_epoch} (owned by `{ep_row['worker_id']}`)."
+                            )
+                            tx_fence_error = runtime_persistence.LeaseOwnershipConflictError(tx_fence_reason)
+                    if effective_allowed and eff_class != "read_only":
+                        unresolved_rows = conn.execute(
+                            """
+                            SELECT action_id FROM runtime_actions
+                            WHERE task_id = ? AND action_id != ? AND action_class != 'read_only'
+                              AND (status = 'uncertain' OR (status = 'in_flight' AND epoch < ?))
+                            ORDER BY created_at ASC LIMIT 3
+                            """,
+                            (effective_tid, aid, clean_epoch),
+                        ).fetchall()
+                        if unresolved_rows:
+                            unres_ids = tuple(str(r["action_id"]) for r in unresolved_rows)
+                            effective_allowed = False
+                            missing_tid_code = "unresolved_effects_hold"
+                            tx_fence_reason = (
+                                f"Denied: Consequential `{eff_class}` action `{tname}` blocked because "
+                                f"task `{effective_tid}` has unresolved side effects ({', '.join(unres_ids)})."
+                            )
+                            tx_fence_error = UnresolvedEffectsHoldError(
+                                tx_fence_reason,
+                                task_id=effective_tid,
+                                epoch=clean_epoch,
+                                unresolved_action_ids=unres_ids,
+                            )
 
-            if not allowed:
+            if not effective_allowed:
                 if existing is None:
                     conn.execute(
                         """
@@ -624,6 +721,9 @@ class DurableActionLedger:
                         status="denied",
                         replay_policy=resolved_replay,
                         record=denied_rec,
+                        replay_blocked=(tx_fence_error is not None),
+                        reason=tx_fence_reason,
+                        error=tx_fence_error,
                     )
                 if existing.status in ("never_started", "denied", "failed"):
                     next_att = existing.attempt + 1
@@ -656,6 +756,9 @@ class DurableActionLedger:
                         status="denied",
                         replay_policy=resolved_replay,
                         record=denied_rec,
+                        replay_blocked=(tx_fence_error is not None),
+                        reason=tx_fence_reason,
+                        error=tx_fence_error,
                     )
                 # Preserve existing `committed`, `in_flight`, or `uncertain` record without clobbering it.
                 return LedgerBeginOutcome(
@@ -666,6 +769,9 @@ class DurableActionLedger:
                     status=existing.status,  # type: ignore[arg-type]
                     replay_policy=resolved_replay,
                     record=existing,
+                    replay_blocked=(tx_fence_error is not None),
+                    reason=tx_fence_reason,
+                    error=tx_fence_error,
                 )
 
             # `allowed` is True: commit durable `in_flight` intent or enforce replay classification!
@@ -1092,3 +1198,336 @@ class DurableActionLedger:
         return runtime_persistence.run_write_transaction(
             self._storage, self._db_path, _tx, retry_policy=self._retry_policy
         )
+
+    def list_task_actions(
+        self,
+        task_id: str,
+        *,
+        statuses: Iterable[str] | None = None,
+    ) -> list[runtime_persistence.ActionRecord]:
+        """Return durable ``runtime_actions`` rows recorded against ``task_id``."""
+        tid = _text(task_id, "task_id")
+        status_list = [str(s) for s in statuses] if statuses is not None else []
+
+        def _read(conn: sqlite3.Connection) -> list[runtime_persistence.ActionRecord]:
+            conn.row_factory = sqlite3.Row
+            if status_list:
+                placeholders = ",".join("?" for _ in status_list)
+                rows = conn.execute(
+                    f"""
+                    SELECT * FROM runtime_actions
+                    WHERE task_id = ? AND status IN ({placeholders})
+                    ORDER BY created_at ASC, action_id ASC
+                    """,
+                    (tid, *status_list),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM runtime_actions WHERE task_id = ? ORDER BY created_at ASC, action_id ASC",
+                    (tid,),
+                ).fetchall()
+            return [_sel_row_to_action(r) for r in rows]
+
+        return runtime_persistence.run_read(
+            self._storage, self._db_path, _read, retry_policy=self._retry_policy
+        )
+
+    def list_unresolved_consequential_actions(
+        self,
+        task_id: str,
+        *,
+        before_epoch: int | None = None,
+    ) -> list[runtime_persistence.ActionRecord]:
+        """Return consequential actions on ``task_id`` that are ``uncertain`` or orphaned ``in_flight``."""
+        tid = _text(task_id, "task_id")
+
+        def _read(conn: sqlite3.Connection) -> list[runtime_persistence.ActionRecord]:
+            conn.row_factory = sqlite3.Row
+            if before_epoch is None:
+                rows = conn.execute(
+                    """
+                    SELECT * FROM runtime_actions
+                    WHERE task_id = ? AND action_class != 'read_only'
+                      AND status IN ('uncertain', 'in_flight')
+                    ORDER BY created_at ASC, action_id ASC
+                    """,
+                    (tid,),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    """
+                    SELECT * FROM runtime_actions
+                    WHERE task_id = ? AND action_class != 'read_only'
+                      AND (status = 'uncertain' OR (status = 'in_flight' AND epoch < ?))
+                    ORDER BY created_at ASC, action_id ASC
+                    """,
+                    (tid, int(before_epoch)),
+                ).fetchall()
+            return [_sel_row_to_action(r) for r in rows]
+
+        return runtime_persistence.run_read(
+            self._storage, self._db_path, _read, retry_policy=self._retry_policy
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PreTakeoverReconciliationReport:
+    """Summary of pre-takeover reconciliation for orphaned in-flight & uncertain effects (M5-P1-04)."""
+
+    task_id: str
+    swept_in_flight_ids: tuple[str, ...] = ()
+    reconciled_committed_ids: tuple[str, ...] = ()
+    reconciled_not_applied_ids: tuple[str, ...] = ()
+    unresolved_action_ids: tuple[str, ...] = ()
+
+    @property
+    def has_unresolved_effects(self) -> bool:
+        return bool(self.unresolved_action_ids)
+
+
+@dataclass(frozen=True, slots=True)
+class LeaseClaimOutcome:
+    """Result of single-owner worker lease claim + pre-takeover reconciliation (M5-P1-04)."""
+
+    task: runtime_persistence.TaskRecord
+    epoch_record: runtime_persistence.TaskEpochRecord
+    superseded_epochs: tuple[runtime_persistence.TaskEpochRecord, ...]
+    reconciliation: PreTakeoverReconciliationReport
+
+
+class WorkerLeaseCoordinator:
+    """Coordinates single-owner worker leases, durable epoch fencing, and safe takeover (M5-P1-04).
+
+    Guarantees:
+    1. Only one unexpired active worker lease can own a task at a time; concurrent
+       claimants fail with :class:`runtime_persistence.LeaseOwnershipConflictError`.
+    2. Lease expiry marks the expired epoch ``expired`` without releasing or
+       clearing unresolved ``in_flight`` / ``uncertain`` actions.
+    3. Before replacement execution enters ``running`` in a new monotonic epoch,
+       all orphaned ``in_flight`` actions on ``task_id`` are swept to ``uncertain``,
+       any ``reconcilable`` actions with supplied candidate args are probed outside
+       SQLite write locks, and if any consequential action remains ``uncertain``,
+       the task is held in ``blocked`` and :class:`UnresolvedEffectsHoldError` is raised.
+    """
+
+    def __init__(
+        self,
+        store: runtime_persistence.RuntimePersistenceStore,
+        ledger: DurableActionLedger,
+    ) -> None:
+        self._store = store
+        self._ledger = ledger
+
+    @property
+    def store(self) -> runtime_persistence.RuntimePersistenceStore:
+        return self._store
+
+    @property
+    def ledger(self) -> DurableActionLedger:
+        return self._ledger
+
+    def reconcile_task_effects(
+        self,
+        task_id: str,
+        *,
+        known_action_args: Mapping[str, Mapping[str, Any]] | None = None,
+        error_code: str = "lease_takeover_in_flight",
+        now: float | None = None,
+    ) -> PreTakeoverReconciliationReport:
+        """Sweep orphaned ``in_flight`` rows to ``uncertain`` and probe reconcilable effects."""
+        tid = _text(task_id, "task_id")
+        ts = time.time() if now is None else float(now)
+
+        swept = self._ledger.reconcile_missing_results(
+            task_id=tid,
+            error_code=error_code,
+            now=ts,
+        )
+        swept_ids = tuple(r.action_id for r in swept)
+
+        reconciled_committed: list[str] = []
+        reconciled_not_applied: list[str] = []
+        reconciler = self._ledger.reconciler
+        if reconciler is not None and known_action_args:
+            uncertain_rows = self._ledger.list_task_actions(tid, statuses=("uncertain",))
+            for rec in uncertain_rows:
+                if rec.replay_policy != "reconcilable":
+                    continue
+                cand_args = known_action_args.get(rec.action_id)
+                if cand_args is None or canonical_args_sha256(cand_args) != rec.args_sha256:
+                    continue
+                try:
+                    verdict = reconciler(rec, rec.tool_name, cand_args)
+                except Exception:
+                    verdict = "unresolved"
+                if verdict == "verified_committed":
+                    self._ledger.resolve_uncertain_action(
+                        rec.action_id,
+                        resolution="verified_committed",
+                        reason="pre_takeover_verified_committed",
+                        now=ts,
+                    )
+                    reconciled_committed.append(rec.action_id)
+                elif verdict == "verified_not_applied":
+                    self._ledger.resolve_uncertain_action(
+                        rec.action_id,
+                        resolution="verified_not_applied",
+                        reason="pre_takeover_verified_not_applied",
+                        now=ts,
+                    )
+                    reconciled_not_applied.append(rec.action_id)
+
+        unresolved = self._ledger.list_unresolved_consequential_actions(tid)
+        return PreTakeoverReconciliationReport(
+            task_id=tid,
+            swept_in_flight_ids=swept_ids,
+            reconciled_committed_ids=tuple(reconciled_committed),
+            reconciled_not_applied_ids=tuple(reconciled_not_applied),
+            unresolved_action_ids=tuple(r.action_id for r in unresolved),
+        )
+
+    def acquire_or_takeover(
+        self,
+        task_id: str,
+        worker_id: str,
+        *,
+        session_id: str = "",
+        title: str = "",
+        workspace_dir: str = "",
+        policy: str = "standard",
+        lease_ttl_s: float = 30.0,
+        force_takeover: bool = False,
+        fence_reason: str = "lease_takeover",
+        known_action_args: Mapping[str, Mapping[str, Any]] | None = None,
+        now: float | None = None,
+    ) -> LeaseClaimOutcome:
+        """Atomically claim a worker lease, fence prior epochs, and reconcile before ``running``."""
+        tid = _text(task_id, "task_id")
+        wid = _text(worker_id, "worker_id")
+        ts = time.time() if now is None else float(now)
+
+        self._store.ensure_task(
+            tid,
+            session_id=session_id or tid,
+            title=title,
+            workspace_dir=workspace_dir,
+            policy=policy,
+            now=ts,
+        )
+
+        # Claim the monotonic epoch FIRST so:
+        # 1) live unexpired owners reject concurrent callers before touching their in-flight actions;
+        # 2) expired/superseded owners are fenced before pre-takeover reconciliation begins.
+        epoch_rec, superseded = self._store.acquire_worker_lease(
+            tid,
+            wid,
+            lease_ttl_s=lease_ttl_s,
+            force_takeover=force_takeover,
+            fence_reason=fence_reason,
+            now=ts,
+        )
+
+        report = self.reconcile_task_effects(
+            tid,
+            known_action_args=known_action_args,
+            now=ts,
+        )
+        if report.has_unresolved_effects:
+            self._store.release_epoch(
+                tid,
+                epoch_rec.epoch,
+                wid,
+                next_state="blocked",
+                reason="unresolved_effects_hold",
+                now=ts,
+            )
+            sample = ", ".join(report.unresolved_action_ids[:3])
+            raise UnresolvedEffectsHoldError(
+                f"Replacement execution on task `{tid}` held (`blocked`) at epoch {epoch_rec.epoch}: "
+                f"unresolved side effects ({sample}) must be reconciled before resuming.",
+                task_id=tid,
+                epoch=epoch_rec.epoch,
+                unresolved_action_ids=report.unresolved_action_ids,
+            )
+
+        transition_reason = (
+            "lease_takeover_reconciled" if superseded else "lease_acquired"
+        )
+        updated_task, _ = self._store.record_transition(
+            tid,
+            to_state="running",
+            epoch=epoch_rec.epoch,
+            reason=transition_reason,
+            now=ts,
+        )
+        return LeaseClaimOutcome(
+            task=updated_task,
+            epoch_record=epoch_rec,
+            superseded_epochs=tuple(superseded),
+            reconciliation=report,
+        )
+
+    def heartbeat(
+        self,
+        task_id: str,
+        epoch: int,
+        worker_id: str,
+        *,
+        lease_ttl_s: float = 30.0,
+        now: float | None = None,
+    ) -> runtime_persistence.TaskEpochRecord:
+        return self._store.heartbeat_epoch(
+            task_id, epoch, worker_id, lease_ttl_s=lease_ttl_s, now=now
+        )
+
+    def release(
+        self,
+        task_id: str,
+        epoch: int,
+        worker_id: str,
+        *,
+        next_state: str | None = "paused",
+        reason: str = "turn_completed",
+        now: float | None = None,
+    ) -> bool:
+        return self._store.release_epoch(
+            task_id,
+            epoch,
+            worker_id,
+            next_state=next_state,
+            reason=reason,
+            now=now,
+        )
+
+    def fence_and_halt(
+        self,
+        task_id: str,
+        *,
+        target_state: str = "paused",
+        reason: str = "fenced_by_operator",
+        sweep_in_flight: bool = False,
+        now: float | None = None,
+    ) -> list[runtime_persistence.TaskEpochRecord]:
+        """Fence active lease epochs on ``task_id`` and record a halted lifecycle state."""
+        tid = _text(task_id, "task_id")
+        ts = time.time() if now is None else float(now)
+        task = self._store.get_task(tid)
+        if task is None:
+            return []
+        fenced = self._store.fence_active_epoch(tid, reason=reason, now=ts)
+        if sweep_in_flight:
+            self._ledger.reconcile_missing_results(task_id=tid, error_code=reason, now=ts)
+        effective_state = target_state
+        if target_state != "cancelled":
+            unresolved = self._ledger.list_unresolved_consequential_actions(tid)
+            if unresolved:
+                effective_state = "blocked"
+        if task.state != effective_state:
+            self._store.record_transition(
+                tid,
+                to_state=effective_state,
+                reason=reason,
+                allow_inactive_epoch=True,
+                now=ts,
+            )
+        return fenced

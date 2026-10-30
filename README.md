@@ -52,25 +52,31 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
   admission gate and durable intent/result ledger** (`_run_authorized_tool`
   delegates to `execution_spine.DurableActionBoundary` +
   `side_effect_ledger.DurableActionLedger`, tightened in `M5-P1-02` and
-  `M5-P1-03`) with deterministic action classes (`read_only` vs `managed_edit`,
-  `consequential`, `external`), grant provenance (no permission inferred from
-  model output), authoritative `runtime_tasks` state and `runtime_task_epochs`
-  lease-epoch checks, durable `runtime_actions` intent rows committed before
-  side effects (`never_started`, `in_flight`, `committed`, `uncertain` plus
-  `denied`/`failed`), missing-result reconciliation to `uncertain` (never
-  `failed`), action-type replay classification (`idempotent`, `reconcilable`,
-  `non_idempotent`) blocking blind replay of uncertain non-idempotent writes,
-  durable `tool_audit_events` rows, a pre-execute write-transaction guard, and
-  scoped `require_active_admission` anti-bypass enforcement on inner executors
-  (`tests/test_action_admission_gate.py`, `tests/test_durable_intent_ledger.py`).
+  `M5-P1-03` and `M5-P1-04`) with deterministic action classes (`read_only` vs
+  `managed_edit`, `consequential`, `external`), grant provenance (no permission
+  inferred from model output), transactional single-owner worker leases with
+  monotonic `runtime_task_epochs` and heartbeat/sleep-wake/crash fencing,
+  pre-takeover reconciliation holding replacement execution `blocked` when
+  unresolved effects remain, durable `runtime_actions` intent rows committed
+  before side effects (`never_started`, `in_flight`, `committed`, `uncertain`
+  plus `denied`/`failed`) with atomic `BEGIN IMMEDIATE` epoch/worker checks,
+  missing-result reconciliation to `uncertain` (never `failed`), action-type
+  replay classification (`idempotent`, `reconcilable`, `non_idempotent`)
+  blocking blind replay of uncertain non-idempotent writes, durable
+  `tool_audit_events` rows, a pre-execute write-transaction guard, and scoped
+  `require_active_admission` anti-bypass enforcement on inner executors
+  (`tests/test_action_admission_gate.py`, `tests/test_durable_intent_ledger.py`,
+  `tests/test_worker_leases_and_fencing.py`).
 - **The execution boundary is extracted and its coverage is inventoried
-  (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02` and `M5-P1-03`):**
+  (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`–`M5-P1-04`):**
   `execution_spine.py` and `side_effect_ledger.py` form a stdlib-only seam
-  (classify → grant/task/epoch check → policy → durable intent & replay gate →
-  scoped execute → durable outcome/reconciliation) with 15 spine contract tests
-  (`tests/test_execution_spine.py`), 10 admission-gate regression tests
-  (`tests/test_action_admission_gate.py`), and 10 durable intent-ledger tests
-  (`tests/test_durable_intent_ledger.py`). Coverage is **partial** —
+  (classify → grant/task/epoch/lease check → policy → durable intent & replay
+  gate → scoped execute → durable outcome/reconciliation) with 15 spine
+  contract tests (`tests/test_execution_spine.py`), 10 admission-gate
+  regression tests (`tests/test_action_admission_gate.py`), 10 durable
+  intent-ledger tests (`tests/test_durable_intent_ledger.py`), and 10 worker
+  lease & fencing tests (`tests/test_worker_leases_and_fencing.py`). Coverage is
+  **partial** —
   [`docs/m5-2-0-bypass-inventory.md`](docs/m5-2-0-bypass-inventory.md) is the
   maintained inventory of which entry points are outside the boundary; no
   complete security guarantee is claimed.
@@ -86,12 +92,13 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
   `runtime_persistence` since `M5-P1-01`, and `side_effect_ledger` since
   `M5-P1-03`; 5 of 42 at the time of the audit table). `runtime_persistence`
   and `side_effect_ledger` govern schema upgrades, SQLite transactions,
-  authoritative task-state / lease-epoch checks at admission (`M5-P1-02`), and
-  durable `runtime_actions` intent/result/replay tracking (`M5-P1-03`), while
-  worker lease recovery and full task-loop migration remain assigned to
-  `M5-P1-04`–`M5-P1-05`. The other 36 modules — including `sandbox_boundary.py`
-  — have passing unit tests but **no `app.py` call path**. Module presence is
-  not integration. Full table:
+  authoritative task-state / lease-epoch checks at admission (`M5-P1-02`),
+  durable `runtime_actions` intent/result/replay tracking (`M5-P1-03`), and
+  single-owner worker leases, fencing, and pre-takeover reconciliation
+  (`M5-P1-04`), while full root task-state checkpoints and execution budgets
+  remain assigned to `M5-P1-05`. The other 36 modules — including
+  `sandbox_boundary.py` — have passing unit tests but **no `app.py` call path**.
+  Module presence is not integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
 
 Reported claims that this review **refuted**: `app.py` is ~2,200 lines
@@ -121,7 +128,7 @@ python3 -m venv .venv
 .venv/bin/mypy                                  # typed contract modules
 .venv/bin/python -m compileall -q app.py scripts tests
 .venv/bin/python scripts/check_frontend_syntax.py
-.venv/bin/python -m pytest -q                   # 782 passed, 1 skipped
+.venv/bin/python -m pytest -q                   # 792 passed, 1 skipped
 .venv/bin/python scripts/smoke_local.py         # loopback app, auth verified
 .venv/bin/python scripts/smoke_local.py --standalone
 ```
@@ -141,7 +148,7 @@ are not guarantees):
 
 ## Verified usage
 
-- **Run the test suite:** `.venv/bin/python -m pytest -q` → 782 passed,
+- **Run the test suite:** `.venv/bin/python -m pytest -q` → 792 passed,
   1 skipped, 1 warning.
 - **Start a disposable authenticated instance (verified):**
   `.venv/bin/python scripts/smoke_local.py` starts `app.py` on a free loopback

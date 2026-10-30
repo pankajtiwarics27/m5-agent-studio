@@ -195,6 +195,7 @@ class TaskAdmissionSnapshot:
     epoch_status: str | None = None
     epoch_worker_id: str | None = None
     lease_expired: bool = False
+    unresolved_effect_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -233,6 +234,7 @@ class ActiveAdmissionScope:
     grant_source: str
     task_id: str | None = None
     epoch: int | None = None
+    worker_id: str | None = None
     action_id: str = ""
     attempt: int = 1
     attempt_id: str = ""
@@ -476,27 +478,47 @@ def _validate_task_state_and_epoch(
                 f"Stale or mismatched task epoch {request.epoch} for task `{snapshot.task_id}` "
                 f"(current epoch: {snapshot.current_epoch})."
             )
+        if snapshot.lease_expired or snapshot.epoch_status == "expired":
+            return f"Task `{snapshot.task_id}` epoch {request.epoch} lease has expired."
         if snapshot.epoch_status != "active":
             return (
                 f"Task `{snapshot.task_id}` epoch {request.epoch} is not active "
                 f"(status: `{snapshot.epoch_status or 'missing'}`)."
             )
-        if snapshot.lease_expired:
-            return f"Task `{snapshot.task_id}` epoch {request.epoch} lease has expired."
-        if (
-            request.worker_id is not None
-            and snapshot.epoch_worker_id is not None
-            and request.worker_id != snapshot.epoch_worker_id
-        ):
-            return (
-                f"Worker `{request.worker_id}` does not own task `{snapshot.task_id}` epoch "
-                f"{request.epoch} (owned by `{snapshot.epoch_worker_id}`)."
-            )
+        if snapshot.epoch_worker_id is not None:
+            if request.worker_id is None:
+                return (
+                    f"Missing required worker_id for task `{snapshot.task_id}` epoch "
+                    f"{request.epoch} (owned by `{snapshot.epoch_worker_id}`)."
+                )
+            if request.worker_id != snapshot.epoch_worker_id:
+                return (
+                    f"Worker `{request.worker_id}` does not own task `{snapshot.task_id}` epoch "
+                    f"{request.epoch} (owned by `{snapshot.epoch_worker_id}`)."
+                )
     elif request.epoch is not None:
         return (
             f"Unexpected task epoch {request.epoch} supplied for task `{snapshot.task_id}` "
             "with no active epoch."
         )
+
+    if is_consequential_action_class(action_class) and snapshot.unresolved_effect_ids:
+        can_self_reconcile = (
+            len(snapshot.unresolved_effect_ids) == 1
+            and request.action_id is not None
+            and request.action_id == snapshot.unresolved_effect_ids[0]
+            and (
+                request.replay_policy == "reconcilable"
+                or request.tool_name in {"write_file", "oc_save_doc"}
+            )
+        )
+        if not can_self_reconcile:
+            sample = ", ".join(snapshot.unresolved_effect_ids[:3])
+            return (
+                f"Consequential `{action_class}` action `{request.tool_name}` blocked: "
+                f"task `{snapshot.task_id}` has unresolved side effects ({sample}) "
+                "requiring reconciliation before replacement execution."
+            )
 
     return None
 
@@ -739,6 +761,7 @@ class DurableActionBoundary:
             grant_source=str(request.grant_source or "unspecified"),
             task_id=request.task_id,
             epoch=request.epoch,
+            worker_id=request.worker_id,
             action_id=(intent_decision.action_id if intent_decision is not None else ""),
             attempt=(intent_decision.attempt if intent_decision is not None else 1),
             attempt_id=(intent_decision.attempt_id if intent_decision is not None else ""),

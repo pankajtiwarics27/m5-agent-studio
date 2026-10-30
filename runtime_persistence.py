@@ -116,6 +116,22 @@ class TransactionDisciplineError(PersistenceError, RuntimeError):
     """Write-transaction boundary violation (async body or spanning tool/inference)."""
 
 
+class LeaseError(PermissionError):
+    """Base error for worker lease ownership, expiry, or epoch fencing violations (M5-P1-04)."""
+
+
+class LeaseOwnershipConflictError(LeaseError):
+    """Raised when a task already has an active unexpired worker lease owned by another worker."""
+
+
+class StaleEpochError(LeaseError):
+    """Raised when an operation presents a stale, fenced, or released task epoch."""
+
+
+class LeaseExpiredError(LeaseError):
+    """Raised when a worker presents a lease epoch whose TTL has elapsed."""
+
+
 @dataclass(frozen=True, slots=True)
 class BusyRetryPolicy:
     """Bounded retry and lock-wait parameters for SQLite contention."""
@@ -1197,6 +1213,58 @@ class RuntimePersistenceStore:
 
         return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
 
+    def ensure_task(
+        self,
+        task_id: str,
+        *,
+        session_id: str = "",
+        title: str = "",
+        state: str = "pending",
+        workspace_dir: str = "",
+        policy: str = "standard",
+        now: float | None = None,
+    ) -> TaskRecord:
+        """Idempotently ensure an authoritative ``runtime_tasks`` row exists."""
+        tid = _non_empty_text(task_id, "task_id", max_len=128)
+        if state not in TASK_STATES:
+            raise ValueError(f"Unsupported task state: {state!r}")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> TaskRecord:
+            conn.row_factory = sqlite3.Row
+            existing = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if existing is not None:
+                if workspace_dir or policy:
+                    conn.execute(
+                        """
+                        UPDATE runtime_tasks
+                        SET workspace_dir = CASE WHEN ? != '' THEN ? ELSE workspace_dir END,
+                            policy = CASE WHEN ? != '' THEN ? ELSE policy END,
+                            updated_at = ?
+                        WHERE task_id = ?
+                        """,
+                        (str(workspace_dir), str(workspace_dir), str(policy)[:40], str(policy)[:40], ts, tid),
+                    )
+                    refreshed = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+                    assert refreshed is not None
+                    return _row_to_task(refreshed)
+                return _row_to_task(existing)
+            conn.execute(
+                """
+                INSERT INTO runtime_tasks (
+                    task_id, parent_task_id, session_id, title, state,
+                    current_epoch, state_version, workspace_dir, policy,
+                    budget_json, checkpoint_ref, created_at, updated_at
+                ) VALUES (?, NULL, ?, ?, ?, 0, 0, ?, ?, '{}', '', ?, ?)
+                """,
+                (tid, str(session_id)[:128], str(title)[:240], state, str(workspace_dir), str(policy)[:40], ts, ts),
+            )
+            created = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            assert created is not None
+            return _row_to_task(created)
+
+        return run_write_transaction(self._storage, self._db_path, _tx, retry_policy=self._retry_policy)
+
     def claim_epoch(
         self,
         task_id: str,
@@ -1247,6 +1315,379 @@ class RuntimePersistenceStore:
 
         return run_write_transaction(self._storage, self._db_path, _tx, retry_policy=self._retry_policy)
 
+    def acquire_worker_lease(
+        self,
+        task_id: str,
+        worker_id: str,
+        *,
+        lease_ttl_s: float = 30.0,
+        force_takeover: bool = False,
+        fence_reason: str = "lease_takeover",
+        now: float | None = None,
+    ) -> tuple[TaskEpochRecord, list[TaskEpochRecord]]:
+        """Transactionally claim single-owner worker lease with monotonic epoch (M5-P1-04).
+
+        Rejects concurrent acquisition with :class:`LeaseOwnershipConflictError`
+        when another worker holds an unexpired active lease unless ``force_takeover=True``.
+        Expired active leases transition to ``expired`` before the replacement
+        epoch is minted; ``runtime_actions`` rows are never cleared by lease expiry.
+        """
+        tid = _non_empty_text(task_id, "task_id", max_len=128)
+        wid = _non_empty_text(worker_id, "worker_id", max_len=128)
+        if lease_ttl_s <= 0:
+            raise ValueError("lease_ttl_s must be positive.")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> tuple[TaskEpochRecord, list[TaskEpochRecord]]:
+            conn.row_factory = sqlite3.Row
+            task_row = conn.execute("SELECT current_epoch FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if task_row is None:
+                raise KeyError(f"Runtime task {tid!r} does not exist.")
+            active_rows = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND status = 'active' ORDER BY epoch ASC",
+                (tid,),
+            ).fetchall()
+            closed_epochs: list[int] = []
+            for a_row in active_rows:
+                a_ep = int(a_row["epoch"])
+                a_owner = str(a_row["worker_id"])
+                a_exp = float(a_row["lease_expires_at"])
+                if a_exp <= ts:
+                    conn.execute(
+                        """
+                        UPDATE runtime_task_epochs
+                        SET status = 'expired', fenced_at = ?, fence_reason = 'lease_expired'
+                        WHERE task_id = ? AND epoch = ? AND status = 'active'
+                        """,
+                        (ts, tid, a_ep),
+                    )
+                    closed_epochs.append(a_ep)
+                else:
+                    if not force_takeover and a_owner != wid:
+                        raise LeaseOwnershipConflictError(
+                            f"Task {tid!r} is actively owned by worker {a_owner!r} in epoch {a_ep} "
+                            f"(lease valid for {max(0.0, a_exp - ts):.2f}s)."
+                        )
+                    conn.execute(
+                        """
+                        UPDATE runtime_task_epochs
+                        SET status = 'fenced', fenced_at = ?, fence_reason = ?
+                        WHERE task_id = ? AND epoch = ? AND status = 'active'
+                        """,
+                        (ts, str(fence_reason)[:160], tid, a_ep),
+                    )
+                    closed_epochs.append(a_ep)
+
+            next_epoch = int(task_row["current_epoch"]) + 1
+            conn.execute(
+                "UPDATE runtime_tasks SET current_epoch = ?, updated_at = ? WHERE task_id = ?",
+                (next_epoch, ts, tid),
+            )
+            conn.execute(
+                """
+                INSERT INTO runtime_task_epochs (
+                    task_id, epoch, worker_id, status, claimed_at, heartbeat_at, lease_expires_at
+                ) VALUES (?, ?, ?, 'active', ?, ?, ?)
+                """,
+                (tid, next_epoch, wid, ts, ts, ts + lease_ttl_s),
+            )
+            new_row = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                (tid, next_epoch),
+            ).fetchone()
+            assert new_row is not None
+            superseded: list[TaskEpochRecord] = []
+            for c_ep in closed_epochs:
+                c_row = conn.execute(
+                    "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                    (tid, c_ep),
+                ).fetchone()
+                if c_row is not None:
+                    superseded.append(_row_to_epoch(c_row))
+            return _row_to_epoch(new_row), superseded
+
+        return run_write_transaction(self._storage, self._db_path, _tx, retry_policy=self._retry_policy)
+
+    def heartbeat_epoch(
+        self,
+        task_id: str,
+        epoch: int,
+        worker_id: str,
+        *,
+        lease_ttl_s: float = 30.0,
+        now: float | None = None,
+    ) -> TaskEpochRecord:
+        """Renew an active worker lease or fail closed on stale/fenced/expired epochs."""
+        tid = _non_empty_text(task_id, "task_id", max_len=128)
+        wid = _non_empty_text(worker_id, "worker_id", max_len=128)
+        if lease_ttl_s <= 0:
+            raise ValueError("lease_ttl_s must be positive.")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> tuple[TaskEpochRecord | None, str, str]:
+            conn.row_factory = sqlite3.Row
+            t_row = conn.execute("SELECT current_epoch FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if t_row is None:
+                raise KeyError(f"Runtime task {tid!r} does not exist.")
+            cur_ep = int(t_row["current_epoch"])
+            ep_row = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                (tid, int(epoch)),
+            ).fetchone()
+            if ep_row is None or int(epoch) != cur_ep:
+                return (
+                    None,
+                    "stale",
+                    f"Stale task epoch {epoch} for task {tid!r} (current_epoch={cur_ep}).",
+                )
+            if str(ep_row["worker_id"]) != wid:
+                return (
+                    None,
+                    "owner",
+                    f"Worker {wid!r} does not own task {tid!r} epoch {epoch} (owned by {ep_row['worker_id']!r}).",
+                )
+            if str(ep_row["status"]) != "active":
+                return (
+                    None,
+                    "stale",
+                    f"Task {tid!r} epoch {epoch} is not active (status={ep_row['status']!r}).",
+                )
+            if float(ep_row["lease_expires_at"]) <= ts:
+                conn.execute(
+                    """
+                    UPDATE runtime_task_epochs
+                    SET status = 'expired', fenced_at = ?, fence_reason = 'lease_expired_before_heartbeat'
+                    WHERE task_id = ? AND epoch = ? AND status = 'active'
+                    """,
+                    (ts, tid, int(epoch)),
+                )
+                return (
+                    None,
+                    "expired",
+                    f"Task {tid!r} epoch {epoch} lease expired at {float(ep_row['lease_expires_at']):.3f} (now={ts:.3f}).",
+                )
+            conn.execute(
+                """
+                UPDATE runtime_task_epochs
+                SET heartbeat_at = ?, lease_expires_at = ?
+                WHERE task_id = ? AND epoch = ?
+                """,
+                (ts, ts + lease_ttl_s, tid, int(epoch)),
+            )
+            conn.execute("UPDATE runtime_tasks SET updated_at = ? WHERE task_id = ?", (ts, tid))
+            refreshed = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                (tid, int(epoch)),
+            ).fetchone()
+            assert refreshed is not None
+            return _row_to_epoch(refreshed), "", ""
+
+        rec, err_kind, err_msg = run_write_transaction(
+            self._storage, self._db_path, _tx, retry_policy=self._retry_policy
+        )
+        if err_kind == "stale":
+            raise StaleEpochError(err_msg)
+        if err_kind == "owner":
+            raise LeaseOwnershipConflictError(err_msg)
+        if err_kind == "expired":
+            raise LeaseExpiredError(err_msg)
+        assert rec is not None
+        return rec
+
+    def expire_stale_leases(
+        self,
+        *,
+        task_id: str | None = None,
+        now: float | None = None,
+    ) -> list[TaskEpochRecord]:
+        """Mark active epochs past ``lease_expires_at`` as ``expired`` without releasing unresolved actions."""
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> list[TaskEpochRecord]:
+            conn.row_factory = sqlite3.Row
+            clauses = ["status = 'active'", "lease_expires_at <= ?"]
+            params: list[Any] = [ts]
+            if task_id is not None:
+                clauses.append("task_id = ?")
+                params.append(_non_empty_text(task_id, "task_id", max_len=128))
+            where_sql = " AND ".join(clauses)
+            rows = conn.execute(
+                f"SELECT task_id, epoch FROM runtime_task_epochs WHERE {where_sql} ORDER BY task_id, epoch",
+                tuple(params),
+            ).fetchall()
+            if not rows:
+                return []
+            expired_records: list[TaskEpochRecord] = []
+            for r in rows:
+                conn.execute(
+                    """
+                    UPDATE runtime_task_epochs
+                    SET status = 'expired', fenced_at = ?, fence_reason = 'lease_expired'
+                    WHERE task_id = ? AND epoch = ? AND status = 'active'
+                    """,
+                    (ts, str(r["task_id"]), int(r["epoch"])),
+                )
+                upd = conn.execute(
+                    "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                    (str(r["task_id"]), int(r["epoch"])),
+                ).fetchone()
+                if upd is not None:
+                    expired_records.append(_row_to_epoch(upd))
+            return expired_records
+
+        return run_write_transaction(self._storage, self._db_path, _tx, retry_policy=self._retry_policy)
+
+    def fence_active_epoch(
+        self,
+        task_id: str,
+        *,
+        reason: str = "fenced_by_operator",
+        now: float | None = None,
+    ) -> list[TaskEpochRecord]:
+        """Fence any currently active lease epoch on ``task_id``."""
+        tid = _non_empty_text(task_id, "task_id", max_len=128)
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> list[TaskEpochRecord]:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT epoch FROM runtime_task_epochs WHERE task_id = ? AND status = 'active' ORDER BY epoch ASC",
+                (tid,),
+            ).fetchall()
+            if not rows:
+                return []
+            fenced: list[TaskEpochRecord] = []
+            for r in rows:
+                ep_num = int(r["epoch"])
+                conn.execute(
+                    """
+                    UPDATE runtime_task_epochs
+                    SET status = 'fenced', fenced_at = ?, fence_reason = ?
+                    WHERE task_id = ? AND epoch = ? AND status = 'active'
+                    """,
+                    (ts, str(reason)[:160], tid, ep_num),
+                )
+                upd = conn.execute(
+                    "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                    (tid, ep_num),
+                ).fetchone()
+                if upd is not None:
+                    fenced.append(_row_to_epoch(upd))
+            return fenced
+
+        return run_write_transaction(self._storage, self._db_path, _tx, retry_policy=self._retry_policy)
+
+    def fence_foreign_boot_leases(
+        self,
+        *,
+        worker_prefix: str = "wrk-",
+        current_boot_prefix: str,
+        now: float | None = None,
+    ) -> list[TaskEpochRecord]:
+        """Fence active runtime worker leases created by a prior OS process boot."""
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> list[TaskEpochRecord]:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT task_id, epoch FROM runtime_task_epochs
+                WHERE status = 'active' AND worker_id LIKE ? AND worker_id NOT LIKE ?
+                ORDER BY task_id, epoch
+                """,
+                (f"{worker_prefix}%", f"{current_boot_prefix}%"),
+            ).fetchall()
+            if not rows:
+                return []
+            fenced: list[TaskEpochRecord] = []
+            for r in rows:
+                conn.execute(
+                    """
+                    UPDATE runtime_task_epochs
+                    SET status = 'fenced', fenced_at = ?, fence_reason = 'prior_process_restart'
+                    WHERE task_id = ? AND epoch = ? AND status = 'active'
+                    """,
+                    (ts, str(r["task_id"]), int(r["epoch"])),
+                )
+                upd = conn.execute(
+                    "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                    (str(r["task_id"]), int(r["epoch"])),
+                ).fetchone()
+                if upd is not None:
+                    fenced.append(_row_to_epoch(upd))
+            return fenced
+
+        return run_write_transaction(self._storage, self._db_path, _tx, retry_policy=self._retry_policy)
+
+    def release_epoch(
+        self,
+        task_id: str,
+        epoch: int,
+        worker_id: str,
+        *,
+        next_state: str | None = None,
+        reason: str = "turn_completed",
+        now: float | None = None,
+    ) -> bool:
+        """Cleanly release ``(task_id, epoch)`` iff still active and owned by ``worker_id``.
+
+        Returns ``False`` without mutating ``runtime_tasks.state`` when the epoch
+        was already fenced, expired, or superseded by a replacement worker.
+        """
+        tid = _non_empty_text(task_id, "task_id", max_len=128)
+        wid = _non_empty_text(worker_id, "worker_id", max_len=128)
+        if next_state is not None and next_state not in TASK_STATES:
+            raise ValueError(f"Unsupported target task state: {next_state!r}")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> bool:
+            conn.row_factory = sqlite3.Row
+            t_row = conn.execute("SELECT state, current_epoch FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            if t_row is None or int(t_row["current_epoch"]) != int(epoch):
+                return False
+            ep_row = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                (tid, int(epoch)),
+            ).fetchone()
+            if ep_row is None or str(ep_row["worker_id"]) != wid or str(ep_row["status"]) != "active":
+                return False
+            if float(ep_row["lease_expires_at"]) <= ts:
+                conn.execute(
+                    """
+                    UPDATE runtime_task_epochs
+                    SET status = 'expired', fenced_at = ?, fence_reason = 'lease_expired_before_release'
+                    WHERE task_id = ? AND epoch = ? AND status = 'active'
+                    """,
+                    (ts, tid, int(epoch)),
+                )
+                return False
+            conn.execute(
+                "UPDATE runtime_task_epochs SET status = 'released', heartbeat_at = ? WHERE task_id = ? AND epoch = ?",
+                (ts, tid, int(epoch)),
+            )
+            if next_state is not None and str(t_row["state"]) != next_state:
+                from_state = str(t_row["state"])
+                seq_row = conn.execute(
+                    "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                    (tid,),
+                ).fetchone()
+                next_seq = int(seq_row[0]) if seq_row else 1
+                conn.execute(
+                    "UPDATE runtime_tasks SET state = ?, state_version = state_version + 1, updated_at = ? WHERE task_id = ?",
+                    (next_state, ts, tid),
+                )
+                conn.execute(
+                    """
+                    INSERT INTO runtime_task_transitions (
+                        task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, '{}', ?)
+                    """,
+                    (tid, next_seq, from_state, next_state, int(epoch), str(reason)[:240], ts),
+                )
+            return True
+
+        return run_write_transaction(self._storage, self._db_path, _tx, retry_policy=self._retry_policy)
+
     def get_epoch(self, task_id: str, epoch: int) -> TaskEpochRecord | None:
         tid = _non_empty_text(task_id, "task_id", max_len=128)
 
@@ -1260,6 +1701,19 @@ class RuntimePersistenceStore:
 
         return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
 
+    def list_epochs(self, task_id: str) -> list[TaskEpochRecord]:
+        tid = _non_empty_text(task_id, "task_id", max_len=128)
+
+        def _read(conn: sqlite3.Connection) -> list[TaskEpochRecord]:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? ORDER BY epoch ASC",
+                (tid,),
+            ).fetchall()
+            return [_row_to_epoch(r) for r in rows]
+
+        return run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
     def record_transition(
         self,
         task_id: str,
@@ -1270,6 +1724,7 @@ class RuntimePersistenceStore:
         reason: str = "",
         evidence_json: str = "{}",
         checkpoint_ref: str | None = None,
+        allow_inactive_epoch: bool = False,
         now: float | None = None,
     ) -> tuple[TaskRecord, TaskTransitionRecord]:
         tid = _non_empty_text(task_id, "task_id", max_len=128)
@@ -1289,9 +1744,22 @@ class RuntimePersistenceStore:
                 )
             current_epoch = int(row["current_epoch"])
             if epoch is not None and epoch != current_epoch:
-                raise PermissionError(
+                raise StaleEpochError(
                     f"Stale task epoch {epoch} cannot transition task {tid!r} at current_epoch={current_epoch}."
                 )
+            if epoch is not None and epoch > 0 and not allow_inactive_epoch:
+                ep_row = conn.execute(
+                    "SELECT status, lease_expires_at FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                    (tid, int(epoch)),
+                ).fetchone()
+                if ep_row is None or str(ep_row["status"]) != "active":
+                    raise StaleEpochError(
+                        f"Inactive task epoch {epoch} cannot transition task {tid!r}."
+                    )
+                if float(ep_row["lease_expires_at"]) <= ts:
+                    raise LeaseExpiredError(
+                        f"Expired task epoch {epoch} cannot transition task {tid!r}."
+                    )
             effective_epoch = current_epoch if epoch is None else int(epoch)
             from_state = str(row["state"])
             seq_row = conn.execute(
