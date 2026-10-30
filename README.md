@@ -28,7 +28,7 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
 - **The application runs and its local auth path works.** `scripts/smoke_local.py`
   launches a disposable loopback instance of both `app.py` and the generated
   `studio.py` and verifies the token/security path — both exit 0.
-- **The test suite passes:** **801 passed, 1 skipped** (the skip is the opt-in
+- **The test suite passes:** **811 passed, 1 skipped** (the skip is the opt-in
   live container-runtime test, see below). `ruff`, `mypy`, `compileall`, and the
   Node-based frontend syntax check all pass.
 - **Generated artifacts are reproducible:** `studio.py`,
@@ -59,6 +59,23 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
   reconcile staged/incomplete transitions on startup, and enforce cumulative
   step/tool/token/time and crash-recovery budgets across restarts — pinned by 9
   end-to-end and crash-recovery tests (`tests/test_durable_task_state_machine.py`).
+- **Single-agent coding tasks complete with authoritative patch + test evidence,
+  action-boundary crash recovery, and false-completion rejection (`M5-P1-06`):**
+  `/api/harness/run` and `DurableTaskStateMachine.complete_task` enforce a
+  universal unrecovered-shell/test failure guard plus optional persisted
+  `TaskVerificationSpec` contracts (managed-edit ledger provenance, Git diff and
+  modified-file SHA-256 deltas, protected user-file preservation, post-edit test
+  ordering, and independent `subprocess.run(..., shell=False)` test execution
+  emitting `patch_verification` and `test_verification` `EvidenceRef`s);
+  `failure_injection.ActionBoundaryFaultInjector` is wired into
+  `DurableActionBoundary` and harness completion (`before_intent`,
+  `after_intent_before_effect`, `after_effect_before_result_commit`,
+  `before_task_completion`) alongside session `known_action_args` crash
+  reconciliation so mid-action crashes neither lose user work nor duplicate side
+  effects — pinned by 8 vertical-slice tests
+  (`tests/test_single_agent_vertical_slice.py`). Note: model streaming in CI
+  uses deterministic scripted streams; resident local-oMLX coding runs and live
+  container sandboxing remain unverified in the Linux CI environment.
 - **The frontend is a single-file vanilla JS UI** (`static/index.html`,
   4,228 lines; no framework build step).
 - **Tool, skill, smart-block, and MCP operations cross an authoritative action
@@ -99,21 +116,23 @@ plus the M5 2.0 ground-truth change-set, Linux x86_64, Python 3.11.2):
   execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
   pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
   plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
-- **11 of 44 shipped Python modules are wired into the served app**
+- **12 of 44 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`, `execution_spine` since `M5-P0-06`,
   `runtime_persistence` since `M5-P1-01`, `side_effect_ledger` since `M5-P1-03`,
-  and `execution_budget`, `workflow_checkpoints`, `workflow_state` since
-  `M5-P1-05`; 5 of 42 at the time of the audit table). Together they govern
+  `execution_budget`, `workflow_checkpoints`, `workflow_state` since
+  `M5-P1-05`, and `failure_injection` since `M5-P1-06`; 5 of 42 at the time of
+  the audit table). Together they govern
   schema upgrades, SQLite transactions, authoritative task-state / lease-epoch
   checks at admission (`M5-P1-02`), durable `runtime_actions`
   intent/result/replay tracking (`M5-P1-03`), single-owner worker leases,
-  fencing, and pre-takeover reconciliation (`M5-P1-04`), and durable root/child
+  fencing, and pre-takeover reconciliation (`M5-P1-04`), durable root/child
   task state machines, safe pause/resume/cancel boundaries, hash-verified
   checkpoints with evidence refs, and persistent task/recovery budgets
-  (`M5-P1-05`). The other 33 modules — including `sandbox_boundary.py` — have
-  passing unit tests but **no `app.py` call path**. Module presence is not
-  integration. Full table:
+  (`M5-P1-05`), and verified coding-task completion gates plus deterministic
+  action-boundary crash injection (`M5-P1-06`). The other 32 modules — including
+  `sandbox_boundary.py` — have passing unit tests but **no `app.py` call path**.
+  Module presence is not integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
 
 Reported claims that this review **refuted**: `app.py` is ~2,200 lines
@@ -143,7 +162,7 @@ python3 -m venv .venv
 .venv/bin/mypy                                  # typed contract modules
 .venv/bin/python -m compileall -q app.py scripts tests
 .venv/bin/python scripts/check_frontend_syntax.py
-.venv/bin/python -m pytest -q                   # 792 passed, 1 skipped
+.venv/bin/python -m pytest -q                   # 811 passed, 1 skipped
 .venv/bin/python scripts/smoke_local.py         # loopback app, auth verified
 .venv/bin/python scripts/smoke_local.py --standalone
 ```
@@ -163,7 +182,7 @@ are not guarantees):
 
 ## Verified usage
 
-- **Run the test suite:** `.venv/bin/python -m pytest -q` → 792 passed,
+- **Run the test suite:** `.venv/bin/python -m pytest -q` → 811 passed,
   1 skipped, 1 warning.
 - **Start a disposable authenticated instance (verified):**
   `.venv/bin/python scripts/smoke_local.py` starts `app.py` on a free loopback
@@ -271,7 +290,7 @@ Summary (2026-10-30, Linux x86_64 container, 2 vCPU, ~4 GB RAM, Python 3.11.2):
 
 | Check | Result |
 |---|---|
-| `pytest -q` | 801 passed, 1 skipped (opt-in live container test), 1 warning |
+| `pytest -q` | 811 passed, 1 skipped (opt-in live container test), 1 warning |
 | `ruff check .` | clean |
 | `mypy` | clean (typed contract modules) |
 | `check_frontend_syntax.py` (Node) | pass |
@@ -382,13 +401,16 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
   4-state `never_started`/`in_flight`/`committed`/`uncertain` separation,
   missing-result-to-`uncertain` reconciliation, and action-type replay
   classification), **`M5-P1-04`** (single-owner worker leases, monotonic epoch
-  fencing, and pre-takeover reconciliation), **and `M5-P1-05`** (durable root
+  fencing, and pre-takeover reconciliation), **`M5-P1-05`** (durable root
   task and child milestone state machine, safe-boundary pause/resume/cancel,
   hash-verified checkpoints with evidence refs, incomplete-transition recovery,
-  and persistent task/recovery budgets). Next ready stories: `M5-P1-06`
-  (single-agent verified vertical slice) and `M5-P1-07` (minimal task events,
-  HTTP commands and existing UI) — claim via the coordination protocol before
-  coding. Planned work is not implemented product behavior.
+  and persistent task/recovery budgets), **and `M5-P1-06`** (single-agent
+  verified vertical slice with authoritative patch + test verification gates,
+  action-boundary crash injection, user-work preservation, duplicate-effect
+  prevention, and false-completion rejection). Next ready story: `M5-P1-07`
+  (minimal task events, HTTP commands and existing UI) — claim via the
+  coordination protocol before coding. Planned work is not implemented product
+  behavior.
 - **AS program (Adaptive Runtime)** —
   [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json)
   with dashboard [`docs/product-roadmap-status.md`](docs/product-roadmap-status.md):

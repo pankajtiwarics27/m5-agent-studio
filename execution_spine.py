@@ -32,6 +32,8 @@ from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol
 
+import failure_injection
+
 ActionClass = Literal["read_only", "managed_edit", "consequential", "external"]
 
 ACTION_CLASSES: frozenset[str] = frozenset({"read_only", "managed_edit", "consequential", "external"})
@@ -557,12 +559,14 @@ class DurableActionBoundary:
         pre_execute_guard: Callable[[], None] | None = None,
         task_context_resolver: TaskContextResolver | None = None,
         intent_ledger: IntentLedger | None = None,
+        boundary_injector: failure_injection.ActionBoundaryFaultInjector | None = None,
     ) -> None:
         self._policy = policy
         self._ledger = ledger
         self._pre_execute_guard = pre_execute_guard
         self._task_context_resolver = task_context_resolver
         self._intent_ledger = intent_ledger
+        self._boundary_injector = boundary_injector
 
     async def admit_and_execute(self, request: ActionRequest, executor: Executor) -> dict[str, Any]:
         effective = self._policy.effective_policy(request.policy)
@@ -618,6 +622,16 @@ class DurableActionBoundary:
                 request.additional_denial,
                 False,
                 action_class,
+            )
+
+        if decision.allowed:
+            failure_injection.check_action_boundary(
+                "before_intent",
+                tool_name=request.tool_name,
+                action_id=str(request.action_id or ""),
+                task_id=str(request.task_id or request.session_id or ""),
+                step_id=request.step_id,
+                injector=self._boundary_injector,
             )
 
         explicit_approval = bool(effective_approved and decision.requires_approval)
@@ -752,6 +766,17 @@ class DurableActionBoundary:
                     pass
                 raise
 
+        resolved_action_id = intent_decision.action_id if intent_decision is not None else str(request.action_id or "")
+        resolved_task_key = str(request.task_id or request.session_id or "")
+        failure_injection.check_action_boundary(
+            "after_intent_before_effect",
+            tool_name=request.tool_name,
+            action_id=resolved_action_id,
+            task_id=resolved_task_key,
+            step_id=request.step_id,
+            injector=self._boundary_injector,
+        )
+
         scope = ActiveAdmissionScope(
             tool_name=request.tool_name,
             action_class=action_class,
@@ -773,6 +798,8 @@ class DurableActionBoundary:
                 result = await executor()
             finally:
                 _ACTIVE_ADMISSION_SCOPE.reset(scope_token)
+        except failure_injection.InjectedBoundaryCrashError:
+            raise
         except Exception as exc:
             err_ms = round((time.perf_counter() - started) * 1000)
             err_ledger_status = "failed"
@@ -795,6 +822,14 @@ class DurableActionBoundary:
             except Exception:
                 pass  # The durable started row still proves that execution was attempted.
             raise
+        failure_injection.check_action_boundary(
+            "after_effect_before_result_commit",
+            tool_name=request.tool_name,
+            action_id=resolved_action_id,
+            task_id=resolved_task_key,
+            step_id=request.step_id,
+            injector=self._boundary_injector,
+        )
         elapsed = int(result.get("elapsed_ms") or round((time.perf_counter() - started) * 1000))
         if intent_decision is not None and self._intent_ledger is not None:
             try:

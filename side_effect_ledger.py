@@ -571,7 +571,9 @@ class DurableActionLedger:
         if allowed and resolved_replay == "reconcilable" and self._reconciler is not None:
             prior = self.get_action(aid)
             if prior is not None and prior.tool_name == tname and prior.args_sha256 == digest:
-                if prior.status in ("uncertain", "in_flight"):
+                if prior.status in ("uncertain", "in_flight") or (
+                    prior.status == "committed" and prior.error_code == "pre_takeover_verified_committed"
+                ):
                     try:
                         reconcile_verdict = self._reconciler(prior, tname, safe_args)
                     except Exception:
@@ -836,6 +838,36 @@ class DurableActionLedger:
                         status="in_flight",
                         replay_policy=resolved_replay,
                         record=_sel_row_to_action(upd),
+                    )
+                if (
+                    resolved_replay == "reconcilable"
+                    and existing.error_code == "pre_takeover_verified_committed"
+                    and reconcile_verdict == "verified_committed"
+                ):
+                    conn.execute(
+                        """
+                        UPDATE runtime_actions
+                        SET epoch = ?, error_code = '', updated_at = ?
+                        WHERE action_id = ?
+                        """,
+                        (clean_epoch, ts, aid),
+                    )
+                    rec_upd = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+                    assert rec_upd is not None
+                    return LedgerBeginOutcome(
+                        proceed=False,
+                        action_id=aid,
+                        attempt=existing.attempt,
+                        attempt_id=format_attempt_id(aid, existing.attempt),
+                        status="committed",
+                        replay_policy=resolved_replay,
+                        record=_sel_row_to_action(rec_upd),
+                        already_committed=True,
+                        reconciled=True,
+                        reason=(
+                            f"Reconciled `{tname}` (`{aid}`): target state already matches intent; "
+                            "skipping duplicate side effect."
+                        ),
                     )
                 err_c = CommittedActionReplayError(
                     f"Replay blocked: consequential action `{aid}` (`{tname}`) is already `committed` "

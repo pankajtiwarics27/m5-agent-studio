@@ -23,6 +23,7 @@ INLINED_MODULES = (
     "mcp_client",
     "context_store",
     "onboarding_preflight",
+    "failure_injection",
     "execution_spine",
 )
 
