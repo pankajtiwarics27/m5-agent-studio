@@ -247,6 +247,15 @@ def test_detect_runtime_prefers_the_requested_runtime(monkeypatch: pytest.Monkey
     assert qe.detect_runtime("podman") == ("/usr/bin/podman", "podman")
 
 
+def test_an_explicit_missing_runtime_is_never_replaced_by_another_backend(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`--runtime podman` on a Docker-only host must block, not silently use Docker."""
+    monkeypatch.setattr(qe.shutil, "which", lambda name: "/usr/bin/docker" if name == "docker" else None)
+    assert qe.detect_runtime("podman") == ("", "")
+    assert qe.detect_runtime("auto") == ("/usr/bin/docker", "docker")
+
+
 # ---------------------------------------------------------------------------
 # Sandbox suite
 # ---------------------------------------------------------------------------
@@ -551,16 +560,36 @@ def test_environment_fingerprint_binds_the_record_to_this_repo() -> None:
 
 
 def test_script_is_runnable_end_to_end_in_this_environment() -> None:
-    """The suite must always produce a record, even with no runtime and no target hardware."""
+    """The suite must always produce a record, and never self-qualify.
+
+    ``--runtime`` is pinned at a name that cannot exist so the result does not
+    depend on whether the host running this test happens to have Docker (a CI
+    runner does, a minimal container does not).
+    """
     import subprocess
 
     result = subprocess.run(
-        [sys.executable, str(ROOT / "scripts" / "qualify_environment.py"), "--all", "--quiet"],
+        [sys.executable, str(ROOT / "scripts" / "qualify_environment.py"), "--all", "--quiet",
+         "--runtime", "m5-no-such-container-runtime"],
         capture_output=True, text=True, timeout=600, cwd=ROOT, check=False,
     )
     assert result.returncode == 2, result.stdout + result.stderr
     assert "M5-P3-01: blocked" in result.stdout
     assert "M5-P4-01: blocked" in result.stdout
+
+
+def test_a_runtime_without_the_image_is_unqualified_never_qualified(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A host that has Docker but not the image must not produce a pass."""
+    monkeypatch.setattr(qe, "run_command", _make_fake_run({"image_exit": 1}))
+    monkeypatch.setattr(qe, "_product_sandbox_module", lambda: _FakeStudio())
+    monkeypatch.setattr(qe, "detect_runtime", lambda preferred=None: ("/usr/bin/docker", "docker"))
+    exit_code = qe.main(["--sandbox", "--quiet", "--json", str(tmp_path / "r.json")])
+    assert exit_code == 1
+    record = json.loads((tmp_path / "r.json").read_text(encoding="utf-8"))
+    assert record["verdicts"][qe.STORY_P3]["verdict"] == "unqualified"
+    assert record["claims"]["container_isolation"] == "unqualified"
 
 
 def test_asyncio_coroutine_path_is_used_for_product_probes(monkeypatch: pytest.MonkeyPatch) -> None:

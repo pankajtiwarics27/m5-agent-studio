@@ -125,7 +125,7 @@
   "session_state": {
     "active_story": null,
     "last_completed_story": "M5-P2-05",
-    "last_checkpoint": "2026-10-30T19:33:38Z",
+    "last_checkpoint": "2026-10-30T19:37:54Z",
     "last_session_id": "arena/bf5fe1a6-m5-agent-studio",
     "next_recommended_story": "M5-P3-01",
     "open_risks": [
@@ -2149,7 +2149,7 @@
         "progress_percent": 25,
         "attempts": 1,
         "started_at": "2026-10-30T19:31:57Z",
-        "updated_at": "2026-10-30T19:33:38Z",
+        "updated_at": "2026-10-30T19:37:54Z",
         "completed_at": null,
         "owner_session": "arena/bf5fe1a6-m5-agent-studio",
         "commit_sha": "44c16b4",
@@ -2169,18 +2169,19 @@
           "Resource and lifecycle limits: 3 GiB allocation under --memory 512m must die (exit 137 or MemoryError), and a background `sleep 300` descendant must leave no container behind (`docker ps --filter name=`). Positive compatibility: code runs and its write lands in the mounted workspace.",
           "No silent host fallback: p3.product.no_host_fallback points STUDIO_SANDBOX_RUNTIME at a nonexistent binary (must deny) and then runs the real configuration (no host marker file may appear); a simulated host execution is reported as a failure (test_sandbox_suite_reports_host_execution_as_a_failure). scripts/isolation_smoke.py --live is executed as one aggregated check.",
           "Blocker unchanged: no container runtime exists in this evidence environment (docker/podman not on PATH). The live run therefore reports M5-P3-01 as blocked, with every container probe recorded skip and the reason; no isolation guarantee is claimed. Evidence: scripts/qualify_environment.py --all locally exits 2 with `M5-P3-01: blocked`.",
-          "Next action: the owner runs `python3 scripts/qualify_environment.py --sandbox --json <path> --markdown <path>` (or ./scripts/qualify_environment.sh) on the Docker host; only a `qualified` record may move this story off blocked (docs/qualification-suite.md)."
+          "Next action: the owner runs `python3 scripts/qualify_environment.py --sandbox --json <path> --markdown <path>` (or ./scripts/qualify_environment.sh) on the Docker host; only a `qualified` record may move this story off blocked (docs/qualification-suite.md).",
+          "Runtime selection fails closed: an explicitly requested `--runtime` that is not installed blocks the run instead of falling back to another backend (tests: test_an_explicit_missing_runtime_is_never_replaced_by_another_backend), and a host that has Docker but not the configured image reports unqualified/exit 1 rather than a pass (test_a_runtime_without_the_image_is_unqualified_never_qualified)."
         ],
         "test_results": [
           {
             "command": ".venv/bin/python -m pytest -q",
             "exit_code": 0,
-            "result": "987 passed, 1 skipped (opt-in live container test), 1 warning in 57.59s"
+            "result": "989 passed, 1 skipped (opt-in live container test), 1 warning in 53.09s"
           },
           {
             "command": ".venv/bin/python -m pytest tests/test_qualify_environment.py -q",
             "exit_code": 0,
-            "result": "41 passed"
+            "result": "43 passed (also re-run with a Docker-on-PATH simulation: same result)"
           },
           {
             "command": ".venv/bin/ruff check .",
@@ -2215,7 +2216,12 @@
           {
             "command": ".venv/bin/python scripts/qualify_environment.py --all --json /tmp/q.json --markdown /tmp/q.md",
             "exit_code": 2,
-            "result": "M5-P3-01: blocked (no container runtime), M5-P4-01: blocked (not 24 GB Apple Silicon); nothing claimed, as designed"
+            "result": "M5-P3-01: blocked (no container runtime), M5-P4-01: blocked (not 24 GB Apple Silicon); nothing claimed"
+          },
+          {
+            "command": "PATH=<fake docker> .venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "989 passed - a host with Docker but without the image yields unqualified (exit 1), never qualified"
           }
         ],
         "decisions": [
@@ -2548,7 +2554,7 @@
         "progress_percent": 25,
         "attempts": 1,
         "started_at": "2026-10-30T19:31:57Z",
-        "updated_at": "2026-10-30T19:33:38Z",
+        "updated_at": "2026-10-30T19:37:54Z",
         "completed_at": null,
         "owner_session": "arena/bf5fe1a6-m5-agent-studio",
         "commit_sha": "44c16b4",
@@ -2567,18 +2573,19 @@
           "AC 'second simultaneous heavy load rejected under policy' is demonstrated for the primitive: p4.single_heavy_model admits a request at 80 % of detected memory, requires the second to be refused, and requires admission to succeed again after release (tests: test_admission_probe_rejects_a_second_heavy_request). app.py does not import resource_admission, so this is reported honestly as the informational check p4.admission_wired (currently false) rather than claimed as a serving-path guarantee.",
           "AC 'routing does not treat public priors as verified': p4.priors_not_verified asserts model_recommendation._confidence(None) returns level `unknown` with the note `no comparable benchmark profile` (tests: test_priors_are_not_treated_as_verified).",
           "AC '24 GB pressure measured': not measured. p4.pressure only runs with --pressure-gb and samples swap before/peak/after; it is recorded `skip` in this environment and the story stays blocked. No number is invented (tests: test_pressure_probe_reports_swap_evidence, test_hardware_suite_blocks_off_target_hardware).",
-          "Model measurement path: --model-command runs a caller-supplied probe N times, records exit codes/wall time/reported metrics and swap growth, and --profile-out persists a model_calibration profile that reloads via load_profile; an impossible measurement (first token after the run ends) is stored as a failed sample instead of a fabricated throughput (tests: test_model_probe_records_each_run, test_model_profile_refuses_to_invent_a_timing)."
+          "Model measurement path: --model-command runs a caller-supplied probe N times, records exit codes/wall time/reported metrics and swap growth, and --profile-out persists a model_calibration profile that reloads via load_profile; an impossible measurement (first token after the run ends) is stored as a failed sample instead of a fabricated throughput (tests: test_model_probe_records_each_run, test_model_profile_refuses_to_invent_a_timing).",
+          "Runtime selection fails closed: an explicitly requested `--runtime` that is not installed blocks the run instead of falling back to another backend (tests: test_an_explicit_missing_runtime_is_never_replaced_by_another_backend), and a host that has Docker but not the configured image reports unqualified/exit 1 rather than a pass (test_a_runtime_without_the_image_is_unqualified_never_qualified)."
         ],
         "test_results": [
           {
             "command": ".venv/bin/python -m pytest -q",
             "exit_code": 0,
-            "result": "987 passed, 1 skipped (opt-in live container test), 1 warning in 57.59s"
+            "result": "989 passed, 1 skipped (opt-in live container test), 1 warning in 53.09s"
           },
           {
             "command": ".venv/bin/python -m pytest tests/test_qualify_environment.py -q",
             "exit_code": 0,
-            "result": "41 passed"
+            "result": "43 passed (also re-run with a Docker-on-PATH simulation: same result)"
           },
           {
             "command": ".venv/bin/ruff check .",
@@ -2613,7 +2620,12 @@
           {
             "command": ".venv/bin/python scripts/qualify_environment.py --all --json /tmp/q.json --markdown /tmp/q.md",
             "exit_code": 2,
-            "result": "M5-P3-01: blocked (no container runtime), M5-P4-01: blocked (not 24 GB Apple Silicon); nothing claimed, as designed"
+            "result": "M5-P3-01: blocked (no container runtime), M5-P4-01: blocked (not 24 GB Apple Silicon); nothing claimed"
+          },
+          {
+            "command": "PATH=<fake docker> .venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "989 passed - a host with Docker but without the image yields unqualified (exit 1), never qualified"
           }
         ],
         "decisions": [

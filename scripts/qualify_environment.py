@@ -394,15 +394,19 @@ def run_command(
 
 
 def detect_runtime(preferred: str | None = None) -> tuple[str, str]:
-    """Return ``(runtime_path, runtime_name)`` or ``("", "")`` when none is usable."""
-    candidates = [preferred] if preferred and preferred != "auto" else []
-    candidates.extend(["docker", "podman"])
-    for candidate in candidates:
-        if not candidate:
-            continue
+    """Return ``(runtime_path, runtime_name)`` or ``("", "")`` when none is usable.
+
+    An explicitly requested runtime is never silently replaced by another one: if
+    ``--runtime podman`` is not installed the run is blocked rather than quietly
+    qualifying a different backend.
+    """
+    if preferred and preferred not in ("", "auto"):
+        found = shutil.which(preferred)
+        return (found, Path(preferred).name) if found else ("", "")
+    for candidate in ("docker", "podman"):
         found = shutil.which(candidate)
         if found:
-            return found, Path(candidate).name
+            return found, candidate
     return "", ""
 
 

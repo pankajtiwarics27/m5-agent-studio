@@ -59,8 +59,10 @@ python3 scripts/qualify_environment.py --hardware \
   --profile-out dist/model-profile.jsonl
 ```
 
-Useful flags: `--runtime docker|podman` (default `auto`), `--timeout` (per
-check, default 180 s), `--quiet`, `--json`, `--markdown`.
+Useful flags: `--runtime docker|podman` (default `auto`; an explicitly requested
+runtime that is not installed blocks the run instead of quietly qualifying a
+different backend), `--timeout` (per check, default 180 s), `--quiet`, `--json`,
+`--markdown`.
 
 ### Exit codes
 
@@ -170,7 +172,7 @@ Verdicts mean exactly this:
 
 ## Tests
 
-`tests/test_qualify_environment.py` (41 tests) pins the properties above without a
+`tests/test_qualify_environment.py` (43 tests) pins the properties above without a
 container runtime: verdict semantics, required-versus-optional checks, argv
 parity with the product, the blocked path when no runtime exists, the failure
 path when a leak is observed, host-execution detection, the record and Markdown
