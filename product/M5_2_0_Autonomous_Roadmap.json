@@ -123,10 +123,10 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "M5-P0-04",
     "last_completed_story": "M5-P0-03",
-    "last_checkpoint": "2026-10-30T11:01:49Z",
-    "last_session_id": "arena/f1d4a766-m5-agent-studio",
+    "last_checkpoint": "2026-10-30T11:08:14Z",
+    "last_session_id": "arena/13166201-m5-agent-studio",
     "next_recommended_story": "M5-P0-04",
     "open_risks": [
       "Skill-script containment landed (M5-P0-03): residual risk is sandbox isolation itself remaining unqualified until a live container runtime proves the denials (M5-P0-04 / M5-P3-01)",
@@ -528,13 +528,13 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P0-04: Live isolation smoke test. Objective: Establish minimum enforceable container boundary on supported macOS. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Identify actual Docker/Podman availability; Test synthetic outside-workspace file access and direct network attempt; Test skill execution path and default-off host bypass; Record environment fingerprint and unsupported guarantees. Acceptance: Observed denial for each claimed smoke-test boundary; No silent host fallback; If no live runtime, mark isolation unqualified and block dependent execution. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-30T11:08:14Z",
+        "updated_at": "2026-10-30T11:08:14Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/13166201-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -542,7 +542,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "After M5-P0-03: requires a live Docker/Podman runtime (absent in the session-1 evidence environment, see docs/m5-2-0-baseline-evidence.md section 1). If no live runtime, mark isolation unqualified and block dependent execution.",
+        "next_action": "Probe Docker/Podman availability (none found pre-claim), run every smoke-test boundary that is observable in this environment, record the environment fingerprint, and per acceptance mark isolation unqualified and block dependent execution where the live runtime is absent.",
         "readme_updated": false
       }
     },
