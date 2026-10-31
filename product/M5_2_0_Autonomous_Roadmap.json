@@ -148,7 +148,9 @@
     "last_verified_commit": "d642bb0",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md",
     "last_updated": "2026-10-31",
-    "active_stories": []
+    "active_stories": [
+      "M5-P4-02"
+    ]
   },
   "delivery_phases": [
     {
@@ -2833,13 +2835,13 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P4-02: Portable handoff and conservative switching. Objective: Allow safe sequential model switches without losing task authority. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Persist portable core and harness-private extensions; Validate handoff references, source versions and permissions; Use selective semantic confirmation for high-risk transitions; Fence old worker and bound retries. Acceptance: No KV cache portability assumption; Switch preserves budgets and grants validity; Failed handoff leaves safe paused state. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
+        "status": "in_progress",
         "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "attempts": 1,
+        "started_at": "2026-10-31T06:50:00Z",
+        "updated_at": "2026-10-31T06:50:00Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/3bd28b17-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -2847,7 +2849,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "next_action": "Inspect routing, model switching, handoff, task state, budgets, grants, and worker lease call paths.",
         "readme_updated": false
       }
     },
