@@ -213,11 +213,17 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   only, with `scripts/qualify_environment.sh` as a thin wrapper) is the operator-run
   suite that CI cannot be. `--sandbox` probes a live runtime with the **product's**
   own path (`app._execute_limited` under `STUDIO_EXECUTION_MODE=sandbox`) and an
-  adversarial matrix run with container flags that a test asserts match
-  `app._sandbox_command`: outside-workspace and traversal paths, a workspace symlink
-  pointing outside, direct TCP egress, an inherited host-environment sentinel, raw
-  sockets, a 3 GiB allocation under `--memory 512m`, a surviving descendant, and
-  `scripts/isolation_smoke.py --live`. `--hardware` records the machine fingerprint,
+  adversarial matrix carried in the product's full hardening set (`--network=none`,
+  `--read-only`, `--cap-drop=ALL`, `--security-opt=no-new-privileges`,
+  `--pull=never`, `HOME`/`TMPDIR` pinned to `/tmp`, `--ipc=private`,
+  `--ulimit nofile`, a `noexec` tmpfs and the same `sh -lc exec` form): outside
+  paths and traversal (with the errno class recorded, so absence and denial stay
+  different facts), a workspace symlink pointing outside, direct and host-loopback
+  egress, raw sockets, host credential stores and `HOME`, a 3 GiB allocation under
+  `--memory 512m`, a surviving descendant, and `scripts/isolation_smoke.py --live`.
+  `p3.product.argv_parity` compares the suite's argv against `app._sandbox_command`
+  **on the machine running it**, so product drift fails the owner's run instead of
+  silently qualifying stale flags. `--hardware` records the machine fingerprint,
   checks that `resource_admission` admits exactly one heavy request at 80 % of
   detected memory and refuses the second, checks that routing confidence without a
   measured profile is `unknown`, drives the real `app.stream_any_model` funnel to
@@ -234,7 +240,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   revision, OS build, chip, RAM and detected runtime into JSON and Markdown. **No
   container-isolation or 24 GB claim is made anywhere in this repository**, both
   stories stay `blocked` in the roadmap until the owner produces a qualified record
-  on the target machine. Pinned by 51 tests (`tests/test_qualify_environment.py`)
+  on the target machine. Pinned by 54 tests (`tests/test_qualify_environment.py`)
   and documented in [`docs/qualification-suite.md`](docs/qualification-suite.md)
   (ADR-0010).
 - **A second heavy local model request is refused by policy in the serving path

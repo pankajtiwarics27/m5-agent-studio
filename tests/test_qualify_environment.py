@@ -57,7 +57,11 @@ def _make_fake_run(behaviour: dict[str, Any] | None = None) -> Any:
             return _FakeCompleted(0, "listing:qualify-link\ncwd:/workspace\npositive-ok\n")
         if "denials:" in code:
             leaked = behaviour.get("leaked", "none")
-            return _FakeCompleted(0 if leaked == "none" else 3, f"denials:{leaked}\n")
+            return _FakeCompleted(0 if leaked == "none" else 3, f"reads:outside-direct=ENOENT\ndenials:{leaked}\n")
+        if "credentials:" in code:
+            leaked = behaviour.get("credentials_visible", "none")
+            home = behaviour.get("home", "/tmp")
+            return _FakeCompleted(0 if leaked == "none" else 3, f"home:{home}\ncredentials:{leaked}\n")
         if "bytearray" in code:
             return _FakeCompleted(137, "", "Killed")
         if "spawned" in code:
@@ -88,7 +92,9 @@ class _FakeStudio:
                          container_name: str | None = None) -> list[str]:
         if self.STUDIO_SANDBOX_RUNTIME.startswith("m5-nonexistent"):
             raise RuntimeError(f"Sandbox runtime `{self.STUDIO_SANDBOX_RUNTIME}` is not installed.")
-        return qe.container_argv(self.STUDIO_SANDBOX_RUNTIME, self.STUDIO_SANDBOX_IMAGE, root, command)
+        return qe.container_argv(
+            self.STUDIO_SANDBOX_RUNTIME, self.STUDIO_SANDBOX_IMAGE, root, command, name=container_name or ""
+        )
 
     async def _execute_limited(self, root: Path, command: str, *, timeout: float,
                                max_output_bytes: int, python_code: bool = False):
@@ -278,6 +284,27 @@ def _run_sandbox_suite(monkeypatch: pytest.MonkeyPatch, *, behaviour: dict[str, 
         timeout=5.0,
     )
     return recorder
+
+
+def test_suite_argv_matches_the_product_argv(tmp_path: Path) -> None:
+    """The suite must probe the sandbox the product actually builds."""
+    import unittest.mock
+
+    studio = pytest.importorskip("app")
+    with unittest.mock.patch.object(studio, "STUDIO_SANDBOX_RUNTIME", "/bin/sh"):
+        product = studio._sandbox_command(tmp_path, "print(1)", python_code=True, container_name="m5-test")
+    suite = qe.container_argv("docker", studio.STUDIO_SANDBOX_IMAGE, tmp_path, "print(1)", name="m5-test")
+    ok, detail = qe.compare_argv(product, suite)
+    assert ok, detail
+    assert "bind mounts=1" in detail
+
+
+def test_argv_parity_detects_a_missing_product_flag(tmp_path: Path) -> None:
+    suite = qe.container_argv("docker", "python:3.12-slim", tmp_path, "print(1)")
+    without_env = [part for part in suite if not part.startswith("--ipc")]
+    ok, detail = qe.compare_argv(suite, without_env)
+    assert not ok
+    assert "--ipc" in detail
 
 
 def test_sandbox_suite_qualifies_when_every_probe_passes(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -681,21 +708,34 @@ def test_asyncio_coroutine_path_is_used_for_product_probes(monkeypatch: pytest.M
         asyncio.run(studio._execute_limited(Path("/tmp"), "print(1)", timeout=1, max_output_bytes=16))
 
 
-def test_container_argv_preserves_posix_uid_gid_and_code_args(tmp_path: Path) -> None:
-    """Parity with app._sandbox_command: drop container root via --user uid:gid on POSIX."""
+def test_container_argv_preserves_posix_uid_gid_and_the_shell_exec_form(tmp_path: Path) -> None:
+    """Parity with app._sandbox_command: drop container root and run via `sh -lc exec`."""
     import os
 
-    argv = qe.container_argv(
-        "docker",
-        "python:3.12-slim",
-        tmp_path,
-        "print(1)",
-        code_args=("/tmp/outside-canary.txt", "/workspace/qualify-link"),
-    )
+    argv = qe.container_argv("docker", "python:3.12-slim", tmp_path, "print(1)")
     if os.name == "posix" and hasattr(os, "getuid") and hasattr(os, "getgid"):
         idx = argv.index("--user")
         assert argv[idx + 1] == f"{os.getuid()}:{os.getgid()}"
-    assert argv[-2:] == ["/tmp/outside-canary.txt", "/workspace/qualify-link"]
+    assert argv[-2] == "-lc"
+    assert argv[-1].startswith("exec python3 -c ")
+
+
+def test_container_argv_bakes_probe_inputs_into_the_code(tmp_path: Path) -> None:
+    """Extra argv would land in the shell, not the interpreter, under `-lc exec`."""
+    code = qe._escape_probe_code(
+        outside=tmp_path / "canary.txt",
+        link="/workspace/qualify-link",
+        read_only_targets=("/etc/hostname",),
+        host_port=0,
+        network_target="127.0.0.1:9",
+    )
+    assert str(tmp_path / "canary.txt") in code
+    assert "/workspace/qualify-link" in code
+    assert "127.0.0.1:9" in code
+    argv = qe.container_argv("docker", "python:3.12-slim", tmp_path, code)
+    assert argv[-2] == "-lc"
+    assert argv[-1].startswith("exec python3 -c ")
+    assert "qualify-link" in argv[-1]
 
 
 def test_escape_probe_code_passes_with_isolated_canary_and_readonly_targets(tmp_path: Path) -> None:
@@ -719,19 +759,17 @@ def test_escape_probe_code_passes_with_isolated_canary_and_readonly_targets(tmp_
     closed_port = int(closed_sock.getsockname()[1])
     closed_sock.close()
 
+    code = qe._escape_probe_code(
+        outside=missing_host_canary,
+        link=str(link),
+        read_only_targets=(str(ro_probe),),
+        host_port=0,
+        network_target=f"127.0.0.1:{closed_port}",
+    )
     env = {"PATH": os.environ.get("PATH", os.defpath)}
     try:
         proc = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                qe._ESCAPE_CODE,
-                str(missing_host_canary),
-                str(link),
-                str(ro_probe),
-                "0",
-                f"127.0.0.1:{closed_port}",
-            ],
+            [sys.executable, "-c", code],
             env=env,
             capture_output=True,
             text=True,
@@ -769,17 +807,15 @@ def test_escape_probe_code_detects_outside_canary_symlink_writable_root_network_
             "PATH": os.environ.get("PATH", os.defpath),
             "STUDIO_QUALIFICATION_SENTINEL": "leaked-from-host",
         }
+        code = qe._escape_probe_code(
+            outside=leaked_canary,
+            link=str(leaked_link),
+            read_only_targets=(str(writable_ro_target),),
+            host_port=port,
+            network_target=f"127.0.0.1:{port}",
+        )
         proc = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                qe._ESCAPE_CODE,
-                str(leaked_canary),
-                str(leaked_link),
-                str(writable_ro_target),
-                str(port),
-                f"127.0.0.1:{port}",
-            ],
+            [sys.executable, "-c", code],
             env=env,
             capture_output=True,
             text=True,
