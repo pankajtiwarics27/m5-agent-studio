@@ -27,6 +27,7 @@ import pytest
 
 import mcp_client
 import process_supervision
+import sandbox_boundary
 import scoped_grants
 
 
@@ -65,6 +66,16 @@ def _write_mcp_effects(root: Path) -> None:
     )
 
 
+def _write_security_incidents(root: Path) -> None:
+    store = sandbox_boundary.SecurityIncidentStore(root)
+    store.record_incident(
+        reason="contract_incident",
+        failed_guarantees=("container_network_isolation",),
+        failed_dependencies=("dep:runtime:docker",),
+        affected_backends=("docker",),
+    )
+
+
 WriteFn = Callable[[Path], None]
 ErrorCls = type[BaseException]
 
@@ -88,12 +99,18 @@ STORE_CASES: list[tuple[str, WriteFn, Path, ErrorCls]] = [
         Path("mcp_effects") / "state.json",
         mcp_client.McpEffectStoreIntegrityError,
     ),
+    (
+        "security_incidents",
+        _write_security_incidents,
+        Path("security_incidents") / "state.json",
+        sandbox_boundary.SecurityIncidentIntegrityError,
+    ),
 ]
 _CASES = [pytest.param(w, rel, err, id=name) for name, w, rel, err in STORE_CASES]
 
 
 def test_every_module_with_a_durable_state_file_is_covered() -> None:
-    """A fourth `state.json` store must be added to STORE_CASES, not just written.
+    """Every `state.json` store must be added to STORE_CASES, not just written.
 
     Discovered from source rather than hard-coded, so a new store fails this test
     instead of silently skipping the contract. `studio.py` is the generated bundle
@@ -110,6 +127,7 @@ def test_every_module_with_a_durable_state_file_is_covered() -> None:
         "containment": "process_supervision",
         "grants": "scoped_grants",
         "mcp_effects": "mcp_client",
+        "security_incidents": "sandbox_boundary",
     }
     covered = {
         covered_modules[relative.parts[0]] for _name, _write, relative, _err in STORE_CASES
