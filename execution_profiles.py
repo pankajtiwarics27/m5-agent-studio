@@ -62,8 +62,10 @@ from pathlib import Path
 from typing import Any, Literal
 
 import execution_spine
+import process_supervision
 import resource_admission
 import sandbox_boundary
+import side_effect_ledger
 import workspace_snapshots
 
 EP_SCHEMA_VERSION = 1
@@ -2578,6 +2580,9 @@ class _EPActiveHandle:
     pre_state: WorkspaceFootprintState | None
     workspace_root: Path | None
     store_dir: Path | None
+    task_id: str | None = None
+    epoch: int | None = None
+    worker_id: str | None = None
     on_reconciled: Callable[[str, ExecutionProfile, FootprintReconciliation], None] | None = None
     released: bool = False
 
@@ -2771,6 +2776,9 @@ class UnifiedExecutionController:
         execution_mode_fn: Callable[[], str] | None = None,
         container_qualified: bool = False,
         on_reconciled: Callable[[str, ExecutionProfile, FootprintReconciliation], None] | None = None,
+        containment_store: process_supervision.ContainmentStore | None = None,
+        current_boot_id: str | None = None,
+        sql_task_fencing: bool = False,
     ) -> UnifiedExecutionCoordinator:
         return UnifiedExecutionCoordinator(
             self,
@@ -2780,6 +2788,9 @@ class UnifiedExecutionController:
             execution_mode_fn=execution_mode_fn,
             container_qualified=container_qualified,
             on_reconciled=on_reconciled,
+            containment_store=containment_store,
+            current_boot_id=current_boot_id,
+            sql_task_fencing=sql_task_fencing,
         )
 
 
@@ -2796,6 +2807,9 @@ class UnifiedExecutionCoordinator:
         execution_mode_fn: Callable[[], str] | None = None,
         container_qualified: bool = False,
         on_reconciled: Callable[[str, ExecutionProfile, FootprintReconciliation], None] | None = None,
+        containment_store: process_supervision.ContainmentStore | None = None,
+        current_boot_id: str | None = None,
+        sql_task_fencing: bool = False,
     ) -> None:
         self._controller = controller
         self._workspace_root = workspace_root
@@ -2804,6 +2818,11 @@ class UnifiedExecutionCoordinator:
         self._execution_mode_fn = execution_mode_fn
         self._container_qualified = container_qualified
         self._on_reconciled = on_reconciled
+        self._containment_store = containment_store or (
+            process_supervision.ContainmentStore(store_dir) if store_dir is not None else None
+        )
+        self._current_boot_id = current_boot_id
+        self._sql_task_fencing = bool(sql_task_fencing)
 
     def _current_execution_mode(self) -> str:
         if self._execution_mode_fn is None:
@@ -2812,6 +2831,56 @@ class UnifiedExecutionCoordinator:
             return str(self._execution_mode_fn() or "disabled")
         except Exception:
             return "disabled"
+
+    def _persist_barrier_hold(
+        self,
+        handle: _EPActiveHandle,
+        *,
+        action_id: str,
+        reason: str,
+    ) -> None:
+        if self._containment_store is None:
+            return
+        if not execution_spine.is_consequential_action_class(handle.profile.descriptor.action_class):
+            return
+        if handle.profile.descriptor.execution_surface == "managed" and reason not in {
+            "footprint_policy_violation",
+            "undeclared_footprint_expansion",
+        }:
+            return
+        barrier_tuples = tuple(
+            (b.target, b.mode)
+            for b in handle.profile.footprint.barriers
+            if b.mode == "exclusive" or handle.profile.descriptor.execution_surface != "managed"
+        )
+        if not barrier_tuples:
+            return
+        ws_str = ""
+        if handle.workspace_root is not None:
+            try:
+                ws_str = str(handle.workspace_root.expanduser().resolve())
+            except OSError:
+                ws_str = str(handle.workspace_root)
+        hold_key = action_id or f"{handle.session_id}:{handle.lease_id}"
+        hold_id = f"hold-{hashlib.sha256(hold_key.encode('utf-8')).hexdigest()[:16]}"
+        try:
+            self._containment_store.persist_barrier_hold(
+                process_supervision.PersistedBarrierHold(
+                    hold_id=hold_id,
+                    session_id=handle.session_id,
+                    task_id=handle.task_id,
+                    epoch=handle.epoch,
+                    worker_id=handle.worker_id,
+                    action_id=action_id,
+                    tool_name=handle.tool_name,
+                    footprint_scope=handle.profile.footprint.scope,
+                    workspace_root=ws_str,
+                    barriers=barrier_tuples,
+                    reason=reason,
+                )
+            )
+        except Exception:
+            pass
 
     def admit_profile(
         self,
@@ -2844,6 +2913,99 @@ class UnifiedExecutionCoordinator:
                 footprint_scope=profile.footprint.scope,
                 profile=profile.to_mapping(),
             )
+
+        barrier_tuples = tuple((b.target, b.mode) for b in profile.footprint.barriers)
+        if self._containment_store is not None:
+            active_sup_id = process_supervision.current_supervision_id()
+            use_sql_fencing = bool(self._sql_task_fencing and request.task_id is not None)
+            wid_for_fence = (
+                request.worker_id
+                if (not use_sql_fencing or str(request.worker_id or "").startswith("wrk-"))
+                else None
+            )
+            is_fenced, fenced_reason = self._containment_store.is_origin_fenced(
+                worker_id=(wid_for_fence if not use_sql_fencing else None),
+                task_id=(None if use_sql_fencing else request.task_id),
+                epoch=(None if use_sql_fencing else request.epoch),
+                session_id=request.session_id,
+                supervision_id=active_sup_id,
+                current_boot_id=self._current_boot_id,
+            )
+            if not is_fenced and use_sql_fencing and self._current_boot_id and request.worker_id:
+                is_fenced, fenced_reason = self._containment_store.is_origin_fenced(
+                    worker_id=(
+                        request.worker_id if str(request.worker_id).startswith("wrk-") else None
+                    ),
+                    current_boot_id=self._current_boot_id,
+                )
+            if is_fenced:
+                return execution_spine.ProfileAdmissionOutcome(
+                    allowed=False,
+                    reason=(
+                        f"Stale or contained execution origin (`{fenced_reason}`) "
+                        f"cannot admit `{request.tool_name}`."
+                    ),
+                    error_code="stale_origin_fenced",
+                    footprint_scope=profile.footprint.scope,
+                    profile=profile.to_mapping(),
+                )
+
+            candidate_action_id = str(request.action_id or "")
+            if not candidate_action_id and (
+                request.task_id is not None
+                or request.step_id is not None
+                or request.call_index is not None
+            ):
+                candidate_action_id = side_effect_ledger.derive_action_id(
+                    str(request.task_id or request.session_id or "default"),
+                    request.tool_name,
+                    request.args,
+                    step_id=request.step_id,
+                    call_index=request.call_index,
+                )
+            allow_ack_rollback = (
+                profile.descriptor.tool_name == "rollback_edits"
+                and isinstance(request.args, Mapping)
+                and not bool(request.args.get("dry_run", False))
+                and bool(request.args.get("acknowledge_unresolved", False))
+            )
+            holds, conflict_targets_list = self._containment_store.find_conflicting_holds(
+                barrier_tuples,
+                action_class=action_class,
+                candidate_action_id=candidate_action_id,
+                allow_acknowledged_rollback=allow_ack_rollback,
+            )
+            if holds:
+                conflict_targets = tuple(conflict_targets_list)
+                live_pids = tuple(
+                    dict.fromkeys(pid for h in holds for pid, _fp in h.lingering_pids)
+                )
+                hold_labels = tuple(
+                    dict.fromkeys(h.action_id or h.hold_id for h in holds)
+                )
+                if live_pids:
+                    err_code = "lingering_process_containment"
+                    reason_msg = (
+                        f"Conflicting action `{request.tool_name}` blocked by active containment barrier "
+                        f"({', '.join(conflict_targets)}): lingering child process(es) "
+                        f"{list(live_pids)} have not exited yet."
+                    )
+                else:
+                    err_code = "unresolved_containment_barrier"
+                    reason_msg = (
+                        f"Conflicting action `{request.tool_name}` blocked by persisted containment barrier "
+                        f"({', '.join(conflict_targets)}): unresolved side effects "
+                        f"({', '.join(hold_labels[:3])}) must be reconciled before conflicting execution."
+                    )
+                return execution_spine.ProfileAdmissionOutcome(
+                    allowed=False,
+                    reason=reason_msg,
+                    error_code=err_code,
+                    footprint_scope=profile.footprint.scope,
+                    conflict_denied=True,
+                    conflicting_barriers=conflict_targets,
+                    profile=profile.to_mapping(),
+                )
 
         decision = self._controller.admit_footprint(profile.footprint)
         if not decision.allowed or decision.lease_id is None:
@@ -2888,12 +3050,16 @@ class UnifiedExecutionCoordinator:
             pre_state=pre_state,
             workspace_root=self._workspace_root,
             store_dir=self._store_dir,
+            task_id=request.task_id,
+            epoch=request.epoch,
+            worker_id=request.worker_id,
             on_reconciled=self._on_reconciled,
         )
         return execution_spine.ProfileAdmissionOutcome(
             allowed=True,
             lease_id=decision.lease_id,
             footprint_scope=profile.footprint.scope,
+            barriers=barrier_tuples,
             profile=profile.to_mapping(),
             handle=handle,
         )
@@ -2902,6 +3068,20 @@ class UnifiedExecutionCoordinator:
         if isinstance(handle, _EPActiveHandle) and not handle.released:
             handle.released = True
             self._controller.release(handle.lease_id)
+
+    def abort_on_interrupt(
+        self,
+        handle: Any,
+        *,
+        action_id: str = "",
+        reason: str = "interrupted_in_flight",
+    ) -> None:
+        if not isinstance(handle, _EPActiveHandle):
+            return
+        try:
+            self._persist_barrier_hold(handle, action_id=action_id, reason=reason)
+        finally:
+            self.release_only(handle)
 
     def reconcile_and_release(
         self,
@@ -2913,6 +3093,8 @@ class UnifiedExecutionCoordinator:
     ) -> dict[str, Any] | None:
         if not isinstance(handle, _EPActiveHandle):
             return result
+        reconciliation: FootprintReconciliation | None = None
+        updated: dict[str, Any] | None = None
         try:
             reconciliation = observe_and_reconcile(handle.profile, handle.pre_state)
             if handle.store_dir is not None and (
@@ -2935,40 +3117,59 @@ class UnifiedExecutionCoordinator:
                     handle.on_reconciled(handle.session_id, handle.profile, reconciliation)
                 except Exception:
                     pass
+
+            if result is not None:
+                updated = {
+                    **result,
+                    "execution_profile": handle.profile.to_mapping(),
+                    "footprint_reconciliation": reconciliation.to_mapping(),
+                }
+                if reconciliation.status == "policy_violation":
+                    reasons = ", ".join(
+                        f"{v.get('path')}:{v.get('reason')}" for v in reconciliation.policy_violations
+                    )
+                    prior_out = str(updated.get("output") or "")
+                    updated["ok"] = False
+                    updated["policy_violation"] = True
+                    updated["error_code"] = "footprint_policy_violation"
+                    if reconciliation.uncertain_required:
+                        updated["uncertain"] = True
+                    updated["output"] = (
+                        f"Denied post-execution: `{handle.tool_name}` violated unified workspace policy ({reasons})."
+                        + (f"\n{prior_out}" if prior_out else "")
+                    )
+                elif reconciliation.status == "scope_violation":
+                    bad_paths = ", ".join(reconciliation.scope_violations[:5])
+                    prior_out = str(updated.get("output") or "")
+                    updated["ok"] = False
+                    updated["scope_violation"] = True
+                    updated["error_code"] = "undeclared_footprint_expansion"
+                    updated["uncertain"] = True
+                    updated["output"] = (
+                        f"Denied post-execution: `{handle.tool_name}` mutated undeclared workspace path(s) ({bad_paths})."
+                        + (f"\n{prior_out}" if prior_out else "")
+                    )
+
+            exc_uncertain = exc is not None and side_effect_ledger.is_ambiguous_exception(exc)
+            res_uncertain = updated is not None and bool(updated.get("uncertain"))
+            if exc_uncertain or res_uncertain:
+                hold_reason = (
+                    str(updated.get("error_code") or "uncertain_outcome")
+                    if updated is not None
+                    else type(exc).__name__
+                )
+                self._persist_barrier_hold(handle, action_id=action_id, reason=hold_reason)
+            elif (
+                self._containment_store is not None
+                and action_id
+                and updated is not None
+                and bool(updated.get("ok"))
+            ):
+                try:
+                    self._containment_store.release_holds_for_action(action_id)
+                except Exception:
+                    pass
         finally:
             self.release_only(handle)
 
-        if result is None:
-            return None
-
-        updated: dict[str, Any] = {
-            **result,
-            "execution_profile": handle.profile.to_mapping(),
-            "footprint_reconciliation": reconciliation.to_mapping(),
-        }
-        if reconciliation.status == "policy_violation":
-            reasons = ", ".join(
-                f"{v.get('path')}:{v.get('reason')}" for v in reconciliation.policy_violations
-            )
-            prior_out = str(updated.get("output") or "")
-            updated["ok"] = False
-            updated["policy_violation"] = True
-            updated["error_code"] = "footprint_policy_violation"
-            if reconciliation.uncertain_required:
-                updated["uncertain"] = True
-            updated["output"] = (
-                f"Denied post-execution: `{handle.tool_name}` violated unified workspace policy ({reasons})."
-                + (f"\n{prior_out}" if prior_out else "")
-            )
-        elif reconciliation.status == "scope_violation":
-            bad_paths = ", ".join(reconciliation.scope_violations[:5])
-            prior_out = str(updated.get("output") or "")
-            updated["ok"] = False
-            updated["scope_violation"] = True
-            updated["error_code"] = "undeclared_footprint_expansion"
-            updated["uncertain"] = True
-            updated["output"] = (
-                f"Denied post-execution: `{handle.tool_name}` mutated undeclared workspace path(s) ({bad_paths})."
-                + (f"\n{prior_out}" if prior_out else "")
-            )
         return updated

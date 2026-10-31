@@ -82,6 +82,7 @@ import edit_rollback
 import edit_transactions
 import execution_profiles
 import model_admission
+import process_supervision
 import resource_admission  # noqa: F401 - inlined into studio.py; execution_profiles/model_admission use it
 import verification_evidence
 import workspace_snapshots
@@ -449,6 +450,30 @@ def _sandbox_command(root: Path, command: str, *, python_code: bool = False, con
     )
 
 
+_LAST_SUBPROCESS_CONTAINED: ContextVar[bool] = ContextVar(
+    "m5_last_subprocess_contained",
+    default=False,
+)
+
+
+def _cleanup_sandbox_container_sync(name: str) -> None:
+    runtime_path = shutil.which(STUDIO_SANDBOX_RUNTIME)
+    if not runtime_path:
+        return
+    try:
+        subprocess.run(
+            [runtime_path, "rm", "--force", name],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=_sandbox_cli_env(runtime_path),
+            timeout=8.0,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return
+
+
 async def _cleanup_sandbox_container(name: str) -> None:
     runtime_path = shutil.which(STUDIO_SANDBOX_RUNTIME)
     if not runtime_path:
@@ -466,16 +491,90 @@ async def _cleanup_sandbox_container(name: str) -> None:
         return
 
 
+_PROCESS_SUPERVISOR_LOCK = threading.Lock()
+_PROCESS_SUPERVISOR: process_supervision.ProcessSupervisor | None = None
+_PROCESS_SUPERVISOR_STORE_DIR: Path | None = None
+
+
+def _reset_process_supervisor(
+    supervisor: process_supervision.ProcessSupervisor | None = None,
+) -> None:
+    global _PROCESS_SUPERVISOR, _PROCESS_SUPERVISOR_STORE_DIR
+    with _PROCESS_SUPERVISOR_LOCK:
+        _PROCESS_SUPERVISOR = supervisor
+        _PROCESS_SUPERVISOR_STORE_DIR = (
+            Path(HARNESS_STORE_DIR).resolve() if supervisor is not None else None
+        )
+
+
+def get_containment_store() -> process_supervision.ContainmentStore:
+    """Return the durable process-supervision & containment store rooted under ``HARNESS_STORE_DIR``."""
+    return process_supervision.ContainmentStore(HARNESS_STORE_DIR)
+
+
+def get_process_supervisor() -> process_supervision.ProcessSupervisor:
+    """Return the authoritative M5-P3-03 process supervisor bound to ``HARNESS_STORE_DIR``."""
+    global _PROCESS_SUPERVISOR, _PROCESS_SUPERVISOR_STORE_DIR
+    cur_dir = Path(HARNESS_STORE_DIR).resolve()
+    with _PROCESS_SUPERVISOR_LOCK:
+        if _PROCESS_SUPERVISOR is None or _PROCESS_SUPERVISOR_STORE_DIR != cur_dir:
+            _PROCESS_SUPERVISOR = process_supervision.ProcessSupervisor(
+                process_supervision.ContainmentStore(cur_dir),
+                sync_container_cleanup_fn=_cleanup_sandbox_container_sync,
+                async_container_cleanup_fn=_cleanup_sandbox_container,
+            )
+            _PROCESS_SUPERVISOR_STORE_DIR = cur_dir
+        return _PROCESS_SUPERVISOR
+
+
+def _register_active_subprocess(
+    supervisor: process_supervision.ProcessSupervisor,
+    proc: asyncio.subprocess.Process,
+    *,
+    supervision_id: str,
+    root: Path,
+    default_tool: str,
+    container_name: str | None = None,
+) -> process_supervision.SupervisedProcessRecord | None:
+    if not proc.pid or proc.pid <= 1:
+        return None
+    scope = execution_spine.current_admission_scope()
+    ws_str = str(root.resolve()) if root is not None else ""
+    barriers = (
+        scope.barriers
+        if (scope is not None and scope.barriers)
+        else ((f"workspace:{ws_str}", "exclusive"),) if ws_str else ()
+    )
+    return supervisor.register_process(
+        proc,
+        supervision_id=supervision_id,
+        tool_name=(scope.tool_name if scope is not None else default_tool),
+        workspace_root=root,
+        container_name=container_name,
+        session_id=(scope.session_id if scope is not None else "standalone"),
+        task_id=(scope.task_id if scope is not None else None),
+        epoch=(scope.epoch if scope is not None else None),
+        worker_id=(scope.worker_id if scope is not None else None),
+        boot_id=_PROCESS_BOOT_ID,
+        action_id=(scope.action_id if scope is not None else ""),
+        barriers=barriers,
+    )
+
+
 async def _start_code_process(root: Path, command: str, *, python_code: bool = False) -> tuple[asyncio.subprocess.Process, str | None]:
     runtime_persistence.assert_no_active_write_transaction("code_subprocess")
     mode = _execution_mode()
     if mode == "disabled":
         raise PermissionError("Code execution is disabled. Set STUDIO_EXECUTION_MODE=sandbox with a local container runtime, or explicitly enable host execution and accept the security risk.")
+    sup_id = process_supervision.current_supervision_id()
+    extra_env = {process_supervision.SUPERVISION_ENV_KEY: sup_id} if sup_id else None
     if mode == "sandbox":
         container_name = f"m5-studio-{uuid.uuid4().hex[:20]}"
         argv = _sandbox_command(root, command, python_code=python_code, container_name=container_name)
         runtime_path = argv[0]
         cli_env = _sandbox_cli_env(runtime_path)
+        if sup_id:
+            cli_env = {**cli_env, process_supervision.SUPERVISION_ENV_KEY: sup_id}
         proc = await asyncio.create_subprocess_exec(
             *argv,
             stdin=asyncio.subprocess.DEVNULL,
@@ -490,42 +589,88 @@ async def _start_code_process(root: Path, command: str, *, python_code: bool = F
         proc = await asyncio.create_subprocess_exec(
             *argv, cwd=str(root), stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-            start_new_session=True, env=_minimal_execution_env(),
+            start_new_session=True, env=_minimal_execution_env(extra_env),
         )
     else:
         proc = await asyncio.create_subprocess_shell(
             command, cwd=str(root), stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-            start_new_session=True, env=_minimal_execution_env(),
+            start_new_session=True, env=_minimal_execution_env(extra_env),
         )
     return proc, None
 
 
 async def _execute_limited(root: Path, command: str, *, timeout: float, max_output_bytes: int, python_code: bool = False) -> tuple[int | None, bytes, bool, bool]:
-    proc, container_name = await _start_code_process(root, command, python_code=python_code)
-    try:
+    _LAST_SUBPROCESS_CONTAINED.set(False)
+    supervisor = get_process_supervisor()
+    sup_id = supervisor.new_supervision_id()
+    sup_rec: process_supervision.SupervisedProcessRecord | None = None
+    container_name: str | None = None
+    with supervisor.supervision_context(sup_id):
+        proc, container_name = await _start_code_process(root, command, python_code=python_code)
+        if proc.pid:
+            sup_rec = _register_active_subprocess(
+                supervisor,
+                proc,
+                supervision_id=sup_id,
+                root=root,
+                default_tool="ctx_execute_python" if python_code else "run_bash",
+                container_name=container_name,
+            )
         try:
-            output, truncated = await asyncio.wait_for(_communicate_limited(proc, max_output_bytes), timeout=timeout)
-            return proc.returncode, output, truncated, False
-        except asyncio.TimeoutError:
             try:
-                if proc.pid and hasattr(os, "killpg"):
-                    os.killpg(proc.pid, 9)
+                output, truncated = await asyncio.wait_for(_communicate_limited(proc, max_output_bytes), timeout=timeout)
+                rc = proc.returncode
+                fin_report = (
+                    await supervisor.finalize_process_async(sup_id)
+                    if sup_rec is not None
+                    else None
+                )
+                externally_fenced, _ = supervisor.store.is_origin_fenced(supervision_id=sup_id)
+                if (
+                    externally_fenced
+                    or (rc is not None and rc < 0)
+                    or (fin_report is not None and bool(fin_report.lingering_pids))
+                ):
+                    _LAST_SUBPROCESS_CONTAINED.set(True)
+                return rc, output, truncated, False
+            except asyncio.TimeoutError:
+                _LAST_SUBPROCESS_CONTAINED.set(True)
+                if sup_rec is not None:
+                    await supervisor.finalize_process_async(
+                        sup_id, interrupted_reason="subprocess_timeout"
+                    )
                 else:
-                    proc.kill()
-            except (ProcessLookupError, PermissionError):
-                proc.kill()
-            return None, b"", False, True
-    except asyncio.CancelledError:
-        try:
-            if proc.returncode is None:
-                proc.kill()
-        except ProcessLookupError:
-            pass
-        raise
-    finally:
-        if container_name:
-            await _cleanup_sandbox_container(container_name)
+                    try:
+                        if proc.pid and hasattr(os, "killpg"):
+                            os.killpg(proc.pid, 9)
+                        else:
+                            proc.kill()
+                    except (ProcessLookupError, PermissionError):
+                        proc.kill()
+                try:
+                    await asyncio.wait_for(proc.wait(), timeout=0.5)
+                except (asyncio.TimeoutError, OSError):
+                    pass
+                return None, b"", False, True
+        except asyncio.CancelledError:
+            _LAST_SUBPROCESS_CONTAINED.set(True)
+            if sup_rec is not None:
+                await asyncio.shield(
+                    supervisor.finalize_process_async(
+                        sup_id, interrupted_reason="cancelled_in_flight"
+                    )
+                )
+            else:
+                try:
+                    if proc.returncode is None:
+                        proc.kill()
+                except ProcessLookupError:
+                    pass
+            raise
+        finally:
+            if container_name:
+                await _cleanup_sandbox_container(container_name)
 
 
 async def _communicate_limited(proc: asyncio.subprocess.Process, max_bytes: int) -> tuple[bytes, bool]:
@@ -605,6 +750,15 @@ async def _execute_skill_script_inner(
                 "diff": "",
                 "elapsed_ms": elapsed_ms,
             }
+        if _LAST_SUBPROCESS_CONTAINED.get() or (exit_code is not None and exit_code < 0):
+            return {
+                "ok": False,
+                "uncertain": True,
+                "error_code": "subprocess_contained",
+                "output": "Skill script terminated by process supervision containment.",
+                "diff": "",
+                "elapsed_ms": elapsed_ms,
+            }
         if exit_code != 0:
             return {"ok": False, "output": "", "diff": "", "elapsed_ms": elapsed_ms}
         return {
@@ -613,33 +767,83 @@ async def _execute_skill_script_inner(
             "diff": "",
             "elapsed_ms": elapsed_ms,
         }
-    proc = await asyncio.create_subprocess_exec(
-        "python3", str(script), *args,
-        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
-        cwd=str(cwd), env=_minimal_execution_env(),
-    )
-    try:
-        out, _err = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-    except asyncio.TimeoutError:
-        proc.kill()
-        await proc.wait()
+    supervisor = get_process_supervisor()
+    sup_id = supervisor.new_supervision_id()
+    sup_rec: process_supervision.SupervisedProcessRecord | None = None
+    with supervisor.supervision_context(sup_id):
+        proc = await asyncio.create_subprocess_exec(
+            sys.executable, str(script), *args,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+            cwd=str(cwd), start_new_session=True,
+            env=_minimal_execution_env({process_supervision.SUPERVISION_ENV_KEY: sup_id}),
+        )
+        if proc.pid:
+            sup_rec = _register_active_subprocess(
+                supervisor,
+                proc,
+                supervision_id=sup_id,
+                root=cwd,
+                default_tool="skill_execute_script",
+            )
+        try:
+            out, _err = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        except asyncio.TimeoutError:
+            if sup_rec is not None:
+                await supervisor.finalize_process_async(
+                    sup_id, interrupted_reason="skill_script_timeout"
+                )
+            else:
+                proc.kill()
+            try:
+                await asyncio.wait_for(proc.wait(), timeout=0.5)
+            except (asyncio.TimeoutError, OSError):
+                pass
+            return {
+                "ok": False,
+                "uncertain": True,
+                "error_code": "skill_script_timeout",
+                "output": "",
+                "diff": "",
+                "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+            }
+        except asyncio.CancelledError:
+            if sup_rec is not None:
+                await asyncio.shield(
+                    supervisor.finalize_process_async(
+                        sup_id, interrupted_reason="cancelled_in_flight"
+                    )
+                )
+            else:
+                proc.kill()
+            raise
+        fin_report = (
+            await supervisor.finalize_process_async(sup_id)
+            if sup_rec is not None
+            else None
+        )
+        elapsed_ms = round((time.perf_counter() - t0) * 1000)
+        skill_fenced, _ = supervisor.store.is_origin_fenced(supervision_id=sup_id)
+        if (
+            skill_fenced
+            or (proc.returncode is not None and proc.returncode < 0)
+            or (fin_report is not None and bool(fin_report.lingering_pids))
+        ):
+            return {
+                "ok": False,
+                "uncertain": True,
+                "error_code": "subprocess_contained",
+                "output": "Skill script terminated by process supervision containment.",
+                "diff": "",
+                "elapsed_ms": elapsed_ms,
+            }
+        if proc.returncode != 0:
+            return {"ok": False, "output": "", "diff": "", "elapsed_ms": elapsed_ms}
         return {
-            "ok": False,
-            "uncertain": True,
-            "error_code": "skill_script_timeout",
-            "output": "",
+            "ok": True,
+            "output": out.decode("utf-8", errors="replace"),
             "diff": "",
-            "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+            "elapsed_ms": elapsed_ms,
         }
-    elapsed_ms = round((time.perf_counter() - t0) * 1000)
-    if proc.returncode != 0:
-        return {"ok": False, "output": "", "diff": "", "elapsed_ms": elapsed_ms}
-    return {
-        "ok": True,
-        "output": out.decode("utf-8", errors="replace"),
-        "diff": "",
-        "elapsed_ms": elapsed_ms,
-    }
 
 
 async def _run_skill_script(
@@ -1405,17 +1609,51 @@ def init_db() -> None:
         base_ddl=_ensure_base_tables,
         target_version=SCHEMA_VERSION,
     )
+    _containment = get_containment_store()
+    _sup_reports = get_process_supervisor().recover_on_startup(
+        current_boot_id=_PROCESS_BOOT_ID
+    )
     _rp_store = runtime_persistence.RuntimePersistenceStore(STORAGE, DB_PATH)
     _rp_store.expire_stale_leases()
-    _rp_store.fence_foreign_boot_leases(
+    _fenced_boot = _rp_store.fence_foreign_boot_leases(
         worker_prefix="wrk-",
         current_boot_prefix=f"wrk-{_PROCESS_BOOT_ID}-",
     )
-    _startup_ledger = side_effect_ledger.DurableActionLedger(STORAGE, DB_PATH)
+    for _fb in _fenced_boot:
+        _containment.fence_origin(
+            reason="foreign_boot_fenced",
+            task_id=_fb.task_id,
+            epoch=_fb.epoch,
+            worker_id=_fb.worker_id,
+        )
+    _startup_ledger = get_durable_action_ledger()
     _swept_startup = _startup_ledger.reconcile_missing_results(
         error_code="missing_result_on_startup"
     )
+    for _swept_rec in _swept_startup:
+        if _swept_rec.action_class in {"consequential", "external"} and _swept_rec.task_id:
+            _task_for_hold = _rp_store.get_task(_swept_rec.task_id)
+            _ws_hold = str(_task_for_hold.workspace_dir or "").strip() if _task_for_hold else ""
+            if _ws_hold and not any(h.action_id == _swept_rec.action_id for h in _containment.list_holds()):
+                _containment.persist_barrier_hold(
+                    process_supervision.PersistedBarrierHold(
+                        hold_id=f"hold-{hashlib.sha256(_swept_rec.action_id.encode('utf-8')).hexdigest()[:16]}",
+                        session_id=_swept_rec.session_id,
+                        task_id=_swept_rec.task_id,
+                        epoch=_swept_rec.epoch,
+                        action_id=_swept_rec.action_id,
+                        tool_name=_swept_rec.tool_name,
+                        footprint_scope="conservative_workspace",
+                        workspace_root=_ws_hold,
+                        barriers=((f"workspace:{_ws_hold}", "exclusive"),),
+                        reason="missing_result_on_startup",
+                    )
+                )
     _affected_tasks = {r.task_id for r in _swept_startup if r.task_id}
+    _ = _sup_reports
+    for _h in _containment.list_holds():
+        if _h.task_id:
+            _affected_tasks.add(_h.task_id)
     for _tid in sorted(_affected_tasks):
         _t = _rp_store.get_task(_tid)
         _known_args = _extract_session_known_action_args(_tid)
@@ -1426,7 +1664,7 @@ def init_db() -> None:
                 _tid,
                 known_action_args=_known_args,
             )
-        if _startup_ledger.list_unresolved_consequential_actions(_tid):
+        if _startup_ledger.list_unresolved_consequential_actions(_tid) or _containment.find_resumption_holds(task_id=_tid):
             _t = _rp_store.get_task(_tid)
             if _t is not None and _t.state not in {"blocked", "cancelled"}:
                 _rp_store.record_transition(
@@ -1436,7 +1674,10 @@ def init_db() -> None:
                     allow_inactive_epoch=True,
                 )
     _recovery_report = workflow_state.DurableTaskStateMachine(
-        STORAGE, DB_PATH, recovery_memory=recovery_guard.RecoveryGuard(HARNESS_STORE_DIR)
+        STORAGE,
+        DB_PATH,
+        recovery_memory=recovery_guard.RecoveryGuard(HARNESS_STORE_DIR),
+        containment_store=_containment,
     ).recover_incomplete_transitions()
     _reconciled_session_map: list[tuple[str, str]] = (
         [(tid, "paused") for tid in _recovery_report.recovered_task_ids]
@@ -1484,6 +1725,7 @@ def simulate_process_restart() -> str:
     global _PROCESS_BOOT_ID
     _PROCESS_BOOT_ID = uuid.uuid4().hex[:10]
     _reset_execution_profile_controller(None)
+    _reset_process_supervisor(None)
     init_db()
     return _PROCESS_BOOT_ID
 
@@ -5029,88 +5271,119 @@ async def _mcp_stdio_rpc(
         raise PermissionError("MCP stdio process launch is disabled by default. Set STUDIO_ALLOW_MCP_STDIO=1 after reviewing the configured command.")
     cmd = srv["command"]
     args = [str(a) for a in (srv.get("args") or [])]
-    merged_env = _minimal_execution_env(srv.get("env") or {})
-    work_cwd = str((cwd or WORKSPACE_ROOT).resolve())
+    supervisor = get_process_supervisor()
+    sup_id = supervisor.new_supervision_id()
+    raw_srv_env = dict(srv.get("env") or {})
+    raw_srv_env[process_supervision.SUPERVISION_ENV_KEY] = sup_id
+    merged_env = _minimal_execution_env(raw_srv_env)
+    resolved_cwd = (cwd or WORKSPACE_ROOT).resolve()
+    work_cwd = str(resolved_cwd)
+    sup_rec: process_supervision.SupervisedProcessRecord | None = None
+    rpc_completed = False
+    post_dispatch_sent = False
 
-    proc = await asyncio.create_subprocess_exec(
-        cmd,
-        *args,
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-        cwd=work_cwd,
-        env=merged_env,
-    )
-    assert proc.stdin is not None and proc.stdout is not None
-
-    async def read_rpc_id(target_id: int, *, post_dispatch_tool_call: bool = False) -> dict[str, Any]:
-        while True:
-            raw_line = await proc.stdout.readline()
-            if not raw_line:
-                err_txt = ""
-                if proc.stderr:
-                    err_txt = (await proc.stderr.read()).decode("utf-8", errors="replace")[:350]
-                msg = f"Stdio MCP `{cmd}` exited before replying to id={target_id}. {err_txt}".strip()
-                if post_dispatch_tool_call:
-                    raise mcp_client.McpAmbiguousOutcomeError(msg)
-                raise RuntimeError(msg)
-            line = raw_line.decode("utf-8", errors="replace").strip()
-            if not line or not line.startswith("{"):
-                continue
-            try:
-                pkt = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if pkt.get("id") == target_id:
-                if pkt.get("error"):
-                    raise RuntimeError(f"Stdio MCP error: {pkt['error']}")
-                return pkt.get("result") or {}
-
-    try:
-        init_msg = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {},
-                "clientInfo": {"name": "m5-studio", "version": STUDIO_VERSION},
-            },
-        }
-        proc.stdin.write((json.dumps(init_msg) + "\n").encode("utf-8"))
-        await proc.stdin.drain()
-        await asyncio.wait_for(read_rpc_id(1), timeout=timeout_sec)
-
-        notif_msg = {"jsonrpc": "2.0", "method": "notifications/initialized"}
-        req_msg = {"jsonrpc": "2.0", "id": 2, "method": method, "params": params or {}}
-        proc.stdin.write((json.dumps(notif_msg) + "\n" + json.dumps(req_msg) + "\n").encode("utf-8"))
-        await proc.stdin.drain()
-        try:
-            res = await asyncio.wait_for(
-                read_rpc_id(2, post_dispatch_tool_call=(method == "tools/call")),
-                timeout=timeout_sec,
+    with supervisor.supervision_context(sup_id):
+        proc = await asyncio.create_subprocess_exec(
+            cmd,
+            *args,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=work_cwd,
+            start_new_session=True,
+            env=merged_env,
+        )
+        if proc.pid:
+            sup_rec = _register_active_subprocess(
+                supervisor,
+                proc,
+                supervision_id=sup_id,
+                root=resolved_cwd,
+                default_tool=f"mcp__{srv.get('alias') or 'stdio'}__{method}",
             )
-        except asyncio.TimeoutError as timeout_exc:
-            if method == "tools/call":
-                raise mcp_client.McpAmbiguousOutcomeError(
-                    f"Stdio MCP `{cmd}` timed out after dispatching `tools/call`."
-                ) from timeout_exc
-            raise
-        return res
-    finally:
-        try:
-            proc.stdin.close()
-        except Exception:
-            pass
-        if proc.returncode is None:
-            try:
-                proc.terminate()
-                await asyncio.wait_for(proc.wait(), timeout=1.5)
-            except Exception:
+        assert proc.stdin is not None and proc.stdout is not None
+
+        async def read_rpc_id(target_id: int, *, post_dispatch_tool_call: bool = False) -> dict[str, Any]:
+            while True:
+                raw_line = await proc.stdout.readline()
+                if not raw_line:
+                    err_txt = ""
+                    if proc.stderr:
+                        err_txt = (await proc.stderr.read()).decode("utf-8", errors="replace")[:350]
+                    msg = f"Stdio MCP `{cmd}` exited before replying to id={target_id}. {err_txt}".strip()
+                    if post_dispatch_tool_call:
+                        raise mcp_client.McpAmbiguousOutcomeError(msg)
+                    raise RuntimeError(msg)
+                line = raw_line.decode("utf-8", errors="replace").strip()
+                if not line or not line.startswith("{"):
+                    continue
                 try:
-                    proc.kill()
+                    pkt = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if pkt.get("id") == target_id:
+                    if pkt.get("error"):
+                        raise RuntimeError(f"Stdio MCP error: {pkt['error']}")
+                    return pkt.get("result") or {}
+
+        try:
+            init_msg = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "m5-studio", "version": STUDIO_VERSION},
+                },
+            }
+            proc.stdin.write((json.dumps(init_msg) + "\n").encode("utf-8"))
+            await proc.stdin.drain()
+            await asyncio.wait_for(read_rpc_id(1), timeout=timeout_sec)
+
+            notif_msg = {"jsonrpc": "2.0", "method": "notifications/initialized"}
+            req_msg = {"jsonrpc": "2.0", "id": 2, "method": method, "params": params or {}}
+            if method == "tools/call":
+                post_dispatch_sent = True
+            proc.stdin.write((json.dumps(notif_msg) + "\n" + json.dumps(req_msg) + "\n").encode("utf-8"))
+            await proc.stdin.drain()
+            try:
+                res = await asyncio.wait_for(
+                    read_rpc_id(2, post_dispatch_tool_call=(method == "tools/call")),
+                    timeout=timeout_sec,
+                )
+            except asyncio.TimeoutError as timeout_exc:
+                if method == "tools/call":
+                    raise mcp_client.McpAmbiguousOutcomeError(
+                        f"Stdio MCP `{cmd}` timed out after dispatching `tools/call`."
+                    ) from timeout_exc
+                raise
+            rpc_completed = True
+            return res
+        finally:
+            try:
+                proc.stdin.close()
+            except Exception:
+                pass
+            if sup_rec is not None:
+                await asyncio.shield(
+                    supervisor.terminate_record_async(
+                        sup_rec,
+                        reason="mcp_stdio_cleanup" if rpc_completed else "mcp_stdio_interrupted",
+                        persist_hold=(not rpc_completed and post_dispatch_sent),
+                        fence_origin=not rpc_completed,
+                    )
+                )
+                await asyncio.shield(supervisor.finalize_process_async(sup_id))
+            elif proc.returncode is None:
+                try:
+                    proc.terminate()
+                    await asyncio.wait_for(proc.wait(), timeout=1.5)
                 except Exception:
-                    pass
+                    try:
+                        proc.kill()
+                    except Exception:
+                        pass
 
 
 async def sync_mcp_server_tools(client: httpx.AsyncClient, alias: str) -> dict[str, Any]:
@@ -6123,6 +6396,7 @@ async def run_reusable_block(root: Path, block_name: str, target: str = "") -> d
         blocked = _is_shell_blocked(cmd) or _check_gsd_secret_guard(cmd)
         if blocked:
             return {"ok": False, "output": blocked, "diff": "", "elapsed_ms": 1}
+        _LAST_SUBPROCESS_CONTAINED.set(False)
         try:
             ec, out_b, _truncated, timed_out = await _execute_limited(
                 root, cmd, timeout=45.0, max_output_bytes=1_000_000,
@@ -6137,6 +6411,15 @@ async def run_reusable_block(root: Path, block_name: str, target: str = "") -> d
                 "output": f"Block `{bname}` timed out after 45s.",
                 "diff": "",
                 "elapsed_ms": 45000,
+            }
+        if _LAST_SUBPROCESS_CONTAINED.get() or (ec is not None and ec < 0):
+            return {
+                "ok": False,
+                "uncertain": True,
+                "error_code": "subprocess_contained",
+                "output": f"Block `{bname}` terminated by process supervision containment.",
+                "diff": "",
+                "elapsed_ms": round((time.perf_counter() - t0) * 1000),
             }
         ec = int(ec if ec is not None else 1)
         raw = out_b.decode("utf-8", errors="replace")
@@ -8808,6 +9091,7 @@ async def _execute_harness_tool_inner(
             if blocked_msg:
                 return {"ok": False, "output": blocked_msg, "diff": "", "elapsed_ms": 1}
             timeout_sec = min(max(int(args.get("timeout_sec") or 30), 2), 120)
+            _LAST_SUBPROCESS_CONTAINED.set(False)
             try:
                 exit_code, out_bytes, _truncated, timed_out = await _execute_limited(
                     root, cmd, timeout=float(timeout_sec), max_output_bytes=1_000_000,
@@ -8823,11 +9107,22 @@ async def _execute_harness_tool_inner(
                     "diff": "",
                     "elapsed_ms": round((time.perf_counter() - t0) * 1000),
                 }
+            was_contained = _LAST_SUBPROCESS_CONTAINED.get() or (exit_code is not None and exit_code < 0)
             exit_code = int(exit_code if exit_code is not None else 1)
             out_str = out_bytes.decode("utf-8", errors="replace")
             if len(out_str) > 10_000:
                 out_str = out_str[:5_000] + "\n... [output truncated] ...\n" + out_str[-4_500:]
             summary = f"$ {cmd}\n[exit_code={exit_code}]\n{out_str.strip() or '(no stdout/stderr)'}"
+            if was_contained:
+                return {
+                    "ok": False,
+                    "uncertain": True,
+                    "error_code": "subprocess_contained",
+                    "exit_code": exit_code,
+                    "output": f"[Terminated by process supervision containment]\n{summary}",
+                    "diff": "",
+                    "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                }
             return {
                 "ok": exit_code == 0,
                 "exit_code": exit_code,
@@ -8915,6 +9210,7 @@ async def _execute_harness_tool_inner(
             sec_err = _check_gsd_secret_guard(code_str)
             if sec_err:
                 return {"ok": False, "output": sec_err, "diff": "", "elapsed_ms": 1}
+            _LAST_SUBPROCESS_CONTAINED.set(False)
             try:
                 ec, out_b, _truncated, timed_out = await _execute_limited(
                     root, code_str, timeout=20.0, max_output_bytes=256_000, python_code=True,
@@ -8930,8 +9226,18 @@ async def _execute_harness_tool_inner(
                     "diff": "",
                     "elapsed_ms": 20000,
                 }
+            py_contained = _LAST_SUBPROCESS_CONTAINED.get() or (ec is not None and ec < 0)
             ec = int(ec if ec is not None else 1)
             out_txt = out_b.decode("utf-8", errors="replace").strip() or "(no stdout)"
+            if py_contained:
+                return {
+                    "ok": False,
+                    "uncertain": True,
+                    "error_code": "subprocess_contained",
+                    "output": f"[Context-Mode Python Sandbox • terminated by containment • exit_code={ec}]\n{out_txt}",
+                    "diff": "",
+                    "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                }
             return {
                 "ok": ec == 0,
                 "output": f"[Context-Mode Python Sandbox • exit_code={ec}]\n{out_txt}",
@@ -9138,7 +9444,39 @@ def get_durable_action_ledger(workspace_root: Path | None = None) -> side_effect
         STORAGE,
         DB_PATH,
         reconciler=lambda rec, tname, a: _reconcile_app_action(target_root, rec, tname, a),
+        on_action_resolved=lambda aid: get_containment_store().release_holds_for_action(aid),
     )
+
+
+def _on_worker_epochs_fenced(
+    task_id: str,
+    epochs: Sequence[runtime_persistence.TaskEpochRecord],
+    reason: str,
+) -> None:
+    supervisor = get_process_supervisor()
+    for ep in epochs:
+        supervisor.store.fence_origin(
+            reason=reason,
+            task_id=task_id,
+            epoch=ep.epoch,
+            worker_id=ep.worker_id,
+        )
+        supervisor.contain_by_scope_sync(
+            task_id=task_id,
+            epochs=(ep.epoch,),
+            worker_id=ep.worker_id,
+            reason=reason,
+            quarantine_session=False,
+        )
+
+
+def _check_containment_resumption_blockers(task_id: str, workspace_dir: str) -> tuple[str, ...]:
+    ws_clean = str(workspace_dir or "").strip()
+    holds = get_containment_store().find_resumption_holds(
+        task_id=task_id,
+        workspace_root=ws_clean if ws_clean else None,
+    )
+    return tuple(h.action_id or h.hold_id for h in holds)
 
 
 class _AppIntentLedger:
@@ -9206,6 +9544,8 @@ def get_worker_lease_coordinator(
     return side_effect_ledger.WorkerLeaseCoordinator(
         runtime_persistence.RuntimePersistenceStore(STORAGE, DB_PATH),
         get_durable_action_ledger(workspace_root),
+        on_epochs_fenced=_on_worker_epochs_fenced,
+        resumption_blocker=_check_containment_resumption_blockers,
     )
 
 
@@ -9216,7 +9556,12 @@ def get_recovery_guard() -> recovery_guard.RecoveryGuard:
 
 def get_task_state_machine() -> workflow_state.DurableTaskStateMachine:
     """Return the authoritative M5-P1-05 root-task, milestone, budget, and checkpoint state machine."""
-    return workflow_state.DurableTaskStateMachine(STORAGE, DB_PATH, recovery_memory=get_recovery_guard())
+    return workflow_state.DurableTaskStateMachine(
+        STORAGE,
+        DB_PATH,
+        recovery_memory=get_recovery_guard(),
+        containment_store=get_containment_store(),
+    )
 
 
 def _extract_session_known_action_args(session_id: str) -> dict[str, dict[str, Any]]:
@@ -9698,6 +10043,27 @@ def _on_footprint_reconciled(
         event_type = "execution/footprint_reconciled"
     else:
         return
+    if reconciliation.status == "policy_violation":
+        try:
+            get_containment_store().record_incident(
+                session_id=session_id,
+                task_id=None,
+                epoch=None,
+                worker_id=None,
+                reason="footprint_policy_violation",
+                details={
+                    "tool": profile.descriptor.tool_name,
+                    "quarantined_paths": list(reconciliation.quarantined_paths[:20]),
+                    "policy_violations": [dict(v) for v in reconciliation.policy_violations[:10]],
+                },
+            )
+            get_process_supervisor().contain_by_scope_sync(
+                session_id=session_id,
+                reason="footprint_policy_violation",
+                quarantine_session=False,
+            )
+        except Exception:
+            pass
     _safe_append_harness_event(
         session_id,
         event_type,
@@ -9759,6 +10125,9 @@ async def _run_authorized_tool(
         ),
         execution_mode_fn=_safe_execution_mode_label,
         on_reconciled=_on_footprint_reconciled,
+        containment_store=get_containment_store(),
+        current_boot_id=_PROCESS_BOOT_ID,
+        sql_task_fencing=True,
     )
     boundary = execution_spine.DurableActionBoundary(
         _AppToolPolicy(workspace_root=workspace_root),
@@ -10223,10 +10592,16 @@ async def api_delete_harness_session(session_id: str) -> JSONResponse:
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     _HARNESS_ABORT_FLAGS.add(session_id)
+    del_reports = await get_process_supervisor().contain_by_scope_async(
+        session_id=session_id,
+        task_id=session_id,
+        reason="session_deleted",
+    )
     get_worker_lease_coordinator(Path(sess["worktree_dir"]).resolve()).fence_and_halt(
         session_id,
         target_state="cancelled",
         reason="session_deleted",
+        sweep_in_flight=True,
     )
     _remove_harness_worktree(Path(sess["workspace_dir"]), Path(sess["worktree_dir"]), sess.get("branch_name") or "")
     runtime_persistence.run_write_transaction(
@@ -10239,6 +10614,16 @@ async def api_delete_harness_session(session_id: str) -> JSONResponse:
         if p.exists():
             p.unlink(missing_ok=True)
     _workspace_snapshot_store().delete_session_snapshots(session_id)
+    execution_profiles.FootprintReconciliationLedger(HARNESS_STORE_DIR).purge_session(session_id)
+    if (
+        not del_reports
+        or (
+            bool(sess.get("use_worktree"))
+            and not Path(sess["worktree_dir"]).exists()
+            and not any(r.lingering_pids for r in del_reports)
+        )
+    ):
+        get_containment_store().purge_session(session_id)
     return JSONResponse({"status": "deleted", "sessions": list_harness_sessions_db()})
 
 
@@ -10346,6 +10731,11 @@ async def api_abort_harness(session_id: str) -> JSONResponse:
     for aid, slot in list(_PENDING_APPROVALS.items()):
         if slot.get("session_id") == session_id and not slot["event"].is_set():
             _resolve_pending_tool_approval(aid, "reject", note="Run aborted by user.", session_id=session_id, remember=True)
+    abort_reports = await get_process_supervisor().contain_by_scope_async(
+        session_id=session_id,
+        task_id=session_id,
+        reason="aborted_by_operator",
+    )
     try:
         sess_ab = get_harness_session_db(session_id)
         wt_ab = Path(sess_ab["worktree_dir"]).resolve() if sess_ab.get("worktree_dir") else None
@@ -10355,9 +10745,19 @@ async def api_abort_harness(session_id: str) -> JSONResponse:
         session_id,
         target_state="paused",
         reason="aborted_by_operator",
+        sweep_in_flight=True,
     )
     _update_harness_session_state(session_id, status="idle")
-    return JSONResponse({"status": "aborted", "session_id": session_id})
+    return JSONResponse(
+        {
+            "status": "aborted",
+            "session_id": session_id,
+            "contained_processes": len(abort_reports),
+            "containment": get_containment_store().summary(
+                session_id=session_id, task_id=session_id
+            ),
+        }
+    )
 
 
 def _serialize_task_record(rec: runtime_persistence.TaskRecord) -> dict[str, Any]:
@@ -10760,6 +11160,18 @@ def _recovery_summary_or_none(task_id: str) -> dict[str, Any] | None:
         return {"error": str(exc)[:240], "schema_version": recovery_guard.RECOVERY_SCHEMA_VERSION}
 
 
+def _containment_summary_or_none(session_id: str) -> dict[str, Any]:
+    """Read-only process-supervision & containment view; corruption is reported explicitly."""
+    try:
+        return get_containment_store().summary(session_id=session_id, task_id=session_id)
+    except (process_supervision.ProcessSupervisionError, OSError) as exc:
+        return {
+            "error": str(exc)[:240],
+            "corrupt": True,
+            "schema_version": process_supervision.CONTAINMENT_SCHEMA_VERSION,
+        }
+
+
 @app.get("/api/harness/sessions/{session_id}/task")
 async def api_get_harness_task_state(session_id: str) -> JSONResponse:
     """Return durable root-task state, child milestones, checkpoints, budgets, and transition log."""
@@ -10818,6 +11230,7 @@ async def api_get_harness_task_state(session_id: str) -> JSONResponse:
             "verification_spec": ver_spec.to_dict() if ver_spec is not None else None,
             "verification_evidence": ver_evidence_preview,
             "recovery": _recovery_summary_or_none(session_id),
+            "containment": _containment_summary_or_none(session_id),
             "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
             "checkpoint_integrity_error": integrity_error,
             "checkpoints": [ck.to_dict() for ck in checkpoints],
@@ -10888,23 +11301,66 @@ async def api_cancel_harness_session(session_id: str, request: Request) -> JSONR
     for aid, slot in list(_PENDING_APPROVALS.items()):
         if slot.get("session_id") == session_id and not slot["event"].is_set():
             _resolve_pending_tool_approval(aid, "reject", note="Run cancelled by operator.", session_id=session_id, remember=True)
+    supervisor = get_process_supervisor()
+    cancel_reports = await supervisor.contain_by_scope_async(
+        session_id=session_id,
+        task_id=session_id,
+        reason=reason,
+    )
     sm = get_task_state_machine()
-    sm.ensure_root_task(
+    pre_task, _ = sm.ensure_root_task(
         session_id,
         session_id=session_id,
         title=str(sess.get("title") or ""),
         workspace_dir=str(sess.get("worktree_dir") or ""),
         policy=str(sess.get("policy") or "standard"),
     )
+    active_ep = (
+        sm.store.get_epoch(session_id, pre_task.current_epoch)
+        if pre_task.current_epoch > 0
+        else None
+    )
     try:
         outcome = sm.cancel_task(session_id, reason=reason)
     except workflow_state.WorkflowTransitionRejected as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if active_ep is not None:
+        supervisor.store.fence_origin(
+            reason=reason,
+            session_id=session_id,
+            task_id=session_id,
+            epoch=active_ep.epoch,
+            worker_id=active_ep.worker_id,
+        )
+    wt_cancel_str = str(Path(sess["worktree_dir"]).resolve()) if sess.get("worktree_dir") else ""
+    if wt_cancel_str and outcome.unresolved_action_ids:
+        existing_hold_actions = {h.action_id for h in supervisor.store.list_holds()}
+        for u_aid in outcome.unresolved_action_ids:
+            if u_aid not in existing_hold_actions:
+                supervisor.store.persist_barrier_hold(
+                    process_supervision.PersistedBarrierHold(
+                        hold_id=f"hold-{hashlib.sha256(u_aid.encode('utf-8')).hexdigest()[:16]}",
+                        session_id=session_id,
+                        task_id=session_id,
+                        epoch=outcome.task.current_epoch or None,
+                        worker_id=(active_ep.worker_id if active_ep is not None else None),
+                        action_id=u_aid,
+                        tool_name="in_flight_cancelled",
+                        footprint_scope="conservative_workspace",
+                        workspace_root=wt_cancel_str,
+                        barriers=((f"workspace:{wt_cancel_str}", "exclusive"),),
+                        reason=reason,
+                    )
+                )
     _update_harness_session_state(session_id, status="cancelled")
     _append_harness_event(
         session_id,
         "turn/cancelled",
-        {"reason": reason, "unresolved_action_ids": list(outcome.unresolved_action_ids)},
+        {
+            "reason": reason,
+            "unresolved_action_ids": list(outcome.unresolved_action_ids),
+            "contained_processes": len(cancel_reports),
+        },
         dedupe_key=f"turn-cancelled:{outcome.task.current_epoch}",
     )
     return JSONResponse(
@@ -10912,8 +11368,107 @@ async def api_cancel_harness_session(session_id: str, request: Request) -> JSONR
             "status": "cancelled",
             "session_id": session_id,
             "unresolved_action_ids": list(outcome.unresolved_action_ids),
+            "contained_processes": len(cancel_reports),
+            "containment": _containment_summary_or_none(session_id),
             "task": _serialize_task_record(outcome.task),
             "budget": outcome.budget.to_dict(),
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/contain")
+async def api_contain_harness_session(session_id: str, request: Request) -> JSONResponse:
+    """Contain in-flight subprocesses, fence active origins, and persist barriers on security incident."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    reason = "security_incident"
+    quarantine_session = True
+    try:
+        body = await request.json()
+        if isinstance(body, dict):
+            if body.get("reason"):
+                reason = str(body["reason"])[:160]
+            if "quarantine_session" in body:
+                quarantine_session = bool(body["quarantine_session"])
+    except Exception:
+        pass
+    _HARNESS_ABORT_FLAGS.add(session_id)
+    for aid, slot in list(_PENDING_APPROVALS.items()):
+        if slot.get("session_id") == session_id and not slot["event"].is_set():
+            _resolve_pending_tool_approval(
+                aid, "reject", note="Contained due to security incident.", session_id=session_id, remember=True
+            )
+    wt_path = Path(sess["worktree_dir"]).resolve() if sess.get("worktree_dir") else None
+    supervisor = get_process_supervisor()
+    reports = await supervisor.contain_by_scope_async(
+        session_id=session_id,
+        task_id=session_id,
+        reason=reason,
+        quarantine_session=quarantine_session,
+    )
+    fenced_eps = get_worker_lease_coordinator(wt_path).fence_and_halt(
+        session_id,
+        target_state="blocked",
+        reason=reason,
+        sweep_in_flight=True,
+    )
+    unresolved = [
+        r.action_id
+        for r in get_durable_action_ledger(wt_path).list_unresolved_consequential_actions(session_id)
+    ]
+    if wt_path is not None and unresolved:
+        wt_str = str(wt_path)
+        existing_hold_actions = {h.action_id for h in supervisor.store.list_holds()}
+        for u_aid in unresolved:
+            if u_aid not in existing_hold_actions:
+                supervisor.store.persist_barrier_hold(
+                    process_supervision.PersistedBarrierHold(
+                        hold_id=f"hold-{hashlib.sha256(u_aid.encode('utf-8')).hexdigest()[:16]}",
+                        session_id=session_id,
+                        task_id=session_id,
+                        action_id=u_aid,
+                        tool_name="incident_swept",
+                        footprint_scope="conservative_workspace",
+                        workspace_root=wt_str,
+                        barriers=((f"workspace:{wt_str}", "exclusive"),),
+                        reason=reason,
+                    )
+                )
+    incident = supervisor.store.record_incident(
+        session_id=session_id,
+        task_id=session_id,
+        epoch=(fenced_eps[0].epoch if fenced_eps else None),
+        worker_id=(fenced_eps[0].worker_id if fenced_eps else None),
+        reason=reason,
+        details={
+            "quarantine_session": quarantine_session,
+            "contained_processes": len(reports),
+            "unresolved_action_ids": unresolved,
+        },
+    )
+    _update_harness_session_state(session_id, status="blocked")
+    _append_harness_event(
+        session_id,
+        "security/containment",
+        {
+            "incident_id": incident["incident_id"],
+            "reason": reason,
+            "quarantine_session": quarantine_session,
+            "contained_processes": len(reports),
+            "unresolved_action_ids": unresolved,
+        },
+    )
+    return JSONResponse(
+        {
+            "status": "contained",
+            "session_id": session_id,
+            "incident_id": incident["incident_id"],
+            "quarantine_session": quarantine_session,
+            "contained_processes": len(reports),
+            "unresolved_action_ids": unresolved,
+            "containment": _containment_summary_or_none(session_id),
         }
     )
 
