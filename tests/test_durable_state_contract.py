@@ -27,6 +27,7 @@ import pytest
 
 import mcp_client
 import process_supervision
+import routing_policy
 import sandbox_boundary
 import scoped_grants
 
@@ -76,6 +77,11 @@ def _write_security_incidents(root: Path) -> None:
     )
 
 
+def _write_handoffs(root: Path) -> None:
+    store = routing_policy.PortableHandoffStore(root)
+    store.reserve_switch_attempt("sess-contract")
+
+
 WriteFn = Callable[[Path], None]
 ErrorCls = type[BaseException]
 
@@ -105,6 +111,12 @@ STORE_CASES: list[tuple[str, WriteFn, Path, ErrorCls]] = [
         Path("security_incidents") / "state.json",
         sandbox_boundary.SecurityIncidentIntegrityError,
     ),
+    (
+        "handoffs",
+        _write_handoffs,
+        Path("handoffs") / "state.json",
+        routing_policy.HandoffStoreIntegrityError,
+    ),
 ]
 _CASES = [pytest.param(w, rel, err, id=name) for name, w, rel, err in STORE_CASES]
 
@@ -128,6 +140,7 @@ def test_every_module_with_a_durable_state_file_is_covered() -> None:
         "grants": "scoped_grants",
         "mcp_effects": "mcp_client",
         "security_incidents": "sandbox_boundary",
+        "handoffs": "routing_policy",
     }
     covered = {
         covered_modules[relative.parts[0]] for _name, _write, relative, _err in STORE_CASES
