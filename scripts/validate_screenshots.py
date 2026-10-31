@@ -33,9 +33,22 @@ class ScreenshotError(RuntimeError):
 
 
 def ui_tabs(ui_path: Path = UI) -> tuple[str, ...]:
-    """Read the tab ids the UI actually declares."""
+    """Read the tab ids the UI actually declares.
+
+    Parsed per button rather than per attribute pattern: the rail used to carry
+    `aria-current` and now carries `role`, `id` and `aria-controls`, and a regex that
+    expects one attribute order turns an accessibility change into a false "no tabs"
+    failure. The tab id is the class and the `data-tab` value, in any order.
+    """
     text = ui_path.read_text(encoding="utf-8")
-    return tuple(re.findall(r'class="mode-tab[^"]*"\s+(?:aria-current="page"\s+)?data-tab="([a-z]+)"', text))
+    tabs = []
+    for tag in re.findall(r"<button\b[^>]*>", text):
+        if not re.search(r'class="mode-tab[^"]*"', tag):
+            continue
+        found = re.search(r'data-tab="([a-z]+)"', tag)
+        if found:
+            tabs.append(found.group(1))
+    return tuple(tabs)
 
 
 def png_size(data: bytes) -> tuple[int, int]:

@@ -367,8 +367,17 @@ async function capture(args, manifest) {
         const buttons = [...document.querySelectorAll('.mode-tab.active')];
         const panes = [...document.querySelectorAll('.pane.active')];
         const pane = document.getElementById(`pane-${tab}`);
-        if (buttons.length !== 1 || buttons[0].dataset.tab !== tab ||
-            buttons[0].getAttribute('aria-current') !== 'page' || panes.length !== 1 || panes[0] !== pane) return false;
+        // Selection is reported by whichever state model the shell uses: `aria-selected`
+        // for a tablist, `aria-current="page"` for a rail of links. Pinning one of the two
+        // turned a legitimate accessibility change into a capture failure, and the point of
+        // this check is that the clicked tab is *the* selected one and its pane is visible,
+        // not which attribute spells it.
+        const selected = buttons.length === 1 && (
+          buttons[0].getAttribute('aria-selected') === 'true' ||
+          buttons[0].getAttribute('aria-current') === 'page'
+        );
+        if (buttons.length !== 1 || buttons[0].dataset.tab !== tab || !selected ||
+            panes.length !== 1 || panes[0] !== pane) return false;
         for (let node = pane; node; node = node.parentElement) {
           const style = getComputedStyle(node);
           if (style.display === 'none' || style.visibility !== 'visible' || Number(style.opacity) <= 0) return false;

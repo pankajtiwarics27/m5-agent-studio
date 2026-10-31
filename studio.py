@@ -4365,32 +4365,35 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     <span id="connPill" class="status-pill" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="connText">Connecting...</span></span>
   </div>
 
-  <nav class="mode-tabs" aria-label="Studio Modes">
-    <button class="mode-tab" data-tab="start" onclick="switchTab('start')" title="Guided first run (Alt+6)">
+  <!-- Six panes of one application: a tablist, not six pages. The tab ids and the
+       data-tab values are the contract every handler and every screenshot uses, so
+       they do not change here; only the semantics and the keyboard path do. -->
+  <div class="mode-tabs" role="tablist" aria-label="Studio panes" aria-orientation="vertical">
+    <button class="mode-tab" role="tab" id="tab-start" data-tab="start" data-shortcut="Alt+6" aria-controls="pane-start" aria-selected="false" tabindex="-1" onclick="switchTab('start')" title="Guided first run (Alt+6)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.9 4.9l2.8 2.8"/><path d="M16.3 16.3l2.8 2.8"/><circle cx="12" cy="12" r="4"/></svg>
       <span>Start</span>
     </button>
-    <button class="mode-tab active" aria-current="page" data-tab="harness" onclick="switchTab('harness')" title="Agent harness (Alt+1)">
+    <button class="mode-tab active" role="tab" id="tab-harness" data-tab="harness" data-shortcut="Alt+1" aria-controls="pane-harness" aria-selected="true" tabindex="0" onclick="switchTab('harness')" title="Agent harness (Alt+1)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
       <span>Harness</span>
     </button>
-    <button class="mode-tab" data-tab="hall" onclick="switchTab('hall')" title="Council sessions (Alt+2)">
+    <button class="mode-tab" role="tab" id="tab-hall" data-tab="hall" data-shortcut="Alt+2" aria-controls="pane-hall" aria-selected="false" tabindex="-1" onclick="switchTab('hall')" title="Council sessions (Alt+2)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       <span>Council</span>
     </button>
-    <button class="mode-tab" data-tab="council" onclick="switchTab('council')" title="Four-stage pipeline (Alt+3)">
+    <button class="mode-tab" role="tab" id="tab-council" data-tab="council" data-shortcut="Alt+3" aria-controls="pane-council" aria-selected="false" tabindex="-1" onclick="switchTab('council')" title="Four-stage pipeline (Alt+3)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
       <span>Pipeline</span>
     </button>
-    <button class="mode-tab" data-tab="debate" onclick="switchTab('debate')" title="Compare model responses (Alt+4)">
+    <button class="mode-tab" role="tab" id="tab-debate" data-tab="debate" data-shortcut="Alt+4" aria-controls="pane-debate" aria-selected="false" tabindex="-1" onclick="switchTab('debate')" title="Compare model responses (Alt+4)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       <span>Compare</span>
     </button>
-    <button class="mode-tab" data-tab="chat" onclick="switchTab('chat')" title="Model chat (Alt+5)">
+    <button class="mode-tab" role="tab" id="tab-chat" data-tab="chat" data-shortcut="Alt+5" aria-controls="pane-chat" aria-selected="false" tabindex="-1" onclick="switchTab('chat')" title="Model chat (Alt+5)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
       <span>Chat</span>
     </button>
-  </nav>
+  </div>
 
   <div class="top-actions">
     <button class="btn" onclick="openCommandPalette()" aria-label="Open Command Palette (Cmd+K)" title="Search actions and navigate (⌘K / Ctrl+K)">
@@ -4951,7 +4954,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </div>
 
     <!-- ================= TAB 0: AUTONOMOUS AGENTIC HARNESS (v5.0) ================= -->
-    <section id="pane-start" class="pane">
+    <section id="pane-start" role="tabpanel" aria-labelledby="tab-start" class="pane">
       <div class="onboarding-shell">
         <div class="m-card">
           <div class="m-head">
@@ -4974,7 +4977,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       </div>
     </section>
 
-    <section id="pane-harness" class="pane active">
+    <section id="pane-harness" role="tabpanel" aria-labelledby="tab-harness" class="pane active">
       <div class="harness-shell">
         <aside class="harness-sidebar">
           <div style="padding:11px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
@@ -5091,7 +5094,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </section>
 
     <!-- ================= TAB 1: COUNCIL HALL ================= -->
-    <section id="pane-hall" class="pane">
+    <section id="pane-hall" role="tabpanel" aria-labelledby="tab-hall" class="pane">
       <div class="hall-shell">
         <aside class="hall-sidebar">
           <div class="hall-side-head">
@@ -5180,7 +5183,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </section>
 
     <!-- ================= TAB 2: AUTO 4-STAGE ================= -->
-    <section id="pane-council" class="pane">
+    <section id="pane-council" role="tabpanel" aria-labelledby="tab-council" class="pane">
       <div id="councilScroll" class="scroll-body">
         <div class="config-strip">
           <div class="role-grid">
@@ -5245,7 +5248,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </section>
 
     <!-- ================= TAB 3: DEBATE ================= -->
-    <section id="pane-debate" class="pane">
+    <section id="pane-debate" role="tabpanel" aria-labelledby="tab-debate" class="pane">
       <div class="scroll-body">
         <div class="config-strip" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
           <div style="flex:1; min-width:260px;">
@@ -5274,7 +5277,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </section>
 
     <!-- ================= TAB 4: DIRECT CHAT ================= -->
-    <section id="pane-chat" class="pane">
+    <section id="pane-chat" role="tabpanel" aria-labelledby="tab-chat" class="pane">
       <div class="chat-header-bar">
         <div><label class="field-lbl">Active Model (Local / Cloud / Combo)</label><select id="chatModel"></select></div>
         <div>
@@ -5487,10 +5490,16 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       }
       return;
     }
-    if (e.altKey && ["1","2","3","4","5"].includes(e.key)) {
-      e.preventDefault();
-      const map = { "1": "harness", "2": "hall", "3": "council", "4": "debate", "5": "chat" };
-      switchTab(map[e.key]);
+    if (e.altKey && !e.ctrlKey && !e.metaKey) {
+      // Read the shortcuts off the tabs instead of restating them: the title a user
+      // reads and the key that works are then the same attribute. The previous map
+      // hard-coded keys 1-5 and quietly left Alt+6 (Start) advertised but dead.
+      const tab = [...document.querySelectorAll(".mode-tab[data-shortcut]")]
+        .find(b => b.dataset.shortcut === `Alt+${e.key}`);
+      if (tab) {
+        e.preventDefault();
+        switchTab(tab.dataset.tab, { focus: true });
+      }
     }
   });
 
@@ -5695,16 +5704,60 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (box) { box.hidden = false; box.textContent = ONBOARDING_ACTION_LABELS["run-first-task"]; }
   }
 
-  function switchTab(tab) {
-    document.querySelectorAll(".mode-tab").forEach(b => {
+  // The rail is a tablist: exactly one tab is selected and exactly one tab is in the
+  // tab order. Both facts are written here and nowhere else, so a keyboard user and a
+  // screen reader see the same state the .active class paints.
+  function switchTab(tab, options = {}) {
+    const tabs = [...document.querySelectorAll(".mode-tab")];
+    let selected = null;
+    tabs.forEach(b => {
       const on = b.dataset.tab === tab;
       b.classList.toggle("active", on);
-      if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+      b.setAttribute("aria-selected", on ? "true" : "false");
+      b.tabIndex = on ? 0 : -1;
+      if (on) selected = b;
     });
     document.querySelectorAll(".pane").forEach(p => p.classList.toggle("active", p.id === `pane-${tab}`));
+    if (options.focus && selected) selected.focus();
     if (tab === "hall") refreshHallSessions();
     if (tab === "harness") loadHarnessSessions();
     if (tab === "start") refreshOnboarding();
+  }
+
+  // Arrow keys move between tabs, Home/End jump to the ends, and activation follows
+  // focus (automatic activation): in a six-item rail, requiring Enter as well as an
+  // arrow is a second keystroke for nothing. The axis follows the layout - the rail is
+  // vertical above 1100px and a horizontal strip below it - so both arrow pairs work
+  // and the reported orientation matches what the user sees.
+  function currentTabIndex(tabs) {
+    const index = tabs.findIndex(b => b.getAttribute("aria-selected") === "true");
+    return index === -1 ? 0 : index;
+  }
+  function focusTabByIndex(tabs, index) {
+    const next = tabs[(index + tabs.length) % tabs.length];
+    switchTab(next.dataset.tab, { focus: true });
+  }
+  function tabRailKeydown(event) {
+    const tabs = [...document.querySelectorAll(".mode-tab")];
+    if (tabs.length === 0) return;
+    const index = currentTabIndex(tabs);
+    const keys = {
+      ArrowDown: index + 1,
+      ArrowRight: index + 1,
+      ArrowUp: index - 1,
+      ArrowLeft: index - 1,
+      Home: 0,
+      End: tabs.length - 1,
+    };
+    if (!(event.key in keys)) return;
+    event.preventDefault();
+    focusTabByIndex(tabs, keys[event.key]);
+  }
+  function syncTabOrientation() {
+    const rail = document.querySelector(".mode-tabs");
+    if (!rail) return;
+    const horizontal = window.matchMedia("(max-width: 1100px)").matches;
+    rail.setAttribute("aria-orientation", horizontal ? "horizontal" : "vertical");
   }
   function toggleMonitorRail() {
     const layout = document.getElementById("mainLayout");
@@ -8206,6 +8259,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     });
   }
 
+  const tabRail = document.querySelector(".mode-tabs");
+  if (tabRail) tabRail.addEventListener("keydown", tabRailKeydown);
+  syncTabOrientation();
+  try {
+    window.matchMedia("(max-width: 1100px)").addEventListener("change", syncTabOrientation);
+  } catch (_) { /* older engines: the initial orientation still applies */ }
   try { applyDensity(localStorage.getItem("m5_ui_density") === "compact"); } catch (_) { applyDensity(false); }
   const advanced = document.getElementById("harnessAdvanced");
   try { advanced.open = sessionStorage.getItem("m5_harness_advanced") === "open"; } catch (_) {}

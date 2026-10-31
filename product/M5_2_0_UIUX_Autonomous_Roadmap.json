@@ -102,14 +102,14 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P1-01",
-    "next_recommended_story": "UIUX-P1-02",
-    "last_checkpoint": "2026-10-31T21:10:00Z",
+    "last_completed_story": "UIUX-P1-02",
+    "next_recommended_story": "UIUX-P1-03",
+    "last_checkpoint": "2026-11-01T01:30:00Z",
     "last_session_id": "arena/9110aa1b-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "73bc5e4",
-    "last_updated": "2026-10-31",
+    "last_verified_commit": "24b7fee",
+    "last_updated": "2026-11-01",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
       "Tab labels in this ledger (Start, Harness, Council, Pipeline, Compare, Chat) are NOT the DOM ids in static/index.html (start, harness, hall, council, debate, chat): 'Council' is data-tab=hall and 'Pipeline' is data-tab=council, while data-tab=council is the Pipeline pane. tab_registry records the mapping and tests/test_uiux_roadmap.py fails if it drifts. A session that greps for a 'pipeline' tab will not find one.",
@@ -231,10 +231,10 @@
         "UIUX-P1-05"
       ],
       "total": 5,
-      "done": 1,
+      "done": 2,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 4,
+      "not_started": 3,
       "percent_complete": 0
     },
     {
@@ -339,11 +339,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 7,
+    "done": 8,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 33,
-    "percent_complete": 18
+    "not_started": 32,
+    "percent_complete": 20
   },
   "stories": [
     {
@@ -1536,23 +1536,92 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P1-02 (Refactor navigation shell without changing routes). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-01T00:30:00Z",
+        "updated_at": "2026-11-01T01:30:00Z",
+        "completed_at": "2026-11-01T01:30:00Z",
+        "owner_session": "arena/b8e1322f-m5-agent-studio",
+        "commit_sha": "9933bf90632a7a69dd402251228fec0a8fc62fa5",
+        "changed_files": [
+          "static/index.html",
+          "studio.py",
+          "scripts/keyboard_walk.mjs",
+          "scripts/validate_screenshots.py",
+          "tests/test_navigation_shell.py",
+          "docs/uiux-2-0-navigation-shell.md",
+          "docs/uiux-2-0-program.md",
+          "docs/README.md",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "The rail is a tablist: role=tablist with an accessible name and an aria-orientation that follows the layout (vertical above 1100px, horizontal below), six role=tab buttons carrying id, aria-controls, aria-selected and a roving tabindex, and six panes carrying role=tabpanel and aria-labelledby. The data-tab values and pane ids did not change, which is what kept every handler, test and screenshot valid.",
+          "Moving between tabs is keyboard-first: ArrowDown/ArrowRight and ArrowUp/ArrowLeft move with wrapping, Home/End jump to the ends, activation follows focus, and Tab leaves the rail instead of walking all six tabs. Both arrow axes work in both orientations, because the rail is vertical on a desktop and horizontal on a narrow window.",
+          "A real defect surfaced while tracing: Alt+6 was advertised on the Start tab's title and in the ledger's tab_registry, but the key handler carried its own map of keys 1-5, so the first-run pane was the one tab no shortcut could reach and every document said otherwise. The handler now reads data-shortcut off the tabs, so title, registry and behaviour are one fact, and tests/test_navigation_shell.py checks all three against each other.",
+          "Keyboard behaviour is measured in a browser, not asserted: scripts/keyboard_walk.mjs drives real key events and reported 22 of 22 checks passing - tablist role, one selected and one tabbable tab, Tab reaching that tab and leaving on the next press, both arrow axes, Home and End, wrapping, a 2px focus ring on the focused tab, all six Alt+N shortcuts including Alt+6, and no page errors. The script fails when no browser is available rather than reporting a pass it did not earn.",
+          "The change is visually inert: with the markup and stylesheet swapped between captures on one running instance, all six panes are byte-identical before and after, and two consecutive captures of the new tree match each other. The committed baseline screenshots were neither re-shot nor hand-edited; validate_screenshots.py still reports 6 of 6.",
+          "No route, handler or control changed: the route map is unchanged at 53 call sites and 0 findings, the authorization trace unchanged at 37 state-changing routes, and the control inventory unchanged at 170 markup controls and 30 rendered by script. The only tooling change outside the frontend is the screenshots validator, which now reads tab ids per button instead of expecting one attribute order - the old regex reported 'no tabs at all' once the rail gained role and id attributes, which is a false failure rather than a passing check.",
+          "Closed at 9933bf90632a7a69dd402251228fec0a8fc62fa5: the commit whose tree the keyboard walk, the screenshot comparison and the suite ran on.",
+          "Merging main surfaced one more over-specified check, this time from another session's screenshot hardening (PR #124): its pane assertion required aria-current=\"page\" on the selected tab, which is the attribute this story replaced with aria-selected. The capture script now accepts either spelling of selection and keeps the checks that carry the meaning - one active tab matching the clicked one, one active pane matching that tab, and the pane actually visible in the viewport. With the merged tree, all 14 browser-backed capture tests in tests/test_screenshot_capture_browser.py pass, and the keyboard walk still reports 22 of 22.",
+          "Merging #127 changed what the P0 sign-off says about the owner's approval, and it is worth recording plainly: the package now reports historical-approval-unbound, because the owner's signature has no approved input digests and P1 has since changed the ledger and the artifacts. That is the honest state, not a regression, and this session did not fabricate a binding to make the page read better: binding_schema, approved_inputs and binding_reference are an owner decision, and #126 tracks the question. Regenerating the package in this state is what makes the gap visible instead of papering over it."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "1691 passed, 1 skipped"
+          },
+          {
+            "command": "node scripts/keyboard_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "22 of 22 checks passed"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_screenshots.py",
+            "exit_code": 0,
+            "result": "Screenshots validated: 6 of 6 captured and consistent with the manifest"
+          },
+          {
+            "command": "node scripts/capture_screenshots.mjs (three runs: new, pre-change markup, new)",
+            "exit_code": 0,
+            "result": "all six panes byte-identical between the two trees; the two new runs identical to each other"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_route_map.py --check",
+            "exit_code": 0,
+            "result": "53 call sites, 0 findings, 58 routes with no caller observed"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_control_inventory.py --check",
+            "exit_code": 0,
+            "result": "170 markup controls (101 chrome, 69 panes), 30 script-rendered"
+          },
+          {
+            "command": ".venv/bin/python scripts/build_studio.py && .venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "studio.py rebuilt; one inline script block parses"
+          },
+          {
+            "command": "STUDIO_SCREENSHOT_CHROME=... .venv/bin/python -m pytest -q tests/test_screenshot_capture_browser.py",
+            "exit_code": 0,
+            "result": "14 passed with the merged tree (browser-backed capture regressions from #124)"
+          }
+        ],
         "visual_evidence": [],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "The rail is a tablist, not a nav landmark with six buttons. These are six views of one application state, so tab semantics describe them; the cost is the navigation landmark, which is why the tablist carries an explicit accessible name.",
+          "Activation follows focus. In a six-item rail, requiring Enter as well as an arrow doubles the keystrokes for a switch that is instant and local.",
+          "The shortcut map was deleted rather than extended. Adding '6' to the hand-written map would have fixed this instance and preserved the defect: two lists that can disagree. The DOM attribute is now the only list.",
+          "The screenshots validator's tab parser was fixed instead of the markup being reordered to suit it. A check that fails when an element gains a legitimate attribute is not protecting anything; it is teaching the next session to avoid accessibility attributes."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "The rail is a tablist with roving tabindex; switchTab() is the only place that writes aria-selected, tabindex and the active class, so keep it that way. Shortcuts live in data-shortcut on the tabs and are read by the key handler - do not add a second map. scripts/keyboard_walk.mjs is the behavioural check for any later shell change and needs a browser; run it before claiming keyboard work. Rebuild studio.py and regenerate the source manifest after editing the frontend.",
+        "next_action": "None. UIUX-P1-03 (reusable status and evidence components) builds on this shell.",
         "readme_updated": false
       },
       "required_evidence": [
