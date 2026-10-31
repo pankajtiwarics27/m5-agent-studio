@@ -13,7 +13,6 @@ Covers all 4 implementation tasks and all 3 acceptance criteria:
 from __future__ import annotations
 
 import asyncio
-import hashlib
 from pathlib import Path
 import subprocess
 import sys
