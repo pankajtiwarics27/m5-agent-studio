@@ -97,8 +97,10 @@ managed file tool executes:
 ### What command inspection cannot see
 
 Command inspection is one layer, not the boundary. These are known and are why
-the sandbox (M5-P3-01) is the real containment, and why `unqualified` isolation
-keeps host execution unavailable:
+the sandbox (M5-P3-01) is the real containment, and why isolation has to be
+*qualified before* it is relied on: the target host qualified on 2026-10-31
+([record](m5-2-0-sandbox-isolation-evidence.md)), and any host without its own
+run — CI included — is still `unqualified` and keeps host execution unavailable:
 
 - **script file contents** — `sh build.sh` (and the equivalent `sh < build.sh`) is
   inspected as a command line, not read;

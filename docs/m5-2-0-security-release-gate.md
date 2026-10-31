@@ -122,15 +122,16 @@ only when `M5-P3-01` is `done`, `unqualified` while it is `blocked` or in progre
 read as evidence that the container sandbox holds. It is reported, not waived:
 `gate_invariants_satisfied` keeps its meaning (the harness itself blocks correctly)
 and the release decision stays `release-blocked` while any mandatory prerequisite is
-unfinished. After the 2026-10-31 operator run it reports `no`; that is the state
-`RR-02` below describes.
+unfinished. After the target-host operator run of 2026-10-31 it reports `yes` — the
+sandbox backend passed all twelve checks — and `RR-02` below records both that result
+and the swap-headroom residual it measured.
 
 ### Residual risks
 
 | ID | Severity | Area | Blocks v1.0 release | Summary and mitigation |
 |---|---|---|---|---|
 | `RR-01` | `high` | Independent security sign-off (`AS-031`) | **Yes** | `docs/security-review-signoff.md` is `state: deferred`, `decision: pending`; release gate blocks publication until an independent human reviewer signs `decision: accepted`. |
-| `RR-02` | `high` | Container execution isolation (`M5-P3-01`) | **Yes** | Measured UNQUALIFIED on the target host: the 2026-10-31 run on an Apple M5 (Docker Desktop 29.5.3) passed 11 of 12 sandbox checks and failed `p3.adversarial.memory_limit` — a 3 GiB allocation exited 0 under `--memory 512m` while the container's `memory.max` read `536870912`, so the cap was set but did not refuse the allocation (swap escape vs unenforced cgroup still open, see [`m5-2-0-sandbox-memory-limit-finding.md`](m5-2-0-sandbox-memory-limit-finding.md)). `STUDIO_EXECUTION_MODE` defaults to `disabled`, `sandbox` fails closed when unqualified, and the release gate blocks until `M5-P3-01` is qualified via `./scripts/qualify_environment.sh`. |
+| `RR-02` | `medium` | Container execution isolation (`M5-P3-01`) | No | **Qualified on the target host, measured:** the 2026-10-31 operator run on an Apple M5 (Docker Desktop 29.5.3, image `python:sha256:aa943ce41142…`) passed **12 of 12** sandbox checks, including `p3.adversarial.memory_limit` (**exit 137**, `memory.max=536870912`, `memory.swap.max=536870912`) and `isolation_smoke.py --live`, which released `dependent_execution` under the observed container boundary ([record](m5-2-0-sandbox-isolation-evidence.md)). The 2026-10-30 run that failed the same check (`exit 0`) stays recorded and was never explained, only superseded ([finding](m5-2-0-sandbox-memory-limit-finding.md)). **Residual:** the shipped `--memory=2g` carries the engine's default swap allowance, so the sandbox ceiling is RAM + swap (~4 GiB), not 2 GiB, and the qualification binds to this machine, engine and image digest; pinning `--memory-swap` to `--memory` is the pending hardening change. |
 | `RR-03` | `medium` | Release artifact signing (`AS-042`) | **Yes** | SBOM, SLSA provenance, and scans verify cleanly, but no maintainer signing key is provisioned in CI; `scripts/release_supply_chain.py gate` and `--supply-chain-dir` fail closed without `signature.json`. |
 | `RR-04` | `low` | macOS non-root thermal counters (`p4.thermal`) | No | macOS 26.6.1 hid thermal pressure counters from unprivileged processes during `M5-P4-01`; `model_admission` and `resource_admission` enforce conservative unified-memory budgets without depending on thermal counter availability. |
 | `RR-05` | `low` | Opt-in `host` execution mode limits | No | When an operator explicitly enables `STUDIO_EXECUTION_MODE=host` + `STUDIO_ALLOW_HOST_EXECUTION=1`, static command guards cannot isolate arbitrary code running as the same OS user; UI/docs label host mode unsandboxed and default execution stays `disabled`. |

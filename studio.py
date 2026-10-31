@@ -58501,24 +58501,30 @@ DEFAULT_RESIDUAL_RISKS: tuple[ResidualRiskEntry, ...] = (
     ),
     ResidualRiskEntry(
         risk_id="RR-02",
-        severity="high",
+        severity="medium",
         area="container-execution-isolation",
         summary=(
-            "M5-P3-01 container isolation is UNQUALIFIED, measured: the 2026-10-31 operator run on the target "
-            "host (Apple M5, Docker Desktop 29.5.3) passed 11 of 12 sandbox checks and failed "
-            "p3.adversarial.memory_limit - a 3 GiB allocation completed (exit 0) under '--memory 512m' while the "
-            "container's own /sys/fs/cgroup/memory.max read 536870912, so the memory cap was set but did not "
-            "refuse the allocation. Whether swap let it escape the cap or the cgroup was not enforced is "
-            "undecided (docs/m5-2-0-sandbox-memory-limit-finding.md); host execution mode still relies on "
-            "static inspection and process containment, not OS/VM isolation."
+            "M5-P3-01 container isolation is QUALIFIED on the target host, measured: the 2026-10-31 operator "
+            "run on an Apple M5 (Docker Desktop 29.5.3) passed all 12 sandbox checks, including "
+            "p3.adversarial.memory_limit (exit 137, memory.max=536870912 and memory.swap.max=536870912 "
+            "captured before and after a 3 GiB allocation) and isolation_smoke.py --live, which released "
+            "dependent_execution under the observed container boundary. The 2026-10-30 run that failed that "
+            "check stays recorded and was never explained, only superseded "
+            "(docs/m5-2-0-sandbox-isolation-evidence.md). Residual: the shipped '--memory=2g' carries the "
+            "engine's default swap allowance, so the sandbox ceiling is RAM plus swap (roughly 4 GiB), not "
+            "2 GiB; the qualification binds to this machine, engine version and image digest."
         ),
         mitigation=(
             "STUDIO_EXECUTION_MODE defaults to 'disabled'; 'sandbox' mode fails closed when no qualified "
-            "container runtime is available; dependent_execution stays blocked and the release gate blocks v1.0 "
-            "until M5-P3-01 is qualified, and '--memory-swap' parity is hardened once the finding is triaged."
+            "container runtime is available; the runner re-checks runtime version, image digest and the "
+            "product's hardening flags before reusing a record, so another host or a re-pulled image starts "
+            "unqualified. Pinning '--memory-swap' to '--memory' is the pending hardening change."
         ),
-        revisit_trigger="Operator runs ./scripts/qualify_environment.sh with Docker/Podman and records M5-P3-01.",
-        blocks_release=True,
+        revisit_trigger=(
+            "A new host/engine/image needs its own operator run, or the '--memory-swap' parity hardening "
+            "ships and is re-qualified."
+        ),
+        blocks_release=False,
     ),
     ResidualRiskEntry(
         risk_id="RR-03",

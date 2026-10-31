@@ -315,14 +315,18 @@ repository is still a run; the numbers are transcribed where the record lives.
 
 | Date | Machine | Suite | Verdict | Record |
 |---|---|---|---|---|
+| 2026-10-31 | Apple M5, arm64, 24.0 GiB, macOS 26.6.1, Docker Desktop 29.5.3 (build `d1c06ef`) | `--sandbox --runtime docker` (`./scripts/qualify_environment.sh`) | **qualified** — 12 of 12 checks pass, including `p3.adversarial.memory_limit` (exit 137; `memory.max=536870912`, `memory.swap.max=536870912`) and `isolation_smoke.py --live` | [`m5-2-0-sandbox-isolation-evidence.md`](m5-2-0-sandbox-isolation-evidence.md) |
 | 2026-10-31 | Apple M5, arm64, 24.0 GiB, macOS 26.6.1, Docker Desktop 29.5.3, `main` at `d0e47f0` | `--hardware --pressure-gb 16 --model-runs 3` | **qualified** (8 checks; `p4.thermal` blocked, `p4.coding_cases` skipped, both non-required) | [`m5-2-0-hardware-qualification-evidence.md`](m5-2-0-hardware-qualification-evidence.md) |
 | 2026-10-31 | same machine | `--sandbox --runtime docker` | **unqualified** — failed `p3.adversarial.memory_limit`: 3 GiB allocated under `--memory 512m` with `memory.max` reading 536870912 inside the container. That record predates the counter-capture added below, so it says only `exit 0`; the next run on a host where this check fails will name the mechanism | this page, below |
 | 2026-10-30 | Linux x86_64 CI container, ~4 GB RAM | `--all` | `blocked` — no container runtime, not the target hardware | [`m5-2-0-baseline-evidence.md`](m5-2-0-baseline-evidence.md) |
 
-The sandbox failure is recorded, not waived: `M5-P3-01` stays `blocked` and
-container isolation stays unavailable until a re-run is `qualified`; what it could
-mean for the product and which controls would settle it are tracked in
-[`m5-2-0-sandbox-memory-limit-finding.md`](m5-2-0-sandbox-memory-limit-finding.md).
+The earlier sandbox failure is recorded, not erased: the 2026-10-31 rows contain
+both the failing run and the later run that qualified the same check, and the
+[finding page](m5-2-0-sandbox-memory-limit-finding.md) explains why the passing run
+supersedes the failing one without explaining it. The qualified record measures a
+residual too — the shipped `--memory=2g` carries the engine's default swap
+allowance, so the sandbox ceiling is RAM + swap (~4 GiB), not 2 GiB — in
+[`m5-2-0-sandbox-isolation-evidence.md`](m5-2-0-sandbox-isolation-evidence.md).
 The first
 hardware attempt on that machine (`qualification-20261031T074346Z`) was also
 `unqualified`, because the operator's own command inlined an empty `--server-pid`
