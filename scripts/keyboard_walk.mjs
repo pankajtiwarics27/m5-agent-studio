@@ -120,6 +120,36 @@ function resolveChrome() {
   );
 }
 
+function demoUrl(value) {
+  let url;
+  try { url = new URL(value); } catch { throw new Error("--base-url must be a loopback demo URL"); }
+  if (!["http:", "https:"].includes(url.protocol) ||
+      !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) ||
+      url.username || url.password || url.pathname !== "/" || url.search || url.hash) {
+    throw new Error("--base-url must be an HTTP(S) loopback origin without a path, credentials, query, or fragment");
+  }
+  return url;
+}
+
+async function verifyAuth(url, token, timeoutMs) {
+  const endpoint = new URL("/api/workspace/directory", url);
+  const options = { redirect: "manual", signal: AbortSignal.timeout(timeoutMs) };
+  const without = await fetch(endpoint, options);
+  if (without.status !== 401) throw new Error("demo API did not require authentication");
+  const withToken = await fetch(endpoint, {
+    redirect: "manual", signal: AbortSignal.timeout(timeoutMs),
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (withToken.status !== 200 || !(withToken.headers.get("content-type") || "").includes("application/json")) {
+    throw new Error("demo API did not accept the supplied token");
+  }
+  let data;
+  try { data = await withToken.json(); } catch { throw new Error("demo API returned invalid JSON"); }
+  if (!data || typeof data.workspace_dir !== "string" || !Array.isArray(data.recent_dirs)) {
+    throw new Error("demo API returned an unexpected workspace response");
+  }
+}
+
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
 async function state(page) {
@@ -147,6 +177,11 @@ async function state(page) {
 }
 
 async function run(args) {
+  const url = demoUrl(args.baseUrl);
+  if (!/^[A-Za-z0-9._~-]{32,}$/.test(args.token)) throw new Error("--token must be a valid throwaway demo token");
+  if (!Number.isSafeInteger(args.timeoutMs) || args.timeoutMs <= 0) throw new Error("--timeout-ms must be a positive integer");
+  if (!Number.isFinite(args.settleMs) || args.settleMs < 0) throw new Error("--settle-ms must be non-negative");
+  await verifyAuth(url, args.token, args.timeoutMs);
   const puppeteer = await loadPuppeteer();
   const browser = await puppeteer.launch({
     executablePath: resolveChrome(),
@@ -168,15 +203,49 @@ async function run(args) {
   try {
     const page = await browser.newPage();
     await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
-    const errors = [];
-    page.on("pageerror", (error) => errors.push(String(error)));
-    await page.evaluateOnNewDocument((key, token) => {
-      try {
+    let errors = 0;
+    let unexpectedNavigation = false;
+    let initialRequest = true;
+    page.on("pageerror", () => { errors += 1; });
+    page.on("dialog", (dialog) => { errors += 1; void dialog.dismiss(); });
+    page.on("framenavigated", (frame) => {
+      if (frame === page.mainFrame() && frame.url() !== url.href) unexpectedNavigation = true;
+    });
+    await page.setRequestInterception(true);
+    page.on("request", (request) => {
+      if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
+        const allowed = initialRequest && request.url() === url.href && request.redirectChain().length === 0;
+        initialRequest = false;
+        if (!allowed) {
+          unexpectedNavigation = true;
+          void request.abort();
+          return;
+        }
+      }
+      void request.continue();
+    });
+    // New-document scripts run in every frame, so check both frame and origin.
+    await page.evaluateOnNewDocument((key, token, origin) => {
+      if (window.top === window && location.origin === origin) {
         window.sessionStorage.setItem(key, token);
-      } catch (_error) {}
-    }, args.tokenKey, args.token);
-    await page.goto(args.baseUrl, { waitUntil: "domcontentloaded", timeout: args.timeoutMs });
+      }
+    }, args.tokenKey, args.token, url.origin);
+    const response = await page.goto(url.href, { waitUntil: "domcontentloaded", timeout: args.timeoutMs });
+    if (!response || response.status() !== 200 || response.request().redirectChain().length ||
+        !(response.headers()["content-type"] || "").includes("text/html")) {
+      throw new Error("demo document was not a direct successful HTML response");
+    }
+    const browserAuth = await page.evaluate(async () => {
+      const response = await fetch("/api/workspace/directory", { redirect: "error", cache: "no-store" });
+      if (response.status !== 200) return false;
+      const data = await response.json();
+      return typeof data.workspace_dir === "string" && Array.isArray(data.recent_dirs);
+    });
+    if (!browserAuth) throw new Error("browser could not authenticate to the demo API");
     await sleep(args.settleMs * 4);
+    if (unexpectedNavigation || page.url() !== url.href) {
+      throw new Error("unexpected main-frame navigation during keyboard walk");
+    }
 
     const initial = await state(page);
     record("the rail is a tablist", initial.role === "tablist", `role=${initial.role}`);
@@ -294,7 +363,10 @@ async function run(args) {
       );
     }
 
-    record("no page errors during the walk", errors.length === 0, errors.join("; "));
+    record("no page errors during the walk", errors === 0, `${errors} page error(s) or dialog(s)`);
+    if (unexpectedNavigation || page.url() !== url.href) {
+      throw new Error("unexpected main-frame navigation during keyboard walk");
+    }
   } finally {
     await browser.close();
   }
