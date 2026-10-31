@@ -2367,6 +2367,67 @@ def _ep_quarantine_created_artifact(resolved_ws: Path, rel_posix: str) -> bool:
     return False
 
 
+_EP_DANGEROUS_GIT_CONFIG_KEYS: frozenset[str] = frozenset(
+    {
+        "core.fsmonitor",
+        "core.sshcommand",
+        "core.hookspath",
+        "core.gitproxy",
+        "credential.helper",
+    }
+)
+
+
+def _ep_git_config_directives(text: str) -> list[str]:
+    """Dotted ``section[.sub].key`` names in a Git config file, in file order.
+
+    Git writes the *sectioned* form (``[credential]`` then ``helper = ...``), never
+    the dotted form, so a regex over the raw text recognises only what a human
+    would type at the command line. This parses sections, subsections and keys
+    so both spellings resolve to the same name.
+    """
+    names: list[str] = []
+    section = ""
+    for raw_line in (text or "").splitlines():
+        line = raw_line.strip()
+        if not line or line[0] in "#;":
+            continue
+        if line.startswith("["):
+            end = line.find("]")
+            inner = line[1:end] if end != -1 else line[1:]
+            if end == -1:
+                continue  # malformed header: nothing to attribute keys to
+            head, _, rest = inner.partition(" ")
+            sub = rest.strip().strip('"')
+            section = head.strip().lower() + (f".{sub.lower()}" if sub else "")
+            continue
+        key, sep, _value = line.partition("=")
+        key = key.strip().lower()
+        if not key or not sep:
+            if key:
+                names.append(f"{section}.{key}" if section else key)
+            continue
+        names.append(f"{section}.{key}" if section else key)
+    return names
+
+
+def _ep_git_config_dangerous_directives(text: str) -> list[str]:
+    """The directives that make a config file an execution or secret-exfiltration vector."""
+    found: list[str] = []
+    for name in _ep_git_config_directives(text):
+        if name in _EP_DANGEROUS_GIT_CONFIG_KEYS:
+            found.append(name)
+        elif name.startswith("filter.") and name.rsplit(".", 1)[-1] in {"clean", "smudge"}:
+            found.append(name)
+        elif name.startswith("include.") or (
+            name.startswith("includeif.") and name.endswith(".path")
+        ):
+            # An include pulls in configuration this policy never inspected,
+            # including any directive listed above.
+            found.append(name)
+    return found
+
+
 def _ep_git_config_has_dangerous_directives(git_config_path: Path) -> bool:
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
     try:
@@ -2382,7 +2443,7 @@ def _ep_git_config_has_dangerous_directives(git_config_path: Path) -> bool:
             os.close(fd)
         except OSError:
             pass
-    return bool(_EP_DANGEROUS_GIT_CONFIG_RE.search(raw))
+    return bool(_ep_git_config_dangerous_directives(raw))
 
 
 def observe_and_reconcile(

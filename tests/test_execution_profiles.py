@@ -776,6 +776,64 @@ def test_conservative_shell_expansion_is_observed_and_durably_reconciled(
     assert ledger.purge_session("sess-expand-ok") is False
 
 
+@pytest.mark.parametrize(
+    ("config_text", "expected"),
+    [
+        # Git writes the sectioned form; only the dotted form matched the old regex.
+        ("[credential]\n\thelper = !/tmp/evil\n", True),
+        ('[filter "lfs"]\n\tclean = /tmp/evil %f\n', True),
+        ('[filter "lfs"]\n\tsmudge = /tmp/evil %f\n', True),
+        ("[core]\n\thooksPath = /tmp/evil\n", True),
+        ("[core]\n\tfsmonitor = /tmp/evil\n", True),
+        ("[core]\n\tsshCommand = /tmp/evil\n", True),
+        ("[core]\n\tgitProxy = /tmp/evil\n", True),
+        ("[include]\n\tpath = /tmp/evil\n", True),
+        ('[includeIf "gitdir:/w/"]\n\tpath = /tmp/evil\n', True),
+        # The benign shapes that must keep working (a plain `git init` writes this).
+        ("[core]\n\trepositoryformatversion = 0\n\tbare = false\n\tfilemode = true\n", False),
+        ('[remote "origin"]\n\turl = git@example.com:x.git\n', False),
+        ("[core]\n\tpager = less\n[alias]\n\tst = status\n", False),
+        ("# [credential]\n# helper = /tmp/evil\n[core]\n\tbare = false\n", False),
+    ],
+)
+def test_git_config_directives_are_parsed_not_pattern_matched(
+    config_text: str, expected: bool
+) -> None:
+    """Post-execution must not be weaker than pre-execution on the same directive."""
+    assert bool(ep._ep_git_config_dangerous_directives(config_text)) is expected
+
+
+def test_a_planted_credential_helper_config_is_a_violation_not_benign(
+    isolated_env: Path,
+) -> None:
+    """A fresh `.git/config` with a sectioned credential helper is code execution.
+
+    The reconciliation path deliberately tolerates a `git init`-shaped config, so
+    the tolerance must be decided by parsing the directives. A regex over the raw
+    text missed `[credential]` + `helper = ...`, which git always writes in that
+    form, and the run was reported `clean`.
+    """
+    (isolated_env / ".git").mkdir(exist_ok=True)
+    sess = _session(isolated_env, sid="sess-gitcfg", policy="autonomous")
+
+    # The path is assembled from codepoints so only post-execution observation can
+    # see it; the static inspector is exercised by the test above.
+    code = (
+        "import os\n"
+        "git_dir = bytes([46, 103, 105, 116]).decode()\n"
+        "os.makedirs(git_dir, exist_ok=True)\n"
+        "cfg = '[' + 'credential' + ']' + chr(10) + chr(9) + 'helper = !/tmp/evil-helper' + chr(10)\n"
+        "open(os.path.join(git_dir, 'config'), 'w').write(cfg)\n"
+    )
+    res = _run_tool(sess, "ctx_execute_python", {"code": code}, call_index=1)
+    assert res["ok"] is False, res
+    assert res["error_code"] == "footprint_policy_violation", res
+    rec = res["footprint_reconciliation"]
+    assert rec["status"] == "policy_violation"
+    reasons = {item["reason"] for item in rec.get("policy_violations", [])}
+    assert "protected_vcs_created" in reasons, rec
+
+
 def test_runtime_obfuscated_secret_hook_and_symlink_creations_are_quarantined_post_execution(
     isolated_env: Path,
 ) -> None:
