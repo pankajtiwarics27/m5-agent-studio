@@ -133,6 +133,7 @@ measurements without trusting them).
 · [`uiux-2-0-overlays.md`](uiux-2-0-overlays.md) (generated P1-04 overlay layer: nine dialogs on one controller, the shortcut registry and the inspector drawer)
 · [`../M5_2_0_UIUX_AGENT_PROMPT.md`](../M5_2_0_UIUX_AGENT_PROMPT.md) (UI/UX claim, review and merge protocol)
 · [`uiux-2-0-coordination.md`](uiux-2-0-coordination.md) (read-only readiness check, current handoff and capture risks)
+· [`uiux-coordination-ledger-drift-followup.md`](uiux-coordination-ledger-drift-followup.md) (reconciled UI/UX phase summaries and status-walk token-exposure follow-up)
 
 ## M5 2.0 ground-truth evidence (2026-10-30)
 
