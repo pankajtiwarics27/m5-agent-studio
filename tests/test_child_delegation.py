@@ -805,6 +805,18 @@ def test_delegate_subagent_tool_executes_bounded_fresh_context_and_benchmark_jus
     assert cd_comp["single_model"]["cost"]["median"] == we_comp.single_model.cost.median
     assert cd_comp["multi_agent"]["cost"]["median"] == we_comp.multi_agent.cost.median
 
+    # Regression: sub-millisecond wall-clock jitter (lat_delta < 0) must NEVER
+    # justify delegation when verified success_rate is tied (sr_delta == 0) and
+    # multi_agent spends strictly more tokens (cost_delta > 0).
+    jitter_runs = (
+        cd.DelegationEvalRun("j1", "single_model", "trivial_single_file_edit", eval_task.digest, eval_cfg.digest, hw_d, "completed", True, 12.0, 90.0, 1, 1024),
+        cd.DelegationEvalRun("j2", "multi_agent", "trivial_single_file_edit", eval_task.digest, eval_cfg.digest, hw_d, "completed", True, 11.5, 190.0, 2, 1024),
+    )
+    jitter_comp = cd.compare_delegation_runs("trivial_single_file_edit", jitter_runs)
+    assert jitter_comp["multi_agent_minus_single_model"]["latency_ms"] == -0.5
+    assert jitter_comp["multi_agent_minus_single_model"]["cost"] == 100.0
+    assert jitter_comp["delegation_overhead_justified"] is False
+
     # 4. Feeding persisted `trivial_single_file_edit` benchmark summary into worker delegation rejects overhead!
     parent_ctx, _, _ = _create_parent_session(isolated_env, policy="autonomous")
     denied_overhead = asyncio.run(

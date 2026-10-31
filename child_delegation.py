@@ -1448,7 +1448,15 @@ def compare_delegation_runs(
         "peak_memory_bytes": mem_delta,
     }
     preserves_or_improves = sr_delta >= 0.0
-    overhead_justified = bool(sr_delta > 0.0 or (sr_delta == 0.0 and (lat_delta <= 0.0 or cost_delta <= 0.0)))
+    overhead_justified = bool(
+        sr_delta > 0.0
+        or (
+            sr_delta == 0.0
+            and cost_delta <= 0.0
+            and lat_delta <= 0.0
+            and (cost_delta < 0.0 or lat_delta < 0.0)
+        )
+    )
     payload: dict[str, Any] = {
         "schema_version": CD_SCHEMA_VERSION,
         "scenario_id": clean_scen,
