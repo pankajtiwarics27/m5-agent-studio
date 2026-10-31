@@ -74,7 +74,11 @@ def _make_fake_run(behaviour: dict[str, Any] | None = None) -> Any:
             home = behaviour.get("home", "/tmp")
             return _FakeCompleted(0 if leaked == "none" else 3, f"home:{home}\ncredentials:{leaked}\n")
         if "bytearray" in code:
-            return _FakeCompleted(137, "", "Killed")
+            exit_code = behaviour.get("memory_exit", 137)
+            report = behaviour.get("memory_report") or None
+            stdout = f"{json.dumps(report)}\n" if report else ""
+            stderr = behaviour.get("memory_stderr", "" if exit_code == 0 else "Killed")
+            return _FakeCompleted(exit_code, stdout, stderr)
         if "spawned" in code:
             return _FakeCompleted(0, "spawned 42\n")
         if "ps" in argv:
@@ -350,6 +354,70 @@ def test_sandbox_suite_is_blocked_without_a_container_runtime(monkeypatch: pytes
     # Nothing that requires a container may be reported as passing.
     for check_id in ("p3.image.local", "p3.positive.execute", "p3.adversarial.escape_matrix"):
         assert statuses[check_id] == qe.STATUS_SKIP
+
+
+def test_memory_limit_denial_records_the_exit_code_as_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A refused allocation is a pass, and the record says what was refused."""
+    recorder = _run_sandbox_suite(monkeypatch)
+    result = next(r for r in recorder.results if r.check_id == "p3.adversarial.memory_limit")
+    assert result.status == qe.STATUS_PASS
+    assert result.evidence["exit_code"] == 137
+    assert result.evidence["requested_bytes"] == qe.MEMORY_PROBE_BYTES
+    # The process was killed before it could print; the absence is recorded.
+    assert result.evidence["container_report"] is None
+
+
+def test_memory_limit_failure_names_the_counters_the_container_saw(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A 3 GiB allocation that survives --memory 512m must say why it is a failure.
+
+    This is the shape the 2026-10-31 Apple M5 run produced: exit 0 with the
+    container's own memory.max below the allocation. The record has to carry the
+    numbers, otherwise the operator cannot tell a swap escape from an
+    unenforced cgroup.
+    """
+    report = {
+        "allocated_bytes": qe.MEMORY_PROBE_BYTES,
+        "rss_bytes": qe.MEMORY_PROBE_BYTES,
+        "memory_max": "536870912",
+        "memory_high": "max",
+        "memory_current": str(qe.MEMORY_PROBE_BYTES),
+        "memory_peak": str(qe.MEMORY_PROBE_BYTES),
+        "memory_swap_max": "max",
+        "memory_swap_current": "0",
+        "memory_events": "max 0 oom 0 oom_kill 0",
+    }
+    recorder = _run_sandbox_suite(
+        monkeypatch, behaviour={"memory_exit": 0, "memory_report": report}
+    )
+    result = next(r for r in recorder.results if r.check_id == "p3.adversarial.memory_limit")
+    assert result.status == qe.STATUS_FAIL
+    assert result.evidence["container_report"] == report
+    assert "memory.max=536870912" in result.detail
+    assert "swap.max=max" in result.detail
+    assert recorder.verdict(qe.STORY_P3) == "unqualified"
+
+
+def test_memory_probe_code_reports_the_cgroup_counters_it_ran_under() -> None:
+    """The probe source is executable and reports its own accounting."""
+    import subprocess
+
+    code = qe.memory_probe_code(4 * 1024 * 1024)
+    proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 0, proc.stderr
+    report = json.loads(proc.stdout.strip().splitlines()[-1])
+    assert report["allocated_bytes"] == 4 * 1024 * 1024
+    assert report["rss_bytes"] and report["rss_bytes"] >= 4 * 1024 * 1024
+    for key in (
+        "memory_max",
+        "memory_current",
+        "memory_peak",
+        "memory_swap_max",
+        "memory_swap_current",
+        "memory_events",
+    ):
+        assert key in report
 
 
 def test_sandbox_suite_fails_when_an_escape_is_observed(monkeypatch: pytest.MonkeyPatch) -> None:
