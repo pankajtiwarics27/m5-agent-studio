@@ -100,12 +100,10 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": "UIUX-P1-01",
-    "active_stories": [
-      "UIUX-P1-01"
-    ],
-    "last_completed_story": "UIUX-P0-06",
-    "next_recommended_story": "UIUX-P1-01",
+    "active_story": null,
+    "active_stories": [],
+    "last_completed_story": "UIUX-P1-01",
+    "next_recommended_story": "UIUX-P1-02",
     "last_checkpoint": "2026-10-31T21:10:00Z",
     "last_session_id": "arena/9110aa1b-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
@@ -233,8 +231,8 @@
         "UIUX-P1-05"
       ],
       "total": 5,
-      "done": 0,
-      "in_progress": 1,
+      "done": 1,
+      "in_progress": 0,
       "blocked": 0,
       "not_started": 4,
       "percent_complete": 0
@@ -341,11 +339,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 6,
-    "in_progress": 1,
+    "done": 7,
+    "in_progress": 0,
     "blocked": 0,
     "not_started": 33,
-    "percent_complete": 15
+    "percent_complete": 18
   },
   "stories": [
     {
@@ -1374,14 +1372,14 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P1-01 (Define tokens typography density and themes). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 95,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-31T20:50:00Z",
         "updated_at": "2026-10-31T21:10:00Z",
-        "completed_at": null,
+        "completed_at": "2026-10-31T21:10:00Z",
         "owner_session": "arena/9110aa1b-m5-agent-studio",
-        "commit_sha": null,
+        "commit_sha": "5011052f81c307baf9935ff23e68b468dd59b5f3",
         "changed_files": [
           "static/index.html",
           "studio.py",
@@ -1405,7 +1403,8 @@
           "Three defects in the pre-existing layer were found by the checks rather than by eye: --accent-hi was declared in both themes and read nowhere (removed rather than exempted), the light theme never re-pointed --primary-text so it silently inherited the dark value, and the density re-point was duplicated as three hand-written padding rules instead of one token. The compact rules now read --strip-pad-y and friends.",
           "The refactor is provably not a visual change at the baseline: on one running demo instance, with the stylesheet swapped between captures, all six panes are byte-identical before and after (start, harness, hall, pipeline, compare, chat), and two consecutive captures of the refactored tree are byte-identical to each other. Nothing in the committed six-image baseline was re-shot or hand-edited.",
           "Themes and density are photographed, not described: docs/media/tokens/light-900 (light theme, Start and Chat at 900x800@2) and docs/media/tokens/compact (compact density, 1440x900@2), each with its own index.json of digests, captured through the same script by seeding the shell's persisted preferences before the first document. The captures show the shell as the approved design direction describes it: rail, workspace, inspector.",
-          "Keyboard and control preservation: no markup control was added, removed or renamed (the control inventory still reports 170 markup controls and 30 script-rendered), no route or handler changed (route map unchanged at 53 call sites), and the change touches only CSS declarations and their token values."
+          "Keyboard and control preservation: no markup control was added, removed or renamed (the control inventory still reports 170 markup controls and 30 script-rendered), no route or handler changed (route map unchanged at 53 call sites), and the change touches only CSS declarations and their token values.",
+          "Closed at 5011052f81c307baf9935ff23e68b468dd59b5f3: the commit that carries the token layer, the generator and the tests, so the evidence sha is the tree the checks ran on."
         ],
         "test_results": [
           {
