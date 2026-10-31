@@ -43,13 +43,18 @@ python3 scripts/qualify_environment.py --all \
   --json dist/qualification.json --markdown dist/qualification.md
 ```
 
-Add representative cases and thermal sampling to the hardware run:
+Add representative cases and thermal sampling to the hardware run, using the
+probe this repository ships (see [Ready-made probe](#ready-made-probe-scriptsmodel_probepy)):
 
 ```sh
 python3 scripts/qualify_environment.py --hardware \
   --pressure-gb 16 --case-runs 3 \
-  --coding-cases cases.json --model-command "your-probe-command"
+  --coding-cases cases.json \
+  --model-command "python3 scripts/model_probe.py --base-url http://127.0.0.1:8000/v1"
 ```
+
+Any command works as long as it performs one measured call and prints one JSON
+line in the contract below; the probe is a convenience, not a requirement.
 
 The sandbox suite needs a local image and refuses to fetch one:
 
@@ -63,8 +68,8 @@ The hardware suite takes the two optional measurements:
 ```sh
 python3 scripts/qualify_environment.py --hardware \
   --pressure-gb 12 \
-  --model-command "your-probe-command" --model-runs 3 \
-  --profile-out dist/model-profile.jsonl
+  --model-command "python3 scripts/model_probe.py --server-pid \$(pgrep -f 'mlx_lm.server' | head -1)" \
+  --model-runs 3 --profile-out dist/model-profile.jsonl
 ```
 
 Useful flags: `--dry-run` (print every command the suite would run and exit
@@ -236,6 +241,42 @@ loads through `model_calibration.load_profile`. An impossible measurement (a
 first token after the end of the run) is recorded as a failed sample instead of
 contributing a fabricated throughput.
 
+#### Ready-made probe (`scripts/model_probe.py`)
+
+The probe is stdlib-only and speaks the OpenAI-compatible protocol that oMLX,
+`mlx_lm.server`, llama.cpp and Ollama all expose. It is a measuring instrument,
+not evidence: it reports what it observed and stays silent about the rest.
+
+```sh
+python3 scripts/model_probe.py --base-url http://127.0.0.1:8000/v1
+{"end_to_end_ms": 1240.5, "first_token_ms": 412.0, "model_id": "mlx-community/Qwen3-8B-4bit",
+ "output_chars": 233, "output_tokens": 64, "prompt_tokens": 41, "runtime": "openai-compatible",
+ "temperature": 0.0}
+```
+
+| Flag | Meaning |
+|---|---|
+| `--base-url` | OpenAI-compatible base URL (default `http://127.0.0.1:8000/v1`) |
+| `--model` | model id; when omitted the probe asks the server's `/models` endpoint |
+| `--prompt` | prompt text; the suite's `STUDIO_QUALIFY_CASE_PROMPT` wins next, then a fixed prompt |
+| `--max-tokens`, `--temperature`, `--timeout` | request shape (defaults 64, 0.0, 300 s) |
+| `--model-digest`, `--context-length` | recorded verbatim when supplied; omitted otherwise |
+| `--server-pid` | sample that process's RSS while the request runs, for `peak_memory_bytes` |
+
+It streams the response so `first_token_ms` is a real time-to-first-token, and
+takes `prompt_tokens`/`output_tokens` **only** from the server's `usage` block —
+which is why the request sets `stream_options.include_usage`. A server that
+ignores `stream: true` yields no `first_token_ms`; a server that reports no
+`usage` yields no token counts. Both land in `notes` as limitations rather than
+in the record as numbers. `STUDIO_QUALIFY_CASE_ID`/`STUDIO_QUALIFY_CASE_CATEGORY`
+are echoed as `case_id`/`case_category`, so a per-case measurement says which
+case it came from.
+
+Exit codes: `0` measured; `1` the server answered with an error or no content;
+`2` nothing was measured (unreachable, no model id, bad arguments). On `1`/`2`
+the reason goes to stderr and **no** JSON line is printed, so a failed probe is
+recorded by the suite as a failed run instead of an empty measurement.
+
 ## Reading the record
 
 The JSON record carries `schema_version`, `generated_at_utc`, `invocation`,
@@ -278,3 +319,14 @@ hardening flags, and the refusal to invent any of them), thermal sampling and
 coding-case parsing, the record and Markdown shape, the exit codes, the
 model-probe contract, `--dry-run` executing nothing, and an end-to-end run in
 this environment that must exit `2` and print both stories as `blocked`.
+
+`tests/test_model_probe.py` (12 tests) covers the probe against a local fake
+OpenAI-compatible endpoint — a double for the *wire protocol*, making no claim
+about any model's performance. It pins that a measured first token is timed from
+the request (a late first chunk raises `first_token_ms`), that token counts come
+only from the server's `usage` block, that a missing usage block or a
+non-streaming server yields an omitted field plus a note instead of a number,
+that an unreachable server, an HTTP error, an empty answer or an unresolvable
+model id exits non-zero with no JSON line, and that the qualification suite
+consumes the probe's output into a `model_calibration` profile with a derived
+decode rate.

@@ -2096,7 +2096,10 @@ def render_plan(*, suites: Sequence[str], runtime_name: str, image: str, args: a
                 + (f", writing a profile to {args.profile_out}" if args.profile_out else "")
             )
         else:
-            lines.append("  6. model load measurement SKIPPED (no --model-command)")
+            lines.append(
+                "  6. model load measurement SKIPPED (no --model-command; "
+                "scripts/model_probe.py is a ready-made one)"
+            )
         if args.coding_cases is not None:
             lines.append(
                 f"  7. coding cases: run every case in {args.coding_cases} through that command "
