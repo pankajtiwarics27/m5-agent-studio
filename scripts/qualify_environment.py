@@ -738,9 +738,10 @@ if failures:
 """
 
 
-# The adversarial memory probe. Its output is the evidence for either outcome:
-# on a denial the kernel usually kills the process before it can print, and that
-# absence is recorded rather than inferred.
+# The adversarial memory probe. It reports the limits in force *before* it
+# allocates, because on a denial the kernel usually kills the process before it
+# can say anything: the pre-allocation report is then the only evidence of what
+# the runtime had actually applied.
 MEMORY_PROBE_BYTES = 3 * 1024 ** 3
 
 _MEMORY_PROBE_TEMPLATE = """import json, os
@@ -755,7 +756,18 @@ def cgroup(name):
         return None
 
 
-def rss_bytes():
+def meminfo(field):
+    try:
+        with open('/proc/meminfo') as handle:
+            for line in handle:
+                key, _, rest = line.partition(':')
+                if key.strip() == field:
+                    return rest.strip()
+    except OSError:
+        return None
+
+
+def rss():
     try:
         with open('/proc/self/statm') as handle:
             return int(handle.read().split()[1]) * os.sysconf('SC_PAGE_SIZE')
@@ -763,21 +775,28 @@ def rss_bytes():
         return None
 
 
+def report(phase, allocated_bytes=None):
+    print(json.dumps({
+        'phase': phase,
+        'memory_max': cgroup('memory.max'),
+        'memory_high': cgroup('memory.high'),
+        'memory_current': cgroup('memory.current'),
+        'memory_peak': cgroup('memory.peak'),
+        'memory_swap_max': cgroup('memory.swap.max'),
+        'memory_swap_current': cgroup('memory.swap.current'),
+        'memory_events': cgroup('memory.events'),
+        'swap_total': meminfo('SwapTotal'),
+        'rss_bytes': rss(),
+        'allocated_bytes': allocated_bytes,
+    }), flush=True)
+
+
+report('before')
 buf = bytearray(SIZE)
 # Touch every page: an untouched allocation proves nothing about the limit.
 for offset in range(0, SIZE, 4096):
     buf[offset] = 1
-print(json.dumps({
-    'allocated_bytes': len(buf),
-    'rss_bytes': rss_bytes(),
-    'memory_max': cgroup('memory.max'),
-    'memory_high': cgroup('memory.high'),
-    'memory_current': cgroup('memory.current'),
-    'memory_peak': cgroup('memory.peak'),
-    'memory_swap_max': cgroup('memory.swap.max'),
-    'memory_swap_current': cgroup('memory.swap.current'),
-    'memory_events': cgroup('memory.events'),
-}))
+report('after', len(buf))
 """
 
 
@@ -1082,7 +1101,7 @@ def sandbox_suite(
                 timeout=timeout,
                 env=probe_env,
             )
-            report: dict[str, Any] = {}
+            reports: list[dict[str, Any]] = []
             for line in (proc.stdout or "").splitlines():
                 stripped = line.strip()
                 if not stripped.startswith("{"):
@@ -1092,30 +1111,40 @@ def sandbox_suite(
                 except ValueError:
                     continue
                 if isinstance(parsed, dict):
-                    report = parsed
-            # The counters the container reports are the evidence for either
-            # outcome: on a denial there may be none (the process was killed
-            # before it could print), and that absence is recorded too.
+                    reports.append(parsed)
+            before = next((item for item in reports if item.get("phase") == "before"), {})
+            after = next((item for item in reports if item.get("phase") == "after"), {})
+            # `before` survives an OOM kill, `after` only exists if the
+            # allocation was allowed. Both are recorded when present, and their
+            # absence is recorded as absence.
             memory_observed.clear()
             memory_observed.update(
                 {
                     "exit_code": proc.returncode,
-                    "requested_bytes": 3 * 1024 ** 3,
-                    "container_report": report or None,
+                    "requested_bytes": MEMORY_PROBE_BYTES,
+                    "limits_in_force": before or None,
+                    "post_allocation": after or None,
                     "stderr_tail": (proc.stderr or "")[-300:],
                 }
             )
             # Either the kernel kills the process (137) or Python raises MemoryError.
             denied = proc.returncode != 0 or "MemoryError" in (proc.stderr or "")
+            limits = before or after
             detail = f"exit {proc.returncode}"
-            if not denied and report:
+            if limits:
                 detail += (
-                    f"; allocated {report.get('allocated_bytes')} B, "
-                    f"rss={report.get('rss_bytes')} B, "
-                    f"memory.max={report.get('memory_max')}, "
-                    f"memory.current={report.get('memory_current')}, "
-                    f"swap.max={report.get('memory_swap_max')}, "
-                    f"swap.current={report.get('memory_swap_current')}"
+                    f"; limits: memory.max={limits.get('memory_max')}, "
+                    f"memory.swap.max={limits.get('memory_swap_max')}, "
+                    f"meminfo SwapTotal={limits.get('swap_total')}"
+                )
+            if not denied and after:
+                detail += (
+                    f"; allocated {after.get('allocated_bytes')} B, "
+                    f"rss={after.get('rss_bytes')} B, "
+                    f"memory.current={after.get('memory_current')}, "
+                    f"memory.peak={after.get('memory_peak')}, "
+                    f"swap.current={after.get('memory_swap_current')}, "
+                    f"events={after.get('memory_events')}"
                 )
             elif not denied:
                 detail += "; the container reported no cgroup counters"
