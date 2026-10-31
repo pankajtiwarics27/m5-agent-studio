@@ -4457,7 +4457,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   </div>
 
   <div class="top-actions">
-    <button class="btn" onclick="openCommandPalette()" aria-label="Open Command Palette (Cmd+K)" title="Search actions and navigate (⌘K / Ctrl+K)">
+    <button class="btn" data-shortcut-action="command-palette" onclick="openCommandPalette()" aria-label="Open Command Palette (Cmd+K)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <span>Search</span>
       <span class="kbd">⌘K</span>
@@ -5005,7 +5005,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <option value="context">Knowledge &amp; CodeGraph</option>
           <option value="external">External Harness CLI Bridge</option>
         </select>
-        <button id="monitorToggleBtn" class="btn btn-xs" onclick="toggleMonitorRail()" aria-controls="monitorRail" aria-expanded="true" title="Toggle telemetry and model monitor">
+        <button id="monitorToggleBtn" class="btn btn-xs" onclick="toggleMonitorRail()" aria-controls="monitorRail" aria-expanded="true" title="Hide telemetry and model monitor">
           <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Telemetry</span>
         </button>
         <button class="btn btn-xs btn-danger" onclick="unloadAllModels()" title="Unload local models to free memory">
@@ -5385,7 +5385,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   </main>
 
   <!-- ================= RIGHT MONITORING RAIL ================= -->
-  <aside id="monitorRail" class="monitor-rail">
+  <aside id="monitorRail" class="monitor-rail" role="complementary" aria-label="Telemetry and model monitor">
     <div class="m-card">
       <div class="m-head"><span>M5 Unified Memory (24 GB)</span><span class="status" data-tone="ok">OK</span></div>
       <div style="display:flex; justify-content:space-between; font-size:11.6px; margin-bottom:2px;">
@@ -5465,17 +5465,22 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     setTimeout(() => { el.style.opacity = "0"; setTimeout(() => el.remove(), 220); }, 4200);
   }
 
+  // An item that is a rail destination names its shortcut by id. The hint is looked
+  // up when the list is drawn, so the palette cannot advertise a key the handler
+  // does not read - the failure mode that left Alt+6 dead for Start before P1-02.
   const CMD_PALETTE_ITEMS = [
     { label: "Plan and deliver a product", hint: "SDLC", run: () => { switchTab("harness"); openSdlcModal(); } },
-    { label: "Open Harness", hint: "Alt+1", run: () => switchTab("harness") },
-    { label: "Open Council", hint: "Alt+2", run: () => switchTab("hall") },
-    { label: "Open Pipeline", hint: "Alt+3", run: () => switchTab("council") },
-    { label: "Open Compare", hint: "Alt+4", run: () => switchTab("debate") },
-    { label: "Open Chat", hint: "Alt+5", run: () => switchTab("chat") },
+    { label: "Open Start", shortcut: "tab-start", run: () => switchTab("start") },
+    { label: "Open Harness", shortcut: "tab-harness", run: () => switchTab("harness") },
+    { label: "Open Council", shortcut: "tab-hall", run: () => switchTab("hall") },
+    { label: "Open Pipeline", shortcut: "tab-council", run: () => switchTab("council") },
+    { label: "Open Compare", shortcut: "tab-debate", run: () => switchTab("debate") },
+    { label: "Open Chat", shortcut: "tab-chat", run: () => switchTab("chat") },
     { label: "Search knowledge", hint: "Memory", run: () => { openContextModal(); switchCtxTab("oc"); } },
     { label: "Explore code graph", hint: "Graph", run: () => { openContextModal(); switchCtxTab("cg"); } },
     { label: "Review code-debt report", hint: "Debt", run: () => { openContextModal(); switchCtxTab("cg"); document.getElementById("cgModeSelect").value = "debt"; runCodeGraphPlayground(); } },
     { label: "Configure MCP tools", hint: "MCP", run: () => openMcpModal() },
+    { label: "Open the official Harness bridge", hint: "Bridge", run: () => openExternalHarnessModal() },
     { label: "Configure model providers", hint: "Cloud", run: () => openProvidersModal() },
     { label: "Manage agent skills", hint: "Skills", run: () => openSkillsModal() },
     { label: "Compact active Harness session", hint: "KV Cache", run: () => compactActiveHarness() },
@@ -5485,27 +5490,212 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     { label: "Toggle appearance", hint: "Theme", run: () => toggleTheme() },
   ];
 
-  let commandPaletteReturnFocus = null;
+  /* ── Overlays ───────────────────────────────────────────────────────────────
+     Nine dialogs, one controller. Before this every open function added .open and
+     every close function removed it, Escape removed it from all nine at once, no
+     dialog trapped focus, and exactly one of the nine remembered where focus came
+     from. A keyboard user therefore tabbed out of an open dialog into the page
+     behind it, and on close landed wherever the browser decided.
+
+     Two mechanisms, because one is not enough. `inert` on every sibling of the open
+     backdrop is what actually stops Tab, click and screen-reader traversal reaching
+     the background; the Tab handler below is the fallback for a browser without
+     `inert`, and it keeps the same promise by wrapping the cycle inside the dialog.
+     Focus return is the controller's job too, so it happens once, in one place,
+     whether the dialog was closed by Escape, by its Close button or by its backdrop. */
+  const overlayStack = [];
+
+  // Where focus was before it was nowhere: a chord pressed with the page focused
+  // still has an answer to "put it back where I was", and the answer is the last
+  // control the user actually used.
+  let lastFocusable = null;
+  document.addEventListener("focusin", event => {
+    if (event.target instanceof HTMLElement && event.target !== document.body) lastFocusable = event.target;
+  });
+
+  function returnTarget(node) {
+    return node && node.isConnected && typeof node.focus === "function" && node.offsetParent !== null ? node : null;
+  }
+
+  function overlayFocusable(root) {
+    const selector = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]),'
+      + ' select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    return [...root.querySelectorAll(selector)].filter(node => node.offsetParent !== null || node === document.activeElement);
+  }
+
+  function overlayBackgrounds() {
+    return [...document.body.children].filter(node =>
+      node.nodeType === 1 && !node.classList.contains("modal-backdrop") && !["SCRIPT", "STYLE", "LINK"].includes(node.tagName));
+  }
+
+  function overlayInert(on) {
+    for (const node of overlayBackgrounds()) {
+      if (on) {
+        if (!node.inert) { node.dataset.overlayInert = "1"; node.inert = true; }
+      } else if (node.dataset.overlayInert === "1") {
+        node.inert = false;
+        delete node.dataset.overlayInert;
+      }
+    }
+  }
+
+  function openOverlay(id, options = {}) {
+    const backdrop = document.getElementById(id);
+    if (!backdrop) return null;
+    if (backdrop.classList.contains("open")) return backdrop;
+    const dialog = backdrop.querySelector('[role="dialog"]') || backdrop.firstElementChild;
+    const opener = returnTarget(document.activeElement) || returnTarget(lastFocusable);
+    overlayStack.push({ id, backdrop, dialog, opener });
+    backdrop.classList.add("open");
+    if (dialog) {
+      dialog.setAttribute("aria-modal", "true");
+      if (!dialog.hasAttribute("tabindex")) dialog.tabIndex = -1;
+    }
+    overlayInert(true);
+    document.body.dataset.overlay = "open";
+    const explicit = options.focus ? backdrop.querySelector(options.focus) : null;
+    const target = explicit || overlayFocusable(backdrop)[0] || dialog || backdrop;
+    // After the frame that paints .open: a display:none element cannot take focus.
+    requestAnimationFrame(() => {
+      if (target && typeof target.focus === "function") target.focus({ preventScroll: true });
+    });
+    return backdrop;
+  }
+
+  function closeOverlay(id) {
+    let index = -1;
+    if (id === undefined) index = overlayStack.length - 1;
+    else for (let i = overlayStack.length - 1; i >= 0; i -= 1) if (overlayStack[i].id === id) { index = i; break; }
+    if (index < 0) {
+      // Closed without going through the controller (a handler that predates it):
+      // still drop the class so the backdrop cannot be left painted over the app.
+      const stale = id ? document.getElementById(id) : null;
+      if (stale) stale.classList.remove("open");
+      return null;
+    }
+    const [entry] = overlayStack.splice(index, 1);
+    entry.backdrop.classList.remove("open");
+    if (entry.dialog) entry.dialog.removeAttribute("aria-modal");
+    if (!overlayStack.length) {
+      overlayInert(false);
+      delete document.body.dataset.overlay;
+    }
+    const target = returnTarget(entry.opener) || returnTarget(lastFocusable);
+    if (target) target.focus({ preventScroll: true });
+    return entry.backdrop;
+  }
+
+  function closeTopOverlay() {
+    return overlayStack.length ? closeOverlay(overlayStack[overlayStack.length - 1].id) : null;
+  }
+
+  // Exported for the keyboard walk, which asserts the stack rather than guessing at
+  // it from classes: a dialog can look closed and still be on the stack, and that
+  // difference is exactly what "Escape closes the top one" depends on.
+  window.M5Overlays = {
+    open: id => openOverlay(id),
+    close: id => closeOverlay(id),
+    closeTop: () => closeTopOverlay(),
+    stack: () => overlayStack.map(entry => entry.id),
+    shortcuts: () => SHORTCUTS.concat(railShortcuts()).map(entry => ({ ...entry, keys: [...entry.keys] })),
+  };
+
+  function overlayTrapTab(event) {
+    const top = overlayStack[overlayStack.length - 1];
+    if (!top || event.key !== "Tab") return false;
+    const stops = overlayFocusable(top.backdrop);
+    if (!stops.length) { event.preventDefault(); return true; }
+    const first = stops[0];
+    const last = stops[stops.length - 1];
+    const active = document.activeElement;
+    if (!top.backdrop.contains(active)) { event.preventDefault(); first.focus(); return true; }
+    if (event.shiftKey && active === first) { event.preventDefault(); last.focus(); return true; }
+    if (!event.shiftKey && active === last) { event.preventDefault(); first.focus(); return true; }
+    return false;
+  }
+
+  /* ── Shortcuts ──────────────────────────────────────────────────────────────
+     One registry, read by the handler, the palette and the markup. The rail's
+     Alt+N entries come from the tabs themselves, so the title a user reads and the
+     key that fires are the same attribute - the P1-02 fix this builds on. What is
+     new is everything else: the palette and the dialog keys are declared once and
+     the handler dispatch reads that list, so a key cannot work in the handler while
+     the palette advertises a different one. */
+  const SHORTCUTS = [
+    { id: "command-palette", keys: ["Ctrl+K", "Meta+K"], label: "Command palette", where: "global" },
+    { id: "command-palette-next", keys: ["ArrowDown", "ArrowUp"], label: "Move through matches", where: "palette" },
+    { id: "command-palette-run", keys: ["Enter"], label: "Run the highlighted command", where: "palette" },
+    { id: "dismiss-overlay", keys: ["Escape"], label: "Close the open dialog", where: "global" },
+  ];
+
+  function railShortcuts() {
+    return [...document.querySelectorAll(".mode-tab[data-shortcut]")]
+      .map(tab => ({ id: `tab-${tab.dataset.tab}`, keys: [tab.dataset.shortcut], label: `Open ${tab.querySelector(".mode-label, span")?.textContent?.trim() || tab.dataset.tab}`, where: "rail" }));
+  }
+
+  function shortcutFor(id) {
+    return SHORTCUTS.concat(railShortcuts()).find(entry => entry.id === id) || null;
+  }
+
+  function shortcutKeys(id) {
+    const entry = shortcutFor(id);
+    return entry ? entry.keys : [];
+  }
+
+  function shortcutLabel(id) {
+    return shortcutKeys(id).join(" / ");
+  }
+
+  function shortcutMatches(event, id) {
+    return shortcutKeys(id).some(key => {
+      if (key === "Escape") return event.key === "Escape";
+      const [mod, ...rest] = key.split("+");
+      const name = rest.join("+");
+      if (mod === "Ctrl") return event.ctrlKey && !event.metaKey && event.key.toLowerCase() === name.toLowerCase();
+      if (mod === "Meta") return event.metaKey && event.key.toLowerCase() === name.toLowerCase();
+      if (mod === "Alt") return event.altKey && event.key === name;
+      return event.key === key;
+    });
+  }
+
+  /** Advertise a shortcut where a control declares one: the title a pointer user
+      reads and `aria-keyshortcuts`, which a screen reader announces. */
+  function applyShortcutHints() {
+    for (const node of document.querySelectorAll("[data-shortcut-action]")) {
+      const id = node.dataset.shortcutAction;
+      const keys = shortcutKeys(id);
+      if (!keys.length) continue;
+      node.setAttribute("aria-keyshortcuts", keys.join(" "));
+      const existing = node.dataset.shortcutTitle || node.title || "";
+      if (!node.dataset.shortcutTitle) node.dataset.shortcutTitle = existing;
+      const base = node.dataset.shortcutTitle;
+      node.title = base ? `${base} (${shortcutLabel(id)})` : shortcutLabel(id);
+    }
+    for (const tab of document.querySelectorAll(".mode-tab[data-shortcut]")) {
+      tab.setAttribute("aria-keyshortcuts", tab.dataset.shortcut);
+    }
+  }
+
   let commandPaletteIndex = 0;
   function openCommandPalette() {
-    const m = document.getElementById("cmdPaletteModal");
-    commandPaletteReturnFocus = document.activeElement;
-    m.classList.add("open");
-    const inp = document.getElementById("cmdSearchInput");
-    inp.value = "";
+    document.getElementById("cmdSearchInput").value = "";
     renderCommandPaletteList("");
-    setTimeout(() => inp.focus(), 20);
+    openOverlay("cmdPaletteModal", { focus: "#cmdSearchInput" });
   }
   function closeCommandPalette() {
-    document.getElementById("cmdPaletteModal").classList.remove("open");
-    const target = commandPaletteReturnFocus;
-    commandPaletteReturnFocus = null;
-    if (target && target.isConnected && typeof target.focus === "function") target.focus();
+    closeOverlay("cmdPaletteModal");
+  }
+
+  function paletteItemHint(item) {
+    return item.shortcut ? shortcutLabel(item.shortcut) : (item.hint || "");
   }
 
   function renderCommandPaletteList(q) {
     const ql = (q || "").trim().toLowerCase();
-    const list = CMD_PALETTE_ITEMS.filter(it => !ql || it.label.toLowerCase().includes(ql) || it.hint.toLowerCase().includes(ql));
+    const list = CMD_PALETTE_ITEMS.filter(it => {
+      if (!ql) return true;
+      return it.label.toLowerCase().includes(ql) || paletteItemHint(it).toLowerCase().includes(ql);
+    });
     const box = document.getElementById("cmdPaletteList");
     if (!list.length) {
       box.innerHTML = `<div style="padding:12px; font-size:12px; color:var(--text-faint);">No matching commands.</div>`;
@@ -5517,7 +5707,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     box.innerHTML = list.map((it, idx) => `
       <button class="cmd-item ${idx === 0 ? 'selected' : ''}" role="option" aria-selected="${idx === 0 ? 'true' : 'false'}" onclick="runPaletteIndex(${CMD_PALETTE_ITEMS.indexOf(it)})">
         <span>${escapeHtml(it.label)}</span>
-        <span class="kbd">${escapeHtml(it.hint)}</span>
+        <span class="kbd">${escapeHtml(paletteItemHint(it))}</span>
       </button>`).join("");
   }
   function runPaletteIndex(idx) {
@@ -5526,20 +5716,36 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   document.addEventListener("keydown", e => {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+    // One dispatch, read from the registry. Escape closes the top overlay only -
+    // the old handler stripped .open from all nine at once, which meant a stacked
+    // dialog vanished without returning focus to the one underneath it.
+    if (shortcutMatches(e, "dismiss-overlay")) {
+      if (overlayStack.length) {
+        e.preventDefault();
+        closeTopOverlay();
+        return;
+      }
+      if (document.getElementById("mainLayout")?.classList.contains("rail-mobile-open")) {
+        e.preventDefault();
+        toggleMonitorRail(true);
+        return;
+      }
+    }
+    if (shortcutMatches(e, "command-palette")) {
       e.preventDefault();
-      const open = document.getElementById("cmdPaletteModal").classList.contains("open");
-      if (open) closeCommandPalette(); else openCommandPalette();
+      if (document.getElementById("cmdPaletteModal").classList.contains("open")) closeCommandPalette();
+      else openCommandPalette();
       return;
     }
-    const palette = document.getElementById("cmdPaletteModal");
-    if (palette && palette.classList.contains("open") && ["ArrowDown", "ArrowUp", "Enter"].includes(e.key)) {
+    const paletteOpen = document.getElementById("cmdPaletteModal").classList.contains("open");
+    if (paletteOpen && (shortcutMatches(e, "command-palette-next") || shortcutMatches(e, "command-palette-run"))) {
       const options = [...document.querySelectorAll("#cmdPaletteList .cmd-item")];
       if (options.length) {
         e.preventDefault();
-        if (e.key === "Enter") options[commandPaletteIndex].click();
+        if (shortcutMatches(e, "command-palette-run")) options[commandPaletteIndex].click();
         else {
-          commandPaletteIndex = (commandPaletteIndex + (e.key === "ArrowDown" ? 1 : -1) + options.length) % options.length;
+          const step = e.key === "ArrowDown" ? 1 : -1;
+          commandPaletteIndex = (commandPaletteIndex + step + options.length) % options.length;
           options.forEach((option, index) => {
             const selected = index === commandPaletteIndex;
             option.classList.toggle("selected", selected);
@@ -5549,25 +5755,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       }
       return;
     }
-    if (e.key === "Escape") {
-      const paletteOpen = palette && palette.classList.contains("open");
-      document.querySelectorAll(".modal-backdrop.open").forEach(m => m.classList.remove("open"));
-      if (paletteOpen) {
-        const target = commandPaletteReturnFocus;
-        commandPaletteReturnFocus = null;
-        if (target && target.isConnected && typeof target.focus === "function") target.focus();
-      }
-      return;
-    }
+    if (overlayTrapTab(e)) return;
+    // The rail keys come from the tabs' own data-shortcut, through the registry.
     if (e.altKey && !e.ctrlKey && !e.metaKey) {
-      // Read the shortcuts off the tabs instead of restating them: the title a user
-      // reads and the key that works are then the same attribute. The previous map
-      // hard-coded keys 1-5 and quietly left Alt+6 (Start) advertised but dead.
-      const tab = [...document.querySelectorAll(".mode-tab[data-shortcut]")]
-        .find(b => b.dataset.shortcut === `Alt+${e.key}`);
-      if (tab) {
+      for (const tab of document.querySelectorAll(".mode-tab[data-shortcut]")) {
+        if (!shortcutMatches(e, `tab-${tab.dataset.tab}`)) continue;
         e.preventDefault();
         switchTab(tab.dataset.tab, { focus: true });
+        return;
       }
     }
   });
@@ -5901,19 +6096,43 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     set: setStatus,
     evidence: evidenceNote,
   };
-  function toggleMonitorRail() {
+  // The inspector is a drawer when it cannot sit beside the work: below 1100px it
+  // overlays the pane instead of squeezing it. A drawer that opens must take focus
+  // and one that closes must give it back, or a keyboard user is stranded behind
+  // their own panel. On a wide window it is a column, not an overlay, so focus never
+  // moves - nothing was covered, so nothing needs to be returned.
+  function toggleMonitorRail(returnFocus) {
     const layout = document.getElementById("mainLayout");
+    const rail = document.getElementById("monitorRail");
     const btn = document.getElementById("monitorToggleBtn");
     const narrow = window.matchMedia("(max-width: 1100px)").matches;
     let expanded;
     if (narrow) {
       layout.classList.remove("rail-collapsed");
       expanded = layout.classList.toggle("rail-mobile-open");
+      // aria-modal is set or absent, never "false": the attribute means "this dialog
+      // covers the page", and a closed drawer does not.
+      if (rail) {
+        if (expanded) rail.setAttribute("aria-modal", "true");
+        else rail.removeAttribute("aria-modal");
+      }
     } else {
       layout.classList.remove("rail-mobile-open");
       expanded = !layout.classList.toggle("rail-collapsed");
+      if (rail) rail.removeAttribute("aria-modal");
     }
-    if (btn) btn.setAttribute("aria-expanded", expanded ? "true" : "false");
+    if (btn) {
+      btn.setAttribute("aria-expanded", expanded ? "true" : "false");
+      btn.title = expanded ? "Hide telemetry and model monitor" : "Show telemetry and model monitor";
+    }
+    if (narrow && expanded && rail) {
+      const target = rail.querySelector("button, [href], input, select, textarea") || rail;
+      if (target && typeof target.focus === "function") {
+        if (!rail.hasAttribute("tabindex")) rail.tabIndex = -1;
+        requestAnimationFrame(() => (target === rail ? rail : target).focus({ preventScroll: true }));
+      }
+    }
+    if (!expanded && returnFocus === true && btn) btn.focus({ preventScroll: true });
   }
   function setCouncilPreset(txt) { document.getElementById("councilPrompt").value = txt; }
   function stopActiveStream() { if (activeAbort) { activeAbort.abort(); activeAbort = null; } }
@@ -6075,9 +6294,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     loadProviders().then(() => {
       if (!document.getElementById("provAlias").value) selectProviderPreset("openrouter");
     });
-    document.getElementById("providersModal").classList.add("open");
+    openOverlay("providersModal");
   }
-  function closeProvidersModal() { document.getElementById("providersModal").classList.remove("open"); }
+  function closeProvidersModal() { closeOverlay("providersModal"); }
 
   // ================= AGENT SKILLS =================
   async function loadSkills() {
@@ -6122,8 +6341,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         }).join("");
   }
 
-  function openSkillsModal() { loadSkills(); document.getElementById("skillsModal").classList.add("open"); }
-  function closeSkillsModal() { document.getElementById("skillsModal").classList.remove("open"); }
+  function openSkillsModal() { loadSkills(); openOverlay("skillsModal"); }
+  function closeSkillsModal() { closeOverlay("skillsModal"); }
 
   async function installSkill() {
     const cmd = document.getElementById("skillInstallInput").value.trim();
@@ -6145,7 +6364,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   // ================= COUNCIL HALL =================
   async function openSpawnModal() {
-    document.getElementById("spawnModal").classList.add("open");
+    openOverlay("spawnModal");
     try {
       const d = await (await fetch("/api/workspace/files")).json();
       const box = document.getElementById("workspaceFilesChecks");
@@ -6154,7 +6373,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         : d.files.map(f => `<label class="chk-lbl"><input type="checkbox" class="ws-file-chk" value="${escapeHtml(f)}"/> <span class="mono" style="font-size:11.6px;">${escapeHtml(f)}</span></label>`).join("");
     } catch (e) {}
   }
-  function closeSpawnModal() { document.getElementById("spawnModal").classList.remove("open"); }
+  function closeSpawnModal() { closeOverlay("spawnModal"); }
 
   async function confirmSpawnSession(autoConvene = true) {
     const req = document.getElementById("spawnRequestInput").value.trim();
@@ -6802,7 +7021,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   async function openExternalHarnessModal() {
-    document.getElementById("externalHarnessModal").classList.add("open");
+    openOverlay("externalHarnessModal");
     try {
       const d = await (await fetch("/api/harness/external-configs")).json();
       document.getElementById("extDshYaml").textContent = d.dsh_settings_yaml || "";
@@ -6810,7 +7029,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       document.getElementById("extOpenHarness").textContent = d.openharness_cli || "";
     } catch (e) {}
   }
-  function closeExternalHarnessModal() { document.getElementById("externalHarnessModal").classList.remove("open"); }
+  function closeExternalHarnessModal() { closeOverlay("externalHarnessModal"); }
 
   function renderDiffHtml(diffText) {
     if (!diffText || !diffText.trim()) return `<span style="color:var(--text-faint);">No file changes detected.</span>`;
@@ -7469,7 +7688,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   async function openHarnessDiffModal() {
     if (!activeHarnessId) { showToast("Start or select a Harness session first to inspect its Git Diff.", "warn"); return; }
-    document.getElementById("harnessDiffModal").classList.add("open");
+    openOverlay("harnessDiffModal");
     document.getElementById("harnessGitStatusBox").textContent = "Inspecting workspace git status...";
     document.getElementById("harnessGitDiffBox").innerHTML = "";
     try {
@@ -7483,7 +7702,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       document.getElementById("harnessGitStatusBox").textContent = "Error: " + e.message;
     }
   }
-  function closeHarnessDiffModal() { document.getElementById("harnessDiffModal").classList.remove("open"); }
+  function closeHarnessDiffModal() { closeOverlay("harnessDiffModal"); }
 
   async function applyHarnessWorktree() {
     if (!activeHarnessId) return;
@@ -7651,9 +7870,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function openMcpModal() {
     loadMcpServers();
-    document.getElementById("mcpModal").classList.add("open");
+    openOverlay("mcpModal");
   }
-  function closeMcpModal() { document.getElementById("mcpModal").classList.remove("open"); }
+  function closeMcpModal() { closeOverlay("mcpModal"); }
 
   function toggleMcpTransportFields() {
     const tr = document.getElementById("mcpTransport").value;
@@ -8091,14 +8310,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   let ocDocs = [];
 
   function openContextModal() {
-    document.getElementById("contextModal").classList.add("open");
+    openOverlay("contextModal");
     const ws = document.getElementById("harnessWorkspaceInput").value.trim();
     if (ws && !document.getElementById("cgWorkspaceInput").value) {
       document.getElementById("cgWorkspaceInput").value = ws;
     }
     loadOpenContextDocs();
   }
-  function closeContextModal() { document.getElementById("contextModal").classList.remove("open"); }
+  function closeContextModal() { closeOverlay("contextModal"); }
 
   function switchCtxTab(which) {
     for (const k of ["oc", "cg", "gsd"]) {
@@ -8258,10 +8477,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (promptCarry && !vis.value.trim()) vis.value = promptCarry;
     const ws = document.getElementById("harnessWorkspaceInput");
     if (ws && ws.value.trim()) syncProjectDirInputs(ws.value.trim());
-    document.getElementById("sdlcModal").classList.add("open");
+    openOverlay("sdlcModal");
     await refreshSdlcBoard();
   }
-  function closeSdlcModal() { document.getElementById("sdlcModal").classList.remove("open"); }
+  function closeSdlcModal() { closeOverlay("sdlcModal"); }
 
   function switchSdlcArtifact(name) {
     activeSdlcArtifactTab = name;
@@ -8441,15 +8660,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const layout = document.getElementById("mainLayout");
     const monitorButton = document.getElementById("monitorToggleBtn");
     if (!layout || !monitorButton) return;
-    if (narrow) {
-      layout.classList.remove("rail-mobile-open");
-      layout.classList.remove("rail-collapsed");
-      monitorButton.setAttribute("aria-expanded", "false");
-    } else {
-      layout.classList.remove("rail-mobile-open");
-      layout.classList.remove("rail-collapsed");
-      monitorButton.setAttribute("aria-expanded", "true");
-    }
+    // A resize returns the inspector to its layout default: a drawer has no state
+    // to preserve once the panel fits beside the work again, and a drawer left
+    // marked aria-modal after it became a column would lie about covering the page.
+    const rail = document.getElementById("monitorRail");
+    layout.classList.remove("rail-mobile-open");
+    layout.classList.remove("rail-collapsed");
+    if (rail) rail.removeAttribute("aria-modal");
+    monitorButton.setAttribute("aria-expanded", narrow ? "false" : "true");
+    monitorButton.title = narrow ? "Show telemetry and model monitor" : "Hide telemetry and model monitor";
   });
   try {
     const themePreference = window.matchMedia("(prefers-color-scheme: light)");
@@ -8459,6 +8678,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       if (!localStorage.getItem("m5_theme")) applyTheme(event.matches ? "light" : "dark");
     });
   } catch (_) { applyTheme("dark"); }
+  applyShortcutHints();
   loadOpenContextDocs();
   loadProviders();
   refreshOnboarding();
