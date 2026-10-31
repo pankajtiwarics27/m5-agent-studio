@@ -125,10 +125,24 @@ Note that `ExecStartPre` refusal (exit `1`/`2`) stops the service. Use `-` as th
 
 ## The sandbox suite (M5-P3-01)
 
+### Which story task each check answers (M5-P3-01)
+
+`M5-P3-01`'s implementation tasks, mapped to the checks that produce evidence for
+them. Run `--runtime docker` **and** `--runtime podman` if you intend to claim
+both backends: one run qualifies one runtime.
+
+| Task | Checks |
+|---|---|
+| Exercise live container/native candidates on supported macOS | `p3.runtime.available`, `p3.image.local`, `p3.positive.execute` |
+| Test path traversal, symlink, network bypass, credentials, descendants, resource limits | `p3.adversarial.escape_matrix` (traversal, symlink, network, raw socket), `p3.adversarial.credentials`, `p3.adversarial.descendants`, `p3.adversarial.memory_limit` |
+| Run positive compatibility tests | `p3.positive.execute` |
+| Bind evidence to OS/runtime/config fingerprint | `p3.environment.bind` (runtime version, image id and digest, hardening flags) plus the record's `fingerprint` (OS build, CPU, git revision) |
+
 | Check | What it observes |
 |---|---|
 | `p3.runtime.available` | The runtime CLI answers `--version` and its daemon answers `info`. |
 | `p3.image.local` | The configured image is already present (`image inspect`); nothing is pulled. Absent → `blocked`, with the exact `pull` command. |
+| `p3.environment.bind` | Binds the record to **what** it measured: the runtime's version line, the image's content id and repo digest (a tag can be re-pulled to a different digest), and the product's hardening flags with their limit values, read from `app._sandbox_command`. Unreadable identity is `blocked`, not a failed guarantee — but a `qualified` record cannot be produced without it. |
 | `p3.positive.execute` | Positive compatibility: the container lists `/workspace`, code runs, and its write lands on the host. If the mount is missing/empty or unwritable the check is `blocked` (setup), not failed. |
 | `p3.adversarial.escape_matrix` | Inside the container: a host-only canary file via direct path, `/workspace/..` traversal, and `/proc/1/root`, read-only rootfs write attempts (`/` and `/etc/hostname`), a workspace symlink pointing outside, direct and host-loopback TCP egress, an inherited host environment sentinel, and a raw socket are all refused. |
 | `p3.adversarial.credentials` | Inside the container `HOME` is `/tmp` and `~/.aws/credentials`, `~/.ssh/*`, `~/.netrc`, `~/.docker/config.json`, `~/.kube/config` and the gcloud ADC file are all absent. A host credential store visible in the sandbox fails the check. |
@@ -166,7 +180,7 @@ can turn it into a pass.
 | `p4.coding_cases` | With `--coding-cases` + `--model-command`: runs every representative case, per category, and records per-case completion, success rate, wall-time median and spread, plus an uncertainty summary. Optional check — a case that never completes is reported, not hidden. |
 | `p4.thermal` | Sampled during every load phase. macOS reads thermal pressure from `pmset -g therm` (no root needed; `powermetrics` is never invoked because it needs root); Linux reads `/sys/class/thermal/thermal_zone*/temp`. Records stress min/max and whether throttling was observed; `blocked` when the platform offers no readable source. Optional check. |
 
-### Which story task each check answers
+### Which story task each check answers (M5-P4-01)
 
 `M5-P4-01`'s implementation tasks, mapped to the checks that produce evidence for
 them, so a gap is visible instead of assumed:
@@ -225,7 +239,8 @@ contributing a fabricated throughput.
 ## Reading the record
 
 The JSON record carries `schema_version`, `generated_at_utc`, `invocation`,
-`fingerprint` (including `git_revision`), the detected `sandbox` runtime/image,
+`fingerprint` (including `git_revision`), the detected `sandbox` backend down to
+the runtime version, image content id, repo digest and hardening configuration,
 every `check` with its status, detail, duration and evidence, per-story
 `verdicts`, and `claims` that mirror those verdicts verbatim. The Markdown file
 is the same content for a human reader.
@@ -254,10 +269,12 @@ Verdicts mean exactly this:
 
 ## Tests
 
-`tests/test_qualify_environment.py` (54 tests) pins the properties above without a
+`tests/test_qualify_environment.py` (94 tests) pins the properties above without a
 container runtime: verdict semantics, required-versus-optional checks, argv
 parity with the product, the blocked path when no runtime, image or usable
 workspace mount is missing, the failure path when a leak is observed,
-host-execution detection, the record and Markdown shape, the exit codes, the
+host-execution detection, the evidence binding (version, image id/digest,
+hardening flags, and the refusal to invent any of them), thermal sampling and
+coding-case parsing, the record and Markdown shape, the exit codes, the
 model-probe contract, `--dry-run` executing nothing, and an end-to-end run in
 this environment that must exit `2` and print both stories as `blocked`.

@@ -29,6 +29,17 @@ ROOT = Path(__file__).resolve().parents[1]
 # ---------------------------------------------------------------------------
 
 
+_FAKE_IMAGE_INSPECT = json.dumps(
+    [
+        {
+            "Id": "sha256:9f1c2b7d5e0a4c3f8b6d1e2a7c0b5f9d4e8a3c6b1f0d7e2a5c8b4f3e0d9a2c7b",
+            "RepoTags": ["python:3.12-slim"],
+            "RepoDigests": ["python@sha256:1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b"],
+        }
+    ]
+)
+
+
 class _FakeCompleted:
     def __init__(self, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
         self.returncode = returncode
@@ -69,7 +80,10 @@ def _make_fake_run(behaviour: dict[str, Any] | None = None) -> Any:
         if "ps" in argv:
             return _FakeCompleted(0, behaviour.get("ps_output", ""))
         if "image" in argv and "inspect" in argv:
-            return _FakeCompleted(behaviour.get("image_exit", 0), "")
+            return _FakeCompleted(
+                behaviour.get("image_exit", 0),
+                behaviour.get("image_inspect_stdout", _FAKE_IMAGE_INSPECT),
+            )
         if "--version" in argv:
             return _FakeCompleted(0, "Docker version 27.0.0\n")
         if "info" in argv:
@@ -320,6 +334,7 @@ def test_sandbox_suite_qualifies_when_every_probe_passes(monkeypatch: pytest.Mon
         "p3.adversarial.escape_matrix",
         "p3.adversarial.memory_limit",
         "p3.adversarial.descendants",
+        "p3.environment.bind",
         "p3.product.argv",
         "p3.product.no_host_fallback",
         "p3.product.isolation_smoke",
@@ -1092,3 +1107,151 @@ def test_dry_run_mentions_coding_cases_and_thermal(
     assert "coding cases" in out
     assert "STUDIO_QUALIFY_CASE_ID" in out
     assert "thermal readings" in out
+
+
+# ---------------------------------------------------------------------------
+# Binding the evidence to what was measured (M5-P3-01 task 4)
+# ---------------------------------------------------------------------------
+
+
+def test_runtime_version_reads_the_runtime_version_line(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        qe,
+        "run_command",
+        lambda argv, **kwargs: _FakeCompleted(0, "\nDocker version 27.3.1, build abcdef0\n"),
+    )
+    assert qe.runtime_version("/usr/bin/docker") == "Docker version 27.3.1, build abcdef0"
+
+
+def test_runtime_version_is_empty_rather_than_invented(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert qe.runtime_version("") == ""
+    monkeypatch.setattr(qe, "run_command", lambda argv, **kwargs: _FakeCompleted(1, "", "boom"))
+    assert qe.runtime_version("/usr/bin/docker") == ""
+
+
+def test_parse_image_identity_extracts_the_content_id_and_digest() -> None:
+    identity = qe.parse_image_identity(_FAKE_IMAGE_INSPECT)
+    assert identity["image_id"] == "sha256:9f1c2b7d5e0a4c3f8b6d1e2a7c0b5f9d4e8a3c6b1f0d7e2a5c8b4f3e0d9a2c7b"
+    assert identity["image_digest"].startswith("python@sha256:")
+    assert identity["image_tags"] == ["python:3.12-slim"]
+
+
+@pytest.mark.parametrize("stdout", ["", "not json", "[]", '"a string"', "{}"])
+def test_parse_image_identity_yields_nothing_rather_than_a_guess(stdout: str) -> None:
+    """A tag alone is not an identity: absent is reported, never fabricated."""
+    identity = qe.parse_image_identity(stdout)
+    assert identity.get("image_id", "") == ""
+
+
+def test_sandbox_config_fingerprint_reads_the_product_argv() -> None:
+    config = qe.sandbox_config_fingerprint(_FakeStudio())
+    assert config["bind_mounts"] == 1
+    assert config["privileged"] is False
+    assert "--network" in config["hardening_flags"]
+    assert "--read-only" in config["hardening_flags"]
+    assert "--privileged" not in config["hardening_flags"]
+    # The limits keep their values: --memory=2g and --memory=8g differ.
+    assert config["limits"]["--memory"] == "2g"
+    assert config["limits"]["--cpus"] == "2"
+
+
+def test_sandbox_config_fingerprint_is_empty_without_the_product(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert qe.sandbox_config_fingerprint(None) == {}
+    assert qe.sandbox_config_fingerprint(object()) == {}
+
+
+def test_sandbox_suite_binds_evidence_to_the_runtime_and_image(monkeypatch: pytest.MonkeyPatch) -> None:
+    recorder = qe.Recorder()
+    monkeypatch.setattr(qe, "run_command", _make_fake_run({}))
+    monkeypatch.setattr(qe, "_product_sandbox_module", lambda: _FakeStudio())
+    identity = qe.sandbox_suite(
+        recorder, runtime="/usr/bin/docker", runtime_name="docker", image="python:3.12-slim", timeout=5.0
+    )
+    bind = next(result for result in recorder.results if result.check_id == "p3.environment.bind")
+    assert bind.status == qe.STATUS_PASS, bind.detail
+    assert identity["runtime_version"] == "Docker version 27.0.0"
+    assert identity["image_id"].startswith("sha256:")
+    assert identity["config"]["bind_mounts"] == 1
+    # The binding is real evidence, not a sentence: the values travel with it.
+    assert bind.evidence["image_digest"].startswith("python@sha256:")
+    assert bind.evidence["runtime_version"] == "Docker version 27.0.0"
+
+
+def test_sandbox_suite_blocks_when_the_image_identity_cannot_be_read(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unreadable identity is a readability gap (blocked), never a failed guarantee."""
+    recorder = _run_sandbox_suite(monkeypatch, behaviour={"image_inspect_stdout": ""})
+    statuses = {result.check_id: result.status for result in recorder.results}
+    assert statuses["p3.image.local"] == qe.STATUS_PASS
+    assert statuses["p3.environment.bind"] == qe.STATUS_BLOCKED
+    assert recorder.verdict(qe.STORY_P3) == "blocked"
+    assert "image id" in next(
+        result.detail for result in recorder.results if result.check_id == "p3.environment.bind"
+    )
+
+
+def test_sandbox_suite_bind_is_skipped_without_a_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
+    recorder = _run_sandbox_suite(monkeypatch, runtime_available=False)
+    bind = next(result for result in recorder.results if result.check_id == "p3.environment.bind")
+    assert bind.status == qe.STATUS_SKIP
+    assert "no reachable container runtime" in bind.detail
+
+
+def test_build_record_carries_the_sandbox_identity_into_json_and_markdown() -> None:
+    recorder = qe.Recorder()
+    recorder.record("p3.runtime.available", qe.STORY_P3, "t", qe.STATUS_PASS)
+    identity = {
+        "runtime": "docker",
+        "runtime_path": "/usr/bin/docker",
+        "image": "python:3.12-slim",
+        "runtime_version": "Docker version 27.3.1, build abcdef0",
+        "image_id": "sha256:9f1c",
+        "image_digest": "python@sha256:1a2b",
+        "config": {"hardening_flags": ["--read-only"], "limits": {"--memory": "2g"},
+                   "bind_mounts": 1, "privileged": False},
+    }
+    record = qe.build_record(
+        recorder,
+        fingerprint=_fingerprint(16 * qe.GIB),
+        suites=[qe.STORY_P3],
+        runtime_name="docker",
+        runtime_path="/usr/bin/docker",
+        image="python:3.12-slim",
+        invocation=["qualify_environment.py", "--sandbox"],
+        sandbox_identity=identity,
+    )
+    assert record["sandbox"]["runtime_version"] == "Docker version 27.3.1, build abcdef0"
+    assert record["sandbox"]["image_digest"] == "python@sha256:1a2b"
+    assert record["sandbox"]["runtime"] == "docker"
+    markdown = qe.render_markdown(record)
+    assert "sha256:9f1c" in markdown
+    assert "python@sha256:1a2b" in markdown
+    assert "Docker version 27.3.1" in markdown
+    assert "1 bind mount(s)" in markdown
+
+
+def test_build_record_without_an_identity_says_so() -> None:
+    recorder = qe.Recorder()
+    record = qe.build_record(
+        recorder,
+        fingerprint=_fingerprint(16 * qe.GIB),
+        suites=[qe.STORY_P3],
+        runtime_name="",
+        runtime_path="",
+        image="python:3.12-slim",
+        invocation=["qualify_environment.py", "--sandbox"],
+        sandbox_identity={},
+    )
+    # Nothing is invented when the suite never reached a runtime.
+    assert "runtime_version" not in record["sandbox"]
+    assert "image id: not recorded" in qe.render_markdown(record)
+
+
+def test_dry_run_announces_the_binding_step(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(qe, "detect_runtime", lambda preferred=None: ("", ""))
+    assert qe.main(["--sandbox", "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert "bind the record to what ran" in out
