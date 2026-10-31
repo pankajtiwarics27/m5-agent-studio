@@ -15,6 +15,8 @@ claims anything; the binding contract is
 | [`product/M5_2_0_UIUX_Source_Manifest.json`](../product/M5_2_0_UIUX_Source_Manifest.json) | The pinned source surface (`UIUX-P0-01`): SHA-256 of every file the program may touch, the six tabs as the markup declares them, and the 102 routes `app.py` mounts. Regenerate it when the surface moves; `--check` fails CI on drift. |
 | [`scripts/uiux_source_manifest.py`](../scripts/uiux_source_manifest.py) | Writes and checks that manifest. Deterministic, parses the files, stamps no clock. |
 | [`tests/test_uiux_source_manifest.py`](../tests/test_uiux_source_manifest.py) | Re-derives every manifest claim from disk and proves the drift check actually fails. |
+| [`product/M5_2_0_UIUX_Control_Inventory.json`](../product/M5_2_0_UIUX_Control_Inventory.json) + [`uiux-2-0-control-inventory.md`](uiux-2-0-control-inventory.md) | The control inventory (`UIUX-P0-02`): every interactive element attributed to its pane, plus the script-rendered set. Generated — never hand-edited. |
+| [`scripts/uiux_control_inventory.py`](../scripts/uiux_control_inventory.py) | Writes and checks the inventory; `--check` fails CI when a control moves without it. |
 | [`product/M5_2_0_Autonomous_Roadmap.json`](../product/M5_2_0_Autonomous_Roadmap.json) | The runtime program's ledger. Separate scope, separate ownership; a UI/UX session never edits its story tracking. |
 
 ## What the program is for
@@ -72,10 +74,10 @@ The roadmap was written from GitHub web extracts, so its statements about the
 current UI start as hypotheses. `UIUX-P0-01` closed that gap with a manifest
 built from the checkout rather than from prose:
 
-* **10 pinned files** — `static/index.html`, `app.py`, the generated `studio.py`,
-  the design-system contract, the screenshot manifest, the UI audit and the four
-  scripts that build or verify the surface — each with its SHA-256, size and line
-  count;
+* **11 pinned files** — `static/index.html`, `app.py`, the generated `studio.py`,
+  the design-system contract, the screenshot manifest, the UI audit and the five
+  scripts that build, inventory or verify the surface — each with its SHA-256,
+  size and line count;
 * **the six tabs** in document order, with `dom_id`, visible label, `title`
   attribute, shortcut and `switchTab` target, parsed from the markup;
 * **the route table** — 102 routes (`36` `GET`, `58` `POST`, `5` `DELETE`, `3`
@@ -99,6 +101,27 @@ which fails, naming the files that moved, when the two disagree. The manifest an
 the ledger share one pin: `pinned_source_commit` must equal the ledger's
 `source_commit_sha`, and the tests assert that commit is an ancestor of `HEAD`, so
 a fabricated pin cannot pass.
+
+## The control inventory
+
+`UIUX-P0-02` inventoried the UI by parsing it, not by reading it, and the numbers
+are worth knowing before any redesign:
+
+* **170 controls in the markup**, attributed to their pane section or to the shared
+  chrome, plus **30 more built by inline-script templates** attributed to the
+  function that renders them — a checklist written from the markup alone would
+  have missed 15 % of the interactive surface;
+* **101 of the 170 controls live in the chrome**, more than all six panes together
+  (69). The shell, not the tabs, is where most of the clicking happens;
+* **58 controls have no `id`**, so no test can reach them by selector until one is
+  added or a stable hook exists — a binding constraint on the `P5` accessibility
+  and regression stories;
+* `start` has 3 controls, `harness` 18, `hall` 19, `council` 16, `debate` 5,
+  `chat` 9.
+
+What it does not claim: that a control is *shown* (nothing was rendered), that the
+nearest-function attribution is a call graph, or that a missing `id` means a
+missing label — a wrapping `label` element is not resolved by this walk.
 
 ## The tab registry
 
@@ -133,8 +156,9 @@ claimed elsewhere. The two programs share a repository, not a ledger:
 
 ## Status
 
-Nothing in this program is shipped: 40 stories, 1 done (`UIUX-P0-01`, the pinned
-source manifest), `next_recommended_story` = `UIUX-P0-02` (inventory every tab
-and control). Planned work is never described as available in `README.md` before
-the owning story closes with evidence, and no screenshot has been captured yet,
-so no pane is claimed to have been seen rendered.
+Nothing in this program is shipped: 40 stories, 2 done (`UIUX-P0-01` the pinned
+source manifest, `UIUX-P0-02` the control inventory), `next_recommended_story` =
+`UIUX-P0-03` (map frontend handlers to API routes). Planned work is never
+described as available in `README.md` before the owning story closes with
+evidence, and no screenshot has been captured yet, so no pane is claimed to have
+been seen rendered.

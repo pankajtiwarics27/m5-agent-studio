@@ -78,6 +78,13 @@
       "sha256": "d370439e0be951ae5b6450c5a5c9a9d2e3d7067190f6eae7a6afecdab5ca0639",
       "bytes": 1310,
       "lines": 34
+    },
+    {
+      "path": "scripts/uiux_control_inventory.py",
+      "role": "builds and checks the per-pane control inventory",
+      "sha256": "6c4ffb5cda6751c4646f52578488e2a5d5167dd2f6cb6275bc0369682bb6e91c",
+      "bytes": 21576,
+      "lines": 494
     }
   ],
   "frontend": {

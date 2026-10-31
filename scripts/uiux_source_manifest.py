@@ -58,6 +58,7 @@ TRACKED_FILES: tuple[tuple[str, str], ...] = (
     ("scripts/validate_screenshots.py", "validates capture output against the manifest"),
     ("scripts/build_studio.py", "regenerates studio.py from app.py and the inlined modules"),
     ("scripts/check_frontend_syntax.py", "parses the inline script block for syntax errors"),
+    ("scripts/uiux_control_inventory.py", "builds and checks the per-pane control inventory"),
 )
 
 BUTTON_RE = re.compile(
