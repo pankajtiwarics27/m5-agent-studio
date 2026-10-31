@@ -125,8 +125,8 @@
   "session_state": {
     "active_story": null,
     "last_completed_story": "M5-P2-05",
-    "last_checkpoint": "2026-10-30T19:50:24Z",
-    "last_session_id": "arena/7cdf26c8-m5-agent-studio",
+    "last_checkpoint": "2026-10-31T02:51:42Z",
+    "last_session_id": "arena/e22714be-m5-agent-studio",
     "next_recommended_story": "M5-P3-01",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
@@ -2149,7 +2149,7 @@
         "progress_percent": 25,
         "attempts": 1,
         "started_at": "2026-10-30T19:31:57Z",
-        "updated_at": "2026-10-30T19:37:54Z",
+        "updated_at": "2026-10-31T02:51:31Z",
         "completed_at": null,
         "owner_session": "arena/bf5fe1a6-m5-agent-studio",
         "commit_sha": "44c16b4",
@@ -2170,18 +2170,19 @@
           "No silent host fallback: p3.product.no_host_fallback points STUDIO_SANDBOX_RUNTIME at a nonexistent binary (must deny) and then runs the real configuration (no host marker file may appear); a simulated host execution is reported as a failure (test_sandbox_suite_reports_host_execution_as_a_failure). scripts/isolation_smoke.py --live is executed as one aggregated check.",
           "Blocker unchanged: no container runtime exists in this evidence environment (docker/podman not on PATH). The live run therefore reports M5-P3-01 as blocked, with every container probe recorded skip and the reason; no isolation guarantee is claimed. Evidence: scripts/qualify_environment.py --all locally exits 2 with `M5-P3-01: blocked`.",
           "Next action: the owner runs `python3 scripts/qualify_environment.py --sandbox --json <path> --markdown <path>` (or ./scripts/qualify_environment.sh) on the Docker host; only a `qualified` record may move this story off blocked (docs/qualification-suite.md).",
-          "Runtime selection fails closed: an explicitly requested `--runtime` that is not installed blocks the run instead of falling back to another backend (tests: test_an_explicit_missing_runtime_is_never_replaced_by_another_backend), and a host that has Docker but not the configured image reports unqualified/exit 1 rather than a pass (test_a_runtime_without_the_image_is_unqualified_never_qualified)."
+          "Runtime selection fails closed: an explicitly requested `--runtime` that is not installed blocks the run instead of falling back to another backend (tests: test_an_explicit_missing_runtime_is_never_replaced_by_another_backend), and a host that has Docker but not the configured image reports unqualified/exit 1 rather than a pass (test_a_runtime_without_the_image_is_unqualified_never_qualified).",
+          "First-run hardening of the qualification tooling (so the owner's run cannot report a false verdict): --dry-run prints every command without executing any of them (tests: test_dry_run_prints_the_plan_and_touches_nothing, test_dry_run_is_explicit_about_skipped_measurements); a missing image is now blocked/exit 2 instead of unqualified, because nothing about isolation was observed (test_a_missing_image_blocks_the_suite_instead_of_accusing_isolation, test_a_runtime_without_the_image_never_produces_a_pass); the positive probe reports what the container sees in /workspace, so a mount the runtime does not share (macOS file sharing, SELinux labels) is blocked rather than reported as a leak, and dependent probes are skipped (test_an_unusable_workspace_mount_is_blocked_not_unqualified, test_an_unwritable_empty_mount_is_blocked); unqualified is now reserved for observed violations, documented in docs/qualification-suite.md."
         ],
         "test_results": [
           {
             "command": ".venv/bin/python -m pytest -q",
             "exit_code": 0,
-            "result": "989 passed, 1 skipped (opt-in live container test), 1 warning in 53.09s"
+            "result": "1032 passed, 1 skipped (opt-in live container test), 1 warning in 49.20s"
           },
           {
             "command": ".venv/bin/python -m pytest tests/test_qualify_environment.py -q",
             "exit_code": 0,
-            "result": "43 passed (also re-run with a Docker-on-PATH simulation: same result)"
+            "result": "51 passed"
           },
           {
             "command": ".venv/bin/ruff check .",
@@ -2191,37 +2192,22 @@
           {
             "command": ".venv/bin/mypy",
             "exit_code": 0,
-            "result": "Success: no issues found in 47 source files"
+            "result": "Success: no issues found in 48 source files"
           },
           {
-            "command": ".venv/bin/python scripts/validate_docs.py",
+            "command": ".venv/bin/python scripts/validate_docs.py && scripts/validate_adrs.py && scripts/validate_governance.py",
             "exit_code": 0,
-            "result": "passed (5 required pages, 88 files scanned)"
+            "result": "all passed"
           },
           {
-            "command": ".venv/bin/python scripts/validate_adrs.py",
+            "command": "sh scripts/qualify_environment.sh --sandbox --dry-run",
             "exit_code": 0,
-            "result": "passed (process, template, numbered records)"
+            "result": "plan printed (hardened argv, one bind mount, --pull=never, --network=none), nothing executed, no artifacts written"
           },
           {
-            "command": ".venv/bin/python scripts/validate_governance.py",
-            "exit_code": 0,
-            "result": "passed (7 required files)"
-          },
-          {
-            "command": ".venv/bin/python scripts/smoke_local.py && .venv/bin/python scripts/smoke_local.py --standalone",
-            "exit_code": 0,
-            "result": "both passed"
-          },
-          {
-            "command": ".venv/bin/python scripts/qualify_environment.py --all --json /tmp/q.json --markdown /tmp/q.md",
+            "command": ".venv/bin/python scripts/qualify_environment.py --sandbox",
             "exit_code": 2,
-            "result": "M5-P3-01: blocked (no container runtime), M5-P4-01: blocked (not 24 GB Apple Silicon); nothing claimed"
-          },
-          {
-            "command": "PATH=<fake docker> .venv/bin/python -m pytest -q",
-            "exit_code": 0,
-            "result": "989 passed - a host with Docker but without the image yields unqualified (exit 1), never qualified"
+            "result": "M5-P3-01: blocked (no container runtime on PATH in this environment); nothing claimed"
           }
         ],
         "decisions": [
@@ -2554,7 +2540,7 @@
         "progress_percent": 60,
         "attempts": 1,
         "started_at": "2026-10-30T19:31:57Z",
-        "updated_at": "2026-10-30T19:50:24Z",
+        "updated_at": "2026-10-31T02:51:42Z",
         "completed_at": null,
         "owner_session": "arena/7cdf26c8-m5-agent-studio",
         "commit_sha": "ed1d15b",
@@ -2590,17 +2576,12 @@
           {
             "command": ".venv/bin/python -m pytest -q",
             "exit_code": 0,
-            "result": "1025 passed, 1 skipped (opt-in live container test), 1 warning in 52.78s"
+            "result": "1032 passed, 1 skipped (opt-in live container test), 1 warning in 49.20s"
           },
           {
             "command": ".venv/bin/python -m pytest tests/test_model_admission.py -q",
             "exit_code": 0,
             "result": "35 passed"
-          },
-          {
-            "command": ".venv/bin/python -m pytest tests/test_qualify_environment.py -q",
-            "exit_code": 0,
-            "result": "47 passed"
           },
           {
             "command": ".venv/bin/ruff check .",
@@ -2625,7 +2606,7 @@
           {
             "command": ".venv/bin/python scripts/qualify_environment.py --hardware --quiet",
             "exit_code": 2,
-            "result": "p4.single_heavy_model pass, p4.admission_wired pass, p4.machine.fingerprint blocked (not 24 GB Apple Silicon) -> suite blocked, nothing claimed"
+            "result": "p4.single_heavy_model pass, p4.admission_wired pass, p4.priors_not_verified pass, p4.machine.fingerprint blocked (not 24 GB Apple Silicon), p4.pressure/p4.model_load skipped -> blocked"
           }
         ],
         "decisions": [

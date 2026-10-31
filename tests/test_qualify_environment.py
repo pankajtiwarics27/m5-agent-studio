@@ -46,11 +46,15 @@ def _make_fake_run(behaviour: dict[str, Any] | None = None) -> Any:
         if "isolation_smoke.py" in joined:
             return _FakeCompleted(behaviour.get("smoke_exit", 0), "isolation_status: qualified\n")
         if "positive-ok" in code:
-            if behaviour.get("positive_fails"):
-                return _FakeCompleted(1, "")
             target = Path(argv[argv.index("--mount") + 1].split("source=")[1].split(",")[0])
+            if behaviour.get("mount_missing"):
+                return _FakeCompleted(4, "listing:<missing-workspace>\nwrite-error:2:FileNotFoundError\n")
+            if behaviour.get("mount_empty"):
+                return _FakeCompleted(4, "listing:\nwrite-error:30:OSError\n")
+            if behaviour.get("positive_fails"):
+                return _FakeCompleted(1, "listing:qualify-link\n")
             (target / "qualification-positive.txt").write_text("ok", encoding="utf-8")
-            return _FakeCompleted(0, "positive-ok\n")
+            return _FakeCompleted(0, "listing:qualify-link\ncwd:/workspace\npositive-ok\n")
         if "denials:" in code:
             leaked = behaviour.get("leaked", "none")
             return _FakeCompleted(0 if leaked == "none" else 3, f"denials:{leaked}\n")
@@ -319,11 +323,39 @@ def test_sandbox_suite_fails_when_the_positive_path_breaks(monkeypatch: pytest.M
     assert "p3.positive.execute" in {result.check_id for result in recorder.failures(qe.STORY_P3)}
 
 
-def test_sandbox_suite_blocks_image_pull_expectations(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_missing_image_blocks_the_suite_instead_of_accusing_isolation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Nothing about isolation was observed, so the verdict must not be `unqualified`."""
     recorder = _run_sandbox_suite(monkeypatch, behaviour={"image_exit": 1})
     statuses = {result.check_id: result.status for result in recorder.results}
-    assert statuses["p3.image.local"] == qe.STATUS_FAIL
+    assert statuses["p3.image.local"] == qe.STATUS_BLOCKED
     assert statuses["p3.positive.execute"] == qe.STATUS_SKIP
+    assert recorder.verdict(qe.STORY_P3) == "blocked"
+    detail = next(r.detail for r in recorder.results if r.check_id == "p3.image.local")
+    assert "pull" in detail
+
+
+def test_an_unusable_workspace_mount_is_blocked_not_unqualified(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A runtime that cannot see the shared workspace is a setup gap, not a leak."""
+    recorder = _run_sandbox_suite(monkeypatch, behaviour={"mount_missing": True})
+    statuses = {result.check_id: result.status for result in recorder.results}
+    assert statuses["p3.positive.execute"] == qe.STATUS_BLOCKED
+    assert recorder.verdict(qe.STORY_P3) == "blocked"
+    detail = next(r.detail for r in recorder.results if r.check_id == "p3.positive.execute")
+    assert "File sharing" in detail
+    # Nothing that needs a trustworthy mount may be reported as an isolation failure.
+    for check_id in ("p3.adversarial.escape_matrix", "p3.adversarial.memory_limit"):
+        assert statuses[check_id] == qe.STATUS_SKIP
+
+
+def test_an_unwritable_empty_mount_is_blocked(monkeypatch: pytest.MonkeyPatch) -> None:
+    recorder = _run_sandbox_suite(monkeypatch, behaviour={"mount_empty": True})
+    assert recorder.verdict(qe.STORY_P3) == "blocked"
+    statuses = {result.check_id: result.status for result in recorder.results}
+    assert statuses["p3.positive.execute"] == qe.STATUS_BLOCKED
 
 
 def test_sandbox_suite_reports_host_execution_as_a_failure(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -593,18 +625,53 @@ def test_script_is_runnable_end_to_end_in_this_environment() -> None:
     assert "M5-P4-01: blocked" in result.stdout
 
 
-def test_a_runtime_without_the_image_is_unqualified_never_qualified(
+def test_a_runtime_without_the_image_never_produces_a_pass(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A host that has Docker but not the image must not produce a pass."""
+    """A host with Docker but no image yields `blocked` (exit 2), never `qualified`."""
     monkeypatch.setattr(qe, "run_command", _make_fake_run({"image_exit": 1}))
     monkeypatch.setattr(qe, "_product_sandbox_module", lambda: _FakeStudio())
     monkeypatch.setattr(qe, "detect_runtime", lambda preferred=None: ("/usr/bin/docker", "docker"))
     exit_code = qe.main(["--sandbox", "--quiet", "--json", str(tmp_path / "r.json")])
-    assert exit_code == 1
+    assert exit_code == 2
     record = json.loads((tmp_path / "r.json").read_text(encoding="utf-8"))
-    assert record["verdicts"][qe.STORY_P3]["verdict"] == "unqualified"
-    assert record["claims"]["container_isolation"] == "unqualified"
+    assert record["verdicts"][qe.STORY_P3]["verdict"] == "blocked"
+    assert record["claims"]["container_isolation"] == "blocked"
+
+
+def test_dry_run_prints_the_plan_and_touches_nothing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    calls: list[list[str]] = []
+
+    def _never(argv, **_kwargs):  # noqa: ANN001 - signature mirrors run_command
+        calls.append(list(argv))
+        raise AssertionError("--dry-run must not execute anything")
+
+    monkeypatch.setattr(qe, "run_command", _never)
+    monkeypatch.setattr(qe, "detect_runtime", lambda preferred=None: ("/usr/bin/docker", "docker"))
+    exit_code = qe.main(
+        ["--all", "--dry-run", "--pressure-gb", "16", "--model-command", "probe-me",
+         "--json", str(tmp_path / "r.json")]
+    )
+    assert exit_code == 0
+    assert calls == []
+    assert not (tmp_path / "r.json").exists()
+    out = capsys.readouterr().out
+    assert "Planned qualification" in out
+    assert "--network=none" in out and "--read-only" in out and "--pull=never" in out
+    assert "touch 16.0 GiB" in out and "probe-me" in out
+    assert "Nothing above has been executed" in out
+
+
+def test_dry_run_is_explicit_about_skipped_measurements(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(qe, "detect_runtime", lambda preferred=None: ("", ""))
+    assert qe.main(["--hardware", "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert "pressure measurement SKIPPED" in out
+    assert "model load measurement SKIPPED" in out
 
 
 def test_asyncio_coroutine_path_is_used_for_product_probes(monkeypatch: pytest.MonkeyPatch) -> None:

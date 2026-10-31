@@ -59,10 +59,30 @@ python3 scripts/qualify_environment.py --hardware \
   --profile-out dist/model-profile.jsonl
 ```
 
-Useful flags: `--runtime docker|podman` (default `auto`; an explicitly requested
-runtime that is not installed blocks the run instead of quietly qualifying a
-different backend), `--timeout` (per check, default 180 s), `--quiet`, `--json`,
-`--markdown`.
+Useful flags: `--dry-run` (print every command the suite would run and exit
+without touching anything), `--runtime docker|podman` (default `auto`; an
+explicitly requested runtime that is not installed blocks the run instead of
+quietly qualifying a different backend), `--timeout` (per check, default 180 s),
+`--quiet`, `--json`, `--markdown`.
+
+Review a run before making it:
+
+```sh
+./scripts/qualify_environment.sh --all --dry-run --pressure-gb 16
+```
+
+### Prerequisites, and why they are `blocked` rather than `unqualified`
+
+| Situation | Verdict | Why |
+|---|---|---|
+| No runtime CLI on `PATH`, or the daemon is down | `blocked` | Nothing was observed. |
+| The image is not local | `blocked` (exit `2`) | The suite never pulls; pull it yourself and re-run. |
+| The container cannot see the shared workspace | `blocked` | A macOS file-sharing or SELinux labelling problem is a setup gap, not an isolation leak. |
+| A probe observed a leak | `unqualified` (exit `1`) | A guarantee actually failed. |
+
+`unqualified` is reserved for *observed* violations. A misconfigured host must not
+be reported as a security failure, and it must not be reported as a pass either —
+`blocked` is the honest third answer.
 
 ### Exit codes
 
@@ -100,8 +120,8 @@ Note that `ExecStartPre` refusal (exit `1`/`2`) stops the service. Use `-` as th
 | Check | What it observes |
 |---|---|
 | `p3.runtime.available` | The runtime CLI answers `--version` and its daemon answers `info`. |
-| `p3.image.local` | The configured image is already present (`image inspect`); nothing is pulled. |
-| `p3.positive.execute` | Positive compatibility: code runs and its write lands in the mounted workspace. |
+| `p3.image.local` | The configured image is already present (`image inspect`); nothing is pulled. Absent → `blocked`, with the exact `pull` command. |
+| `p3.positive.execute` | Positive compatibility: the container lists `/workspace`, code runs, and its write lands on the host. If the mount is missing/empty or unwritable the check is `blocked` (setup), not failed. |
 | `p3.adversarial.escape_matrix` | Inside the container: a host-only canary file via direct path, `/workspace/..` traversal, and `/proc/1/root`, read-only rootfs write attempts (`/` and `/etc/hostname`), a workspace symlink pointing outside, direct and host-loopback TCP egress, an inherited host environment sentinel, and a raw socket are all refused. |
 | `p3.adversarial.memory_limit` | A 3 GiB allocation dies under `--memory 512m`. |
 | `p3.adversarial.descendants` | A background `sleep` descendant does not survive the container (`docker ps --filter name=`). |
@@ -175,9 +195,10 @@ Verdicts mean exactly this:
 
 ## Tests
 
-`tests/test_qualify_environment.py` (47 tests) pins the properties above without a
+`tests/test_qualify_environment.py` (51 tests) pins the properties above without a
 container runtime: verdict semantics, required-versus-optional checks, argv
-parity with the product, the blocked path when no runtime exists, the failure
-path when a leak is observed, host-execution detection, the record and Markdown
-shape, the exit codes, the model-probe contract, and an end-to-end run in this
-environment that must exit `2` and print both stories as `blocked`.
+parity with the product, the blocked path when no runtime, image or usable
+workspace mount is missing, the failure path when a leak is observed,
+host-execution detection, the record and Markdown shape, the exit codes, the
+model-probe contract, `--dry-run` executing nothing, and an end-to-end run in
+this environment that must exit `2` and print both stories as `blocked`.
