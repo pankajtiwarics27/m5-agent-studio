@@ -74,7 +74,8 @@ def test_every_resolved_url_is_classified_exactly_once() -> None:
     assert totals["exact_matches"] == kinds.get("exact", 0)
     assert totals["dynamic_matches"] == kinds.get("dynamic", 0)
     assert sum(kinds.values()) == resolved
-    assert totals["unresolved_call_sites"] == sum(1 for call in calls if not call["urls"])
+    assert totals["unresolved_call_sites"] == sum(1 for call in calls if not call["urls"] or call["unresolved_edges"])
+    assert totals["unresolved_caller_edges"] == sum(len(call["unresolved_edges"]) for call in calls)
     assert set(kinds) <= {"exact", "dynamic", "method_mismatch", "no_route"}
 
 
@@ -188,7 +189,7 @@ def test_line_numbers_are_published_in_both_frames() -> None:
     assert set(frames) == {"script_line", "document_line"}
 
 
-def test_an_unresolved_forward_makes_the_caller_list_a_lower_bound() -> None:
+def test_an_unresolved_forward_is_reported() -> None:
     """Issue #110: an unresolved hand-off must not be published as proof of disuse."""
     module = _load_generator()
     synthetic = """
@@ -198,11 +199,12 @@ def test_an_unresolved_forward_makes_the_caller_list_a_lower_bound() -> None:
     functions = module._read_functions(synthetic)
     at = synthetic.index("fetch(")
     scope = module._scope_at(synthetic, functions, at)
-    pairs, how = module._resolve_expression(
+    pairs, how, unresolved = module._resolve_expression(
         synthetic, functions, "url", scope, at
     )
     assert pairs == []
     assert how == "unresolved"
+    assert unresolved
 
     # With a literal at the call site the same shape resolves, so the test above
     # fails for the reason it names and not because the walker never works.
@@ -213,14 +215,164 @@ def test_an_unresolved_forward_makes_the_caller_list_a_lower_bound() -> None:
     functions = module._read_functions(resolvable)
     at = resolvable.index("fetch(")
     scope = module._scope_at(resolvable, functions, at)
-    pairs, how = module._resolve_expression(resolvable, functions, "url", scope, at)
+    pairs, how, unresolved = module._resolve_expression(resolvable, functions, "url", scope, at)
     assert [url for url, _chain in pairs] == ["/api/things"]
     assert how == "callers"
+    assert not unresolved
 
     resolution = _map()["caller_resolution"]
     assert resolution["complete"] is True
     assert resolution["unresolved_call_sites"] == []
-    assert "really has none" in resolution["statement"]
+    assert "not proof of absence" in resolution["statement"]
+
+
+def _fixture_map(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, script: str,
+    routes: str = '@app.post("/api/known")\n@app.post("/api/maybe")\n',
+) -> dict:
+    module = _load_generator()
+    html = tmp_path / "index.html"
+    app = tmp_path / "app.py"
+    html.write_text("<!doctype html>\n<script>\n" + script + "\n</script>\n", encoding="utf-8")
+    app.write_text(routes, encoding="utf-8")
+    monkeypatch.setattr(module, "FRONTEND", html)
+    monkeypatch.setattr(module, "APP", app)
+    return module.build_map()
+
+
+def test_multiple_structural_candidates_are_all_possible(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = _fixture_map(
+        tmp_path, monkeypatch,
+        'function send() { return fetch("/api/known", {method: "POST"}); }',
+        '@app.post("/api/{identifier}")\n@app.post("/api/known")\n',
+    )
+    assert len(mapping["calls"][0]["urls"][0]["candidates"]) == 2
+    for route in mapping["routes"]:
+        assert route["possible_callers"] == ["send"]
+        assert route["callers"] == []
+        assert route["caller_certainty"] == "possible"
+
+
+def test_partially_resolved_forwarding_keeps_unknown_edges(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = _fixture_map(tmp_path, monkeypatch, """
+function sink(url) { return fetch(url, {method: "POST"}); }
+function relay(other, url) { sink(url); }
+function known() { relay(callWithComma(1, 2), "/api/known"); }
+function unknown(input) { relay("token", input); }
+""")
+    (call,) = mapping["calls"]
+    assert {url["route"] for url in call["urls"]} == {"/api/known"}
+    assert call["unresolved_edges"], "one literal must not hide an unresolved caller"
+    assert mapping["totals"]["unresolved_call_sites"] == 1
+    assert mapping["totals"]["unresolved_caller_edges"] >= 1
+    assert mapping["caller_resolution"]["complete"] is False
+    assert any(finding["kind"] == "unresolved_caller" for finding in mapping["findings"])
+    routes = {route["path"]: route for route in mapping["routes"]}
+    assert routes["/api/known"]["used_by_frontend"] is True
+    assert routes["/api/maybe"]["used_by_frontend"] is None
+    assert routes["/api/maybe"]["caller_certainty"] == "unknown"
+    assert mapping["totals"]["routes_unknown_frontend_caller"] == 1
+
+
+def test_unknown_only_never_asserts_unused_routes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = _fixture_map(tmp_path, monkeypatch, """
+function sink(url) { return fetch(url, {method: "POST"}); }
+function unknown(input) { sink(input); }
+""")
+    assert not mapping["caller_resolution"]["complete"]
+    assert all(route["used_by_frontend"] is None for route in mapping["routes"])
+    module = _load_generator()
+    page = module.render_doc(mapping)
+    assert "routes are not called by the inline script" not in page
+    assert "unknown" in page.lower()
+
+
+def test_same_url_keeps_each_distinct_helper_chain(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = _fixture_map(tmp_path, monkeypatch, """
+function sink(url) { return fetch(url, {method: "POST"}); }
+function first() { sink("/api/known"); }
+function second() { sink("/api/known"); }
+""")
+    urls = mapping["calls"][0]["urls"]
+    assert {tuple(url["forwarded_via"]) for url in urls} == {("sink", "first"), ("sink", "second")}
+
+
+def test_literal_inside_an_unknown_expression_is_not_a_resolved_url(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = _fixture_map(tmp_path, monkeypatch, """
+function sink(url) { return fetch(url, {method: "POST"}); }
+function unknown() { sink(rewrite("/api/known")); }
+""")
+    (call,) = mapping["calls"]
+    assert call["urls"] == []
+    assert call["unresolved_edges"]
+    assert all(route["used_by_frontend"] is None for route in mapping["routes"])
+
+
+def test_known_conditional_branch_does_not_hide_an_unknown_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = _fixture_map(tmp_path, monkeypatch, """
+function sink(condition, custom) {
+  const url = condition ? "/api/known" : custom;
+  return fetch(url, {method: "POST"});
+}
+""")
+    (call,) = mapping["calls"]
+    assert {url["route"] for url in call["urls"]} == {"/api/known"}
+    assert call["unresolved_edges"]
+    assert next(row for row in mapping["routes"] if row["path"] == "/api/maybe")["caller_certainty"] == "unknown"
+
+
+def test_reassigned_url_does_not_hide_an_unresolved_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = _fixture_map(tmp_path, monkeypatch, """
+function sink(condition, custom) {
+  let url = "/api/known";
+  if (condition) url = custom;
+  return fetch(url, {method: "POST"});
+}
+""")
+    (call,) = mapping["calls"]
+    assert call["unresolved_edges"]
+    assert next(row for row in mapping["routes"] if row["path"] == "/api/maybe")["caller_certainty"] == "unknown"
+
+
+def test_cyclic_forwarding_is_bounded_and_reported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = _fixture_map(tmp_path, monkeypatch, """
+function sink(url) { return fetch(url, {method: "POST"}); }
+function first(url) { second(url); }
+function second(url) { first(url); sink(url); }
+function known() { first("/api/known"); }
+""")
+    (call,) = mapping["calls"]
+    assert "/api/known" in {url["route"] for url in call["urls"]}
+    assert any("cycle" in edge["detail"].lower() for edge in call["unresolved_edges"])
+
+
+def test_long_forwarding_chain_fails_closed_at_the_depth_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    script = 'function sink(url) { return fetch(url, {method: "POST"}); }\n'
+    script += 'function f0(url) { sink(url); }\n'
+    script += ''.join(f'function f{i}(url) {{ f{i - 1}(url); }}\n' for i in range(1, 8))
+    script += 'function known() { f7("/api/known"); }\n'
+    mapping = _fixture_map(tmp_path, monkeypatch, script)
+    (call,) = mapping["calls"]
+    assert any("depth limit" in edge["detail"] for edge in call["unresolved_edges"])
+    assert all(route["used_by_frontend"] is None for route in mapping["routes"])
 
 
 def test_the_map_agrees_with_the_manifest_and_the_ledger() -> None:
@@ -237,7 +389,9 @@ def test_the_map_agrees_with_the_manifest_and_the_ledger() -> None:
 def test_the_generated_page_carries_its_limitations() -> None:
     page = DOC.read_text(encoding="utf-8")
     assert "never hand-edit this page" in page
-    for heading in ("## Call sites by handler", "## Findings", "## Routes with no browser caller", "## Not verified"):
+    for heading in (
+        "## Call sites by handler", "## Findings", "## Routes without a resolved browser caller", "## Not verified"
+    ):
         assert heading in page
     for note in _map()["not_verified"]:
         assert note[:60] in page

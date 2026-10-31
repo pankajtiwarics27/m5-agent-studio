@@ -89,16 +89,16 @@
     {
       "path": "scripts/uiux_route_map.py",
       "role": "maps every fetch call to the route it can hit",
-      "sha256": "bedc75c45d09d2fe02a4cd76b3f64e1f466aecb12d016529823d77fdaa59dca1",
-      "bytes": 32841,
-      "lines": 730
+      "sha256": "81fd6447046a4b12bb902e2f516261fb70484b69fd1956bb51568bb88ad3fd97",
+      "bytes": 35744,
+      "lines": 793
     },
     {
       "path": "scripts/uiux_authorization_trace.py",
       "role": "traces the authorization and state behind each state-changing call",
-      "sha256": "a5bbdaad958cac6cff52a99073c09ad485fec4166e434a11354bf89648d093f3",
-      "bytes": 36017,
-      "lines": 754
+      "sha256": "b015927e6874d3500c565beb3c8363077909f97afc8ae4df7796e92abd754219",
+      "bytes": 36525,
+      "lines": 759
     }
   ],
   "frontend": {

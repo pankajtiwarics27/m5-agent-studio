@@ -8,7 +8,7 @@ status code that was smoothed into a bucket, a subsystem the handlers use that
 nobody classified. So the checks re-derive the claims from `app.py` and the P0-03
 route map instead of trusting the file:
 
-* every state-changing route the browser can call is traced, and nothing else is;
+* every state-changing candidate in the lexical route map is traced, and nothing else is;
 * every traced handler exists in `app.py` at the recorded line with that decorator;
 * the shared boundary's refusals are the middleware's own returns;
 * every handler refusal is a real `HTTPException` in that handler, and a computed
@@ -53,17 +53,19 @@ def _rows() -> list[dict]:
     return _trace()["routes"]
 
 
+def _route_map() -> dict:
+    return json.loads(ROUTE_MAP.read_text(encoding="utf-8"))
+
+
 def _ui_state_changing_routes() -> set[tuple[str, str]]:
-    """Every state-changing route the browser reaches, derived from the route map."""
+    """State-changing route candidates derived from the lexical browser map."""
     mapping = json.loads(ROUTE_MAP.read_text(encoding="utf-8"))
     found: set[tuple[str, str]] = set()
     for call in mapping["calls"]:
         if call["method"] not in STATE_CHANGING:
             continue
         for url in call["urls"]:
-            if url["kind"] == "exact":
-                found.add((call["method"], url["route"]))
-            elif url["kind"] == "dynamic":
+            if url["kind"] in {"exact", "dynamic"}:
                 for candidate in url["candidates"]:
                     found.add((candidate["method"], candidate["path"]))
     return found
@@ -106,7 +108,7 @@ def _load_generator():
 
 
 # ---------------------------------------------------------------------------
-# Coverage: the trace describes exactly the calls the browser can make
+# Coverage: the trace describes the candidates present in the lexical map
 # ---------------------------------------------------------------------------
 
 
@@ -116,6 +118,50 @@ def test_every_state_changing_call_the_browser_makes_is_traced() -> None:
     traced = {(row["method"], row["path"]) for row in _rows()}
     assert traced == expected, f"missing: {sorted(expected - traced)}; unexpected: {sorted(traced - expected)}"
     assert _trace()["totals"]["traced_routes"] == len(traced)
+
+
+def test_route_map_uncertainty_is_visible_in_the_trace() -> None:
+    route_totals = _route_map()["totals"]
+    trace_totals = _trace()["totals"]
+    assert trace_totals["route_map_unresolved_call_sites"] == route_totals["unresolved_call_sites"]
+    assert trace_totals["route_map_unresolved_caller_edges"] == route_totals["unresolved_caller_edges"]
+    assert any("not proof" in note for note in _trace()["not_verified"])
+
+
+def test_trace_propagates_nonzero_route_map_uncertainty(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = _route_map()
+    mapping["totals"]["unresolved_call_sites"] = 1
+    mapping["totals"]["unresolved_caller_edges"] = 2
+    route_map = tmp_path / "route-map.json"
+    route_map.write_text(json.dumps(mapping), encoding="utf-8")
+    module = _load_generator()
+    monkeypatch.setattr(module, "ROUTE_MAP", route_map)
+    trace = module.build_trace()
+    assert trace["totals"]["route_map_unresolved_call_sites"] == 1
+    assert trace["totals"]["route_map_unresolved_caller_edges"] == 2
+    assert "1 fetch site(s) have 2 unresolved caller edge(s)" in module.render_doc(trace)
+
+
+def test_trace_rejects_route_map_without_uncertainty_data(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = _route_map()
+    del mapping["totals"]["unresolved_caller_edges"]
+    route_map = tmp_path / "route-map.json"
+    route_map.write_text(json.dumps(mapping), encoding="utf-8")
+    module = _load_generator()
+    monkeypatch.setattr(module, "ROUTE_MAP", route_map)
+    assert module.main(["--check", "--quiet"]) == 1
+
+
+def test_forwarded_sdlc_state_changing_calls_are_traced() -> None:
+    routes = {(row["method"], row["path"]): row for row in _rows()}
+    for path in ("/api/harness/sdlc/run", "/api/harness/sdlc/feedback"):
+        row = routes[("POST", path)]
+        assert "consumeSSE" in row["ui_callers"]
+        assert row["handler_line"] > 0
 
 
 def test_nothing_read_only_is_traced() -> None:
@@ -142,10 +188,7 @@ def test_ui_callers_come_from_the_route_map() -> None:
         if call["method"] not in STATE_CHANGING:
             continue
         for url in call["urls"]:
-            route = url["route"] if url["kind"] == "exact" else None
-            if route:
-                expected.setdefault((call["method"], route), set()).add(call["handler"])
-            elif url["kind"] == "dynamic":
+            if url["kind"] in {"exact", "dynamic"}:
                 for candidate in url["candidates"]:
                     expected.setdefault((candidate["method"], candidate["path"]), set()).add(call["handler"])
     for row in _rows():

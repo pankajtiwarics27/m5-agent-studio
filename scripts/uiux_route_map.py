@@ -1,39 +1,18 @@
 #!/usr/bin/env python3
-"""Map every frontend fetch call to the API route it hits (UIUX-P0-03).
+"""Statically map browser fetch calls in ``static/index.html`` (UIUX-P0-03).
 
     python3 scripts/uiux_route_map.py            # regenerate JSON + docs
     python3 scripts/uiux_route_map.py --check    # fail if either drifted
     python3 scripts/uiux_route_map.py --json     # print the map
 
-`static/index.html` talks to the server through `fetch` calls inside one inline
-script; `app.py` mounts 102 routes. Nothing in the repository states which call
-hits which route, so every later UI story that touches a pane is guessing about
-the contract it depends on. This script derives the mapping from the calls:
+Follow supported literal, assignment and parameter-forwarding expressions to
+service decorators in ``app.py``. Preserve helper chains, dynamic candidates,
+script/document line frames, and every unresolved edge, including partial ones.
 
-* each `fetch(...)` is located, its enclosing function recorded, and its HTTP
-  method read from the `method:` option (default `GET`);
-* literal URLs are used directly; a URL held in a local `const` is resolved from
-  the enclosing function's own assignment; a helper that receives its URL as a
-  parameter (`consumeSSE(url, ...)`) is resolved from its call sites, *including
-  the call sites of helpers that forward their own parameter into it*
-  (`_streamSdlcEndpoint(url, ...)` -> `consumeSSE(url, ...)`), four hops deep.
-  Each URL carries the helper chain it travelled, so a forwarded call names the
-  entry point that supplied the literal;
-* each URL is matched against the route table segment by segment, honouring
-  `<param>` and `<param:path>` converters, and distinguishing three outcomes:
-  an exact match, a *dynamic* match (the URL supplies a segment the route spells
-  literally, e.g. `/api/models/${id}/${act}` against `/load` and `/unload`), and
-  no match at all. A dynamic match registers its caller as *possible* on every
-  candidate route, never as certain on one of them;
-* lines are published in two frames, `script_line` (inside the inline script) and
-  `document_line` (in `static/index.html`), because a script line read as a
-  document line is off by all the markup above it.
-
-The unmatched and mismatched entries are the point. A call that resolves to no
-route is either dead code or a bug, and a call whose method disagrees with the
-route is a request that can only fail; both are published as findings instead of
-being smoothed into a clean-looking table. Routes with no browser caller are
-published too, because "the UI does not use this" is as useful as the converse.
+This is a bounded lexical scan, not a complete JavaScript parser or a runtime
+observation. A route without a resolved caller is not proof of an unused route;
+a match is not proof that a call works. Auth and response semantics are
+addressed separately by UIUX-P0-04.
 """
 
 from __future__ import annotations
@@ -52,7 +31,7 @@ LEDGER = PROJECT_ROOT / "product" / "M5_2_0_UIUX_Autonomous_Roadmap.json"
 MAP_PATH = PROJECT_ROOT / "product" / "M5_2_0_UIUX_Route_Map.json"
 DOC_PATH = PROJECT_ROOT / "docs" / "uiux-2-0-route-map.md"
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "2.0.0"
 STORY = "UIUX-P0-03"
 
 SCRIPT_RE = re.compile(r"<script\b[^>]*>(?P<body>.*?)</script>", re.DOTALL)
@@ -161,6 +140,48 @@ def _split_args(text: str) -> list[str]:
     return [part.strip() for part in parts]
 
 
+def _conditional_arms(expression: str) -> tuple[str, str] | None:
+    """Return the two top-level ternary branches, if recognizable."""
+    quote: str | None = None
+    stack: list[str] = []
+    pairs = {"(": ")", "[": "]", "{": "}"}
+    question: int | None = None
+    nested = 0
+    index = 0
+    while index < len(expression):
+        char = expression[index]
+        if quote:
+            if char == "\\":
+                index += 2
+                continue
+            if char == quote:
+                quote = None
+        elif char in "'\"`":
+            quote = char
+        elif char in pairs:
+            stack.append(pairs[char])
+        elif stack and char == stack[-1]:
+            stack.pop()
+        elif not stack and char == "?":
+            # Optional chaining and null-coalescing are not ternary questions.
+            if (index + 1 < len(expression) and expression[index + 1] in "?.") or (
+                index > 0 and expression[index - 1] == "?"
+            ):
+                index += 1
+                continue
+            if question is None:
+                question = index
+            else:
+                nested += 1
+        elif not stack and char == ":" and question is not None:
+            if nested:
+                nested -= 1
+            else:
+                return expression[question + 1:index].strip(), expression[index + 1:].strip()
+        index += 1
+    return None
+
+
 def _brace_end(script: str, open_index: int) -> int:
     """Index just past the `}` matching the `{` at `open_index`."""
     depth = 0
@@ -212,21 +233,31 @@ def _scope_at(script: str, functions: dict[str, dict[str, object]], offset: int)
     return best
 
 
-def _local_assignment(script: str, name: str, start: int, end: int) -> str | None:
-    """The last `const|let|var name = <expr>;` between `start` and `end`."""
-    found: str | None = None
-    for match in re.finditer(rf"\b(?:const|let|var)\s+{re.escape(name)}\s*=\s*([^;]+);", script[start:end]):
-        found = match.group(1)
-    return found
+def _local_assignment(script: str, name: str, start: int, end: int) -> tuple[str, int] | None:
+    """The last declaration expression and its position in this function."""
+    matches = list(re.finditer(rf"\b(?:const|let|var)\s+{re.escape(name)}\s*=\s*([^;]+);", script[start:end]))
+    if not matches:
+        return None
+    last = matches[-1]
+    return last.group(1).strip(), start + last.start(1)
 
 
-def _call_sites(script: str, functions: dict[str, dict[str, object]], name: str) -> list[tuple[str, int]]:
+def _may_be_reassigned(script: str, name: str, start: int, end: int, has_declaration: bool) -> bool:
+    """A later mutation is unknown, not proof the declaration still holds."""
+    scope = script[start:end]
+    writes = list(re.finditer(
+        rf"(?<![\w$.]){re.escape(name)}\s*(?:\+\+|--|(?:[+*/%&|^?-]|\|\||&&|\?\?)?=(?!=|>))", scope
+    ))
+    prefix_update = re.search(rf"(?:\+\+|--)\s*{re.escape(name)}\b", scope)
+    return bool(prefix_update) or len(writes) > (1 if has_declaration else 0)
+
+
+def _call_sites(script: str, name: str) -> list[tuple[str, int]]:
     """Every call to `name`: its argument text and the offset of the call."""
     sites: list[tuple[str, int]] = []
-    definition = functions.get(name)
     for match in re.finditer(rf"(?<![\w$.]){re.escape(name)}\s*\(", script):
-        if definition is not None and int(definition["def_start"]) == match.start():
-            continue
+        if re.search(r"\bfunction\s*$", script[:match.start()]):
+            continue  # definition, not a call
         sites.append((_balanced(script, match.end() - 1), match.start()))
     return sites
 
@@ -239,71 +270,93 @@ def _resolve_expression(
     at: int,
     depth: int = 0,
     seen: frozenset[str] = frozenset(),
-) -> tuple[list[tuple[str, list[str]]], str]:
-    """Resolve one `fetch` URL argument to the service paths it can hold.
+) -> tuple[list[tuple[str, list[str]]], str, list[dict[str, object]]]:
+    """Return resolved (URL, helper chain) pairs, their source, and unknown edges.
 
-    Returns `(pairs, how)`, where each pair is a URL and the helper chain the
-    value travelled through to reach it, and `how` is `literal`, `assignment`,
-    `callers` (a helper whose call sites pass literals), `forwarded` (the value
-    crossed more than one helper) or `unresolved`. The chain is per URL on
-    purpose: two URLs reached through the same sink can come from different
-    entry points, and one merged list would describe neither.
+    Preserve every failed branch, even if another branch resolved. This bounded
+    lexical walk is not a complete JavaScript parser or a runtime observation.
     """
-    direct = _urls_in(expression)
-    if direct:
-        return [(url, []) for url in direct], "literal"
+    expression = expression.strip()
 
-    # The same identifier in two functions is two different values, so a guard
-    # on the name alone would stop a legitimate forward (`url` inside
-    # `consumeSSE` -> `url` inside `_streamSdlcEndpoint`); guard on the pair.
+    def unresolved(detail: str) -> list[dict[str, object]]:
+        return [{"handler": str(scope["name"]), "script_line": _line_of(script, at),
+                 "argument": expression[:120], "detail": detail}]
+
+    while expression.startswith("("):
+        inner = _balanced(expression, 0)
+        if expression != f"({inner})":
+            break
+        expression = inner.strip()
+
+    if STRING_RE.fullmatch(expression):
+        direct = _urls_in(expression)
+        if direct:
+            return [(url, []) for url in direct], "literal", []
+        return [], "unresolved", unresolved("literal is not a recognized service URL")
+
+    arms = _conditional_arms(expression)
+    if arms:
+        if depth >= MAX_RESOLUTION_DEPTH:
+            return [], "unresolved", unresolved("URL expression depth limit reached")
+        collected: list[tuple[str, list[str]]] = []
+        issues: list[dict[str, object]] = []
+        for arm in arms:
+            pairs, _how, unknown = _resolve_expression(script, functions, arm, scope, at, depth + 1, seen)
+            collected.extend(pairs)
+            issues.extend(unknown)
+        return collected, "literal" if collected else "unresolved", issues
+
+    if not IDENT_RE.fullmatch(expression):
+        return [], "unresolved", unresolved("unsupported URL expression")
     marker = f"{scope['name']}:{expression}"
-    if not IDENT_RE.match(expression) or depth >= MAX_RESOLUTION_DEPTH or marker in seen:
-        return [], "unresolved"
+    if marker in seen:
+        return [], "unresolved", unresolved("cycle in caller/assignment forwarding")
+    if depth >= MAX_RESOLUTION_DEPTH:
+        return [], "unresolved", unresolved("caller/assignment forwarding depth limit reached")
 
-    # 1. A local binding in the same function, before the use. A same-named
-    #    variable in another function is a different value, so the search never
-    #    leaves this function's body.
-    assignment = _local_assignment(script, expression, int(scope["body_start"]), at)
+    start = int(scope["body_start"])
+    assignment = _local_assignment(script, expression, start, at)
+    mutation_issues = (
+        unresolved("URL may be reassigned before use")
+        if _may_be_reassigned(script, expression, start, at, assignment is not None) else []
+    )
     if assignment is not None:
-        pairs, _how = _resolve_expression(
-            script, functions, assignment.strip(), scope, int(scope["body_start"]), depth + 1, seen | {marker}
+        pairs, _how, issues = _resolve_expression(
+            script, functions, assignment[0], scope, assignment[1], depth + 1, seen | {marker}
         )
-        if pairs:
-            return pairs, "assignment"
+        return pairs, "assignment" if pairs else "unresolved", mutation_issues + issues
 
-    # 2. A parameter of the enclosing function: follow the argument every call
-    #    site passes at that position, recursing into *its* scope. This is what
-    #    resolves `consumeSSE(url)` when `url` is itself a helper's parameter.
+    # Follow the corresponding argument at every call site, not just the
+    # successful ones. Different caller chains may supply the same URL.
     params = [str(part) for part in scope["params"]]  # type: ignore[union-attr]
     if expression in params and str(scope["name"]) != "top-level":
         index = params.index(expression)
-        collected: list[tuple[str, list[str]]] = []
+        collected = []
+        issues = mutation_issues
         hop_kinds: set[str] = set()
-        for args_text, call_at in _call_sites(script, functions, str(scope["name"])):
+        sites = _call_sites(script, str(scope["name"]))
+        if not sites:
+            issues.extend(unresolved("no statically located callers for parameter"))
+        for args_text, call_at in sites:
             args = _split_args(args_text)
-            if index >= len(args) or not args[index]:
-                continue
             caller_scope = _scope_at(script, functions, call_at)
-            pairs, how = _resolve_expression(
+            if index >= len(args) or not args[index]:
+                issues.append({"handler": str(caller_scope["name"]), "script_line": _line_of(script, call_at),
+                               "argument": "", "detail": f"missing argument for {scope['name']} parameter {index}"})
+                continue
+            pairs, how, unknown = _resolve_expression(
                 script, functions, args[index], caller_scope, call_at, depth + 1, seen | {marker}
             )
-            if not pairs:
-                continue
-            hop_kinds.add(how)
+            issues.extend(unknown)
+            if pairs:
+                hop_kinds.add(how)
             for url, chain in pairs:
-                # The chain reads up from the fetch to the function holding the
-                # literal, so a reader sees the entry point, not just the sink.
-                collected.append((url, [str(scope["name"]), *(chain or [str(caller_scope["name"])])]))
-        if collected:
-            merged: list[tuple[str, list[str]]] = []
-            index_by_url: dict[str, int] = {}
-            for url, chain in collected:
-                if url in index_by_url:
-                    continue
-                index_by_url[url] = len(merged)
-                merged.append((url, chain))
-            return merged, ("callers" if hop_kinds == {"literal"} else "forwarded")
-    return [], "unresolved"
+                pair = (url, [str(scope["name"]), *(chain or [str(caller_scope["name"])])])
+                if pair not in collected:
+                    collected.append(pair)
+        how = ("callers" if hop_kinds == {"literal"} else "forwarded") if collected else "unresolved"
+        return collected, how, issues
+    return [], "unresolved", mutation_issues + unresolved("not a supported local assignment or named parameter")
 
 
 def read_routes(source: str) -> list[dict[str, str]]:
@@ -388,7 +441,9 @@ def build_map() -> dict[str, object]:
         method_match = METHOD_RE.search(argument_text)
         method = method_match.group("method").upper() if method_match else "GET"
         scope = _scope_at(script, functions, fetch.start())
-        pairs, source = _resolve_expression(script, functions, first_arg, scope, fetch.start())
+        pairs, source, issues = _resolve_expression(script, functions, first_arg, scope, fetch.start())
+        for issue in issues:
+            issue["document_line"] = _line_of(html, script_offset) + int(issue["script_line"]) - 1
         resolutions = [_match(url, method, routes) | {"url": url, "forwarded_via": chain} for url, chain in pairs]
         calls.append(
             {
@@ -399,27 +454,29 @@ def build_map() -> dict[str, object]:
                 "url_argument": first_arg[:120],
                 "resolved_from": source,
                 "urls": resolutions,
+                "unresolved_edges": issues,
             }
         )
 
-    # Route -> callers, in both directions and both strengths. An exact match
-    # proves the route; a dynamic match proves only that the call can reach one
-    # of its candidates, so those callers are recorded as possible, on *every*
-    # candidate rather than on whichever one the matcher happened to list first.
+    # A unique structural match and an ambiguous candidate are different kinds
+    # of static evidence; neither proves runtime execution. Index every possible
+    # candidate even if the matcher selected a primary route.
     certain: dict[tuple[str, str], set[str]] = {}
     possible: dict[tuple[str, str], set[str]] = {}
     for call in calls:
         handler = str(call["handler"])
         method = str(call["method"])
         for resolution in call["urls"]:
-            if resolution["kind"] == "exact":
+            if resolution["kind"] not in {"exact", "dynamic"}:
+                continue
+            candidates = resolution["candidates"]
+            if resolution["kind"] == "exact" and len(candidates) == 1:
                 certain.setdefault((method, str(resolution["route"])), set()).add(handler)
-            elif resolution["kind"] == "dynamic":
-                for candidate in resolution["candidates"]:
-                    possible.setdefault(
-                        (str(candidate["method"]), str(candidate["path"])), set()
-                    ).add(handler)
+            else:
+                for candidate in candidates:
+                    possible.setdefault((str(candidate["method"]), str(candidate["path"])), set()).add(handler)
 
+    incomplete = any(not call["urls"] or call["unresolved_edges"] for call in calls)
     route_rows = []
     for route in routes:
         key = (route["method"], route["path"])
@@ -430,27 +487,21 @@ def build_map() -> dict[str, object]:
                 **route,
                 "callers": sure,
                 "possible_callers": maybe,
-                "caller_certainty": "certain" if sure else ("possible" if maybe else "none"),
-                "used_by_frontend": bool(sure or maybe),
+                "caller_certainty": "certain" if sure else (
+                    "possible" if maybe else ("unknown" if incomplete else "none")
+                ),
+                "used_by_frontend": True if sure or maybe else (None if incomplete else False),
             }
         )
 
     findings = []
     for call in calls:
-        if not call["urls"]:
-            findings.append(
-                {
-                    "kind": "unresolved_url",
-                    "handler": call["handler"],
-                    "method": call["method"],
-                    "url": call["url_argument"],
-                    "detail": (
-                        "the URL argument is not a literal, a local assignment, or a helper parameter "
-                        "whose call sites pass one - the caller list for its routes is a lower bound"
-                    ),
-                }
-            )
-            continue
+        for edge in call["unresolved_edges"]:
+            findings.append({
+                "kind": "unresolved_caller" if call["resolved_from"] in {"callers", "forwarded"} else "unresolved_url",
+                "handler": edge["handler"], "document_line": edge["document_line"], "method": call["method"],
+                "url": edge["argument"], "detail": edge["detail"],
+            })
         for resolution in call["urls"]:
             if resolution["kind"] in {"exact", "dynamic"}:
                 continue
@@ -472,10 +523,12 @@ def build_map() -> dict[str, object]:
     url_count = sum(len(call["urls"]) for call in calls)
     exact = sum(1 for call in calls for r in call["urls"] if r["kind"] == "exact")
     dynamic = sum(1 for call in calls for r in call["urls"] if r["kind"] == "dynamic")
-    used_routes = sum(1 for row in route_rows if row["used_by_frontend"])
+    used_routes = sum(1 for row in route_rows if row["used_by_frontend"] is True)
+    unknown_routes = sum(1 for row in route_rows if row["used_by_frontend"] is None)
+    unobserved_routes = sum(1 for row in route_rows if row["used_by_frontend"] is False)
     certain_routes = sum(1 for row in route_rows if row["caller_certainty"] == "certain")
     possible_only = [str(row["path"]) for row in route_rows if row["caller_certainty"] == "possible"]
-    unresolved_handlers = [str(call["handler"]) for call in calls if not call["urls"]]
+    unresolved_handlers = [str(call["handler"]) for call in calls if not call["urls"] or call["unresolved_edges"]]
     by_source: dict[str, int] = {}
     for call in calls:
         by_source[str(call["resolved_from"])] = by_source.get(str(call["resolved_from"]), 0) + 1
@@ -489,9 +542,9 @@ def build_map() -> dict[str, object]:
         "regenerate_with": "python3 scripts/uiux_route_map.py",
         "check_with": "python3 scripts/uiux_route_map.py --check",
         "statement": (
-            "Every fetch call in the inline script mapped to the route it can hit, derived from the "
-            "call sites and the route table. Unmatched calls, method mismatches, dynamic matches and "
-            "routes with no browser caller are published rather than smoothed over."
+            "A lexical inventory of fetch calls, statically resolved routes and possible dynamic candidates. "
+            "Unresolved caller edges and routes without a resolved caller are reported without asserting "
+            "runtime reachability or complete JavaScript analysis."
         ),
         "line_frames": {
             "script_line": "line inside the inline <script> block",
@@ -504,12 +557,12 @@ def build_map() -> dict[str, object]:
             "complete": not unresolved_handlers,
             "unresolved_call_sites": sorted(set(unresolved_handlers)),
             "statement": (
-                "Every call site resolved to at least one URL, so a route listed as having no browser "
-                "caller really has none at this depth."
+                "No unsupported caller edges were detected by this lexical scan. A missing observed caller "
+                "is not proof of absence."
                 if not unresolved_handlers
                 else (
-                    "Some call sites did not resolve to a URL, so a route listed as having no browser "
-                    "caller may still be called: treat that list as unproven, not as evidence of disuse."
+                    "Some caller edges could not be resolved, even if the same fetch also has known URLs. "
+                    "Routes without known callers have unknown browser usage, not proof of disuse."
                 )
             ),
         },
@@ -519,13 +572,15 @@ def build_map() -> dict[str, object]:
             "exact_matches": exact,
             "dynamic_matches": dynamic,
             "forwarded_call_sites": by_source.get("forwarded", 0),
-            "unresolved_call_sites": sum(1 for call in calls if not call["urls"]),
+            "unresolved_call_sites": sum(1 for call in calls if not call["urls"] or call["unresolved_edges"]),
+            "unresolved_caller_edges": sum(len(call["unresolved_edges"]) for call in calls),
             "findings": len(findings),
             "routes": len(routes),
-            "routes_used_by_frontend": used_routes,
+            "routes_with_resolved_or_possible_caller": used_routes,
             "routes_with_certain_caller": certain_routes,
             "routes_only_possible_caller": len(possible_only),
-            "routes_without_frontend_caller": len(routes) - used_routes,
+            "routes_no_caller_observed": unobserved_routes,
+            "routes_unknown_frontend_caller": unknown_routes,
             "resolved_from": dict(sorted(by_source.items())),
         },
         "calls": calls,
@@ -537,15 +592,16 @@ def build_map() -> dict[str, object]:
             "URLs are matched structurally. A URL whose segment is chosen at runtime is reported as a "
             "dynamic match with its candidate routes instead of being resolved to one, and every "
             "candidate lists that caller as *possible*, never as certain.",
-            "A URL forwarded through helper parameters is followed back to the literal that supplies "
-            "it, at most four helper hops deep, and the chain is published as `forwarded_via`. A "
-            "deeper or indirect hand-off (a value stored on an object, a callback argument) stays "
-            "unresolved and makes the caller list a lower bound rather than a proof of disuse.",
+            "URL forwarding, assignments and conditional branches are followed at most four resolution "
+            "steps; helper chains are published as `forwarded_via`. Unsupported, cyclic or deeper paths are recorded "
+            "as unresolved edges even if another caller resolves.",
             "Line numbers are published in two frames: `script_line` is relative to the inline script, "
             "`document_line` to static/index.html. Reading a script line as a document line is off by "
             "the markup above the script.",
-            "Routes without a browser caller are not dead: the CLI, the demo tour and the tests call "
-            "the same API.",
+            "This lexical scan is not a complete JavaScript parser. No resolved caller does not prove "
+            "a route is unused; the CLI, demo tour, tests or unrecognized browser paths may call it.",
+            "When any caller edge is unresolved, routes without known callers have unknown browser usage "
+            "rather than a false no-caller assertion.",
         ],
     }
 
@@ -562,31 +618,39 @@ def render_doc(mapping: dict[str, object]) -> str:
         "# M5 2.0 UI/UX route map",
         "",
         "Generated by `python3 scripts/uiux_route_map.py` — **never hand-edit this page**.",
-        "It is the `UIUX-P0-03` artifact: every `fetch` call in the inline script, the function",
-        "it lives in, and the route it can hit — derived from the calls and the route table,",
-        "not from handler names.",
+        "It is the `UIUX-P0-03` artifact: lexically located `fetch` calls, their enclosing",
+        "functions and structural route candidates, derived from the inline script and the",
+        "route table, not from handler names.",
         "",
         f"* Pinned source commit: `{mapping['pinned_source_commit']}`.",
         f"* Frontend digest: `{mapping['frontend_sha256'][:16]}…` · `app.py` digest: `{mapping['app_sha256'][:16]}…`.",
         f"* {totals['fetch_call_sites']} call sites resolve to {totals['resolved_urls']} URLs — "
         f"exact: {totals['exact_matches']}, dynamic: {totals['dynamic_matches']}, "
         f"forwarded through a helper: {totals['forwarded_call_sites']}, "
-        f"findings: {totals['findings']}, unresolved call sites: {totals['unresolved_call_sites']}.",
-        f"* {totals['routes']} routes exist; {totals['routes_used_by_frontend']} have a browser caller "
-        f"({totals['routes_with_certain_caller']} proved by a literal argument, "
-        f"{totals['routes_only_possible_caller']} only reachable through a runtime-chosen segment) and "
-        f"{totals['routes_without_frontend_caller']} have none.",
+        f"findings: {totals['findings']}, unresolved sites: {totals['unresolved_call_sites']}, "
+        f"unresolved edges: {totals['unresolved_caller_edges']}.",
+        f"* {totals['routes']} routes exist; {totals['routes_with_resolved_or_possible_caller']} have a "
+        f"resolved or possible caller ({totals['routes_with_certain_caller']} unique structural matches, "
+        f"{totals['routes_only_possible_caller']} only possible candidates); "
+        f"{totals['routes_no_caller_observed']} have none observed and "
+        f"{totals['routes_unknown_frontend_caller']} are unknown due to unresolved edges.",
         "",
         "## What this page is, and is not",
         "",
         "A matched call is a request the browser **can construct**, not a route that works: nothing",
         "here was executed, and authorization, request bodies and response handling are not checked.",
-        "A URL segment chosen at runtime is reported as a *dynamic* match with its candidate routes",
-        "rather than being resolved to one, and each candidate carries that caller as *possible*,",
-        "never as certain. A URL handed to a helper is followed back through the helper's call sites —",
-        "the `Via` column names that chain, so a forwarded call cannot silently lose its route.",
-        "Routes with no browser caller are not dead code — the CLI, the demo tour and the tests call",
-        "the same API.",
+        "A URL segment chosen at runtime is reported as a *dynamic* match with every candidate route,",
+        "not a certain runtime call. Helper chains appear in `Via`; unresolved edges remain findings",
+        "even when another caller resolves. This is a lexical scan, not a complete JavaScript parser.",
+        "A missing observed caller is not proof of absence; the CLI, demo tour or tests may also call a route.",
+        "",
+        "In JSON, `callers` are unique structural matches and `possible_callers` are ambiguous candidates;",
+        "neither proves execution. `caller_certainty` is `certain`, `possible`, `none` or `unknown`,",
+        "with `used_by_frontend` respectively true, true, false or null. When any edge is unresolved,",
+        "routes without known callers are `unknown`, not `none`. In schema 2, the old",
+        "`routes_used_by_frontend` total is `routes_with_resolved_or_possible_caller`;",
+        "`routes_without_frontend_caller` is replaced by `routes_no_caller_observed` and",
+        "`routes_unknown_frontend_caller`. Consumers must handle nullable `used_by_frontend`.",
         "",
         "Line numbers appear in two frames: `Script` is the line inside the inline `<script>` block,",
         "`Document` is the line in `static/index.html` that a reader of that file needs.",
@@ -604,7 +668,10 @@ def render_doc(mapping: dict[str, object]) -> str:
             )
             continue
         for item in call["urls"]:
-            route = item.get("route") or "—"
+            candidates = item["candidates"]
+            route = " or ".join(candidate["path"] for candidate in candidates) if len(candidates) > 1 else (
+                item.get("route") or "—"
+            )
             via = " → ".join(f"`{name}`" for name in item["forwarded_via"]) or "—"
             lines.append(
                 f"| `{call['handler']}` | {call['script_line']} | {call['document_line']} | {call['method']} "
@@ -613,52 +680,47 @@ def render_doc(mapping: dict[str, object]) -> str:
 
     lines += ["", "## Findings", ""]
     if not mapping["findings"]:
-        lines.append(
-            "No unmatched call, no method mismatch and no unresolved URL: every call site resolves to a "
-            "route that exists for the method it uses."
-        )
+        lines.append("No unmatched URL, method mismatch or unresolved edge was detected in this scan.")
     else:
-        lines += ["| Kind | Handler | Method | URL | Detail |", "|---|---|---|---|---|"]
+        lines += ["| Kind | Handler | Document line | Method | URL | Detail |", "|---|---|---|---|---|---|"]
         for finding in mapping["findings"]:
             lines.append(
-                f"| {finding['kind']} | `{finding['handler']}` | {finding['method']} "
-                f"| `{_cell(finding['url'])}` | {_cell(finding['detail'])} |"
+                f"| {finding['kind']} | `{finding['handler']}` | {_cell(finding.get('document_line'))} "
+                f"| {finding['method']} | `{_cell(finding['url'])}` | {_cell(finding['detail'])} |"
             )
 
     possible = [route for route in mapping["routes"] if route["caller_certainty"] == "possible"]
     lines += ["", "## Routes reached only through a runtime-chosen segment", ""]
     if not possible:
-        lines.append("Every route with a browser caller is reached by a literal URL argument.")
+        lines.append("No routes depend solely on an ambiguous candidate in this scan.")
     else:
         lines.append(
-            f"{len(possible)} route(s) have a caller whose URL segment is chosen at runtime. The caller is "
-            "recorded as *possible* because the literal argument at the call site decides which of the "
-            "candidate routes is really used."
+            f"{len(possible)} route(s) have only possible callers in this scan. The actual URL at runtime "
+            "determines which candidate route is reached, if the call executes."
         )
         lines += ["", "| Method | Route | Possible callers |", "|---|---|---|"]
         for route in possible:
             names = ", ".join(f"`{name}`" for name in route["possible_callers"])
             lines.append(f"| {route['method']} | `{route['path']}` | {names} |")
 
-    unused = [route for route in mapping["routes"] if not route["used_by_frontend"]]
-    lines += ["", "## Routes with no browser caller", ""]
+    unobserved = [route for route in mapping["routes"] if route["used_by_frontend"] is not True]
+    lines += ["", "## Routes without a resolved browser caller", ""]
     if not resolution["complete"]:
         lines.append(
-            f"**Lower bound, not a proof of disuse.** {len(resolution['unresolved_call_sites'])} call site(s) "
-            "did not resolve to a URL, so a route below may still be called: "
-            + ", ".join(f"`{name}`" for name in resolution["unresolved_call_sites"])
-            + "."
+            f"**Unknown.** {len(resolution['unresolved_call_sites'])} fetch site(s) have unresolved "
+            "edges: " + ", ".join(f"`{name}`" for name in resolution["unresolved_call_sites"]) + "."
         )
-    if not unused:
-        lines.append("Every route has at least one browser caller.")
+    if not unobserved:
+        lines.append("Every route has a resolved or possible browser caller in this scan.")
     else:
         lines.append(
-            f"{len(unused)} of {mapping['totals']['routes']} routes are not called by the inline script. "
-            "That is not dead code: the CLI, the demo tour and the tests use the same API."
+            f"{len(unobserved)} of {mapping['totals']['routes']} routes have no resolved browser caller "
+            "in this scan. That is not proof of absence or dead code; routes marked unknown may be "
+            "reached by an unresolved edge."
         )
-        lines += ["", "| Method | Route |", "|---|---|"]
-        for route in unused:
-            lines.append(f"| {route['method']} | `{route['path']}` |")
+        lines += ["", "| Method | Route | Caller status |", "|---|---|---|"]
+        for route in unobserved:
+            lines.append(f"| {route['method']} | `{route['path']}` | {route['caller_certainty']} |")
 
     lines += ["", "## Not verified", ""]
     lines += [f"* {item}" for item in mapping["not_verified"]]
@@ -710,7 +772,8 @@ def main(argv: list[str] | None = None) -> int:
                 "UI route map is up to date: "
                 f"{totals['fetch_call_sites']} call sites, {totals['exact_matches']} exact and "
                 f"{totals['dynamic_matches']} dynamic matches, {totals['findings']} findings, "
-                f"{totals['routes_without_frontend_caller']} routes with no browser caller"
+                f"{totals['routes_no_caller_observed']} routes without an observed caller, "
+                f"{totals['routes_unknown_frontend_caller']} unknown"
             )
         return 0
 

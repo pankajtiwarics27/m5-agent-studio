@@ -47,6 +47,21 @@ issues are **not** automatically interpreted; inspect `gh issue list --state ope
 and the ledger's risks as well. The marker is a signal, not a replacement for
 review or a distributed lock.
 
+## Active blocker follow-up (2026-10-31)
+
+[Issue #110](https://github.com/pankajtiwarics27/m5-agent-studio/issues/110)
+remains a program-wide hold. [PR #115](https://github.com/pankajtiwarics27/m5-agent-studio/pull/115)
+merged the named SDLC, model-action and line-frame improvements, but also
+closed #110 just before a [blocking review](https://github.com/pankajtiwarics27/m5-agent-studio/pull/115#issuecomment-6543099994)
+reproduced a mixed known/unknown caller that still appears complete. The issue
+was reopened, and `arena/cbed6c70-m5-agent-studio` is preparing the existing
+[draft PR #114](https://github.com/pankajtiwarics27/m5-agent-studio/pull/114)
+to address the remaining uncertainty. Do not close the hold until the correction
+has independent review and green checks. This is not a new story claim, and it
+does not change another session's tracking. `UIUX-P0-05` remains in progress
+under `arena/c705f453-m5-agent-studio`; do not take its story or treat its visual
+baseline as complete.
+
 ## Baseline at this handoff
 
 The following is a dated observation, not a live status dashboard. Re-run the
