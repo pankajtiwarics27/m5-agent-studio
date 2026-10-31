@@ -108,9 +108,11 @@ def test_known_calls_map_to_known_routes() -> None:
     assert onboarding["resolved_from"] == "assignment"
     assert {u["route"] for u in onboarding["urls"]} == {"/api/onboarding/preflight"}
 
-    # A helper that takes the URL as a parameter is resolved from its call sites.
+    # A helper that takes the URL as a parameter is resolved from its call sites,
+    # including the call sites of helpers that forward their own parameter into
+    # it, so the value is reported as forwarded rather than as a direct caller.
     streamer = by_handler["consumeSSE"]
-    assert streamer["resolved_from"] == "callers"
+    assert streamer["resolved_from"] == "forwarded"
     streamed = {u["route"] for u in streamer["urls"]}
     assert {"/api/chat/stream", "/api/council/stream", "/api/debate/stream"} <= streamed
 
@@ -122,6 +124,103 @@ def test_known_calls_map_to_known_routes() -> None:
         "/api/models/{model_id:path}/load",
         "/api/models/{model_id:path}/unload",
     }
+
+
+def test_a_helper_that_forwards_its_parameter_keeps_the_route() -> None:
+    """Issue #110: `_streamSdlcEndpoint(url)` handed its URL to `consumeSSE(url)`.
+
+    Reading only the fetch helper's direct call sites lost both SDLC routes and
+    published them as unused. The forwarding chain must be followed, and it must
+    name the UI entry point that supplied the literal.
+    """
+    streamer = {call["handler"]: call for call in _calls()}["consumeSSE"]
+    by_url = {item["url"]: item for item in streamer["urls"]}
+
+    run = by_url["/api/harness/sdlc/run"]
+    feedback = by_url["/api/harness/sdlc/feedback"]
+    assert run["route"] == "/api/harness/sdlc/run"
+    assert feedback["route"] == "/api/harness/sdlc/feedback"
+    assert run["forwarded_via"][:2] == ["consumeSSE", "_streamSdlcEndpoint"]
+    assert "startSdlcRun" in run["forwarded_via"]
+    assert "submitSdlcFeedback" in feedback["forwarded_via"]
+
+    routes = {(route["method"], route["path"]): route for route in _map()["routes"]}
+    for path in ("/api/harness/sdlc/run", "/api/harness/sdlc/feedback"):
+        row = routes[("POST", path)]
+        assert row["callers"] == ["consumeSSE"], f"{path} lost the caller that fetches it"
+        assert row["used_by_frontend"] is True
+
+
+def test_a_runtime_chosen_segment_flags_every_candidate_as_possible() -> None:
+    """Issue #110: `${act}` chose between load and unload, but only load got a caller.
+
+    A dynamic match cannot prove which candidate runs, so the caller is recorded
+    as possible on *all* of them, and a route is never reported unused while a
+    candidate branch can reach it.
+    """
+    routes = {(route["method"], route["path"]): route for route in _map()["routes"]}
+    load = routes[("POST", "/api/models/{model_id:path}/load")]
+    unload = routes[("POST", "/api/models/{model_id:path}/unload")]
+
+    for row in (load, unload):
+        assert row["used_by_frontend"] is True, f"{row['path']} is reported unused"
+        assert "modelAction" in row["possible_callers"]
+        assert "modelAction" not in row["callers"], "a runtime-chosen segment is not proof of a route"
+
+    assert {route["caller_certainty"] for route in (load, unload)} == {"possible"}
+    for route in _map()["routes"]:
+        assert not set(route["callers"]) & set(route["possible_callers"])
+        assert route["used_by_frontend"] == bool(route["callers"] or route["possible_callers"])
+
+
+def test_line_numbers_are_published_in_both_frames() -> None:
+    """Issue #110: a script-relative line read as a document line is off by the markup."""
+    document = FRONTEND.read_text(encoding="utf-8").splitlines()
+    for call in _calls():
+        assert isinstance(call["script_line"], int)
+        assert isinstance(call["document_line"], int)
+        # The script starts below the head, so its lines are always earlier.
+        assert call["document_line"] > call["script_line"]
+        line = document[call["document_line"] - 1]
+        assert "fetch" in line or "fetch(" in line, f"{call['handler']}: {call['document_line']} is not a fetch"
+
+    frames = _map()["line_frames"]
+    assert set(frames) == {"script_line", "document_line"}
+
+
+def test_an_unresolved_forward_makes_the_caller_list_a_lower_bound() -> None:
+    """Issue #110: an unresolved hand-off must not be published as proof of disuse."""
+    module = _load_generator()
+    synthetic = """
+      async function sink(url) { await fetch(url, { method: "POST" }); }
+      async function holder() { const box = { url: "/api/things" }; await sink(box.url); }
+    """
+    functions = module._read_functions(synthetic)
+    at = synthetic.index("fetch(")
+    scope = module._scope_at(synthetic, functions, at)
+    pairs, how = module._resolve_expression(
+        synthetic, functions, "url", scope, at
+    )
+    assert pairs == []
+    assert how == "unresolved"
+
+    # With a literal at the call site the same shape resolves, so the test above
+    # fails for the reason it names and not because the walker never works.
+    resolvable = """
+      async function sink(url) { await fetch(url, { method: "POST" }); }
+      async function holder() { await sink("/api/things"); }
+    """
+    functions = module._read_functions(resolvable)
+    at = resolvable.index("fetch(")
+    scope = module._scope_at(resolvable, functions, at)
+    pairs, how = module._resolve_expression(resolvable, functions, "url", scope, at)
+    assert [url for url, _chain in pairs] == ["/api/things"]
+    assert how == "callers"
+
+    resolution = _map()["caller_resolution"]
+    assert resolution["complete"] is True
+    assert resolution["unresolved_call_sites"] == []
+    assert "really has none" in resolution["statement"]
 
 
 def test_the_map_agrees_with_the_manifest_and_the_ledger() -> None:

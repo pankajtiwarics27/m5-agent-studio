@@ -14,7 +14,7 @@ It is evidence, not a plan: the phases, gates and per-story change shape live in
 
 | Fact | Value |
 |---|---|
-| Source | `main` at `866ec1c` (merge of #111), pinned in the UI/UX ledger |
+| Source | `main` at `ecd7816` (merge of #113), pinned in the UI/UX ledger |
 | Python | 3.11.2, virtual environment at `.venv`, installed with `pip install -e '.[dev]'` |
 | Node | 22.22.3 |
 | Platform | Linux sandbox, no display |
@@ -29,7 +29,7 @@ suite states the new numbers and why.
 
 | Command | Exit | Result |
 |---|---|---|
-| `.venv/bin/python -m pytest -q` | 0 | 1,541 passed, 1 skipped (opt-in live container test), 116 s |
+| `.venv/bin/python -m pytest -q` | 0 | 1,588 passed, 1 skipped (opt-in live container test), 116 s |
 | `.venv/bin/python -m ruff check .` | 0 | all checks passed |
 | `.venv/bin/python -m mypy` | 0 | no issues in 58 source files |
 | `.venv/bin/python scripts/validate_docs.py` | 0 | 5 required pages, 121 files scanned |
@@ -37,8 +37,8 @@ suite states the new numbers and why.
 | `.venv/bin/python scripts/demo_tour.py --check` | 0 | committed transcript is current |
 | `.venv/bin/python scripts/uiux_source_manifest.py --check` | 0 | 13 files, 6 tabs, 115 routes |
 | `.venv/bin/python scripts/uiux_control_inventory.py --check` | 0 | 170 markup controls, 101 of them chrome; 30 script-rendered |
-| `.venv/bin/python scripts/uiux_route_map.py --check` | 0 | 53 call sites, 58 exact and 1 dynamic match, 0 findings |
-| `.venv/bin/python scripts/uiux_authorization_trace.py --check` | 0 | 35 state-changing routes traced |
+| `.venv/bin/python scripts/uiux_route_map.py --check` | 0 | 53 call sites, 60 exact and 1 dynamic match, 0 findings, 0 unresolved, 58 routes with no caller |
+| `.venv/bin/python scripts/uiux_authorization_trace.py --check` | 0 | 37 state-changing routes traced |
 | `.venv/bin/python scripts/validate_screenshots.py` | 0 | 0 of 6 captured |
 
 The suite counts include the four UI/UX inventory stories' own tests
