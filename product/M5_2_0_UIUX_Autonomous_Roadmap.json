@@ -100,15 +100,17 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": null,
-    "active_stories": [],
+    "active_story": "UIUX-P2-01",
+    "active_stories": [
+      "UIUX-P2-01"
+    ],
     "last_completed_story": "UIUX-P1-05",
     "next_recommended_story": "UIUX-P2-01",
-    "last_checkpoint": "2026-11-01T10:20:00Z",
-    "last_session_id": "arena/22bea3a6-m5-agent-studio",
+    "last_checkpoint": "2026-10-31T23:02:53Z",
+    "last_session_id": "arena/b084f6af-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "c50be66",
+    "last_verified_commit": "089237f2f1270e2782542e2909c1b5f093f51a0b",
     "last_updated": "2026-11-01",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -241,7 +243,7 @@
       "id": "P2",
       "name": "Start and Chat",
       "title": "Start and Chat",
-      "status": "not_started",
+      "status": "in_progress",
       "story_ids": [
         "UIUX-P2-01",
         "UIUX-P2-02",
@@ -252,9 +254,9 @@
       ],
       "total": 6,
       "done": 0,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 6,
+      "not_started": 5,
       "percent_complete": 0
     },
     {
@@ -340,9 +342,9 @@
   "overall_progress": {
     "total_stories": 40,
     "done": 11,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 29,
+    "not_started": 28,
     "percent_complete": 28
   },
   "stories": [
@@ -2286,23 +2288,26 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P2-01 (Start readiness and actionable onboarding). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 1,
+        "attempts": 1,
+        "started_at": "2026-10-31T23:02:53Z",
+        "updated_at": "2026-10-31T23:02:53Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/b084f6af-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
-        "evidence": [],
+        "evidence": [
+          "Claim checkpoint only (no implementation yet): HEAD is pinned at 089237f2f1270e2782542e2909c1b5f093f51a0b on arena/b084f6af-m5-agent-studio; after git fetch --unshallow origin, the ledger source pin 73bc5e417c1508b41127f3d7162c4afdcbcdbfc4 is confirmed as an ancestor.",
+          "Prerequisite UIUX-P1-05 is done. Read-only coordination against GitHub found no open PRs or blocking issues at claim time; UIUX-P2-01 was the sole locally eligible story."
+        ],
         "test_results": [],
         "visual_evidence": [],
         "known_regressions": [],
         "decisions": [],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "Claimed; code inspection and current-behavior verification are next. Use only disposable demo state and synthetic tokens; retain screenshot provenance caveats.",
+        "next_action": "Trace the Start pane, onboarding preflight handlers and API contract, then capture a disposable baseline and targeted regression fixtures before changing code.",
         "readme_updated": false
       },
       "required_evidence": [
