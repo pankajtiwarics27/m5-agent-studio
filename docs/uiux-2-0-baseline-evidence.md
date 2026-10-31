@@ -70,7 +70,7 @@ not interchangeable with this one.
 | `.venv/bin/python scripts/uiux_control_inventory.py --check` | 0 | 170 markup controls (101 chrome, 69 panes), 30 script-rendered |
 | `.venv/bin/python scripts/uiux_route_map.py --check` | 0 | 53 call sites, 60 exact / 1 dynamic / 0 unknown-method, 0 findings, 58 routes without an observed caller, 0 unknown |
 | `.venv/bin/python scripts/uiux_authorization_trace.py --check` | 0 | 37 state-changing routes, 12 with an authority subsystem, 30 with durable state, 22 that can leave the machine |
-| `.venv/bin/python scripts/uiux_preservation_signoff.py --check` | 0 | unsigned package, 21 capabilities, 6 panes |
+| `.venv/bin/python scripts/uiux_preservation_signoff.py --check` | 0 | approved package (owner signature, 2026-10-31), 21 capabilities, 6 panes |
 | `.venv/bin/python scripts/validate_screenshots.py` | 0 | **6 of 6 captured and consistent with the manifest** |
 
 Every command in that table was run in that clone, not in the author's checkout.

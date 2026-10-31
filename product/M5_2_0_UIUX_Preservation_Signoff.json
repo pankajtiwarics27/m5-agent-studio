@@ -8,22 +8,22 @@
   "check_with": "python3 scripts/uiux_preservation_signoff.py --check",
   "statement": "A preservation and rollback review package with a baseline source pin and hashes of its current input artifacts: capabilities, controls, bounded route candidates and their gates. The source pin alone does not prove that every input was measured at that commit.",
   "prepared_not_signed": "Prepared by an agent. An agent may prepare this package; it may not approve it. The approval lives in the ledger's coordination.preservation_signoff record, and this page reports it.",
-  "pinned_source_commit": "fa2a31cec0704ae4322a30c8ff55fd2d3e4037d0",
-  "status": "unsigned",
+  "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
+  "status": "approved",
   "signature": {
-    "approved": false,
-    "approved_by": null,
-    "approved_at": null,
-    "reference": null,
-    "signed": false,
-    "statement": "No signature. This is material for the owner to approve, not an approved baseline."
+    "approved": true,
+    "approved_by": "pankajtiwarics27",
+    "approved_at": "2026-10-31T20:10:00Z",
+    "reference": "Arena agent-mode session, 2026-10-31: owner message \"Approve UIUX-P0-06: approved_by = pankajtiwarics27\", recorded in the pull request that carries this signature.",
+    "signed": true,
+    "statement": "Signed in the ledger; this page only reports the record."
   },
   "inputs": {
-    "ledger_sha256": "c0ab5724ba561059cdb79b1f9b0595fa9f799fce16d999939ec4686cecc674d1",
-    "source_manifest_sha256": "1d7d5172a7eef857c11d2144ee98df7e05d564ef83b6175561be9ab81efa5a6a",
-    "control_inventory_sha256": "0a91ba129b34374e66a4efcdc352d3b26953aa969061e3a95ebfab9ebb28e8b3",
-    "route_map_sha256": "2d2aeb1f021ddfdd3b87555b48dc288fac2096b6b2580f1b0f86553b09a43f01",
-    "authorization_trace_sha256": "d00449e62788e9f96d523dc49b817ba2df10e5de38071c31e2b0d00fd009de20",
+    "ledger_sha256": "69318178e03d99b6fdefe2b4182bc5abcc2ade6999f4a194de5edbedd374c2c3",
+    "source_manifest_sha256": "3e205449724dbef830928f631eff8f85a7b281e6629187bc2fe1f1dc3e2e7c12",
+    "control_inventory_sha256": "be781825bdbfc50b11ed7547b96bd3d3969d3fbe8ba5639857a090c442c95615",
+    "route_map_sha256": "85fa79650b506df93fb4d0e9feb91dbd5288be20818d7cbda900a2e1b49b636e",
+    "authorization_trace_sha256": "20bb832c396d3430579a2a9e4072a321762cfce7b3a774e9e391b25f9ad1abb7",
     "frontend_sha256": "3137cb7d05bcbdd29155576bd9952f49172705b85e70a0c0a2484c81bc80a66a"
   },
   "approval_request": [

@@ -270,7 +270,7 @@ branch-only claims can still race.
 | `UIUX-P0-03` | done on `main` via PR #109; the false-negative callers in [#110](https://github.com/pankajtiwarics27/m5-agent-studio/issues/110) were fixed in #115, and #114 replaced the map with a lexical scan that publishes unresolved edges as `unknown` rather than absent |
 | `UIUX-P0-04` | done on `main` via [PR #111](https://github.com/pankajtiwarics27/m5-agent-studio/pull/111); regenerated on the #114 map, so it inherits the map's coverage limits rather than claiming more than the scan proves |
 | `UIUX-P0-05` | done on `main` (#118, merge `f432fe6`): suite results and **6 of 6 screenshots**, captured from a disposable archive copy with a Chromium build distributed on npm; the runbook and the answered capture hold are in [`uiux-2-0-baseline-evidence.md`](uiux-2-0-baseline-evidence.md) |
-| `UIUX-P0-06` | package prepared and unsigned in [`uiux-2-0-p0-signoff.md`](uiux-2-0-p0-signoff.md); the owner's signature is the acceptance criterion |
+| `UIUX-P0-06` | signed by `pankajtiwarics27` on 2026-10-31 and frozen at its pin, in [`uiux-2-0-p0-signoff.md`](uiux-2-0-p0-signoff.md); the P0 gate is open |
 | Review duty | the non-author reviews every story PR; findings on #109 and #111 were posted as comments, not formal GitHub reviews, and #110 stays open until the forwarded calls are traced |
 
 **Merge queue.** One story per pull request, reviewed by the other session,

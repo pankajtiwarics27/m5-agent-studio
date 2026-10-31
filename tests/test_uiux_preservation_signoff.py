@@ -162,7 +162,10 @@ def test_signoff_propagates_route_map_uncertainty(
     monkeypatch.setattr(module, "ROUTE_MAP", route_map)
     monkeypatch.setattr(module, "TRACE", trace_file)
     package = module.build_signoff()
-    assert package["status"] == "unsigned"
+    # This test is about uncertainty propagation, not about the signature: the status
+    # must follow the ledger record whatever that record currently says.
+    record = (_ledger().get("coordination") or {}).get("preservation_signoff") or {}
+    assert package["status"] == ("approved" if record.get("approved") else "unsigned")
     assert package["totals"]["routes_with_resolved_or_possible_caller"] == 57
     assert package["totals"]["routes_unknown_frontend_caller"] == 58
     assert package["totals"]["route_map_unresolved_method_edges"] == 1
@@ -208,22 +211,41 @@ def test_signoff_rejects_an_authorization_trace_for_another_map(
         module.build_signoff()
 
 
-def test_the_package_is_unsigned_until_the_ledger_says_otherwise() -> None:
+def test_the_package_reports_the_ledger_signature_state() -> None:
+    """The page reports the ledger; it never carries a signature of its own.
+
+    This used to assert that the package *was* unsigned, which turned the owner's
+    signature into a test failure and would have invited someone to "fix" the test
+    by deleting the assertion. The invariant is the agreement between the record and
+    what is published, and it holds in both directions: an unsigned tree may not
+    render an approval, and a signed tree may not render "no signature", quote a
+    different signer, or drop the limits the signature does not remove.
+    """
     package = _package()
     ledger = _ledger()
     record = (ledger.get("coordination") or {}).get("preservation_signoff") or {}
-
-    assert package["status"] == "unsigned"
-    assert package["signature"]["signed"] is False
-    assert package["signature"]["approved_by"] is None
-    assert package["signature"]["approved_at"] is None
-    assert record.get("approved") is False, "the ledger must not claim an approval nobody signed"
-    assert "No signature" in package["signature"]["statement"]
-
     page = DOC.read_text(encoding="utf-8")
-    assert "**unsigned**" in page
-    assert "| Status | **unsigned** |" in page
-    assert "Prepared by an agent" in page
+    approved = bool(record.get("approved"))
+
+    assert package["signature"]["signed"] is approved
+    assert package["status"] == ("approved" if approved else "unsigned")
+    assert ("| Status | **approved** |" in page) is approved
+    assert ("| Status | **unsigned** |" in page) is (not approved)
+    assert "Prepared by an agent" in page, "the package must keep saying who prepared it"
+
+    if approved:
+        for field in ("approved_by", "approved_at", "reference"):
+            assert record.get(field), f"an approval without {field} is not a signature"
+            assert package["signature"][field] == record[field], f"the page disagrees with the ledger on {field}"
+        assert "Signed in the ledger" in package["signature"]["statement"]
+        assert "No signature" not in package["signature"]["statement"]
+        # A signature approves the matrix and the rollback path; it does not upgrade
+        # the scan's coverage, and the page has to keep saying so.
+        assert "not proof" in page
+    else:
+        assert package["signature"]["approved_by"] is None
+        assert package["signature"]["approved_at"] is None
+        assert "No signature" in package["signature"]["statement"]
 
 
 def test_a_partial_signature_is_refused_and_a_complete_one_is_reported() -> None:
