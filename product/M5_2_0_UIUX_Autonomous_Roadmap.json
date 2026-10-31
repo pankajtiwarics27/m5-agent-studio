@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 5,
+  "revision": 6,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -27,8 +27,8 @@
     ],
     "rule": "This ledger is authoritative for UI/UX stories UIUX-P0-01..UIUX-P6-05 only. It never changes the status of an M5 or AS story, and no UI/UX story may change backend, security or data behavior to make a screen easier to build."
   },
-  "source_commit_sha": "aa1af27898d98d4633da17a4b711cfd628df27dc",
-  "source_commit_status": "Pinned to origin/main aa1af27898d9 by UIUX-P0-03 on 2026-10-31. The previous pin 28930089d0a4 described main before #105 and #106 moved app.py and studio.py, so the manifest's hashes and route table were regenerated against this commit in the same change that re-pinned it. A session that finds main ahead of this pin re-pins the ledger and regenerates the manifest in the same commit; a git diff of a stale manifest is drift, not a fix-up. A branch name is not a pin.",
+  "source_commit_sha": "e96b30e395bd9e785ad96a08738d65e3249c8cd4",
+  "source_commit_status": "Pinned to origin/main e96b30e395bd by UIUX-P0-04 on 2026-10-31. The previous pin aa1af27 described main before #109 merged, so the manifest, control inventory and route map were regenerated against this commit in the same change that re-pinned. A session that finds main ahead of this pin re-pins the ledger and regenerates the artifacts in the same commit; a stale manifest is drift, not a fix-up. A branch name is not a pin.",
   "evidence_basis": {
     "supplied_by": "repository owner, 2026-10-31",
     "original_provenance": {
@@ -100,12 +100,14 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": null,
-    "active_stories": [],
+    "active_story": "UIUX-P0-04",
+    "active_stories": [
+      "UIUX-P0-04"
+    ],
     "last_completed_story": "UIUX-P0-03",
     "next_recommended_story": "UIUX-P0-04",
-    "last_checkpoint": "2026-10-31T11:21:51Z",
-    "last_session_id": "arena/dc8242aa-m5-agent-studio",
+    "last_checkpoint": "2026-10-31T11:29:36Z",
+    "last_session_id": "arena/c705f453-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
     "last_verified_commit": "866083c",
@@ -212,9 +214,9 @@
       ],
       "total": 6,
       "done": 3,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 3,
+      "not_started": 2,
       "percent_complete": 50
     },
     {
@@ -339,9 +341,9 @@
   "overall_progress": {
     "total_stories": 40,
     "done": 3,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 37,
+    "not_started": 36,
     "percent_complete": 8
   },
   "stories": [
@@ -869,13 +871,13 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P0-04 (Trace backend authorization and state). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-31T11:29:36Z",
+        "updated_at": "2026-10-31T11:29:36Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/c705f453-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -884,8 +886,8 @@
         "known_regressions": [],
         "decisions": [],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "Claimed after UIUX-P0-03 closed. The route map gives the 35 distinct non-GET routes the browser can hit; this story records what can refuse each one and what durable state it touches.",
+        "next_action": "Trace the authorization and durable state behind every state-changing call the browser makes, publish the generated trace, then close with evidence.",
         "readme_updated": false
       },
       "required_evidence": [
