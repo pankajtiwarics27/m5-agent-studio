@@ -44,7 +44,7 @@ line numbers are recorded as measurements and are expected to drift.
 | Live regions | 2 (`#connPill`, `#toastStack`) across ~2,900 lines of script | header, shell |
 | Focus styling | 12 `:focus-visible` occurrences | both CSS layers |
 | Breakpoints | 1100, 880, 860, 820, 600, 390 px, plus two `prefers-reduced-motion` blocks | both CSS layers |
-| Themes | dark default, light via `body[data-theme="light"]`, persisted in `m5_theme` | CSS + `toggleTheme()` |
+| Themes | saved `m5_theme`, otherwise the system's light/dark preference; dark fallback. Light uses `body[data-theme="light"]` | CSS + `toggleTheme()` |
 
 Read as a design brief, those numbers say three things:
 
@@ -59,10 +59,12 @@ Read as a design brief, those numbers say three things:
    125 inline handlers mean consistency is currently maintained by copying, not
    by tokens and components.
 
-Not verified here, and not claimed: nothing in this checkout has been rendered.
-There is no Chrome/Chromium binary and no `puppeteer-core` in this environment,
-so the screenshot pipeline (`scripts/capture_screenshots.mjs`) cannot run and
-0 of 6 baseline shots exist. Screenshot evidence is **blocked**, not green.
+The original planning session did not render the checkout: it had no
+Chrome/Chromium binary or `puppeteer-core`. A later session made exploratory
+captures in a disposable source copy with a temporary workaround, but these are
+not formal baseline evidence. The repository screenshot manifest remains at
+0 of 6. See the [coordination handoff](uiux-2-0-coordination.md) for the capture
+and data-isolation risks. The visual baseline is **blocked**, not green.
 
 ## 2. What "transformed" means for M5 2.0
 
@@ -129,8 +131,8 @@ the ledger's five acceptance criteria.
 
 | Story | Change | Anchor | Proof |
 |---|---|---|---|
-| P0-04 Trace backend authorization and state | For every state-changing call in the route map, record the gate in force (bearer token, host/origin check, admission gate, approval scope, sandbox policy) and the durable-state transition it drives; publish a generated trace + page, and derive the UI rule it implies | `app.py` auth/origin middleware, `/api/harness/*`, `/api/tasks/events`, `product/M5_2_0_UIUX_Route_Map.json` | trace covers every non-GET call, names the refusing gate, and a test fails if a route loses its recorded gate |
-| P0-05 Capture baseline screenshots and test results | Baseline suite results with commands, exit codes and environment; 6 screenshots through the real pipeline | `scripts/capture_screenshots.mjs --dry-run`, `scripts/validate_screenshots.py`, `scripts/demo_tour.py --check` | results recorded verbatim; capture either captured or recorded `blocked` with the missing prerequisite named |
+| P0-04 Trace backend authorization and state | For every state-changing call in the route map, record the gate in force (bearer token, host/origin check, admission gate, approval scope, sandbox policy) and the durable-state transition it drives; publish a generated trace + page, and derive the UI rule it implies | `app.py` auth/origin middleware, `/api/harness/*`, `/api/harness/sessions/{session_id}/events`, `product/M5_2_0_UIUX_Route_Map.json` | trace covers every non-GET call, names the refusing gate, and a test fails if a route loses its recorded gate |
+| P0-05 Capture baseline screenshots and test results | Baseline suite results with commands, exit codes and environment; 6 screenshots through the real pipeline | `scripts/capture_screenshots.mjs --dry-run`, `scripts/validate_screenshots.py`, `scripts/demo_tour.py --check` | results recorded verbatim and six captures validated; missing prerequisites recorded as `blocked`, with the gate remaining closed |
 | P0-06 Approve preservation and rollback baseline | Owner sign-off on the preservation matrix and the rollback path, not an agent conclusion | `feature_preservation_matrix`, `docs/ui-decisions.md` | an explicit owner approval recorded in the ledger; agents may prepare, not sign |
 
 ### P1 — shell and design system
@@ -158,10 +160,10 @@ the ledger's five acceptance criteria.
 
 | Story | Change | Anchor | Proof |
 |---|---|---|---|
-| P3-01 Task creation and settings hierarchy | Left sidebar keeps session list + workspace + new session; the control bar keeps model, critic and policy visible and moves the rest into one disclosed "Run settings" group with the current values summarised | `#pane-harness` (1287), `.harness-bar`, `#harnessAdvanced` | every one of the 18 Harness controls reachable; defaults and payload unchanged |
+| P3-01 Task creation and settings hierarchy | Left sidebar keeps session list + workspace + new session; the control bar keeps model, critic and policy visible and moves the rest into one disclosed "Run settings" group with the current values summarised | `#pane-harness` (1287), `.harness-bar`, `#harnessAdvanced` | all 17 inventoried Harness markup controls reachable, plus dynamic controls; defaults and payload unchanged |
 | P3-02 Durable timeline and replay | Trajectory stream becomes an event timeline (step, tool, approval, result) rendered from the server's events, with replay from a cursor | `#harnessStream`, `renderStoredHarnessEventHtml()`, `ensureLiveStepCard()`, task-event resync | replay after reload reproduces the same timeline; cursor semantics unchanged |
 | P3-03 Approvals and permissions | Approval cards state who asks, for what, the scope, the expiry and the refusal consequence; the client never enables an action the server would refuse | `appendWorkflowApprovalCard()`, approval endpoints from the route map | adversarial test: a fabricated client-side approval cannot enable execution |
-| P3-04 Verification, diff, artifacts | Verification result, diff and artifacts share one evidence block with provenance; the diff dialog keeps refresh, copy and apply-to-worktree | `#harnessDiffModal`, `applyHarnessWorktree()`, `#harnessActiveStatusBadge` | diff apply still requires the same confirmation; artifacts listed with source |
+| P3-04 Verification, diff, artifacts | Verification result, diff and artifacts share one evidence block with provenance; the diff dialog keeps refresh and apply-to-worktree and offers copy | `#harnessDiffModal`, `applyHarnessWorktree()`, `#harnessActiveStatusBadge` | apply remains an explicit operator action subject to server checks; artifacts listed with source |
 | P3-05 Pause, cancel, resume, crash recovery | One control cluster with the states the backend actually has, plus a recovery banner after a restart | `#harnessAbortBtn`, `abortHarnessRun()`, checkpoint/resume endpoints | each of pause/cancel/resume proven against server state, not client state |
 | P3-06 Pipeline stages and artifacts | The 5 step cards become a stage timeline with duration, model and status per stage, artefacts attached to their stage | `.stepper`, `#step-card-0..4`, `selectStageFilter()`, `#councilStagesContainer` | filter selection announced; stage status from stream events |
 | P3-07 Pipeline retry and checkpoint recovery | Failure, retry and checkpoint restore surfaced per stage with what is retained | `runCouncil()`, stop/abort paths, `#councilTotalStatus` | retry after failure keeps completed stages; recovery path documented |
@@ -197,23 +199,29 @@ the ledger's five acceptance criteria.
 | P6-04 README, docs, onboarding | Only verified behaviour described; quickstart matches the shipped UI | `README.md`, `docs/quickstart.md` | doc validation plus a first-run walk |
 | P6-05 Release gate and handover | Gate record, known limitations, handover | `release_gates` | owner-signed gate |
 
-## 5. Evidence, and the one check this environment cannot do
+## 5. Evidence and visual capture limitations
 
 Every story runs the sequence in
 [`uiux-2-0-program.md`](uiux-2-0-program.md#evidence-a-ui-story-has-to-produce)
-and records exit codes. Three environment facts to carry forward:
+and records exit codes. Carry forward these environment and safety facts:
 
-* **No browser here.** Screenshot capture needs a Chrome/Chromium binary and
-  `puppeteer-core`; neither is vendored. `node scripts/capture_screenshots.mjs
-  --dry-run` proves the capture plan without one, and any story that changes a
-  pane records visual evidence as `blocked` on a machine without the browser.
-* **`--dry-run` is not evidence of appearance.** It is evidence that the
-  manifest, the routes and the token injection are coherent.
+* **Browser availability is session-specific.** Capture needs a Chrome/Chromium
+  binary and `puppeteer-core`; neither is vendored. On a machine without them,
+  record visual evidence as `blocked` rather than treating it as complete.
+* **`--dry-run` is not a browser test.** It validates the capture-manifest shape
+  and prints the plan; it does not verify routes, token injection or appearance.
+  An unmodified real capture timed out on authentication prompts in a later
+  session; see the [handoff](uiux-2-0-coordination.md#safety-and-capture-risks).
+* **The demo store is not fully isolated.** Until
+  [issue #108](https://github.com/pankajtiwarics27/m5-agent-studio/issues/108)
+  is resolved, use a disposable source copy with its own empty harness store,
+  not a real user's checkout, for captures.
 * **Generated artifacts move with the source.** `studio.py`, the source manifest,
   the control inventory, the route map and the subsystem inventory are
   regenerated in the same commit as the change that moves them; CI fails on drift.
 
-Baseline measured in this checkout on 2026-10-31 (Python 3.11.2, Linux sandbox):
+Baseline measured by the original planning session on 2026-10-31 (Python 3.11.2,
+Linux sandbox; later results are in the [handoff](uiux-2-0-coordination.md)):
 
 | Command | Result |
 |---|---|
@@ -245,20 +253,23 @@ generated artifact, or the same ledger block at the same time.
 | `AGENTS.md`, `docs/README.md`, `M5_2_0_UIUX_AGENT_PROMPT.md` | both sessions add a row or a rule | small additive edits; expect a trivial rebase, never rewrite the other session's line |
 | `product/M5_2_0_UIUX_Autonomous_Roadmap.json` | both sessions write `session_state` and their own story's `tracking` | write only your story's `tracking`; reconcile `session_state` by hand, keeping both sides |
 
-**Claim discipline.** The claim commit goes first and lands before code, so the
-ledger on `main` is the cross-session truth. A story with an open pull request
-belongs to that session even if the claim has not merged yet: read `gh pr list
---state open` before picking work, and record a reservation rather than a claim
-when the dependency is still open.
+**Claim discipline.** Commit and push claim metadata before implementation.
+The ledger on `main` records merged claims, but a claim pushed only to a session
+branch is not yet visible there. Open a draft PR with the story ID immediately
+after the claim push, recheck open PRs before coding, and coordinate any
+collision. A reservation for a dependency-blocked story communicates intent but
+is not a ledger claim. Neither a reservation nor the advisory
+[readiness helper](uiux-2-0-coordination.md) is an atomic lock; unannounced
+branch-only claims can still race.
 
 **State as of this commit (2026-10-31):**
 
 | Item | State |
 |---|---|
 | `UIUX-P0-01`, `P0-02` | done on `main` |
-| `UIUX-P0-03` | implemented on `arena/dc8242aa-m5-agent-studio`, superseding PR #104: that branch could not merge (it conflicted with `main` and carried a runtime-program benchmark change), so the route-map script and tests were ported here, the runtime work was dropped, and the ledger was re-pinned to `aa1af27` |
-| `UIUX-P0-04` | the next claim once `P0-03` is `done`: trace the backend authorization and state behind every state-changing call in the route map |
-| Review duty | the non-author reviews every story PR; findings on #104 were posted on that PR, including the exact conflict and the scope split |
+| `UIUX-P0-03` | marked done on `main` via PR #109, which superseded #104 and separated the runtime work; the merged map still has false-negative caller findings tracked in [#110](https://github.com/pankajtiwarics27/m5-agent-studio/issues/110) |
+| `UIUX-P0-04` | in [PR #111](https://github.com/pankajtiwarics27/m5-agent-studio/pull/111), while the planning session also expressed intent to take it; confirm ownership and resolve #110 before relying on the trace |
+| Review duty | the non-author reviews every story PR; blocking findings on #109 were posted as a comment, not a formal GitHub review |
 
 **Merge queue.** One story per pull request, reviewed by the other session,
 green on all three CI legs, merged with `gh pr merge <number> --merge` (merge
@@ -270,17 +281,17 @@ against the updated `main`.
 | Risk | Effect | Mitigation in this plan |
 |---|---|---|
 | Single-file frontend | every UI story conflicts with every other | serialize UI stories; keep investigation and generated tooling parallel; rebase before claim and before push |
-| No browser in the agent environment | no screenshot evidence, so P0-05 and P6-03 cannot be closed here | record `blocked`, use `--dry-run` for structural proof, keep the visual gate for a machine with Chrome |
+| Capture prerequisites or isolation are unresolved | no accepted screenshot evidence, so P0-05 and P6-03 cannot be closed | record `blocked`, use `--dry-run` only for manifest/plan checks, fix auth setup and isolate the demo store before capture |
 | Ledger content is generated boilerplate | an implementer can satisfy the five criteria without changing the experience | this page's per-story change shape, plus the preservation matrix as the real check |
-| Claim drift | two sessions can start the same story | claim commit first, read open PRs first, reservations recorded here |
+| Claim drift | two sessions can start the same story | claim commit first, announce via draft PR and recheck; reservations are not locks |
 | Legacy CSS layer still live | a token migration can regress a pane that was not opened | convert by rule with a rendered check per pane; never delete a legacy rule before its replacement is proven |
 | Accessibility debt | 58 markup controls have no id, so tests cannot reach them | add stable hooks in P1-03/P5-02 rather than in every story |
 
 Decisions that need the owner, not an agent:
 
-1. **Browser in the loop.** Either a machine with Chrome captures the 6 shots
-   (and P0-05/P6-03 close), or the program permanently records visual evidence as
-   blocked and the gate says so.
+1. **Browser in the loop.** Arrange a safe, reproducible capture environment and
+   review the required shots. If prerequisites remain missing, record the blocker;
+   a blocked capture is not evidence for closing P0-05 or the release gate.
 2. **Parallelism after P1.** The ledger's dependency chain is strictly linear. If
    phases may overlap after the shell lands, the dependency edges need a
    deliberate edit by the owner, not a session quietly starting early.
@@ -291,8 +302,10 @@ Decisions that need the owner, not an agent:
 
 1. Read `AGENTS.md`, the ledger's `session_protocol`, this page's row for the
    story, then the real DOM, handler and route.
-2. Claim: `tracking.status = in_progress`, `owner_session`, `started_at`,
-   `updated_at` — pushed before any code.
+2. Claim: `tracking.status = in_progress`, `progress_percent` in 1–99,
+   `owner_session`, `started_at`, `updated_at`; reconcile the counters and
+   `session_state`. Push before any code, immediately open a draft PR with the
+   story ID and recheck for competing claims.
 3. Re-pin: confirm `HEAD`, update the ledger pin and regenerate the source
    manifest if a pinned file moved.
 4. Change the smallest thing that satisfies the row, in the existing CSS layer
@@ -301,13 +314,13 @@ Decisions that need the owner, not an agent:
    failure, recovery, narrow viewport, both themes.
 6. Run the verification sequence; capture or record `blocked`; regenerate
    artifacts; update the preservation-matrix row and the screenshot manifest.
-7. Open the pull request with the acceptance-criterion-to-evidence map, and ask
-   the other session for review.
+7. Update the draft pull request with the acceptance-criterion-to-evidence map,
+   and ask the other session for review.
 
 ## 9. What this page does not claim
 
-No interface change is shipped by this commit. Nothing here was rendered, no
-screenshot was captured, and no story status was changed. The plan is a
-prediction about where the work goes; the ledger remains the record of what has
-actually been done, and `docs/ui-audit.md` remains the record of what the
-interface looked like before the program touched it.
+This plan does not itself ship an interface change or change a story status.
+Exploratory captures described in the [handoff](uiux-2-0-coordination.md) are not
+an accepted baseline. The plan predicts where the work goes; the ledger remains
+the record of what has actually been done, and `docs/ui-audit.md` remains the
+record of what the interface looked like before the program touched it.
