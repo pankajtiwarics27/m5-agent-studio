@@ -47,6 +47,16 @@ managed file tool executes:
 - **Workspace confinement and symlink refusal (`unauthorized_path` / `unsafe_path`):**
   parent traversal (`..`, `../...`), home/environment escapes (`~`, `~/...`, `$HOME`),
   outside-workspace absolute paths, and intra-workspace or escaping symlinks.
+- **Git control-plane integrity (`.git/config`):** a freshly created or modified
+  `.git/config` is parsed — sections, subsections and keys — and checked for
+  directives that turn configuration into code execution or secret exfiltration:
+  `core.fsmonitor`, `core.sshCommand`, `core.hooksPath`, `core.gitProxy`,
+  `credential.helper`, `filter.*.clean|smudge`, and `include.path` /
+  `includeIf.*.path` (an include pulls in configuration this policy never saw).
+  A plain `git init`-shaped config without those directives stays permissible.
+  Git writes the *sectioned* spelling (`[credential]` + `helper = …`), so the
+  check resolves directives to their dotted name instead of pattern-matching raw
+  text.
 - **Subprocess Bypass Resistance (`inspect_subprocess_policy`):**
   - Quote-aware shell segment and redirection tokenization (`cat ".env"`, `head <.env`,
     `grep --file=.env`),
