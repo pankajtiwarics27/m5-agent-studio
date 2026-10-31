@@ -25,6 +25,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 CAPTURE = ROOT / "scripts" / "capture_screenshots.mjs"
 WALK = ROOT / "scripts" / "keyboard_walk.mjs"
+ACCESSIBILITY_WALK = ROOT / "tests" / "browser" / "accessibility_walk.mjs"
 TOKEN = "synthetic-screenshot-token-0123456789"
 TABS = ("start", "harness", "hall", "council", "debate", "chat")
 
@@ -141,6 +142,13 @@ def _walk(base: str, env: dict[str, str], token: str = TOKEN):
         ["node", str(WALK), "--base-url", base, "--token", token,
          "--timeout-ms", "4000", "--settle-ms", "100", "--json"],
         cwd=ROOT, env=env, capture_output=True, text=True, timeout=40, check=False,
+    )
+
+
+def _accessibility_walk(base: str, env: dict[str, str], token: str = TOKEN):
+    return subprocess.run(
+        ["node", str(ACCESSIBILITY_WALK), "--base-url", base, "--token", token],
+        cwd=ROOT, env=env, capture_output=True, text=True, timeout=60, check=False,
     )
 
 
@@ -405,6 +413,12 @@ def test_real_isolated_demo_captures_all_six_panes(
         assert walk_result["failed"] == 0
         assert walk_result["passed"] == 22
         assert banner["token"] not in walk.stdout + walk.stderr
+        accessibility = _accessibility_walk(banner["url"], browser_env, token=banner["token"])
+        assert accessibility.returncode == 0, accessibility.stderr
+        accessibility_result = json.loads(accessibility.stdout)
+        assert accessibility_result["failed"] == 0
+        assert accessibility_result["passed"] == 12
+        assert banner["token"] not in accessibility.stdout + accessibility.stderr
         assert sentinel.read_bytes() == before
         assert [p for p in store.rglob("*") if p.is_file()] == [sentinel]
     finally:

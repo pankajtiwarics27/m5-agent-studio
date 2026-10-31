@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `5496e2fdb7326702f17a7c643a84aa574b940d0a689aabe29eb1a4d55a2d6bde`.
+* Frontend digest: `484660a563a1e615e8842d573b6f24c77bb36144ed5ebd5cfcaea9c20c6e1475`.
 * Panes: 6 · controls in panes: 69 · controls in the
   shared chrome: 101 · script-rendered: 30.
 
@@ -163,7 +163,7 @@ attributed to one.
 | 7 | button | — | — | Open Command Palette (Cmd+K) | openCommandPalette() |
 | 8 | button | densityToggleBtn | button | Density: comfortable | toggleDensity() |
 | 9 | button | themeToggleBtn | button | Switch to light theme | toggleTheme() |
-| 10 | input | cmdSearchInput | text | Search actions, tools, and settings… | renderCommandPaletteList(this.value) |
+| 10 | input | cmdSearchInput | text | Search actions | renderCommandPaletteList(this.value) |
 | 11 | button | ctxTabBtn-oc | — | Knowledge | switchCtxTab('oc') |
 | 12 | button | ctxTabBtn-cg | — | Code graph | switchCtxTab('cg') |
 | 13 | button | ctxTabBtn-gsd | — | Planning | switchCtxTab('gsd') |

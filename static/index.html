@@ -140,7 +140,8 @@
 
   .toast-stack {
     position: fixed; right: 18px; bottom: 18px; z-index: 95;
-    display: flex; flex-direction: column; gap: 8px; max-width: 390px; pointer-events: none;
+    display: flex; flex-direction: column; gap: 8px; max-width: 390px;
+    max-height: calc(100vh - 36px); overflow-y: auto; pointer-events: none;
   }
   .toast {
     pointer-events: auto; background: rgba(19, 28, 46, 0.96); backdrop-filter: blur(12px);
@@ -152,7 +153,14 @@
   .toast.ok { border-left-color: var(--emerald); }
   .toast.warn { border-left-color: var(--amber); }
   .toast.err { border-left-color: var(--rose); }
+  .toast-dismiss {
+    flex: 0 0 auto; min-width: 32px; min-height: 32px; padding: 4px;
+    border: 1px solid transparent; border-radius: 7px; background: transparent;
+    color: var(--text-dim); cursor: pointer;
+  }
+  .toast-dismiss:hover { background: var(--bg-hover); color: var(--text); }
   @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
 
   .cmd-list { display: flex; flex-direction: column; gap: 4px; max-height: 360px; overflow-y: auto; padding: 8px; }
   .cmd-item {
@@ -844,14 +852,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 </header>
 
 <!-- NON-BLOCKING ACCESSIBLE TOAST STACK (`ui-ux-pro-max` Priority 8) -->
-<div id="toastStack" class="toast-stack" role="status" aria-live="polite" aria-atomic="false"></div>
+<div id="toastStack" class="toast-stack" role="region" aria-label="Notifications" aria-live="polite" aria-atomic="false"></div>
 
 <!-- GLOBAL `⌘K` COMMAND PALETTE MODAL -->
 <div id="cmdPaletteModal" class="modal-backdrop" onclick="if(event.target===this)closeCommandPalette()">
   <div class="modal" style="max-width:580px;" role="dialog" aria-modal="true" aria-label="Command Palette">
     <div style="padding:12px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:9px;">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true" style="color:var(--cyan);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="cmdSearchInput" placeholder="Search actions, tools, and settings…" style="flex:1; border:none; background:transparent; font-size:13.8px; outline:none;" oninput="renderCommandPaletteList(this.value)" />
+      <input type="text" id="cmdSearchInput" role="combobox" aria-label="Search actions" aria-autocomplete="list" aria-controls="cmdPaletteList" aria-expanded="false" placeholder="Search actions, tools, and settings…" autocomplete="off" style="flex:1; border:none; background:transparent; font-size:13.8px; outline:none;" oninput="renderCommandPaletteList(this.value)" />
       <span class="kbd">ESC</span>
     </div>
     <div id="cmdPaletteList" class="cmd-list"></div>
@@ -964,7 +972,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
 <!-- ================= CLOUD + CUSTOM MCP TOOLS HUB MODAL (v6.0) ================= -->
 <div id="mcpModal" class="modal-backdrop" onclick="if(event.target===this)closeMcpModal()">
-  <div class="modal" style="max-width:860px;" role="dialog" aria-label="MCP tools">
+  <div class="modal" style="max-width:860px;" role="dialog" aria-modal="true" aria-label="MCP tools">
     <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
       <div>
         <strong style="font-size:15px;">MCP tools</strong>
@@ -1077,7 +1085,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
 <!-- ================= EXTERNAL HARNESSES (`deepseek-harness` & `openharness`) MODAL ================= -->
 <div id="externalHarnessModal" class="modal-backdrop" onclick="if(event.target===this)closeExternalHarnessModal()">
-  <div class="modal" role="dialog" aria-label="Official DeepSeek Harness & OpenHarness Bridge">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Official DeepSeek Harness & OpenHarness Bridge">
     <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
       <div>
         <strong style="font-size:15px;">External harness integrations</strong>
@@ -1116,7 +1124,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
 <!-- ================= GIT DIFF & WORKTREE APPLY MODAL ================= -->
 <div id="harnessDiffModal" class="modal-backdrop" onclick="if(event.target===this)closeHarnessDiffModal()">
-  <div class="modal" style="max-width:860px;" role="dialog" aria-label="Harness Git Diff">
+  <div class="modal" style="max-width:860px;" role="dialog" aria-modal="true" aria-label="Harness Git Diff">
     <div style="padding:13px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:10px;">
       <div>
         <strong style="font-size:14.8px;">Review workspace changes</strong>
@@ -1137,7 +1145,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
 <!-- ================= CLOUD PROVIDERS & OMNIROUTE COMBOS MODAL ================= -->
 <div id="providersModal" class="modal-backdrop" onclick="if(event.target===this)closeProvidersModal()">
-  <div class="modal" role="dialog" aria-label="Cloud Providers & OmniRoute Router">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Cloud Providers & OmniRoute Router">
     <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
       <div>
         <strong style="font-size:15px;">Model providers and routing</strong>
@@ -1209,7 +1217,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
 <!-- ================= SKILLS & MCP MODAL ================= -->
 <div id="skillsModal" class="modal-backdrop" onclick="if(event.target===this)closeSkillsModal()">
-  <div class="modal" role="dialog" aria-label="Agent Skills Manager">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Agent Skills Manager">
     <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
       <div>
         <strong style="font-size:15px;">Agent skills</strong>
@@ -1334,7 +1342,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
 <!-- ================= SPAWN COUNCIL SESSION MODAL ================= -->
 <div id="spawnModal" class="modal-backdrop" onclick="if(event.target===this)closeSpawnModal()">
-  <div class="modal" role="dialog" aria-label="Spawn Council Session">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Spawn Council Session">
     <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
       <strong>Spawn New Council Hall Session</strong>
       <button class="btn btn-xs" onclick="closeSpawnModal()">Close</button>
@@ -1827,15 +1835,129 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     info:  '<svg class="svg-ico" style="width:13px;height:13px;" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
   };
 
+  const focusReturnByOverlay = new WeakMap();
+  const dismissToastByElement = new WeakMap();
+  function getTopOpenOverlay() {
+    return [...document.querySelectorAll(".modal-backdrop.open")].at(-1) || null;
+  }
+  function focusableInOverlay(backdrop) {
+    const dialog = backdrop?.querySelector('[role="dialog"]');
+    if (!dialog) return [];
+    return [...dialog.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+      .filter(node => node.getClientRects().length && !node.closest('[hidden],[aria-hidden="true"]'));
+  }
+  function focusOverlay(backdrop, preferred) {
+    const dialog = backdrop?.querySelector('[role="dialog"]');
+    if (!dialog) return;
+    dialog.setAttribute("aria-modal", "true");
+    if (!dialog.hasAttribute("tabindex")) dialog.setAttribute("tabindex", "-1");
+    const target = typeof preferred === "string" ? dialog.querySelector(preferred) : preferred;
+    const focusable = focusableInOverlay(backdrop);
+    (target && target.getClientRects().length ? target : focusable[0] || dialog).focus({ preventScroll: true });
+  }
+  function openAccessibleModal(target, preferred) {
+    const backdrop = typeof target === "string" ? document.getElementById(target) : target;
+    if (!backdrop) return;
+    const alreadyOpen = backdrop.classList.contains("open");
+    if (!alreadyOpen) focusReturnByOverlay.set(backdrop, document.activeElement);
+    backdrop.classList.add("open");
+    focusOverlay(backdrop, preferred);
+  }
+  function closeAccessibleModal(target) {
+    const backdrop = typeof target === "string" ? document.getElementById(target) : target;
+    if (!backdrop?.classList.contains("open")) return;
+    backdrop.classList.remove("open");
+    const dialog = backdrop.querySelector('[role="dialog"]');
+    if (dialog) dialog.setAttribute("aria-modal", "false");
+    const returnFocus = focusReturnByOverlay.get(backdrop);
+    focusReturnByOverlay.delete(backdrop);
+    const top = getTopOpenOverlay();
+    if (top) {
+      if (returnFocus && top.contains(returnFocus)) returnFocus.focus({ preventScroll: true });
+      else focusOverlay(top);
+    } else if (returnFocus?.isConnected && typeof returnFocus.focus === "function") {
+      returnFocus.focus({ preventScroll: true });
+    }
+  }
+  function trapOverlayTab(event, backdrop) {
+    const focusable = focusableInOverlay(backdrop);
+    if (!focusable.length) {
+      event.preventDefault();
+      focusOverlay(backdrop);
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!backdrop.contains(document.activeElement) || (event.shiftKey && document.activeElement === first)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
   function showToast(msg, kind = "info") {
     const stack = document.getElementById("toastStack");
     if (!stack) return;
+    const tone = kind === "error" ? "err" : ["ok", "warn", "err", "info"].includes(kind) ? kind : "info";
     const el = document.createElement("div");
-    el.className = `toast ${kind}`;
-    const ico = kind === "ok" ? UI_ICONS.check : (kind === "err" || kind === "warn" ? UI_ICONS.warn : UI_ICONS.info);
-    el.innerHTML = `<span style="margin-top:2px;">${ico}</span><div style="flex:1; line-height:1.45;">${escapeHtml(String(msg || ""))}</div>`;
+    el.className = `toast ${tone}`;
+    const icon = document.createElement("span");
+    icon.setAttribute("aria-hidden", "true");
+    icon.style.marginTop = "2px";
+    icon.innerHTML = tone === "ok" ? UI_ICONS.check : (tone === "err" || tone === "warn" ? UI_ICONS.warn : UI_ICONS.info);
+    const message = document.createElement("div");
+    message.style.cssText = "flex:1; line-height:1.45;";
+    message.textContent = String(msg ?? "");
+    const dismiss = document.createElement("button");
+    dismiss.type = "button";
+    dismiss.className = "toast-dismiss";
+    dismiss.setAttribute("aria-label", "Dismiss notification");
+    dismiss.title = "Dismiss notification";
+    dismiss.innerHTML = UI_ICONS.close;
+    const returnFocus = document.activeElement;
+    let remainingMs = 5000;
+    let timer = null;
+    let startedAt = 0;
+    let dismissed = false;
+    const dismissToast = () => {
+      if (dismissed) return;
+      dismissed = true;
+      if (timer !== null) clearTimeout(timer);
+      timer = null;
+      if (el.contains(document.activeElement) && returnFocus?.isConnected && !el.contains(returnFocus)) {
+        returnFocus.focus();
+      }
+      el.remove();
+    };
+    dismissToastByElement.set(el, dismissToast);
+    const pauseToast = () => {
+      if (timer === null) return;
+      clearTimeout(timer);
+      timer = null;
+      remainingMs = Math.max(0, remainingMs - (performance.now() - startedAt));
+    };
+    const resumeToast = () => {
+      if (dismissed || !el.isConnected || timer !== null || el.matches(":hover") || el.contains(document.activeElement)) return;
+      startedAt = performance.now();
+      timer = setTimeout(dismissToast, remainingMs);
+    };
+    dismiss.addEventListener("click", dismissToast);
+    el.addEventListener("pointerenter", pauseToast);
+    el.addEventListener("pointerleave", resumeToast);
+    el.addEventListener("focusin", pauseToast);
+    el.addEventListener("focusout", () => {
+      if (!el.contains(document.activeElement)) resumeToast();
+    });
+    el.append(icon, message, dismiss);
     stack.appendChild(el);
-    setTimeout(() => { el.style.opacity = "0"; setTimeout(() => el.remove(), 220); }, 4200);
+    const liveToasts = [...stack.querySelectorAll(".toast")];
+    if (liveToasts.length > 5) {
+      const oldestDismissible = liveToasts.find(toast => !toast.contains(document.activeElement) && !toast.matches(":hover"));
+      if (oldestDismissible && oldestDismissible !== el) dismissToastByElement.get(oldestDismissible)?.();
+    }
+    resumeToast();
   }
 
   const CMD_PALETTE_ITEMS = [
@@ -1858,40 +1980,41 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     { label: "Toggle appearance", hint: "Theme", run: () => toggleTheme() },
   ];
 
-  let commandPaletteReturnFocus = null;
   let commandPaletteIndex = 0;
   function openCommandPalette() {
-    const m = document.getElementById("cmdPaletteModal");
-    commandPaletteReturnFocus = document.activeElement;
-    m.classList.add("open");
-    const inp = document.getElementById("cmdSearchInput");
-    inp.value = "";
+    const modal = document.getElementById("cmdPaletteModal");
+    const input = document.getElementById("cmdSearchInput");
+    input.value = "";
     renderCommandPaletteList("");
-    setTimeout(() => inp.focus(), 20);
+    input.setAttribute("aria-expanded", "true");
+    openAccessibleModal(modal, input);
   }
   function closeCommandPalette() {
-    document.getElementById("cmdPaletteModal").classList.remove("open");
-    const target = commandPaletteReturnFocus;
-    commandPaletteReturnFocus = null;
-    if (target && target.isConnected && typeof target.focus === "function") target.focus();
+    const input = document.getElementById("cmdSearchInput");
+    input.setAttribute("aria-expanded", "false");
+    input.removeAttribute("aria-activedescendant");
+    closeAccessibleModal("cmdPaletteModal");
   }
 
   function renderCommandPaletteList(q) {
     const ql = (q || "").trim().toLowerCase();
     const list = CMD_PALETTE_ITEMS.filter(it => !ql || it.label.toLowerCase().includes(ql) || it.hint.toLowerCase().includes(ql));
     const box = document.getElementById("cmdPaletteList");
+    const input = document.getElementById("cmdSearchInput");
+    box.setAttribute("role", "listbox");
+    box.setAttribute("aria-label", "Actions and destinations");
     if (!list.length) {
+      input.removeAttribute("aria-activedescendant");
       box.innerHTML = `<div style="padding:12px; font-size:12px; color:var(--text-faint);">No matching commands.</div>`;
       return;
     }
     commandPaletteIndex = 0;
-    box.setAttribute("role", "listbox");
-    box.setAttribute("aria-label", "Actions and destinations");
     box.innerHTML = list.map((it, idx) => `
-      <button class="cmd-item ${idx === 0 ? 'selected' : ''}" role="option" aria-selected="${idx === 0 ? 'true' : 'false'}" onclick="runPaletteIndex(${CMD_PALETTE_ITEMS.indexOf(it)})">
+      <button id="cmd-option-${idx}" class="cmd-item ${idx === 0 ? 'selected' : ''}" role="option" aria-selected="${idx === 0 ? 'true' : 'false'}" onclick="runPaletteIndex(${CMD_PALETTE_ITEMS.indexOf(it)})">
         <span>${escapeHtml(it.label)}</span>
         <span class="kbd">${escapeHtml(it.hint)}</span>
       </button>`).join("");
+    input.setAttribute("aria-activedescendant", "cmd-option-0");
   }
   function runPaletteIndex(idx) {
     closeCommandPalette();
@@ -1906,7 +2029,19 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       return;
     }
     const palette = document.getElementById("cmdPaletteModal");
-    if (palette && palette.classList.contains("open") && ["ArrowDown", "ArrowUp", "Enter"].includes(e.key)) {
+    const paletteOpen = palette && palette.classList.contains("open");
+    const topOverlay = getTopOpenOverlay();
+    if (e.key === "Escape" && topOverlay) {
+      e.preventDefault();
+      if (topOverlay.id === "cmdPaletteModal") closeCommandPalette();
+      else closeAccessibleModal(topOverlay);
+      return;
+    }
+    if (e.key === "Tab" && topOverlay) {
+      trapOverlayTab(e, topOverlay);
+      return;
+    }
+    if (paletteOpen && ["ArrowDown", "ArrowUp", "Enter"].includes(e.key)) {
       const options = [...document.querySelectorAll("#cmdPaletteList .cmd-item")];
       if (options.length) {
         e.preventDefault();
@@ -1918,24 +2053,16 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             option.classList.toggle("selected", selected);
             option.setAttribute("aria-selected", selected ? "true" : "false");
           });
+          document.getElementById("cmdSearchInput").setAttribute("aria-activedescendant", options[commandPaletteIndex].id);
         }
       }
       return;
     }
-    if (e.key === "Escape") {
-      const paletteOpen = palette && palette.classList.contains("open");
-      document.querySelectorAll(".modal-backdrop.open").forEach(m => m.classList.remove("open"));
-      if (paletteOpen) {
-        const target = commandPaletteReturnFocus;
-        commandPaletteReturnFocus = null;
-        if (target && target.isConnected && typeof target.focus === "function") target.focus();
-      }
-      return;
-    }
-    if (e.altKey && !e.ctrlKey && !e.metaKey) {
-      // Read the shortcuts off the tabs instead of restating them: the title a user
-      // reads and the key that works are then the same attribute. The previous map
-      // hard-coded keys 1-5 and quietly left Alt+6 (Start) advertised but dead.
+    const target = e.target;
+    const editing = target instanceof HTMLElement &&
+      (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+    if (e.altKey && !e.ctrlKey && !e.metaKey && !editing && !topOverlay) {
+      // Read shortcuts from the tabs so the advertised and operative keys agree.
       const tab = [...document.querySelectorAll(".mode-tab[data-shortcut]")]
         .find(b => b.dataset.shortcut === `Alt+${e.key}`);
       if (tab) {
@@ -2448,9 +2575,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     loadProviders().then(() => {
       if (!document.getElementById("provAlias").value) selectProviderPreset("openrouter");
     });
-    document.getElementById("providersModal").classList.add("open");
+    openAccessibleModal("providersModal");
   }
-  function closeProvidersModal() { document.getElementById("providersModal").classList.remove("open"); }
+  function closeProvidersModal() { closeAccessibleModal("providersModal"); }
 
   // ================= AGENT SKILLS =================
   async function loadSkills() {
@@ -2495,8 +2622,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         }).join("");
   }
 
-  function openSkillsModal() { loadSkills(); document.getElementById("skillsModal").classList.add("open"); }
-  function closeSkillsModal() { document.getElementById("skillsModal").classList.remove("open"); }
+  function openSkillsModal() { loadSkills(); openAccessibleModal("skillsModal"); }
+  function closeSkillsModal() { closeAccessibleModal("skillsModal"); }
 
   async function installSkill() {
     const cmd = document.getElementById("skillInstallInput").value.trim();
@@ -2518,7 +2645,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   // ================= COUNCIL HALL =================
   async function openSpawnModal() {
-    document.getElementById("spawnModal").classList.add("open");
+    openAccessibleModal("spawnModal");
     try {
       const d = await (await fetch("/api/workspace/files")).json();
       const box = document.getElementById("workspaceFilesChecks");
@@ -2527,7 +2654,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         : d.files.map(f => `<label class="chk-lbl"><input type="checkbox" class="ws-file-chk" value="${escapeHtml(f)}"/> <span class="mono" style="font-size:11.6px;">${escapeHtml(f)}</span></label>`).join("");
     } catch (e) {}
   }
-  function closeSpawnModal() { document.getElementById("spawnModal").classList.remove("open"); }
+  function closeSpawnModal() { closeAccessibleModal("spawnModal"); }
 
   async function confirmSpawnSession(autoConvene = true) {
     const req = document.getElementById("spawnRequestInput").value.trim();
@@ -3175,7 +3302,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   async function openExternalHarnessModal() {
-    document.getElementById("externalHarnessModal").classList.add("open");
+    openAccessibleModal("externalHarnessModal");
     try {
       const d = await (await fetch("/api/harness/external-configs")).json();
       document.getElementById("extDshYaml").textContent = d.dsh_settings_yaml || "";
@@ -3183,7 +3310,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       document.getElementById("extOpenHarness").textContent = d.openharness_cli || "";
     } catch (e) {}
   }
-  function closeExternalHarnessModal() { document.getElementById("externalHarnessModal").classList.remove("open"); }
+  function closeExternalHarnessModal() { closeAccessibleModal("externalHarnessModal"); }
 
   function renderDiffHtml(diffText) {
     if (!diffText || !diffText.trim()) return `<span style="color:var(--text-faint);">No file changes detected.</span>`;
@@ -3842,7 +3969,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   async function openHarnessDiffModal() {
     if (!activeHarnessId) { showToast("Start or select a Harness session first to inspect its Git Diff.", "warn"); return; }
-    document.getElementById("harnessDiffModal").classList.add("open");
+    openAccessibleModal("harnessDiffModal");
     document.getElementById("harnessGitStatusBox").textContent = "Inspecting workspace git status...";
     document.getElementById("harnessGitDiffBox").innerHTML = "";
     try {
@@ -3856,7 +3983,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       document.getElementById("harnessGitStatusBox").textContent = "Error: " + e.message;
     }
   }
-  function closeHarnessDiffModal() { document.getElementById("harnessDiffModal").classList.remove("open"); }
+  function closeHarnessDiffModal() { closeAccessibleModal("harnessDiffModal"); }
 
   async function applyHarnessWorktree() {
     if (!activeHarnessId) return;
@@ -4024,9 +4151,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function openMcpModal() {
     loadMcpServers();
-    document.getElementById("mcpModal").classList.add("open");
+    openAccessibleModal("mcpModal");
   }
-  function closeMcpModal() { document.getElementById("mcpModal").classList.remove("open"); }
+  function closeMcpModal() { closeAccessibleModal("mcpModal"); }
 
   function toggleMcpTransportFields() {
     const tr = document.getElementById("mcpTransport").value;
@@ -4464,14 +4591,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   let ocDocs = [];
 
   function openContextModal() {
-    document.getElementById("contextModal").classList.add("open");
+    openAccessibleModal("contextModal");
     const ws = document.getElementById("harnessWorkspaceInput").value.trim();
     if (ws && !document.getElementById("cgWorkspaceInput").value) {
       document.getElementById("cgWorkspaceInput").value = ws;
     }
     loadOpenContextDocs();
   }
-  function closeContextModal() { document.getElementById("contextModal").classList.remove("open"); }
+  function closeContextModal() { closeAccessibleModal("contextModal"); }
 
   function switchCtxTab(which) {
     for (const k of ["oc", "cg", "gsd"]) {
@@ -4631,10 +4758,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (promptCarry && !vis.value.trim()) vis.value = promptCarry;
     const ws = document.getElementById("harnessWorkspaceInput");
     if (ws && ws.value.trim()) syncProjectDirInputs(ws.value.trim());
-    document.getElementById("sdlcModal").classList.add("open");
+    openAccessibleModal("sdlcModal");
     await refreshSdlcBoard();
   }
-  function closeSdlcModal() { document.getElementById("sdlcModal").classList.remove("open"); }
+  function closeSdlcModal() { closeAccessibleModal("sdlcModal"); }
 
   function switchSdlcArtifact(name) {
     activeSdlcArtifactTab = name;

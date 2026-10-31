@@ -5244,7 +5244,7 @@
       "tab": "Start",
       "existing": "Guided first run",
       "target": "Start primary view or progressive-disclosure inspector",
-      "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+      "must_preserve": "existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics."
     },
     {
       "tab": "Start",
@@ -5274,7 +5274,7 @@
       "tab": "Harness",
       "existing": "Session creation",
       "target": "Harness primary view or progressive-disclosure inspector",
-      "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+      "must_preserve": "existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics."
     },
     {
       "tab": "Harness",
@@ -5340,25 +5340,25 @@
       "tab": "Council",
       "existing": "Council Hall session spawning and chronicle browsing",
       "target": "Council primary view or progressive-disclosure inspector",
-      "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+      "must_preserve": "existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics."
     },
     {
       "tab": "Pipeline",
       "existing": "Four-stage orchestrator with architect/coder role selection",
       "target": "Pipeline primary view or progressive-disclosure inspector",
-      "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+      "must_preserve": "existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics."
     },
     {
       "tab": "Compare",
       "existing": "Multi-model selection and compare responses",
       "target": "Compare primary view or progressive-disclosure inspector",
-      "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+      "must_preserve": "existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics."
     },
     {
       "tab": "Chat",
       "existing": "Active model and persona selection",
       "target": "Chat primary view or progressive-disclosure inspector",
-      "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+      "must_preserve": "existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics."
     },
     {
       "tab": "Chat",

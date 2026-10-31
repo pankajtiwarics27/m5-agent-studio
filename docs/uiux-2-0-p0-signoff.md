@@ -46,7 +46,7 @@ The preflight checklist a new user sees first: what is ready, what still needs t
 
 | Capability | Target | What must not change |
 |---|---|---|
-| Guided first run | Start primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
+| Guided first run | Start primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics. |
 | readiness summary | Start primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | run-first-task | Start primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | recheck | Start primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
@@ -77,7 +77,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 
 | Capability | Target | What must not change |
 |---|---|---|
-| Session creation | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
+| Session creation | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics. |
 | workspace | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | policy | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | lead/critic | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
@@ -133,7 +133,7 @@ A council session: who was asked, what each participant said, in order.
 
 | Capability | Target | What must not change |
 |---|---|---|
-| Council Hall session spawning and chronicle browsing | Council primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
+| Council Hall session spawning and chronicle browsing | Council primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics. |
 
 **Controls — 19 in the markup:**
 
@@ -179,7 +179,7 @@ The four-stage pipeline view for a single request.
 
 | Capability | Target | What must not change |
 |---|---|---|
-| Four-stage orchestrator with architect/coder role selection | Pipeline primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
+| Four-stage orchestrator with architect/coder role selection | Pipeline primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics. |
 
 **Controls — 16 in the markup:**
 
@@ -217,7 +217,7 @@ One prompt against several models, side by side.
 
 | Capability | Target | What must not change |
 |---|---|---|
-| Multi-model selection and compare responses | Compare primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
+| Multi-model selection and compare responses | Compare primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics. |
 
 **Controls — 5 in the markup:**
 
@@ -244,7 +244,7 @@ A single streaming conversation with the selected model.
 
 | Capability | Target | What must not change |
 |---|---|---|
-| Active model and persona selection | Chat primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
+| Active model and persona selection | Chat primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics. |
 | conversation interface | Chat primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 
 **Controls — 9 in the markup:**
@@ -332,12 +332,12 @@ provenance; a matching snapshot cannot clear separate review holds.
 
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
-| `ledger_content_sha256` | `90702df51a5422c87d69e673983ce0a746c5fd9746d231969bbac7220eb12e95` | `not recorded` |
-| `source_manifest_sha256` | `1eead77e169454cfe6efdab4aeaf2bdad027a92c23a07c7c6d9e9c108d27e7b7` | `not recorded` |
-| `control_inventory_sha256` | `772b976ed1d6a53f959e0325c6bfd9a5b7cd1878e8089e8ee98a28d4c68bb3c0` | `not recorded` |
-| `route_map_sha256` | `eb314b07891e3dbad267666a50a303d64965a947137c742a224025d065242445` | `not recorded` |
-| `authorization_trace_sha256` | `20d80565cc6ecba8b59d7a6cb1f712d150c236480f56003a1b114d66f2cf0601` | `not recorded` |
-| `frontend_sha256` | `5496e2fdb7326702f17a7c643a84aa574b940d0a689aabe29eb1a4d55a2d6bde` | `not recorded` |
+| `ledger_content_sha256` | `e91523b65d3ddfd691f0dbb86de91e0f329b24492e6089e321db1a6357050e17` | `not recorded` |
+| `source_manifest_sha256` | `c43f0685a6781f2baa5932c56e333f1c470ef7e32e47a4b7b994885abb9d86a8` | `not recorded` |
+| `control_inventory_sha256` | `05606e13f863ff2903cc6e395535eb50d24e8bcdca7aebc6db61f1f2b604204e` | `not recorded` |
+| `route_map_sha256` | `74e426a46137e9f44e0f9a873a299590c7a7995bc5e1325c8922c3c90fc0fe51` | `not recorded` |
+| `authorization_trace_sha256` | `1720eb997213919e7153b7ce8db38bd97f0a7b49557a266c52f389dc8d50a344` | `not recorded` |
+| `frontend_sha256` | `484660a563a1e615e8842d573b6f24c77bb36144ed5ebd5cfcaea9c20c6e1475` | `not recorded` |
 | `screenshot_manifest_sha256` | `69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92` | `not recorded` |
 | `screenshot_index_sha256` | `de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

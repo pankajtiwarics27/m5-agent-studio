@@ -130,6 +130,7 @@ measurements without trusting them).
 · [`uiux-2-0-tokens.md`](uiux-2-0-tokens.md) (generated P1-01 token layer: the values P1 builds on, with themes, density and measured contrast)
 · [`uiux-2-0-navigation-shell.md`](uiux-2-0-navigation-shell.md) (P1-02 shell contract: tablist semantics, keyboard map and the browser-driven keyboard walk)
 · [`uiux-2-0-status-and-evidence.md`](uiux-2-0-status-and-evidence.md) (generated P1-03 component layer: six status tones, four evidence bases, the ten harness states and measured contrast)
+· [`uiux-2-0-overlays-keyboard.md`](uiux-2-0-overlays-keyboard.md) (P1-04: modal focus management, accessible notifications and command-palette keyboard behavior)
 · [`../M5_2_0_UIUX_AGENT_PROMPT.md`](../M5_2_0_UIUX_AGENT_PROMPT.md) (UI/UX claim, review and merge protocol)
 · [`uiux-2-0-coordination.md`](uiux-2-0-coordination.md) (read-only readiness check, current handoff and capture risks)
 · [`uiux-coordination-ledger-drift-followup.md`](uiux-coordination-ledger-drift-followup.md) (reconciled UI/UX phase summaries and status-walk token-exposure follow-up)
