@@ -53,11 +53,13 @@ silently admitting work under an unintended capacity.
 
 ## What this does not claim
 
-- **No measurement.** The 80 % figure is a policy constant, not a measured model
-  footprint. `M5-P4-01` still needs the 24 GB pressure and per-model measurements;
-  `scripts/qualify_environment.py --hardware --pressure-gb N --model-command CMD`
-  is how they are taken, and the story stays `blocked` until a `qualified` record
-  exists. See [`qualification-suite.md`](qualification-suite.md).
+- **No measurement of the 80 % constant.** The 80 % figure is a policy constant,
+  not a measured model footprint. The 24 GB pressure criterion and one resident
+  4-bit model's load/swap behaviour *were* measured on an Apple M5 on 2026-10-31
+  ([`m5-2-0-hardware-qualification-evidence.md`](m5-2-0-hardware-qualification-evidence.md)),
+  and that record qualifies `M5-P4-01`; it does not turn 80 % into a per-model
+  sizing rule, and it records the probe run without a model digest or a
+  per-process peak. See [`qualification-suite.md`](qualification-suite.md).
 - **No switching.** Loading a second model deliberately (sequential handoff) is
   `M5-P4-02`'s job. Here a second model is refused, not queued.
 - **No fairness or queueing.** A refused request is refused; it is not parked and

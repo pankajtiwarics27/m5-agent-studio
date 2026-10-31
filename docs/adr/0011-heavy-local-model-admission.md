@@ -106,5 +106,9 @@ and reused everywhere.
 ## Review Status
 
 Not reviewed. This record accompanies the serving-path enforcement added for
-`M5-P4-01`; the story remains blocked on its measured 24 GB pressure criterion and
-has not been reviewed by anyone other than the authoring agent.
+`M5-P4-01`. The story's measured 24 GB pressure criterion was met by an operator
+run on an Apple M5 on 2026-10-31
+([`../m5-2-0-hardware-qualification-evidence.md`](../m5-2-0-hardware-qualification-evidence.md)),
+which is a measurement of the machine, not a review of this decision. This ADR
+has not been reviewed by anyone other than the authoring agent, and
+`review_status` remains `not-reviewed`.

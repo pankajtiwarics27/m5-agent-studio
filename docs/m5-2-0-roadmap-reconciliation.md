@@ -69,7 +69,7 @@ M5 2.0 story needed), **unresolved** (no M5 2.0 counterpart; see §4).
 | AS-020 Ollama and llama.cpp adapters | verified | M5-P4-01, M5-P4-02 | partial | Portability retained; routing measured. |
 | AS-021 Cloud consent and fallback policy | verified | M5-P4-02 | partial | Cloud eligibility requires policy, per invariant. |
 | AS-022 Diagnostics UI | completed | M5-P1-07 | partial / deferred | M5 2.0 keeps UI minimal (projection of backend authority); full diagnostics UI deferred. |
-| AS-023 16/24/48 GB hardware validation | completed | M5-P0-05, M5-P4-01 | covers | Not reproducible in the Linux evidence environment; stays blocked. |
+| AS-023 16/24/48 GB hardware validation | completed | M5-P0-05, M5-P4-01 | covers | Not reproducible in the Linux evidence environment. The 24 GB tier was measured by an operator run on an Apple M5 on 2026-10-31 ([record](m5-2-0-hardware-qualification-evidence.md)); the 16 GB and 48 GB tiers remain arithmetic guidance. |
 | AS-024 Private-network remote gateway | verified | — | retained | Prior-program scope; no M5 2.0 expansion (non-goal). |
 | AS-025 Authenticated sessions and device trust | verified | M5-P3-04 | partial | Scoped grants, expiry, revocation extend it. |
 | AS-026 CSRF and rate-limit protections | verified | — | retained | Security baseline; must not regress (invariant). |

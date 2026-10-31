@@ -301,12 +301,31 @@ Verdicts mean exactly this:
    `blocked` only when the sandbox suite is `qualified`, and `M5-P4-01` only when
    the hardware suite is `qualified` **and** `p4.admission_wired` is true — the
    acceptance criterion "second simultaneous heavy load rejected under policy"
-   is about the serving path, not only the primitive. Both halves now have code:
-   the serving path refuses a second heavy local model
-   ([`model-admission.md`](model-admission.md), ADR-0011), and only the measured
-   24 GB evidence is still missing.
+   is about the serving path, not only the primitive. Both halves have code (the
+   serving path refuses a second heavy local model,
+   [`model-admission.md`](model-admission.md), ADR-0011) and the measured half
+   now exists on the target machine — see *Recorded operator runs* below.
 4. If a check fails, the honest outcome is `unqualified` plus a fix, not a
    re-run until it passes.
+
+## Recorded operator runs
+
+Runs that actually happened, newest first. A run whose artifacts are not in the
+repository is still a run; the numbers are transcribed where the record lives.
+
+| Date | Machine | Suite | Verdict | Record |
+|---|---|---|---|---|
+| 2026-10-31 | Apple M5, arm64, 24.0 GiB, macOS 26.6.1, Docker Desktop 29.5.3, `main` at `d0e47f0` | `--hardware --pressure-gb 16 --model-runs 3` | **qualified** (8 checks; `p4.thermal` blocked, `p4.coding_cases` skipped, both non-required) | [`m5-2-0-hardware-qualification-evidence.md`](m5-2-0-hardware-qualification-evidence.md) |
+| 2026-10-31 | same machine | `--sandbox --runtime docker` | **unqualified** — failed `p3.adversarial.memory_limit`: 3 GiB allocated under `--memory 512m` with `memory.max` reading 536870912 inside the container | this page, below |
+| 2026-10-30 | Linux x86_64 CI container, ~4 GB RAM | `--all` | `blocked` — no container runtime, not the target hardware | [`m5-2-0-baseline-evidence.md`](m5-2-0-baseline-evidence.md) |
+
+The sandbox failure is recorded, not waived: `M5-P3-01` stays `blocked` and
+container isolation stays unavailable until a re-run is `qualified`. The first
+hardware attempt on that machine (`qualification-20261031T074346Z`) was also
+`unqualified`, because the operator's own command inlined an empty `--server-pid`
+subshell; the corrected invocation and both records are described in the hardware
+evidence page, which is deliberate — a record that failed for an operator reason
+is still part of the record.
 
 ## Tests
 
