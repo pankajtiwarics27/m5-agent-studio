@@ -51,15 +51,20 @@ Hardware suite (M5-P4-01):
 1.  machine fingerprint (chip, RAM, cores, swap) bound into the record;
 2.  ``p4.single_heavy_model``: the admission primitive admits one heavy request and
     rejects the second under the detected capacity;
-3.  ``p4.admission_wired``: whether the serving path actually consults admission
-    (reported, not assumed);
+3.  ``p4.admission_wired``: the serving path refuses a second heavy local stream;
 4.  ``p4.priors_not_verified``: routing confidence with no measured profile is
     ``unknown``, never ``high``;
 5.  ``p4.pressure``: measured memory pressure and swap growth (needs
     ``--pressure-gb`` and a 24 GB machine for the story AC);
 6.  ``p4.model_load``: measured load/first-token/throughput/peak memory for a
     caller-supplied probe command, optionally persisted as a
-    ``model_calibration`` profile.
+    ``model_calibration`` profile;
+7.  ``p4.coding_cases``: representative per-category cases run through that probe,
+    with per-case completion and an explicit uncertainty summary
+    (``--coding-cases``);
+8.  ``p4.thermal``: thermal pressure/throttling sampled during every load phase
+    (``pmset -g therm`` on macOS, ``/sys/class/thermal`` on Linux), reported as
+    "cannot read" where the platform offers nothing.
 
 Nothing here needs a network, a model, or a provider. The two optional
 measurement flags are the only things that touch your hardware.
@@ -75,6 +80,7 @@ import re
 import shlex
 import shutil
 import socket
+import statistics
 import subprocess
 import sys
 import tempfile
@@ -1175,8 +1181,246 @@ def _priors_not_verified() -> tuple[bool, str]:
     return ok, f"level={unmeasured.level}; note={unmeasured.note!r}"
 
 
-def _pressure_probe(gigabytes: float, timeout: float) -> tuple[bool, str, dict[str, Any]]:
-    """Touch ``gigabytes`` of anonymous memory while sampling swap growth."""
+# -- thermal sampling -------------------------------------------------------
+
+
+def thermal_snapshot() -> dict[str, Any]:
+    """One thermal reading from the platform, or an explicit "cannot read".
+
+    macOS exposes thermal pressure through ``pmset -g therm`` without privileges
+    (``CPU_Speed_Limit`` below 100 means the system is throttling); ``powermetrics``
+    would give die temperatures but needs root, so it is never invoked here. Linux
+    exposes millidegree readings through ``/sys/class/thermal``. Anything else
+    reports ``available: False`` rather than inventing a number.
+    """
+    system = platform.system()
+    if system == "Darwin":
+        out = _capture(["pmset", "-g", "therm"], timeout=10.0)
+        readings: dict[str, Any] = {}
+        for line in out.splitlines():
+            key, sep, value = line.partition("=")
+            if not sep:
+                continue
+            clean = key.strip().lower().replace(" ", "_")
+            value = value.strip()
+            if clean in {"cpu_speed_limit", "gpu_speed_limit", "cpu_scheduler_limit"} and value.isdigit():
+                readings[clean] = int(value)
+        if not readings:
+            return {"available": False, "source": "pmset -g therm", "note": "no thermal pressure readings returned"}
+        return {"available": True, "source": "pmset -g therm", "readings": readings}
+    if system == "Linux":
+        zones = linux_thermal_readings(Path("/sys/class/thermal"))
+        if not zones:
+            return {
+                "available": False,
+                "source": "/sys/class/thermal",
+                "note": "no readable thermal_zone*/temp (common inside containers)",
+            }
+        return {
+            "available": True,
+            "source": "/sys/class/thermal",
+            "readings": {"zone_celsius_max": max(zones), "zones": zones},
+        }
+    return {"available": False, "source": None, "note": f"no thermal source for platform {system!r}"}
+
+
+def linux_thermal_readings(base: Path) -> list[float]:
+    """Degrees Celsius from ``<base>/thermal_zone*/temp`` (millidegrees on Linux)."""
+    zones: list[float] = []
+    for zone in sorted(Path(base).glob("thermal_zone*")):
+        try:
+            raw = (zone / "temp").read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+        if raw.lstrip("-").isdigit():
+            zones.append(round(int(raw) / 1000.0, 2))
+    return zones
+
+
+def thermal_stress(snapshot: dict[str, Any]) -> float | None:
+    """A single comparable stress number: throttling (0-100) or max zone Celsius."""
+    readings = snapshot.get("readings") or {}
+    if "cpu_speed_limit" in readings:
+        return float(100 - int(readings["cpu_speed_limit"]))
+    if "zone_celsius_max" in readings:
+        return float(readings["zone_celsius_max"])
+    return None
+
+
+class ThermalSampler:
+    """Thermal readings collected across a load phase."""
+
+    def __init__(self) -> None:
+        self.samples: list[dict[str, Any]] = []
+
+    def sample(self) -> None:
+        self.samples.append(thermal_snapshot())
+
+    @property
+    def available(self) -> bool:
+        return any(bool(sample.get("available")) for sample in self.samples)
+
+    def summary(self) -> dict[str, Any]:
+        usable = [sample for sample in self.samples if sample.get("available")]
+        stresses = [value for value in (thermal_stress(sample) for sample in usable) if value is not None]
+        first = usable[0] if usable else (self.samples[0] if self.samples else {"available": False, "source": None, "note": "not sampled"})
+        throttled = [
+            (sample.get("readings") or {}).get("cpu_speed_limit")
+            for sample in usable
+            if (sample.get("readings") or {}).get("cpu_speed_limit") is not None
+        ]
+        return {
+            "source": first.get("source"),
+            "note": first.get("note"),
+            "samples": len(self.samples),
+            "available_samples": len(usable),
+            "first": first,
+            "last": usable[-1] if usable else None,
+            "stress_min": min(stresses) if stresses else None,
+            "stress_max": max(stresses) if stresses else None,
+            "cpu_speed_limit_min": min(throttled) if throttled else None,
+            "throttled": any(limit < 100 for limit in throttled),
+        }
+
+
+# -- per-category coding cases ----------------------------------------------
+
+CODING_CASE_SCHEMA_VERSION = 1
+
+
+class CodingCaseError(ValueError):
+    """Raised when a coding-case file is structurally invalid."""
+
+
+def load_coding_cases(path: Path) -> list[dict[str, str]]:
+    """Read and validate the representative per-category coding cases.
+
+    Accepts a bare list of cases or ``{"categories": [...], "cases": [...]}``. A case
+    is ``{"id", "category", "prompt"}``; ``prompt`` is optional, but a case without
+    one cannot be replayed later, so its absence is visible in the record.
+    """
+    try:
+        raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise CodingCaseError(f"cannot read coding cases: {exc}") from exc
+    except ValueError as exc:
+        raise CodingCaseError(f"coding cases are not valid JSON: {exc}") from exc
+    entries = raw.get("cases") if isinstance(raw, dict) else raw
+    if not isinstance(entries, list) or not entries:
+        raise CodingCaseError("coding cases must be a non-empty list, or an object with a 'cases' list.")
+    cases: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for index, entry in enumerate(entries, start=1):
+        if not isinstance(entry, dict):
+            raise CodingCaseError(f"case {index} must be an object.")
+        case_id = str(entry.get("id") or "").strip()
+        category = str(entry.get("category") or "").strip()
+        if not case_id:
+            raise CodingCaseError(f"case {index} is missing a non-empty 'id'.")
+        if case_id in seen:
+            raise CodingCaseError(f"duplicate case id {case_id!r}.")
+        if not category:
+            raise CodingCaseError(f"case {case_id!r} is missing a non-empty 'category'.")
+        seen.add(case_id)
+        cases.append({"id": case_id, "category": category, "prompt": str(entry.get("prompt") or "")})
+    if isinstance(raw, dict) and isinstance(raw.get("categories"), list):
+        declared = {str(item).strip() for item in raw["categories"]}
+        undeclared = sorted({case["category"] for case in cases} - declared)
+        if undeclared:
+            raise CodingCaseError(f"cases use categories that are not declared: {undeclared}")
+    return cases
+
+
+def _case_env(case: dict[str, str]) -> dict[str, str]:
+    env = dict(os.environ)
+    env["STUDIO_QUALIFY_CASE_ID"] = case["id"]
+    env["STUDIO_QUALIFY_CASE_CATEGORY"] = case["category"]
+    env["STUDIO_QUALIFY_CASE_PROMPT"] = case["prompt"]
+    return env
+
+
+def _coding_case_probe(
+    cases: Sequence[dict[str, str]],
+    command: str,
+    runs_per_case: int,
+    timeout: float,
+    sampler: ThermalSampler,
+) -> tuple[bool, str, dict[str, Any]]:
+    """Run every case through the caller's probe; record evidence and uncertainty."""
+    per_case: list[dict[str, Any]] = []
+    for case in cases:
+        results: list[dict[str, Any]] = []
+        for index in range(max(1, runs_per_case)):
+            started = _now()
+            proc = run_command(["sh", "-c", command], timeout=timeout, env=_case_env(case))
+            elapsed = _now() - started
+            sampler.sample()
+            payload: dict[str, Any] = {}
+            for line in (proc.stdout or "").splitlines():
+                if line.strip().startswith("{"):
+                    try:
+                        payload = json.loads(line)
+                    except ValueError:
+                        payload = {}
+            results.append(
+                {
+                    "run": index + 1,
+                    "exit_code": proc.returncode,
+                    "wall_s": round(elapsed, 3),
+                    "reported": payload,
+                    "stderr_tail": (proc.stderr or "")[-300:],
+                }
+            )
+        walls = sorted(item["wall_s"] for item in results)
+        median = statistics.median(walls) if walls else None
+        spread = (walls[-1] - walls[0]) if walls else 0.0
+        successful = sum(1 for item in results if item["exit_code"] == 0)
+        per_case.append(
+            {
+                "id": case["id"],
+                "category": case["category"],
+                "runs": results,
+                "successful_runs": successful,
+                "success_rate": round(successful / len(results), 3) if results else 0.0,
+                "wall_s_median": median,
+                "wall_s_spread_ratio": round(spread / median, 3) if median else None,
+                "completed": successful > 0,
+            }
+        )
+    categories: dict[str, dict[str, int]] = {}
+    for item in per_case:
+        bucket = categories.setdefault(item["category"], {"cases": 0, "completed": 0})
+        bucket["cases"] += 1
+        bucket["completed"] += 1 if item["completed"] else 0
+    incomplete = [item["id"] for item in per_case if not item["completed"]]
+    evidence = {
+        "schema_version": CODING_CASE_SCHEMA_VERSION,
+        "runner": command,
+        "runs_per_case": max(1, runs_per_case),
+        "cases": per_case,
+        "categories": categories,
+        "incomplete_cases": incomplete,
+        "uncertainty": {
+            "cases": len(per_case),
+            "categories": len(categories),
+            "single_run_cases": sum(1 for item in per_case if item["successful_runs"] == 1),
+            "note": "a single run per case cannot separate model variance from case difficulty",
+        },
+    }
+    detail = (
+        f"{len(per_case) - len(incomplete)}/{len(per_case)} cases completed across "
+        f"{len(categories)} categories"
+        + (f"; incomplete: {', '.join(incomplete)}" if incomplete else "")
+    )
+    return not incomplete, detail, evidence
+
+
+def _pressure_probe(
+    gigabytes: float, timeout: float, sampler: ThermalSampler | None = None
+) -> tuple[bool, str, dict[str, Any]]:
+    """Touch ``gigabytes`` of anonymous memory while sampling swap growth and heat."""
+    if sampler is not None:
+        sampler.sample()
     before = _meminfo_snapshot()
     peak_swap = before.get("swap_used_bytes", 0)
     started = _now()
@@ -1187,6 +1431,8 @@ def _pressure_probe(gigabytes: float, timeout: float) -> tuple[bool, str, dict[s
         while len(held) * len(block) < int(gigabytes * GIB) and _now() < deadline:
             held.append(block)
             peak_swap = max(peak_swap, _meminfo_snapshot().get("swap_used_bytes", 0))
+            if sampler is not None:
+                sampler.sample()
     finally:
         held.clear()
     after = _meminfo_snapshot()
@@ -1203,9 +1449,15 @@ def _pressure_probe(gigabytes: float, timeout: float) -> tuple[bool, str, dict[s
 
 
 def _model_probe(
-    command: str, runs: int, timeout: float, profile_out: Path | None
+    command: str,
+    runs: int,
+    timeout: float,
+    profile_out: Path | None,
+    sampler: ThermalSampler | None = None,
 ) -> tuple[bool, str, dict[str, Any]]:
     """Run a caller-supplied probe command and record its own reported timings."""
+    if sampler is not None:
+        sampler.sample()
     timings: list[dict[str, Any]] = []
     before = _meminfo_snapshot()
     peak_swap = before.get("swap_used_bytes", 0)
@@ -1214,6 +1466,8 @@ def _model_probe(
         proc = run_command(["sh", "-c", command], timeout=timeout)
         elapsed = _now() - started
         peak_swap = max(peak_swap, _meminfo_snapshot().get("swap_used_bytes", 0))
+        if sampler is not None:
+            sampler.sample()
         payload: dict[str, Any] = {}
         for line in (proc.stdout or "").splitlines():
             line = line.strip()
@@ -1310,6 +1564,8 @@ def hardware_suite(
     model_runs: int,
     profile_out: Path | None,
     timeout: float,
+    coding_cases: Sequence[dict[str, str]] | None = None,
+    case_runs: int = 1,
 ) -> None:
     """Record the M5-P4-01 checks for the current machine."""
     memory = fingerprint.get("total_memory_bytes") or 0
@@ -1344,6 +1600,11 @@ def hardware_suite(
         _priors_not_verified,
     )
 
+    # Every load phase contributes thermal readings; the story's task list asks for
+    # thermal behavior, and a reading that cannot be taken is recorded as such.
+    sampler = ThermalSampler()
+    sampler.sample()
+
     pressure_evidence: dict[str, Any] = {}
     if pressure_gb <= 0:
         recorder.record(
@@ -1354,7 +1615,7 @@ def hardware_suite(
         )
     else:
         def _pressure() -> tuple[bool, str]:
-            ok, detail, evidence = _pressure_probe(pressure_gb, timeout)
+            ok, detail, evidence = _pressure_probe(pressure_gb, timeout, sampler)
             pressure_evidence.update(evidence)
             return ok, detail
 
@@ -1372,21 +1633,91 @@ def hardware_suite(
             STATUS_SKIP,
             detail="pass --model-command '...' to measure your runtime (see docs/qualification-suite.md)",
         )
-        return
+    else:
+        model_evidence: dict[str, Any] = {}
 
-    model_evidence: dict[str, Any] = {}
+        def _model() -> tuple[bool, str]:
+            ok, detail, evidence = _model_probe(model_command, model_runs, timeout, profile_out, sampler)
+            model_evidence.update(evidence)
+            return ok, detail
 
-    def _model() -> tuple[bool, str]:
-        ok, detail, evidence = _model_probe(model_command, model_runs, timeout, profile_out)
-        model_evidence.update(evidence)
-        return ok, detail
+        recorder.check(
+            "p4.model_load", STORY_P4,
+            "load / first-token / peak memory measured for a real model run",
+            _model,
+            evidence=lambda: dict(model_evidence),
+        )
 
-    recorder.check(
-        "p4.model_load", STORY_P4,
-        "load / first-token / peak memory measured for a real model run",
-        _model,
-        evidence=lambda: dict(model_evidence),
-    )
+    # Per-category coding cases (task 1/2): evidence and uncertainty per case.
+    case_evidence: dict[str, Any] = {}
+    if not coding_cases:
+        recorder.record(
+            "p4.coding_cases", STORY_P4,
+            "representative per-category coding cases completed with recorded uncertainty",
+            STATUS_SKIP,
+            required=False,
+            detail="pass --coding-cases FILE to run them (see docs/qualification-suite.md)",
+        )
+    elif not model_command:
+        recorder.record(
+            "p4.coding_cases", STORY_P4,
+            "representative per-category coding cases completed with recorded uncertainty",
+            STATUS_SKIP,
+            required=False,
+            detail="--coding-cases needs --model-command: the cases are run through your probe",
+        )
+    else:
+        def _cases() -> tuple[bool, str]:
+            ok, detail, evidence = _coding_case_probe(coding_cases, model_command, case_runs, timeout, sampler)
+            case_evidence.update(evidence)
+            return ok, detail
+
+        recorder.check(
+            "p4.coding_cases", STORY_P4,
+            "representative per-category coding cases completed with recorded uncertainty",
+            _cases,
+            required=False,
+            evidence=lambda: dict(case_evidence),
+        )
+
+    summary = sampler.summary()
+    load_phase = pressure_gb > 0 or bool(model_command) or bool(coding_cases)
+    if not load_phase:
+        recorder.record(
+            "p4.thermal", STORY_P4,
+            "thermal behavior measured under load",
+            STATUS_SKIP,
+            required=False,
+            detail="no load phase requested: pass --pressure-gb or --model-command",
+        )
+    elif not sampler.available:
+        recorder.record(
+            "p4.thermal", STORY_P4,
+            "thermal behavior measured under load",
+            STATUS_BLOCKED,
+            required=False,
+            detail=(
+                f"{len(sampler.samples)} samples taken but none were readable "
+                f"({summary.get('note') or summary.get('source') or 'unknown source'}); "
+                "macOS exposes CPU_Speed_Limit via `pmset -g therm` without root, Linux via "
+                "/sys/class/thermal (often absent in containers), and `powermetrics` needs root"
+            ),
+            evidence={"thermal": summary},
+        )
+    else:
+        detail = (
+            f"{summary['available_samples']}/{summary['samples']} readings from {summary['source']}; "
+            f"stress {summary['stress_min']}-{summary['stress_max']}; "
+            + ("throttling observed" if summary["throttled"] else "no throttling observed")
+        )
+        recorder.record(
+            "p4.thermal", STORY_P4,
+            "thermal behavior measured under load",
+            STATUS_PASS,
+            required=False,
+            detail=detail,
+            evidence={"thermal": summary},
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1525,6 +1856,18 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--model-command", default="", help="shell command that runs one measured model call")
     parser.add_argument("--model-runs", type=int, default=3, help="how many times to run --model-command")
     parser.add_argument("--profile-out", type=Path, default=None, help="persist a model_calibration profile here")
+    parser.add_argument(
+        "--coding-cases",
+        type=Path,
+        default=None,
+        help="JSON file of per-category coding cases to run through --model-command",
+    )
+    parser.add_argument(
+        "--case-runs",
+        type=int,
+        default=1,
+        help="runs per coding case (more runs make the recorded uncertainty meaningful)",
+    )
     parser.add_argument("--quiet", action="store_true", help="do not print per-check lines")
     parser.add_argument(
         "--dry-run",
@@ -1592,6 +1935,14 @@ def render_plan(*, suites: Sequence[str], runtime_name: str, image: str, args: a
             )
         else:
             lines.append("  6. model load measurement SKIPPED (no --model-command)")
+        if args.coding_cases is not None:
+            lines.append(
+                f"  7. coding cases: run every case in {args.coding_cases} through that command "
+                f"x{max(1, args.case_runs)}, with STUDIO_QUALIFY_CASE_ID/CATEGORY/PROMPT in the environment"
+            )
+        else:
+            lines.append("  7. coding cases SKIPPED (no --coding-cases)")
+        lines.append("  thermal readings are sampled during each load phase (pmset -g therm, /sys/class/thermal)")
     lines.extend(
         [
             "",
@@ -1654,6 +2005,16 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if STORY_P4 in suites:
         print("\n== M5-P4-01 hardware and model qualification ==")
+        cases: list[dict[str, str]] | None = None
+        if args.coding_cases is not None:
+            try:
+                cases = load_coding_cases(args.coding_cases)
+            except CodingCaseError as exc:
+                # A malformed case file is the operator's input error, not a verdict:
+                # fail loudly and run nothing rather than claiming a partial suite.
+                print(f"\n  error: {exc}", file=sys.stderr)
+                return 2
+            print(f"  coding cases: {len(cases)} from {args.coding_cases}")
         hardware_suite(
             recorder,
             fingerprint=fingerprint,
@@ -1662,6 +2023,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             model_runs=max(1, args.model_runs),
             profile_out=args.profile_out,
             timeout=max(5.0, args.timeout),
+            coding_cases=cases,
+            case_runs=max(1, args.case_runs),
         )
 
     record = build_record(

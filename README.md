@@ -228,9 +228,14 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   detected memory and refuses the second, checks that routing confidence without a
   measured profile is `unknown`, drives the real `app.stream_any_model` funnel to
   prove that a second heavy local stream is refused while one is resident, and —
-  only when asked with `--pressure-gb` / `--model-command` — measures swap growth
-  under a touched allocation and the timings of a caller-supplied model probe,
-  optionally persisted as a `model_calibration` profile. Every check records `pass` / `fail` / `skip` /
+  only when asked — measures swap growth under a touched allocation
+  (`--pressure-gb`), the timings of a caller-supplied model probe
+  (`--model-command`, optionally persisted as a `model_calibration` profile), the
+  completion and wall-time spread of representative per-category coding cases run
+  through that probe (`--coding-cases`), and thermal pressure/throttling sampled
+  during every load phase (`pmset -g therm` on macOS, `/sys/class/thermal` on
+  Linux — reported as `blocked` where the platform offers no readable source,
+  never guessed). Every check records `pass` / `fail` / `skip` /
   `blocked` with a reason: a required check that could not run makes its suite
   `blocked`, a failed one makes it `unqualified`, and only an all-passing run is
   `qualified`; exit codes follow (`0` / `1` / `2`). `unqualified` is reserved for
@@ -240,7 +245,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   revision, OS build, chip, RAM and detected runtime into JSON and Markdown. **No
   container-isolation or 24 GB claim is made anywhere in this repository**, both
   stories stay `blocked` in the roadmap until the owner produces a qualified record
-  on the target machine. Pinned by 54 tests (`tests/test_qualify_environment.py`)
+  on the target machine. Pinned by 78 tests (`tests/test_qualify_environment.py`)
   and documented in [`docs/qualification-suite.md`](docs/qualification-suite.md)
   (ADR-0010).
 - **A second heavy local model request is refused by policy in the serving path
