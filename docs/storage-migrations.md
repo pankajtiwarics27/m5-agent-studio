@@ -8,7 +8,7 @@ Application database connections go through the `Storage` protocol and `STORAGE`
 
 ## Durable JSON sidecar stores
 
-Seven subsystems keep their own state file under `$HARNESS_STORE_DIR` rather than in
+Ten subsystems keep their own state file under `$HARNESS_STORE_DIR` rather than in
 SQLite, because each must survive a crash *before* the database is usable and each is
 written from a failure path where a transaction is not available:
 
@@ -21,6 +21,9 @@ written from a failure path where a transaction is not available:
 | Artifact content identity, provenance, evidence freshness, and pins | `artifact_lineage.py` | `artifacts/state.json` |
 | Portable model handoffs and per-session switch retry budgets | `routing_policy.py` | `handoffs/state.json` |
 | Bounded child delegations, disjoint write leases, and benchmark summaries | `child_delegation.py` | `delegations/state.json` |
+| Project-scoped evidence-backed lessons and A/B gate summaries | `evidence_lessons.py` | `lessons/state.json` |
+| Typed trusted transformation demand, contracts, and revocation records | `trusted_transformations.py` | `transformations/state.json` |
+| Calibration profiles, drift reports, recovery costs, and routing A/B gate | `routing_experiments.py` | `routing_experiments/state.json` |
 
 They share one contract, and `tests/test_durable_state_contract.py` asserts every
 clause of it against **every** store:

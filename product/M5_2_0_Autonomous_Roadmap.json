@@ -124,10 +124,10 @@
   },
   "session_state": {
     "active_story": null,
-    "last_completed_story": "M5-P6-02",
-    "last_checkpoint": "2026-10-31T16:10:00Z",
+    "last_completed_story": "M5-P6-03",
+    "last_checkpoint": "2026-10-31T16:40:00Z",
     "last_session_id": "arena/eb4484b8-m5-agent-studio",
-    "next_recommended_story": "M5-P6-03 (Advanced calibration and multi-model experiments; final owner-authorized optional Phase P6 story).",
+    "next_recommended_story": "All mandatory M5 2.0 runtime stories and all 3 owner-authorized optional Phase P6 stories (M5-P6-01, M5-P6-02, M5-P6-03) are complete. Remaining external operator gates: qualify_environment.sh on target Apple Silicon / container runtime (M5-P3-01, M5-P4-01), independent human AS-031 sign-off in docs/security-review-signoff.md, and release artifact signing.",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
       "RESOLVED 2026-10-31 (M5-P3-01): container isolation is QUALIFIED on the target host. The operator run (Apple M5, Docker Desktop 29.5.3, image python:sha256:aa943ce41142...) passed all 12 sandbox checks, including p3.adversarial.memory_limit as exit 137 with memory.max=536870912 and memory.swap.max=536870912 captured before and after a 3 GiB allocation, and isolation_smoke.py --live released dependent_execution under the observed boundary (docs/m5-2-0-sandbox-isolation-evidence.md). The 2026-10-30 run that failed that check (exit 0, no counters) is kept; the passing run supersedes it without explaining it. Two limits travel with the record: the qualification binds to that machine, engine version and image digest, so every other host starts unqualified; and the engine's default swap allowance means the shipped '--memory=2g' ceilings at RAM + swap (about 4 GiB), so pinning '--memory-swap' to '--memory' remains an open hardening item that needs its own re-qualification.",
@@ -247,9 +247,9 @@
         "M5-P6-02",
         "M5-P6-03"
       ],
-      "status": "in_progress",
+      "status": "done",
       "exit_gate": "Only evidence-justified optional stories are promoted.",
-      "progress_percent": 67
+      "progress_percent": 100
     }
   ],
   "stories": [
@@ -3503,22 +3503,56 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P6-03: Advanced calibration and multi-model experiments. Objective: Evaluate optional routing improvements under hardware and privacy constraints. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Benchmark measured recovery costs and drift; Test model affinity/hysteresis and sequential handoffs; Keep cloud opt-in and privacy constrained; Do not enable unmeasured simultaneous residency. Acceptance: Measured verified completion benefit; 24 GB resource admission upheld; Cloud never enabled without eligibility. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-10-31T16:18:00Z",
+        "updated_at": "2026-10-31T16:40:00Z",
+        "completed_at": "2026-10-31T16:40:00Z",
+        "owner_session": "arena/eb4484b8-m5-agent-studio",
+        "commit_sha": "HEAD",
+        "changed_files": [
+          "routing_experiments.py",
+          "artifact_lineage.py",
+          "app.py",
+          "studio.py",
+          "pyproject.toml",
+          "scripts/build_studio.py",
+          "README.md",
+          "docs/adr/0024-advanced-calibration-and-multi-model-experiments.md",
+          "docs/storage-migrations.md",
+          "docs/route-security-matrix.md",
+          "docs/subsystem-dependency-inventory.md",
+          "docs/product-roadmap-status.md",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "tests/test_durable_state_contract.py",
+          "tests/test_routing_experiments.py",
+          "product/M5_2_0_Autonomous_Roadmap.json",
+          "child_delegation.py",
+          "tests/test_child_delegation.py"
+        ],
+        "evidence": [
+          "Task 1 (Benchmark measured recovery costs and drift): Implemented CalibrationProfileRecord.from_samples (cold/warm TTFT, prefill/decode throughput, peak_memory_bytes_max, swap_unload_ms, swap_load_ms, failure_rate excluded from timing medians), evaluate_calibration_drift (flagging digest/quantization changes, TTFT/decode degradation, and upward memory drift exceeding 19.2 GiB / 24 GiB with recalibration_required=True), and RecoveryCostMeasurement linked to recovery_guard stagnation verdicts in $HARNESS_STORE_DIR/routing_experiments/state.json (covered by all 8 clauses of tests/test_durable_state_contract.py).",
+          "Task 2 & AC 1 (Model affinity/hysteresis, sequential handoffs & measured verified completion benefit): AffinityHysteresisPolicy (min_dwell_steps=2, hysteresis_margin=0.12 after amortizing cold swap + plain-text re-prefill costs) suppresses minor score jitter thrashing while stagnation/drift triggers execute_sequential_local_handoff (releasing outgoing HeavyModelLease first, stripping non-portable KV-cache keys, acquiring incoming lease). Paired 24-run A/B suite (runs_per_variant=3 across 4 scenarios, report_sha256=d38a697de6d49c83f7aaec70d2c22dc4995e372327183a207e1ceca9036945d2) verified completion 0.25 -> 1.0 (+0.75), median tokens 1600.0 -> 950.0 (-650.0), and median recovery overhead 1555.0 ms -> 1440.0 ms; disables cleanly via STUDIO_ENABLE_ROUTING_EXPERIMENTS=0 or store config.",
+          "Task 4 & AC 2 (No unmeasured simultaneous residency & 24 GB resource admission upheld): validate_residency_and_24gb_admission, /api/harness/routing-experiments/{config,evaluate}, and /api/harness/sessions/{id}/switch-model reject simultaneous_residency=True or multi-model co-residency fail-closed (SimultaneousResidencyForbiddenError); across all 24 benchmark runs peak_concurrent_heavy_models == 1, max_calibrated_admitted_memory_bytes == 19,327,352,832 B (18.0 GiB <= 19.2 GiB request ceiling <= 24.0 GiB), admission_24gb_violations == 0, and unmeasured_simultaneous_accepted == 0.",
+          "Task 3 & AC 3 (Cloud opt-in and privacy constrained; cloud never enabled without eligibility): evaluate_cloud_eligibility defaults cloud_opt_in_enabled=False and denies cloud routing unless FallbackPolicy, per-request FallbackConsent, permitted_providers, non-restricted privacy_class, zero 'secret' ArtifactRegistry task lineage (ArtifactRegistry.task_artifact_confidentialities), zero unredacted credentials (history_privacy.redact_text), and zero quarantine/containment holds all pass simultaneously; _execute_session_model_switch also fails closed (handoff_cloud_privacy_denied) when secret task artifacts exist, with cloud_unauthorized_activations == 0 across all suites."
+        ],
+        "test_results": [
+          ".venv/bin/ruff check . -> exit 0 (All checks passed)",
+          ".venv/bin/mypy -> exit 0 (Success: no issues found in 58 source files)",
+          ".venv/bin/pytest -q -> exit 0 (1520 passed, 1 skipped in 115.49s)",
+          ".venv/bin/python3 scripts/smoke_local.py && .venv/bin/python3 scripts/smoke_local.py --standalone -> exit 0",
+          ".venv/bin/python3 scripts/validate_docs.py && .venv/bin/python3 scripts/validate_adrs.py && .venv/bin/python3 scripts/validate_governance.py && .venv/bin/python3 scripts/validate_security_signoff.py -> exit 0",
+          ".venv/bin/python3 scripts/uiux_source_manifest.py --check && .venv/bin/python3 scripts/uiux_control_inventory.py --check -> exit 0",
+          ".venv/bin/python3 scripts/release_supply_chain.py build && verify -> exit 0 (artifact-secrets=passed, dependency-vulnerabilities=passed)"
+        ],
+        "decisions": [
+          "ADR-0024: Keep routing_experiments.py dormant on cold stores (ab_gate_open=false) until paired A/B evaluation proves higher verified completion under 24 GB single-heavy-slot admission, forbid simultaneous local residency unconditionally, and gate cloud candidates on both explicit per-request FallbackConsent and zero-'secret' ArtifactRegistry task lineage."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
-        "readme_updated": false
+        "handoff_note": "Completed final owner-authorized Phase P6 story M5-P6-03 with ADR-0024, 5 end-to-end test functions + 10-store durable-state contract, HTTP routes, standalone studio.py parity, and 24-run A/B benchmark evidence.",
+        "next_action": "None \u2014 all mandatory stories and all 3 optional Phase P6 stories are complete; only operator-run hardware/container qualification (M5-P3-01, M5-P4-01) and independent human security sign-off (AS-031) remain external prerequisites.",
+        "readme_updated": true
       }
     }
   ],

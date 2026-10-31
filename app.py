@@ -92,6 +92,7 @@ import scoped_grants
 import security_release_gate
 import child_delegation
 import evidence_lessons
+import routing_experiments
 import trusted_transformations
 import verification_evidence
 import workspace_quarantine
@@ -996,6 +997,44 @@ def _reset_trusted_transformation_registry(
 def _env_trusted_transformations_enabled() -> bool:
     """Check process environment opt-out for M5-P6-02 typed trusted transformations."""
     raw = (os.environ.get("STUDIO_ENABLE_TRUSTED_TRANSFORMATIONS") or "").strip().lower()
+    if not raw:
+        return True
+    if raw in _FALSE_VALUES:
+        return False
+    return True
+
+
+_ROUTING_EXPERIMENT_STORE: routing_experiments.RoutingExperimentStore | None = None
+_ROUTING_EXPERIMENT_STORE_DIR: Path | None = None
+_ROUTING_EXPERIMENT_STORE_LOCK = threading.Lock()
+
+
+def get_routing_experiment_store() -> routing_experiments.RoutingExperimentStore:
+    """Return the durable M5-P6-03 routing calibration & multi-model experiment store."""
+    global _ROUTING_EXPERIMENT_STORE, _ROUTING_EXPERIMENT_STORE_DIR
+    cur_dir = Path(HARNESS_STORE_DIR).resolve()
+    with _ROUTING_EXPERIMENT_STORE_LOCK:
+        if _ROUTING_EXPERIMENT_STORE is None or _ROUTING_EXPERIMENT_STORE_DIR != cur_dir:
+            _ROUTING_EXPERIMENT_STORE = routing_experiments.RoutingExperimentStore(cur_dir)
+            _ROUTING_EXPERIMENT_STORE_DIR = cur_dir
+        return _ROUTING_EXPERIMENT_STORE
+
+
+def _reset_routing_experiment_store(
+    store: routing_experiments.RoutingExperimentStore | None = None,
+) -> None:
+    """Replace or clear the cached routing experiment store (tests)."""
+    global _ROUTING_EXPERIMENT_STORE, _ROUTING_EXPERIMENT_STORE_DIR
+    with _ROUTING_EXPERIMENT_STORE_LOCK:
+        _ROUTING_EXPERIMENT_STORE = store
+        _ROUTING_EXPERIMENT_STORE_DIR = (
+            Path(HARNESS_STORE_DIR).resolve() if store is not None else None
+        )
+
+
+def _env_routing_experiments_enabled() -> bool:
+    """Check process environment opt-out for M5-P6-03 routing calibration & experiments."""
+    raw = (os.environ.get("STUDIO_ENABLE_ROUTING_EXPERIMENTS") or "").strip().lower()
     if not raw:
         return True
     if raw in _FALSE_VALUES:
@@ -13128,14 +13167,32 @@ def _artifact_lineage_summary_or_none() -> dict[str, Any]:
 def _trusted_transformations_summary_or_none() -> dict[str, Any]:
     """Read-only typed trusted transformation view (M5-P6-02); corruption is reported, not hidden."""
     try:
-        return get_trusted_transformation_registry().summary(
-            env_enabled=_env_trusted_transformations_enabled()
-        )
+        return get_trusted_transformations_summary_inner()
     except (trusted_transformations.TrustedTransformationError, OSError) as exc:
         return {
             "error": str(exc)[:240],
             "corrupt": True,
             "schema_version": trusted_transformations.TT_SCHEMA_VERSION,
+        }
+
+
+def get_trusted_transformations_summary_inner() -> dict[str, Any]:
+    return get_trusted_transformation_registry().summary(
+        env_enabled=_env_trusted_transformations_enabled()
+    )
+
+
+def _routing_experiments_summary_or_none() -> dict[str, Any]:
+    """Read-only routing calibration & experiment view (M5-P6-03); corruption is reported, not hidden."""
+    try:
+        return get_routing_experiment_store().summary(
+            env_enabled=_env_routing_experiments_enabled()
+        )
+    except (routing_experiments.RoutingExperimentError, OSError) as exc:
+        return {
+            "error": str(exc)[:240],
+            "corrupt": True,
+            "schema_version": routing_experiments.RE_SCHEMA_VERSION,
         }
 
 
@@ -13208,6 +13265,7 @@ async def api_get_harness_task_state(session_id: str) -> JSONResponse:
             "containment": _containment_summary_or_none(session_id),
             "artifact_lineage": _artifact_lineage_summary_or_none(),
             "trusted_transformations": _trusted_transformations_summary_or_none(),
+            "routing_experiments": _routing_experiments_summary_or_none(),
             "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
             "checkpoint_integrity_error": integrity_error,
             "checkpoints": [ck.to_dict() for ck in checkpoints],
@@ -14261,11 +14319,17 @@ async def execute_conservative_model_switch_async(
     except routing_policy.HandoffRejectedError as exc:
         raise _fail_into_safe_pause(exc.code, exc.reason) from exc
 
-    # 3. Forbid KV-cache or opaque-state portability assumptions (AC 1).
+    # 3. Forbid KV-cache or opaque-state portability assumptions (AC 1) and unmeasured simultaneous residency (M5-P6-03).
     try:
         routing_policy.assert_no_kv_cache_portability_request(raw_options)
     except routing_policy.HandoffPortabilityViolationError as exc:
         raise _fail_into_safe_pause("kv_cache_portability_forbidden", str(exc)) from exc
+
+    if isinstance(raw_options, Mapping) and bool(raw_options.get("simultaneous_residency")):
+        raise _fail_into_safe_pause(
+            "unmeasured_simultaneous_residency_forbidden",
+            "Simultaneous multi-model residency is forbidden on the 24 GB single-heavy-slot profile.",
+        )
 
     # 4. Refuse switch while workspace quarantine, unresolved side effects, or budget violations exist (Task 2, AC 2).
     try:
@@ -14481,6 +14545,23 @@ async def execute_conservative_model_switch_async(
             raise _fail_into_safe_pause(
                 "handoff_routing_consent_denied",
                 "; ".join(dec.exclusions) or f"Target `{next_lead}` denied by fallback routing policy.",
+            )
+
+    if tgt_touches_cloud:
+        req_priv = (
+            str(raw_options.get("privacy_class") or "internal").strip()
+            if isinstance(raw_options, Mapping)
+            else "internal"
+        )
+        task_confs = artifact_lineage.ArtifactRegistry(
+            HARNESS_STORE_DIR
+        ).task_artifact_confidentialities(session_id)
+        secret_shas = [sha for sha, conf in task_confs if conf == "secret"]
+        if secret_shas or req_priv in {"secret", "restricted_local_only", "regulated"}:
+            raise _fail_into_safe_pause(
+                "handoff_cloud_privacy_denied",
+                f"Cloud routing to `{next_lead}` denied by privacy constraints "
+                f"(privacy_class={req_priv!r}, secret_artifacts={len(secret_shas)}).",
             )
 
     unloaded_local: list[str] = []
@@ -17304,6 +17385,329 @@ async def api_evaluate_harness_transformations(request: Request) -> JSONResponse
             detail={"code": "transformation_state_corrupt", "message": str(exc)},
         ) from exc
     except trusted_transformations.TrustedTransformationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(report)
+
+
+async def run_routing_calibration_ab_evaluation_async(
+    *,
+    runs_per_variant: int = 3,
+    persist_summary: bool = True,
+) -> dict[str, Any]:
+    """Run deterministic M5-P6-03 calibration, hysteresis, 24 GB admission, and cloud privacy A/B suite."""
+    report = await asyncio.to_thread(
+        routing_experiments.run_routing_calibration_ab_suite,
+        runs_per_variant=runs_per_variant,
+    )
+    if persist_summary:
+        store = get_routing_experiment_store()
+        store.record_ab_summary(report)
+    return report
+
+
+@app.get("/api/harness/routing-experiments")
+async def api_get_routing_experiments() -> JSONResponse:
+    """Inspect M5-P6-03 calibration profiles, drift reports, 24 GB admission, and A/B summary."""
+    try:
+        store = get_routing_experiment_store()
+        env_en = _env_routing_experiments_enabled()
+        return JSONResponse(
+            {
+                "env_enabled": env_en,
+                "config": store.get_config(env_enabled=env_en),
+                "summary": store.summary(env_enabled=env_en),
+                "calibration_profiles": [p.to_mapping() for p in store.list_calibration_profiles()],
+                "latest_drift_by_model": {
+                    k: v.to_mapping() for k, v in sorted(store.latest_drift_by_model().items())
+                },
+                "heavy_model_admission": _heavy_model_admission().snapshot(),
+            }
+        )
+    except routing_experiments.RoutingExperimentStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "routing_experiment_state_corrupt", "message": str(exc)},
+        ) from exc
+    except routing_experiments.RoutingExperimentError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/harness/routing-experiments/config")
+async def api_update_routing_experiments_config(request: Request) -> JSONResponse:
+    """Update optional M5-P6-03 enablement or explicit cloud opt-in configuration."""
+    try:
+        body = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON payload: {exc}") from exc
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="JSON body must be an object.")
+    if bool(body.get("allow_measured_co_residency")):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "unmeasured_simultaneous_residency_forbidden",
+                "message": "Simultaneous multi-model residency cannot be enabled on the 24 GB profile.",
+            },
+        )
+    try:
+        store = get_routing_experiment_store()
+        env_en = _env_routing_experiments_enabled()
+        cfg = store.set_config(
+            enabled=(body["enabled"] if "enabled" in body else None),
+            cloud_opt_in_enabled=(
+                body["cloud_opt_in_enabled"] if "cloud_opt_in_enabled" in body else None
+            ),
+            env_enabled=env_en,
+        )
+        return JSONResponse(
+            {
+                "env_enabled": env_en,
+                "config": cfg,
+                "summary": store.summary(env_enabled=env_en),
+            }
+        )
+    except routing_experiments.RoutingExperimentStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "routing_experiment_state_corrupt", "message": str(exc)},
+        ) from exc
+    except (routing_experiments.RoutingExperimentError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/harness/routing-experiments/calibrate")
+async def api_record_routing_calibration_profile(request: Request) -> JSONResponse:
+    """Record a pinned local model CalibrationProfileRecord from timed cold/warm samples."""
+    try:
+        body = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON payload: {exc}") from exc
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="JSON body must be an object.")
+    raw_samples = body.get("samples")
+    if not isinstance(raw_samples, list) or not raw_samples:
+        raise HTTPException(status_code=400, detail="samples must be a non-empty list.")
+    try:
+        samples = [routing_experiments.TimedCalibrationSample.from_mapping(s) for s in raw_samples]
+        prof = routing_experiments.CalibrationProfileRecord.from_samples(
+            model_id=str(body.get("model_id") or ""),
+            model_digest=str(body.get("model_digest") or ""),
+            quantization=str(body.get("quantization") or "4bit"),
+            runtime=str(body.get("runtime") or "omlx"),
+            context_length=int(body.get("context_length") or 32768),
+            hardware_memory_bytes=int(
+                body.get("hardware_memory_bytes") or _heavy_model_admission().limits.memory_bytes
+            ),
+            samples=samples,
+        )
+        saved = get_routing_experiment_store().save_calibration_profile(prof)
+        fits, deny_code = saved.fits_admission_limits(_heavy_model_admission().limits)
+        return JSONResponse(
+            {
+                "profile": saved.to_mapping(),
+                "fits_24gb_admission": fits,
+                "admission_denial_code": deny_code,
+            }
+        )
+    except routing_experiments.RoutingExperimentStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "routing_experiment_state_corrupt", "message": str(exc)},
+        ) from exc
+    except (routing_experiments.RoutingExperimentError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/harness/routing-experiments/drift-check")
+async def api_check_routing_calibration_drift(request: Request) -> JSONResponse:
+    """Evaluate observed probe samples against a pinned CalibrationProfileRecord and persist drift."""
+    try:
+        body = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON payload: {exc}") from exc
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="JSON body must be an object.")
+    model_id = str(body.get("model_id") or "").strip()
+    raw_samples = body.get("samples")
+    if not isinstance(raw_samples, list) or not raw_samples:
+        raise HTTPException(status_code=400, detail="samples must be a non-empty list.")
+    try:
+        store = get_routing_experiment_store()
+        baseline = store.get_calibration_profile(model_id)
+        if baseline is None:
+            raise HTTPException(
+                status_code=404, detail=f"No CalibrationProfileRecord stored for {model_id!r}."
+            )
+        samples = [routing_experiments.TimedCalibrationSample.from_mapping(s) for s in raw_samples]
+        rep = routing_experiments.evaluate_calibration_drift(
+            baseline,
+            samples,
+            observed_model_digest=(
+                str(body["observed_model_digest"]) if body.get("observed_model_digest") else None
+            ),
+            observed_quantization=(
+                str(body["observed_quantization"]) if body.get("observed_quantization") else None
+            ),
+            limits=_heavy_model_admission().limits,
+        )
+        store.record_drift_report(rep)
+        return JSONResponse({"drift_report": rep.to_mapping()})
+    except HTTPException:
+        raise
+    except routing_experiments.RoutingExperimentStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "routing_experiment_state_corrupt", "message": str(exc)},
+        ) from exc
+    except (routing_experiments.RoutingExperimentError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/harness/routing-experiments/evaluate")
+async def api_evaluate_session_routing_decision(request: Request) -> JSONResponse:
+    """Evaluate affinity, hysteresis, 24 GB admission, and cloud privacy for a session."""
+    try:
+        body = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON payload: {exc}") from exc
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="JSON body must be an object.")
+
+    session_id = str(body.get("session_id") or "").strip()
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required.")
+    raw_cands = body.get("candidates")
+    if not isinstance(raw_cands, list):
+        raise HTTPException(status_code=400, detail="candidates must be a list.")
+
+    sess: dict[str, Any] | None = None
+    with contextlib.suppress(KeyError):
+        sess = get_harness_session_db(session_id)
+
+    resident_model = str(
+        body.get("resident_model_id") or (sess["lead_model"] if sess is not None else "")
+    ).strip()
+
+    has_q_or_hold = bool(body.get("has_quarantine_or_containment_hold", False))
+    outbound_texts: list[str] = [str(x) for x in (body.get("outbound_texts") or ())]
+    if sess is not None:
+        wt_p = Path(str(sess.get("worktree_dir") or "")).resolve()
+        with contextlib.suppress(Exception):
+            if workspace_quarantine.find_active_quarantine(HARNESS_STORE_DIR, wt_p) is not None:
+                has_q_or_hold = True
+        if get_containment_store().find_resumption_holds(task_id=session_id):
+            has_q_or_hold = True
+        for m in _load_harness_messages(session_id):
+            if isinstance(m.get("content"), str):
+                outbound_texts.append(m["content"])
+
+    stagnation_verdict = str(body.get("stagnation_verdict") or recovery_guard.STAGNATION_PROGRESS)
+    if "stagnation_verdict" not in body:
+        with contextlib.suppress(Exception):
+            rg_sum = get_recovery_guard().summary(session_id)
+            last_stag = rg_sum.get("last_stagnation")
+            if isinstance(last_stag, str) and last_stag:
+                stagnation_verdict = last_stag
+
+    sw_budget = get_portable_handoff_store().get_switch_budget(session_id)
+    art_confs = list(
+        artifact_lineage.ArtifactRegistry(HARNESS_STORE_DIR).task_artifact_confidentialities(
+            session_id
+        )
+    )
+    for extra in body.get("artifact_confidentialities") or ():
+        if isinstance(extra, (list, tuple)) and len(extra) == 2:
+            art_confs.append((str(extra[0]), str(extra[1])))
+
+    fb_pol = None
+    if isinstance(body.get("fallback_policy"), Mapping):
+        fp_m = body["fallback_policy"]
+        fb_pol = routing_policy.FallbackPolicy(
+            allow_network_fallback=bool(fp_m.get("allow_network_fallback", False)),
+            allow_billable_fallback=bool(fp_m.get("allow_billable_fallback", False)),
+            permitted_providers=tuple(str(p) for p in (fp_m.get("permitted_providers") or ())),
+        )
+    fb_cons = None
+    if isinstance(body.get("consent"), Mapping):
+        fc_m = body["consent"]
+        fb_cons = routing_policy.FallbackConsent(
+            consent_id=(str(fc_m["consent_id"]) if fc_m.get("consent_id") else None),
+            network_approved=bool(fc_m.get("network_approved", False)),
+            billable_approved=bool(fc_m.get("billable_approved", False)),
+        )
+
+    try:
+        cands = [
+            routing_experiments.CandidateModelOption(
+                model_id=str(c.get("model_id") or ""),
+                provider=str(c.get("provider") or "local-omlx"),
+                is_cloud=bool(c.get("is_cloud", False)),
+                expected_utility=float(c.get("expected_utility", 0.5)),
+            )
+            for c in raw_cands
+            if isinstance(c, Mapping)
+        ]
+        dec = get_routing_experiment_store().evaluate_session_routing(
+            session_id=session_id,
+            resident_model_id=resident_model,
+            resident_utility=float(body.get("resident_utility", 0.6)),
+            candidates=cands,
+            steps_since_last_switch=int(body.get("steps_since_last_switch", 2)),
+            stagnation_verdict=stagnation_verdict,
+            consecutive_failures=int(body.get("consecutive_failures", 0)),
+            context_tokens_to_re_prefill=int(body.get("context_tokens_to_re_prefill", 512)),
+            switch_attempts_used=int(
+                body.get("switch_attempts_used", sw_budget.switch_attempts_used)
+            ),
+            max_switch_attempts=int(body.get("max_switch_attempts", sw_budget.max_switch_attempts)),
+            simultaneous_residency=bool(body.get("simultaneous_residency", False)),
+            limits=_heavy_model_admission().limits,
+            fallback_policy=fb_pol,
+            consent=fb_cons,
+            privacy_class=str(body.get("privacy_class") or "internal"),
+            artifact_confidentialities=art_confs,
+            outbound_texts=outbound_texts,
+            allow_redacted_egress=bool(body.get("allow_redacted_egress", False)),
+            has_quarantine_or_containment_hold=has_q_or_hold,
+            external_redactor=redact_text,
+            env_enabled=_env_routing_experiments_enabled(),
+        )
+        return JSONResponse({"decision": dec.to_mapping()})
+    except routing_experiments.SimultaneousResidencyForbiddenError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": exc.code, "message": exc.reason},
+        ) from exc
+    except routing_experiments.RoutingExperimentStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "routing_experiment_state_corrupt", "message": str(exc)},
+        ) from exc
+    except (routing_experiments.RoutingExperimentError, routing_policy.RoutingPolicyError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/harness/routing-experiments/evaluate-ab")
+async def api_evaluate_routing_experiments_ab(request: Request) -> JSONResponse:
+    """Run deterministic M5-P6-03 paired A/B evaluation across all 4 calibration/routing scenarios."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    runs_n = int(body.get("runs_per_variant") or 3)
+    persist = bool(body.get("persist_summary", True))
+    try:
+        report = await run_routing_calibration_ab_evaluation_async(
+            runs_per_variant=runs_n,
+            persist_summary=persist,
+        )
+    except routing_experiments.RoutingExperimentStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "routing_experiment_state_corrupt", "message": str(exc)},
+        ) from exc
+    except routing_experiments.RoutingExperimentError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return JSONResponse(report)
 

@@ -19,16 +19,16 @@
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "6566f0699ae3896cbafe480f331a272f2bcc317003aab86bfc4490d6e9a39b53",
-      "bytes": 986333,
-      "lines": 21285
+      "sha256": "e3dd15bef236555d4cb3fca12eac003a55e099b48bbefa20e313489af652f129",
+      "bytes": 1004849,
+      "lines": 21689
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "03c1cd48f3bafd69f9a0a9639cb13a55e6d8bdd9cb4e669311e083a7913a3ceb",
-      "bytes": 2890631,
-      "lines": 64824
+      "sha256": "f494a40afcc21523c836d38fd76f2675a778ebab741b50e63403f403ddbfbd77",
+      "bytes": 3018331,
+      "lines": 67605
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -68,9 +68,9 @@
     {
       "path": "scripts/build_studio.py",
       "role": "regenerates studio.py from app.py and the inlined modules",
-      "sha256": "ed31bb2cadd80d164e4c6243e5177e84a92c9bf7b6d6676e798d8350dd33e136",
-      "bytes": 6962,
-      "lines": 129
+      "sha256": "27e98d2ccb44b34684ad854219479b9aa615bf0eba46fb75bbeb69e83eafd555",
+      "bytes": 6989,
+      "lines": 130
     },
     {
       "path": "scripts/check_frontend_syntax.py",
@@ -191,13 +191,13 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "6566f0699ae3896cbafe480f331a272f2bcc317003aab86bfc4490d6e9a39b53",
-    "route_count": 109,
+    "sha256": "e3dd15bef236555d4cb3fca12eac003a55e099b48bbefa20e313489af652f129",
+    "route_count": 115,
     "by_method": {
       "DELETE": 5,
-      "GET": 37,
+      "GET": 38,
       "PATCH": 3,
-      "POST": 64
+      "POST": 69
     },
     "routes": [
       {
@@ -603,6 +603,30 @@
       {
         "method": "POST",
         "path": "/api/harness/transformations/evaluate"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/routing-experiments"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/routing-experiments/config"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/routing-experiments/calibrate"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/routing-experiments/drift-check"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/routing-experiments/evaluate"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/routing-experiments/evaluate-ab"
       },
       {
         "method": "POST",
