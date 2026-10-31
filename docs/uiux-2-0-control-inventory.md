@@ -5,7 +5,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 `static/index.html`, attributed to the pane section that contains it, with the counts
 re-derived from the markup on every run.
 
-* Pinned source commit: `fa2a31cec0704ae4322a30c8ff55fd2d3e4037d0` (the ledger's pin).
+* Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
 * Frontend digest: `3137cb7d05bcbdd29155576bd9952f49172705b85e70a0c0a2484c81bc80a66a`.
 * Panes: 6 · controls in panes: 69 · controls in the
   shared chrome: 101 · script-rendered: 30.

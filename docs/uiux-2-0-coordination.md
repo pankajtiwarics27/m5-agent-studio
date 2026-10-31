@@ -66,6 +66,26 @@ baseline as complete. The P0-06 preparation in merged
 The ledger's source pin is advanced to the #116 merge, with its own story tracking
 left unchanged. The phase gate remains closed.
 
+### Owner signature on P0-06 (2026-10-31)
+
+The owner approved the P0 sign-off, so the P0 phase is closed and the gate is open.
+The record lives in the ledger's `coordination.preservation_signoff`:
+`approved: true`, `approved_by: pankajtiwarics27`, `approved_at: 2026-10-31T20:10:00Z`,
+with the owner's message as the reference; the generated package reports it and
+`--check` fails if the page and the record disagree. `UIUX-P0-05` closed the same
+day (#118, #121) with 6 of 6 isolated screenshots and a clean-clone test run, and
+`UIUX-P0-06` closes with the signature.
+
+Two things this does not change, so the next session does not have to rediscover
+them: the signature approves the matrix and the rollback path, not the scan's
+coverage (the bounded lexical walk is still not proof of exhaustive browser
+coverage), and #117 — a passing test writing a source-relative `.harnesses` store —
+is still open in the product, so the suite still belongs in a disposable clone.
+
+P1 starts from this baseline under `arena/9110aa1b-m5-agent-studio`. The
+preservation matrix, the control inventory and the shared boundary are now a
+checked contract rather than a proposal.
+
 ### Demo isolation follow-up (2026-10-31)
 
 The safety follow-up for [#108](https://github.com/pankajtiwarics27/m5-agent-studio/issues/108)

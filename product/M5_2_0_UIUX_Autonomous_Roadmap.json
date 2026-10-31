@@ -27,8 +27,8 @@
     ],
     "rule": "This ledger is authoritative for UI/UX stories UIUX-P0-01..UIUX-P6-05 only. It never changes the status of an M5 or AS story, and no UI/UX story may change backend, security or data behavior to make a screen easier to build."
   },
-  "source_commit_sha": "fa2a31cec0704ae4322a30c8ff55fd2d3e4037d0",
-  "source_commit_status": "Pinned to origin/main fa2a31c by UIUX-P0-05 on 2026-10-31, the merge commit of #114. The generated artifacts are regenerated in the same pull request that re-pins, and the map is now schema 2 (unresolved edges are published as unknown, never as absent). A session that finds main ahead of this pin re-pins the ledger and regenerates every artifact that embeds the pin in the same commit, because each one fails its --check otherwise. A branch name is not evidence of an ancestor commit: verify the pin.",
+  "source_commit_sha": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
+  "source_commit_status": "Pinned to origin/main 73bc5e4 by UIUX-P0-06 on 2026-10-31, the merge of #121. The generated artifacts are regenerated in the same pull request that re-pins, and this pin is the tree the owner approved. A session that finds main ahead of this pin re-pins the ledger and regenerates every artifact that embeds the pin in the same commit, because each one fails its --check otherwise. A branch name is not evidence of an ancestor commit: verify the pin.",
   "evidence_basis": {
     "supplied_by": "repository owner, 2026-10-31",
     "original_provenance": {
@@ -102,13 +102,13 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P0-05",
-    "next_recommended_story": "UIUX-P0-06",
-    "last_checkpoint": "2026-10-31T19:05:00Z",
-    "last_session_id": "arena/c705f453-m5-agent-studio",
+    "last_completed_story": "UIUX-P0-06",
+    "next_recommended_story": "UIUX-P1-01",
+    "last_checkpoint": "2026-10-31T20:35:00Z",
+    "last_session_id": "arena/9110aa1b-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "f432fe6",
+    "last_verified_commit": "73bc5e4",
     "last_updated": "2026-10-31",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -212,10 +212,10 @@
         "UIUX-P0-06"
       ],
       "total": 6,
-      "done": 5,
+      "done": 6,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 1,
+      "not_started": 0,
       "percent_complete": 67
     },
     {
@@ -339,11 +339,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 5,
+    "done": 6,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 35,
-    "percent_complete": 12
+    "not_started": 34,
+    "percent_complete": 15
   },
   "stories": [
     {
@@ -1253,23 +1253,48 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P0-06 (Approve feature-preservation and rollback baseline). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-10-31T20:10:00Z",
+        "updated_at": "2026-10-31T20:35:00Z",
+        "completed_at": "2026-10-31T20:35:00Z",
+        "owner_session": "arena/9110aa1b-m5-agent-studio",
+        "commit_sha": "11f190bd08359b0ed2b28174ba519f4745299caf",
+        "changed_files": [
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-program.md",
+          "docs/uiux-2-0-transformation-plan.md",
+          "tests/test_uiux_preservation_signoff.py"
+        ],
+        "evidence": [
+          "The owner approved the package on 2026-10-31 in an Arena session, with approved_by = pankajtiwarics27. The record is coordination.preservation_signoff, which is where the generator reads the approval from; the generated page only reports it.",
+          "All five asks in the package are now accepted against the pinned tree 73bc5e4: the preservation matrix (21 capabilities across 6 panes), the control inventory (170 markup controls, 30 rendered by script), the route candidates (115 routes, 57 with a resolved or possible caller, 0 unknown due to unresolved edges), the shared boundary (host allowlist 400, cross-origin 403, bearer 401/503, rate limit 429, body size 413) and the rollback path.",
+          "The signature does not claim coverage: the page keeps its own limits (a bounded lexical scan is not proof of exhaustive browser coverage, and the screenshots are the demo's first-run state), so P1 starts from a baseline that states what it does not know.",
+          "Closed at 11f190bd08359b0ed2b28174ba519f4745299caf, the commit that carries the signature and the regenerated package, so the evidence sha is the tree the owner approved rather than a later reserialisation of it."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python scripts/uiux_preservation_signoff.py --check",
+            "exit_code": 0,
+            "result": "up to date: approved, 21 capabilities across 6 panes, 170 markup controls, 37 state-changing routes traced"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q tests/test_uiux_preservation_signoff.py tests/test_uiux_roadmap.py",
+            "exit_code": 0,
+            "result": "passing after the unsigned-state assertion became a state invariant"
+          }
+        ],
         "visual_evidence": [],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "The check that used to assert \"the package is unsigned\" now asserts \"the package reports the ledger\", because a test that pins today's state turns the owner's signature into a test failure. The invariant is the one worth keeping: package status, page wording and signature fields must all agree with coordination.preservation_signoff."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "P0 is closed and signed. Start P1-01 from this baseline: the preservation matrix, the control inventory and the shared boundary are now a checked contract, and the package's input hashes make any drift visible. Do not re-edit the signature record; if an input artifact changes, regenerate the package and show the owner what changed.",
+        "next_action": "None. The P0 gate is open; UIUX-P1-01 is the next story.",
         "readme_updated": false
       },
       "required_evidence": [
@@ -4535,14 +4560,14 @@
     "program_doc": "docs/uiux-2-0-program.md",
     "ledger_tests": "tests/test_uiux_roadmap.py",
     "preservation_signoff": {
-      "approved": false,
-      "approved_by": null,
-      "approved_at": null,
-      "reference": null,
+      "approved": true,
+      "approved_by": "pankajtiwarics27",
+      "approved_at": "2026-10-31T20:10:00Z",
+      "reference": "Arena agent-mode session, 2026-10-31: owner message \"Approve UIUX-P0-06: approved_by = pankajtiwarics27\", recorded in the pull request that carries this signature.",
       "package": "product/M5_2_0_UIUX_Preservation_Signoff.json",
       "page": "docs/uiux-2-0-p0-signoff.md",
       "regenerate_with": "python3 scripts/uiux_preservation_signoff.py",
-      "note": "Prepared package for UIUX-P0-06, unsigned. An agent may prepare this decision and may not make it: to approve, set approved true and fill approved_by, approved_at and reference - the generator refuses a partial signature - then regenerate the package in the same commit. UIUX-P0-06 itself stays not_started until the owner signs, because its acceptance criterion is the approval, not the package."
+      "note": "Signed by the owner on 2026-10-31. The approval lives here; the generated package only reports it, and scripts/uiux_preservation_signoff.py fails if this record is partial or if the package drifts from the artifacts it summarises. Changing any input artifact after this signature requires regenerating the package, which is the point at which the change becomes visible."
     }
   },
   "global_agent_instructions": {

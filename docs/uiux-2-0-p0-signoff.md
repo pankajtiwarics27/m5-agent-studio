@@ -5,8 +5,8 @@ It is the `UIUX-P0-06` package: the capabilities the program must keep, the cont
 implement them, the routes those controls reach, the boundary that can refuse those routes,
 and what a revert does and does not touch.
 
-* Status: **unsigned** — No signature. This is material for the owner to approve, not an approved baseline.
-* Pinned baseline source commit: `fa2a31cec0704ae4322a30c8ff55fd2d3e4037d0` (input artifacts are hashed separately).
+* Status: **approved** — Signed in the ledger; this page only reports the record.
+* Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
 * 6 panes · 21 preserved capabilities · 170 markup controls (101 chrome, 69 panes) · 30 rendered by script.
 * 115 routes exist, 57 with a resolved or possible caller, 58 with none observed and 0 unknown due to unresolved edges; 37 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
@@ -308,10 +308,10 @@ One story, one merge commit. Revert the merge, not the individual commits, so th
 
 | Field | Value |
 |---|---|
-| Status | **unsigned** |
-| Approved by | — |
-| Approved at | — |
-| Reference | — |
+| Status | **approved** |
+| Approved by | pankajtiwarics27 |
+| Approved at | 2026-10-31T20:10:00Z |
+| Reference | Arena agent-mode session, 2026-10-31: owner message "Approve UIUX-P0-06: approved_by = pankajtiwarics27", recorded in the pull request that carries this signature. |
 
 An approval is recorded in `product/M5_2_0_UIUX_Autonomous_Roadmap.json` under
 `coordination.preservation_signoff` as `approved_by`, `approved_at` and `reference`, and this page
