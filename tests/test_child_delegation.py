@@ -760,11 +760,23 @@ def test_delegate_subagent_tool_executes_bounded_fresh_context_and_benchmark_jus
         assert report["all_preserve_or_improve_verified_outcomes"] is True
 
         scenarios = report["scenarios"]
+
+        def _note(scenario_id: str) -> str:
+            """Per-run diagnostics, so a red run names the arm and the reason."""
+            scenario = scenarios[scenario_id]
+            runs = "; ".join(
+                f"{d['run_id']}={d['failure_code'] or 'ok'}"
+                for d in scenario.get("run_diagnostics", [])
+            )
+            return (
+                f"\n{scenario_id}: justified={scenario['delegation_overhead_justified']} "
+                f"deltas={scenario['multi_agent_minus_single_model']} runs=[{runs}]"
+            )
         # 1. `multi_module_verified_bugfix`: delegation improves verified outcomes (`1.0 > 0.0`).
         bugfix = scenarios["multi_module_verified_bugfix"]
         assert bugfix["single_model"]["success_rate"] == 0.0
         assert bugfix["multi_agent"]["success_rate"] == 1.0
-        assert bugfix["delegation_overhead_justified"] is True
+        assert bugfix["delegation_overhead_justified"] is True, _note("multi_module_verified_bugfix")
         assert bugfix["preserves_or_improves_verified_outcomes"] is True
 
         # 2. `faulty_subagent_preservation`: rollback on failed child verification preserves 100% verified outcomes!
@@ -777,8 +789,8 @@ def test_delegate_subagent_tool_executes_bounded_fresh_context_and_benchmark_jus
         trivial = scenarios["trivial_single_file_edit"]
         assert trivial["single_model"]["success_rate"] == 1.0
         assert trivial["multi_agent"]["success_rate"] == 1.0
-        assert trivial["delegation_overhead_justified"] is False
-        assert trivial["preserves_or_improves_verified_outcomes"] is True
+        assert trivial["delegation_overhead_justified"] is False, _note("trivial_single_file_edit")
+        assert trivial["preserves_or_improves_verified_outcomes"] is True, _note("trivial_single_file_edit")
 
     # Cross-check parity with `workflow_evaluation.compare_workflows` on the same run vectors.
     eval_task = we.EvalTask(
@@ -836,7 +848,7 @@ def test_delegate_subagent_tool_executes_bounded_fresh_context_and_benchmark_jus
             call_index=1,
         )
     )
-    assert denied_overhead["ok"] is False
+    assert denied_overhead["ok"] is False, _note("trivial_single_file_edit")
     assert denied_overhead["error_code"] == "delegation_overhead_unjustified"
 
     # 5. Justified read-only `delegate_subagent` audit executes cleanly and auto-joins into parent!
@@ -941,3 +953,36 @@ def test_session_delete_purges_delegations_and_corrupt_store_fails_closed_with_5
         assert corrupt_resp.status_code == 503
         assert corrupt_resp.json()["detail"]["code"] == "delegation_state_corrupt"
 
+
+
+def test_benchmark_reports_per_run_diagnostics(
+    isolated_env: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed benchmark sample must carry its reason.
+
+    The delegation benchmark decides whether delegation is worth its overhead, and
+    it persists that verdict for the runtime gate. A sample that fails for an
+    infrastructure reason then looks exactly like a strategy that lost, so each run
+    records its failure code next to its numbers instead of only `verified: false`.
+    """
+    with _client() as client:
+        response = client.post(
+            "/api/harness/delegations/benchmark",
+            json={"runs_per_strategy": 1, "persist_summaries": False},
+        )
+    assert response.status_code == 200, response.text
+    scenarios = response.json()["scenarios"]
+    assert scenarios
+    for scenario_id, scenario in scenarios.items():
+        diagnostics = scenario["run_diagnostics"]
+        assert len(diagnostics) == 2, f"{scenario_id}: one diagnostic per run"
+        assert {d["strategy"] for d in diagnostics} == {"single_model", "multi_agent"}
+        for diagnostic in diagnostics:
+            assert isinstance(diagnostic["verified"], bool)
+            assert "failure_code" in diagnostic
+            assert "elapsed_ms" in diagnostic and "token_cost" in diagnostic
+        expected = [
+            f"{d['run_id']}: {d['failure_code'] or 'unknown'}" for d in diagnostics if not d["verified"]
+        ]
+        assert scenario["verification_failures"] == expected

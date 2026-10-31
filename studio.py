@@ -20254,6 +20254,7 @@ async def run_delegation_vs_single_agent_benchmark_async(
         ):
             t_digest = f"sha256:{hashlib.sha256(scenario_id.encode('utf-8')).hexdigest()}"
             eval_runs: list[child_delegation.DelegationEvalRun] = []
+            run_diagnostics: list[dict[str, Any]] = []
 
             for strategy in ("single_model", "multi_agent"):
                 for rep in range(1, safe_runs + 1):
@@ -20473,6 +20474,21 @@ async def run_delegation_vs_single_agent_benchmark_async(
                         coord.release(sid, ep, worker_id, next_state="failed", reason="benchmark_failed")
                         run_outcome = "failed"
                         run_ok = False
+                    # A failed sample is a measurement of the machine as well as of the
+                    # strategy, so the reason travels with the number instead of being
+                    # reduced to `verified_success: false`.
+                    run_diagnostics.append(
+                        {
+                            "run_id": f"{scenario_id}-{strategy}-{rep}",
+                            "strategy": strategy,
+                            "verified": bool(ver_rep.verified),
+                            "failure_code": ver_rep.failure_code,
+                            "failure_detail": (ver_rep.failure_detail or "")[:300],
+                            "test_exit_code": ver_rep.test_exit_code,
+                            "elapsed_ms": round(elapsed_ms, 3),
+                            "token_cost": float(bud_end.tokens_used),
+                        }
+                    )
 
                     eval_runs.append(
                         child_delegation.DelegationEvalRun(
@@ -20492,6 +20508,10 @@ async def run_delegation_vs_single_agent_benchmark_async(
                     )
 
             comp = child_delegation.compare_delegation_runs(scenario_id, eval_runs)
+            comp["run_diagnostics"] = run_diagnostics
+            comp["verification_failures"] = [
+                f"{d['run_id']}: {d['failure_code'] or 'unknown'}" for d in run_diagnostics if not d["verified"]
+            ]
             scenario_reports[scenario_id] = comp
             if persist_summaries:
                 get_child_delegation_store().save_benchmark_summary(scenario_id, comp)
