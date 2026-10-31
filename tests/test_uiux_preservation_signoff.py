@@ -162,10 +162,10 @@ def test_signoff_propagates_route_map_uncertainty(
     monkeypatch.setattr(module, "ROUTE_MAP", route_map)
     monkeypatch.setattr(module, "TRACE", trace_file)
     package = module.build_signoff()
-    # This test is about uncertainty propagation, not about the signature: the status
-    # must follow the ledger record whatever that record currently says.
+    # The historical signature is distinct from binding to the changed route map.
     record = (_ledger().get("coordination") or {}).get("preservation_signoff") or {}
-    assert package["status"] == ("approved" if record.get("approved") else "unsigned")
+    assert package["signature"]["signed"] is bool(record.get("approved"))
+    assert package["approval_binding"]["status"] in {"unsigned", "unbound", "matched", "drifted"}
     assert package["totals"]["routes_with_resolved_or_possible_caller"] == 57
     assert package["totals"]["routes_unknown_frontend_caller"] == 58
     assert package["totals"]["route_map_unresolved_method_edges"] == 1
@@ -177,7 +177,7 @@ def test_signoff_propagates_route_map_uncertainty(
 def test_signoff_uses_schema_two_candidate_totals() -> None:
     mapping = json.loads(ROUTE_MAP.read_text(encoding="utf-8"))
     package = _package()
-    assert package["schema_version"] == "2.0.0"
+    assert package["schema_version"] == "3.0.0"
     assert package["totals"]["routes_with_resolved_or_possible_caller"] == (
         mapping["totals"]["routes_with_resolved_or_possible_caller"]
     )
@@ -228,9 +228,12 @@ def test_the_package_reports_the_ledger_signature_state() -> None:
     approved = bool(record.get("approved"))
 
     assert package["signature"]["signed"] is approved
-    assert package["status"] == ("approved" if approved else "unsigned")
-    assert ("| Status | **approved** |" in page) is approved
-    assert ("| Status | **unsigned** |" in page) is (not approved)
+    binding = package["approval_binding"]
+    statuses = {"unsigned": "unsigned", "unbound": "historical-approval-unbound",
+                "matched": "approval-inputs-match", "drifted": "historical-approval-input-drift"}
+    assert package["status"] == statuses[binding["status"]]
+    assert f"| Status | **{package['status']}** |" in page
+    assert (binding["status"] != "unsigned") is approved
     assert "Prepared by an agent" in page, "the package must keep saying who prepared it"
 
     if approved:
@@ -408,3 +411,145 @@ def test_the_check_mode_passes_and_fails_on_drift(
     stale_json.write_text(payload, encoding="utf-8")
     stale_doc.write_text(page, encoding="utf-8")
     assert module.main(["--check", "--quiet"]) == 0
+
+
+def test_historical_approval_without_a_snapshot_is_not_current_input_approval(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = _load_generator()
+    ledger = _ledger()
+    ledger["coordination"]["preservation_signoff"] = {
+        "approved": True, "approved_by": "synthetic-owner", "approved_at": "2026-01-01", "reference": "synthetic-test",
+    }
+    path = tmp_path / "ledger.json"
+    path.write_text(json.dumps(ledger), encoding="utf-8")
+    monkeypatch.setattr(module, "LEDGER", path)
+    package = module.build_signoff()
+    assert package["signature"]["signed"] is True
+    assert package["status"] == "historical-approval-unbound"
+    binding = package["approval_binding"]
+    assert binding["status"] == "unbound"
+    assert binding["current_inputs_match_approval"] is None
+    assert binding["approved_inputs"] is None
+    assert binding["changed_inputs"] is None
+    page = module.render_doc(package)
+    assert "does not establish approval of current inputs" in page
+
+
+def test_explicit_snapshot_distinguishes_matching_and_changed_inputs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Synthetic signatures only: regenerating current hashes must not reapprove drift."""
+    module = _load_generator()
+    ledger = _ledger()
+    ledger_path = tmp_path / "ledger.json"
+    index_path = tmp_path / "index.json"
+    index_path.write_bytes((ROOT / "docs/media/screenshots/index.json").read_bytes())
+    monkeypatch.setattr(module, "LEDGER", ledger_path)
+    monkeypatch.setattr(module, "SCREENSHOT_INDEX", index_path)
+    record = ledger["coordination"]["preservation_signoff"]
+    record.update({"approved_by": "synthetic-owner", "approved_at": "2026-01-01", "reference": "synthetic-test"})
+    current = module._current_binding_inputs(ledger)
+    record["binding_schema"] = "m5-uiux-inputs-v1"
+    record["binding_reference"] = "synthetic approval of this digest set"
+    record["approved_inputs"] = current
+    ledger_path.write_text(json.dumps(ledger), encoding="utf-8")
+    package = module.build_signoff()
+    assert package["status"] == "approval-inputs-match"
+    assert package["approval_binding"]["current_inputs_match_approval"] is True
+    assert package["approval_binding"]["changed_inputs"] == []
+    assert package["approval_binding"]["approved_inputs"] == current
+
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    index["synthetic-note"] = "changed after owner approval"
+    index_path.write_text(json.dumps(index), encoding="utf-8")
+    drifted = module.build_signoff()
+    assert drifted["status"] == "historical-approval-input-drift"
+    assert drifted["approval_binding"]["current_inputs_match_approval"] is False
+    assert drifted["approval_binding"]["changed_inputs"] == ["screenshot_index_sha256"]
+    assert drifted["approval_binding"]["approved_inputs"] == current
+    assert "current inputs differ" in module.render_doc(drifted)
+    # --check measures generated-file freshness, not owner authorization.
+    output = tmp_path / "signoff.json"
+    page = tmp_path / "signoff.md"
+    monkeypatch.setattr(module, "SIGNOFF_PATH", output)
+    monkeypatch.setattr(module, "DOC_PATH", page)
+    payload, rendered = module._rendered()
+    output.write_text(payload, encoding="utf-8")
+    page.write_text(rendered, encoding="utf-8")
+    assert module.main(["--check", "--quiet"]) == 0
+    assert json.loads(output.read_text())["status"] == "historical-approval-input-drift"
+
+
+def test_signature_fields_do_not_create_a_ledger_hash_cycle_but_content_changes_do() -> None:
+    module = _load_generator()
+    ledger = _ledger()
+    ledger["coordination"]["preservation_signoff"] = {"approved": True, "reference": "synthetic"}
+    before = module._current_binding_inputs(ledger)["ledger_content_sha256"]
+    ledger["coordination"]["preservation_signoff"]["approved_inputs"] = {"synthetic": "record changes are excluded"}
+    assert module._current_binding_inputs(ledger)["ledger_content_sha256"] == before
+    ledger["feature_preservation_matrix"][0]["must_preserve"] += " synthetic change"
+    assert module._current_binding_inputs(ledger)["ledger_content_sha256"] != before
+
+
+@pytest.mark.parametrize("invalid", ["missing", "missing-reference", "empty-reference", "partial", "unknown-key", "bad-hash", "bad-schema", "unsigned"])
+def test_invalid_explicit_bindings_fail_closed(invalid: str) -> None:
+    module = _load_generator()
+    ledger = _ledger()
+    record = ledger["coordination"]["preservation_signoff"]
+    current = module._current_binding_inputs(ledger)
+    record["binding_schema"] = "m5-uiux-inputs-v1"
+    record["binding_reference"] = "synthetic approval of this digest set"
+    record["approved_inputs"] = dict(current)
+    if invalid == "missing":
+        del record["approved_inputs"]
+    elif invalid == "missing-reference":
+        del record["binding_reference"]
+    elif invalid == "empty-reference":
+        record["binding_reference"] = "  "
+    elif invalid == "partial":
+        del record["approved_inputs"]["route_map_sha256"]
+    elif invalid == "unknown-key":
+        record["approved_inputs"]["extra"] = "a" * 64
+    elif invalid == "bad-hash":
+        record["approved_inputs"]["source_manifest_sha256"] = "bad"
+    elif invalid == "bad-schema":
+        record["binding_schema"] = "v999"
+    else:
+        record["approved"] = False
+    with pytest.raises(module.SignoffError):
+        module._approval_binding(ledger, current)
+
+
+def test_unsigned_record_never_reports_current_input_approval() -> None:
+    module = _load_generator()
+    ledger = _ledger()
+    ledger["coordination"].pop("preservation_signoff")
+    binding = module._approval_binding(ledger, module._current_binding_inputs(ledger))
+    assert binding["status"] == "unsigned"
+    assert binding["current_inputs_match_approval"] is None
+    assert binding["approved_inputs"] is None
+
+
+@pytest.mark.parametrize("invalid", ["false", 1, None])
+def test_non_boolean_approval_is_not_treated_as_an_owner_decision(invalid: object) -> None:
+    module = _load_generator()
+    record = {"approved": invalid, "approved_by": "synthetic", "approved_at": "2026-01-01", "reference": "test"}
+    with pytest.raises(module.SignoffError, match="boolean"):
+        module._approval({"coordination": {"preservation_signoff": record}})
+
+
+def test_binding_hashes_actual_frontend_and_optional_screenshot_index(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_generator()
+    frontend = tmp_path / "index.html"
+    frontend.write_bytes((ROOT / "static/index.html").read_bytes())
+    monkeypatch.setattr(module, "FRONTEND", frontend)
+    index = tmp_path / "screenshots.json"
+    monkeypatch.setattr(module, "SCREENSHOT_INDEX", index)
+    ledger = _ledger()
+    before = module._current_binding_inputs(ledger)
+    assert before["screenshot_index_sha256"] is None
+    frontend.write_bytes(frontend.read_bytes() + b"\n<!-- synthetic drift -->\n")
+    index.write_text('{"shots":[]}', encoding="utf-8")
+    after = module._current_binding_inputs(ledger)
+    assert before["frontend_sha256"] != after["frontend_sha256"]
+    assert after["screenshot_index_sha256"] == hashlib.sha256(index.read_bytes()).hexdigest()
+    assert before["source_manifest_sha256"] == after["source_manifest_sha256"]

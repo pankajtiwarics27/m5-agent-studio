@@ -103,9 +103,9 @@
     {
       "path": "scripts/uiux_preservation_signoff.py",
       "role": "freezes the preservation surface and rollback path for the owner sign-off",
-      "sha256": "a79f2de205987753e940a04c61b6db919a25390f33dbc2448166f313d26c12ae",
-      "bytes": 36418,
-      "lines": 720
+      "sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
+      "bytes": 42949,
+      "lines": 840
     }
   ],
   "frontend": {
