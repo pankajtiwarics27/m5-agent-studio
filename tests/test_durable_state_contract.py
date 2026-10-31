@@ -34,6 +34,7 @@ import process_supervision
 import routing_policy
 import sandbox_boundary
 import scoped_grants
+import trusted_transformations
 
 
 def _write_containment(root: Path) -> None:
@@ -105,6 +106,11 @@ def _write_lessons(root: Path) -> None:
     store.update_config(enabled=True, token_ceiling=160)
 
 
+def _write_transformations(root: Path) -> None:
+    store = trusted_transformations.TrustedTransformationRegistry(root)
+    store.update_config(enabled=True)
+
+
 WriteFn = Callable[[Path], None]
 ErrorCls = type[BaseException]
 
@@ -158,6 +164,12 @@ STORE_CASES: list[tuple[str, WriteFn, Path, ErrorCls]] = [
         Path("lessons") / "state.json",
         evidence_lessons.LessonStoreIntegrityError,
     ),
+    (
+        "transformations",
+        _write_transformations,
+        Path("transformations") / "state.json",
+        trusted_transformations.TransformationStoreIntegrityError,
+    ),
 ]
 _CASES = [pytest.param(w, rel, err, id=name) for name, w, rel, err in STORE_CASES]
 
@@ -185,6 +197,7 @@ def test_every_module_with_a_durable_state_file_is_covered() -> None:
         "handoffs": "routing_policy",
         "delegations": "child_delegation",
         "lessons": "evidence_lessons",
+        "transformations": "trusted_transformations",
     }
     covered = {
         covered_modules[relative.parts[0]] for _name, _write, relative, _err in STORE_CASES

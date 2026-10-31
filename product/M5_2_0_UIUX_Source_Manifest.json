@@ -19,16 +19,16 @@
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "dba9c61be9a6525e329efec573df94ed768bf38d8fe2ffad533b4e397c6bbaab",
-      "bytes": 969069,
-      "lines": 20908
+      "sha256": "6566f0699ae3896cbafe480f331a272f2bcc317003aab86bfc4490d6e9a39b53",
+      "bytes": 986333,
+      "lines": 21285
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "21f2946ee80ff53c6ed703b7b4c34c0e6d79ea13e5ddd5a2e1d67db68ddbb3a3",
-      "bytes": 2747305,
-      "lines": 61464
+      "sha256": "03c1cd48f3bafd69f9a0a9639cb13a55e6d8bdd9cb4e669311e083a7913a3ceb",
+      "bytes": 2890631,
+      "lines": 64824
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -68,9 +68,9 @@
     {
       "path": "scripts/build_studio.py",
       "role": "regenerates studio.py from app.py and the inlined modules",
-      "sha256": "c00bbe70c4c5e3456045c0570569beef0a4a26f789ae4ad9633772dc5d5518ae",
-      "bytes": 6931,
-      "lines": 128
+      "sha256": "ed31bb2cadd80d164e4c6243e5177e84a92c9bf7b6d6676e798d8350dd33e136",
+      "bytes": 6962,
+      "lines": 129
     },
     {
       "path": "scripts/check_frontend_syntax.py",
@@ -191,13 +191,13 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "dba9c61be9a6525e329efec573df94ed768bf38d8fe2ffad533b4e397c6bbaab",
-    "route_count": 102,
+    "sha256": "6566f0699ae3896cbafe480f331a272f2bcc317003aab86bfc4490d6e9a39b53",
+    "route_count": 109,
     "by_method": {
       "DELETE": 5,
-      "GET": 36,
+      "GET": 37,
       "PATCH": 3,
-      "POST": 58
+      "POST": 64
     },
     "routes": [
       {
@@ -575,6 +575,34 @@
       {
         "method": "POST",
         "path": "/api/harness/lessons/evaluate"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/transformations"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/transformations/config"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/transformations/qualify"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/transformations/promote"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/transformations/execute"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/transformations/{transform_id}/revoke"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/transformations/evaluate"
       },
       {
         "method": "POST",
