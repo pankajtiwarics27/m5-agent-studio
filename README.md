@@ -247,9 +247,12 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   re-pulled to a different digest cannot inherit an old qualification. **No
   container-isolation or 24 GB claim is made anywhere in this repository**, both
   stories stay `blocked` in the roadmap until the owner produces a qualified record
-  on the target machine. Pinned by 94 tests (`tests/test_qualify_environment.py`)
-  and documented in [`docs/qualification-suite.md`](docs/qualification-suite.md)
-  (ADR-0010).
+  on the target machine. The model-call half has a ready-made stdlib probe
+  (`scripts/model_probe.py`, OpenAI-compatible, streams for a real
+  time-to-first-token, and omits any metric the server did not report). Pinned by
+  94 tests (`tests/test_qualify_environment.py`) and by 12 for the probe
+  (`tests/test_model_probe.py`); documented in
+  [`docs/qualification-suite.md`](docs/qualification-suite.md) (ADR-0010).
 - **A second heavy local model request is refused by policy in the serving path
   (`M5-P4-01`, code half — the story stays blocked on measurement):**
   `model_admission.py` (stdlib only, inlined into `studio.py`) wraps
