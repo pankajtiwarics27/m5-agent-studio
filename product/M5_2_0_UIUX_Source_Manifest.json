@@ -7,7 +7,7 @@
   "regenerate_with": "python3 scripts/uiux_source_manifest.py",
   "check_with": "python3 scripts/uiux_source_manifest.py --check",
   "statement": "Hashed inventory of the UI surface this program may change, plus the tab and route tables every later story depends on. Values are parsed from the files, not from the roadmap's web extracts. A story that changes the surface regenerates this manifest; the check fails when the two disagree.",
-  "pinned_source_commit": "e96b30e395bd9e785ad96a08738d65e3249c8cd4",
+  "pinned_source_commit": "866ec1c063c0c750d40e219ddfc9107363732fc6",
   "files": [
     {
       "path": "static/index.html",

@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 7,
+  "revision": 8,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -27,8 +27,8 @@
     ],
     "rule": "This ledger is authoritative for UI/UX stories UIUX-P0-01..UIUX-P6-05 only. It never changes the status of an M5 or AS story, and no UI/UX story may change backend, security or data behavior to make a screen easier to build."
   },
-  "source_commit_sha": "e96b30e395bd9e785ad96a08738d65e3249c8cd4",
-  "source_commit_status": "Pinned to origin/main e96b30e395bd by UIUX-P0-04 on 2026-10-31. The previous pin aa1af27 described main before #109 merged, so the manifest, control inventory and route map were regenerated against this commit in the same change that re-pinned. A session that finds main ahead of this pin re-pins the ledger and regenerates the artifacts in the same commit; a stale manifest is drift, not a fix-up. A branch name is not a pin.",
+  "source_commit_sha": "866ec1c063c0c750d40e219ddfc9107363732fc6",
+  "source_commit_status": "Pinned to origin/main 866ec1c063c0 by UIUX-P0-05 on 2026-10-31, the merge commit of #111. The generated artifacts are regenerated in the same pull request that re-pins. A session that finds main ahead of this pin re-pins the ledger and regenerates the artifacts in the same commit. A branch name is not a pin.",
   "evidence_basis": {
     "supplied_by": "repository owner, 2026-10-31",
     "original_provenance": {
@@ -100,15 +100,17 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": null,
-    "active_stories": [],
+    "active_story": "UIUX-P0-05",
+    "active_stories": [
+      "UIUX-P0-05"
+    ],
     "last_completed_story": "UIUX-P0-04",
     "next_recommended_story": "UIUX-P0-05",
-    "last_checkpoint": "2026-10-31T11:35:25Z",
+    "last_checkpoint": "2026-10-31T12:20:00Z",
     "last_session_id": "arena/c705f453-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "c33b98c",
+    "last_verified_commit": "866ec1c",
     "last_updated": "2026-10-31",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -213,9 +215,9 @@
       ],
       "total": 6,
       "done": 4,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 2,
+      "not_started": 1,
       "percent_complete": 67
     },
     {
@@ -340,9 +342,9 @@
   "overall_progress": {
     "total_stories": 40,
     "done": 4,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 36,
+    "not_started": 35,
     "percent_complete": 10
   },
   "stories": [
@@ -1046,23 +1048,104 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P0-05 (Capture baseline screenshots and test results). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 50,
+        "attempts": 1,
+        "started_at": "2026-10-31T11:38:38Z",
+        "updated_at": "2026-10-31T12:20:00Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/c705f453-m5-agent-studio",
         "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "changed_files": [
+          "docs/uiux-2-0-baseline-evidence.md",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-program.md",
+          "docs/uiux-2-0-transformation-plan.md",
+          "docs/README.md",
+          "AGENTS.md"
+        ],
+        "evidence": [
+          "Half 1, the test baseline: every command in verification_commands was run on this checkout at 866ec1c and its exit code recorded - pytest 0 (1541 passed, 1 skipped in 116 s), ruff 0, mypy 0 (58 files), check_frontend_syntax 0, demo_tour --check 0, validate_docs 0 (122 files), and all four UI/UX guards 0 (manifest 13 files pinned to 866ec1c063c0, inventory 170 markup controls, route map 53 call sites, trace 35 state-changing routes). all staged in docs/uiux-2-0-baseline-evidence.md.",
+          "Half 2, the capture plan, measured without a browser: node scripts/capture_screenshots.mjs --dry-run exits 0 and prints the resolved plan - 6 shots in manifest id order (start, harness, hall, council -> pipeline.png, debate -> compare.png, chat), viewport 1440x900 at device scale factor 2, output docs/media/screenshots, base URL unresolved as '<start scripts/demo_tour.py --serve>'. This proves the manifest, the tab ids and the output paths agree; it draws nothing.",
+          "Half 3, the honest state of the visual gate: scripts/validate_screenshots.py exits 0 with 'Screenshot manifest validated: 0 of 6 captured', and docs/uiux-2-0-baseline-evidence.md records the exact commands a machine with Chrome/Chromium plus puppeteer-core must run. 0 of 6 is recorded as the current state, not as a pass.",
+          "Criterion-to-evidence map (the one this story can close): commands actually run with exit codes and the environment they ran in - docs/uiux-2-0-baseline-evidence.md, reproduced from these recorded results, not from memory."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "1541 passed, 1 skipped, 1 warning in 116.38s (0:01:56)"
+          },
+          {
+            "command": ".venv/bin/python -m ruff check .",
+            "exit_code": 0,
+            "result": "All checks passed!"
+          },
+          {
+            "command": ".venv/bin/python -m mypy",
+            "exit_code": 0,
+            "result": "Success: no issues found in 58 source files"
+          },
+          {
+            "command": ".venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "JavaScript syntax OK (1 inline block(s))"
+          },
+          {
+            "command": ".venv/bin/python scripts/demo_tour.py --check",
+            "exit_code": 0,
+            "result": "Demo transcript is up to date: /home/user/m5-agent-studio/docs/media/demo-transcript.md"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_screenshots.py",
+            "exit_code": 0,
+            "result": "Screenshot manifest validated: 0 of 6 captured. Capture needs a browser; see docs/demo.md."
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py",
+            "exit_code": 0,
+            "result": "Documentation validation passed (5 required pages, 122 files scanned)."
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_source_manifest.py --check",
+            "exit_code": 0,
+            "result": "UI source manifest is up to date: 13 files, 6 tabs, 115 routes, pinned to 866ec1c063c0"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_control_inventory.py --check",
+            "exit_code": 0,
+            "result": "UI control inventory is up to date: 170 markup controls across 6 panes (101 in the chrome, 30 rendered by script)"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_route_map.py --check",
+            "exit_code": 0,
+            "result": "UI route map is up to date: 53 call sites, 58 exact and 1 dynamic matches, 0 findings, 61 routes with no browser caller"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_authorization_trace.py --check",
+            "exit_code": 0,
+            "result": "UI authorization trace is up to date: 35 state-changing routes, 10 with an authority subsystem, 28 with durable state, 20 that can leave the machine"
+          }
+        ],
+        "visual_evidence": [
+          "None captured: 0 of 6. The pipeline resolves the six planned shots and their paths (dry run, exit 0) but draws nothing, so no pane is claimed to have been seen rendered."
+        ],
         "known_regressions": [],
-        "decisions": [],
-        "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "decisions": [
+          "The story is split rather than closed: the test half is measurable here and is now measured; the visual half needs a browser this environment does not have. Closing on the capture script's dry run would be a claim about pixels that were never drawn.",
+          "The baseline counts are recorded in a hand-written page rather than a generated artifact. They describe one checkout at one commit; regenerating them would imply they track HEAD, which would make a stale baseline look current. A later story states its own numbers beside these.",
+          "Re-pinning the ledger to 866ec1c forced regeneration of all four pin-embedding artifacts in the same change (manifest, control inventory, route map, trace), because each embeds the pinned SHA."
+        ],
+        "blockers": [
+          "The six baseline screenshots cannot be captured in this environment: no Chrome/Chromium binary is on PATH and puppeteer-core is not installed. A machine with a browser must run scripts/capture_screenshots.mjs against scripts/demo_tour.py --serve and then scripts/validate_screenshots.py; only then can this story close."
+        ],
+        "handoff_note": "Test half measured and published in docs/uiux-2-0-baseline-evidence.md (all commands exit 0; pytest 1541 passed, 1 skipped). Visual half blocked: no browser here. Do not close this story on a dry run, and do not edit the recorded counts without re-running the commands.",
+        "next_action": "On a machine with Chrome/Chromium and puppeteer-core: serve scripts/demo_tour.py, capture the six shots with scripts/capture_screenshots.mjs, validate with scripts/validate_screenshots.py, then record the index.json digests here and move the story to done. Until then the story stays in_progress at 50 percent.",
         "readme_updated": false
       },
       "required_evidence": [
