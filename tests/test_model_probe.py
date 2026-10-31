@@ -240,6 +240,24 @@ def test_probe_samples_the_server_process_memory(fake_server: ThreadingHTTPServe
     assert report["peak_memory_bytes"] > 0
 
 
+def test_rss_sampler_measures_before_the_request_window_opens() -> None:
+    """A slow `ps` must not be able to lose the whole measurement.
+
+    The sampler takes one sample synchronously in `start()`, so `readable` cannot
+    depend on winning the first polling interval. With an interval far longer than
+    the test, the thread never samples again: any value present came from `start()`.
+    """
+    from scripts import model_probe
+
+    sampler = model_probe.RssSampler(os.getpid(), interval=3600.0)
+    sampler.start()
+    try:
+        assert sampler.readable is True
+        assert sampler.peak is not None and sampler.peak > 0
+    finally:
+        sampler.stop()
+
+
 def test_probe_never_reports_a_memory_figure_for_an_unreadable_pid(
     fake_server: ThreadingHTTPServer,
 ) -> None:
