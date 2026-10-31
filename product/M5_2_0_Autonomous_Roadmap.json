@@ -123,14 +123,14 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": "M5-P3-01",
-    "last_completed_story": "M5-P5-03",
-    "last_checkpoint": "2026-10-31T11:10:00Z",
+    "active_story": null,
+    "last_completed_story": "M5-P3-01",
+    "last_checkpoint": "2026-10-31T11:40:00Z",
     "last_session_id": "arena/29fdbf7f-m5-agent-studio",
-    "next_recommended_story": "M5-P6-01 (explicitly authorized by repository owner on 2026-10-31 for sequential Phase P6 execution M5-P6-01..M5-P6-03; M5-P3-01 remains host-Docker gated)",
+    "next_recommended_story": "M5-P6-01 (only remaining unblocked story; optional, so it requires explicit owner authorization before selection). M5-P3-01 is done as of 2026-10-31.",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
-      "Container isolation UNQUALIFIED (M5-P0-04, M5-P3-01): the first operator run on real hardware (2026-10-31, Apple M5, Docker Desktop 29.5.3) passed 11 of 12 sandbox checks and failed p3.adversarial.memory_limit - a 3 GiB allocation completed under --memory 512m (exit 0) while the container's own /sys/fs/cgroup/memory.max read 536870912. Whether swap let the allocation escape the cap or the cgroup was simply not enforced is undecided. dependent_execution stays blocked (fail closed) and M5-P3-01 stays blocked until a re-run is qualified; nothing is waived.",
+      "RESOLVED 2026-10-31 (M5-P3-01): container isolation is QUALIFIED on the target host. The operator run (Apple M5, Docker Desktop 29.5.3, image python:sha256:aa943ce41142...) passed all 12 sandbox checks, including p3.adversarial.memory_limit as exit 137 with memory.max=536870912 and memory.swap.max=536870912 captured before and after a 3 GiB allocation, and isolation_smoke.py --live released dependent_execution under the observed boundary (docs/m5-2-0-sandbox-isolation-evidence.md). The 2026-10-30 run that failed that check (exit 0, no counters) is kept; the passing run supersedes it without explaining it. Two limits travel with the record: the qualification binds to that machine, engine version and image digest, so every other host starts unqualified; and the engine's default swap allowance means the shipped '--memory=2g' ceilings at RAM + swap (about 4 GiB), so pinning '--memory-swap' to '--memory' remains an open hardening item that needs its own re-qualification.",
       "RESOLVED 2026-10-31 (M5-P4-01): the 24 GB Apple Silicon memory/swap measurements now exist - 16 GiB touched pressure with 0.00 GiB swap growth (machine already 6.18 GiB into swap) and a 3/3 model-probe run against Gemma-4-21B-REAP-4bit (1.29 GiB swap growth) on an Apple M5, recorded in docs/m5-2-0-hardware-qualification-evidence.md. Still missing from that record: thermal pressure (blocked), per-category coding cases (skipped), model digest and per-process peak memory. The 80% admission reservation remains a policy constant.",
       "Unified execution profiles and resource barriers (execution_profiles.py, M5-P3-02) enforce shared/exclusive barriers and capacity slots within a single application process (matching worker leases, task events, and model admission); static shell/AST inspection cannot decide arbitrary Turing-complete obfuscation pre-execution when container isolation is unqualified, relying on post-execution quarantine/uncertain marking until M5-P3-01 live container qualification passes.",
       "Multi-agent parallel work active: product/M5_2_0_Autonomous_Roadmap.json tracking blocks are the shared claim ledger; claim protocol and PR/merge rules live in M5_2_0_AGENT_PROMPT.md",
@@ -151,7 +151,6 @@
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md",
     "last_updated": "2026-10-31",
     "active_stories": [
-      "M5-P3-01",
       "M5-P6-01"
     ]
   },
@@ -2158,23 +2157,36 @@
       ],
       "prompt": "Implement story M5-P3-01: Sandbox backend qualification suite. Objective: Validate actual isolation guarantees, not backend labels. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Exercise live container/native candidates on supported macOS; Test path traversal, symlink, network bypass, credentials, descendants, resource limits; Run positive compatibility tests; Bind evidence to OS/runtime/config fingerprint. Acceptance: Each claimed guarantee has positive and adversarial evidence; Unqualified guarantees remain unavailable; No silent host fallback. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 25,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 2,
         "started_at": "2026-10-30T19:31:57Z",
-        "updated_at": "2026-10-31T11:10:00Z",
-        "completed_at": null,
+        "updated_at": "2026-10-31T11:40:00Z",
+        "completed_at": "2026-10-31T11:40:00Z",
         "owner_session": "arena/29fdbf7f-m5-agent-studio",
-        "commit_sha": "dff964a",
+        "commit_sha": "ae14c69",
         "changed_files": [
           "README.md",
           "docs/README.md",
           "docs/adr/0010-operator-run-environment-qualification.md",
+          "docs/artifact-lineage.md",
+          "docs/execution-profiles.md",
+          "docs/m5-2-0-hardware-qualification-evidence.md",
+          "docs/m5-2-0-integration-audit.md",
+          "docs/m5-2-0-isolation-smoke-evidence.md",
+          "docs/m5-2-0-sandbox-isolation-evidence.md",
+          "docs/m5-2-0-sandbox-memory-limit-finding.md",
+          "docs/m5-2-0-security-release-gate.md",
           "docs/qualification-suite.md",
+          "docs/supported-hardware.md",
+          "docs/workspace-quarantine.md",
           "product/M5_2_0_Autonomous_Roadmap.json",
           "scripts/qualify_environment.py",
           "scripts/qualify_environment.sh",
-          "tests/test_qualify_environment.py"
+          "security_release_gate.py",
+          "studio.py",
+          "tests/test_qualify_environment.py",
+          "tests/test_security_release_gate.py"
         ],
         "evidence": [
           "Deliverable (tooling, not a result): scripts/qualify_environment.py --sandbox executes the sandbox suite through app._execute_limited with STUDIO_EXECUTION_MODE=sandbox and a hardened `--network=none --read-only --cap-drop=ALL --security-opt=no-new-privileges --pull=never` container built by container_argv; tests/test_qualify_environment.py::test_container_argv_matches_the_product_hardening_flags asserts the suite's flags stay equal to app._sandbox_command's (single bind mount, no --privileged).",
@@ -2188,7 +2200,13 @@
           "The suite had been qualifying a *different* container than the product builds: container_argv was missing --env HOME=/tmp, TMPDIR=/tmp, PYTHONDONTWRITEBYTECODE=1, --ipc=private, --ulimit nofile, --entrypoint /bin/sh and the `exec python3 -c` shell form, and used a 64m tmpfs where the product uses 256m. It now reproduces app._sandbox_command flag for flag, and p3.product.argv_parity re-checks that on the machine running the qualification (compare_argv; tests: test_suite_argv_matches_the_product_argv, test_argv_parity_detects_a_missing_product_flag), so future product drift fails the owner's run instead of silently qualifying stale flags.",
           "P3-01 task 'credentials' now has a probe of its own rather than riding on an environment-variable sentinel: p3.adversarial.credentials runs inside the sandbox and fails if ~/.aws/credentials, ~/.ssh/id_rsa, ~/.ssh/id_ed25519, ~/.netrc, ~/.docker/config.json, ~/.kube/config or the gcloud ADC file is visible, or if HOME is not the product's throwaway /tmp. The escape matrix also reports the errno class of every refusal (reads:outside-direct=ENOENT,...) so a pass is explainable instead of a bare 'denied', and the symlink case now records symlink-target=VISIBLE/ABSENT explicitly.",
           "P3-01 task 'Bind evidence to OS/runtime/config fingerprint' now has a check of its own: p3.environment.bind records the runtime version line, the image content id and repo digest (from image inspect: a tag can be re-pulled to a different digest, so a tag alone cannot inherit an old qualification) and the product's hardening flags with their limit values, read from app._sandbox_command. Unreadable identity is blocked (a readability gap, not a failed guarantee) so a qualified record cannot be produced without it; the values travel in record.sandbox and in the check's evidence block, and the Markdown record prints them under 'Sandbox backend'.",
-          "With this, all four P3-01 implementation tasks map to a check in docs/qualification-suite.md (a task -> check table added for M5-P3-01 alongside the M5-P4-01 one), so the owner's single run produces evidence for every task rather than for two of four. Story stays blocked: still no container runtime in this evidence environment, and the check itself reports skip with 'no reachable container runtime'."
+          "With this, all four P3-01 implementation tasks map to a check in docs/qualification-suite.md (a task -> check table added for M5-P3-01 alongside the M5-P4-01 one), so the owner's single run produces evidence for every task rather than for two of four. Story stays blocked: still no container runtime in this evidence environment, and the check itself reports skip with 'no reachable container runtime'.",
+          "Operator run 2026-10-31 (record: dist/qualification/qualification-20261031T091931Z.json, transcribed in docs/m5-2-0-sandbox-isolation-evidence.md): ./scripts/qualify_environment.sh on the target Apple M5, Docker Desktop 29.5.3 build d1c06ef, image python:3.12-slim at digest python@sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159 - 12 of 12 sandbox checks pass, verdict qualified.",
+          "Acceptance criterion 1 (positive and adversarial evidence for each claimed guarantee) observed in that run: p3.positive.execute exit 0 with the workspace write landing on the host; p3.adversarial.escape_matrix leaked=none (outside paths ENOENT, read-only root EROFS/EACCES, symlink target ABSENT); p3.adversarial.credentials HOME=/tmp with no host credential store visible; p3.adversarial.descendants 0 survivors; p3.adversarial.memory_limit exit 137.",
+          "The memory-limit check that failed on 2026-10-30 (exit 0, no counters) passed on 2026-10-31 as exit 137 with memory.max=536870912, memory.swap.max=536870912 and host SwapTotal=1048572 kB captured before and after the allocation. The earlier record is kept; the passing run supersedes it without explaining it (docs/m5-2-0-sandbox-memory-limit-finding.md).",
+          "Acceptance criterion 2 (unqualified guarantees remain unavailable) and 3 (no silent host fallback) observed in the same run: p3.product.no_host_fallback denies with PermissionError for a missing runtime in both the simulated and the real configuration (host_write simulated=False real=False), and p3.product.argv_parity reports the suite probes exactly the argv app._sandbox_command builds (17 flags match, 1 bind mount, privileged=False).",
+          "p3.product.isolation_smoke passed: scripts/isolation_smoke.py --live exit 0 with dependent_execution released under the observed container boundary - the first record in this repository where that gate released.",
+          "Residual measured by the same run and not waived: the engine turns '--memory 512m' with no '--memory-swap' into memory.swap.max=536870912, so the shipped '--memory=2g' has roughly 2 GiB of swap headroom (~4 GiB total ceiling) and the qualification binds to this machine, engine version and image digest. Pinning '--memory-swap' to '--memory' is follow-up hardening with its own re-qualification."
         ],
         "test_results": [
           {
@@ -2232,11 +2250,9 @@
           "The suite qualifies the product's argv, not its own: suite flags are asserted against app._sandbox_command in CI, and product-path probes call app._execute_limited rather than re-implementing execution.",
           "Qualification is not wired into server startup by default; documented ExecStartPre/Compose hooks are opt-in because boot-time memory pressure and boot-time isolation failures would misrepresent the service."
         ],
-        "blockers": [
-          "Live container runtime (Docker/Podman) unavailable in the M5-P0-04 evidence environment; container isolation remains unqualified (docs/m5-2-0-isolation-smoke-evidence.md). The tooling to qualify it now exists and needs one live run by the owner."
-        ],
-        "handoff_note": "Tooling complete and tested; the story is blocked on a live run, not on code. Do not flip status without a qualified JSON record bound to the runtime host.",
-        "next_action": "Owner: run `./scripts/qualify_environment.sh --sandbox` on the Docker host and attach the record. Agent: if a qualified record lands, add it to tracking.evidence and close the story; otherwise leave blocked.",
+        "blockers": [],
+        "handoff_note": "Qualified by an operator run on the target Apple M5 on 2026-10-31; the record and the residual it measures are in docs/m5-2-0-sandbox-isolation-evidence.md. Any other host, engine or image digest starts unqualified: re-run ./scripts/qualify_environment.sh there. Next hardening step is --memory-swap parity, which needs its own run.",
+        "next_action": "None for this story. Follow-up hardening (--memory-swap parity) is tracked as an open risk.",
         "readme_updated": true
       }
     },
