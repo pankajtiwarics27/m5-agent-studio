@@ -214,6 +214,22 @@ _EP_SENSITIVE_ABS_PREFIXES: tuple[str, ...] = (
     "/usr/",
 )
 _EP_WRAPPER_BINARIES: frozenset[str] = frozenset({"env", "nice", "nohup", "time", "command", "exec"})
+# Shells whose `-c "<command>"` payload is a *second* command line: it is parsed
+# and inspected exactly like the outer one, so `sh -c 'cat .env'` cannot reach a
+# secret that `cat .env` is refused.
+_EP_SHELL_INTERPRETERS: frozenset[str] = frozenset(
+    {"sh", "bash", "zsh", "dash", "ksh", "ash", "mksh", "fish", "busybox"}
+)
+# Interpreters that execute inline program text which no inspector here can
+# parse. Their payload is not executed by this policy; instead every path-like
+# substring of it is checked against the same confinement and secret rules.
+_EP_INLINE_CODE_INTERPRETERS: frozenset[str] = frozenset({"perl", "ruby", "node", "nodejs", "php", "lua"})
+_EP_MAX_NESTING = 3
+_EP_INLINE_PATH_RE = re.compile(
+    r"(?:~|\$HOME|\$\{HOME\})(?:/[\w.\-]+)+"  # ~/... and $HOME/... escapes
+    r"|/[\w.\-]+(?:/[\w.\-]+)*"  # absolute paths
+    r"|(?:[\.]{1,2}/|[\w.\-]+/)+[\w.\-]*"  # relative paths with a separator
+)
 _EP_FORBIDDEN_PRIV_BINARIES: frozenset[str] = frozenset(
     {"sudo", "su", "doas", "chroot", "nsenter", "unshare", "docker", "podman", " nerdctl".strip()}
 )
@@ -1693,6 +1709,68 @@ def _ep_space_unquoted_redirections(segment: str) -> str:
     return "".join(out)
 
 
+def _ep_inline_shell_payload(tokens: Sequence[str], cmd_idx: int) -> str | None:
+    """The inline command of ``shell -c "<cmd>"`` (also ``-lc``/``-ec``/``busybox sh -c``).
+
+    Returns ``None`` when the tokens hold no inline command (a script *path* is a
+    separate, uninspected case: this policy reads command lines, not files).
+    """
+    exe = tokens[cmd_idx].rsplit("/", 1)[-1].lower()
+    idx = cmd_idx + 1
+    if exe == "busybox":
+        while idx < len(tokens) and tokens[idx].startswith("-"):
+            idx += 1
+        if idx >= len(tokens):
+            return None
+        exe = tokens[idx].rsplit("/", 1)[-1].lower()
+        idx += 1
+    if exe not in _EP_SHELL_INTERPRETERS:
+        return None
+    while idx < len(tokens):
+        tok = tokens[idx]
+        if tok == "--command":
+            return tokens[idx + 1] if idx + 1 < len(tokens) else None
+        if not tok.startswith("-"):
+            return None  # a script path: nothing inline to inspect
+        if not tok.startswith("--") and tok.endswith("c"):
+            return tokens[idx + 1] if idx + 1 < len(tokens) else None
+        idx += 1
+    return None
+
+
+def _ep_inline_code_payload(tokens: Sequence[str], cmd_idx: int) -> str | None:
+    """Inline program text for interpreters that execute it without a file."""
+    exe = tokens[cmd_idx].rsplit("/", 1)[-1].lower()
+    if exe not in _EP_INLINE_CODE_INTERPRETERS:
+        return None
+    for idx in range(cmd_idx + 1, len(tokens)):
+        tok = tokens[idx]
+        if tok.startswith("--eval="):
+            return tok.split("=", 1)[1] or None
+        if tok in ("-e", "-r", "--eval", "--print") and idx + 1 < len(tokens):
+            return tokens[idx + 1]
+        if not tok.startswith("-"):
+            return None
+    return None
+
+
+def _ep_inspect_inline_code_paths(payload: str, *, workspace_root: Path | None) -> PolicyViolation | None:
+    """Check the path-like substrings of uninspectable inline code.
+
+    This is a token scan, not an execution model: it catches the honest form
+    (``perl -e 'open(F,">>.git/config")'``) and cannot see a path assembled at
+    runtime. The boundary for that is the sandbox (M5-P3-01), which is why this
+    is described as defence in depth in docs/execution-profiles.md.
+    """
+    for match in _EP_INLINE_PATH_RE.finditer(payload or ""):
+        viol = _ep_check_candidate_path_token(
+            match.group(0), workspace_root=workspace_root, strict_abs_check=True
+        )
+        if viol is not None:
+            return viol
+    return None
+
+
 def inspect_subprocess_policy(
     command_or_code: str,
     *,
@@ -1821,6 +1899,49 @@ def inspect_subprocess_policy(
                         if py_viol is not None:
                             return py_viol
                         break
+
+            # `sh -c "<command>"` is a second command line: inspect it as one.
+            # Without this the payload is a single quoted token that the path
+            # checks below cannot parse, and `sh -c 'cat .env'` would be allowed
+            # where `cat .env` is refused.
+            shell_payload = _ep_inline_shell_payload(tokens, cmd_idx)
+            if shell_payload is not None and _depth < _EP_MAX_NESTING:
+                shell_viol = inspect_subprocess_policy(
+                    shell_payload,
+                    python_code=False,
+                    workspace_root=workspace_root,
+                    _depth=_depth + 1,
+                )
+                if shell_viol is not None:
+                    return shell_viol
+
+            # A shell with no `-c` payload and no script argument reads its
+            # command from stdin (`curl ... | sh`, `sh <<EOF`), which no
+            # command-line inspection can see. Fail closed.
+            if (
+                exe_base in _EP_SHELL_INTERPRETERS
+                and shell_payload is None
+                and not any(
+                    not tok.startswith("-")
+                    for tok in tokens[cmd_idx + 1 :]
+                )
+            ):
+                return PolicyViolation(
+                    error_code="policy_violation",
+                    rule="uninspectable_shell_source",
+                    message=(
+                        f"Refused: `{exe_base}` with no inline command or script reads its command "
+                        "from stdin, which cannot be policy-checked; pass `-c <command>` or a script path."
+                    ),
+                )
+
+            # Inline program text for interpreters there is no parser for: check
+            # every path-like substring against the same rules.
+            code_payload = _ep_inline_code_payload(tokens, cmd_idx)
+            if code_payload is not None:
+                code_viol = _ep_inspect_inline_code_paths(code_payload, workspace_root=workspace_root)
+                if code_viol is not None:
+                    return code_viol
 
         skip_redir_ops = {">", ">>", "<", "<<", "<>", "&>", "&>>", "1>", "1>>", "2>", "2>>", ">&2", "2>&1", "1>&2"}
         py_inline_idx: int | None = None

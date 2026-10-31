@@ -125,7 +125,7 @@
   "session_state": {
     "active_story": null,
     "last_completed_story": "M5-P3-02",
-    "last_checkpoint": "2026-10-31T03:34:00Z",
+    "last_checkpoint": "2026-10-31T03:49:55Z",
     "last_session_id": "arena/46877a13-m5-agent-studio",
     "next_recommended_story": "M5-P3-03",
     "open_risks": [
@@ -138,7 +138,8 @@
       "Harness task-event store (task_events.py, M5-P1-07) and workspace snapshot store (workspace_snapshots.py, M5-P2-01) assume a single application process per session, matching the worker-lease model; cross-process concurrent appends are unsupported and not claimed safe.",
       "The edit ledger and observed-version index assume one application process per session (same assumption as the durable event stream and worker leases); a second process editing the same workspace is not detected. The .harnesses/edits directory is bounded per session (4 MiB rotation) but has no cross-session pruning (M5-P2-02).",
       "The M5-P2-03 rollback journal stores both the pre- and post-edit bytes of every managed edit in the edit CAS (.harnesses/edits/blobs) and has no garbage collection; the store grows with edit volume until a retention story adds pruning. Rollback covers managed edits only, and its line-based merge refuses rather than guesses on a user edit inside a region the batch wrote."
-    ],
+    ,
+      "M5-P3-02 review (post-merge, independent session): docs/execution-profiles.md claimed 'recursive inspection of inline sh -c / bash -c' payloads, but the code only handled python -c, so a quoted payload token (sh -c 'cat .env', bash -c 'echo x > .git/hooks/pre-commit', perl/node/ruby -e '<path>') was allowed where the same command written directly was refused. Fixed in the reviewing session's PR by re-parsing shell -c payloads (bounded to three levels), refusing a shell that reads its command from stdin, and checking the path tokens of perl/ruby/node/php/lua inline code; the remaining limits of pre-execution text inspection (script file contents, runtime-built paths, encoded payloads) are now stated in docs/execution-profiles.md instead of being implied away. The sandbox (M5-P3-01) remains the boundary for those, which is another reason unqualified isolation keeps host execution unavailable."],
     "last_readme_sync": "2026-10-31T03:34:00Z",
     "last_verified_commit": "3f73d2db4ae6064ac557d2022b617dfa661d44fd",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md"
