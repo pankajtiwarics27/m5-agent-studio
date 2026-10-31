@@ -123,11 +123,11 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "M5-P6-03",
     "last_completed_story": "M5-P6-02",
-    "last_checkpoint": "2026-10-31T16:10:00Z",
+    "last_checkpoint": "2026-10-31T16:18:00Z",
     "last_session_id": "arena/eb4484b8-m5-agent-studio",
-    "next_recommended_story": "M5-P6-03 (Advanced calibration and multi-model experiments; final owner-authorized optional Phase P6 story).",
+    "next_recommended_story": "Complete M5-P6-03 (Advanced calibration and multi-model experiments) to finish Phase P6.",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
       "RESOLVED 2026-10-31 (M5-P3-01): container isolation is QUALIFIED on the target host. The operator run (Apple M5, Docker Desktop 29.5.3, image python:sha256:aa943ce41142...) passed all 12 sandbox checks, including p3.adversarial.memory_limit as exit 137 with memory.max=536870912 and memory.swap.max=536870912 captured before and after a 3 GiB allocation, and isolation_smoke.py --live released dependent_execution under the observed boundary (docs/m5-2-0-sandbox-isolation-evidence.md). The 2026-10-30 run that failed that check (exit 0, no counters) is kept; the passing run supersedes it without explaining it. Two limits travel with the record: the qualification binds to that machine, engine version and image digest, so every other host starts unqualified; and the engine's default swap allowance means the shipped '--memory=2g' ceilings at RAM + swap (about 4 GiB), so pinning '--memory-swap' to '--memory' remains an open hardening item that needs its own re-qualification.",
@@ -249,7 +249,7 @@
       ],
       "status": "in_progress",
       "exit_gate": "Only evidence-justified optional stories are promoted.",
-      "progress_percent": 67
+      "progress_percent": 75
     }
   ],
   "stories": [
@@ -3503,21 +3503,21 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P6-03: Advanced calibration and multi-model experiments. Objective: Evaluate optional routing improvements under hardware and privacy constraints. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Benchmark measured recovery costs and drift; Test model affinity/hysteresis and sequential handoffs; Keep cloud opt-in and privacy constrained; Do not enable unmeasured simultaneous residency. Acceptance: Measured verified completion benefit; 24 GB resource admission upheld; Cloud never enabled without eligibility. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 15,
+        "attempts": 1,
+        "started_at": "2026-10-31T16:18:00Z",
+        "updated_at": "2026-10-31T16:18:00Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/eb4484b8-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
         "test_results": [],
         "decisions": [],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "handoff_note": "Claimed M5-P6-03 on arena/eb4484b8-m5-agent-studio after merging M5-P6-02 (PR #105 at 71eab00).",
+        "next_action": "Inspect model_admission.py, cloud_eligibility.py, session_recovery.py, child_delegation.py, and app.py routing call paths; implement advanced calibration, affinity/hysteresis, sequential handoffs, and paired benchmark evaluation.",
         "readme_updated": false
       }
     }
