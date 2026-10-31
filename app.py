@@ -87,6 +87,7 @@ import process_supervision
 import resource_admission  # noqa: F401 - inlined into studio.py; execution_profiles/model_admission use it
 import scoped_grants
 import verification_evidence
+import workspace_quarantine
 import workspace_snapshots
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
 
@@ -8050,6 +8051,42 @@ def _observed_versions() -> edit_transactions.ObservedVersionIndex:
     return edit_transactions.ObservedVersionIndex(HARNESS_STORE_DIR)
 
 
+def _workspace_quarantined_denial(root_res: Path, rel_s: str) -> dict[str, Any] | None:
+    """Refuse a workspace mutation while the workspace is frozen under quarantine (M5-P5-01).
+
+    Freezing is not advisory: while an unreleased quarantine covers this workspace,
+    every managed edit is refused so the evidence being reconstructed stays stable.
+    Unreadable quarantine state denies (fail closed) rather than admits the edit.
+    """
+    try:
+        active = workspace_quarantine.find_active_quarantine(HARNESS_STORE_DIR, root_res)
+    except Exception:  # noqa: BLE001 - a broken quarantine record must never admit a mutation
+        return {
+            "ok": False,
+            "error_code": "workspace_quarantined",
+            "output": (
+                "Refusing to modify the workspace: quarantine state could not be read. "
+                "Mutations stay frozen until an operator inspects the quarantine store."
+            ),
+            "diff": "",
+            "elapsed_ms": 1,
+        }
+    if active is None:
+        return None
+    return {
+        "ok": False,
+        "error_code": "workspace_quarantined",
+        "output": (
+            f"Refusing to modify {rel_s!r}: the workspace is quarantined as {active.quarantine_id!r} "
+            f"(reason: {active.reason}). Reconstruct into a new workspace and release the quarantine "
+            "before further edits."
+        ),
+        "diff": "",
+        "elapsed_ms": 1,
+        "quarantine_id": active.quarantine_id,
+    }
+
+
 def _edit_conflict_result(
     rel_s: str,
     *,
@@ -9405,6 +9442,9 @@ async def _execute_harness_tool_inner(
                     "diff": "",
                     "elapsed_ms": 1,
                 }
+            quarantined = _workspace_quarantined_denial(root_res, rel_s)
+            if quarantined is not None:
+                return quarantined
             snap_sid = _snapshot_session_id(sess)
             snap_task_id = str(sess.get("task_id") or sess.get("id") or "").strip() or None
             observed_sha = None
