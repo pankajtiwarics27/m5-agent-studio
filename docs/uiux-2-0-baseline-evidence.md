@@ -1,5 +1,17 @@
 # M5 2.0 UI/UX baseline evidence
 
+> **Review hold (2026-10-31):** Do not run the capture recipe below from a real
+> checkout while [#108](https://github.com/pankajtiwarics27/m5-agent-studio/issues/108)
+> remains open: the demo can read that checkout's harness data. Use a disposable
+> source copy with an empty `.harnesses` directory and resolve the capture
+> authentication-prompt timeout before accepting screenshots. The dry run only
+> validates manifest shape and prints a plan; it does **not** check tab IDs against
+> the UI (`scripts/validate_screenshots.py` checks those separately). The test
+> table also mixes results from different revisions: 1,588 tests and the updated
+> route map require the #115 change, not the listed `main` commit `ecd7816`.
+> See the [review](https://github.com/pankajtiwarics27/m5-agent-studio/pull/115#issuecomment-6543099994);
+> the P0-05 owner must reconcile that evidence. The formal baseline remains 0/6.
+
 This page records the baseline `UIUX-P0-05` exists to establish: what the test
 suite and the repository checks actually produce on this checkout, and what the
 screenshot pipeline would capture if a browser were available. The test half is
