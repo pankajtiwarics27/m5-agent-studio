@@ -125,8 +125,8 @@
   "session_state": {
     "active_story": null,
     "last_completed_story": "M5-P2-05",
-    "last_checkpoint": "2026-10-31T02:51:42Z",
-    "last_session_id": "arena/e22714be-m5-agent-studio",
+    "last_checkpoint": "2026-10-31T03:00:54Z",
+    "last_session_id": "arena/2a4164e4-m5-agent-studio",
     "next_recommended_story": "M5-P3-01",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
@@ -2149,7 +2149,7 @@
         "progress_percent": 25,
         "attempts": 1,
         "started_at": "2026-10-30T19:31:57Z",
-        "updated_at": "2026-10-31T02:51:31Z",
+        "updated_at": "2026-10-31T03:00:54Z",
         "completed_at": null,
         "owner_session": "arena/bf5fe1a6-m5-agent-studio",
         "commit_sha": "44c16b4",
@@ -2171,18 +2171,20 @@
           "Blocker unchanged: no container runtime exists in this evidence environment (docker/podman not on PATH). The live run therefore reports M5-P3-01 as blocked, with every container probe recorded skip and the reason; no isolation guarantee is claimed. Evidence: scripts/qualify_environment.py --all locally exits 2 with `M5-P3-01: blocked`.",
           "Next action: the owner runs `python3 scripts/qualify_environment.py --sandbox --json <path> --markdown <path>` (or ./scripts/qualify_environment.sh) on the Docker host; only a `qualified` record may move this story off blocked (docs/qualification-suite.md).",
           "Runtime selection fails closed: an explicitly requested `--runtime` that is not installed blocks the run instead of falling back to another backend (tests: test_an_explicit_missing_runtime_is_never_replaced_by_another_backend), and a host that has Docker but not the configured image reports unqualified/exit 1 rather than a pass (test_a_runtime_without_the_image_is_unqualified_never_qualified).",
-          "First-run hardening of the qualification tooling (so the owner's run cannot report a false verdict): --dry-run prints every command without executing any of them (tests: test_dry_run_prints_the_plan_and_touches_nothing, test_dry_run_is_explicit_about_skipped_measurements); a missing image is now blocked/exit 2 instead of unqualified, because nothing about isolation was observed (test_a_missing_image_blocks_the_suite_instead_of_accusing_isolation, test_a_runtime_without_the_image_never_produces_a_pass); the positive probe reports what the container sees in /workspace, so a mount the runtime does not share (macOS file sharing, SELinux labels) is blocked rather than reported as a leak, and dependent probes are skipped (test_an_unusable_workspace_mount_is_blocked_not_unqualified, test_an_unwritable_empty_mount_is_blocked); unqualified is now reserved for observed violations, documented in docs/qualification-suite.md."
+          "First-run hardening of the qualification tooling (so the owner's run cannot report a false verdict): --dry-run prints every command without executing any of them (tests: test_dry_run_prints_the_plan_and_touches_nothing, test_dry_run_is_explicit_about_skipped_measurements); a missing image is now blocked/exit 2 instead of unqualified, because nothing about isolation was observed (test_a_missing_image_blocks_the_suite_instead_of_accusing_isolation, test_a_runtime_without_the_image_never_produces_a_pass); the positive probe reports what the container sees in /workspace, so a mount the runtime does not share (macOS file sharing, SELinux labels) is blocked rather than reported as a leak, and dependent probes are skipped (test_an_unusable_workspace_mount_is_blocked_not_unqualified, test_an_unwritable_empty_mount_is_blocked); unqualified is now reserved for observed violations, documented in docs/qualification-suite.md.",
+          "The suite had been qualifying a *different* container than the product builds: container_argv was missing --env HOME=/tmp, TMPDIR=/tmp, PYTHONDONTWRITEBYTECODE=1, --ipc=private, --ulimit nofile, --entrypoint /bin/sh and the `exec python3 -c` shell form, and used a 64m tmpfs where the product uses 256m. It now reproduces app._sandbox_command flag for flag, and p3.product.argv_parity re-checks that on the machine running the qualification (compare_argv; tests: test_suite_argv_matches_the_product_argv, test_argv_parity_detects_a_missing_product_flag), so future product drift fails the owner's run instead of silently qualifying stale flags.",
+          "P3-01 task 'credentials' now has a probe of its own rather than riding on an environment-variable sentinel: p3.adversarial.credentials runs inside the sandbox and fails if ~/.aws/credentials, ~/.ssh/id_rsa, ~/.ssh/id_ed25519, ~/.netrc, ~/.docker/config.json, ~/.kube/config or the gcloud ADC file is visible, or if HOME is not the product's throwaway /tmp. The escape matrix also reports the errno class of every refusal (reads:outside-direct=ENOENT,...) so a pass is explainable instead of a bare 'denied', and the symlink case now records symlink-target=VISIBLE/ABSENT explicitly."
         ],
         "test_results": [
           {
             "command": ".venv/bin/python -m pytest -q",
             "exit_code": 0,
-            "result": "1032 passed, 1 skipped (opt-in live container test), 1 warning in 49.20s"
+            "result": "1035 passed, 1 skipped (opt-in live container test), 1 warning in 49.14s"
           },
           {
             "command": ".venv/bin/python -m pytest tests/test_qualify_environment.py -q",
             "exit_code": 0,
-            "result": "51 passed"
+            "result": "54 passed (3 new, 2 ported to the literal-based probe API)"
           },
           {
             "command": ".venv/bin/ruff check .",
@@ -2200,14 +2202,14 @@
             "result": "all passed"
           },
           {
-            "command": "sh scripts/qualify_environment.sh --sandbox --dry-run",
+            "command": ".venv/bin/python scripts/qualify_environment.py --sandbox --dry-run",
             "exit_code": 0,
-            "result": "plan printed (hardened argv, one bind mount, --pull=never, --network=none), nothing executed, no artifacts written"
+            "result": "plan shows the product's full flag set and the shell-exec form; nothing executed"
           },
           {
             "command": ".venv/bin/python scripts/qualify_environment.py --sandbox",
             "exit_code": 2,
-            "result": "M5-P3-01: blocked (no container runtime on PATH in this environment); nothing claimed"
+            "result": "M5-P3-01: blocked (no container runtime on PATH here); nothing claimed"
           }
         ],
         "decisions": [

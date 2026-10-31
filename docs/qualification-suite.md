@@ -123,17 +123,27 @@ Note that `ExecStartPre` refusal (exit `1`/`2`) stops the service. Use `-` as th
 | `p3.image.local` | The configured image is already present (`image inspect`); nothing is pulled. Absent → `blocked`, with the exact `pull` command. |
 | `p3.positive.execute` | Positive compatibility: the container lists `/workspace`, code runs, and its write lands on the host. If the mount is missing/empty or unwritable the check is `blocked` (setup), not failed. |
 | `p3.adversarial.escape_matrix` | Inside the container: a host-only canary file via direct path, `/workspace/..` traversal, and `/proc/1/root`, read-only rootfs write attempts (`/` and `/etc/hostname`), a workspace symlink pointing outside, direct and host-loopback TCP egress, an inherited host environment sentinel, and a raw socket are all refused. |
+| `p3.adversarial.credentials` | Inside the container `HOME` is `/tmp` and `~/.aws/credentials`, `~/.ssh/*`, `~/.netrc`, `~/.docker/config.json`, `~/.kube/config` and the gcloud ADC file are all absent. A host credential store visible in the sandbox fails the check. |
 | `p3.adversarial.memory_limit` | A 3 GiB allocation dies under `--memory 512m`. |
 | `p3.adversarial.descendants` | A background `sleep` descendant does not survive the container (`docker ps --filter name=`). |
 | `p3.product.argv` | The **product's** `_sandbox_command` still carries `--network=none`, `--read-only`, `--cap-drop=ALL`, `--security-opt=no-new-privileges`, `--pull=never`, the pids/memory/cpu limits, exactly one bind mount, and no `--privileged`. |
+| `p3.product.argv_parity` | The argv the suite probes with is compared, **at run time on this machine**, against `app._sandbox_command`: same flag set, exactly one bind mount. If the product changes and the suite is not updated, this fails instead of quietly qualifying stale flags. |
 | `p3.product.no_host_fallback` | With the runtime name pointed at a nonexistent binary the product denies; with the real configuration no marker file appears on the host. |
 | `p3.product.isolation_smoke` | `scripts/isolation_smoke.py --live` exits 0. |
 
-The suite's own container flags are asserted against the product's argv by
-`tests/test_qualify_environment.py::test_container_argv_matches_the_product_hardening_flags`,
-so the suite cannot quietly qualify a sandbox the product does not build. A leak
-in the escape matrix fails the suite; there is no interpretation step that can
-turn it into a pass.
+The suite's own container flags are asserted against the product's argv twice:
+statically in CI
+(`tests/test_qualify_environment.py::test_suite_argv_matches_the_product_argv`)
+and dynamically in `p3.product.argv_parity` on the machine that runs the
+qualification. The suite carries the product's full hardening set —
+`--network=none`, `--read-only`, `--cap-drop=ALL`,
+`--security-opt=no-new-privileges`, `--pull=never`,
+`--env HOME=/tmp TMPDIR=/tmp PYTHONDONTWRITEBYTECODE=1`, `--pids-limit`,
+`--memory`, `--cpus`, `--ipc=private`, `--ulimit nofile`, a 256m `noexec` `/tmp`
+tmpfs, one bind mount, `--entrypoint /bin/sh` and the same `exec python3 -c`
+shell form — so it cannot quietly qualify a sandbox the product does not build.
+A leak in the escape matrix fails the suite; there is no interpretation step that
+can turn it into a pass.
 
 ## The hardware suite (M5-P4-01)
 
@@ -195,7 +205,7 @@ Verdicts mean exactly this:
 
 ## Tests
 
-`tests/test_qualify_environment.py` (51 tests) pins the properties above without a
+`tests/test_qualify_environment.py` (54 tests) pins the properties above without a
 container runtime: verdict semantics, required-versus-optional checks, argv
 parity with the product, the blocked path when no runtime, image or usable
 workspace mount is missing, the failure path when a leak is observed,

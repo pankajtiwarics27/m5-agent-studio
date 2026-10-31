@@ -34,15 +34,17 @@ argv:
 1.  runtime CLI present and its daemon reachable;
 2.  the configured image is already local (no implicit pull);
 3.  positive compatibility: the sandbox runs code and its workspace writes land;
-4.  path traversal and absolute outside-workspace paths are not readable;
+4.  path traversal and absolute outside-workspace paths are not readable (the
+    errno class of each refusal is recorded, so absence and denial differ);
 5.  a workspace symlink pointing outside does not disclose the target;
-6.  direct network egress is refused;
-7.  host environment credentials are not visible inside the sandbox;
+6.  direct and host-loopback network egress are refused;
+7.  host credential stores are absent and ``HOME`` is the throwaway ``/tmp``;
 8.  a spawned descendant does not survive the sandbox lifetime;
 9.  resource limits hold (memory cap and pids cap);
 10. dropped capabilities hold (raw sockets refused);
-11. no silent host fallback: without a working runtime the product path denies;
-12. ``scripts/isolation_smoke.py --live`` exits 0 with its own checks.
+11. the suite's own container flags equal the product's, checked at run time;
+12. no silent host fallback: without a working runtime the product path denies;
+13. ``scripts/isolation_smoke.py --live`` exits 0 with its own checks.
 
 Hardware suite (M5-P4-01):
 
@@ -419,16 +421,18 @@ def container_argv(
     code: str,
     *,
     name: str = "",
-    memory: str = "1g",
+    memory: str = "2g",
     pids_limit: int = 128,
-    cpus: str = "1",
-    code_args: Sequence[str] = (),
+    cpus: str = "2",
 ) -> list[str]:
-    """Build a hardened, ``--rm`` sandbox invocation mirroring the product flags.
+    """Build the sandbox invocation the *product* would build, for probing.
 
-    Every flag here is asserted against ``app._sandbox_command`` by
-    ``tests/test_qualify_environment.py``; a check that drifts from the product
-    would qualify something the product does not actually do.
+    This mirrors ``app._sandbox_command`` flag for flag (verified at run time by
+    ``p3.product.argv_parity`` and in CI by
+    ``tests/test_qualify_environment.py::test_container_argv_matches_the_product``):
+    if the two ever drift, the suite would qualify a sandbox the product does not
+    actually use. ``memory``/``cpus`` are overridable only so the resource-limit
+    probe can run *stricter* than the product.
     """
     argv = [
         runtime,
@@ -439,19 +443,58 @@ def container_argv(
         "--read-only",
         "--cap-drop=ALL",
         "--security-opt=no-new-privileges",
-        "--pids-limit", str(pids_limit),
-        "--memory", memory,
-        "--cpus", cpus,
-        "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=64m",
+        "--env", "HOME=/tmp",
+        "--env", "TMPDIR=/tmp",
+        "--env", "PYTHONDONTWRITEBYTECODE=1",
+        f"--pids-limit={pids_limit}",
+        f"--memory={memory}",
+        f"--cpus={cpus}",
+        "--ipc=private",
+        "--ulimit", "nofile=1024:1024",
+        "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=256m",
         "--mount", f"type=bind,source={workspace.resolve()},target=/workspace",
         "--workdir", "/workspace",
+        "--entrypoint", "/bin/sh",
     ]
     if os.name == "posix" and hasattr(os, "getuid") and hasattr(os, "getgid"):
         argv.extend(["--user", f"{os.getuid()}:{os.getgid()}"])
     if name:
         argv.extend(["--name", name])
-    argv.extend([image, "python3", "-c", code, *code_args])
+    argv.append(image)
+    argv.extend(["-lc", f"exec python3 -c {shlex.quote(code)}"])
     return argv
+
+
+def argv_flag_names(argv: Sequence[str]) -> list[str]:
+    """Long option names in ``argv``, without values or duplicates."""
+    seen: list[str] = []
+    for part in argv:
+        if part.startswith("--"):
+            flag = part.split("=", 1)[0]
+            if flag not in seen:
+                seen.append(flag)
+    return seen
+
+
+def compare_argv(product_argv: Sequence[str], suite_argv: Sequence[str]) -> tuple[bool, str]:
+    """Do the suite's probes use exactly the flags the product builds?
+
+    ``--name`` is bookkeeping rather than a guarantee, so either side may name the
+    container freely. Everything else must match, including exactly one bind mount.
+    """
+    ignore = {"--name"}
+    product_flags = [flag for flag in argv_flag_names(product_argv) if flag not in ignore]
+    suite_flags = [flag for flag in argv_flag_names(suite_argv) if flag not in ignore]
+    missing = [flag for flag in product_flags if flag not in suite_flags]
+    extra = [flag for flag in suite_flags if flag not in product_flags]
+    product_binds = [part for part in product_argv if part.startswith("type=bind")]
+    suite_binds = [part for part in suite_argv if part.startswith("type=bind")]
+    if missing or extra or len(product_binds) != 1 or len(suite_binds) != 1:
+        return False, (
+            f"suite is missing {missing or 'nothing'}, adds {extra or 'nothing'}, "
+            f"bind mounts product={len(product_binds)} suite={len(suite_binds)}"
+        )
+    return True, f"flags match ({len(product_flags)}); bind mounts={len(suite_binds)}"
 
 
 def _looks_denied(text: str) -> bool:
@@ -485,49 +528,97 @@ print('cwd:' + os.getcwd())
 print('positive-ok')
 """
 
-_ESCAPE_CODE = r"""
-import os, pathlib, socket, sys
-outside_raw = sys.argv[1] if len(sys.argv) > 1 else ''
-link_raw = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else '/workspace/qualify-link'
-ro_csv = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3] else '/outside-root-write-probe,/etc/hostname'
-host_port = int(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4].isdigit() else 0
-primary_net = sys.argv[5] if len(sys.argv) > 5 and sys.argv[5] else '1.1.1.1:443'
-failures = []
-if not outside_raw:
-    failures.append('missing-outside-arg')
-else:
-    suffix = outside_raw if outside_raw.startswith('/') else ('/' + outside_raw)
-    probes = (
-        ('outside-direct', outside_raw),
-        ('outside-traversal', '/workspace/..' + suffix),
-        ('outside-proc-root', '/proc/1/root' + suffix),
-    )
-    for label, candidate in probes:
-        try:
-            pathlib.Path(candidate).read_text(encoding='utf-8')
-        except (OSError, PermissionError):
+_CREDENTIAL_CODE = r"""
+import os, pathlib
+home = os.environ.get('HOME', '')
+relative = (
+    '.aws/credentials', '.ssh/id_rsa', '.ssh/id_ed25519', '.netrc',
+    '.docker/config.json', '.kube/config',
+    '.config/gcloud/application_default_credentials.json',
+)
+visible = []
+for rel in relative:
+    for base in (home, '/root', '/home/user'):
+        if not base:
             continue
-        failures.append(label)
-for ro_target in [item for item in ro_csv.split(',') if item]:
+        candidate = pathlib.Path(base) / rel
+        try:
+            if candidate.is_file():
+                visible.append(str(candidate))
+        except OSError:
+            pass
+print('home:' + (home or '<unset>'))
+print('credentials:' + (','.join(visible) if visible else 'none'))
+if visible:
+    raise SystemExit(3)
+"""
+
+
+def _escape_probe_code(
+    outside: Path,
+    link: str,
+    read_only_targets: Sequence[str],
+    host_port: int,
+    network_target: str,
+) -> str:
+    """Adversarial probe with its inputs baked in as literals.
+
+    Literals rather than ``sys.argv`` because the product runs code as
+    ``/bin/sh -lc 'exec python3 -c …'`` and extra argv would land in the shell, not
+    the interpreter.
+    """
+    return f"""
+import errno, os, pathlib, socket
+
+failures = []
+reads = []
+outside = {str(outside)!r}
+suffix = outside if outside.startswith('/') else '/' + outside
+for label, candidate in (
+    ('outside-direct', outside),
+    ('outside-traversal', '/workspace/..' + suffix),
+    ('outside-proc-root', '/proc/1/root' + suffix),
+):
+    try:
+        pathlib.Path(candidate).read_text(encoding='utf-8')
+    except (OSError, PermissionError) as exc:
+        reads.append('%s=%s' % (label, errno.errorcode.get(exc.errno, type(exc).__name__)))
+        continue
+    reads.append('%s=VISIBLE' % label)
+    failures.append(label)
+
+for ro_target in [item for item in {list(read_only_targets)!r} if item]:
     try:
         with open(ro_target, 'a', encoding='utf-8'):
             pass
-    except (OSError, PermissionError):
+    except (OSError, PermissionError) as exc:
+        reads.append('readonly-root=%s' % errno.errorcode.get(exc.errno, type(exc).__name__))
         continue
     failures.append('readonly-root')
     break
-link = pathlib.Path(link_raw)
+
+link = pathlib.Path({link!r})
 if not link.is_symlink():
     failures.append('symlink-missing')
 else:
+    target = pathlib.Path(os.readlink(link))
+    if target.exists():
+        reads.append('symlink-target=VISIBLE')
+        failures.append('symlink-target-visible')
+    else:
+        reads.append('symlink-target=ABSENT')
     try:
         link.read_text(encoding='utf-8')
-    except (OSError, PermissionError):
-        pass
+    except (OSError, PermissionError) as exc:
+        reads.append('symlink-read=%s' % errno.errorcode.get(exc.errno, type(exc).__name__))
     else:
         failures.append('symlink')
-net_host, _, net_port_s = primary_net.rpartition(':')
-targets = [(net_host or '1.1.1.1', int(net_port_s) if net_port_s.isdigit() else 443)]
+
+print('reads:' + ','.join(reads))
+
+host, _, port = {network_target!r}.rpartition(':')
+targets = [(host or '1.1.1.1', int(port) if port.isdigit() else 443)]
+host_port = {int(host_port)}
 if host_port > 0:
     targets.extend([('127.0.0.1', host_port), ('host.docker.internal', host_port)])
 for host, port in targets:
@@ -542,6 +633,7 @@ for host, port in targets:
         break
     finally:
         sock.close()
+
 if os.environ.get('STUDIO_QUALIFICATION_SENTINEL'):
     failures.append('env')
 try:
@@ -554,6 +646,7 @@ print('denials:' + (','.join(failures) if failures else 'none'))
 if failures:
     raise SystemExit(3)
 """
+
 
 _MEMORY_CODE = "import sys\nbuf = bytearray(3 * 1024 ** 3)\nprint('allocated', len(buf))"
 
@@ -744,35 +837,53 @@ def sandbox_suite(
             except OSError:
                 listener.close()
                 listener = None  # type: ignore[assignment]
+            code = _escape_probe_code(
+                outside=outside,
+                link="/workspace/qualify-link",
+                read_only_targets=("/outside-root-write-probe", "/etc/hostname"),
+                host_port=host_port,
+                network_target="1.1.1.1:443",
+            )
             try:
                 proc = run_command(
-                    container_argv(
-                        runtime,
-                        image,
-                        workspace,
-                        _ESCAPE_CODE,
-                        code_args=(
-                            str(outside),
-                            "/workspace/qualify-link",
-                            "/outside-root-write-probe,/etc/hostname",
-                            str(host_port),
-                        ),
-                    ),
-                    timeout=timeout,
-                    env=probe_env,
+                    container_argv(runtime, image, workspace, code), timeout=timeout, env=probe_env
                 )
             finally:
                 if listener is not None:
                     listener.close()
             marker = next((line for line in proc.stdout.splitlines() if line.startswith("denials:")), "")
             leaked = marker.partition(":")[2] if marker else "unknown"
+            reads = next((line.partition(":")[2] for line in proc.stdout.splitlines() if line.startswith("reads:")), "")
             ok = proc.returncode == 0 and leaked == "none"
-            return ok, f"exit {proc.returncode}; leaked={leaked}"
+            # The errno classes are part of the evidence: a denial by absence
+            # (ENOENT) and a denial by permission (EACCES) are different facts.
+            return ok, f"exit {proc.returncode}; leaked={leaked}; reads={reads or 'n/a'}"
 
         recorder.check(
             "p3.adversarial.escape_matrix", STORY_P3,
             "outside paths, symlink, network, host env and raw sockets are all refused",
             _denials, skip_reason=skip or ("" if mount_ok else "workspace bind mount unusable"),
+        )
+
+        def _credentials() -> tuple[bool, str]:
+            """Credentials: the sandbox must not inherit the host's secret stores."""
+            proc = run_command(
+                container_argv(runtime, image, workspace, _CREDENTIAL_CODE), timeout=timeout, env=probe_env
+            )
+            home = next((line.partition(":")[2] for line in proc.stdout.splitlines() if line.startswith("home:")), "")
+            creds = next(
+                (line.partition(":")[2] for line in proc.stdout.splitlines() if line.startswith("credentials:")),
+                "unknown",
+            )
+            # The product pins HOME=/tmp inside the sandbox; anything else means the
+            # suite is not measuring the configuration the product ships.
+            ok = proc.returncode == 0 and creds == "none" and home == "/tmp"
+            return ok, f"exit {proc.returncode}; HOME={home or 'unset'}; host credentials visible={creds}"
+
+        recorder.check(
+            "p3.adversarial.credentials", STORY_P3,
+            "host credential stores are absent and HOME is the throwaway /tmp",
+            _credentials, skip_reason=skip or ("" if mount_ok else "workspace bind mount unusable"),
         )
 
         def _memory_limit() -> tuple[bool, str]:
@@ -855,6 +966,28 @@ def sandbox_suite(
         recorder.check(
             "p3.product.argv", STORY_P3,
             "constructed sandbox argv carries every hardening flag", _argv,
+        )
+
+        def _argv_parity() -> tuple[bool, str]:
+            """The suite must probe the argv the product actually builds.
+
+            Verified here, on the machine that runs the qualification, so a future
+            change to ``app._sandbox_command`` fails this run instead of silently
+            qualifying flags the product no longer uses.
+            """
+            import unittest.mock  # noqa: PLC0415 - only needed for this probe
+
+            with tempfile.TemporaryDirectory(prefix="m5-qualify-parity-") as td:
+                root = Path(td)
+                with unittest.mock.patch.object(studio, "STUDIO_SANDBOX_RUNTIME", "/bin/sh"):
+                    product = studio._sandbox_command(root, "print(1)", python_code=True, container_name="m5-parity")
+                suite = container_argv(runtime or "docker", image, root, "print(1)", name="m5-parity")
+            return compare_argv(product, suite)
+
+        recorder.check(
+            "p3.product.argv_parity", STORY_P3,
+            "the suite probes exactly the argv the product builds", _argv_parity,
+            skip_reason="" if (runtime and runtime_name) else "no container runtime to compare against",
         )
 
         def _no_host_fallback() -> tuple[bool, str]:
@@ -1401,6 +1534,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(list(argv) if argv is not None else None)
 
 
+def _render_probe_argv(runtime: str, image: str, label: str) -> str:
+    """The probe argv for display, with the probe code elided so flags stay readable."""
+    argv = container_argv(runtime, image, Path("<workspace>"), "<probe>")[:-2]
+    return " ".join(shlex.quote(part) for part in argv) + f" -lc 'exec python3 -c {label}'"
+
+
 def render_plan(*, suites: Sequence[str], runtime_name: str, image: str, args: argparse.Namespace) -> str:
     """The exact commands the suite would run, without running any of them.
 
@@ -1418,10 +1557,9 @@ def render_plan(*, suites: Sequence[str], runtime_name: str, image: str, args: a
                 f"  2. {runtime} info",
                 f"  3. {runtime} image inspect {image}   (nothing is ever pulled)",
                 "  4. positive compatibility, inside a temporary workspace:",
-                f"     {shlex.join(container_argv(runtime, image, Path('<workspace>'), '<positive probe>'))}",
-                "  5. adversarial matrix (same flags, escape probe):",
-                f"     {shlex.join(container_argv(runtime, image, Path('<workspace>'), '<escape probe>'))}"
-                " <outside-path> /workspace/qualify-link /outside-root-write-probe,/etc/hostname <host-port>",
+                f"     {_render_probe_argv(runtime, image, '<positive compatibility probe>')}",
+                "  5. adversarial matrix (identical flags):",
+                f"     {_render_probe_argv(runtime, image, '<escape probe: outside paths, symlink, network, credentials>')}",
                 "  6. memory limit: same argv with --memory 512m and a 3 GiB allocation probe",
                 "  7. descendants: same argv with a named container that spawns `sleep 300`,",
                 f"     then `{runtime} ps --quiet --filter name=^<name>$`",
