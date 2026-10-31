@@ -6,7 +6,7 @@ heading gets renamed, and nothing notices until a reader hits a dead end. This
 validator is the documentation equivalent of the generated-artifact checks — it
 fails the build when the docs stop being true about themselves.
 
-It enforces four things and nothing else:
+It enforces five things and nothing else:
 
 1. every required document exists;
 2. each required document keeps its required sections (renaming a heading is a
@@ -15,7 +15,14 @@ It enforces four things and nothing else:
    angle-bracket placeholder) — this repository publishes evidence, not stubs;
 4. every relative Markdown link resolves to a file that exists, and every
    required document is reachable from ``README.md`` (otherwise it is written but
-   not published).
+   not published);
+5. the module counts ``README.md`` states about the code are the counts the code
+   actually has, and every module ``app.py`` imports is either inlined by
+   ``scripts/build_studio.py`` or one of the two documented special cases. Those
+   sentences were correct when written and went stale twice in one afternoon
+   (``M5-P3-03`` and ``M5-P3-04`` each added a module), which is exactly the kind
+   of rot a reader cannot detect. A sentence that is absent is not an error; a
+   sentence that is present must be true.
 
 Deliberately no network access: external URLs are not fetched, so a dead external
 link is not caught here.
@@ -23,6 +30,7 @@ link is not caught here.
 
 from __future__ import annotations
 
+import ast
 import re
 import sys
 from dataclasses import dataclass
@@ -157,6 +165,102 @@ def _link_errors(root: Path, document: Document) -> list[str]:
     return errors
 
 
+# The two modules `scripts/build_studio.py` emits through dedicated paths rather
+# than INLINED_MODULES (the orchestrator and the retention/privacy helpers are
+# injected as whole sections, not as sibling modules).
+_BUILD_SPECIAL_MODULES = frozenset({"workflow_orchestration", "history_privacy"})
+_SHIPPED_COUNT_RE = re.compile(r"(\d+) of (\d+) shipped Python modules are wired into the served app")
+_CONTRACT_COUNT_RE = re.compile(r"`app\.py` plus (\d+) small contract modules")
+_INLINES_COUNT_RE = re.compile(r"inlines (\d+) sibling modules")
+_TYPECHECKED_COUNT_RE = re.compile(r"\((\d+) of them type-checked")
+
+
+def _local_modules(root: Path) -> set[str]:
+    return {path.stem for path in root.glob("*.py")} - {"app", "studio"}
+
+
+def _imported_local_modules(root: Path) -> set[str]:
+    """Modules `app.py` imports, which is what "wired into the served app" means."""
+    tree = ast.parse((root / "app.py").read_text(encoding="utf-8"))
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names |= {alias.name.split(".")[0] for alias in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+            names.add(node.module.split(".")[0])
+    return names & _local_modules(root)
+
+
+def _inlined_modules(root: Path) -> set[str]:
+    """`INLINED_MODULES` from the builder, read by AST so nothing is executed."""
+    tree = ast.parse((root / "scripts" / "build_studio.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+            getattr(target, "id", None) == "INLINED_MODULES" for target in node.targets
+        ):
+            return set(ast.literal_eval(node.value))
+    return set()
+
+
+def _mypy_modules(root: Path) -> set[str]:
+    text = (root / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r"^files = \[(.*?)^\]", text, flags=re.DOTALL | re.MULTILINE)
+    if not match:
+        return set()
+    return {
+        entry.rsplit(".py", 1)[0].strip().strip('",')
+        for entry in re.findall(r'"([^"]+)"', match.group(1))
+    }
+
+
+def _module_count_errors(root: Path) -> list[str]:
+    readme = _read(root, README)
+    if readme is None:
+        return []
+    # Scratch trees assembled by the tests hold documentation only; with no code
+    # to compare against there is nothing to keep true.
+    required = (root / "app.py", root / "scripts" / "build_studio.py", root / "pyproject.toml")
+    if not all(path.is_file() for path in required):
+        return []
+    errors: list[str] = []
+    modules = _local_modules(root)
+    imported = _imported_local_modules(root)
+    inlined = _inlined_modules(root)
+    mypy_modules = _mypy_modules(root)
+
+    # A module app.py imports but the builder does not inline is missing from the
+    # standalone bundle: the artifact and the served app would disagree.
+    unbuilt = imported - inlined - _BUILD_SPECIAL_MODULES
+    if unbuilt:
+        errors.append(
+            f"scripts/build_studio.py does not inline {sorted(unbuilt)}, which app.py imports"
+        )
+
+    def _check(pattern: re.Pattern[str], actual: int, what: str) -> None:
+        match = pattern.search(readme.text)
+        if match is None:
+            return  # sentence rewritten; nothing to keep true
+        if int(match.group(1)) != actual:
+            errors.append(f"{README}: states {match.group(1)} {what}, code has {actual}")
+
+    _check(_INLINES_COUNT_RE, len(inlined | _BUILD_SPECIAL_MODULES), "inlined sibling modules")
+    match = _SHIPPED_COUNT_RE.search(readme.text)
+    if match is not None:
+        if int(match.group(1)) != len(imported):
+            errors.append(f"{README}: states {match.group(1)} wired modules, code has {len(imported)}")
+        if int(match.group(2)) != len(modules):
+            errors.append(f"{README}: states {match.group(2)} shipped modules, code has {len(modules)}")
+    _check(_CONTRACT_COUNT_RE, len(modules), "small contract modules")
+    _check(_TYPECHECKED_COUNT_RE, len(mypy_modules), "type-checked modules")
+    missing_from_mypy = sorted(modules - mypy_modules)
+    if missing_from_mypy != ["edit_rollback"]:
+        errors.append(
+            f"pyproject.toml type-checks {len(mypy_modules)} modules; uncovered: {missing_from_mypy} "
+            "(README documents `edit_rollback` as the only omission)"
+        )
+    return errors
+
+
 def validate_docs(root: Path = ROOT) -> list[str]:
     """Return documentation defects for `root`; never accesses the network."""
     errors: list[str] = []
@@ -201,6 +305,8 @@ def validate_docs(root: Path = ROOT) -> list[str]:
         if relative.as_posix() not in PLACEHOLDER_EXEMPT and PLACEHOLDERS.search(document.text):
             errors.append(f"{relative}: contains placeholder text")
         errors.extend(_link_errors(root, document))
+
+    errors.extend(_module_count_errors(root))
     return errors
 
 
