@@ -1,0 +1,380 @@
+{
+  "schema_version": "1.0.0",
+  "story": "UIUX-P1-04",
+  "statement": "One controller for the nine dialogs - open, trap, close, return focus - one shortcut registry read by the handler, the palette and the markup, and an inspector that declares whether it is a drawer or a column. Checks prove the wiring; the browser walk proves the behaviour.",
+  "source": {
+    "frontend": "static/index.html"
+  },
+  "dialogs": [
+    {
+      "id": "cmdPaletteModal",
+      "role": "dialog",
+      "label": "Command Palette",
+      "backdrop_close": "closeCommandPalette",
+      "open_function": "openCommandPalette",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "markup",
+          "line": 833
+        },
+        {
+          "kind": "script",
+          "line": 2110
+        }
+      ],
+      "triggers": [
+        {
+          "kind": "markup",
+          "line": 833
+        }
+      ],
+      "line": 850
+    },
+    {
+      "id": "contextModal",
+      "role": "dialog",
+      "label": "Knowledge and code tools",
+      "backdrop_close": "closeContextModal",
+      "open_function": "openContextModal",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "script",
+          "line": 1852
+        },
+        {
+          "kind": "script",
+          "line": 1853
+        },
+        {
+          "kind": "script",
+          "line": 1854
+        },
+        {
+          "kind": "script",
+          "line": 3007
+        }
+      ],
+      "triggers": [],
+      "line": 862
+    },
+    {
+      "id": "mcpModal",
+      "role": "dialog",
+      "label": "MCP tools",
+      "backdrop_close": "closeMcpModal",
+      "open_function": "openMcpModal",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "script",
+          "line": 1855
+        },
+        {
+          "kind": "script",
+          "line": 3005
+        }
+      ],
+      "triggers": [],
+      "line": 966
+    },
+    {
+      "id": "externalHarnessModal",
+      "role": "dialog",
+      "label": "Official DeepSeek Harness & OpenHarness Bridge",
+      "backdrop_close": "closeExternalHarnessModal",
+      "open_function": "openExternalHarnessModal",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "script",
+          "line": 1856
+        },
+        {
+          "kind": "script",
+          "line": 3008
+        }
+      ],
+      "triggers": [],
+      "line": 1079
+    },
+    {
+      "id": "harnessDiffModal",
+      "role": "dialog",
+      "label": "Harness Git Diff",
+      "backdrop_close": "closeHarnessDiffModal",
+      "open_function": "openHarnessDiffModal",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "markup",
+          "line": 1127
+        },
+        {
+          "kind": "script",
+          "line": 1860
+        },
+        {
+          "kind": "script",
+          "line": 3015
+        }
+      ],
+      "triggers": [
+        {
+          "kind": "markup",
+          "line": 1127
+        }
+      ],
+      "line": 1118
+    },
+    {
+      "id": "providersModal",
+      "role": "dialog",
+      "label": "Cloud Providers & OmniRoute Router",
+      "backdrop_close": "closeProvidersModal",
+      "open_function": "openProvidersModal",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "markup",
+          "line": 1406
+        },
+        {
+          "kind": "markup",
+          "line": 1608
+        },
+        {
+          "kind": "script",
+          "line": 1857
+        },
+        {
+          "kind": "script",
+          "line": 2333
+        },
+        {
+          "kind": "script",
+          "line": 3004
+        }
+      ],
+      "triggers": [
+        {
+          "kind": "markup",
+          "line": 1406
+        },
+        {
+          "kind": "markup",
+          "line": 1608
+        }
+      ],
+      "line": 1139
+    },
+    {
+      "id": "skillsModal",
+      "role": "dialog",
+      "label": "Agent Skills Manager",
+      "backdrop_close": "closeSkillsModal",
+      "open_function": "openSkillsModal",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "script",
+          "line": 1858
+        },
+        {
+          "kind": "script",
+          "line": 3006
+        }
+      ],
+      "triggers": [],
+      "line": 1211
+    },
+    {
+      "id": "sdlcModal",
+      "role": "dialog",
+      "label": "Autonomous Agile SDLC Product Factory",
+      "backdrop_close": "closeSdlcModal",
+      "open_function": "openSdlcModal",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "script",
+          "line": 1845
+        },
+        {
+          "kind": "script",
+          "line": 3017
+        },
+        {
+          "kind": "script",
+          "line": 3036
+        }
+      ],
+      "triggers": [],
+      "line": 1241
+    },
+    {
+      "id": "spawnModal",
+      "role": "dialog",
+      "label": "Spawn Council Session",
+      "backdrop_close": "closeSpawnModal",
+      "open_function": "openSpawnModal",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "markup",
+          "line": 1543
+        },
+        {
+          "kind": "markup",
+          "line": 1607
+        },
+        {
+          "kind": "script",
+          "line": 2876
+        },
+        {
+          "kind": "script",
+          "line": 2880
+        },
+        {
+          "kind": "script",
+          "line": 2892
+        }
+      ],
+      "triggers": [
+        {
+          "kind": "markup",
+          "line": 1543
+        },
+        {
+          "kind": "markup",
+          "line": 1607
+        }
+      ],
+      "line": 1336
+    }
+  ],
+  "shortcuts": {
+    "registry": [
+      {
+        "id": "command-palette",
+        "keys": [
+          "Ctrl+K",
+          "Meta+K"
+        ],
+        "label": "Command palette",
+        "where": "global"
+      },
+      {
+        "id": "command-palette-next",
+        "keys": [
+          "ArrowDown",
+          "ArrowUp"
+        ],
+        "label": "Move through matches",
+        "where": "palette"
+      },
+      {
+        "id": "command-palette-run",
+        "keys": [
+          "Enter"
+        ],
+        "label": "Run the highlighted command",
+        "where": "palette"
+      },
+      {
+        "id": "dismiss-overlay",
+        "keys": [
+          "Escape"
+        ],
+        "label": "Close the open dialog",
+        "where": "global"
+      }
+    ],
+    "rail": [
+      {
+        "id": "tab-start",
+        "keys": [
+          "Alt+6"
+        ],
+        "where": "rail"
+      },
+      {
+        "id": "tab-harness",
+        "keys": [
+          "Alt+1"
+        ],
+        "where": "rail"
+      },
+      {
+        "id": "tab-hall",
+        "keys": [
+          "Alt+2"
+        ],
+        "where": "rail"
+      },
+      {
+        "id": "tab-council",
+        "keys": [
+          "Alt+3"
+        ],
+        "where": "rail"
+      },
+      {
+        "id": "tab-debate",
+        "keys": [
+          "Alt+4"
+        ],
+        "where": "rail"
+      },
+      {
+        "id": "tab-chat",
+        "keys": [
+          "Alt+5"
+        ],
+        "where": "rail"
+      }
+    ],
+    "palette_shortcut_refs": [
+      "tab-chat",
+      "tab-council",
+      "tab-debate",
+      "tab-hall",
+      "tab-harness",
+      "tab-start"
+    ],
+    "advertised_actions": [
+      "command-palette"
+    ]
+  },
+  "inspector": {
+    "element": "monitorRail",
+    "toggle": "monitorToggleBtn",
+    "drawer_breakpoint": "1100px",
+    "role": "complementary"
+  },
+  "totals": {
+    "dialogs": 9,
+    "dialogs_via_controller": 9,
+    "registry_entries": 4,
+    "rail_shortcuts": 6,
+    "advertised_controls": 1,
+    "findings": 0
+  },
+  "findings": [],
+  "limits": [
+    "the inventory proves the dialogs route through the controller, not that focus lands where it should",
+    "it reads the source, so a backdrop rendered from a template joins the list only when it is written",
+    "shortcut keys are checked for collisions across the registry; the browser walk is what presses them"
+  ]
+}

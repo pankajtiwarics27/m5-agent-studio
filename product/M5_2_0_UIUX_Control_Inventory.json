@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "5496e2fdb7326702f17a7c643a84aa574b940d0a689aabe29eb1a4d55a2d6bde",
+  "frontend_sha256": "3d6de428fd9ac7915c7bcaa04b5971a8c7b792e13acf918f021f46f1aef213a3",
   "panes": [
     {
       "dom_id": "start",
@@ -599,8 +599,10 @@
         "tag": "button",
         "class": "btn",
         "aria-label": "Open Command Palette (Cmd+K)",
-        "title": "Search actions and navigate (⌘K / Ctrl+K)",
         "onclick": "openCommandPalette()",
+        "data": {
+          "data-shortcut-action": "command-palette"
+        },
         "text": "Search ⌘K"
       },
       {
@@ -1142,7 +1144,7 @@
         "tag": "button",
         "id": "monitorToggleBtn",
         "class": "btn btn-xs",
-        "title": "Toggle telemetry and model monitor",
+        "title": "Hide telemetry and model monitor",
         "onclick": "toggleMonitorRail()",
         "text": "Telemetry"
       },
