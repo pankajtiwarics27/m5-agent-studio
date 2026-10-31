@@ -123,10 +123,10 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "M5-P3-01",
     "last_completed_story": "M5-P5-03",
-    "last_checkpoint": "2026-10-31T10:25:00Z",
-    "last_session_id": "arena/0211ee82-m5-agent-studio",
+    "last_checkpoint": "2026-10-31T11:10:00Z",
+    "last_session_id": "arena/29fdbf7f-m5-agent-studio",
     "next_recommended_story": "M5-P6-01 (explicitly authorized by repository owner on 2026-10-31 for sequential Phase P6 execution M5-P6-01..M5-P6-03; M5-P3-01 remains host-Docker gated)",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
@@ -150,7 +150,10 @@
     "last_verified_commit": "fe5a84b",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md",
     "last_updated": "2026-10-31",
-    "active_stories": []
+    "active_stories": [
+      "M5-P3-01",
+      "M5-P6-01"
+    ]
   },
   "delivery_phases": [
     {
@@ -2155,13 +2158,13 @@
       ],
       "prompt": "Implement story M5-P3-01: Sandbox backend qualification suite. Objective: Validate actual isolation guarantees, not backend labels. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Exercise live container/native candidates on supported macOS; Test path traversal, symlink, network bypass, credentials, descendants, resource limits; Run positive compatibility tests; Bind evidence to OS/runtime/config fingerprint. Acceptance: Each claimed guarantee has positive and adversarial evidence; Unqualified guarantees remain unavailable; No silent host fallback. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "blocked",
+        "status": "in_progress",
         "progress_percent": 25,
-        "attempts": 1,
+        "attempts": 2,
         "started_at": "2026-10-30T19:31:57Z",
-        "updated_at": "2026-10-31T03:16:40Z",
+        "updated_at": "2026-10-31T11:10:00Z",
         "completed_at": null,
-        "owner_session": "arena/ca2d533a-m5-agent-studio",
+        "owner_session": "arena/29fdbf7f-m5-agent-studio",
         "commit_sha": "dff964a",
         "changed_files": [
           "README.md",
