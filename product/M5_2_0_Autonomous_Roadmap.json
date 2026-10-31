@@ -3527,7 +3527,9 @@
           "product/M5_2_0_UIUX_Source_Manifest.json",
           "tests/test_durable_state_contract.py",
           "tests/test_routing_experiments.py",
-          "product/M5_2_0_Autonomous_Roadmap.json"
+          "product/M5_2_0_Autonomous_Roadmap.json",
+          "child_delegation.py",
+          "tests/test_child_delegation.py"
         ],
         "evidence": [
           "Task 1 (Benchmark measured recovery costs and drift): Implemented CalibrationProfileRecord.from_samples (cold/warm TTFT, prefill/decode throughput, peak_memory_bytes_max, swap_unload_ms, swap_load_ms, failure_rate excluded from timing medians), evaluate_calibration_drift (flagging digest/quantization changes, TTFT/decode degradation, and upward memory drift exceeding 19.2 GiB / 24 GiB with recalibration_required=True), and RecoveryCostMeasurement linked to recovery_guard stagnation verdicts in $HARNESS_STORE_DIR/routing_experiments/state.json (covered by all 8 clauses of tests/test_durable_state_contract.py).",

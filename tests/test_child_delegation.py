@@ -816,6 +816,17 @@ def test_delegate_subagent_tool_executes_bounded_fresh_context_and_benchmark_jus
     assert jitter_comp["multi_agent_minus_single_model"]["latency_ms"] == -0.5
     assert jitter_comp["multi_agent_minus_single_model"]["cost"] == 100.0
     assert jitter_comp["delegation_overhead_justified"] is False
+    with pytest.raises(cd.DelegationRejectedError) as jitter_rej:
+        cd.evaluate_delegation_justification(
+            role="worker",
+            objective="Trivial one-line tweak",
+            parent_budget=studio.execution_budget.TaskBudgetState(
+                spec=studio.execution_budget.TaskBudgetSpec(max_steps=10, max_tokens=4000),
+            ),
+            writable_paths=("src/allowed.py",),
+            benchmark_prior=jitter_comp,
+        )
+    assert jitter_rej.value.code == "delegation_overhead_unjustified"
 
     # 4. Feeding persisted `trivial_single_file_edit` benchmark summary into worker delegation rejects overhead!
     parent_ctx, _, _ = _create_parent_session(isolated_env, policy="autonomous")

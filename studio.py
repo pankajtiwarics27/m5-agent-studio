@@ -38250,11 +38250,24 @@ def evaluate_delegation_justification(
                     f"Measured benchmark shows delegation degrades verified success rate ({sr_delta:+.3f}); "
                     "refusing subagent spawn.",
                 )
-            if sr_delta == 0.0 and lat_delta > 0.0 and cost_delta > 0.0 and role != "critic":
+            pareto_improves_tie = (
+                sr_delta == 0.0
+                and cost_delta <= 0.0
+                and lat_delta <= 0.0
+                and (cost_delta < 0.0 or lat_delta < 0.0)
+            )
+            if (
+                role != "critic"
+                and sr_delta == 0.0
+                and (
+                    benchmark_prior.get("delegation_overhead_justified") is False
+                    or not pareto_improves_tie
+                )
+            ):
                 raise DelegationRejectedError(
                     "delegation_overhead_unjustified",
-                    f"Measured benchmark shows zero verified accuracy gain with higher latency (+{lat_delta:.1f}ms) "
-                    f"and cost (+{cost_delta:.2f}); execute inline in single-agent mode.",
+                    f"Measured benchmark shows zero verified accuracy gain without Pareto improvement "
+                    f"(latency {lat_delta:+.1f}ms, cost {cost_delta:+.2f}); execute inline in single-agent mode.",
                 )
             reasons.append(f"measured_benchmark_success_delta:{sr_delta:+.3f}")
 
