@@ -937,18 +937,12 @@ def get_process_supervisor() -> process_supervision.ProcessSupervisor:
         return _PROCESS_SUPERVISOR
 
 
-def _register_active_subprocess(
-    supervisor: process_supervision.ProcessSupervisor,
-    proc: asyncio.subprocess.Process,
+def _resolve_subprocess_supervision_metadata(
     *,
-    supervision_id: str,
     root: Path,
     default_tool: str,
-    container_name: str | None = None,
     explicit_resource_scopes: Sequence[str] = (),
-) -> process_supervision.SupervisedProcessRecord | None:
-    if not proc.pid or proc.pid <= 1:
-        return None
+) -> dict[str, Any]:
     scope = execution_spine.current_admission_scope()
     eff_tool = scope.tool_name if scope is not None else default_tool
     ws_str = str(root.resolve()) if root is not None else ""
@@ -962,32 +956,112 @@ def _register_active_subprocess(
         if (scope is not None and scope.capabilities)
         else scoped_grants.resolve_tool_capabilities(eff_tool)
     )
-    res_scopes = (
-        tuple(explicit_resource_scopes)
-        if explicit_resource_scopes
-        else (
-            scope.resource_scopes
-            if (scope is not None and scope.resource_scopes)
-            else tuple(t for t, _ in barriers)
-        )
+    if scope is not None and scope.resource_scopes:
+        res_scopes = tuple(scope.resource_scopes)
+    elif explicit_resource_scopes:
+        res_scopes = tuple(explicit_resource_scopes)
+    else:
+        res_scopes = tuple(t for t, _ in barriers)
+    return {
+        "scope": scope,
+        "tool_name": eff_tool,
+        "barriers": barriers,
+        "capabilities": caps,
+        "resource_scopes": res_scopes,
+        "session_id": (scope.session_id if scope is not None else "standalone"),
+        "task_id": (scope.task_id if scope is not None else None),
+        "epoch": (scope.epoch if scope is not None else None),
+        "worker_id": (scope.worker_id if scope is not None else None),
+        "action_id": (scope.action_id if scope is not None else ""),
+        "grant_id": (scope.grant_id if scope is not None else None),
+    }
+
+
+def _begin_active_subprocess_spawn(
+    supervisor: process_supervision.ProcessSupervisor,
+    *,
+    supervision_id: str,
+    root: Path,
+    default_tool: str,
+    explicit_resource_scopes: Sequence[str] = (),
+) -> None:
+    meta = _resolve_subprocess_supervision_metadata(
+        root=root,
+        default_tool=default_tool,
+        explicit_resource_scopes=explicit_resource_scopes,
     )
-    return supervisor.register_process(
+    supervisor.begin_spawn(
+        supervision_id=supervision_id,
+        tool_name=meta["tool_name"],
+        workspace_root=root,
+        session_id=meta["session_id"],
+        task_id=meta["task_id"],
+        epoch=meta["epoch"],
+        worker_id=meta["worker_id"],
+        boot_id=_PROCESS_BOOT_ID,
+        action_id=meta["action_id"],
+        barriers=meta["barriers"],
+        grant_id=meta["grant_id"],
+        capabilities=meta["capabilities"],
+        resource_scopes=meta["resource_scopes"],
+    )
+
+
+async def _register_active_subprocess_async(
+    supervisor: process_supervision.ProcessSupervisor,
+    proc: asyncio.subprocess.Process,
+    *,
+    supervision_id: str,
+    root: Path,
+    default_tool: str,
+    container_name: str | None = None,
+    explicit_resource_scopes: Sequence[str] = (),
+) -> process_supervision.SupervisedProcessRecord | None:
+    if not proc.pid or proc.pid <= 1:
+        supervisor.abort_spawn(supervision_id)
+        return None
+    meta = _resolve_subprocess_supervision_metadata(
+        root=root,
+        default_tool=default_tool,
+        explicit_resource_scopes=explicit_resource_scopes,
+    )
+    rec = supervisor.register_process(
         proc,
         supervision_id=supervision_id,
-        tool_name=eff_tool,
+        tool_name=meta["tool_name"],
         workspace_root=root,
         container_name=container_name,
-        session_id=(scope.session_id if scope is not None else "standalone"),
-        task_id=(scope.task_id if scope is not None else None),
-        epoch=(scope.epoch if scope is not None else None),
-        worker_id=(scope.worker_id if scope is not None else None),
+        session_id=meta["session_id"],
+        task_id=meta["task_id"],
+        epoch=meta["epoch"],
+        worker_id=meta["worker_id"],
         boot_id=_PROCESS_BOOT_ID,
-        action_id=(scope.action_id if scope is not None else ""),
-        barriers=barriers,
-        grant_id=(scope.grant_id if scope is not None else None),
-        capabilities=caps,
-        resource_scopes=res_scopes,
+        action_id=meta["action_id"],
+        barriers=meta["barriers"],
+        grant_id=meta["grant_id"],
+        capabilities=meta["capabilities"],
+        resource_scopes=meta["resource_scopes"],
     )
+    await supervisor.await_pending_containment_async(supervision_id)
+    grant_id = meta["grant_id"]
+    if grant_id and supervisor.get_contained_outcome(supervision_id) is None:
+        grant_rec = get_scoped_grant_store().get_grant(grant_id)
+        if grant_rec is None or grant_rec.status == "revoked":
+            supervisor.store.fence_origin(
+                reason="grant_revoked_during_spawn",
+                session_id=rec.session_id,
+                task_id=rec.task_id,
+                supervision_id=supervision_id,
+                quarantine_session=False,
+            )
+            await supervisor.terminate_record_async(
+                rec,
+                reason="grant_revoked_during_spawn",
+                persist_hold=False,
+                fence_origin=False,
+                quarantine_session=False,
+            )
+    return rec
 
 
 async def _start_code_process(root: Path, command: str, *, python_code: bool = False) -> tuple[asyncio.subprocess.Process, str | None]:
@@ -1050,17 +1124,30 @@ async def _execute_limited(root: Path, command: str, *, timeout: float, max_outp
     sup_id = supervisor.new_supervision_id()
     sup_rec: process_supervision.SupervisedProcessRecord | None = None
     container_name: str | None = None
+    default_tool_name = "ctx_execute_python" if python_code else "run_bash"
     with supervisor.supervision_context(sup_id):
-        proc, container_name = await _start_code_process(root, command, python_code=python_code)
+        _begin_active_subprocess_spawn(
+            supervisor,
+            supervision_id=sup_id,
+            root=root,
+            default_tool=default_tool_name,
+        )
+        try:
+            proc, container_name = await _start_code_process(root, command, python_code=python_code)
+        except BaseException:
+            supervisor.abort_spawn(sup_id)
+            raise
         if proc.pid:
-            sup_rec = _register_active_subprocess(
+            sup_rec = await _register_active_subprocess_async(
                 supervisor,
                 proc,
                 supervision_id=sup_id,
                 root=root,
-                default_tool="ctx_execute_python" if python_code else "run_bash",
+                default_tool=default_tool_name,
                 container_name=container_name,
             )
+        else:
+            supervisor.abort_spawn(sup_id)
         try:
             try:
                 output, truncated = await asyncio.wait_for(_communicate_limited(proc, max_output_bytes), timeout=timeout)
@@ -1215,20 +1302,32 @@ async def _execute_skill_script_inner(
     sup_id = supervisor.new_supervision_id()
     sup_rec: process_supervision.SupervisedProcessRecord | None = None
     with supervisor.supervision_context(sup_id):
-        proc = await asyncio.create_subprocess_exec(
-            sys.executable, str(script), *args,
-            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
-            cwd=str(cwd), start_new_session=True,
-            env=_arbitrary_subprocess_env({process_supervision.SUPERVISION_ENV_KEY: sup_id}),
+        _begin_active_subprocess_spawn(
+            supervisor,
+            supervision_id=sup_id,
+            root=cwd,
+            default_tool="skill_execute_script",
         )
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                sys.executable, str(script), *args,
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                cwd=str(cwd), start_new_session=True,
+                env=_arbitrary_subprocess_env({process_supervision.SUPERVISION_ENV_KEY: sup_id}),
+            )
+        except BaseException:
+            supervisor.abort_spawn(sup_id)
+            raise
         if proc.pid:
-            sup_rec = _register_active_subprocess(
+            sup_rec = await _register_active_subprocess_async(
                 supervisor,
                 proc,
                 supervision_id=sup_id,
                 root=cwd,
                 default_tool="skill_execute_script",
             )
+        else:
+            supervisor.abort_spawn(sup_id)
         try:
             out, _err = await asyncio.wait_for(proc.communicate(), timeout=timeout)
         except asyncio.TimeoutError:
@@ -5930,26 +6029,50 @@ async def _mcp_stdio_rpc(
     rpc_completed = False
     post_dispatch_sent = False
 
+    mcp_default_tool = (
+        f"mcp__{srv_alias}__{rtool}"
+        if (method == "tools/call" and rtool)
+        else f"mcp__{srv_alias}__{method}"
+    )
+    mcp_explicit_scopes = (
+        (f"mcp:{srv_alias}:{rtool}",)
+        if (method == "tools/call" and rtool)
+        else (f"mcp:{srv_alias}",)
+    )
+
     with supervisor.supervision_context(sup_id):
-        proc = await asyncio.create_subprocess_exec(
-            cmd,
-            *args,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            cwd=work_cwd,
-            start_new_session=True,
-            env=merged_env,
+        _begin_active_subprocess_spawn(
+            supervisor,
+            supervision_id=sup_id,
+            root=resolved_cwd,
+            default_tool=mcp_default_tool,
+            explicit_resource_scopes=mcp_explicit_scopes,
         )
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                cmd,
+                *args,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=work_cwd,
+                start_new_session=True,
+                env=merged_env,
+            )
+        except BaseException:
+            supervisor.abort_spawn(sup_id)
+            raise
         if proc.pid:
-            sup_rec = _register_active_subprocess(
+            sup_rec = await _register_active_subprocess_async(
                 supervisor,
                 proc,
                 supervision_id=sup_id,
                 root=resolved_cwd,
-                default_tool=f"mcp__{srv_alias}__{method}",
-                explicit_resource_scopes=(f"mcp:{srv_alias}",),
+                default_tool=mcp_default_tool,
+                explicit_resource_scopes=mcp_explicit_scopes,
             )
+        else:
+            supervisor.abort_spawn(sup_id)
         assert proc.stdin is not None and proc.stdout is not None
 
         async def read_rpc_id(target_id: int, *, post_dispatch_tool_call: bool = False) -> dict[str, Any]:
@@ -5976,6 +6099,11 @@ async def _mcp_stdio_rpc(
                     return pkt.get("result") or {}
 
         try:
+            contained_pre_init = supervisor.get_contained_outcome(sup_id)
+            if contained_pre_init is not None:
+                raise PermissionError(
+                    f"Stdio MCP `{cmd}` contained before initialize ({contained_pre_init.reason})."
+                )
             init_msg = {
                 "jsonrpc": "2.0",
                 "id": 1,
@@ -5990,6 +6118,11 @@ async def _mcp_stdio_rpc(
             await proc.stdin.drain()
             await asyncio.wait_for(read_rpc_id(1), timeout=timeout_sec)
 
+            contained_pre_call = supervisor.get_contained_outcome(sup_id)
+            if contained_pre_call is not None:
+                raise PermissionError(
+                    f"Stdio MCP `{cmd}` contained before `{method}` dispatch ({contained_pre_call.reason})."
+                )
             notif_msg = {"jsonrpc": "2.0", "method": "notifications/initialized"}
             req_msg = {"jsonrpc": "2.0", "id": 2, "method": method, "params": effective_params}
             if method == "tools/call":
