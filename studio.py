@@ -39410,12 +39410,16 @@ class SecurityIncidentStore:
         return self._containment_store
 
     def _ensure_dir_unlocked(self) -> None:
+        if self._base_dir.is_symlink():
+            raise SecurityIncidentIntegrityError(
+                f"Security incident store root {self._base_dir} must not be a symlink."
+            )
         self._base_dir.mkdir(parents=True, exist_ok=True)
         if self._dir.is_symlink():
             raise SecurityIncidentIntegrityError(
                 f"Security incident directory {self._dir} must not be a symlink."
             )
-        self._dir.mkdir(parents=True, exist_ok=True)
+        self._dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         with contextlib.suppress(OSError):
             os.chmod(self._dir, 0o700)
 
@@ -39431,6 +39435,10 @@ class SecurityIncidentStore:
         }
 
     def _read_state_unlocked(self) -> dict[str, Any]:
+        if self._base_dir.is_symlink() or self._dir.is_symlink():
+            raise SecurityIncidentIntegrityError(
+                f"Security incident directory {self._dir} must not be a symlink."
+            )
         if os.path.lexists(self._state_path):
             try:
                 st = os.lstat(self._state_path)
