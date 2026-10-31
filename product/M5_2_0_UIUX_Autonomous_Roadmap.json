@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 3,
+  "revision": 4,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -27,8 +27,8 @@
     ],
     "rule": "This ledger is authoritative for UI/UX stories UIUX-P0-01..UIUX-P6-05 only. It never changes the status of an M5 or AS story, and no UI/UX story may change backend, security or data behavior to make a screen easier to build."
   },
-  "source_commit_sha": "28930089d0a450fe86e418bfef79d16f8a585965",
-  "source_commit_status": "Pinned to origin/main 28930089d0a4 by UIUX-P0-01 on 2026-10-31. The pin moved twice while the story was open: once when it was claimed (0d7a8f1 was stale after PRs #95 and #98) and once more before the story closed, because #99 changed studio.py and the source manifest caught the drift. The pin names the main commit the manifest's hashes describe; a session that finds main ahead of it re-pins the ledger and regenerates the manifest in the same commit. A branch name is not a pin.",
+  "source_commit_sha": "aa1af27898d98d4633da17a4b711cfd628df27dc",
+  "source_commit_status": "Pinned to origin/main aa1af27898d9 by UIUX-P0-03 on 2026-10-31. The previous pin 28930089d0a4 described main before #105 and #106 moved app.py and studio.py, so the manifest's hashes and route table were regenerated against this commit in the same change that re-pinned it. A session that finds main ahead of this pin re-pins the ledger and regenerates the manifest in the same commit; a git diff of a stale manifest is drift, not a fix-up. A branch name is not a pin.",
   "evidence_basis": {
     "supplied_by": "repository owner, 2026-10-31",
     "original_provenance": {
@@ -100,12 +100,14 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": null,
-    "active_stories": [],
+    "active_story": "UIUX-P0-03",
+    "active_stories": [
+      "UIUX-P0-03"
+    ],
     "last_completed_story": "UIUX-P0-02",
     "next_recommended_story": "UIUX-P0-03",
-    "last_checkpoint": "2026-10-31T14:55:00Z",
-    "last_session_id": "arena/be7957d5-m5-agent-studio",
+    "last_checkpoint": "2026-10-31T11:20:31Z",
+    "last_session_id": "arena/dc8242aa-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
     "last_verified_commit": "836243e",
@@ -211,9 +213,9 @@
       ],
       "total": 6,
       "done": 2,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 4,
+      "not_started": 3,
       "percent_complete": 33
     },
     {
@@ -338,9 +340,9 @@
   "overall_progress": {
     "total_stories": 40,
     "done": 2,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 38,
+    "not_started": 37,
     "percent_complete": 5
   },
   "stories": [
@@ -705,13 +707,13 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P0-03 (Map frontend handlers to API routes). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-31T11:20:31Z",
+        "updated_at": "2026-10-31T11:20:31Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/dc8242aa-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -720,8 +722,8 @@
         "known_regressions": [],
         "decisions": [],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "Claimed after PR #104 (the same story on arena/dc36f4b7) could not merge: it conflicts with main and carries a runtime-program benchmark change. This branch ports the route-map script and tests, drops the runtime work, and re-pins.",
+        "next_action": "Derive the call-to-route map from the fetch sites and app.py's route table, publish the generated JSON and page, then close with evidence.",
         "readme_updated": false
       },
       "required_evidence": [
