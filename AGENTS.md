@@ -96,6 +96,13 @@ The roadmap's implementation playbook (in the JSON under
 5. Ask questions only when a blocking ambiguity exists; otherwise decide and
    document the decision in the pull request description.
 
+For UI/UX coordination, `python3 scripts/uiux_coordination.py` reports local
+readiness without network access; `--github` explicitly checks open PRs,
+marked blocker issues and the current main commit. It is a read-only,
+non-atomic advisory, not a claim or a replacement for [`M5_2_0_UIUX_AGENT_PROMPT.md`](M5_2_0_UIUX_AGENT_PROMPT.md).
+See [`docs/uiux-2-0-coordination.md`](docs/uiux-2-0-coordination.md) for the
+handoff, capture risks, and claim-window precautions.
+
 ## 5. Environment setup and verification
 
 Python `>=3.11`. No model, provider, MCP, or cloud endpoint is needed for any

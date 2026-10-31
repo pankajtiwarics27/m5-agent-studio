@@ -32,8 +32,11 @@ runtime program and on its optional P6 stories.
    [`design-system/m5-agentic-studio/MASTER.md`](design-system/m5-agentic-studio/MASTER.md),
    [`docs/ui-decisions.md`](docs/ui-decisions.md), [`docs/ui-summary.md`](docs/ui-summary.md),
    `static/index.html`, `docs/media/screenshots/manifest.json`.
-5. Open work: `gh pr list --state open`, plus the ledger's `session_state`.
-   Review anything the other agent has open **before** claiming a story.
+5. Open work: `python3 scripts/uiux_coordination.py --github`,
+   `gh pr list --state open`, `gh issue list --state open`, and the ledger's
+   `session_state`. Review open work and risks **before** claiming a story. The
+   helper is a read-only snapshot, not an atomic lock; see
+   [`docs/uiux-2-0-coordination.md`](docs/uiux-2-0-coordination.md).
 
 ## 2. Mission
 
@@ -48,8 +51,12 @@ screens simpler.
 1. **Claim before you code.** Pick the highest-priority ready story (all
    dependencies `done`, not `blocked`); phases run `P0` → `P6` in order and the
    `P0` inventory gate is absolute. Set `tracking.status = in_progress`,
-   `owner_session`, `started_at`, `updated_at`, and push that metadata commit
-   **before** any code. If the push races, take a different story.
+   `progress_percent` to a value from 1–99, `owner_session`, `started_at` and
+   `updated_at`; reconcile phase/overall counters and `session_state`. Push that
+   metadata commit **before** any code. Immediately open a draft PR with the
+   story ID in its title, then check open PRs again for a competing claim.
+   Separate branch pushes do not serialize claims: if a collision or uncertainty
+   remains, stop and coordinate with the other session before implementing anything.
 2. **Re-pin ground truth.** `UIUX-P0-01` exists because this plan was written
    from web extracts, not a checkout. Confirm `HEAD`, re-pin the source commit in
    the story, and re-read the panes you are about to touch.
@@ -98,9 +105,9 @@ screens simpler.
    manifest entries, and `README.md` only if user-visible behaviour changed and
    was verified. Set `progress_percent = 100` only when every acceptance
    criterion has evidence.
-10. **Open the PR** titled `UIUX-PX-YY: <imperative summary>` with what changed,
-    why, the acceptance-criteria-to-evidence map, the screenshots touched, and
-    the commands you ran. Ask the other agent for review.
+10. **Ready the draft PR** titled `UIUX-PX-YY: <imperative summary>` with what
+    changed, why, the acceptance-criteria-to-evidence map, the screenshots
+    touched, and the commands you ran. Ask the other agent for review.
 
 ## 4. Coordination protocol
 
@@ -113,8 +120,10 @@ screens simpler.
    keep both sides' entries.
 2. **Atomic ledger writes.** Write the JSON via a temporary file + replace,
    commit metadata in small dedicated commits, and `git pull --rebase` before
-   pushing. `tests/test_uiux_roadmap.py` must stay green: a ledger that fails its
-   own invariants blocks the claim.
+   pushing. Atomic file replacement prevents partial JSON writes; it is not a
+   cross-branch lock. Announce a claim in a draft PR and resolve concurrent
+   claims before work starts. `tests/test_uiux_roadmap.py` must stay green: a
+   ledger that fails its own invariants blocks the claim.
 3. **One story at a time.** Start the next story only after the previous PR is
    merged. Investigation and review may overlap; implementation does not.
 4. **Review each other.** The non-author reviews every story PR: run the

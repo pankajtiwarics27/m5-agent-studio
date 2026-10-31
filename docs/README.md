@@ -125,8 +125,8 @@ measurements without trusting them).
 · [`uiux-2-0-control-inventory.md`](uiux-2-0-control-inventory.md) (generated inventory of every control in the six panes and the shared chrome)
 · [`uiux-2-0-route-map.md`](uiux-2-0-route-map.md) (generated map of every frontend fetch call to the route it hits)
 · [`uiux-2-0-authorization-trace.md`](uiux-2-0-authorization-trace.md) (generated trace of what can refuse each state-changing call, and what state it touches)
-· [`uiux-2-0-authorization-trace.md`](uiux-2-0-authorization-trace.md) (generated trace of what can refuse each state-changing call, and what state it touches)
 · [`../M5_2_0_UIUX_AGENT_PROMPT.md`](../M5_2_0_UIUX_AGENT_PROMPT.md) (UI/UX claim, review and merge protocol)
+· [`uiux-2-0-coordination.md`](uiux-2-0-coordination.md) (read-only readiness check, current handoff and capture risks)
 
 ## M5 2.0 ground-truth evidence (2026-10-30)
 
