@@ -98,15 +98,25 @@ class RssSampler:
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._run, name="rss-sampler", daemon=True)
 
+    def _sample_once(self) -> None:
+        value = _rss_bytes(self.pid)
+        if value is None:
+            return
+        self.readable = True
+        self.peak = value if self.peak is None else max(self.peak, value)
+
     def _run(self) -> None:
         while not self._stop.wait(self.interval):
-            value = _rss_bytes(self.pid)
-            if value is None:
-                continue
-            self.readable = True
-            self.peak = value if self.peak is None else max(self.peak, value)
+            self._sample_once()
 
     def start(self) -> None:
+        # Sample synchronously *before* the measured request begins. Otherwise the
+        # first sample waits a full interval and then depends on how long the `ps`
+        # spawn takes: when that spawn is slow (a loaded CI runner), the stream can
+        # finish first and a readable pid is reported as unmeasurable. A single `ps`
+        # at t=0 removes that window without inflating the measured latency, because
+        # this runs before the clock starts.
+        self._sample_once()
         self._thread.start()
 
     def stop(self) -> None:
