@@ -83,6 +83,7 @@ import edit_rollback
 import edit_transactions
 import execution_profiles
 import model_admission
+import artifact_lineage
 import process_supervision
 import resource_admission  # noqa: F401 - inlined into studio.py; execution_profiles/model_admission use it
 import scoped_grants
@@ -570,6 +571,19 @@ def get_security_incident_store() -> sandbox_boundary.SecurityIncidentStore:
         HARNESS_STORE_DIR,
         containment_store=get_containment_store(),
     )
+
+
+def _current_security_generation() -> int | None:
+    """Current security configuration generation, or ``None`` when it cannot be read.
+
+    Passed to task verification so evidence gathered under one security configuration
+    is not accepted under another (M5-P5-02). ``None`` is reported as "not checked";
+    it is never promoted to "unchanged".
+    """
+    try:
+        return int(get_security_incident_store().summary()["current_generation_seq"])
+    except Exception:  # noqa: BLE001 - an unreadable store must not break the harness loop
+        return None
 
 
 def _current_primary_backend_profile(
@@ -12517,6 +12531,18 @@ def _containment_summary_or_none(session_id: str) -> dict[str, Any]:
         }
 
 
+def _artifact_lineage_summary_or_none() -> dict[str, Any]:
+    """Read-only artifact lineage view (M5-P5-02); corruption is reported, not hidden."""
+    try:
+        return artifact_lineage.ArtifactRegistry(HARNESS_STORE_DIR).summary()
+    except (artifact_lineage.ArtifactLineageError, OSError) as exc:
+        return {
+            "error": str(exc)[:240],
+            "corrupt": True,
+            "schema_version": artifact_lineage.AL_SCHEMA_VERSION,
+        }
+
+
 @app.get("/api/harness/sessions/{session_id}/task")
 async def api_get_harness_task_state(session_id: str) -> JSONResponse:
     """Return durable root-task state, child milestones, checkpoints, budgets, and transition log."""
@@ -12576,6 +12602,7 @@ async def api_get_harness_task_state(session_id: str) -> JSONResponse:
             "verification_evidence": ver_evidence_preview,
             "recovery": _recovery_summary_or_none(session_id),
             "containment": _containment_summary_or_none(session_id),
+            "artifact_lineage": _artifact_lineage_summary_or_none(),
             "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
             "checkpoint_integrity_error": integrity_error,
             "checkpoints": [ck.to_dict() for ck in checkpoints],
@@ -14109,6 +14136,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                 verification_report = sm.verify_task_completion(
                     session_id,
                     workspace_dir=wt_dir,
+                    security_generation=_current_security_generation,
                 )
                 if not verification_report.verified:
                     # Repeated identical evidence or a revisited patch state is not a

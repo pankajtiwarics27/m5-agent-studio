@@ -415,7 +415,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
   pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
   plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
-- **25 of 53 shipped Python modules are wired into the served app**
+- **26 of 54 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`, `execution_spine` since `M5-P0-06`,
   `runtime_persistence` since `M5-P1-01`, `side_effect_ledger` since `M5-P1-03`,
@@ -426,8 +426,8 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   `verification_evidence` since `M5-P2-04`, `recovery_guard` since
   `M5-P2-05`, `resource_admission` + `model_admission` since `M5-P4-01`,
   `execution_profiles` since `M5-P3-02`, `process_supervision` since
-  `M5-P3-03`, `scoped_grants` since `M5-P3-04`, and `workspace_quarantine`
-  since `M5-P5-01`;
+  `M5-P3-03`, `scoped_grants` since `M5-P3-04`, `workspace_quarantine` since
+  `M5-P5-01`, and `artifact_lineage` since `M5-P5-02`;
   5 of 42 at the time of the audit table). Together they govern
   schema upgrades, SQLite transactions, authoritative task-state / lease-epoch
   checks at admission (`M5-P1-02`), durable `runtime_actions`
@@ -541,15 +541,15 @@ are not guarantees):
 Observed structure (see [`docs/architecture.md`](docs/architecture.md) and the
 generated [`docs/subsystem-dependency-inventory.md`](docs/subsystem-dependency-inventory.md)):
 
-- **Backend:** one FastAPI process — `app.py` plus 53 small contract modules
-  (52 of them type-checked by the `pyproject.toml` `mypy` file list; the
+- **Backend:** one FastAPI process — `app.py` plus 54 small contract modules
+  (53 of them type-checked by the `pyproject.toml` `mypy` file list; the
   remainder is `edit_rollback`, which predates that list). `studio.py` is a **generated** standalone
-  artifact (`scripts/build_studio.py` inlines 25 sibling modules — including
+  artifact (`scripts/build_studio.py` inlines 26 sibling modules — including
   `runtime_persistence`, `side_effect_ledger`, `execution_budget`,
   `workflow_checkpoints`, `workflow_state`, `mcp_client`, `context_store`,
   `onboarding_preflight`, `failure_injection`, `execution_spine`, `task_events`,
   `sandbox_boundary`, `workspace_snapshots`, `workspace_quarantine`,
-  `edit_transactions`, `edit_rollback`, `verification_evidence`, `recovery_guard`,
+  `artifact_lineage`, `edit_transactions`, `edit_rollback`, `verification_evidence`, `recovery_guard`,
   `resource_admission`, `model_admission`, `process_supervision`,
   `scoped_grants`, `execution_profiles`, `history_privacy`, and
   `workflow_orchestration`, and embeds `static/index.html`); never hand-edit it.

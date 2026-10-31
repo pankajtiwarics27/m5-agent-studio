@@ -39,6 +39,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
+import artifact_lineage
+
 WQ_SCHEMA_VERSION = 1
 WQ_DIRNAME = "workspace_quarantine"
 WQ_MANIFEST_NAME = "manifest.json"
@@ -348,6 +350,7 @@ def freeze_workspace(
     # a release or a later reconstruction may need to annotate the record.
     _wq_restrict_file(manifest_path, 0o600)
     _wq_fsync_dir(record_dir)
+    _wq_record_recovery_artifact(store_root, manifest)
     return manifest
 
 
@@ -363,6 +366,34 @@ def _wq_fsync_dir(path: Path) -> None:
         pass
     finally:
         os.close(fd)
+
+
+def _wq_record_recovery_artifact(store_root: Path | str, manifest: QuarantineManifest) -> None:
+    """Give the frozen tree lineage and pin it so retention cannot collect it (M5-P5-02).
+
+    A quarantine is the only copy of contested bytes, so it is recorded as a
+    deliberately untrusted, confidential artifact — somebody may have written it — and
+    pinned under ``quarantine:<id>``. `artifact_lineage.plan_retention` refuses to evict
+    a pinned artifact, and it independently protects artifacts of any quarantine that is
+    still unreleased.
+    """
+    registry = artifact_lineage.ArtifactRegistry(store_root)
+    registry.record_artifact(
+        manifest.tree_sha256,
+        source_kind="quarantine",
+        source_ref=manifest.quarantine_id,
+        trust="untrusted",
+        confidentiality="secret",
+        denied_operations=("export", "prompt"),
+    )
+    registry.pin(
+        f"quarantine:{manifest.quarantine_id}",
+        kind="recovery",
+        # The pin names the protected *artifact* (the frozen tree digest), so retention
+        # can resolve it directly instead of guessing what a quarantine id refers to.
+        ref=manifest.tree_sha256,
+        reason=f"frozen workspace {manifest.quarantine_id} awaiting reconstruction ({manifest.reason})",
+    )
 
 
 def quarantine_dir(store_root: Path | str, quarantine_id: str) -> Path:
@@ -421,6 +452,24 @@ def _wq_is_released(store_root: Path | str, quarantine_id: str) -> bool:
     return (quarantine_dir(store_root, quarantine_id) / WQ_RELEASE_NAME).exists()
 
 
+def recovery_protection(store_root: Path | str) -> dict[str, str]:
+    """Artifact refs that retention must keep because a quarantine still owns them.
+
+    `artifact_lineage.plan_retention` never evicts a ref it is handed here, and a freeze
+    also records its own pin — so protection survives even if a caller forgets to pass
+    this through. Both mechanisms exist on purpose: the pin is a record, this is a
+    re-derivation from the quarantine store itself.
+    """
+    protection: dict[str, str] = {}
+    for manifest in list_quarantines(store_root):
+        if _wq_is_released(store_root, manifest.quarantine_id):
+            continue
+        protection[manifest.tree_sha256] = (
+            f"unreleased quarantine {manifest.quarantine_id} still owns these bytes"
+        )
+    return protection
+
+
 def release_quarantine(store_root: Path | str, quarantine_id: str, *, note: str = "") -> None:
     """Mark a quarantine released so mutations of the old workspace may resume.
 
@@ -435,6 +484,13 @@ def release_quarantine(store_root: Path | str, quarantine_id: str, *, note: str 
         os.fsync(fd)
     finally:
         os.close(fd)
+    # Releasing lifts the retention pin; it never deletes the frozen bytes. A lineage
+    # failure here is tolerated on purpose: an un-unpinned artifact stays protected, so
+    # the failure direction is "kept", not "collected".
+    try:
+        artifact_lineage.ArtifactRegistry(store_root).unpin(f"quarantine:{quarantine_id}")
+    except artifact_lineage.ArtifactLineageError:
+        pass
 
 
 def _wq_file_sha256(path: Path) -> str:
@@ -635,6 +691,7 @@ __all__ = [
     "load_manifest",
     "plan_reconstruction",
     "quarantine_root",
+    "recovery_protection",
     "reconstruct_workspace",
     "release_quarantine",
 ]
