@@ -123,9 +123,9 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": "M5-P3-05",
-    "last_completed_story": "M5-P3-04",
-    "last_checkpoint": "2026-10-31T05:30:00Z",
+    "active_story": null,
+    "last_completed_story": "M5-P3-05",
+    "last_checkpoint": "2026-10-31T06:15:00Z",
     "last_session_id": "arena/5b0c65e0-m5-agent-studio",
     "next_recommended_story": "M5-P3-06",
     "open_risks": [
@@ -144,8 +144,8 @@
       "M5-P3-02 review, third pass (on the first fix's own code): the inline-payload inspection added in PR #62 still had two holes, found by re-testing it adversarially. (a) The wrapper skip consumed only tokens starting with '-', so for wrappers whose option takes a separate value the option's VALUE was read as the executable: `env -u HOME sh -c 'cat .env'`, `nice -n 5 sh -c ...`, `time -f %s sh -c ...` all skipped the shell entirely. (b) The inline-code path scan matched only paths containing a separator, so a bare secret name in interpreter code (`node --eval 'require(\"fs\").readFileSync(\".env\")'`, `perl -e'open(F,\".env\")'`) was invisible. Fixed by resolving wrapper options with their values (_ep_skip_wrapper), accepting the glued `-e<payload>` form, matching bare dotted names, and refusing a shell asked to read its command from stdin (`-s`). The lesson generalises: a fix for a security boundary needs the same adversarial pass as the code it replaced.",
       "M5-P3-02 review, fourth pass: the `.git/config` fix (#63) judged configuration as a FILE, but git accepts the same directives in-band. `git -c include.path=/tmp/evil.cfg status` was allowed: the command-line guard was a regex over the raw text, so it missed `include.path` entirely, and shell quoting (`git -c core.\"fs\"monitor=...`) defeats text matching even for the keys it did list. `-c`, glued `-ckey=value`, `--config-env`, `git config key value` and `GIT_CONFIG_KEY_<n>`/`GIT_CONFIG_PARAMETERS` are now judged from parsed tokens against one shared predicate (_ep_git_config_key_is_dangerous) used by both the file parser and the command scanner, so the two cannot drift again. Same lesson as the previous pass: a security fix has to cover every way the underlying tool accepts the setting, not just the way the report named."
     ],
-    "last_readme_sync": "2026-10-31T05:18:00Z",
-    "last_verified_commit": "e68466c4e385cd763514e368fdc382c62c119611",
+    "last_readme_sync": "2026-10-31T06:15:00Z",
+    "last_verified_commit": "d642bb0",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md"
   },
   "delivery_phases": [
@@ -208,7 +208,7 @@
       ],
       "status": "in_progress",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
-      "progress_percent": 50
+      "progress_percent": 67
     },
     {
       "id": "P4",
@@ -318,8 +318,8 @@
           "Authority consolidation completed 2026-10-30 on user/owner confirmation; AS roadmap retained unmodified as historical source and AS-status ledger (no history deleted)"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None \u2014 done. Authority consolidation awaits owner confirmation.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None — done. Authority consolidation awaits owner confirmation.",
         "readme_updated": true
       }
     },
@@ -373,14 +373,14 @@
           "docs/README.md"
         ],
         "evidence": [
-          "docs/m5-2-0-integration-audit.md \u00a71: all 9 reported claims verified/refuted with line evidence (claims 1 and 6 refuted; 2,3,4,5,7,8,9 confirmed)",
-          "\u00a72: FastAPI route -> tool/subprocess/SQLite/MCP traces with function and line references",
-          "\u00a73.1: all 17 direct subprocess entry points in app.py enumerated with gates; \u00a73.2: all consequential SQLite/FS write entry points enumerated",
-          "\u00a74: 42-module code-exists/integrated/tested/qualified table (5 integrated, 37 unit-tested-but-unintegrated)"
+          "docs/m5-2-0-integration-audit.md §1: all 9 reported claims verified/refuted with line evidence (claims 1 and 6 refuted; 2,3,4,5,7,8,9 confirmed)",
+          "§2: FastAPI route -> tool/subprocess/SQLite/MCP traces with function and line references",
+          "§3.1: all 17 direct subprocess entry points in app.py enumerated with gates; §3.2: all consequential SQLite/FS write entry points enumerated",
+          "§4: 42-module code-exists/integrated/tested/qualified table (5 integrated, 37 unit-tested-but-unintegrated)"
         ],
         "test_results": [
           {
-            "command": "grep/sed call-path audit (commands listed in audit doc \u00a76)",
+            "command": "grep/sed call-path audit (commands listed in audit doc §6)",
             "exit_code": 0,
             "result": "evidence captured inline"
           }
@@ -391,8 +391,8 @@
           "Skill-code subprocess paths classified as containment targets for M5-P0-03 (app.py:1831 flag-gated but sandbox-bypassing; app.py:8645 ungated)"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None \u2014 done. Containment work continues in M5-P0-03.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None — done. Containment work continues in M5-P0-03.",
         "readme_updated": true
       }
     },
@@ -642,7 +642,7 @@
           "docs/README.md"
         ],
         "evidence": [
-          "docs/m5-2-0-baseline-evidence.md \u00a72: full command log with exit codes",
+          "docs/m5-2-0-baseline-evidence.md §2: full command log with exit codes",
           "pytest: 717 passed, 1 skipped (opt-in live container test), 1 warning, 19.13s",
           "ruff/mypy/compileall/frontend-syntax/smoke_local x2/governance/security-signoff/docs/generators-no-drift/demo-tour/screenshots/adrs: all exit 0",
           "pip_audit exit 1: 21 advisories in venv bootstrap packages pip 23.0.1 + setuptools 66.1.1 only; runtime dependencies clean (recorded undiluted)",
@@ -676,12 +676,12 @@
           }
         ],
         "decisions": [
-          "verify_baseline.py initially failed on the shallow checkout; git fetch --unshallow (documented prerequisite) fixed it \u2014 both outcomes recorded",
-          "Blocked measurements (peak unified memory/swap, oMLX coding task, FTS5 load latency, live isolation) listed in evidence doc \u00a74 and never promoted to claims"
+          "verify_baseline.py initially failed on the shallow checkout; git fetch --unshallow (documented prerequisite) fixed it — both outcomes recorded",
+          "Blocked measurements (peak unified memory/swap, oMLX coding task, FTS5 load latency, live isolation) listed in evidence doc §4 and never promoted to claims"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None \u2014 done. Target-hardware telemetry moves to M5-P4-01 / M5-P0-04 on real hardware.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None — done. Target-hardware telemetry moves to M5-P4-01 / M5-P0-04 on real hardware.",
         "readme_updated": true
       }
     },
@@ -869,8 +869,8 @@
           "Old marketing-forward README content replaced per draft mandate; deep reference material (env vars, API, invariants) preserved in README reference section and docs/ links so validate_docs publication checks stay green"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None \u2014 done. README maintenance rule: refresh with verified behavior after every subsequent story.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None — done. README maintenance rule: refresh with verified behavior after every subsequent story.",
         "readme_updated": true
       }
     },
@@ -1489,7 +1489,7 @@
           "Enforced two-tier false-completion protection: a universal ledger invariant rejecting completion when the latest run_bash action failed without a subsequent passing run, plus full TaskVerificationSpec verification (managed-edit provenance, modified-file SHA-256 deltas, Git diff, protected user-file digests, post-edit test ordering, and independent shell=False test execution)."
         ],
         "blockers": [],
-        "handoff_note": "M5-P1-06 complete: single-agent verified vertical slice, deterministic action-boundary crash injection + session reconciliation, and false-completion rejection are integrated across app.py and standalone studio.py (811 passed, 1 skipped; 12/44 modules integrated; Phase P1 at 86% \u2014 6/7 stories done). Ready for M5-P1-07 (Minimal task events, HTTP commands and existing UI).",
+        "handoff_note": "M5-P1-06 complete: single-agent verified vertical slice, deterministic action-boundary crash injection + session reconciliation, and false-completion rejection are integrated across app.py and standalone studio.py (811 passed, 1 skipped; 12/44 modules integrated; Phase P1 at 86% — 6/7 stories done). Ready for M5-P1-07 (Minimal task events, HTTP commands and existing UI).",
         "next_action": "Claim and implement M5-P1-07 on a fresh branch after M5-P1-06 merges.",
         "readme_updated": true
       }
@@ -2533,7 +2533,15 @@
       "likely_files_to_inspect": [
         "mcp_client.py"
       ],
-      "verification_commands": [],
+      "verification_commands": [
+        ".venv/bin/pytest tests/test_mcp_idempotency_reconciliation.py -v",
+        ".venv/bin/pytest -q",
+        ".venv/bin/ruff check .",
+        ".venv/bin/mypy",
+        ".venv/bin/python scripts/validate_docs.py",
+        ".venv/bin/python scripts/validate_adrs.py",
+        ".venv/bin/python scripts/smoke_local.py --standalone"
+      ],
       "required_evidence": [
         "git diff / changed-file list",
         "test commands and exit codes",
@@ -2543,22 +2551,53 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P3-05: MCP idempotency and external-effect reconciliation. Objective: Prevent blind replay of non-idempotent remote writes. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Inspect actual MCP invocation paths and connector semantics; Bind action IDs and idempotency keys where supported; Implement queryable-outcome reconciliation; Pause uncertain non-idempotent writes. Acceptance: Duplicate external effect not created by recovery; Unsupported idempotency explicitly marked; MCP permissions pass central gate. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 10,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-31T05:30:00Z",
-        "updated_at": "2026-10-31T05:30:00Z",
-        "completed_at": null,
+        "updated_at": "2026-10-31T06:15:00Z",
+        "completed_at": "2026-10-31T06:15:00Z",
         "owner_session": "arena/5b0c65e0-m5-agent-studio",
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "commit_sha": "d642bb0",
+        "changed_files": [
+          "app.py",
+          "docs/README.md",
+          "docs/adr/0015-mcp-idempotency-and-external-effect-reconciliation.md",
+          "docs/mcp-idempotency.md",
+          "docs/route-security-matrix.md",
+          "docs/side-effect-idempotency.md",
+          "docs/subsystem-dependency-inventory.md",
+          "execution_profiles.py",
+          "execution_spine.py",
+          "mcp_client.py",
+          "process_supervision.py",
+          "product/M5_2_0_Autonomous_Roadmap.json",
+          "README.md",
+          "side_effect_ledger.py",
+          "studio.py",
+          "tests/test_mcp_idempotency_reconciliation.py"
+        ],
+        "evidence": [
+          "AC1 (Duplicate external effect not created by recovery): McpReconciliationSpec runs verified read_only=True allowlisted query_tool probes through execute_mcp_tool_call across replay, WorkerLeaseCoordinator.acquire_or_takeover, POST /api/harness/sessions/{id}/mcp-effects/reconcile, and /resume; verified_committed transitions DurableActionLedger via pre_takeover_verified_committed and short-circuits replay (reconciled=True, already_committed=True, 0 duplicate remote writes), verified_not_applied requires authoritative_not_found=True, and operator-committed non_idempotent actions raise CommittedActionReplayError on replay (tests/test_mcp_idempotency_reconciliation.py::test_queryable_outcome_reconciliation_verified_committed_prevents_duplicate_external_effect, test_queryable_outcome_reconciliation_verified_not_applied_vs_non_authoritative_not_found, test_api_reconcile_endpoint_and_worker_lease_takeover_without_duplicate_effects).",
+          "AC2 (Unsupported idempotency explicitly marked): classify_mcp_tool_semantics defaults all non-read-only MCP tools fail-closed to idempotency_supported=False, idempotency_status=unsupported, idempotency_mechanism=unsupported, and replay_policy=non_idempotent (or reconcilable with McpReconciliationSpec), surfacing markers on /api/mcp/servers, /api/mcp/tools, params._meta[\"m5.studio/idempotencyStatus\"], X-MCP-Idempotency-Supported, tool outputs, and McpExternalEffectStore records while binding idempotencyKey / argument_field only when explicitly supported (tests/test_mcp_idempotency_reconciliation.py::test_connector_semantics_explicit_unsupported_marking_and_policy_persistence, test_action_id_and_idempotency_key_binding_across_http_and_stdio).",
+          "AC3 (MCP permissions pass central gate): _mcp_http_rpc and _mcp_stdio_rpc enforce execution_spine.require_active_admission on method==tools/call, authorize_tool_invocation enforces STUDIO_ALLOW_MCP_STDIO and per-tool requiresApproval before in_flight ledger creation, reconciliation query_tool calls traverse DurableActionBoundary + ScopedGrantStore, and ambiguous non-idempotent writes pause single-agent and GSD Wave 2 turns (pause_reason=uncertain_external_effect) and block subsequent writes/resume until resolved (tests/test_mcp_idempotency_reconciliation.py::test_uncertain_non_idempotent_write_pauses_session_blocks_subsequent_writes_and_resolves_via_api, test_harness_single_agent_turn_pauses_immediately_after_uncertain_mcp_write, test_mcp_permissions_and_reconciliation_queries_pass_central_gate).",
+          "README ground-truth updated with M5-P3-05 capability summary and ADR-0015 / docs/mcp-idempotency.md references; SQLite SCHEMA_VERSION=3 preserved via $HARNESS_STORE_DIR/mcp_effects/state.json (0600 atomic write + file/dir fsync)."
+        ],
+        "test_results": [
+          ".venv/bin/pytest tests/test_mcp_idempotency_reconciliation.py -v -> 8 passed (exit 0)",
+          ".venv/bin/pytest -q -> 1263 passed, 1 skipped (exit 0)",
+          ".venv/bin/ruff check . -> All checks passed! (exit 0)",
+          ".venv/bin/mypy -> Success: no issues found in 51 source files (exit 0)",
+          ".venv/bin/python scripts/validate_docs.py -> Documentation validation passed (exit 0)",
+          ".venv/bin/python scripts/validate_adrs.py -> ADR validation passed (exit 0)"
+        ],
+        "decisions": [
+          "ADR-0015: Fail-closed MCP tool idempotency classification, JSON-RPC _meta / optional argument-field binding, strict read-only queryable-outcome reconciliation via central gate, uncertain-write session pause, and file-backed McpExternalEffectStore preserving SQLite Schema v3."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect mcp_client.py, app.py MCP RPC/tool/approval/direct paths, execution_spine.py, side_effect_ledger.py, execution_profiles.py, and scoped_grants.py before implementing M5-P3-05.",
-        "readme_updated": false
+        "handoff_note": "M5-P3-05 complete and verified (8 new tests, 1263 total passing). Next mandatory unblocked story is M5-P3-06 (Permission UX, audit trail and adversarial regression suite).",
+        "next_action": "Proceed to M5-P3-06 on a fresh branch after PR #68 merges.",
+        "readme_updated": true
       }
     },
     {
@@ -2690,7 +2729,7 @@
           "AC '24 GB pressure measured' remains UNMEASURED: p4.pressure and p4.model_load need the owner's 24 GB Apple Silicon run (--pressure-gb N --model-command CMD). The 80% reservation is documented as policy, not a measurement (docs/model-admission.md 'What this does not claim'), and the story therefore stays blocked.",
           "Standalone bundle stays self-contained: resource_admission and model_admission are inlined into studio.py (builder now tolerates a trailing comment on the import line), verified by tests/test_release_manager.py::test_generated_standalone_has_no_local_module_imports and ::test_the_standalone_bundle_carries_the_same_policy.",
           "Task 1/2 (representative per-category coding cases + recorded uncertainty): --coding-cases takes a case set (id/category/prompt, optional declared categories) and runs every case through --model-command with STUDIO_QUALIFY_CASE_ID/CATEGORY/PROMPT in the environment, --case-runs times each. p4.coding_cases records per-case exit codes, success rate, wall_s_median, wall_s_spread_ratio, per-category completion and an explicit uncertainty block (incl. single_run_cases) instead of a bare pass. A malformed case set (duplicate/missing id, missing category, undeclared category, invalid JSON) aborts with exit 2 and writes no record. Tests: test_load_coding_cases_* , test_coding_case_probe_passes_case_identity_through_the_environment, test_coding_case_probe_records_failures_and_uncertainty, test_coding_case_probe_measures_wall_time_spread, test_malformed_coding_cases_abort_the_run_without_a_verdict.",
-          "Task 3 (thermal): p4.thermal samples thermal pressure during every load phase \u2014 macOS via `pmset -g therm` CPU_Speed_Limit (no root; powermetrics is never invoked because it needs root), Linux via /sys/class/thermal/thermal_zone*/temp \u2014 and records stress min/max plus whether throttling was observed. Where the platform exposes no readable source the check is `blocked` with the reason (this container: 35 samples, none readable) rather than a fabricated temperature. Tests: test_thermal_snapshot_parses_pmset_thermal_pressure, test_linux_thermal_readings_convert_millidegrees, test_thermal_sampler_summarises_throttling, test_thermal_check_blocks_when_the_platform_cannot_report, test_thermal_check_passes_with_readings_under_load.",
+          "Task 3 (thermal): p4.thermal samples thermal pressure during every load phase — macOS via `pmset -g therm` CPU_Speed_Limit (no root; powermetrics is never invoked because it needs root), Linux via /sys/class/thermal/thermal_zone*/temp — and records stress min/max plus whether throttling was observed. Where the platform exposes no readable source the check is `blocked` with the reason (this container: 35 samples, none readable) rather than a fabricated temperature. Tests: test_thermal_snapshot_parses_pmset_thermal_pressure, test_linux_thermal_readings_convert_millidegrees, test_thermal_sampler_summarises_throttling, test_thermal_check_blocks_when_the_platform_cannot_report, test_thermal_check_passes_with_readings_under_load.",
           "The measurement path is now executable end to end instead of 'write a harness first': scripts/model_probe.py (stdlib only, OpenAI-compatible) performs one real request and prints one JSON line in the contract the suite already parses. first_token_ms is timed from the request being sent, not from the response headers - the first version of this probe timed from the headers and reported 0.0 ms, which excluded prefill; the regression is pinned by tests/test_model_probe.py::test_first_token_latency_includes_the_wait_for_the_first_token. Token counts come only from the server's usage block, peak_memory_bytes only from a readable --server-pid; anything unobserved is omitted and explained in a notes field rather than defaulted.",
           "Observed in this environment against a local OpenAI-compatible endpoint (record: /tmp/rec3.json, not committed): p4.model_load pass (3/3 runs, first_token_ms and output_tokens carried through to a loadable model_calibration profile), p4.coding_cases pass (3/3 cases across 3 categories, per-case success_rate 1.0 and wall_s_spread_ratio recorded, case_id/case_category echoed by the probe so a per-case measurement says which case it came from), p4.thermal blocked (no readable thermal source in a container), p4.machine.fingerprint blocked off-target. The story therefore stays blocked: this is evidence that the instrument works, not that a 24 GB Apple Silicon machine qualified."
         ],
