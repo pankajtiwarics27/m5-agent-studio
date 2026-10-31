@@ -62,10 +62,14 @@ Environment qualification is a **separate, operator-run artefact** delivered as
   documented `ExecStartPre`/Compose hooks exist for operators who want the record
   on every boot; they are opt-in and their failure semantics are spelled out.
 - **A blocked story stays blocked.** Tooling existing is not evidence. `M5-P3-01`
-  and `M5-P4-01` remain `blocked` in the ledger until a `qualified` record exists,
+  and `M5-P4-01` stay `blocked` in the ledger until a `qualified` record exists,
   and `M5-P4-01` additionally requires the serving path to refuse a second heavy
   local model for its "second simultaneous heavy load rejected under policy"
-  criterion — which it now does (ADR-0011), so only the measurement is missing.
+  criterion — which it does (ADR-0011). The hardware story received its
+  `qualified` record from an operator run on an Apple M5 on 2026-10-31
+  ([`../m5-2-0-hardware-qualification-evidence.md`](../m5-2-0-hardware-qualification-evidence.md))
+  and is `done`; `M5-P3-01` remains `blocked` because its sandbox run failed
+  `p3.adversarial.memory_limit` on that same machine.
 
 ## Alternatives
 
@@ -112,4 +116,7 @@ Environment qualification is a **separate, operator-run artefact** delivered as
 Not reviewed. This record accompanies the operator-run qualification tooling for
 `M5-P3-01`/`M5-P4-01` and records the decision to keep both stories blocked until
 a qualified record exists. It has not been reviewed by anyone other than the
-authoring agent.
+authoring agent. Both stories were blocked when this was written; `M5-P4-01`
+later received a qualified hardware record (2026-10-31) and is `done`, while
+`M5-P3-01` remains `blocked` on the failed sandbox memory-limit check.
+`review_status` is unchanged.
