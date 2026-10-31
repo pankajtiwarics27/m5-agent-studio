@@ -100,12 +100,10 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": "UIUX-P1-02",
-    "active_stories": [
-      "UIUX-P1-02"
-    ],
-    "last_completed_story": "UIUX-P1-01",
-    "next_recommended_story": "UIUX-P1-02",
+    "active_story": null,
+    "active_stories": [],
+    "last_completed_story": "UIUX-P1-02",
+    "next_recommended_story": "UIUX-P1-03",
     "last_checkpoint": "2026-11-01T01:30:00Z",
     "last_session_id": "arena/9110aa1b-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
@@ -233,8 +231,8 @@
         "UIUX-P1-05"
       ],
       "total": 5,
-      "done": 1,
-      "in_progress": 1,
+      "done": 2,
+      "in_progress": 0,
       "blocked": 0,
       "not_started": 3,
       "percent_complete": 0
@@ -341,11 +339,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 7,
-    "in_progress": 1,
+    "done": 8,
+    "in_progress": 0,
     "blocked": 0,
     "not_started": 32,
-    "percent_complete": 18
+    "percent_complete": 20
   },
   "stories": [
     {
@@ -1538,14 +1536,14 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P1-02 (Refactor navigation shell without changing routes). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 95,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-11-01T00:30:00Z",
         "updated_at": "2026-11-01T01:30:00Z",
-        "completed_at": null,
+        "completed_at": "2026-11-01T01:30:00Z",
         "owner_session": "arena/b8e1322f-m5-agent-studio",
-        "commit_sha": null,
+        "commit_sha": "9933bf90632a7a69dd402251228fec0a8fc62fa5",
         "changed_files": [
           "static/index.html",
           "studio.py",
@@ -1566,7 +1564,8 @@
           "A real defect surfaced while tracing: Alt+6 was advertised on the Start tab's title and in the ledger's tab_registry, but the key handler carried its own map of keys 1-5, so the first-run pane was the one tab no shortcut could reach and every document said otherwise. The handler now reads data-shortcut off the tabs, so title, registry and behaviour are one fact, and tests/test_navigation_shell.py checks all three against each other.",
           "Keyboard behaviour is measured in a browser, not asserted: scripts/keyboard_walk.mjs drives real key events and reported 22 of 22 checks passing - tablist role, one selected and one tabbable tab, Tab reaching that tab and leaving on the next press, both arrow axes, Home and End, wrapping, a 2px focus ring on the focused tab, all six Alt+N shortcuts including Alt+6, and no page errors. The script fails when no browser is available rather than reporting a pass it did not earn.",
           "The change is visually inert: with the markup and stylesheet swapped between captures on one running instance, all six panes are byte-identical before and after, and two consecutive captures of the new tree match each other. The committed baseline screenshots were neither re-shot nor hand-edited; validate_screenshots.py still reports 6 of 6.",
-          "No route, handler or control changed: the route map is unchanged at 53 call sites and 0 findings, the authorization trace unchanged at 37 state-changing routes, and the control inventory unchanged at 170 markup controls and 30 rendered by script. The only tooling change outside the frontend is the screenshots validator, which now reads tab ids per button instead of expecting one attribute order - the old regex reported 'no tabs at all' once the rail gained role and id attributes, which is a false failure rather than a passing check."
+          "No route, handler or control changed: the route map is unchanged at 53 call sites and 0 findings, the authorization trace unchanged at 37 state-changing routes, and the control inventory unchanged at 170 markup controls and 30 rendered by script. The only tooling change outside the frontend is the screenshots validator, which now reads tab ids per button instead of expecting one attribute order - the old regex reported 'no tabs at all' once the rail gained role and id attributes, which is a false failure rather than a passing check.",
+          "Closed at 9933bf90632a7a69dd402251228fec0a8fc62fa5: the commit whose tree the keyboard walk, the screenshot comparison and the suite ran on."
         ],
         "test_results": [
           {
