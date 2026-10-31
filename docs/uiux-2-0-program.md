@@ -210,10 +210,10 @@ claimed elsewhere. The two programs share a repository, not a ledger:
 
 ## Status
 
-Nothing in this program is shipped: 40 stories, 3 done (`UIUX-P0-01` the pinned
-source manifest, `UIUX-P0-02` the control inventory, `UIUX-P0-03` the route map),
-`next_recommended_story` = `UIUX-P0-04` (trace backend authorization and state
-behind every state-changing call). Planned work is never
+Nothing in this program is shipped: 40 stories, 4 done (`UIUX-P0-01` the pinned
+source manifest, `UIUX-P0-02` the control inventory, `UIUX-P0-03` the route map,
+`UIUX-P0-04` the authorization and state trace), `next_recommended_story` =
+`UIUX-P0-05` (baseline screenshots and test results). Planned work is never
 described as available in `README.md` before the owning story closes with
 evidence, and no screenshot has been captured yet, so no pane is claimed to have
 been seen rendered.
