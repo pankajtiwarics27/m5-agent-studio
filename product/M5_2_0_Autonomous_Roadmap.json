@@ -123,10 +123,10 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "M5-P3-06",
     "last_completed_story": "M5-P3-05",
-    "last_checkpoint": "2026-10-31T06:15:00Z",
-    "last_session_id": "arena/5b0c65e0-m5-agent-studio",
+    "last_checkpoint": "2026-10-31T06:20:00Z",
+    "last_session_id": "arena/9abb586e-m5-agent-studio",
     "next_recommended_story": "M5-P3-06",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
@@ -2636,13 +2636,13 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P3-06: Security incident containment and fallback qualification. Objective: Suspend failed guarantees and dependent profiles safely. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Track security dependencies and configuration generations; Suspend affected admissions promptly; Qualify alternative backend against incident-specific shared dependencies; Requalify before restoration. Acceptance: Regression prevents affected actions; Fallback cannot bypass shared failed dependency; Incident and barriers persist through crash. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-31T06:20:00Z",
+        "updated_at": "2026-10-31T06:20:00Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/9abb586e-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -2650,7 +2650,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "next_action": "Inspect sandbox_boundary.py, process_supervision.py, execution_profiles.py, execution_spine.py, qualify_environment.py, and app.py before designing M5-P3-06.",
         "readme_updated": false
       }
     },
