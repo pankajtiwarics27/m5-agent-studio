@@ -85,6 +85,13 @@
       "sha256": "6c4ffb5cda6751c4646f52578488e2a5d5167dd2f6cb6275bc0369682bb6e91c",
       "bytes": 21576,
       "lines": 494
+    },
+    {
+      "path": "scripts/uiux_route_map.py",
+      "role": "maps every fetch call to the route it can hit",
+      "sha256": "f71f59b34e0eb921aeafa6ba92621771de60033cbd5db08033a0c7db272018e5",
+      "bytes": 20875,
+      "lines": 487
     }
   ],
   "frontend": {

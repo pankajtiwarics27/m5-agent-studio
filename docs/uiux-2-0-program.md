@@ -17,6 +17,8 @@ claims anything; the binding contract is
 | [`tests/test_uiux_source_manifest.py`](../tests/test_uiux_source_manifest.py) | Re-derives every manifest claim from disk and proves the drift check actually fails. |
 | [`product/M5_2_0_UIUX_Control_Inventory.json`](../product/M5_2_0_UIUX_Control_Inventory.json) + [`uiux-2-0-control-inventory.md`](uiux-2-0-control-inventory.md) | The control inventory (`UIUX-P0-02`): every interactive element attributed to its pane, plus the script-rendered set. Generated — never hand-edited. |
 | [`scripts/uiux_control_inventory.py`](../scripts/uiux_control_inventory.py) | Writes and checks the inventory; `--check` fails CI when a control moves without it. |
+| [`product/M5_2_0_UIUX_Route_Map.json`](../product/M5_2_0_UIUX_Route_Map.json) + [`uiux-2-0-route-map.md`](uiux-2-0-route-map.md) | The route map (`UIUX-P0-03`): every `fetch` call mapped to the route it can hit, with the calls that match nothing and the routes no browser calls. Generated — never hand-edited. |
+| [`scripts/uiux_route_map.py`](../scripts/uiux_route_map.py) | Derives and checks the map from the calls and the route table; `--check` fails CI on drift. |
 | [`product/M5_2_0_Autonomous_Roadmap.json`](../product/M5_2_0_Autonomous_Roadmap.json) | The runtime program's ledger. Separate scope, separate ownership; a UI/UX session never edits its story tracking. |
 
 ## What the program is for
@@ -123,6 +125,30 @@ What it does not claim: that a control is *shown* (nothing was rendered), that t
 nearest-function attribution is a call graph, or that a missing `id` means a
 missing label — a wrapping `label` element is not resolved by this walk.
 
+## The route map
+
+`UIUX-P0-03` answered the question the repository could not answer: which
+frontend call hits which server route. It is derived from the 53 `fetch` calls,
+not from handler names — `loadProviders` proves nothing about its URL, the call
+inside it does.
+
+* **53 call sites resolve to 59 URLs**: 58 exact matches, **1 dynamic** and **0
+  findings** — no dead call, no call whose method disagrees with its route, no
+  URL that failed to resolve. Three resolution paths did the work: 51 URLs are
+  literals, 1 comes from a local `const` (`refreshOnboarding` chooses between
+  `/api/onboarding/preflight?probe=local` and the plain path), and 1 is a helper
+  parameter resolved from its call sites (`consumeSSE` receives its URL from six
+  callers, so it maps to six routes).
+* **1 dynamic match**: `/api/models/${id}/${act}` picks `load` or `unload` at
+  runtime, so both routes stay listed as candidates rather than one being guessed.
+* **54 of 102 routes have a browser caller**; the other 48 do not — which is not
+  dead code, because the CLI, the demo tour and the tests use the same API.
+
+What it does not claim: that any of these calls *works* (nothing was executed;
+authorization, request bodies and response handling are out of scope), that a
+dynamic match resolves to one route, or that an unused route is unused anywhere
+but in the browser.
+
 ## The tab registry
 
 The ledger carries a `tab_registry` derived from `static/index.html` and
@@ -156,9 +182,10 @@ claimed elsewhere. The two programs share a repository, not a ledger:
 
 ## Status
 
-Nothing in this program is shipped: 40 stories, 2 done (`UIUX-P0-01` the pinned
-source manifest, `UIUX-P0-02` the control inventory), `next_recommended_story` =
-`UIUX-P0-03` (map frontend handlers to API routes). Planned work is never
+Nothing in this program is shipped: 40 stories, 3 done (`UIUX-P0-01` the pinned
+source manifest, `UIUX-P0-02` the control inventory, `UIUX-P0-03` the route map),
+`next_recommended_story` = `UIUX-P0-04` (trace backend authorization for every
+state-changing call). Planned work is never
 described as available in `README.md` before the owning story closes with
 evidence, and no screenshot has been captured yet, so no pane is claimed to have
 been seen rendered.

@@ -1,0 +1,1893 @@
+{
+  "schema_version": "1.0.0",
+  "document_type": "m5_uiux_route_map",
+  "program": "M5_2_0_UIUX",
+  "story": "UIUX-P0-03",
+  "generator": "scripts/uiux_route_map.py",
+  "regenerate_with": "python3 scripts/uiux_route_map.py",
+  "check_with": "python3 scripts/uiux_route_map.py --check",
+  "statement": "Every fetch call in the inline script mapped to the route it can hit, derived from the call sites and the route table. Unmatched calls, method mismatches, dynamic matches and routes with no browser caller are published rather than smoothed over.",
+  "pinned_source_commit": "0956e44f51c2989c93ad22ae1b2606da78e7e1c9",
+  "frontend_sha256": "3137cb7d05bcbdd29155576bd9952f49172705b85e70a0c0a2484c81bc80a66a",
+  "app_sha256": "dba9c61be9a6525e329efec573df94ed768bf38d8fe2ffad533b4e397c6bbaab",
+  "totals": {
+    "fetch_call_sites": 53,
+    "resolved_urls": 59,
+    "exact_matches": 58,
+    "dynamic_matches": 1,
+    "unresolved_call_sites": 0,
+    "findings": 0,
+    "routes": 102,
+    "routes_used_by_frontend": 54,
+    "routes_without_frontend_caller": 48,
+    "resolved_from": {
+      "assignment": 1,
+      "callers": 1,
+      "literal": 51
+    }
+  },
+  "calls": [
+    {
+      "handler": "refreshOnboarding",
+      "line": 275,
+      "method": "GET",
+      "url_argument": "url",
+      "resolved_from": "assignment",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/onboarding/preflight",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/onboarding/preflight"
+            }
+          ],
+          "url": "/api/onboarding/preflight?probe=local"
+        },
+        {
+          "kind": "exact",
+          "route": "/api/onboarding/preflight",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/onboarding/preflight"
+            }
+          ],
+          "url": "/api/onboarding/preflight"
+        }
+      ]
+    },
+    {
+      "handler": "loadProviders",
+      "line": 355,
+      "method": "GET",
+      "url_argument": "\"/api/providers\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/providers",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/providers"
+            }
+          ],
+          "url": "/api/providers"
+        }
+      ]
+    },
+    {
+      "handler": "fetchRemoteModels",
+      "line": 434,
+      "method": "POST",
+      "url_argument": "\"/api/providers/fetch-models\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/providers/fetch-models",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/providers/fetch-models"
+            }
+          ],
+          "url": "/api/providers/fetch-models"
+        }
+      ]
+    },
+    {
+      "handler": "saveProvider",
+      "line": 458,
+      "method": "POST",
+      "url_argument": "\"/api/providers\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/providers",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/providers"
+            }
+          ],
+          "url": "/api/providers"
+        }
+      ]
+    },
+    {
+      "handler": "removeProvider",
+      "line": 478,
+      "method": "DELETE",
+      "url_argument": "`/api/providers/${encodeURIComponent(alias)}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/providers/{alias}",
+          "candidates": [
+            {
+              "method": "DELETE",
+              "path": "/api/providers/{alias}"
+            }
+          ],
+          "url": "/api/providers/{param}"
+        }
+      ]
+    },
+    {
+      "handler": "saveCombo",
+      "line": 485,
+      "method": "POST",
+      "url_argument": "\"/api/combos\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/combos",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/combos"
+            }
+          ],
+          "url": "/api/combos"
+        }
+      ]
+    },
+    {
+      "handler": "removeCombo",
+      "line": 500,
+      "method": "DELETE",
+      "url_argument": "`/api/combos/${encodeURIComponent(alias)}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/combos/{alias}",
+          "candidates": [
+            {
+              "method": "DELETE",
+              "path": "/api/combos/{alias}"
+            }
+          ],
+          "url": "/api/combos/{param}"
+        }
+      ]
+    },
+    {
+      "handler": "loadSkills",
+      "line": 516,
+      "method": "GET",
+      "url_argument": "\"/api/skills\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/skills",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/skills"
+            }
+          ],
+          "url": "/api/skills"
+        }
+      ]
+    },
+    {
+      "handler": "installSkill",
+      "line": 565,
+      "method": "POST",
+      "url_argument": "\"/api/skills/install\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/skills/install",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/skills/install"
+            }
+          ],
+          "url": "/api/skills/install"
+        }
+      ]
+    },
+    {
+      "handler": "openSpawnModal",
+      "line": 581,
+      "method": "GET",
+      "url_argument": "\"/api/workspace/files\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/workspace/files",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/workspace/files"
+            }
+          ],
+          "url": "/api/workspace/files"
+        }
+      ]
+    },
+    {
+      "handler": "confirmSpawnSession",
+      "line": 594,
+      "method": "POST",
+      "url_argument": "\"/api/hall/sessions\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/hall/sessions",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/hall/sessions"
+            }
+          ],
+          "url": "/api/hall/sessions"
+        }
+      ]
+    },
+    {
+      "handler": "refreshHallSessions",
+      "line": 605,
+      "method": "GET",
+      "url_argument": "\"/api/hall/sessions\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/hall/sessions",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/hall/sessions"
+            }
+          ],
+          "url": "/api/hall/sessions"
+        }
+      ]
+    },
+    {
+      "handler": "selectHallSession",
+      "line": 624,
+      "method": "GET",
+      "url_argument": "`/api/hall/sessions/${encodeURIComponent(id)}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/hall/sessions/{session_id}",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/hall/sessions/{session_id}"
+            }
+          ],
+          "url": "/api/hall/sessions/{param}"
+        }
+      ]
+    },
+    {
+      "handler": "postHumanHallMessage",
+      "line": 666,
+      "method": "POST",
+      "url_argument": "\"/api/hall/sessions\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/hall/sessions",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/hall/sessions"
+            }
+          ],
+          "url": "/api/hall/sessions"
+        }
+      ]
+    },
+    {
+      "handler": "postHumanHallMessage",
+      "line": 670,
+      "method": "POST",
+      "url_argument": "`/api/hall/sessions/${encodeURIComponent(activeHallId)}/message`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/hall/sessions/{session_id}/message",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/hall/sessions/{session_id}/message"
+            }
+          ],
+          "url": "/api/hall/sessions/{param}/message"
+        }
+      ]
+    },
+    {
+      "handler": "refreshTelemetry",
+      "line": 972,
+      "method": "GET",
+      "url_argument": "\"/api/telemetry\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/telemetry",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/telemetry"
+            }
+          ],
+          "url": "/api/telemetry"
+        }
+      ]
+    },
+    {
+      "handler": "modelAction",
+      "line": 1048,
+      "method": "POST",
+      "url_argument": "`/api/models/${encodeURIComponent(id)}/${act}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "dynamic",
+          "route": "/api/models/{model_id:path}/load",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/models/{model_id:path}/load"
+            },
+            {
+              "method": "POST",
+              "path": "/api/models/{model_id:path}/unload"
+            }
+          ],
+          "url": "/api/models/{param}/{param}"
+        }
+      ]
+    },
+    {
+      "handler": "unloadAllModels",
+      "line": 1049,
+      "method": "POST",
+      "url_argument": "\"/api/models/unload-all\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/models/unload-all",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/models/unload-all"
+            }
+          ],
+          "url": "/api/models/unload-all"
+        }
+      ]
+    },
+    {
+      "handler": "clearSsdCache",
+      "line": 1050,
+      "method": "POST",
+      "url_argument": "\"/api/cache/clear-ssd\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/cache/clear-ssd",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/cache/clear-ssd"
+            }
+          ],
+          "url": "/api/cache/clear-ssd"
+        }
+      ]
+    },
+    {
+      "handler": "consumeSSE",
+      "line": 1056,
+      "method": "POST",
+      "url_argument": "url",
+      "resolved_from": "callers",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/hall/sessions/{session_id}/summon",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/hall/sessions/{session_id}/summon"
+            }
+          ],
+          "url": "/api/hall/sessions/{param}/summon"
+        },
+        {
+          "kind": "exact",
+          "route": "/api/council/stream",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/council/stream"
+            }
+          ],
+          "url": "/api/council/stream"
+        },
+        {
+          "kind": "exact",
+          "route": "/api/debate/stream",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/debate/stream"
+            }
+          ],
+          "url": "/api/debate/stream"
+        },
+        {
+          "kind": "exact",
+          "route": "/api/chat/stream",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/chat/stream"
+            }
+          ],
+          "url": "/api/chat/stream"
+        },
+        {
+          "kind": "exact",
+          "route": "/api/harness/run",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/harness/run"
+            }
+          ],
+          "url": "/api/harness/run"
+        },
+        {
+          "kind": "exact",
+          "route": "/api/harness/gsd-wave",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/harness/gsd-wave"
+            }
+          ],
+          "url": "/api/harness/gsd-wave"
+        }
+      ]
+    },
+    {
+      "handler": "openExternalHarnessModal",
+      "line": 1236,
+      "method": "GET",
+      "url_argument": "\"/api/harness/external-configs\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/harness/external-configs",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/harness/external-configs"
+            }
+          ],
+          "url": "/api/harness/external-configs"
+        }
+      ]
+    },
+    {
+      "handler": "saveWorkspaceDirectory",
+      "line": 1328,
+      "method": "POST",
+      "url_argument": "\"/api/workspace/directory\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/workspace/directory",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/workspace/directory"
+            }
+          ],
+          "url": "/api/workspace/directory"
+        }
+      ]
+    },
+    {
+      "handler": "loadHarnessSessions",
+      "line": 1348,
+      "method": "GET",
+      "url_argument": "\"/api/harness/sessions\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/harness/sessions",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/harness/sessions"
+            }
+          ],
+          "url": "/api/harness/sessions"
+        }
+      ]
+    },
+    {
+      "handler": "selectHarnessSession",
+      "line": 1424,
+      "method": "GET",
+      "url_argument": "`/api/harness/sessions/${encodeURIComponent(id)}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/harness/sessions/{session_id}",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/harness/sessions/{session_id}"
+            }
+          ],
+          "url": "/api/harness/sessions/{param}"
+        }
+      ]
+    },
+    {
+      "handler": "patchActiveHarnessSettings",
+      "line": 1435,
+      "method": "PATCH",
+      "url_argument": "`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/harness/sessions/{session_id}",
+          "candidates": [
+            {
+              "method": "PATCH",
+              "path": "/api/harness/sessions/{session_id}"
+            }
+          ],
+          "url": "/api/harness/sessions/{param}"
+        }
+      ]
+    },
+    {
+      "handler": "deleteHarnessSession",
+      "line": 1448,
+      "method": "DELETE",
+      "url_argument": "`/api/harness/sessions/${encodeURIComponent(id)}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/harness/sessions/{session_id}",
+          "candidates": [
+            {
+              "method": "DELETE",
+              "path": "/api/harness/sessions/{session_id}"
+            }
+          ],
+          "url": "/api/harness/sessions/{param}"
+        }
+      ]
+    },
+    {
+      "handler": "harnessFetchEventPage",
+      "line": 1581,
+      "method": "GET",
+      "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/events?cursor=${cursor}&limit=${limit || 500}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/harness/sessions/{session_id}/events",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/harness/sessions/{session_id}/events"
+            }
+          ],
+          "url": "/api/harness/sessions/{param}/events?cursor={param}&limit={param}"
+        }
+      ]
+    },
+    {
+      "handler": "harnessResyncFromSnapshot",
+      "line": 1635,
+      "method": "GET",
+      "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/harness/sessions/{session_id}/state",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/harness/sessions/{session_id}/state"
+            }
+          ],
+          "url": "/api/harness/sessions/{param}/state"
+        }
+      ]
+    },
+    {
+      "handler": "openHarnessEventStream",
+      "line": 1674,
+      "method": "GET",
+      "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/events/stream?cursor=${harnessCursor}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/harness/sessions/{session_id}/events/stream",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/harness/sessions/{session_id}/events/stream"
+            }
+          ],
+          "url": "/api/harness/sessions/{param}/events/stream?cursor={param}"
+        }
+      ]
+    },
+    {
+      "handler": "openHarnessEventStream",
+      "line": 1708,
+      "method": "GET",
+      "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/harness/sessions/{session_id}/state",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/harness/sessions/{session_id}/state"
+            }
+          ],
+          "url": "/api/harness/sessions/{param}/state"
+        }
+      ]
+    },
+    {
+      "handler": "resolveHarnessApproval",
+      "line": 1869,
+      "method": "POST",
+      "url_argument": "\"/api/harness/approve\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/harness/approve",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/harness/approve"
+            }
+          ],
+          "url": "/api/harness/approve"
+        }
+      ]
+    },
+    {
+      "handler": "abortHarnessRun",
+      "line": 1890,
+      "method": "POST",
+      "url_argument": "`/api/harness/abort/${encodeURIComponent(activeHarnessId)}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/harness/abort/{session_id}",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/harness/abort/{session_id}"
+            }
+          ],
+          "url": "/api/harness/abort/{param}"
+        }
+      ]
+    },
+    {
+      "handler": "openHarnessDiffModal",
+      "line": 1900,
+      "method": "GET",
+      "url_argument": "`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/diff`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/harness/sessions/{session_id}/diff",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/harness/sessions/{session_id}/diff"
+            }
+          ],
+          "url": "/api/harness/sessions/{param}/diff"
+        }
+      ]
+    },
+    {
+      "handler": "applyHarnessWorktree",
+      "line": 1914,
+      "method": "POST",
+      "url_argument": "`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/apply`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/harness/sessions/{session_id}/apply",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/harness/sessions/{session_id}/apply"
+            }
+          ],
+          "url": "/api/harness/sessions/{param}/apply"
+        }
+      ]
+    },
+    {
+      "handler": "loadMcpServers",
+      "line": 2091,
+      "method": "GET",
+      "url_argument": "\"/api/mcp/servers\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/mcp/servers",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/mcp/servers"
+            }
+          ],
+          "url": "/api/mcp/servers"
+        }
+      ]
+    },
+    {
+      "handler": "saveMcpServer",
+      "line": 2282,
+      "method": "POST",
+      "url_argument": "\"/api/mcp/servers\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/mcp/servers",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/mcp/servers"
+            }
+          ],
+          "url": "/api/mcp/servers"
+        }
+      ]
+    },
+    {
+      "handler": "importMcpJson",
+      "line": 2306,
+      "method": "POST",
+      "url_argument": "\"/api/mcp/import-json\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/mcp/import-json",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/mcp/import-json"
+            }
+          ],
+          "url": "/api/mcp/import-json"
+        }
+      ]
+    },
+    {
+      "handler": "syncMcpServer",
+      "line": 2320,
+      "method": "POST",
+      "url_argument": "`/api/mcp/servers/${encodeURIComponent(alias)}/sync`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/mcp/servers/{alias}/sync",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/mcp/servers/{alias}/sync"
+            }
+          ],
+          "url": "/api/mcp/servers/{param}/sync"
+        }
+      ]
+    },
+    {
+      "handler": "toggleMcpServerEnabled",
+      "line": 2334,
+      "method": "PATCH",
+      "url_argument": "`/api/mcp/servers/${encodeURIComponent(alias)}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/mcp/servers/{alias}",
+          "candidates": [
+            {
+              "method": "PATCH",
+              "path": "/api/mcp/servers/{alias}"
+            }
+          ],
+          "url": "/api/mcp/servers/{param}"
+        }
+      ]
+    },
+    {
+      "handler": "changeMcpApprovalPolicy",
+      "line": 2342,
+      "method": "PATCH",
+      "url_argument": "`/api/mcp/servers/${encodeURIComponent(alias)}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/mcp/servers/{alias}",
+          "candidates": [
+            {
+              "method": "PATCH",
+              "path": "/api/mcp/servers/{alias}"
+            }
+          ],
+          "url": "/api/mcp/servers/{param}"
+        }
+      ]
+    },
+    {
+      "handler": "toggleMcpSingleTool",
+      "line": 2355,
+      "method": "PATCH",
+      "url_argument": "`/api/mcp/servers/${encodeURIComponent(alias)}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/mcp/servers/{alias}",
+          "candidates": [
+            {
+              "method": "PATCH",
+              "path": "/api/mcp/servers/{alias}"
+            }
+          ],
+          "url": "/api/mcp/servers/{param}"
+        }
+      ]
+    },
+    {
+      "handler": "deleteMcpServer",
+      "line": 2363,
+      "method": "DELETE",
+      "url_argument": "`/api/mcp/servers/${encodeURIComponent(alias)}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/mcp/servers/{alias}",
+          "candidates": [
+            {
+              "method": "DELETE",
+              "path": "/api/mcp/servers/{alias}"
+            }
+          ],
+          "url": "/api/mcp/servers/{param}"
+        }
+      ]
+    },
+    {
+      "handler": "runMcpPlayground",
+      "line": 2376,
+      "method": "POST",
+      "url_argument": "`/api/mcp/servers/${encodeURIComponent(alias)}/call`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/mcp/servers/{alias}/call",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/mcp/servers/{alias}/call"
+            }
+          ],
+          "url": "/api/mcp/servers/{param}/call"
+        }
+      ]
+    },
+    {
+      "handler": "compactActiveHarness",
+      "line": 2392,
+      "method": "POST",
+      "url_argument": "`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/compact`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/harness/sessions/{session_id}/compact",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/harness/sessions/{session_id}/compact"
+            }
+          ],
+          "url": "/api/harness/sessions/{param}/compact"
+        }
+      ]
+    },
+    {
+      "handler": "loadOpenContextDocs",
+      "line": 2539,
+      "method": "GET",
+      "url_argument": "\"/api/opencontext/docs\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/opencontext/docs",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/opencontext/docs"
+            }
+          ],
+          "url": "/api/opencontext/docs"
+        }
+      ]
+    },
+    {
+      "handler": "searchOpenContextUI",
+      "line": 2548,
+      "method": "GET",
+      "url_argument": "`/api/opencontext/search?q=${encodeURIComponent(q)}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/opencontext/search",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/opencontext/search"
+            }
+          ],
+          "url": "/api/opencontext/search?q={param}"
+        }
+      ]
+    },
+    {
+      "handler": "saveOpenContextDoc",
+      "line": 2602,
+      "method": "POST",
+      "url_argument": "\"/api/opencontext/docs\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/opencontext/docs",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/opencontext/docs"
+            }
+          ],
+          "url": "/api/opencontext/docs"
+        }
+      ]
+    },
+    {
+      "handler": "togglePinOpenContextDoc",
+      "line": 2614,
+      "method": "PATCH",
+      "url_argument": "`/api/opencontext/docs/${encodeURIComponent(id)}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/opencontext/docs/{doc_id}",
+          "candidates": [
+            {
+              "method": "PATCH",
+              "path": "/api/opencontext/docs/{doc_id}"
+            }
+          ],
+          "url": "/api/opencontext/docs/{param}"
+        }
+      ]
+    },
+    {
+      "handler": "deleteOpenContextDoc",
+      "line": 2622,
+      "method": "DELETE",
+      "url_argument": "`/api/opencontext/docs/${encodeURIComponent(id)}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/opencontext/docs/{doc_id}",
+          "candidates": [
+            {
+              "method": "DELETE",
+              "path": "/api/opencontext/docs/{doc_id}"
+            }
+          ],
+          "url": "/api/opencontext/docs/{param}"
+        }
+      ]
+    },
+    {
+      "handler": "runOpenContextLintUI",
+      "line": 2631,
+      "method": "GET",
+      "url_argument": "\"/api/opencontext/lint\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/opencontext/lint",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/opencontext/lint"
+            }
+          ],
+          "url": "/api/opencontext/lint"
+        }
+      ]
+    },
+    {
+      "handler": "refreshCodeGraphOverview",
+      "line": 2645,
+      "method": "GET",
+      "url_argument": "`/api/codegraph/analyze?workspace_dir=${encodeURIComponent(ws)}`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/codegraph/analyze",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/codegraph/analyze"
+            }
+          ],
+          "url": "/api/codegraph/analyze?workspace_dir={param}"
+        }
+      ]
+    },
+    {
+      "handler": "runCodeGraphPlayground",
+      "line": 2668,
+      "method": "POST",
+      "url_argument": "\"/api/codegraph/query\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/codegraph/query",
+          "candidates": [
+            {
+              "method": "POST",
+              "path": "/api/codegraph/query"
+            }
+          ],
+          "url": "/api/codegraph/query"
+        }
+      ]
+    },
+    {
+      "handler": "refreshSdlcBoard",
+      "line": 2706,
+      "method": "GET",
+      "url_argument": "`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/sdlc`",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/harness/sessions/{session_id}/sdlc",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/harness/sessions/{session_id}/sdlc"
+            }
+          ],
+          "url": "/api/harness/sessions/{param}/sdlc"
+        }
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/onboarding/preflight",
+      "callers": [
+        "refreshOnboarding"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/providers",
+      "callers": [
+        "loadProviders"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/providers",
+      "callers": [
+        "saveProvider"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/providers/{alias}",
+      "callers": [
+        "removeProvider"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/providers/fetch-models",
+      "callers": [
+        "fetchRemoteModels"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/combos",
+      "callers": [
+        "saveCombo"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/combos/{alias}",
+      "callers": [
+        "removeCombo"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/models",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/chat/completions",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/skills",
+      "callers": [
+        "loadSkills"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/skills/install",
+      "callers": [
+        "installSkill"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/workspace/files",
+      "callers": [
+        "openSpawnModal"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/workspace/directory",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/workspace/directory",
+      "callers": [
+        "saveWorkspaceDirectory"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/hall/sessions",
+      "callers": [
+        "refreshHallSessions"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/hall/sessions",
+      "callers": [
+        "confirmSpawnSession",
+        "postHumanHallMessage"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/hall/sessions/{session_id}",
+      "callers": [
+        "selectHallSession"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/hall/sessions/{session_id}/message",
+      "callers": [
+        "postHumanHallMessage"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/hall/sessions/{session_id}/close",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/hall/sessions/{session_id}/summon",
+      "callers": [
+        "consumeSSE"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/telemetry",
+      "callers": [
+        "refreshTelemetry"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/models/admission",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/models/unload-all",
+      "callers": [
+        "unloadAllModels"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/models/{model_id:path}/load",
+      "callers": [
+        "modelAction"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/models/{model_id:path}/unload",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/cache/clear-ssd",
+      "callers": [
+        "clearSsdCache"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/history/export",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/history/retention/run",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/chat/stream",
+      "callers": [
+        "consumeSSE"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/council/stream",
+      "callers": [
+        "consumeSSE"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/debate/stream",
+      "callers": [
+        "consumeSSE"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/mcp/servers",
+      "callers": [
+        "loadMcpServers"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/mcp/servers",
+      "callers": [
+        "saveMcpServer"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/mcp/import-json",
+      "callers": [
+        "importMcpJson"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/mcp/servers/{alias}",
+      "callers": [
+        "changeMcpApprovalPolicy",
+        "toggleMcpServerEnabled",
+        "toggleMcpSingleTool"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/mcp/servers/{alias}",
+      "callers": [
+        "deleteMcpServer"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/mcp/servers/{alias}/sync",
+      "callers": [
+        "syncMcpServer"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/mcp/servers/{alias}/call",
+      "callers": [
+        "runMcpPlayground"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/opencontext/docs",
+      "callers": [
+        "loadOpenContextDocs"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/opencontext/search",
+      "callers": [
+        "searchOpenContextUI"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/opencontext/docs",
+      "callers": [
+        "saveOpenContextDoc"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/opencontext/docs/{doc_id}",
+      "callers": [
+        "togglePinOpenContextDoc"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/opencontext/docs/{doc_id}",
+      "callers": [
+        "deleteOpenContextDoc"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/opencontext/lint",
+      "callers": [
+        "runOpenContextLintUI"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/codegraph/analyze",
+      "callers": [
+        "refreshCodeGraphOverview"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/codegraph/query",
+      "callers": [
+        "runCodeGraphPlayground"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/external-configs",
+      "callers": [
+        "openExternalHarnessModal"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/audit",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions",
+      "callers": [
+        "loadHarnessSessions"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions/{session_id}",
+      "callers": [
+        "selectHarnessSession"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/harness/sessions/{session_id}",
+      "callers": [
+        "patchActiveHarnessSettings"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/harness/sessions/{session_id}",
+      "callers": [
+        "deleteHarnessSession"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions/{session_id}/diff",
+      "callers": [
+        "openHarnessDiffModal"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/apply",
+      "callers": [
+        "applyHarnessWorktree"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/compact",
+      "callers": [
+        "compactActiveHarness"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/approve",
+      "callers": [
+        "resolveHarnessApproval"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/abort/{session_id}",
+      "callers": [
+        "abortHarnessRun"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions/{session_id}/state",
+      "callers": [
+        "harnessResyncFromSnapshot",
+        "openHarnessEventStream"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions/{session_id}/snapshots",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/snapshots",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/snapshots/{snapshot_id}/restore",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions/{session_id}/events",
+      "callers": [
+        "harnessFetchEventPage"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions/{session_id}/events/stream",
+      "callers": [
+        "openHarnessEventStream"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions/{session_id}/task",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/pause",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/cancel",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/contain",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/security/incidents",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/security/incidents",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/security/incidents/{incident_id}/fallback",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/security/incidents/{incident_id}/restore",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions/{session_id}/grants",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/grants",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/grants/revoke",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions/{session_id}/mcp-effects",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/mcp-effects/reconcile",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/mcp-effects/{action_id}/resolve",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions/{session_id}/handoffs",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/switch-model",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/handoffs/reset-budget",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions/{session_id}/delegations",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/delegations",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/delegations/{delegation_id}/join",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/delegations/{delegation_id}/cancel",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/delegations/benchmark",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/lessons",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/lessons/config",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/lessons/promote",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/lessons/retrieve",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/lessons/{lesson_id}/invalidate",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/lessons/evaluate",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/resume",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/run",
+      "callers": [
+        "consumeSSE"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/gsd-wave",
+      "callers": [
+        "consumeSSE"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions/{session_id}/sdlc",
+      "callers": [
+        "refreshSdlcBoard"
+      ],
+      "used_by_frontend": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sdlc/run",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sdlc/feedback",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/release-gate",
+      "callers": [],
+      "used_by_frontend": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/release-gate/evaluate",
+      "callers": [],
+      "used_by_frontend": false
+    }
+  ],
+  "findings": [],
+  "not_verified": [
+    "Nothing here was executed. A matched call is a request the browser can construct, not a route that works: authorization, request bodies and response handling are out of scope.",
+    "URLs are matched structurally. A URL whose segment is chosen at runtime is reported as a dynamic match with its candidate routes instead of being resolved to one.",
+    "Routes without a browser caller are not dead: the CLI, the demo tour and the tests call the same API."
+  ]
+}
