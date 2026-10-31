@@ -83,6 +83,131 @@ def test_pane_control_counts_match_the_inventory() -> None:
         assert [control["id"] for control in pane["controls"]] == [c.get("id") for c in source["controls"]]
 
 
+def test_signoff_keeps_ambiguous_and_unknown_method_candidates() -> None:
+    module = _load_generator()
+    calls = [
+        {
+            "handler": "ambiguous", "method": "GET",
+            "urls": [{"kind": "exact", "route": "/api/known", "candidates": [
+                {"method": "GET", "path": "/api/known"},
+                {"method": "GET", "path": "/api/{item}"},
+            ]}],
+        },
+        {
+            "handler": "dynamic_method", "method": None,
+            "urls": [{"kind": "dynamic_method", "route": None, "candidates": [
+                {"method": "GET", "path": "/api/known"},
+                {"method": "POST", "path": "/api/known"},
+            ]}],
+        },
+    ]
+    trace = {("POST", "/api/known"): {"shared_gates": [{"gate": "bearer_token"}]}}
+    routes = module._routes_by_handler(calls, trace)
+    assert {(r["path"], r["certainty"]) for r in routes["ambiguous"]} == {
+        ("/api/known", "possible"), ("/api/{item}", "possible")
+    }
+    assert {(r["method"], r["path"], r["certainty"]) for r in routes["dynamic_method"]} == {
+        ("GET", "/api/known", "possible"), ("POST", "/api/known", "possible")
+    }
+    post = next(r for r in routes["dynamic_method"] if r["method"] == "POST")
+    assert post["state_changing"] is True
+    assert post["gates"] == ["bearer_token"]
+
+
+def test_shared_helper_retains_distinct_paths_within_the_walk_depth() -> None:
+    module = _load_generator()
+    routes_by_handler = {"fetcher": [
+        {"method": "GET", "path": "/api/one", "certainty": "certain", "state_changing": False,
+         "gates": [], "entry_point": "one"},
+        {"method": "POST", "path": "/api/two", "certainty": "certain", "state_changing": True,
+         "gates": ["bearer_token"], "entry_point": "two"},
+    ]}
+    callees = {"start": ["one", "two"], "one": ["fetcher"], "two": ["fetcher"]}
+    routes, _excluded = module._pane_routes({"start"}, routes_by_handler, callees)
+    assert {(route["method"], route["path"]) for route in routes} == {
+        ("GET", "/api/one"), ("POST", "/api/two")
+    }
+
+
+def test_signoff_fails_closed_when_a_state_changing_candidate_is_not_traced() -> None:
+    module = _load_generator()
+    calls = [{"handler": "send", "method": None, "urls": [{
+        "kind": "dynamic_method", "route": None,
+        "candidates": [{"method": "POST", "path": "/api/known"}],
+    }]}]
+    with pytest.raises(module.SignoffError, match="trace"):
+        module._routes_by_handler(calls, {})
+
+
+def test_signoff_propagates_route_map_uncertainty(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = json.loads(ROUTE_MAP.read_text(encoding="utf-8"))
+    mapping["caller_resolution"]["complete"] = False
+    mapping["totals"]["unresolved_call_sites"] = 1
+    mapping["totals"]["unresolved_caller_edges"] = 2
+    mapping["totals"]["unresolved_method_edges"] = 1
+    mapping["totals"]["routes_unknown_frontend_caller"] = 58
+    mapping["totals"]["routes_no_caller_observed"] = 0
+    route_map = tmp_path / "map.json"
+    route_map.write_text(json.dumps(mapping), encoding="utf-8")
+    trace = json.loads(TRACE.read_text(encoding="utf-8"))
+    trace["route_map_sha256"] = hashlib.sha256(route_map.read_bytes()).hexdigest()
+    trace["totals"]["route_map_unresolved_call_sites"] = 1
+    trace["totals"]["route_map_unresolved_caller_edges"] = 2
+    trace["totals"]["route_map_unresolved_method_edges"] = 1
+    trace_file = tmp_path / "trace.json"
+    trace_file.write_text(json.dumps(trace), encoding="utf-8")
+    module = _load_generator()
+    monkeypatch.setattr(module, "ROUTE_MAP", route_map)
+    monkeypatch.setattr(module, "TRACE", trace_file)
+    package = module.build_signoff()
+    assert package["status"] == "unsigned"
+    assert package["totals"]["routes_with_resolved_or_possible_caller"] == 57
+    assert package["totals"]["routes_unknown_frontend_caller"] == 58
+    assert package["totals"]["route_map_unresolved_method_edges"] == 1
+    page = module.render_doc(package)
+    assert "2 unresolved URL or method edge(s)" in page
+    assert "not proof" in page
+
+
+def test_signoff_uses_schema_two_candidate_totals() -> None:
+    mapping = json.loads(ROUTE_MAP.read_text(encoding="utf-8"))
+    package = _package()
+    assert package["schema_version"] == "2.0.0"
+    assert package["totals"]["routes_with_resolved_or_possible_caller"] == (
+        mapping["totals"]["routes_with_resolved_or_possible_caller"]
+    )
+    assert package["totals"]["routes_unknown_frontend_caller"] == mapping["totals"]["routes_unknown_frontend_caller"]
+    assert "routes_used_by_frontend" not in package["totals"]
+
+
+def test_signoff_rejects_route_maps_without_uncertainty_data(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = json.loads(ROUTE_MAP.read_text(encoding="utf-8"))
+    del mapping["totals"]["unresolved_method_edges"]
+    path = tmp_path / "map.json"
+    path.write_text(json.dumps(mapping), encoding="utf-8")
+    module = _load_generator()
+    monkeypatch.setattr(module, "ROUTE_MAP", path)
+    with pytest.raises(module.SignoffError, match="uncertainty"):
+        module.build_signoff()
+
+
+def test_signoff_rejects_an_authorization_trace_for_another_map(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = json.loads(ROUTE_MAP.read_text(encoding="utf-8"))
+    mapping["statement"] += " changed"
+    path = tmp_path / "map.json"
+    path.write_text(json.dumps(mapping), encoding="utf-8")
+    module = _load_generator()
+    monkeypatch.setattr(module, "ROUTE_MAP", path)
+    with pytest.raises(module.SignoffError, match="does not match"):
+        module.build_signoff()
+
+
 def test_the_package_is_unsigned_until_the_ledger_says_otherwise() -> None:
     package = _package()
     ledger = _ledger()

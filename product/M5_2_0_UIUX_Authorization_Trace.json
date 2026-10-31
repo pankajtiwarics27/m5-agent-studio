@@ -6,14 +6,17 @@
   "generator": "scripts/uiux_authorization_trace.py",
   "regenerate_with": "python3 scripts/uiux_authorization_trace.py",
   "check_with": "python3 scripts/uiux_authorization_trace.py --check",
-  "statement": "For every state-changing route the browser can call: the shared gates every request passes, the refusals the handler raises, the authority and durable-state subsystems it references, and whether it can leave the machine. Derived from app.py and the P0-03 route map; a reference is evidence of a consultation, not proof of enforcement.",
-  "pinned_source_commit": "0b4b1a4a19c65db2782bdf660b38563df071ead3",
+  "statement": "For state-changing route candidates resolved by the browser map: the shared gates every request passes, handler refusals, referenced authority and durable-state subsystems, and possible effects. The route map is a lexical scan, not proof of exhaustive browser coverage; a reference is evidence of a consultation, not proof of enforcement.",
+  "pinned_source_commit": "95cc01dfbd9cc581bf5923da4910397df96bbe50",
   "app_sha256": "e3dd15bef236555d4cb3fca12eac003a55e099b48bbefa20e313489af652f129",
-  "route_map_sha256": "ace5222d7b530d2e92633881d1875980353cece5df1f34c1b7247964c49d03da",
+  "route_map_sha256": "53d72874d56033ac6771bc6def32de223b1fd9dbd6ca78f8e82969b8a19d1e35",
   "totals": {
     "routes_in_app": 115,
     "state_changing_routes_in_app": 77,
     "traced_routes": 37,
+    "route_map_unresolved_call_sites": 0,
+    "route_map_unresolved_caller_edges": 0,
+    "route_map_unresolved_method_edges": 0,
     "traced_by_method": {
       "DELETE": 5,
       "PATCH": 3,
@@ -2613,7 +2616,7 @@
     "Nothing here was executed: no request was sent, so no refusal was observed. The status codes are read from the handler's own raise statements and the middleware's own returns.",
     "A subsystem reference is a consultation, not a guarantee: a handler may call it on one branch only, and a guard made inside a helper the handler calls is invisible to this trace.",
     "Authorization decisions that depend on runtime policy (a grant that was revoked, an approval that expired) cannot be read from source. The UI must render the server's answer, never infer it.",
-    "Only the state-changing routes the browser calls are traced; a route with no browser caller is out of scope here and appears in the P0-03 route map instead.",
+    "Only state-changing candidates resolved by the lexical browser map are traced. Unobserved or unresolved browser paths are not proof that other routes have no caller.",
     "A blank authority or durable-state cell is not a verdict. The scan reads the handler and the functions it calls by name, one level down; a guard two calls away, or made inside a method on a class, is not seen. Read the cell as 'nothing at this depth', never as 'unguarded'."
   ]
 }

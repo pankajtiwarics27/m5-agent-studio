@@ -1,14 +1,14 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "document_type": "m5_uiux_preservation_signoff",
   "program": "M5_2_0_UIUX",
   "story": "UIUX-P0-06",
   "generator": "scripts/uiux_preservation_signoff.py",
   "regenerate_with": "python3 scripts/uiux_preservation_signoff.py",
   "check_with": "python3 scripts/uiux_preservation_signoff.py --check",
-  "statement": "The preservation surface and the rollback path, frozen at one commit for the owner's P0-06 approval: the capabilities the program must keep, the controls that implement them, the routes those controls reach, the boundary that can refuse those routes, and what reverting a story does and does not touch.",
+  "statement": "A preservation and rollback review package with a baseline source pin and hashes of its current input artifacts: capabilities, controls, bounded route candidates and their gates. The source pin alone does not prove that every input was measured at that commit.",
   "prepared_not_signed": "Prepared by an agent. An agent may prepare this package; it may not approve it. The approval lives in the ledger's coordination.preservation_signoff record, and this page reports it.",
-  "pinned_source_commit": "0b4b1a4a19c65db2782bdf660b38563df071ead3",
+  "pinned_source_commit": "95cc01dfbd9cc581bf5923da4910397df96bbe50",
   "status": "unsigned",
   "signature": {
     "approved": false,
@@ -19,11 +19,11 @@
     "statement": "No signature. This is material for the owner to approve, not an approved baseline."
   },
   "inputs": {
-    "ledger_sha256": "e687fea2a047f1bad421efea27c1025c599baaf03c813ed5309d163ce39c4028",
-    "source_manifest_sha256": "600fa55ac5716af055a86d44e49edec500ed9f2fe5b4027ff0529dfa489682a8",
-    "control_inventory_sha256": "f54bb4f9e327e3ee638a68f0cfe111d1ddc1d5827025d994b2dd75c666534c6e",
-    "route_map_sha256": "ace5222d7b530d2e92633881d1875980353cece5df1f34c1b7247964c49d03da",
-    "authorization_trace_sha256": "46538edad6f34626599cb3cf64c5736147079d080458a2c17b75a5cf5e913b44",
+    "ledger_sha256": "f4fcb12f552ec73e18729458a21502c08c2cc2f0f1f90de88093c5b2174497f4",
+    "source_manifest_sha256": "9657a3f8c4848f552de6e838b3321b6db318b15d86685c4fae64de5b5dfd0ad3",
+    "control_inventory_sha256": "1a854af0969cee34b1cdcbd47a76c29edcfb5bc67b66d6d150960dec86e92b97",
+    "route_map_sha256": "53d72874d56033ac6771bc6def32de223b1fd9dbd6ca78f8e82969b8a19d1e35",
+    "authorization_trace_sha256": "a6452ced395649d1615f71facb776157526aaf2986d702ec0965378aa90cd344",
     "frontend_sha256": "3137cb7d05bcbdd29155576bd9952f49172705b85e70a0c0a2484c81bc80a66a"
   },
   "approval_request": [
@@ -39,8 +39,8 @@
     },
     {
       "id": 3,
-      "ask": "Accept that every browser-reachable route stays mounted, and that state-changing ones stay traced",
-      "evidence": "115 routes exist; 57 have a browser caller; 37 state-changing routes carry their gates, refusals and state"
+      "ask": "Review route candidates and preserve confirmed browser-reachable routes and their gates",
+      "evidence": "115 routes exist; 57 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 37 state-changing candidates; the lexical scan is not exhaustive"
     },
     {
       "id": 4,
@@ -49,8 +49,8 @@
     },
     {
       "id": 5,
-      "ask": "Accept the rollback path: one merge commit per story, no schema change, artifacts regenerate",
-      "evidence": "no artifact in this program adds a table, a migration or a privilege; each story is reverted with `git revert -m 1 <merge sha>` and re-verified with the commands listed below"
+      "ask": "Review the rollback path and the state effects of each story",
+      "evidence": "this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below"
     }
   ],
   "totals": {
@@ -61,10 +61,15 @@
     "pane_controls": 69,
     "script_rendered_controls": 30,
     "routes": 115,
-    "routes_used_by_frontend": 57,
+    "routes_with_resolved_or_possible_caller": 57,
+    "routes_no_caller_observed": 58,
+    "routes_unknown_frontend_caller": 0,
+    "route_map_unresolved_call_sites": 0,
+    "route_map_unresolved_caller_edges": 0,
+    "route_map_unresolved_method_edges": 0,
     "state_changing_routes_traced": 37,
-    "pane_routes_reached": 25,
-    "pane_routes_excluded": 35,
+    "pane_routes_reached": 26,
+    "pane_routes_excluded": 34,
     "route_walk_depth": 2,
     "screenshots_captured": 0,
     "screenshots_planned": 6
@@ -499,6 +504,25 @@
         },
         {
           "method": "POST",
+          "path": "/api/harness/run",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "rate_limit",
+            "body_size_limit"
+          ],
+          "handler": "consumeSSE",
+          "via": [
+            "executeHarnessSelectedWorkflow",
+            "runHarnessTurn",
+            "consumeSSE"
+          ]
+        },
+        {
+          "method": "POST",
           "path": "/api/workspace/directory",
           "certainty": "certain",
           "state_changing": true,
@@ -514,7 +538,7 @@
           ]
         }
       ],
-      "routes_excluded_by_entry_point": 7
+      "routes_excluded_by_entry_point": 6
     },
     {
       "label": "Council",
@@ -1207,9 +1231,9 @@
       "Re-run the verification commands below and record their exit codes in the ledger."
     ],
     "not_touched": [
-      "No database migration, table or column is added by any P0 or P1 story: durable task state, approvals, event cursors and workspace files are read, never restructured.",
-      "No new privilege: the bearer token, host allowlist, origin check, rate limit and body-size limit are read by the UI, not changed by it.",
-      "User workspace data under the configured workspace directory is never rewritten by a revert."
+      "This package adds no database migration. A Git revert does not roll back durable database state; each future story must separately verify its migration and recovery effects.",
+      "This package adds no privilege: the bearer token, host allowlist, origin check, rate limit and body-size limit are not changed by it.",
+      "A revert changes tracked files in the target checkout, not arbitrary external workspaces. Review the target and protect uncommitted work before running it."
     ],
     "verify_after_revert": [
       ".venv/bin/python -m pytest -q",
@@ -1228,8 +1252,10 @@
   "not_verified": [
     "Nothing here was rendered or clicked. A control counted in the markup is present in the file, not proven to work, and no keyboard, contrast or screen-reader check has been run.",
     "Pane-to-route attribution follows calls inside the inline script at most 2 hops from the handler a control names, and keeps a route only when the walk passes the function that supplied its literal. A deeper chain is invisible, so a pane with no routes below is not a pane that calls nothing; the excluded count on each pane shows the filter refusing a shared helper's other callers.",
+    "The route map is a bounded lexical scan, not proof of exhaustive browser coverage or execution. Unresolved URL or method edges remain visible; no observed caller is not proof of absence.",
     "The preservation matrix is a list of capabilities in words. This package carries it row for row and does not decide which control implements which row; that mapping is what the owner is being asked to confirm.",
-    "0 of 6 baseline screenshots exist, so the approval cannot rest on visual evidence: it rests on the inventory, the map, the trace and the test suite.",
-    "Approval is an owner act recorded in the ledger. A green test suite proves the package matches the tree; it does not prove the tree is acceptable."
+    "0 of 6 baseline screenshots are recorded. Missing or unaccepted screenshots leave the visual gate open; static artifacts cannot substitute for them.",
+    "The demo and full test suite can use source-relative harness data; until isolation is fixed, run them only from a disposable checkout with an empty harness store (issues #108 and #117).",
+    "Approval is an owner act recorded in the ledger. A green test suite proves the package matches the tree; it does not prove the tree is acceptable or that other P0 holds are cleared."
   ]
 }

@@ -14,10 +14,9 @@ approving measured state rather than an agent's summary:
   carried row for row, with no row merged, dropped or reworded;
 * the controls that implement them come from the P0-02 inventory, with their
   ids, labels and inline handlers, attributed to the pane that contains them;
-* the routes a pane's buttons can reach come from the P0-03 map, at one call
-  depth: the handler named in a control's `onclick` is matched against the
-  functions that hold a `fetch` call. A control whose handler sits behind another
-  helper is not counted, and the page says so;
+* route candidates come from the P0-03 map and a bounded pane-to-handler walk;
+  ambiguous and unknown-method candidates remain possible, and unresolved edges
+  stay visible. A deeper chain may be missed, as the page says;
 * what can refuse those state-changing routes comes from the P0-04 trace, so the
   approval covers the boundary, not just the widgets.
 
@@ -45,8 +44,9 @@ SCREENSHOT_INDEX = PROJECT_ROOT / "docs" / "media" / "screenshots" / "index.json
 SIGNOFF_PATH = PROJECT_ROOT / "product" / "M5_2_0_UIUX_Preservation_Signoff.json"
 DOC_PATH = PROJECT_ROOT / "docs" / "uiux-2-0-p0-signoff.md"
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "2.0.0"
 STORY = "UIUX-P0-06"
+STATE_CHANGING = {"POST", "PUT", "PATCH", "DELETE"}
 FRONTEND = PROJECT_ROOT / "static" / "index.html"
 ROUTE_MAP_SCRIPT = PROJECT_ROOT / "scripts" / "uiux_route_map.py"
 # How far the pane -> route walk follows calls inside the inline script. Two hops
@@ -162,22 +162,21 @@ def _routes_by_handler(
             kind = str(item["kind"])
             chain = item.get("forwarded_via") or []
             entry_point = str(chain[-1]) if chain else handler
-            if kind == "exact":
-                keys = [(str(call["method"]), str(item["route"]), "certain")]
-            elif kind == "dynamic":
-                keys = [
-                    (str(candidate["method"]), str(candidate["path"]), "possible")
-                    for candidate in item["candidates"]  # type: ignore[union-attr]
-                ]
-            else:
+            if kind not in {"exact", "dynamic", "dynamic_method"}:
                 continue
-            for method, path, certainty in keys:
+            candidates = item["candidates"]
+            certainty = "certain" if kind == "exact" and len(candidates) == 1 else "possible"
+            for candidate in candidates:
+                method, path = str(candidate["method"]), str(candidate["path"])
                 row = trace_rows.get((method, path))
+                state_changing = method in STATE_CHANGING
+                if state_changing and row is None:
+                    raise SignoffError(f"{method} {path}: route candidate is missing from the authorization trace")
                 entry = {
                     "method": method,
                     "path": path,
                     "certainty": certainty,
-                    "state_changing": row is not None,
+                    "state_changing": state_changing,
                     "gates": [gate["gate"] for gate in row["shared_gates"]] if row is not None else [],  # type: ignore[index]
                     "entry_point": entry_point,
                 }
@@ -198,35 +197,33 @@ def _pane_routes(
     function the walk passed through. Returns the routes and how many were
     excluded for failing that test, so the page can show the filter working.
     """
-    seen: set[str] = set()
+    seen: set[tuple[str, ...]] = set()
     queue: list[tuple[str, list[str]]] = [(name, [name]) for name in sorted(handlers)]
     found: dict[tuple[str, str], dict[str, object]] = {}
-    depth_of: dict[str, int] = {name: 0 for name in handlers}
-    excluded = 0
+    excluded: set[tuple[str, str]] = set()
 
     while queue:
         name, chain = queue.pop(0)
-        if name in seen:
+        if tuple(chain) in seen:
             continue
-        seen.add(name)
+        seen.add(tuple(chain))
         chain_set = set(chain)
         for route in routes_by_handler.get(name, []):
             key = (str(route["method"]), str(route["path"]))
             if str(route["entry_point"]) not in chain_set:
                 if key not in found:
-                    excluded += 1
+                    excluded.add(key)
                 continue
-            if key not in found:
+            excluded.discard(key)
+            if key not in found or (found[key]["certainty"] == "possible" and route["certainty"] == "certain"):
                 found[key] = {k: v for k, v in route.items() if k != "entry_point"} | {"handler": name, "via": chain}
-        depth = depth_of.get(name, 0)
-        if depth >= MAX_CALL_DEPTH:
+        if len(chain) - 1 >= MAX_CALL_DEPTH:
             continue
         for callee in callees.get(name, []):
-            if callee == "fetch" or callee in seen:
+            if callee == "fetch" or callee in chain_set:
                 continue
-            depth_of.setdefault(callee, depth + 1)
             queue.append((callee, [*chain, callee]))
-    return [found[key] for key in sorted(found)], excluded
+    return [found[key] for key in sorted(found)], len(excluded)
 
 
 def build_signoff() -> dict[str, object]:
@@ -246,6 +243,26 @@ def build_signoff() -> dict[str, object]:
     ):
         if str(artifact.get(key)) != pin:
             raise SignoffError(f"{label} is pinned to {artifact.get(key)!r}, not to the ledger's {pin}; regenerate it")
+
+    map_totals = route_map.get("totals")
+    trace_totals = trace.get("totals")
+    required_map_totals = {
+        "routes", "routes_with_resolved_or_possible_caller", "routes_no_caller_observed",
+        "routes_unknown_frontend_caller", "unresolved_call_sites", "unresolved_caller_edges",
+        "unresolved_method_edges",
+    }
+    if (
+        str(route_map.get("schema_version", "")).split(".")[0] != "2"
+        or not isinstance(route_map.get("caller_resolution"), dict)
+        or not isinstance(map_totals, dict)
+        or not required_map_totals <= map_totals.keys()
+    ):
+        raise SignoffError("the route map lacks schema-2 candidate and uncertainty data; regenerate it")
+    if not isinstance(trace_totals, dict) or str(trace.get("route_map_sha256")) != _sha256(ROUTE_MAP):
+        raise SignoffError("the authorization trace does not match the route map; regenerate it")
+    for name in ("unresolved_call_sites", "unresolved_caller_edges", "unresolved_method_edges"):
+        if trace_totals.get("route_map_" + name) != map_totals[name]:
+            raise SignoffError(f"the authorization trace disagrees with the route map on {name}; regenerate it")
 
     registry = ledger.get("tab_registry")
     matrix = ledger.get("feature_preservation_matrix")
@@ -319,8 +336,6 @@ def build_signoff() -> dict[str, object]:
         )
 
     totals = inventory.get("totals") if isinstance(inventory.get("totals"), dict) else {}
-    map_totals = route_map.get("totals") if isinstance(route_map.get("totals"), dict) else {}
-    trace_totals = trace.get("totals") if isinstance(trace.get("totals"), dict) else {}
     captured, planned = _screenshot_count()
     approval = _approval(ledger)
 
@@ -333,10 +348,9 @@ def build_signoff() -> dict[str, object]:
         "regenerate_with": "python3 scripts/uiux_preservation_signoff.py",
         "check_with": "python3 scripts/uiux_preservation_signoff.py --check",
         "statement": (
-            "The preservation surface and the rollback path, frozen at one commit for the owner's P0-06 "
-            "approval: the capabilities the program must keep, the controls that implement them, the routes "
-            "those controls reach, the boundary that can refuse those routes, and what reverting a story "
-            "does and does not touch."
+            "A preservation and rollback review package with a baseline source pin and hashes of its "
+            "current input artifacts: capabilities, controls, bounded route candidates and their gates. "
+            "The source pin alone does not prove that every input was measured at that commit."
         ),
         "prepared_not_signed": (
             "Prepared by an agent. An agent may prepare this package; it may not approve it. The approval "
@@ -376,10 +390,12 @@ def build_signoff() -> dict[str, object]:
             },
             {
                 "id": 3,
-                "ask": "Accept that every browser-reachable route stays mounted, and that state-changing ones stay traced",
-                "evidence": f"{map_totals.get('routes')} routes exist; {map_totals.get('routes_used_by_frontend')} "
-                f"have a browser caller; {trace_totals.get('traced_routes')} state-changing routes carry their "
-                f"gates, refusals and state",
+                "ask": "Review route candidates and preserve confirmed browser-reachable routes and their gates",
+                "evidence": f"{map_totals['routes']} routes exist; "
+                f"{map_totals['routes_with_resolved_or_possible_caller']} have a resolved or possible caller; "
+                f"{map_totals['routes_unknown_frontend_caller']} have unknown browser usage due to detected "
+                f"unresolved edges. The trace covers {trace_totals.get('traced_routes')} state-changing candidates; "
+                "the lexical scan is not exhaustive",
             },
             {
                 "id": 4,
@@ -389,9 +405,9 @@ def build_signoff() -> dict[str, object]:
             },
             {
                 "id": 5,
-                "ask": "Accept the rollback path: one merge commit per story, no schema change, artifacts regenerate",
-                "evidence": "no artifact in this program adds a table, a migration or a privilege; each story is "
-                "reverted with `git revert -m 1 <merge sha>` and re-verified with the commands listed below",
+                "ask": "Review the rollback path and the state effects of each story",
+                "evidence": "this package adds no migration or privilege; review each story's actual merge, "
+                "revert and recovery effects, then regenerate artifacts and re-run the checks below",
             },
         ],
         "totals": {
@@ -401,8 +417,13 @@ def build_signoff() -> dict[str, object]:
             "chrome_controls": int(totals.get("chrome_controls") or 0),
             "pane_controls": int(totals.get("pane_controls") or 0),
             "script_rendered_controls": int(totals.get("script_rendered_controls") or 0),
-            "routes": int(map_totals.get("routes") or 0),
-            "routes_used_by_frontend": int(map_totals.get("routes_used_by_frontend") or 0),
+            "routes": int(map_totals["routes"]),
+            "routes_with_resolved_or_possible_caller": int(map_totals["routes_with_resolved_or_possible_caller"]),
+            "routes_no_caller_observed": int(map_totals["routes_no_caller_observed"]),
+            "routes_unknown_frontend_caller": int(map_totals["routes_unknown_frontend_caller"]),
+            "route_map_unresolved_call_sites": int(map_totals["unresolved_call_sites"]),
+            "route_map_unresolved_caller_edges": int(map_totals["unresolved_caller_edges"]),
+            "route_map_unresolved_method_edges": int(map_totals["unresolved_method_edges"]),
             "state_changing_routes_traced": int(trace_totals.get("traced_routes") or 0),
             "pane_routes_reached": sum(len(pane["routes_reached"]) for pane in panes),  # type: ignore[arg-type]
             "pane_routes_excluded": sum(int(pane["routes_excluded_by_entry_point"]) for pane in panes),  # type: ignore[arg-type]
@@ -429,11 +450,12 @@ def build_signoff() -> dict[str, object]:
                 "Re-run the verification commands below and record their exit codes in the ledger.",
             ],
             "not_touched": [
-                "No database migration, table or column is added by any P0 or P1 story: durable task state, "
-                "approvals, event cursors and workspace files are read, never restructured.",
-                "No new privilege: the bearer token, host allowlist, origin check, rate limit and body-size "
-                "limit are read by the UI, not changed by it.",
-                "User workspace data under the configured workspace directory is never rewritten by a revert.",
+                "This package adds no database migration. A Git revert does not roll back durable database "
+                "state; each future story must separately verify its migration and recovery effects.",
+                "This package adds no privilege: the bearer token, host allowlist, origin check, rate limit "
+                "and body-size limit are not changed by it.",
+                "A revert changes tracked files in the target checkout, not arbitrary external workspaces. "
+                "Review the target and protect uncommitted work before running it.",
             ],
             "verify_after_revert": [
                 ".venv/bin/python -m pytest -q",
@@ -456,13 +478,17 @@ def build_signoff() -> dict[str, object]:
             "the handler a control names, and keeps a route only when the walk passes the function that supplied "
             "its literal. A deeper chain is invisible, so a pane with no routes below is not a pane that calls "
             "nothing; the excluded count on each pane shows the filter refusing a shared helper's other callers.",
+            "The route map is a bounded lexical scan, not proof of exhaustive browser coverage or execution. "
+            "Unresolved URL or method edges remain visible; no observed caller is not proof of absence.",
             "The preservation matrix is a list of capabilities in words. This package carries it row for row "
             "and does not decide which control implements which row; that mapping is what the owner is "
             "being asked to confirm.",
-            f"{captured} of {planned} baseline screenshots exist, so the approval cannot rest on visual "
-            "evidence: it rests on the inventory, the map, the trace and the test suite.",
+            f"{captured} of {planned} baseline screenshots are recorded. Missing or unaccepted screenshots "
+            "leave the visual gate open; static artifacts cannot substitute for them.",
+            "The demo and full test suite can use source-relative harness data; until isolation is fixed, "
+            "run them only from a disposable checkout with an empty harness store (issues #108 and #117).",
             "Approval is an owner act recorded in the ledger. A green test suite proves the package matches "
-            "the tree; it does not prove the tree is acceptable.",
+            "the tree; it does not prove the tree is acceptable or that other P0 holds are cleared.",
         ],
     }
 
@@ -487,21 +513,28 @@ def render_doc(package: dict[str, object]) -> str:
         "and what a revert does and does not touch.",
         "",
         f"* Status: **{package['status']}** — {signature['statement']}",
-        f"* Pinned source commit: `{package['pinned_source_commit']}`.",
+        f"* Pinned baseline source commit: `{package['pinned_source_commit']}` (input artifacts are hashed separately).",
         f"* {totals['panes']} panes · {totals['preserved_capabilities']} preserved capabilities · "
         f"{totals['markup_controls']} markup controls ({totals['chrome_controls']} chrome, "
         f"{totals['pane_controls']} panes) · {totals['script_rendered_controls']} rendered by script.",
-        f"* {totals['routes']} routes exist, {totals['routes_used_by_frontend']} with a browser caller, "
-        f"{totals['state_changing_routes_traced']} state-changing routes traced.",
+        f"* {totals['routes']} routes exist, {totals['routes_with_resolved_or_possible_caller']} with a "
+        f"resolved or possible caller, {totals['routes_no_caller_observed']} with none observed and "
+        f"{totals['routes_unknown_frontend_caller']} unknown due to unresolved edges; "
+        f"{totals['state_changing_routes_traced']} state-changing candidates traced.",
+        f"* {totals['route_map_unresolved_call_sites']} fetch site(s) have "
+        f"{totals['route_map_unresolved_caller_edges']} unresolved URL or method edge(s) "
+        f"({totals['route_map_unresolved_method_edges']} method).",
         f"* Baseline screenshots: {totals['screenshots_captured']} of {totals['screenshots_planned']}.",
         "",
         "## What this page is, and is not",
         "",
         str(package["prepared_not_signed"]),
         "",
-        "It is frozen at one commit on purpose: an approval of a moving surface approves nothing. If any",
-        "input artifact changes, `--check` fails and the package has to be regenerated — which is the point",
-        "at which the owner sees what changed.",
+        "If an input artifact changes, `--check` fails and the package has to be regenerated — which is",
+        "the point at which the owner sees what changed. This bounded scan is not proof of exhaustive browser",
+        "coverage or execution. An unsigned package and passing checks do not clear other P0 holds.",
+        "Schema 2 replaces `routes_used_by_frontend` with `routes_with_resolved_or_possible_caller`,",
+        "`routes_no_caller_observed` and `routes_unknown_frontend_caller`; unresolved totals include methods.",
         "",
         "## What the owner is being asked to approve",
         "",
@@ -516,7 +549,7 @@ def render_doc(package: dict[str, object]) -> str:
         "## The preservation surface, pane by pane",
         "",
         "Each pane carries every matrix row that names it, every control the inventory attributes to it,",
-        "and the routes its own controls reach at one call depth.",
+        "and the route candidates its controls reach through the bounded walk. Matches are not runtime proof.",
         "",
     ]
     for pane in package["panes"]:

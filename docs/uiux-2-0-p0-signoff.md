@@ -6,18 +6,21 @@ implement them, the routes those controls reach, the boundary that can refuse th
 and what a revert does and does not touch.
 
 * Status: **unsigned** — No signature. This is material for the owner to approve, not an approved baseline.
-* Pinned source commit: `0b4b1a4a19c65db2782bdf660b38563df071ead3`.
+* Pinned baseline source commit: `95cc01dfbd9cc581bf5923da4910397df96bbe50` (input artifacts are hashed separately).
 * 6 panes · 21 preserved capabilities · 170 markup controls (101 chrome, 69 panes) · 30 rendered by script.
-* 115 routes exist, 57 with a browser caller, 37 state-changing routes traced.
+* 115 routes exist, 57 with a resolved or possible caller, 58 with none observed and 0 unknown due to unresolved edges; 37 state-changing candidates traced.
+* 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots: 0 of 6.
 
 ## What this page is, and is not
 
 Prepared by an agent. An agent may prepare this package; it may not approve it. The approval lives in the ledger's coordination.preservation_signoff record, and this page reports it.
 
-It is frozen at one commit on purpose: an approval of a moving surface approves nothing. If any
-input artifact changes, `--check` fails and the package has to be regenerated — which is the point
-at which the owner sees what changed.
+If an input artifact changes, `--check` fails and the package has to be regenerated — which is
+the point at which the owner sees what changed. This bounded scan is not proof of exhaustive browser
+coverage or execution. An unsigned package and passing checks do not clear other P0 holds.
+Schema 2 replaces `routes_used_by_frontend` with `routes_with_resolved_or_possible_caller`,
+`routes_no_caller_observed` and `routes_unknown_frontend_caller`; unresolved totals include methods.
 
 ## What the owner is being asked to approve
 
@@ -25,14 +28,14 @@ at which the owner sees what changed.
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
 | 2 | Accept the control inventory as the list of controls that must stay reachable | 170 markup controls (101 chrome, 69 panes) plus 30 rendered by script |
-| 3 | Accept that every browser-reachable route stays mounted, and that state-changing ones stay traced | 115 routes exist; 57 have a browser caller; 37 state-changing routes carry their gates, refusals and state |
+| 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 115 routes exist; 57 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 37 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
-| 5 | Accept the rollback path: one merge commit per story, no schema change, artifacts regenerate | no artifact in this program adds a table, a migration or a privilege; each story is reverted with `git revert -m 1 <merge sha>` and re-verified with the commands listed below |
+| 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
 
 ## The preservation surface, pane by pane
 
 Each pane carries every matrix row that names it, every control the inventory attributes to it,
-and the routes its own controls reach at one call depth.
+and the route candidates its controls reach through the bounded walk. Matches are not runtime proof.
 
 ### Start (`data-tab="start"`, Alt+6)
 
@@ -107,7 +110,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | select | harnessWorkflowMode | Autonomous Turn (Step Loop) Plan, Build, Verify (GSD 3-Wave) Agile SDLC Factory (Full Build) Agile SDLC Board & Backlog… | — |
 | button | harnessRunBtn | Run | executeHarnessSelectedWorkflow() |
 
-**Routes reached from this pane's controls — 8, walking at most 2 calls; 7 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
+**Routes reached from this pane's controls — 9, walking at most 2 calls; 6 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
 
 | Method | Route | Certainty | State-changing | Walk | Gates that can refuse it |
 |---|---|---|---|---|---|
@@ -118,6 +121,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | POST | `/api/harness/abort/{session_id}` | certain | yes | `abortHarnessRun` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | POST | `/api/harness/approve` | certain | yes | `executeHarnessSelectedWorkflow` → `runHarnessTurn` → `resolveHarnessApproval` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | POST | `/api/harness/gsd-wave` | certain | yes | `executeHarnessSelectedWorkflow` → `runGsdWaveTurn` → `consumeSSE` | `host_allowlist`, `origin_check`, `bearer_token`, `rate_limit`, `body_size_limit` |
+| POST | `/api/harness/run` | certain | yes | `executeHarnessSelectedWorkflow` → `runHarnessTurn` → `consumeSSE` | `host_allowlist`, `origin_check`, `bearer_token`, `rate_limit`, `body_size_limit` |
 | POST | `/api/workspace/directory` | certain | yes | `saveWorkspaceDirectory` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 
 ### Council (`data-tab="hall"`, Alt+2)
@@ -282,9 +286,9 @@ One story, one merge commit. Revert the merge, not the individual commits, so th
 
 **What a revert does not touch:**
 
-* No database migration, table or column is added by any P0 or P1 story: durable task state, approvals, event cursors and workspace files are read, never restructured.
-* No new privilege: the bearer token, host allowlist, origin check, rate limit and body-size limit are read by the UI, not changed by it.
-* User workspace data under the configured workspace directory is never rewritten by a revert.
+* This package adds no database migration. A Git revert does not roll back durable database state; each future story must separately verify its migration and recovery effects.
+* This package adds no privilege: the bearer token, host allowlist, origin check, rate limit and body-size limit are not changed by it.
+* A revert changes tracked files in the target checkout, not arbitrary external workspaces. Review the target and protect uncommitted work before running it.
 
 **Verification after a revert:**
 
@@ -318,6 +322,8 @@ publishing a half-signature as an approval.
 
 * Nothing here was rendered or clicked. A control counted in the markup is present in the file, not proven to work, and no keyboard, contrast or screen-reader check has been run.
 * Pane-to-route attribution follows calls inside the inline script at most 2 hops from the handler a control names, and keeps a route only when the walk passes the function that supplied its literal. A deeper chain is invisible, so a pane with no routes below is not a pane that calls nothing; the excluded count on each pane shows the filter refusing a shared helper's other callers.
+* The route map is a bounded lexical scan, not proof of exhaustive browser coverage or execution. Unresolved URL or method edges remain visible; no observed caller is not proof of absence.
 * The preservation matrix is a list of capabilities in words. This package carries it row for row and does not decide which control implements which row; that mapping is what the owner is being asked to confirm.
-* 0 of 6 baseline screenshots exist, so the approval cannot rest on visual evidence: it rests on the inventory, the map, the trace and the test suite.
-* Approval is an owner act recorded in the ledger. A green test suite proves the package matches the tree; it does not prove the tree is acceptable.
+* 0 of 6 baseline screenshots are recorded. Missing or unaccepted screenshots leave the visual gate open; static artifacts cannot substitute for them.
+* The demo and full test suite can use source-relative harness data; until isolation is fixed, run them only from a disposable checkout with an empty harness store (issues #108 and #117).
+* Approval is an owner act recorded in the ledger. A green test suite proves the package matches the tree; it does not prove the tree is acceptable or that other P0 holds are cleared.

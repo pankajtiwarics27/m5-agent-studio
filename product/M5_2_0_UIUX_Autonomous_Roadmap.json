@@ -27,8 +27,8 @@
     ],
     "rule": "This ledger is authoritative for UI/UX stories UIUX-P0-01..UIUX-P6-05 only. It never changes the status of an M5 or AS story, and no UI/UX story may change backend, security or data behavior to make a screen easier to build."
   },
-  "source_commit_sha": "0b4b1a4a19c65db2782bdf660b38563df071ead3",
-  "source_commit_status": "Pinned to origin/main 0b4b1a4 by the UIUX-P0-06 preparation on 2026-10-31, the merge commit of #115. The generated artifacts are regenerated in the same pull request that re-pins. A session that finds main ahead of this pin re-pins the ledger and regenerates every artifact that embeds the pin (source manifest, control inventory, route map, authorization trace, preservation sign-off), because each one fails its --check otherwise. A branch name is not evidence of an ancestor commit: verify the pin against the history.",
+  "source_commit_sha": "95cc01dfbd9cc581bf5923da4910397df96bbe50",
+  "source_commit_status": "Pinned to origin/main 95cc01d by the #110 corrective follow-up on 2026-10-31, the merge commit of #116. The generated artifacts are regenerated in the same pull request that re-pins. A session that finds main ahead of this pin re-pins the ledger and regenerates every artifact that embeds the pin (source manifest, control inventory, route map, authorization trace, preservation sign-off), because each one fails its --check otherwise. A branch name is not evidence of an ancestor commit: verify the pin against the history.",
   "evidence_basis": {
     "supplied_by": "repository owner, 2026-10-31",
     "original_provenance": {

@@ -47,6 +47,25 @@ issues are **not** automatically interpreted; inspect `gh issue list --state ope
 and the ledger's risks as well. The marker is a signal, not a replacement for
 review or a distributed lock.
 
+## Active blocker follow-up (2026-10-31)
+
+[Issue #110](https://github.com/pankajtiwarics27/m5-agent-studio/issues/110)
+remains a program-wide hold. [PR #115](https://github.com/pankajtiwarics27/m5-agent-studio/pull/115)
+merged the named SDLC, model-action and line-frame improvements, but also
+closed #110 just before a [blocking review](https://github.com/pankajtiwarics27/m5-agent-studio/pull/115#issuecomment-6543099994)
+reproduced a mixed known/unknown caller that still appears complete. The issue
+was reopened, and `arena/cbed6c70-m5-agent-studio` has proposed a correction in
+[PR #114](https://github.com/pankajtiwarics27/m5-agent-studio/pull/114) for
+unresolved URLs and request methods. Do not close the hold until the correction
+has independent review and green checks. This is not a new story claim, and it
+does not change another session's tracking. `UIUX-P0-05` remains in progress
+under `arena/c705f453-m5-agent-studio`; do not take its story or treat its visual
+baseline as complete. The P0-06 preparation in merged
+[#116](https://github.com/pankajtiwarics27/m5-agent-studio/pull/116) is unsigned;
+#114 reconciles its route-map consumer without claiming or approving that story.
+The ledger's source pin is advanced to the #116 merge, with its own story tracking
+left unchanged. The phase gate remains closed.
+
 ## Baseline at this handoff
 
 The following is a dated observation, not a live status dashboard. Re-run the
@@ -127,6 +146,12 @@ behavior prematurely:
   and sentinel reproduction are tracked in
   [issue #108](https://github.com/pankajtiwarics27/m5-agent-studio/issues/108);
   a durable fix needs isolation tests.
+- A passing audit test also writes to the source-relative harness store even when
+  HOME and the database are isolated; a disposable-copy sentinel changed during
+  the test. See [issue #117](https://github.com/pankajtiwarics27/m5-agent-studio/issues/117).
+  Until fixed, run the full suite in a disposable clone or detached worktree with
+  an empty store, not a checkout holding real harness data; a full suite needs
+  Git history, unlike a simple archive copy.
 - `scripts/capture_screenshots.mjs` first loads the page before inserting its
   token into `sessionStorage`. With the browser versions above, authentication
   prompts prevented the first navigation from completing. The temporary shim is

@@ -7,7 +7,7 @@
   "regenerate_with": "python3 scripts/uiux_source_manifest.py",
   "check_with": "python3 scripts/uiux_source_manifest.py --check",
   "statement": "Hashed inventory of the UI surface this program may change, plus the tab and route tables every later story depends on. Values are parsed from the files, not from the roadmap's web extracts. A story that changes the surface regenerates this manifest; the check fails when the two disagree.",
-  "pinned_source_commit": "0b4b1a4a19c65db2782bdf660b38563df071ead3",
+  "pinned_source_commit": "95cc01dfbd9cc581bf5923da4910397df96bbe50",
   "files": [
     {
       "path": "static/index.html",
@@ -89,23 +89,23 @@
     {
       "path": "scripts/uiux_route_map.py",
       "role": "maps every fetch call to the route it can hit",
-      "sha256": "9253a0b00b6234124c87c1e9bbad96c18613fc621207dcba4e69f2477bfc879a",
-      "bytes": 33316,
-      "lines": 744
+      "sha256": "b60f8e88e6dba6f31dea75b6c79ce18b45c5bb221f84227d915be9f6b97d5c23",
+      "bytes": 41449,
+      "lines": 916
     },
     {
       "path": "scripts/uiux_authorization_trace.py",
       "role": "traces the authorization and state behind each state-changing call",
-      "sha256": "a5bbdaad958cac6cff52a99073c09ad485fec4166e434a11354bf89648d093f3",
-      "bytes": 36017,
-      "lines": 754
+      "sha256": "161c5668ac7b351e86e601abfa57ef5512aae699672136e3e58046cbe28506d2",
+      "bytes": 36905,
+      "lines": 763
     },
     {
       "path": "scripts/uiux_preservation_signoff.py",
       "role": "freezes the preservation surface and rollback path for the owner sign-off",
-      "sha256": "7701722552d3931e774ea4139100620e0fa3d8fd94daf153842a887b5964e5c1",
-      "bytes": 33370,
-      "lines": 687
+      "sha256": "a79f2de205987753e940a04c61b6db919a25390f33dbc2448166f313d26c12ae",
+      "bytes": 36418,
+      "lines": 720
     }
   ],
   "frontend": {

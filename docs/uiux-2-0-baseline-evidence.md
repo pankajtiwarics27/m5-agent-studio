@@ -1,5 +1,23 @@
 # M5 2.0 UI/UX baseline evidence
 
+> **Review hold (2026-10-31):** Do not run the capture recipe below from a real
+> checkout while [#108](https://github.com/pankajtiwarics27/m5-agent-studio/issues/108)
+> remains open: the demo can read that checkout's harness data. Use a disposable
+> source copy with an empty `.harnesses` directory and resolve the capture
+> authentication-prompt timeout before accepting screenshots. A passing test can
+> also modify checkout harness data despite isolated HOME and database settings;
+> until [#117](https://github.com/pankajtiwarics27/m5-agent-studio/issues/117)
+> is fixed, run the full suite in a disposable clone or detached worktree with
+> an empty store. The dry run only
+> validates manifest shape and prints a plan; it does **not** check tab IDs against
+> the UI (`scripts/validate_screenshots.py` checks those separately). The test
+> table still needs provenance reconciliation: its 1,598 tests and 14-file
+> manifest include the later #116 sign-off work, not only the listed `0b4b1a4`
+> pin, while P0-05's recorded pytest result remains 1,541. The P0-05 owner must
+> reconcile those revisions and results. Earlier route-map claims also have a
+> [review hold](https://github.com/pankajtiwarics27/m5-agent-studio/pull/115#issuecomment-6543099994).
+> The formal baseline remains 0/6.
+
 This page records the baseline `UIUX-P0-05` exists to establish: what the test
 suite and the repository checks actually produce on this checkout, and what the
 screenshot pipeline would capture if a browser were available. The test half is
@@ -14,7 +32,7 @@ It is evidence, not a plan: the phases, gates and per-story change shape live in
 
 | Fact | Value |
 |---|---|
-| Source | `main` at `0b4b1a4` (merge of #115), pinned in the UI/UX ledger |
+| Source | Recorded as `main` at `0b4b1a4` (merge of #115); see the review hold above for later #116 work included in the results |
 | Python | 3.11.2, virtual environment at `.venv`, installed with `pip install -e '.[dev]'` |
 | Node | 22.22.3 |
 | Platform | Linux sandbox, no display |
