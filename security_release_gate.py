@@ -509,6 +509,12 @@ class PrerequisiteQualificationStatus:
     supply_chain_checked: bool
     supply_chain_ready: bool
     supply_chain_reasons: tuple[str, ...]
+    # Health of the container isolation prerequisite, derived from the roadmap:
+    # "qualified" only when M5-P3-01 is done, "unqualified" while it is blocked,
+    # and "unknown" when the roadmap does not say. It is reported next to the
+    # acceptance criteria so a passing local fault suite can never be read as
+    # evidence that the sandbox itself holds.
+    isolation_status: str = "unknown"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -519,6 +525,7 @@ class PrerequisiteQualificationStatus:
             "supply_chain_checked": self.supply_chain_checked,
             "supply_chain_ready": self.supply_chain_ready,
             "supply_chain_reasons": list(self.supply_chain_reasons),
+            "isolation_status": self.isolation_status,
         }
 
 
@@ -533,6 +540,7 @@ def inspect_prerequisite_qualifications(
     ignored = set(ignore_story_ids)
     blocked_mandatory: list[str] = []
     incomplete_mandatory: list[str] = []
+    isolation = "unknown"
     if roadmap_path is not None and roadmap_path.is_file():
         try:
             data = json.loads(roadmap_path.read_text(encoding="utf-8"))
@@ -546,6 +554,11 @@ def inspect_prerequisite_qualifications(
                 status = str(tracking.get("status") or story.get("status") or "")
                 if phase == "P6" or sid in ignored:
                     continue
+                if sid == "M5-P3-01":
+                    if status == "done":
+                        isolation = "qualified"
+                    elif status:
+                        isolation = "unqualified"
                 if status == "blocked":
                     blocked_mandatory.append(sid)
                 elif status != "done":
@@ -613,6 +626,7 @@ def inspect_prerequisite_qualifications(
         supply_chain_checked=sc_checked,
         supply_chain_ready=sc_ready,
         supply_chain_reasons=tuple(sc_reasons),
+        isolation_status=isolation,
     )
 
 
@@ -902,6 +916,7 @@ def evaluate_release_gate(
             "no_critical_unauthorized_execution_paths": ac1_ok,
             "no_silent_user_data_loss": ac2_ok,
             "security_signoff_recorded_or_release_blocked": ac3_ok,
+            "container_isolation_qualified": prerequisites.isolation_status == "qualified",
         },
         blocking_reasons=tuple(blocking_reasons),
         suites_executed=suites_executed,

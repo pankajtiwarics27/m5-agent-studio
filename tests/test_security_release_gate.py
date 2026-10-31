@@ -113,12 +113,18 @@ def test_full_fault_injection_and_adversarial_suite_passes_and_blocks_deferred_r
     assert report.silent_user_data_losses == 0
     assert report.gate_invariants_satisfied is True
 
-    # All 3 M5-P5-03 acceptance criteria hold (AC3 holds via fail-closed release-blocked)
+    # All 3 M5-P5-03 acceptance criteria hold (AC3 holds via fail-closed release-blocked),
+    # and the isolation prerequisite is reported as measured-unqualified rather than
+    # silently folded into AC1.
     assert report.acceptance_criteria == {
         "no_critical_unauthorized_execution_paths": True,
         "no_silent_user_data_loss": True,
         "security_signoff_recorded_or_release_blocked": True,
+        "container_isolation_qualified": False,
     }
+    assert report.prerequisites.isolation_status == "unqualified"
+    # The isolation criterion is reported, not waived: it does not mask the harness verdict.
+    assert report.gate_invariants_satisfied is True
 
     # Because docs/security-review-signoff.md is deferred/pending, release MUST be blocked!
     assert report.release_ready is False
@@ -483,6 +489,58 @@ def test_security_release_gate_cli_and_release_py_gate_enforce_block_vs_ready(tm
     )
     assert proc_pkg.returncode == 1
     assert "Security release gate blocked packaging" in proc_pkg.stderr
+
+
+def test_container_isolation_criterion_follows_the_roadmap_and_never_releases(tmp_path: Path) -> None:
+    """A passing fault suite must not be reported as "container isolation is fine".
+
+    The local crash/adversarial suites run without a container runtime, so they
+    say nothing about whether the sandbox's own limits hold. The gate reports
+    `container_isolation_qualified` from the roadmap (only `done` counts as
+    qualified) and keeps the release blocked while the prerequisite is open.
+    """
+
+    def _roadmap(story_status: str | None) -> Path:
+        path = tmp_path / f"roadmap_{story_status}.json"
+        stories: list[dict[str, Any]] = [{"id": "M5-P5-03", "phase": "P5", "tracking": {"status": "done"}}]
+        if story_status is not None:
+            stories.insert(0, {"id": "M5-P3-01", "phase": "P3", "tracking": {"status": story_status}})
+        path.write_text(json.dumps({"stories": stories}), encoding="utf-8")
+        return path
+
+    assert srg.inspect_prerequisite_qualifications(roadmap_path=_roadmap("blocked")).isolation_status == "unqualified"
+    assert srg.inspect_prerequisite_qualifications(roadmap_path=_roadmap("in_progress")).isolation_status == "unqualified"
+    assert srg.inspect_prerequisite_qualifications(roadmap_path=_roadmap("done")).isolation_status == "qualified"
+    unknown = srg.inspect_prerequisite_qualifications(roadmap_path=_roadmap(None))
+    assert unknown.isolation_status == "unknown"
+    assert unknown.to_dict()["isolation_status"] == "unknown"
+
+    qualified_report = asyncio.run(
+        studio.run_security_release_gate_async(
+            signoff_path=SIGNOFF_DOC,
+            roadmap_path=_roadmap("done"),
+            hardware_evidence_path=HW_DOC,
+        )
+    )
+    assert qualified_report.acceptance_criteria["container_isolation_qualified"] is True
+
+    unqualified_report = asyncio.run(
+        studio.run_security_release_gate_async(
+            signoff_path=SIGNOFF_DOC,
+            roadmap_path=_roadmap("blocked"),
+            hardware_evidence_path=HW_DOC,
+        )
+    )
+    assert unqualified_report.acceptance_criteria["container_isolation_qualified"] is False
+    assert unqualified_report.prerequisites.to_dict()["isolation_status"] == "unqualified"
+    # Reported, not waived: the open prerequisite still blocks the release through its
+    # own reason, and the markdown report says so next to AC1 rather than hiding it.
+    assert unqualified_report.release_ready is False
+    assert unqualified_report.release_decision == "release-blocked"
+    assert any("M5-P3-01" in reason for reason in unqualified_report.blocking_reasons)
+    markdown = srg.render_release_gate_markdown(unqualified_report)
+    assert "| `container_isolation_qualified` | `no` |" in markdown
+    assert "| `no_critical_unauthorized_execution_paths` | `yes` |" in markdown
 
 
 def test_residual_risk_02_reports_the_measured_memory_cap_finding_it_blocks_on() -> None:
