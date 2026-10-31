@@ -129,6 +129,7 @@ measurements without trusting them).
 · [`uiux-2-0-p0-signoff.md`](uiux-2-0-p0-signoff.md) (generated P0-06 package: what must be preserved, controls, routes, boundary and rollback — approved by the owner 2026-10-31)
 · [`uiux-2-0-tokens.md`](uiux-2-0-tokens.md) (generated P1-01 token layer: the values P1 builds on, with themes, density and measured contrast)
 · [`uiux-2-0-navigation-shell.md`](uiux-2-0-navigation-shell.md) (P1-02 shell contract: tablist semantics, keyboard map and the browser-driven keyboard walk)
+· [`uiux-2-0-status-and-evidence.md`](uiux-2-0-status-and-evidence.md) (generated P1-03 component layer: six status tones, four evidence bases, the ten harness states and measured contrast)
 · [`../M5_2_0_UIUX_AGENT_PROMPT.md`](../M5_2_0_UIUX_AGENT_PROMPT.md) (UI/UX claim, review and merge protocol)
 · [`uiux-2-0-coordination.md`](uiux-2-0-coordination.md) (read-only readiness check, current handoff and capture risks)
 
