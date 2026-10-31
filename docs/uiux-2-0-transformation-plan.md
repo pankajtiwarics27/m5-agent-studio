@@ -257,7 +257,7 @@ when the dependency is still open.
 |---|---|
 | `UIUX-P0-01`, `P0-02` | done on `main` |
 | `UIUX-P0-03` | implemented on `arena/dc8242aa-m5-agent-studio`, superseding PR #104: that branch could not merge (it conflicted with `main` and carried a runtime-program benchmark change), so the route-map script and tests were ported here, the runtime work was dropped, and the ledger was re-pinned to `aa1af27` |
-| `UIUX-P0-04` | the next claim once `P0-03` is `done`: trace the backend authorization and state behind every state-changing call in the route map |
+| `UIUX-P0-04` | in progress on `arena/c705f453-m5-agent-studio`: trace the authorization and durable state behind the 35 state-changing calls the browser can make |
 | Review duty | the non-author reviews every story PR; findings on #104 were posted on that PR, including the exact conflict and the scope split |
 
 **Merge queue.** One story per pull request, reviewed by the other session,

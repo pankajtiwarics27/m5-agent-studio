@@ -5,7 +5,7 @@ It is the `UIUX-P0-03` artifact: every `fetch` call in the inline script, the fu
 it lives in, and the route it can hit — derived from the calls and the route table,
 not from handler names.
 
-* Pinned source commit: `aa1af27898d98d4633da17a4b711cfd628df27dc`.
+* Pinned source commit: `e96b30e395bd9e785ad96a08738d65e3249c8cd4`.
 * Frontend digest: `3137cb7d05bcbdd2…` · `app.py` digest: `e3dd15bef236555d…`.
 * 53 call sites resolve to 59 URLs — exact: 58, dynamic: 1, findings: 0, unresolved call sites: 0.
 * 115 routes exist; 54 have a browser caller and 61 do not.

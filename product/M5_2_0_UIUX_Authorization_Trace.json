@@ -1,0 +1,2449 @@
+{
+  "schema_version": "1.0.0",
+  "document_type": "m5_uiux_authorization_trace",
+  "program": "M5_2_0_UIUX",
+  "story": "UIUX-P0-04",
+  "generator": "scripts/uiux_authorization_trace.py",
+  "regenerate_with": "python3 scripts/uiux_authorization_trace.py",
+  "check_with": "python3 scripts/uiux_authorization_trace.py --check",
+  "statement": "For every state-changing route the browser can call: the shared gates every request passes, the refusals the handler raises, the authority and durable-state subsystems it references, and whether it can leave the machine. Derived from app.py and the P0-03 route map; a reference is evidence of a consultation, not proof of enforcement.",
+  "pinned_source_commit": "e96b30e395bd9e785ad96a08738d65e3249c8cd4",
+  "app_sha256": "e3dd15bef236555d4cb3fca12eac003a55e099b48bbefa20e313489af652f129",
+  "route_map_sha256": "077d8ef8269459bbd22361fbb82c86823b4409937c522cccaa736f4a1619ce86",
+  "totals": {
+    "routes_in_app": 115,
+    "state_changing_routes_in_app": 77,
+    "traced_routes": 35,
+    "traced_by_method": {
+      "DELETE": 5,
+      "PATCH": 3,
+      "POST": 27
+    },
+    "routes_with_authority_subsystem": 10,
+    "routes_with_authority_directly": 5,
+    "routes_with_state_subsystem": 28,
+    "routes_with_state_directly": 10,
+    "routes_with_durable_writes": 3,
+    "routes_that_can_leave_the_machine": 20,
+    "distinct_handler_refusals": 9,
+    "refusals_by_status": {
+      "400": 58,
+      "401": 35,
+      "403": 37,
+      "404": 9,
+      "409": 8,
+      "413": 35,
+      "429": 5,
+      "500": 1,
+      "502": 1,
+      "503": 4,
+      "507": 2
+    },
+    "shared_refusals_by_status": {
+      "400": 35,
+      "401": 35,
+      "403": 35,
+      "413": 35,
+      "429": 5
+    },
+    "handler_refusals_by_status": {
+      "400": 23,
+      "403": 2,
+      "404": 9,
+      "409": 8,
+      "500": 1,
+      "502": 1,
+      "503": 4,
+      "507": 2,
+      "dynamic": 1
+    }
+  },
+  "shared_boundary": {
+    "function": "security_boundary",
+    "line": 3591,
+    "refusals": [
+      {
+        "status": 400,
+        "detail": "Host is not permitted; configure STUDIO_ALLOWED_HOSTS explicitly."
+      },
+      {
+        "status": 403,
+        "detail": "Cross-origin state-changing request rejected."
+      },
+      {
+        "status": 503,
+        "detail": "Authentication is unavailable; configure a token and restart Studio."
+      },
+      {
+        "status": 401,
+        "detail": "Authentication required. Send `Authorization: Bearer <STUDIO_API_TOKEN>`."
+      },
+      {
+        "status": 429,
+        "detail": "Rate limit exceeded for expensive workflow requests."
+      },
+      {
+        "status": 400,
+        "detail": "Invalid Content-Length header."
+      },
+      {
+        "status": 413,
+        "detail": "Request body exceeds the configured size limit."
+      },
+      {
+        "status": 413,
+        "detail": "Request body exceeds the configured size limit."
+      }
+    ],
+    "protected_prefixes": [
+      "/api/",
+      "/v1/"
+    ],
+    "constant_time_token_compare": true,
+    "auth_can_be_disabled": true,
+    "rate_limit_paths": [
+      "/api/chat/stream",
+      "/api/council/stream",
+      "/api/debate/stream",
+      "/api/harness/run",
+      "/api/harness/gsd-wave",
+      "/api/harness/sdlc/run",
+      "/v1/chat/completions"
+    ],
+    "unprotected_routes": [
+      {
+        "method": "GET",
+        "path": "/healthz",
+        "handler": "healthz"
+      },
+      {
+        "method": "GET",
+        "path": "/",
+        "handler": "index"
+      }
+    ]
+  },
+  "subsystem_roles": {
+    "artifact_lineage": {
+      "role": "state",
+      "reason": "artifact provenance records"
+    },
+    "child_delegation": {
+      "role": "support",
+      "reason": "delegation runs and their benchmarks"
+    },
+    "context_store": {
+      "role": "state",
+      "reason": "the SQLite/FTS5 context store"
+    },
+    "edit_rollback": {
+      "role": "state",
+      "reason": "edit rollback records"
+    },
+    "edit_transactions": {
+      "role": "state",
+      "reason": "transactional edits"
+    },
+    "evidence_lessons": {
+      "role": "state",
+      "reason": "retained lessons and their provenance"
+    },
+    "execution_budget": {
+      "role": "authority",
+      "reason": "caps tokens, steps and wall clock for a run"
+    },
+    "execution_profiles": {
+      "role": "authority",
+      "reason": "the execution policy a run is held to"
+    },
+    "execution_spine": {
+      "role": "authority",
+      "reason": "admission decisions: whether a task may run, and against which budget"
+    },
+    "failure_injection": {
+      "role": "support",
+      "reason": "fault injection used by tests"
+    },
+    "history_privacy": {
+      "role": "state",
+      "reason": "history retention and export"
+    },
+    "mcp_client": {
+      "role": "support",
+      "reason": "MCP transports and tool calls"
+    },
+    "model_admission": {
+      "role": "authority",
+      "reason": "decides whether a model may be loaded or used"
+    },
+    "onboarding_preflight": {
+      "role": "support",
+      "reason": "local readiness probing"
+    },
+    "process_supervision": {
+      "role": "authority",
+      "reason": "registers and contains subprocesses"
+    },
+    "recovery_guard": {
+      "role": "state",
+      "reason": "crash-recovery state"
+    },
+    "resource_admission": {
+      "role": "authority",
+      "reason": "decides whether the host can take another concurrent unit of work"
+    },
+    "routing_experiments": {
+      "role": "support",
+      "reason": "routing experiments and measurements"
+    },
+    "routing_policy": {
+      "role": "authority",
+      "reason": "routing consent: which provider may serve which request"
+    },
+    "runtime_persistence": {
+      "role": "state",
+      "reason": "durable runtime records"
+    },
+    "sandbox_boundary": {
+      "role": "authority",
+      "reason": "decides which isolation backend is in force and closes the boundary on failure"
+    },
+    "scoped_grants": {
+      "role": "authority",
+      "reason": "issues, narrows and revokes scoped capabilities for a session"
+    },
+    "security_release_gate": {
+      "role": "authority",
+      "reason": "the release gate for security findings"
+    },
+    "side_effect_ledger": {
+      "role": "state",
+      "reason": "the idempotency and side-effect ledger"
+    },
+    "task_events": {
+      "role": "state",
+      "reason": "the durable event log the UI replays"
+    },
+    "trusted_transformations": {
+      "role": "authority",
+      "reason": "bounded, reviewed code transformations"
+    },
+    "verification_evidence": {
+      "role": "state",
+      "reason": "verification results attached to a task"
+    },
+    "workflow_checkpoints": {
+      "role": "state",
+      "reason": "checkpoints a run resumes from"
+    },
+    "workflow_orchestration": {
+      "role": "support",
+      "reason": "multi-stage workflow sequencing"
+    },
+    "workflow_state": {
+      "role": "state",
+      "reason": "durable workflow and task state"
+    },
+    "workspace_quarantine": {
+      "role": "authority",
+      "reason": "quarantines workspace changes pending review"
+    },
+    "workspace_snapshots": {
+      "role": "state",
+      "reason": "workspace snapshots and restore points"
+    }
+  },
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/api/cache/clear-ssd",
+      "handler": "api_clear_ssd_cache",
+      "handler_line": 5182,
+      "response": "json",
+      "ui_callers": [
+        "clearSsdCache"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [],
+      "helpers_scanned": [
+        "_omlx_is_online"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/chat/stream",
+      "handler": "api_chat_stream",
+      "handler_line": 5254,
+      "response": "stream",
+      "ui_callers": [
+        "consumeSSE"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "rate_limit",
+          "status": 429,
+          "when": "more requests than the window allows"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [
+        "routing_policy",
+        "scoped_grants"
+      ],
+      "state_via_helpers": [
+        "context_store",
+        "runtime_persistence",
+        "side_effect_ledger"
+      ],
+      "helpers_scanned": [
+        "_heavy_model_preflight",
+        "build_skills_context",
+        "build_pinned_opencontext_prompt",
+        "build_active_mcp_tools_prompt",
+        "_sse",
+        "stream_any_model",
+        "record_perf",
+        "extract_tool_calls",
+        "_execute_harness_tool",
+        "sandbox_tool_output_if_large",
+        "_format_untrusted_tool_response",
+        "is_local_omlx_model"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/codegraph/query",
+      "handler": "api_codegraph_query",
+      "handler_line": 7318,
+      "response": "json",
+      "ui_callers": [
+        "runCodeGraphPlayground"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [],
+      "helpers_scanned": [
+        "run_codegraph_tool"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/combos",
+      "handler": "api_save_combo",
+      "handler_line": 3855,
+      "response": "json",
+      "ui_callers": [
+        "saveCombo"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 400,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "upsert_model_combo",
+        "list_model_combos"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/combos/{alias}",
+      "handler": "api_delete_combo",
+      "handler_line": 3869,
+      "response": "json",
+      "ui_callers": [
+        "removeCombo"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "delete_model_combo",
+        "list_model_combos"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/council/stream",
+      "handler": "api_council_stream",
+      "handler_line": 5395,
+      "response": "stream",
+      "ui_callers": [
+        "consumeSSE"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "rate_limit",
+          "status": 429,
+          "when": "more requests than the window allows"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "build_skills_context",
+        "_sse",
+        "_workflow_orchestrator",
+        "save_run"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/debate/stream",
+      "handler": "api_debate_stream",
+      "handler_line": 5449,
+      "response": "stream",
+      "ui_callers": [
+        "consumeSSE"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "rate_limit",
+          "status": 429,
+          "when": "more requests than the window allows"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "build_skills_context",
+        "_sse",
+        "_workflow_orchestrator",
+        "save_run"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/hall/sessions",
+      "handler": "api_hall_create",
+      "handler_line": 4831,
+      "response": "json",
+      "ui_callers": [
+        "confirmSpawnSession",
+        "postHumanHallMessage"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 400,
+          "detail": "\"Request text is required\""
+        }
+      ],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "create_hall_session"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/hall/sessions/{session_id}/message",
+      "handler": "api_hall_post_message",
+      "handler_line": 4855,
+      "response": "json",
+      "ui_callers": [
+        "postHumanHallMessage"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 400,
+          "detail": "\"Empty message\""
+        }
+      ],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "append_hall_message"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/hall/sessions/{session_id}/summon",
+      "handler": "api_hall_summon",
+      "handler_line": 4880,
+      "response": "stream",
+      "ui_callers": [
+        "consumeSSE"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [
+        "routing_policy"
+      ],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "get_hall_session",
+        "build_skills_context",
+        "_sse",
+        "read_workspace_context_block",
+        "stream_any_model",
+        "record_perf",
+        "is_local_omlx_model",
+        "append_hall_message",
+        "close_hall_session_db",
+        "_unload_omlx_model",
+        "parse_model_route"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/abort/{session_id}",
+      "handler": "api_abort_harness",
+      "handler_line": 12704,
+      "response": "json",
+      "ui_callers": [
+        "abortHarnessRun"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [
+        "process_supervision",
+        "scoped_grants"
+      ],
+      "state_via_helpers": [
+        "runtime_persistence",
+        "side_effect_ledger"
+      ],
+      "helpers_scanned": [
+        "_resolve_pending_tool_approval",
+        "get_scoped_grant_store",
+        "get_process_supervisor",
+        "get_harness_session_db",
+        "get_worker_lease_coordinator",
+        "_update_harness_session_state",
+        "get_containment_store"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/approve",
+      "handler": "api_approve_harness_tool",
+      "handler_line": 12634,
+      "response": "json",
+      "ui_callers": [
+        "resolveHarnessApproval"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 409,
+          "detail": "\"Approval already resolved; re-submission (replay) rejected.\","
+        },
+        {
+          "status": 409,
+          "detail": "\"Approval already resolved (durable decision record); re-submission rejected.\","
+        },
+        {
+          "status": 404,
+          "detail": "\"Approval request not found or already resolved.\""
+        },
+        {
+          "status": 403,
+          "detail": "\"Approval is scoped to its originating session; session_id must match.\","
+        },
+        {
+          "status": 400,
+          "detail": "\"`ttl_seconds` must be a positive finite number.\""
+        },
+        {
+          "status": 400,
+          "detail": "f\"`ttl_seconds` must be within (0, {scoped_grants.SG_MAX_GRANT_TTL_SECONDS}].\","
+        }
+      ],
+      "authority": [
+        "scoped_grants"
+      ],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "task_events"
+      ],
+      "helpers_scanned": [
+        "_is_replayed_approval",
+        "_durable_approval_decision",
+        "_resolve_pending_tool_approval"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/gsd-wave",
+      "handler": "api_run_gsd_fresh_wave",
+      "handler_line": 18740,
+      "response": "stream",
+      "ui_callers": [
+        "consumeSSE"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "rate_limit",
+          "status": 429,
+          "when": "more requests than the window allows"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 400,
+          "detail": "\"Goal prompt is required for GSD 3-Wave execution.\""
+        }
+      ],
+      "authority": [
+        "execution_budget",
+        "scoped_grants"
+      ],
+      "state": [
+        "runtime_persistence"
+      ],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "context_store",
+        "side_effect_ledger",
+        "task_events",
+        "workflow_state"
+      ],
+      "helpers_scanned": [
+        "_parse_task_budget_spec",
+        "create_harness_session_db",
+        "_get_default_projects_dir",
+        "get_harness_session_db",
+        "_set_harness_session_policy",
+        "_acquire_turn_plan_and_lease_or_409",
+        "_inspect_git_repo",
+        "_ensure_git_exclude",
+        "_update_harness_session_state",
+        "_append_harness_event",
+        "_sse",
+        "build_pinned_opencontext_prompt"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": true,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/run",
+      "handler": "api_run_harness_turn",
+      "handler_line": 17797,
+      "response": "stream",
+      "ui_callers": [
+        "consumeSSE"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "rate_limit",
+          "status": 429,
+          "when": "more requests than the window allows"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 400,
+          "detail": "\"Task prompt is required.\""
+        },
+        {
+          "status": 507,
+          "detail": "str(exc)"
+        },
+        {
+          "status": 503,
+          "detail": "{\"code\": \"handoff_state_corrupt\", \"message\": str(exc)}"
+        },
+        {
+          "status": 409,
+          "detail": "exc.to_mapping()"
+        },
+        {
+          "status": 503,
+          "detail": "{\"code\": \"handoff_state_corrupt\", \"message\": str(exc)}"
+        },
+        {
+          "status": 409,
+          "detail": "exc.to_mapping()"
+        },
+        {
+          "status": 409,
+          "detail": "str(exc)"
+        },
+        {
+          "status": 503,
+          "detail": "{\"code\": \"lesson_state_corrupt\", \"message\": str(exc)}"
+        },
+        {
+          "status": 400,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [
+        "execution_budget",
+        "routing_policy",
+        "scoped_grants"
+      ],
+      "state": [
+        "runtime_persistence",
+        "workflow_checkpoints",
+        "evidence_lessons",
+        "workspace_snapshots"
+      ],
+      "support": [
+        "failure_injection"
+      ],
+      "authority_via_helpers": [
+        "workspace_quarantine"
+      ],
+      "state_via_helpers": [
+        "artifact_lineage",
+        "workflow_state"
+      ],
+      "helpers_scanned": [
+        "_parse_task_budget_spec",
+        "create_harness_session_db",
+        "_get_default_projects_dir",
+        "get_harness_session_db",
+        "execute_conservative_model_switch_async",
+        "_set_harness_session_policy",
+        "get_scoped_grant_store",
+        "get_portable_handoff_store",
+        "get_task_state_machine",
+        "_verify_active_session_handoff",
+        "get_evidence_lesson_store",
+        "_current_security_generation"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": true
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/harness/sessions/{session_id}",
+      "handler": "api_delete_harness_session",
+      "handler_line": 12536,
+      "response": "json",
+      "ui_callers": [
+        "deleteHarnessSession"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [
+        "execution_profiles"
+      ],
+      "state": [
+        "runtime_persistence"
+      ],
+      "support": [],
+      "authority_via_helpers": [
+        "process_supervision",
+        "routing_policy",
+        "scoped_grants"
+      ],
+      "state_via_helpers": [
+        "side_effect_ledger",
+        "workspace_snapshots"
+      ],
+      "helpers_scanned": [
+        "get_harness_session_db",
+        "get_process_supervisor",
+        "get_worker_lease_coordinator",
+        "_remove_harness_worktree",
+        "_workspace_snapshot_store",
+        "get_scoped_grant_store",
+        "get_portable_handoff_store",
+        "get_child_delegation_store",
+        "get_containment_store",
+        "list_harness_sessions_db"
+      ],
+      "durable_writes": 1,
+      "effects": {
+        "subprocess": true,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": false
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/harness/sessions/{session_id}",
+      "handler": "api_patch_harness_session",
+      "handler_line": 12447,
+      "response": "json",
+      "ui_callers": [
+        "patchActiveHarnessSettings"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "str(exc)"
+        },
+        {
+          "status": 503,
+          "detail": "{\"code\": \"handoff_state_corrupt\", \"message\": str(exc)}"
+        },
+        {
+          "status": 409,
+          "detail": "exc.to_mapping()"
+        },
+        {
+          "status": 400,
+          "detail": "{\"code\": \"invalid_switch_request\", \"message\": str(exc)}"
+        }
+      ],
+      "authority": [
+        "routing_policy"
+      ],
+      "state": [
+        "runtime_persistence"
+      ],
+      "support": [],
+      "authority_via_helpers": [
+        "process_supervision",
+        "scoped_grants",
+        "workspace_quarantine"
+      ],
+      "state_via_helpers": [
+        "artifact_lineage",
+        "task_events",
+        "workflow_checkpoints",
+        "workspace_snapshots"
+      ],
+      "helpers_scanned": [
+        "get_harness_session_db",
+        "execute_conservative_model_switch_async",
+        "get_scoped_grant_store",
+        "_resolve_pending_tool_approval",
+        "get_process_supervisor",
+        "_safe_append_harness_event"
+      ],
+      "durable_writes": 1,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/apply",
+      "handler": "api_apply_harness_worktree",
+      "handler_line": 12592,
+      "response": "json",
+      "ui_callers": [
+        "applyHarnessWorktree"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "str(exc)"
+        },
+        {
+          "status": 403,
+          "detail": "str(exc)"
+        },
+        {
+          "status": 507,
+          "detail": "str(exc)"
+        },
+        {
+          "status": 409,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [],
+      "state": [
+        "workspace_snapshots"
+      ],
+      "support": [],
+      "authority_via_helpers": [
+        "workspace_quarantine"
+      ],
+      "state_via_helpers": [
+        "runtime_persistence",
+        "side_effect_ledger",
+        "task_events"
+      ],
+      "helpers_scanned": [
+        "get_harness_session_db",
+        "_apply_worktree_to_main",
+        "_request_disk_full_safe_pause",
+        "_safe_append_harness_event"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": true,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/compact",
+      "handler": "api_compact_harness_session",
+      "handler_line": 12622,
+      "response": "json",
+      "ui_callers": [
+        "compactActiveHarness"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "get_harness_session_db",
+        "compact_harness_session_messages"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/mcp/import-json",
+      "handler": "api_import_mcp_json",
+      "handler_line": 6564,
+      "response": "json",
+      "ui_callers": [
+        "importMcpJson"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 400,
+          "detail": "f\"Invalid JSON: {exc}\""
+        },
+        {
+          "status": 400,
+          "detail": "\"Expected a JSON object.\""
+        }
+      ],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "upsert_mcp_server",
+        "sync_mcp_server_tools",
+        "list_mcp_servers"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/mcp/servers",
+      "handler": "api_save_mcp_server",
+      "handler_line": 6547,
+      "response": "json",
+      "ui_callers": [
+        "saveMcpServer"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 400,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "upsert_mcp_server",
+        "sync_mcp_server_tools",
+        "get_mcp_server",
+        "list_mcp_servers"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/mcp/servers/{alias}",
+      "handler": "api_delete_mcp_server",
+      "handler_line": 6650,
+      "response": "json",
+      "ui_callers": [
+        "deleteMcpServer"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [],
+      "authority": [],
+      "state": [
+        "runtime_persistence"
+      ],
+      "support": [],
+      "authority_via_helpers": [
+        "process_supervision",
+        "scoped_grants"
+      ],
+      "state_via_helpers": [],
+      "helpers_scanned": [
+        "_clean_mcp_alias",
+        "get_mcp_effect_store",
+        "get_mcp_server",
+        "_keyring_delete",
+        "get_scoped_grant_store",
+        "get_process_supervisor",
+        "list_mcp_servers"
+      ],
+      "durable_writes": 1,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": true,
+        "via_helpers": true,
+        "streams": false
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/mcp/servers/{alias}",
+      "handler": "api_patch_mcp_server",
+      "handler_line": 6620,
+      "response": "json",
+      "ui_callers": [
+        "changeMcpApprovalPolicy",
+        "toggleMcpServerEnabled",
+        "toggleMcpSingleTool"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "get_mcp_server",
+        "upsert_mcp_server",
+        "list_mcp_servers"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/mcp/servers/{alias}/call",
+      "handler": "api_call_mcp_server_tool",
+      "handler_line": 6704,
+      "response": "json",
+      "ui_callers": [
+        "runMcpPlayground"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 400,
+          "detail": "f\"Arguments must be valid JSON: {exc}\""
+        },
+        {
+          "status": 400,
+          "detail": "\"`tool` name is required.\""
+        },
+        {
+          "status": 400,
+          "detail": "\"`arguments` must be a JSON object.\""
+        },
+        {
+          "status": 409,
+          "detail": "str(exc)"
+        },
+        {
+          "status": 400,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [],
+      "state": [
+        "side_effect_ledger"
+      ],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [],
+      "helpers_scanned": [
+        "execute_mcp_tool_call"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/mcp/servers/{alias}/sync",
+      "handler": "api_sync_mcp_server",
+      "handler_line": 6693,
+      "response": "json",
+      "ui_callers": [
+        "syncMcpServer"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "str(exc)"
+        },
+        {
+          "status": 400,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "sync_mcp_server_tools",
+        "list_mcp_servers"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/models/unload-all",
+      "handler": "api_unload_all",
+      "handler_line": 5140,
+      "response": "json",
+      "ui_callers": [
+        "unloadAllModels"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [],
+      "helpers_scanned": [
+        "_omlx_is_online"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/models/{model_id:path}/load",
+      "handler": "api_load_model",
+      "handler_line": 5156,
+      "response": "json",
+      "ui_callers": [
+        "modelAction"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": null,
+          "detail": "r.text"
+        }
+      ],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [],
+      "helpers_scanned": [
+        "_omlx_is_online"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/models/{model_id:path}/unload",
+      "handler": "api_unload_model",
+      "handler_line": 5170,
+      "response": "json",
+      "ui_callers": [
+        "modelAction"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [],
+      "helpers_scanned": [
+        "_omlx_is_online"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/opencontext/docs",
+      "handler": "api_save_opencontext",
+      "handler_line": 6803,
+      "response": "json",
+      "ui_callers": [
+        "saveOpenContextDoc"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 400,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [],
+      "state": [
+        "context_store"
+      ],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [],
+      "helpers_scanned": [],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/opencontext/docs/{doc_id}",
+      "handler": "api_delete_opencontext",
+      "handler_line": 6838,
+      "response": "json",
+      "ui_callers": [
+        "deleteOpenContextDoc"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [],
+      "authority": [],
+      "state": [
+        "context_store"
+      ],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [],
+      "helpers_scanned": [],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/opencontext/docs/{doc_id}",
+      "handler": "api_patch_opencontext",
+      "handler_line": 6820,
+      "response": "json",
+      "ui_callers": [
+        "togglePinOpenContextDoc"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [],
+      "state": [
+        "context_store"
+      ],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [],
+      "helpers_scanned": [],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/providers",
+      "handler": "api_save_provider",
+      "handler_line": 3785,
+      "response": "json",
+      "ui_callers": [
+        "saveProvider"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 400,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "upsert_cloud_provider",
+        "list_cloud_providers",
+        "list_model_combos"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/providers/fetch-models",
+      "handler": "api_fetch_provider_models",
+      "handler_line": 3809,
+      "response": "json",
+      "ui_callers": [
+        "fetchRemoteModels"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 400,
+          "detail": "str(exc)"
+        },
+        {
+          "status": 502,
+          "detail": "f\"Failed to query {base_url}/models: {exc}\""
+        }
+      ],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "list_cloud_providers",
+        "_validate_outbound_url"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/providers/{alias}",
+      "handler": "api_delete_provider",
+      "handler_line": 3803,
+      "response": "json",
+      "ui_callers": [
+        "removeProvider"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "delete_cloud_provider",
+        "list_cloud_providers"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/skills/install",
+      "handler": "api_install_skill",
+      "handler_line": 4769,
+      "response": "json",
+      "ui_callers": [
+        "installSkill"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 400,
+          "detail": "str(exc)"
+        },
+        {
+          "status": 500,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [],
+      "helpers_scanned": [
+        "parse_skill_install_spec",
+        "install_skills_native_git",
+        "discover_installed_skills"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": true,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/workspace/directory",
+      "handler": "api_set_workspace_directory",
+      "handler_line": 4804,
+      "response": "json",
+      "ui_callers": [
+        "saveWorkspaceDirectory"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 400,
+          "detail": "\"workspace_dir is required.\""
+        },
+        {
+          "status": 400,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [],
+      "helpers_scanned": [
+        "_set_default_projects_dir",
+        "_inspect_git_repo",
+        "list_workspace_files",
+        "_load_workspace_prefs"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": true,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": false
+      }
+    }
+  ],
+  "not_verified": [
+    "Nothing here was executed: no request was sent, so no refusal was observed. The status codes are read from the handler's own raise statements and the middleware's own returns.",
+    "A subsystem reference is a consultation, not a guarantee: a handler may call it on one branch only, and a guard made inside a helper the handler calls is invisible to this trace.",
+    "Authorization decisions that depend on runtime policy (a grant that was revoked, an approval that expired) cannot be read from source. The UI must render the server's answer, never infer it.",
+    "Only the state-changing routes the browser calls are traced; a route with no browser caller is out of scope here and appears in the P0-03 route map instead.",
+    "A blank authority or durable-state cell is not a verdict. The scan reads the handler and the functions it calls by name, one level down; a guard two calls away, or made inside a method on a class, is not seen. Read the cell as 'nothing at this depth', never as 'unguarded'."
+  ]
+}
