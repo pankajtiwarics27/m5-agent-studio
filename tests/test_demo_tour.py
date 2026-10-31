@@ -85,6 +85,8 @@ def test_environment_is_isolated_and_authenticated(tmp_path: Path) -> None:
     assert env["STUDIO_API_TOKEN"] == ""
     assert Path(env["STUDIO_API_TOKEN_FILE"]) == environment.token_path
     assert Path(env["STUDIO_DB_PATH"]) == environment.db_path
+    assert Path(env["STUDIO_WORKSPACE"]) == environment.workspace_dir
+    assert environment.harness_dir.is_relative_to(environment.root)
     assert env["STUDIO_DB_PATH"].startswith(str(tmp_path))
 
 
@@ -96,6 +98,8 @@ def test_environment_is_isolated_and_authenticated(tmp_path: Path) -> None:
         ({"STUDIO_AUTH_DISABLED": "1"}, "authentication"),
         ({"STUDIO_API_TOKEN": "a" * 40}, "generate its own token"),
         ({"STUDIO_DB_PATH": "/tmp/real-user-data.db"}, "throwaway database"),
+        ({"STUDIO_WORKSPACE": "/tmp/real-user-workspace"}, "throwaway workspace"),
+        ({"STUDIO_API_TOKEN_FILE": "/tmp/real-user-token"}, "throwaway token"),
     ],
 )
 def test_the_demo_refuses_an_unsafe_environment(

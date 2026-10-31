@@ -83,17 +83,42 @@ def _apply_environment(environment: tour.DemoEnvironment) -> None:
     tour.assert_isolated(os.environ, environment)
 
 
+def _isolated_app(environment: tour.DemoEnvironment):
+    """Configure the modular app before startup without changing production defaults."""
+    if "app" in sys.modules:
+        raise tour.DemoEnvironmentError("The demo requires a fresh process; app was already imported.")
+    _apply_environment(environment)
+    import app as studio
+
+    if (
+        Path(studio.DB_PATH).resolve() != environment.db_path.resolve()
+        or Path(studio.WORKSPACE_ROOT).resolve() != environment.workspace_dir.resolve()
+        or Path(studio.STUDIO_API_TOKEN_FILE).resolve() != environment.token_path.resolve()
+        or studio.STUDIO_AUTH_DISABLED
+        or studio.STUDIO_EXECUTION_MODE != "disabled"
+    ):
+        raise tour.DemoEnvironmentError("The imported app does not use the isolated demo settings.")
+    # The app binds the store at module level; set it before lifespan or any
+    # requests run, in this fresh demo process only. Production stays unchanged.
+    studio.HARNESS_STORE_DIR = environment.harness_dir
+    # App startup seeds cloud providers from these inherited environment keys.
+    # Remove known provider and MCP preset credentials before startup as well.
+    for preset in (*studio.PROVIDER_PRESETS.values(), *studio.MCP_SERVER_PRESETS.values()):
+        name = preset.get("env_key")
+        if name:
+            os.environ.pop(str(name), None)
+    return studio
+
+
 def run_in_process(environment: tour.DemoEnvironment) -> tuple[tour.StepOutcome, ...]:
     """Drive the real ASGI app in-process; no socket, no port, no subprocess."""
-    _apply_environment(environment)
+    studio = _isolated_app(environment)
     import warnings
 
     # The in-process test client warns about its own httpx pin; the tour is not
     # the place to surface that.
     warnings.filterwarnings("ignore", message=".*starlette.testclient.*")
     from fastapi.testclient import TestClient
-
-    import app as studio
 
     with TestClient(studio.app) as client:
         return tour.run_tour(client, environment.token())
@@ -128,7 +153,7 @@ def serve(environment: tour.DemoEnvironment, port: int) -> int:
     log_path = environment.root / "server.log"
     with log_path.open("wb") as log:
         process = subprocess.Popen(
-            [sys.executable, str(PROJECT_ROOT / "app.py")],
+            [sys.executable, str(PROJECT_ROOT / "scripts" / "demo_tour.py"), "--_demo-server", "--root", str(environment.root), "--port", str(chosen)],
             cwd=PROJECT_ROOT,
             env=env,
             stdout=log,
@@ -195,13 +220,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", action="store_true", help="print machine-readable observations")
     parser.add_argument("--serve", action="store_true", help="serve a seeded instance for screenshots")
     parser.add_argument("--port", type=int, default=0, help="port for --serve (0 picks a free port)")
+    parser.add_argument("--_demo-server", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "--root", default="", help="reuse a specific directory as the throwaway environment"
     )
     args = parser.parse_args(argv)
 
-    environment = tour.make_environment(Path(args.root).expanduser() if args.root else None)
     try:
+        environment = tour.make_environment(Path(args.root).expanduser() if args.root else None)
+        if args._demo_server:
+            if not args.root or not 1 <= args.port <= 65535:
+                raise tour.DemoEnvironmentError("The demo server requires a root and a valid port.")
+            studio = _isolated_app(environment)
+            import uvicorn
+
+            uvicorn.run(studio.app, host="127.0.0.1", port=args.port, log_level="warning")
+            return 0
         if args.serve:
             return serve(environment, args.port)
         outcomes = run_in_process(environment)

@@ -66,6 +66,16 @@ baseline as complete. The P0-06 preparation in merged
 The ledger's source pin is advanced to the #116 merge, with its own story tracking
 left unchanged. The phase gate remains closed.
 
+### Demo isolation follow-up (2026-10-31)
+
+The safety follow-up for [#108](https://github.com/pankajtiwarics27/m5-agent-studio/issues/108)
+is being prepared on `arena/440f863b-m5-agent-studio`. Its scope is the demo
+runner and isolation tests, not a claim on `UIUX-P0-05` or permission to start
+redesign. Keep using a disposable checkout for captures and for the full suite
+until the corresponding safety fixes are independently verified. #110 and
+[#117](https://github.com/pankajtiwarics27/m5-agent-studio/issues/117) remain
+separate open issues; neither is resolved by this claim.
+
 ## Baseline at this handoff
 
 The following is a dated observation, not a live status dashboard. Re-run the
