@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 1,
+  "revision": 2,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -27,8 +27,8 @@
     ],
     "rule": "This ledger is authoritative for UI/UX stories UIUX-P0-01..UIUX-P6-05 only. It never changes the status of an M5 or AS story, and no UI/UX story may change backend, security or data behavior to make a screen easier to build."
   },
-  "source_commit_sha": "0d7a8f10414092caadf95224f14509ee68fc4ebb",
-  "source_commit_status": "Pinned by the coordinating session on 2026-10-31 from origin/main (0d7a8f104140); HEAD at adoption was 0d7a8f104140. main moves continuously, so the first working session must re-pin HEAD in UIUX-P0-01 before implementing anything.",
+  "source_commit_sha": "7fefe898af1904090fec573a969c19106b5bc0ba",
+  "source_commit_status": "Pinned to origin/main 7fefe898af19 and re-pinned by the first working session on 2026-10-31 at the start of UIUX-P0-01, as this ledger instructs (it was adopted at 0d7a8f104140, before PRs #95-#99 merged). UIUX-P0-01 records the per-file manifest and hashes; re-pin again at the start of any session that finds origin/main ahead of this sha, and never implement against an unpinned HEAD. A full sha is required — a branch name is not a pin.",
   "evidence_basis": {
     "supplied_by": "repository owner, 2026-10-31",
     "original_provenance": {
@@ -100,15 +100,17 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": null,
-    "active_stories": [],
+    "active_story": "UIUX-P0-01",
+    "active_stories": [
+      "UIUX-P0-01"
+    ],
     "last_completed_story": null,
     "next_recommended_story": "UIUX-P0-01",
-    "last_checkpoint": "2026-10-31T12:20:00Z",
+    "last_checkpoint": "2026-10-31T13:40:00Z",
     "last_session_id": "arena/be7957d5-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": null,
+    "last_verified_commit": "7fefe89",
     "last_updated": "2026-10-31",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -210,9 +212,9 @@
       ],
       "total": 6,
       "done": 0,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 6,
+      "not_started": 5,
       "percent_complete": 0
     },
     {
@@ -337,9 +339,9 @@
   "overall_progress": {
     "total_stories": 40,
     "done": 0,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 40,
+    "not_started": 39,
     "percent_complete": 0
   },
   "stories": [
@@ -399,13 +401,13 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P0-01 (Pin HEAD and source manifest). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-31T13:40:00Z",
+        "updated_at": "2026-10-31T13:40:00Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/be7957d5-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -414,8 +416,8 @@
         "known_regressions": [],
         "decisions": [],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "Claimed. Reading the shipped frontend, the route table and the screenshot manifest instead of the plan's web extracts; the deliverable is a reproducible manifest with hashes, not prose.",
+        "next_action": "Generate the pinned source manifest (files, hashes, tab inventory, route table) with a drift check, then record evidence and close the story.",
         "readme_updated": false
       },
       "required_evidence": [
