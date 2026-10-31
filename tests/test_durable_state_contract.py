@@ -31,6 +31,7 @@ import child_delegation
 import evidence_lessons
 import mcp_client
 import process_supervision
+import routing_experiments
 import routing_policy
 import sandbox_boundary
 import scoped_grants
@@ -111,6 +112,11 @@ def _write_transformations(root: Path) -> None:
     store.update_config(enabled=True)
 
 
+def _write_routing_experiments(root: Path) -> None:
+    store = routing_experiments.RoutingExperimentStore(root)
+    store.set_config(enabled=True)
+
+
 WriteFn = Callable[[Path], None]
 ErrorCls = type[BaseException]
 
@@ -170,6 +176,12 @@ STORE_CASES: list[tuple[str, WriteFn, Path, ErrorCls]] = [
         Path("transformations") / "state.json",
         trusted_transformations.TransformationStoreIntegrityError,
     ),
+    (
+        "routing_experiments",
+        _write_routing_experiments,
+        Path("routing_experiments") / "state.json",
+        routing_experiments.RoutingExperimentStoreIntegrityError,
+    ),
 ]
 _CASES = [pytest.param(w, rel, err, id=name) for name, w, rel, err in STORE_CASES]
 
@@ -198,6 +210,7 @@ def test_every_module_with_a_durable_state_file_is_covered() -> None:
         "delegations": "child_delegation",
         "lessons": "evidence_lessons",
         "transformations": "trusted_transformations",
+        "routing_experiments": "routing_experiments",
     }
     covered = {
         covered_modules[relative.parts[0]] for _name, _write, relative, _err in STORE_CASES

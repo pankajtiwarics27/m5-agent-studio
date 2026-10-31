@@ -483,6 +483,23 @@ class ArtifactRegistry:
             return "secret"
         return max(entries, key=lambda e: CONFIDENTIALITY_LEVELS.index(e.confidentiality)).confidentiality
 
+    def task_artifact_confidentialities(self, task_id: str) -> tuple[tuple[str, str], ...]:
+        """Return ``(content_sha256, effective_confidentiality)`` pairs linked to ``task_id``."""
+        clean_tid = str(task_id or "").strip()
+        if not clean_tid:
+            return ()
+        with self._lock:
+            state = self._read_state_unlocked()
+            matched_shas: list[str] = []
+            for sha, blob in sorted(state["blobs"].items()):
+                if not isinstance(blob, Mapping):
+                    continue
+                for entry in (blob.get("entries") or {}).values():
+                    if isinstance(entry, Mapping) and str(entry.get("task_id") or "") == clean_tid:
+                        matched_shas.append(str(sha))
+                        break
+        return tuple((sha, self.effective_confidentiality(sha)) for sha in matched_shas)
+
     def check_operation(self, content_sha256: str, operation: str) -> OperationVerdict:
         """Deny wins: allowed only if *every* entry allows it and none denies it."""
         entries = self.entries_for(content_sha256)

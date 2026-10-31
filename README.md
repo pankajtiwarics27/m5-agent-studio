@@ -452,7 +452,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
   pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
   plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
-- **31 of 58 shipped Python modules are wired into the served app**
+- **32 of 59 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`, `execution_spine` since `M5-P0-06`,
   `runtime_persistence` since `M5-P1-01`, `side_effect_ledger` since `M5-P1-03`,
@@ -466,8 +466,9 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   `M5-P3-03`, `scoped_grants` since `M5-P3-04`, `workspace_quarantine` since
   `M5-P5-01`, `artifact_lineage` since `M5-P5-02`, `routing_policy` since
   `M5-P4-02`, `child_delegation` since `M5-P4-03`, `security_release_gate`
-  since `M5-P5-03`, `evidence_lessons` since `M5-P6-01`, and
-  `trusted_transformations` since `M5-P6-02`;
+  since `M5-P5-03`, `evidence_lessons` since `M5-P6-01`,
+  `trusted_transformations` since `M5-P6-02`, and
+  `routing_experiments` since `M5-P6-03`;
   5 of 42 at the time of the audit table). Together they govern
   schema upgrades, SQLite transactions, authoritative task-state / lease-epoch
   checks at admission (`M5-P1-02`), durable `runtime_actions`
@@ -494,11 +495,14 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   [`docs/m5-2-0-security-release-gate.md`](docs/m5-2-0-security-release-gate.md)),
   optional project-scoped evidence-backed lessons with provenance/privacy
   promotion gates, file-hash staleness invalidation, decision-boundary retrieval
-  under a hard 160-token ceiling, and A/B coding evaluation (`M5-P6-01`), and
+  under a hard 160-token ceiling, and A/B coding evaluation (`M5-P6-01`),
   the optional typed trusted transformation registry with fail-closed demand
   collection, allowlisted deterministic contracts, risk-tiered human promotion
   authority forbidding model self-certification, and cascading revocation across
-  artifact lineage and lessons (`M5-P6-02`).
+  artifact lineage and lessons (`M5-P6-02`), and optional calibrated
+  affinity/hysteresis sequential routing experiments upholding 24 GB single-slot
+  admission, forbidding unmeasured simultaneous residency, and enforcing
+  default-off privacy-constrained cloud eligibility (`M5-P6-03`).
   The other 27 modules have passing unit tests but **no `app.py` call path**.
   Module presence is not integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
@@ -593,10 +597,10 @@ are not guarantees):
 Observed structure (see [`docs/architecture.md`](docs/architecture.md) and the
 generated [`docs/subsystem-dependency-inventory.md`](docs/subsystem-dependency-inventory.md)):
 
-- **Backend:** one FastAPI process — `app.py` plus 58 small contract modules
-  (57 of them type-checked by the `pyproject.toml` `mypy` file list; the
+- **Backend:** one FastAPI process — `app.py` plus 59 small contract modules
+  (58 of them type-checked by the `pyproject.toml` `mypy` file list; the
   remainder is `edit_rollback`, which predates that list). `studio.py` is a **generated** standalone
-  artifact (`scripts/build_studio.py` inlines 31 sibling modules — including
+  artifact (`scripts/build_studio.py` inlines 32 sibling modules — including
   `runtime_persistence`, `side_effect_ledger`, `execution_budget`,
   `workflow_checkpoints`, `workflow_state`, `mcp_client`, `context_store`,
   `onboarding_preflight`, `failure_injection`, `execution_spine`, `task_events`,
@@ -604,7 +608,7 @@ generated [`docs/subsystem-dependency-inventory.md`](docs/subsystem-dependency-i
   `artifact_lineage`, `edit_transactions`, `edit_rollback`, `verification_evidence`,
   `recovery_guard`, `resource_admission`, `model_admission`, `routing_policy`,
   `child_delegation`, `process_supervision`,
-  `scoped_grants`, `execution_profiles`, `security_release_gate`, `evidence_lessons`, `trusted_transformations`, `history_privacy`, and
+  `scoped_grants`, `execution_profiles`, `security_release_gate`, `evidence_lessons`, `trusted_transformations`, `routing_experiments`, `history_privacy`, and
   `workflow_orchestration`, and embeds `static/index.html`); never hand-edit it.
 - **Frontend:** `static/index.html`, vanilla HTML/CSS/JS, no build step.
 - **Storage:** SQLite (`studio_history.db`, `SCHEMA_VERSION = 3`) in WAL mode
@@ -614,7 +618,7 @@ generated [`docs/subsystem-dependency-inventory.md`](docs/subsystem-dependency-i
   per-session `.harnesses/{id}.jsonl` task-event journals and `.harnesses/snapshots/`
   (`0600` SHA-256 content-addressed blobs and integrity-checked baseline manifests).
 - **Request path:** `security_boundary` middleware (rate limit, origin checks,
-  body limits; `app.py` L2348) → 90 registered routes → either model streaming
+  body limits; `app.py` L2348) → 96 registered routes → either model streaming
   (`stream_any_model`), the harness tool loop
   (`_execute_harness_tool` L7679 → `_run_authorized_tool` L7592 →
   `_execute_harness_tool_inner` L7182), or MCP calls (`_mcp_http_rpc` L4623 →
