@@ -22,6 +22,7 @@ CASES = (
     "test_sandbox_boundary.py::test_build_container_invocation_matches_app_sandbox_command_and_rejects_unsafe_inputs",
     "test_qualify_environment.py::test_container_argv_matches_the_product_hardening_flags",
     "test_qualify_environment.py::test_suite_argv_matches_the_product_argv",
+    "test_qualify_environment.py::test_script_is_runnable_end_to_end_in_this_environment",
     "test_trusted_transformations.py::test_http_endpoints_and_standalone_studio_bundle_parity",
 )
 
