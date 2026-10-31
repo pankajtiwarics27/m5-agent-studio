@@ -123,6 +123,7 @@ measurements without trusting them).
 · [`uiux-2-0-program.md`](uiux-2-0-program.md) (UI/UX phases, gates and evidence bar)
 · [`uiux-2-0-transformation-plan.md`](uiux-2-0-transformation-plan.md) (what each UI/UX story changes, and how two sessions share one HTML file)
 · [`uiux-2-0-control-inventory.md`](uiux-2-0-control-inventory.md) (generated inventory of every control in the six panes and the shared chrome)
+· [`uiux-2-0-route-map.md`](uiux-2-0-route-map.md) (generated map of every frontend fetch call to the route it hits)
 · [`../M5_2_0_UIUX_AGENT_PROMPT.md`](../M5_2_0_UIUX_AGENT_PROMPT.md) (UI/UX claim, review and merge protocol)
 
 ## M5 2.0 ground-truth evidence (2026-10-30)

@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 3,
+  "revision": 5,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -27,8 +27,8 @@
     ],
     "rule": "This ledger is authoritative for UI/UX stories UIUX-P0-01..UIUX-P6-05 only. It never changes the status of an M5 or AS story, and no UI/UX story may change backend, security or data behavior to make a screen easier to build."
   },
-  "source_commit_sha": "28930089d0a450fe86e418bfef79d16f8a585965",
-  "source_commit_status": "Pinned to origin/main 28930089d0a4 by UIUX-P0-01 on 2026-10-31. The pin moved twice while the story was open: once when it was claimed (0d7a8f1 was stale after PRs #95 and #98) and once more before the story closed, because #99 changed studio.py and the source manifest caught the drift. The pin names the main commit the manifest's hashes describe; a session that finds main ahead of it re-pins the ledger and regenerates the manifest in the same commit. A branch name is not a pin.",
+  "source_commit_sha": "aa1af27898d98d4633da17a4b711cfd628df27dc",
+  "source_commit_status": "Pinned to origin/main aa1af27898d9 by UIUX-P0-03 on 2026-10-31. The previous pin 28930089d0a4 described main before #105 and #106 moved app.py and studio.py, so the manifest's hashes and route table were regenerated against this commit in the same change that re-pinned it. A session that finds main ahead of this pin re-pins the ledger and regenerates the manifest in the same commit; a git diff of a stale manifest is drift, not a fix-up. A branch name is not a pin.",
   "evidence_basis": {
     "supplied_by": "repository owner, 2026-10-31",
     "original_provenance": {
@@ -102,13 +102,13 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P0-02",
-    "next_recommended_story": "UIUX-P0-03",
-    "last_checkpoint": "2026-10-31T14:55:00Z",
-    "last_session_id": "arena/be7957d5-m5-agent-studio",
+    "last_completed_story": "UIUX-P0-03",
+    "next_recommended_story": "UIUX-P0-04",
+    "last_checkpoint": "2026-10-31T11:21:51Z",
+    "last_session_id": "arena/dc8242aa-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "836243e",
+    "last_verified_commit": "866083c",
     "last_updated": "2026-10-31",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -117,7 +117,8 @@
       "Screenshot capture needs a Chrome/Chromium binary and puppeteer-core, neither vendored. Stories that claim visual evidence must capture it on a machine that has them, and must not mark visual evidence as passed when the capture was skipped.",
       "The six panes share one shell, one integration strip and one telemetry rail. A story scoped to one pane can regress another; the feature-preservation matrix is the checklist, and P5-01..P5-03 plus P6-01/P6-02 are the regression gates.",
       "A parallel session owns the optional M5 P6 stories (the lessons/retrieval work). If a UI story surfaces a backend defect, it is recorded as a new M5 story or an open risk, never fixed inside a UI pull request.",
-      "No UI/UX story has been started: 40 stories, 0 done. Nothing in this ledger is a shipped feature, and README.md must not describe any of it as available until the owning story closes with evidence."
+      "PR #104 (the same UIUX-P0-03 story, on arena/dc36f4b7) is still open and conflicts with main. It must not be merged: the story is done here, and the runtime-program benchmark diagnostics the branch carries (app.py, studio.py, tests/test_child_delegation.py, the runtime ledger) need their own pull request in the runtime program.",
+      "The program's prose had drifted from the code at the pin: the program page still said 102 routes and 11 pinned files while app.py mounts 115 and the manifest now pins 12. Counts in docs are re-derived from the artifacts, not remembered."
     ]
   },
   "tab_registry": [
@@ -210,11 +211,11 @@
         "UIUX-P0-06"
       ],
       "total": 6,
-      "done": 2,
+      "done": 3,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 4,
-      "percent_complete": 33
+      "not_started": 3,
+      "percent_complete": 50
     },
     {
       "id": "P1",
@@ -337,11 +338,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 2,
+    "done": 3,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 38,
-    "percent_complete": 5
+    "not_started": 37,
+    "percent_complete": 8
   },
   "stories": [
     {
@@ -705,23 +706,92 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P0-03 (Map frontend handlers to API routes). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-10-31T11:20:31Z",
+        "updated_at": "2026-10-31T11:21:51Z",
+        "completed_at": "2026-10-31T11:21:51Z",
+        "owner_session": "arena/dc8242aa-m5-agent-studio",
+        "commit_sha": "866083c306051d8fbb3d0dd2fae6baa83e1ed28f",
+        "changed_files": [
+          "scripts/uiux_route_map.py",
+          "tests/test_uiux_route_map.py",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "docs/uiux-2-0-route-map.md",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "scripts/uiux_source_manifest.py",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
+          "docs/uiux-2-0-program.md",
+          "docs/uiux-2-0-transformation-plan.md",
+          "docs/README.md",
+          "AGENTS.md",
+          "M5_2_0_UIUX_AGENT_PROMPT.md"
+        ],
+        "evidence": [
+          "Criterion 1 (every mapped control stays reachable and equivalent): the story changes no markup. static/index.html's digest is unchanged (3137cb7d05bcbdd2...), scripts/uiux_control_inventory.py --check still reports the same 170 markup controls (101 chrome, 69 panes) and 30 script-rendered controls, and no route or handler was touched. The delivered surface is analysis: a generator, two generated artifacts and nine tests.",
+          "Criterion 2 (no console errors on tested journeys) and criterion 3 (keyboard and focus) are not applicable and are not claimed: this story adds no UI control and changes no markup, and nothing was rendered because this environment has no browser.",
+          "Criterion 4 (failure and recovery states are honest): the artifact carries a not_verified block naming exactly what it does not prove - that nothing was executed, that a dynamic match is a candidate and not a resolution, and that a route without a browser caller is not dead code - and test_the_generated_page_carries_its_limitations fails if the page drops any of those statements.",
+          "Criterion 5 (demonstrable by test): the map is derived, and every claim is re-derived independently in tests/test_uiux_route_map.py. Every fetch( in the inline script appears as a call site; every resolved URL is classified exactly once; every exact match names a route app.py mounts for the method the call uses; a runtime-chosen segment can never be reported as exact; the three known resolution paths (literal, local const, helper call sites) are pinned; the map, manifest and ledger share one pin and one frontend digest; --check is proved to fail on a temporary copy.",
+          "Measured result: 53 call sites resolve to 59 URLs - 58 exact, 1 dynamic, 0 findings, 0 unresolved call sites. 54 of 115 routes have a browser caller; 61 do not, and that is published as information rather than as a defect.",
+          "Provenance: the generator and its tests are ported from arena/dc36f4b7 (PR #104), which could not merge because it conflicted with main and carried a runtime-program benchmark change. The runtime work is not in this story; the generator was re-run against the current app.py and the docs carry the measured counts (115 routes, replacing a stale 102)."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q tests/test_uiux_route_map.py",
+            "exit_code": 0,
+            "result": "9 passed"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q tests/test_uiux_route_map.py tests/test_uiux_source_manifest.py tests/test_uiux_roadmap.py tests/test_docs.py",
+            "exit_code": 0,
+            "result": "60 passed"
+          },
+          {
+            "command": ".venv/bin/python -m ruff check .",
+            "exit_code": 0,
+            "result": "All checks passed"
+          },
+          {
+            "command": ".venv/bin/python -m mypy",
+            "exit_code": 0,
+            "result": "Success: no issues found in 58 source files"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_route_map.py --check",
+            "exit_code": 0,
+            "result": "UI route map is up to date: 53 call sites, 58 exact and 1 dynamic matches, 0 findings, 61 routes with no browser caller"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_source_manifest.py --check",
+            "exit_code": 0,
+            "result": "12 files, 6 tabs, 115 routes, pinned to aa1af27898d9"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_control_inventory.py --check",
+            "exit_code": 0,
+            "result": "170 markup controls across 6 panes (101 in the chrome, 30 rendered by script)"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py",
+            "exit_code": 0,
+            "result": "Documentation validation passed (5 required pages, 120 files scanned)"
+          }
+        ],
+        "visual_evidence": [
+          "None, and none applicable: this story adds no UI surface. Screenshot capture is still blocked in this environment (no Chrome/Chromium binary, no puppeteer-core), so 0 of 6 baseline shots exist and no pane is claimed to have been seen rendered."
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "A URL segment chosen at runtime is a dynamic match with candidates, never an exact match: guessing one of two routes would turn a finding into a false statement.",
+          "A route parameter absorbs any URL segment, while a URL wildcard may only stand in for a literal route segment - that asymmetry keeps {model_id:path} routes matching without mislabelling ordinary parameter routes.",
+          "Helper URLs are resolved from call sites: consumeSSE(url, ...) has no URL of its own, and reading its name would have produced a wrong or empty row.",
+          "Routes without a browser caller are published as information, not as defects, because the CLI, the demo tour and the tests use the same API.",
+          "The story was re-done on a clean branch rather than merged from PR #104, so the runtime-program benchmark change it carried stays out of a UI/UX pull request; the generator and tests were ported rather than re-invented."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "UIUX-P0-03 closed: every browser call now has a route or a stated reason why it does not. The map is the contract the later pane stories read before changing a call, and the generator's --check keeps it honest.",
+        "next_action": "Claim UIUX-P0-04 (trace backend authorization and state) and start from this map's non-GET rows: the state-changing calls are the set that needs an authorization trace, and routes with no browser caller stay out of scope for the UI.",
         "readme_updated": false
       },
       "required_evidence": [

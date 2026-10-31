@@ -12,7 +12,7 @@ claims anything; the binding contract is
 | [`product/M5_2_0_UIUX_Autonomous_Roadmap.json`](../product/M5_2_0_UIUX_Autonomous_Roadmap.json) | Authoritative ledger: 40 stories `UIUX-P0-01`…`UIUX-P6-05` across 7 phases, each with per-story tracking, plus the session state and the verified tab registry. |
 | [`M5_2_0_UIUX_AGENT_PROMPT.md`](../M5_2_0_UIUX_AGENT_PROMPT.md) | The claim/implement/verify/review/merge protocol every agent follows. |
 | [`tests/test_uiux_roadmap.py`](../tests/test_uiux_roadmap.py) | Executable invariants: the registry matches the shipped frontend, `done` requires evidence, dependencies are acyclic, `P0` gates the rest. |
-| [`product/M5_2_0_UIUX_Source_Manifest.json`](../product/M5_2_0_UIUX_Source_Manifest.json) | The pinned source surface (`UIUX-P0-01`): SHA-256 of every file the program may touch, the six tabs as the markup declares them, and the 102 routes `app.py` mounts. Regenerate it when the surface moves; `--check` fails CI on drift. |
+| [`product/M5_2_0_UIUX_Source_Manifest.json`](../product/M5_2_0_UIUX_Source_Manifest.json) | The pinned source surface (`UIUX-P0-01`): SHA-256 of every file the program may touch, the six tabs as the markup declares them, and the 115 routes `app.py` mounts. Regenerate it when the surface moves; `--check` fails CI on drift. |
 | [`scripts/uiux_source_manifest.py`](../scripts/uiux_source_manifest.py) | Writes and checks that manifest. Deterministic, parses the files, stamps no clock. |
 | [`tests/test_uiux_source_manifest.py`](../tests/test_uiux_source_manifest.py) | Re-derives every manifest claim from disk and proves the drift check actually fails. |
 | [`product/M5_2_0_UIUX_Control_Inventory.json`](../product/M5_2_0_UIUX_Control_Inventory.json) + [`uiux-2-0-control-inventory.md`](uiux-2-0-control-inventory.md) | The control inventory (`UIUX-P0-02`): every interactive element attributed to its pane, plus the script-rendered set. Generated — never hand-edited. |
@@ -74,21 +74,21 @@ The roadmap was written from GitHub web extracts, so its statements about the
 current UI start as hypotheses. `UIUX-P0-01` closed that gap with a manifest
 built from the checkout rather than from prose:
 
-* **11 pinned files** — `static/index.html`, `app.py`, the generated `studio.py`,
-  the design-system contract, the screenshot manifest, the UI audit and the five
-  scripts that build, inventory or verify the surface — each with its SHA-256,
-  size and line count;
+* **12 pinned files** — `static/index.html`, `app.py`, the generated `studio.py`,
+  the design-system contract, the screenshot manifest, the UI audit and the six
+  scripts that build, inventory, verify or map the surface — each with its
+  SHA-256, size and line count;
 * **the six tabs** in document order, with `dom_id`, visible label, `title`
   attribute, shortcut and `switchTab` target, parsed from the markup;
-* **the route table** — 102 routes (`36` `GET`, `58` `POST`, `5` `DELETE`, `3`
-  `PATCH`) in source order, plus the 48 distinct `/api/` literals the browser
-  script names, with template placeholders normalised (`${id}` → `{param}`);
+* **the route table** — 115 routes (`38` `GET`, `69` `POST`, `5` `DELETE`, `3`
+  `PATCH`) in source order, derived from the decorators rather than from prose;
+  which of them a browser call can reach is the route map's answer, below;
 * **the screenshot state** — 0 of 6 captured in this environment, recorded as
   such instead of implied.
 
 What it deliberately does **not** claim: which handler calls which route (that
-mapping is `UIUX-P0-03`), that any pane was seen rendered (capture needs a
-browser), or that any of it matches an upstream version.
+is the route map's job, not the manifest's), that any pane was seen rendered
+(capture needs a browser), or that any of it matches an upstream version.
 
 The rule that makes it a pin: a story that changes a pinned file regenerates the
 manifest in the same commit, and CI runs
@@ -123,6 +123,31 @@ What it does not claim: that a control is *shown* (nothing was rendered), that t
 nearest-function attribution is a call graph, or that a missing `id` means a
 missing label — a wrapping `label` element is not resolved by this walk.
 
+## The route map
+
+`UIUX-P0-03` answered the question the repository could not answer before:
+which frontend call hits which server route. It is derived from the 53 `fetch`
+calls, not from handler names — `loadProviders` proves nothing about its URL,
+the call inside it does.
+
+* **53 call sites resolve to 59 URLs**: 58 exact matches, **1 dynamic** and **0
+  findings** — no dead call, no call whose method disagrees with its route, no
+  URL that failed to resolve. Three resolution paths do the work: 51 URLs are
+  literals, 1 comes from a local `const` (`refreshOnboarding` chooses between
+  `/api/onboarding/preflight?probe=local` and the plain path), and 1 is a helper
+  parameter resolved from its call sites (`consumeSSE` receives its URL from six
+  callers, so it maps to six routes).
+* **1 dynamic match**: `/api/models/${id}/${act}` picks `load` or `unload` at
+  runtime, so both routes stay listed as candidates rather than one being guessed.
+* **54 of 115 routes have a browser caller**; the other 61 do not — which is not
+  dead code, because the CLI, the demo tour and the tests use the same API.
+
+What it does not claim: that any of these calls *works* (nothing was executed;
+authorization, request bodies and response handling are out of scope), that a
+dynamic match resolves to one route, or that an unused route is unused anywhere
+but in the browser. Those limits are written into the generated page and a test
+fails if the page drops them.
+
 ## The tab registry
 
 The ledger carries a `tab_registry` derived from `static/index.html` and
@@ -156,9 +181,10 @@ claimed elsewhere. The two programs share a repository, not a ledger:
 
 ## Status
 
-Nothing in this program is shipped: 40 stories, 2 done (`UIUX-P0-01` the pinned
-source manifest, `UIUX-P0-02` the control inventory), `next_recommended_story` =
-`UIUX-P0-03` (map frontend handlers to API routes). Planned work is never
+Nothing in this program is shipped: 40 stories, 3 done (`UIUX-P0-01` the pinned
+source manifest, `UIUX-P0-02` the control inventory, `UIUX-P0-03` the route map),
+`next_recommended_story` = `UIUX-P0-04` (trace backend authorization and state
+behind every state-changing call). Planned work is never
 described as available in `README.md` before the owning story closes with
 evidence, and no screenshot has been captured yet, so no pane is claimed to have
 been seen rendered.

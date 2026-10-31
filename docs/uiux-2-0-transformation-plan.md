@@ -256,9 +256,9 @@ when the dependency is still open.
 | Item | State |
 |---|---|
 | `UIUX-P0-01`, `P0-02` | done on `main` |
-| `UIUX-P0-03` | in flight on `arena/dc36f4b7-m5-agent-studio` (PR #104); the branch also carries a runtime-program benchmark change, and it conflicts with `main` |
-| `UIUX-P0-04` | reserved by this session (`arena/dc8242aa-m5-agent-studio`) for the next claim, contingent on #104 merging; **not** claimed in the ledger while its dependency is open |
-| Review duty | the non-author reviews every story PR; findings on #104 were posted as a request for changes |
+| `UIUX-P0-03` | implemented on `arena/dc8242aa-m5-agent-studio`, superseding PR #104: that branch could not merge (it conflicted with `main` and carried a runtime-program benchmark change), so the route-map script and tests were ported here, the runtime work was dropped, and the ledger was re-pinned to `aa1af27` |
+| `UIUX-P0-04` | the next claim once `P0-03` is `done`: trace the backend authorization and state behind every state-changing call in the route map |
+| Review duty | the non-author reviews every story PR; findings on #104 were posted on that PR, including the exact conflict and the scope split |
 
 **Merge queue.** One story per pull request, reviewed by the other session,
 green on all three CI legs, merged with `gh pr merge <number> --merge` (merge

@@ -59,6 +59,7 @@ TRACKED_FILES: tuple[tuple[str, str], ...] = (
     ("scripts/build_studio.py", "regenerates studio.py from app.py and the inlined modules"),
     ("scripts/check_frontend_syntax.py", "parses the inline script block for syntax errors"),
     ("scripts/uiux_control_inventory.py", "builds and checks the per-pane control inventory"),
+    ("scripts/uiux_route_map.py", "maps every fetch call to the route it can hit"),
 )
 
 BUTTON_RE = re.compile(
