@@ -124,10 +124,10 @@
   },
   "session_state": {
     "active_story": null,
-    "last_completed_story": "M5-P3-01",
-    "last_checkpoint": "2026-10-31T11:40:00Z",
-    "last_session_id": "arena/29fdbf7f-m5-agent-studio",
-    "next_recommended_story": "M5-P6-01 (only remaining unblocked story; optional, so it requires explicit owner authorization before selection). M5-P3-01 is done as of 2026-10-31.",
+    "last_completed_story": "M5-P6-01",
+    "last_checkpoint": "2026-10-31T12:15:00Z",
+    "last_session_id": "arena/0211ee82-m5-agent-studio",
+    "next_recommended_story": "M5-P6-02 (Typed trusted transformation registry; owner-authorized optional Phase P6 story).",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
       "RESOLVED 2026-10-31 (M5-P3-01): container isolation is QUALIFIED on the target host. The operator run (Apple M5, Docker Desktop 29.5.3, image python:sha256:aa943ce41142...) passed all 12 sandbox checks, including p3.adversarial.memory_limit as exit 137 with memory.max=536870912 and memory.swap.max=536870912 captured before and after a 3 GiB allocation, and isolation_smoke.py --live released dependent_execution under the observed boundary (docs/m5-2-0-sandbox-isolation-evidence.md). The 2026-10-30 run that failed that check (exit 0, no counters) is kept; the passing run supersedes it without explaining it. Two limits travel with the record: the qualification binds to that machine, engine version and image digest, so every other host starts unqualified; and the engine's default swap allowance means the shipped '--memory=2g' ceilings at RAM + swap (about 4 GiB), so pinning '--memory-swap' to '--memory' remains an open hardening item that needs its own re-qualification.",
@@ -146,13 +146,11 @@
       "RESOLVED 2026-10-31 (CI-flake fix, Python 3.13 'assert 0 == 1' in tests/test_scoped_grants.py::test_capability_specific_in_flight_containment_preserves_unrelated_capabilities plus a JSONDecodeError in tests/test_process_supervision.py on 3.12, run 41184293148): both were test-side races, not product defects. The containment test treated the stdio MCP child's pid file as proof that the supervisor owned the process, but app._mcp_stdio_rpc registers the record only after create_subprocess_exec returns, so a containment call landing in that window legitimately matched zero records; it now polls supervisor.store.list_in_flight_processes() - the same source contain_by_capability_async reads - and additionally asserts the registered record's pid equals the child's own pid, i.e. the assertion was tightened, not relaxed. The supervision test waited on Path.exists() and then parsed the file, but existence precedes the payload, so it now waits on parseable content and the test children write pid/payload files via tmp + os.replace. Neither fix is a re-run: the waits remove the race, and a regression test reproduces the empty-then-filled writer deterministically. Follow-up product hardening (arena/0211ee82-m5-agent-studio): that same fork-to-register window in asyncio.create_subprocess_exec was also a live TOCTOU gap if an operator revoked a grant or contained a session mid-spawn; ProcessSupervisor.begin_spawn / abort_spawn / await_pending_containment_async and app._register_active_subprocess_async now pre-register pending spawns before create_subprocess_*, latch synchronous or asynchronous containment across pipe setup, prevent pre-initialize/pre-dispatch stdio MCP writes when contained, and preserve narrow mcp:alias:tool resource scopes (verified deterministically in test_mid_spawn_grant_revocation_contains_stdio_mcp_before_register_process).",
       "OWNER AUTHORIZATION 2026-10-31: Optional Phase P6 stories (M5-P6-01 -> M5-P6-02 -> M5-P6-03) are explicitly authorized by the user to proceed sequentially under each story's measured-benefit and fail-closed acceptance gates while M5-P3-01 awaits live host Docker qualification."
     ],
-    "last_readme_sync": "2026-10-31T08:40:00Z",
+    "last_readme_sync": "2026-10-31T12:15:00Z",
     "last_verified_commit": "fe5a84b",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md",
     "last_updated": "2026-10-31",
-    "active_stories": [
-      "M5-P6-01"
-    ]
+    "active_stories": []
   },
   "delivery_phases": [
     {
@@ -325,8 +323,8 @@
           "Authority consolidation completed 2026-10-30 on user/owner confirmation; AS roadmap retained unmodified as historical source and AS-status ledger (no history deleted)"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. Authority consolidation awaits owner confirmation.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. Authority consolidation awaits owner confirmation.",
         "readme_updated": true
       }
     },
@@ -380,14 +378,14 @@
           "docs/README.md"
         ],
         "evidence": [
-          "docs/m5-2-0-integration-audit.md §1: all 9 reported claims verified/refuted with line evidence (claims 1 and 6 refuted; 2,3,4,5,7,8,9 confirmed)",
-          "§2: FastAPI route -> tool/subprocess/SQLite/MCP traces with function and line references",
-          "§3.1: all 17 direct subprocess entry points in app.py enumerated with gates; §3.2: all consequential SQLite/FS write entry points enumerated",
-          "§4: 42-module code-exists/integrated/tested/qualified table (5 integrated, 37 unit-tested-but-unintegrated)"
+          "docs/m5-2-0-integration-audit.md \u00a71: all 9 reported claims verified/refuted with line evidence (claims 1 and 6 refuted; 2,3,4,5,7,8,9 confirmed)",
+          "\u00a72: FastAPI route -> tool/subprocess/SQLite/MCP traces with function and line references",
+          "\u00a73.1: all 17 direct subprocess entry points in app.py enumerated with gates; \u00a73.2: all consequential SQLite/FS write entry points enumerated",
+          "\u00a74: 42-module code-exists/integrated/tested/qualified table (5 integrated, 37 unit-tested-but-unintegrated)"
         ],
         "test_results": [
           {
-            "command": "grep/sed call-path audit (commands listed in audit doc §6)",
+            "command": "grep/sed call-path audit (commands listed in audit doc \u00a76)",
             "exit_code": 0,
             "result": "evidence captured inline"
           }
@@ -398,8 +396,8 @@
           "Skill-code subprocess paths classified as containment targets for M5-P0-03 (app.py:1831 flag-gated but sandbox-bypassing; app.py:8645 ungated)"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. Containment work continues in M5-P0-03.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. Containment work continues in M5-P0-03.",
         "readme_updated": true
       }
     },
@@ -649,7 +647,7 @@
           "docs/README.md"
         ],
         "evidence": [
-          "docs/m5-2-0-baseline-evidence.md §2: full command log with exit codes",
+          "docs/m5-2-0-baseline-evidence.md \u00a72: full command log with exit codes",
           "pytest: 717 passed, 1 skipped (opt-in live container test), 1 warning, 19.13s",
           "ruff/mypy/compileall/frontend-syntax/smoke_local x2/governance/security-signoff/docs/generators-no-drift/demo-tour/screenshots/adrs: all exit 0",
           "pip_audit exit 1: 21 advisories in venv bootstrap packages pip 23.0.1 + setuptools 66.1.1 only; runtime dependencies clean (recorded undiluted)",
@@ -683,12 +681,12 @@
           }
         ],
         "decisions": [
-          "verify_baseline.py initially failed on the shallow checkout; git fetch --unshallow (documented prerequisite) fixed it — both outcomes recorded",
-          "Blocked measurements (peak unified memory/swap, oMLX coding task, FTS5 load latency, live isolation) listed in evidence doc §4 and never promoted to claims"
+          "verify_baseline.py initially failed on the shallow checkout; git fetch --unshallow (documented prerequisite) fixed it \u2014 both outcomes recorded",
+          "Blocked measurements (peak unified memory/swap, oMLX coding task, FTS5 load latency, live isolation) listed in evidence doc \u00a74 and never promoted to claims"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. Target-hardware telemetry moves to M5-P4-01 / M5-P0-04 on real hardware.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. Target-hardware telemetry moves to M5-P4-01 / M5-P0-04 on real hardware.",
         "readme_updated": true
       }
     },
@@ -876,8 +874,8 @@
           "Old marketing-forward README content replaced per draft mandate; deep reference material (env vars, API, invariants) preserved in README reference section and docs/ links so validate_docs publication checks stay green"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. README maintenance rule: refresh with verified behavior after every subsequent story.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. README maintenance rule: refresh with verified behavior after every subsequent story.",
         "readme_updated": true
       }
     },
@@ -1496,7 +1494,7 @@
           "Enforced two-tier false-completion protection: a universal ledger invariant rejecting completion when the latest run_bash action failed without a subsequent passing run, plus full TaskVerificationSpec verification (managed-edit provenance, modified-file SHA-256 deltas, Git diff, protected user-file digests, post-edit test ordering, and independent shell=False test execution)."
         ],
         "blockers": [],
-        "handoff_note": "M5-P1-06 complete: single-agent verified vertical slice, deterministic action-boundary crash injection + session reconciliation, and false-completion rejection are integrated across app.py and standalone studio.py (811 passed, 1 skipped; 12/44 modules integrated; Phase P1 at 86% — 6/7 stories done). Ready for M5-P1-07 (Minimal task events, HTTP commands and existing UI).",
+        "handoff_note": "M5-P1-06 complete: single-agent verified vertical slice, deterministic action-boundary crash injection + session reconciliation, and false-completion rejection are integrated across app.py and standalone studio.py (811 passed, 1 skipped; 12/44 modules integrated; Phase P1 at 86% \u2014 6/7 stories done). Ready for M5-P1-07 (Minimal task events, HTTP commands and existing UI).",
         "next_action": "Claim and implement M5-P1-07 on a fresh branch after M5-P1-06 merges.",
         "readme_updated": true
       }
@@ -2770,7 +2768,7 @@
           "AC '24 GB pressure measured' remains UNMEASURED: p4.pressure and p4.model_load need the owner's 24 GB Apple Silicon run (--pressure-gb N --model-command CMD). The 80% reservation is documented as policy, not a measurement (docs/model-admission.md 'What this does not claim'), and the story therefore stays blocked.",
           "Standalone bundle stays self-contained: resource_admission and model_admission are inlined into studio.py (builder now tolerates a trailing comment on the import line), verified by tests/test_release_manager.py::test_generated_standalone_has_no_local_module_imports and ::test_the_standalone_bundle_carries_the_same_policy.",
           "Task 1/2 (representative per-category coding cases + recorded uncertainty): --coding-cases takes a case set (id/category/prompt, optional declared categories) and runs every case through --model-command with STUDIO_QUALIFY_CASE_ID/CATEGORY/PROMPT in the environment, --case-runs times each. p4.coding_cases records per-case exit codes, success rate, wall_s_median, wall_s_spread_ratio, per-category completion and an explicit uncertainty block (incl. single_run_cases) instead of a bare pass. A malformed case set (duplicate/missing id, missing category, undeclared category, invalid JSON) aborts with exit 2 and writes no record. Tests: test_load_coding_cases_* , test_coding_case_probe_passes_case_identity_through_the_environment, test_coding_case_probe_records_failures_and_uncertainty, test_coding_case_probe_measures_wall_time_spread, test_malformed_coding_cases_abort_the_run_without_a_verdict.",
-          "Task 3 (thermal): p4.thermal samples thermal pressure during every load phase — macOS via `pmset -g therm` CPU_Speed_Limit (no root; powermetrics is never invoked because it needs root), Linux via /sys/class/thermal/thermal_zone*/temp — and records stress min/max plus whether throttling was observed. Where the platform exposes no readable source the check is `blocked` with the reason (this container: 35 samples, none readable) rather than a fabricated temperature. Tests: test_thermal_snapshot_parses_pmset_thermal_pressure, test_linux_thermal_readings_convert_millidegrees, test_thermal_sampler_summarises_throttling, test_thermal_check_blocks_when_the_platform_cannot_report, test_thermal_check_passes_with_readings_under_load.",
+          "Task 3 (thermal): p4.thermal samples thermal pressure during every load phase \u2014 macOS via `pmset -g therm` CPU_Speed_Limit (no root; powermetrics is never invoked because it needs root), Linux via /sys/class/thermal/thermal_zone*/temp \u2014 and records stress min/max plus whether throttling was observed. Where the platform exposes no readable source the check is `blocked` with the reason (this container: 35 samples, none readable) rather than a fabricated temperature. Tests: test_thermal_snapshot_parses_pmset_thermal_pressure, test_linux_thermal_readings_convert_millidegrees, test_thermal_sampler_summarises_throttling, test_thermal_check_blocks_when_the_platform_cannot_report, test_thermal_check_passes_with_readings_under_load.",
           "The measurement path is now executable end to end instead of 'write a harness first': scripts/model_probe.py (stdlib only, OpenAI-compatible) performs one real request and prints one JSON line in the contract the suite already parses. first_token_ms is timed from the request being sent, not from the response headers - the first version of this probe timed from the headers and reported 0.0 ms, which excluded prefill; the regression is pinned by tests/test_model_probe.py::test_first_token_latency_includes_the_wait_for_the_first_token. Token counts come only from the server's usage block, peak_memory_bytes only from a readable --server-pid; anything unobserved is omitted and explained in a notes field rather than defaulted.",
           "Observed in this environment against a local OpenAI-compatible endpoint (record: /tmp/rec3.json, not committed): p4.model_load pass (3/3 runs, first_token_ms and output_tokens carried through to a loadable model_calibration profile), p4.coding_cases pass (3/3 cases across 3 categories, per-case success_rate 1.0 and wall_s_spread_ratio recorded, case_id/case_category echoed by the probe so a per-case measurement says which case it came from), p4.thermal blocked (no readable thermal source in a container), p4.machine.fingerprint blocked off-target. The story therefore stays blocked: this is evidence that the instrument works, not that a 24 GB Apple Silicon machine qualified.",
           "MEASURED on the target machine 2026-10-31 (operator run, Apple M5 / arm64 / 24.0 GiB / macOS 26.6.1 / Docker Desktop 29.5.3, main at d0e47f0): scripts/qualify_environment.py --hardware --pressure-gb 16 --model-runs 3 --profile-out dist/model-profile.jsonl returned QUALIFIED, checks_run=8, failed=[], not_executed=[]. Record: docs/m5-2-0-hardware-qualification-evidence.md (artifact qualification-20261031T074929Z.json on the operator's machine; dist/ is git-ignored).",
@@ -2917,9 +2915,9 @@
           "product/M5_2_0_Autonomous_Roadmap.json"
         ],
         "evidence": [
-          "AC1 (No KV cache portability assumption): routing_policy.assert_no_kv_cache_portability_request rejects KV/prompt/SSD/response-state cache transfer keys (409 kv_cache_portability_forbidden), sanitize_portable_messages and sanitize_messages_for_wire scrub non-portable attributes across transcripts and stream_any_model wire calls, and PortableHandoffCore enforces kv_cache_portable=False (discarded_recomputed_from_text) — verified by test_portable_core_and_harness_extensions_persisted_and_no_kv_cache_assumption.",
-          "AC2 (Switch preserves budgets and grants validity): execute_conservative_model_switch_async preserves TaskBudgetState counters/specs unchanged (refusing exhausted-budget laundering with 409 handoff_budget_already_exceeded), preserves active session/task ScopedGrant expires_at and uses_consumed without renewal or reset, and revokes only grants pinned to fenced old epochs — verified by test_switch_preserves_budgets_and_grants_validity_without_renewal_or_reset.",
-          "AC3 (Failed handoff leaves safe paused state): Every failure path (KV-cache violation, invalid/escaped reference, file SHA-256 version drift, permission escalation, unconsented cloud routing, busy heavy-model slot, semantic confirmation mismatch, retry cap exhaustion, or unresolved side effects/quarantine) persists HandoffRecord(status=failed_paused), keeps the prior model binding, and transitions session + durable task into paused (or blocked when unresolved holds exist) — verified across all 8 tests in tests/test_portable_handoff_and_switching.py.",
+          "AC1 (No KV cache portability assumption): routing_policy.assert_no_kv_cache_portability_request rejects KV/prompt/SSD/response-state cache transfer keys (409 kv_cache_portability_forbidden), sanitize_portable_messages and sanitize_messages_for_wire scrub non-portable attributes across transcripts and stream_any_model wire calls, and PortableHandoffCore enforces kv_cache_portable=False (discarded_recomputed_from_text) \u2014 verified by test_portable_core_and_harness_extensions_persisted_and_no_kv_cache_assumption.",
+          "AC2 (Switch preserves budgets and grants validity): execute_conservative_model_switch_async preserves TaskBudgetState counters/specs unchanged (refusing exhausted-budget laundering with 409 handoff_budget_already_exceeded), preserves active session/task ScopedGrant expires_at and uses_consumed without renewal or reset, and revokes only grants pinned to fenced old epochs \u2014 verified by test_switch_preserves_budgets_and_grants_validity_without_renewal_or_reset.",
+          "AC3 (Failed handoff leaves safe paused state): Every failure path (KV-cache violation, invalid/escaped reference, file SHA-256 version drift, permission escalation, unconsented cloud routing, busy heavy-model slot, semantic confirmation mismatch, retry cap exhaustion, or unresolved side effects/quarantine) persists HandoffRecord(status=failed_paused), keeps the prior model binding, and transitions session + durable task into paused (or blocked when unresolved holds exist) \u2014 verified across all 8 tests in tests/test_portable_handoff_and_switching.py.",
           "Tasks 1-4: PortableHandoffStore ($HARNESS_STORE_DIR/handoffs/state.json, 0700/0600, O_EXCL+fsync+dir-fsync, covered by test_durable_state_contract.py); workspace-confined SHA-256 file reference & post-switch activation checks; selective semantic confirmation skipping low-risk transitions and verifying JSON core_sha256/policy/paths/ack_no_kv_cache on high-risk transitions; old-worker epoch fencing + subprocess containment + bounded SessionSwitchBudget retries."
         ],
         "test_results": [
@@ -3001,8 +2999,8 @@
           "product/M5_2_0_Autonomous_Roadmap.json"
         ],
         "evidence": [
-          "AC1 (Child cannot exceed parent permissions): child_delegation.derive_child_authority and enforce_child_tool_authority enforce CD_POLICY_RANK monotonicity (plan < standard < autonomous), block recursive delegation (delegate_subagent forbidden; ::sub: callers rejected with child_recursive_delegation_forbidden), confine readable_paths/writable_paths inside workspace without secret basenames, intersect delegated parent_grant_ids into task/epoch-pinned child grants, and immediately reject tool calls on mid-flight parent policy downgrade (child_parent_policy_downgraded) or capability revocation (child_capability_revoked_on_parent) — verified in tests/test_child_delegation.py.",
-          "AC2 (No orphan consequential actions): Child subtasks persist as {parent}::sub:{key} in SQLite runtime_tasks with independent WorkerLeaseCoordinator epochs; join_child_delegation_async refuses join (409 child_unresolved_consequential_actions) while any SQLite runtime_actions, McpExternalEffectStore records, or ContainmentStore holds remain in_flight/uncertain; workflow_state.complete_task refuses parent completion while any child is non-terminal or unjoined; parent cancel and crash recovery (recover_incomplete_transitions) fence child epochs, contain child subprocesses, revoke child grants, and sweep in-flight child consequential actions to uncertain — verified in tests/test_child_delegation.py.",
+          "AC1 (Child cannot exceed parent permissions): child_delegation.derive_child_authority and enforce_child_tool_authority enforce CD_POLICY_RANK monotonicity (plan < standard < autonomous), block recursive delegation (delegate_subagent forbidden; ::sub: callers rejected with child_recursive_delegation_forbidden), confine readable_paths/writable_paths inside workspace without secret basenames, intersect delegated parent_grant_ids into task/epoch-pinned child grants, and immediately reject tool calls on mid-flight parent policy downgrade (child_parent_policy_downgraded) or capability revocation (child_capability_revoked_on_parent) \u2014 verified in tests/test_child_delegation.py.",
+          "AC2 (No orphan consequential actions): Child subtasks persist as {parent}::sub:{key} in SQLite runtime_tasks with independent WorkerLeaseCoordinator epochs; join_child_delegation_async refuses join (409 child_unresolved_consequential_actions) while any SQLite runtime_actions, McpExternalEffectStore records, or ContainmentStore holds remain in_flight/uncertain; workflow_state.complete_task refuses parent completion while any child is non-terminal or unjoined; parent cancel and crash recovery (recover_incomplete_transitions) fence child epochs, contain child subprocesses, revoke child grants, and sweep in-flight child consequential actions to uncertain \u2014 verified in tests/test_child_delegation.py.",
           "AC3 (Delegation preserves or improves verified outcomes): POST /api/harness/delegations/benchmark and compare_delegation_runs evaluate matched single_model vs multi_agent runs across multi_module_verified_bugfix (0.0 -> 1.0 verified success), faulty_subagent_preservation (1.0 == 1.0 via automatic EditRollbackEngine rollback on failed join verification), and trivial_single_file_edit (1.0 == 1.0 with delegation_overhead_justified=False blocking unjustified worker delegation), cross-checked for exact parity with workflow_evaluation.compare_workflows.",
           "Tasks 1-4: Carved ChildBudgetAllocation strictly inside unreserved parent remaining budget with per-step enforcement and idempotent parent debit on join; disjoint ChildDelegationStore write-scope locks ($HARNESS_STORE_DIR/delegations/state.json, 7th durable JSON sidecar store covered by test_durable_state_contract.py) blocking sibling/parent write races and preserving out-of-band user edits on rollback conflict (child_rollback_conflict)."
         ],
@@ -3196,7 +3194,7 @@
         "decisions": [
           "ADR-0019: dedup the content, never the history (one provenance entry per sighting; weakest-trust / strictest-confidentiality / deny-wins answers); invalidation is recorded and cascading rather than destructive; evidence records the digests and security generation it was computed against and cannot be re-validated after going stale; retention protects active tasks, pins, valid evidence, secrets and the recovery path's own bytes, with a reason recorded per survivor.",
           "The registry is not a proof engine and does not decide safety; the live staleness gate is in workflow_state's completion path, and the registry records the lineage.",
-          "The quarantine module imports artifact_lineage (freeze records and pins); artifact_lineage does not import workspace_quarantine — the dependency is inverted through recovery_protection() because a lazy import broke the generated standalone artifact (caught by tests/test_release_manager.py)."
+          "The quarantine module imports artifact_lineage (freeze records and pins); artifact_lineage does not import workspace_quarantine \u2014 the dependency is inverted through recovery_protection() because a lazy import broke the generated standalone artifact (caught by tests/test_release_manager.py)."
         ],
         "blockers": [
           "Retention is a plan/apply API with no scheduler; nothing runs collection automatically in this build.",
@@ -3342,22 +3340,51 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P6-01: Evidence-backed lessons and bounded retrieval. Objective: Add curated cross-task lessons only if measured benefit exists. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Define provenance and promotion gates; Use decision-boundary retrieval and hard token ceilings; Invalidate stale lessons; A/B test coding completion. Acceptance: Measured improvement over baseline; No cross-project privacy leakage; Optional feature can be disabled. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-10-31T10:40:00Z",
+        "updated_at": "2026-10-31T12:15:00Z",
+        "completed_at": "2026-10-31T12:15:00Z",
+        "owner_session": "arena/0211ee82-m5-agent-studio",
         "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "changed_files": [
+          "evidence_lessons.py",
+          "app.py",
+          "studio.py",
+          "scripts/build_studio.py",
+          "pyproject.toml",
+          "tests/test_durable_state_contract.py",
+          "tests/test_evidence_lessons.py",
+          "docs/adr/0022-evidence-backed-lessons-and-bounded-retrieval.md",
+          "docs/route-security-matrix.md",
+          "docs/subsystem-dependency-inventory.md",
+          "README.md"
+        ],
+        "evidence": [
+          "evidence_lessons.py + app.py: EvidenceLessonStore ($HARNESS_STORE_DIR/lessons/state.json, 0600/0700 owner-only) with provenance/secret/anchor promotion gates, canonical per-project scope isolation (derive_project_scope_id), O_NOFOLLOW file-hash + security-generation + ArtifactRegistry + regression staleness invalidation, and bounded decision-boundary retrieval (turn_plan_start, verification_replan, handoff_switch) capped at 160 default / 256 max tokens",
+          "run_lessons_ab_evaluation_async + POST /api/harness/lessons/evaluate: 18 subprocess-verified coding runs across 3 scenarios (9 baseline vs 9 lessons) measured +33.33% verified completion rate (66.67% -> 100.0%), -2.0 median steps (4.0 -> 2.0), -160.0 median total tokens (754.0 -> 594.0), max 104 retrieved lesson tokens (<= 160 ceiling), 0 cross-project leaks, and 0 stale injections",
+          "Optional disablement & fail-closed gate: cold stores start with ab_gate_open=false until measured A/B evaluation passes, and operators can disable lessons via STUDIO_ENABLE_EVIDENCE_LESSONS=0, POST /api/harness/lessons/config (enabled=false), or per-turn enable_lessons=false"
+        ],
+        "test_results": [
+          "pytest tests/test_evidence_lessons.py -v -> 7 passed",
+          "pytest tests/test_durable_state_contract.py -v -> 57 passed",
+          "python scripts/validate_docs.py && python scripts/validate_adrs.py -> exit 0",
+          "ruff check . && mypy -> exit 0 (56 source files)"
+        ],
+        "decisions": [
+          "ADR-0022: Partition lessons strictly per canonical repository scope (proj-...) with zero cross-project retrieval paths, fail closed on cold stores (ab_gate_open=false) until measured A/B coding evaluation passes, and restrict prompt injection to explicit decision boundaries within a 160-token default ceiling."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
-        "readme_updated": false
+        "handoff_note": "M5-P6-01 complete with measured A/B benefit, zero cross-project leakage, and runtime/env/session disable switches. Next owner-authorized optional Phase P6 story is M5-P6-02 (Typed trusted transformation registry).",
+        "next_action": "Claim and implement M5-P6-02 (Typed trusted transformation registry) on a clean branch/PR after merging PR #95.",
+        "readme_updated": true,
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/95",
+        "test_evidence": [
+          "tests/test_evidence_lessons.py",
+          "tests/test_durable_state_contract.py",
+          "docs/adr/0022-evidence-backed-lessons-and-bounded-retrieval.md"
+        ]
       }
     },
     {

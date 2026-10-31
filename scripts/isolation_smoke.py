@@ -88,12 +88,19 @@ def environment_fingerprint() -> bool:
     runtime_path = shutil.which(runtime_name)
     runtime_ok = False
     if runtime_path:
-        probe = subprocess.run(  # noqa: S603 - fixed argv, local daemon query only
-            [runtime_path, "info"], capture_output=True, text=True, timeout=10, check=False,
-        )
-        runtime_ok = probe.returncode == 0
-        print(f"  runtime_available: {'yes' if runtime_ok else 'no'} "
-              f"({runtime_name} at {runtime_path}, `info` exit {probe.returncode})")
+        try:
+            probe = subprocess.run(  # noqa: S603 - fixed argv, local daemon query only
+                [runtime_path, "info"], capture_output=True, text=True, timeout=10, check=False,
+            )
+            runtime_ok = probe.returncode == 0
+            print(f"  runtime_available: {'yes' if runtime_ok else 'no'} "
+                  f"({runtime_name} at {runtime_path}, `info` exit {probe.returncode})")
+        except subprocess.TimeoutExpired:
+            runtime_ok = False
+            print(f"  runtime_available: no ({runtime_name} at {runtime_path}, `info` timed out)")
+        except OSError as exc:
+            runtime_ok = False
+            print(f"  runtime_available: no ({runtime_name} at {runtime_path}, `info` error: {exc})")
     else:
         print(f"  runtime_available: no ({runtime_name!r} not on PATH)")
     return runtime_ok
@@ -126,13 +133,16 @@ def skill_execution_gates() -> None:
     section("3. Skill-code execution gates (app._run_skill_script)")
     with tempfile.TemporaryDirectory(prefix="m5-isolation-smoke-") as td:
         smoke_db = Path(td) / "smoke-audit.db"
+        smoke_store = Path(td) / "smoke-store"
+        smoke_store.mkdir(parents=True, exist_ok=True)
         skill_dir = Path(td) / "demo-skill"
         (skill_dir / "scripts").mkdir(parents=True)
         script = skill_dir / "scripts" / "search.py"
         script.write_text("print('skill-script-ran')\n", encoding="utf-8")
         args = ["kw"]
 
-        with unittest.mock.patch.object(studio, "DB_PATH", smoke_db):
+        with unittest.mock.patch.object(studio, "DB_PATH", smoke_db), \
+             unittest.mock.patch.object(studio, "HARNESS_STORE_DIR", smoke_store):
             studio.init_db()
 
             def expect_denial(label: str, exc_types: tuple[type[BaseException], ...]) -> None:

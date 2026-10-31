@@ -28,6 +28,7 @@ import pytest
 
 import artifact_lineage
 import child_delegation
+import evidence_lessons
 import mcp_client
 import process_supervision
 import routing_policy
@@ -99,6 +100,11 @@ def _write_delegations(root: Path) -> None:
     store.save_benchmark_summary("contract-cat", {"verified": True})
 
 
+def _write_lessons(root: Path) -> None:
+    store = evidence_lessons.EvidenceLessonStore(root)
+    store.update_config(enabled=True, token_ceiling=160)
+
+
 WriteFn = Callable[[Path], None]
 ErrorCls = type[BaseException]
 
@@ -146,6 +152,12 @@ STORE_CASES: list[tuple[str, WriteFn, Path, ErrorCls]] = [
         Path("delegations") / "state.json",
         child_delegation.DelegationStoreIntegrityError,
     ),
+    (
+        "lessons",
+        _write_lessons,
+        Path("lessons") / "state.json",
+        evidence_lessons.LessonStoreIntegrityError,
+    ),
 ]
 _CASES = [pytest.param(w, rel, err, id=name) for name, w, rel, err in STORE_CASES]
 
@@ -172,6 +184,7 @@ def test_every_module_with_a_durable_state_file_is_covered() -> None:
         "artifacts": "artifact_lineage",
         "handoffs": "routing_policy",
         "delegations": "child_delegation",
+        "lessons": "evidence_lessons",
     }
     covered = {
         covered_modules[relative.parts[0]] for _name, _write, relative, _err in STORE_CASES

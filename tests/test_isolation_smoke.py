@@ -62,3 +62,24 @@ def test_smoke_script_never_marks_qualified_without_live_probes() -> None:
 
     assert "isolation_status: qualified" not in result.stdout
     assert "released under the observed container boundary" not in result.stdout
+
+
+def test_smoke_script_handles_hung_container_runtime_info_probe(tmp_path: Path) -> None:
+    fake_rt = tmp_path / "hung-docker"
+    fake_rt.write_text("#!/bin/sh\nsleep 30\n", encoding="utf-8")
+    fake_rt.chmod(0o755)
+    env = dict(**__import__("os").environ, STUDIO_SANDBOX_RUNTIME=str(fake_rt))
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        cwd=ROOT,
+        env=env,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "runtime_available: no" in result.stdout
+    assert "timed out" in result.stdout
+    assert "isolation_status: unqualified" in result.stdout
+
