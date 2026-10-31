@@ -267,10 +267,10 @@ branch-only claims can still race.
 | Item | State |
 |---|---|
 | `UIUX-P0-01`, `P0-02` | done on `main` |
-| `UIUX-P0-03` | marked done on `main` via PR #109, which superseded #104 and separated the runtime work; false-negative caller findings remain open in [#110](https://github.com/pankajtiwarics27/m5-agent-studio/issues/110) |
-| `UIUX-P0-04` | marked done on `main` via [PR #111](https://github.com/pankajtiwarics27/m5-agent-studio/pull/111); its authorization trace omits the forwarded SDLC calls described in #110 and needs follow-up |
-| `UIUX-P0-05` | the ledger's next recommendation; coordinate the #110 blocker and safe capture prerequisites before proceeding |
-| Review duty | the non-author reviews every story PR; findings on #109 and #111 were posted as comments, not formal GitHub reviews |
+| `UIUX-P0-03` | done on `main` via PR #109, which superseded #104 and separated the runtime work; false-negative caller findings remain open in [#110](https://github.com/pankajtiwarics27/m5-agent-studio/issues/110) |
+| `UIUX-P0-04` | done on `main` via [PR #111](https://github.com/pankajtiwarics27/m5-agent-studio/pull/111); its authorization trace omits the forwarded SDLC calls described in #110 and needs follow-up |
+| `UIUX-P0-05` | in progress on `arena/c705f453-m5-agent-studio`: the test half is measured and published in [`uiux-2-0-baseline-evidence.md`](uiux-2-0-baseline-evidence.md); the six screenshots are `blocked` — no browser exists in the agent environment, so the story stays open at 50 % |
+| Review duty | the non-author reviews every story PR; findings on #109 and #111 were posted as comments, not formal GitHub reviews, and #110 stays open until the forwarded calls are traced |
 
 **Merge queue.** One story per pull request, reviewed by the other session,
 green on all three CI legs, merged with `gh pr merge <number> --merge` (merge

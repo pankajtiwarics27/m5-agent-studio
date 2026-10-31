@@ -21,6 +21,7 @@ claims anything; the binding contract is
 | [`scripts/uiux_route_map.py`](../scripts/uiux_route_map.py) | Derives and checks the map from the calls and the route table; `--check` fails CI on drift. |
 | [`product/M5_2_0_UIUX_Authorization_Trace.json`](../product/M5_2_0_UIUX_Authorization_Trace.json) + [`uiux-2-0-authorization-trace.md`](uiux-2-0-authorization-trace.md) | The authorization and state trace (`UIUX-P0-04`): for every state-changing browser call, the shared gates, the handler's own refusals, the authority and durable-state subsystems it references one call deep, and whether it can leave the machine. Generated — never hand-edited. |
 | [`scripts/uiux_authorization_trace.py`](../scripts/uiux_authorization_trace.py) | Derives and checks the trace from `app.py` and the route map; `--check` fails CI on drift. |
+| [`uiux-2-0-baseline-evidence.md`](uiux-2-0-baseline-evidence.md) | The measured baseline (`UIUX-P0-05`): suite and check results with exit codes, the capture plan, and what a machine with a browser has to run. Hand-written; the counts are re-run, not remembered. |
 | [`product/M5_2_0_Autonomous_Roadmap.json`](../product/M5_2_0_Autonomous_Roadmap.json) | The runtime program's ledger. Separate scope, separate ownership; a UI/UX session never edits its story tracking. |
 
 ## What the program is for
@@ -212,8 +213,11 @@ claimed elsewhere. The two programs share a repository, not a ledger:
 
 Nothing in this program is shipped: 40 stories, 4 done (`UIUX-P0-01` the pinned
 source manifest, `UIUX-P0-02` the control inventory, `UIUX-P0-03` the route map,
-`UIUX-P0-04` the authorization and state trace), `next_recommended_story` =
-`UIUX-P0-05` (baseline screenshots and test results). Planned work is never
-described as available in `README.md` before the owning story closes with
-evidence, and no screenshot has been captured yet, so no pane is claimed to have
-been seen rendered.
+`UIUX-P0-04` the authorization and state trace), `UIUX-P0-05` (baseline
+screenshots and test results) in progress: its test half is measured and
+published in [`uiux-2-0-baseline-evidence.md`](uiux-2-0-baseline-evidence.md),
+and its visual half is **blocked** — this environment has no Chrome/Chromium and
+no `puppeteer-core`, so the six screenshots stay 0 of 6 and the story does not
+close on the capture script's dry run. Planned work is never described as
+available in `README.md` before the owning story closes with evidence, and no
+pane is claimed to have been seen rendered.
