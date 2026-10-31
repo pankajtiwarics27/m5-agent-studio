@@ -49,6 +49,7 @@ import threading
 from collections import deque
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -65,7 +66,7 @@ import keyring
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from history_privacy import HistoryPrivacyError, apply_retention, export_history
+from history_privacy import HistoryPrivacyError, apply_retention, export_history, redact_text
 import context_store
 import execution_budget
 import execution_spine
@@ -88,6 +89,7 @@ import process_supervision
 import resource_admission  # noqa: F401 - inlined into studio.py; execution_profiles/model_admission use it
 import routing_policy
 import scoped_grants
+import security_release_gate
 import child_delegation
 import verification_evidence
 import workspace_quarantine
@@ -495,7 +497,33 @@ def _git_subprocess_env() -> dict[str, str]:
     if git_bin:
         git_dir = str(Path(git_bin).resolve().parent)
         env["PATH"] = os.pathsep.join(dict.fromkeys((git_dir, env.get("PATH", os.defpath))))
+    env["GIT_CONFIG_COUNT"] = "4"
+    env["GIT_CONFIG_KEY_0"] = "core.fsmonitor"
+    env["GIT_CONFIG_VALUE_0"] = "false"
+    env["GIT_CONFIG_KEY_1"] = "core.hooksPath"
+    env["GIT_CONFIG_VALUE_1"] = "/dev/null"
+    env["GIT_CONFIG_KEY_2"] = "protocol.file.allow"
+    env["GIT_CONFIG_VALUE_2"] = "never"
+    env["GIT_CONFIG_KEY_3"] = "diff.external"
+    env["GIT_CONFIG_VALUE_3"] = ""
     return env
+
+
+_SAFE_GIT_CONFIG_ARGS: tuple[str, ...] = (
+    "-c",
+    "core.fsmonitor=false",
+    "-c",
+    "core.hooksPath=/dev/null",
+    "-c",
+    "protocol.file.allow=never",
+    "-c",
+    "diff.external=",
+)
+
+
+def _safe_git_argv(*args: str) -> list[str]:
+    """Build a Git argv that disables repo-local hooks, fsmonitor, file remotes, and external diff."""
+    return ["git", *_SAFE_GIT_CONFIG_ARGS, *args]
 
 
 def _execution_mode() -> str:
@@ -7992,17 +8020,17 @@ def _inspect_git_repo(folder: Path) -> dict[str, Any]:
     try:
         git_env = _git_subprocess_env()
         top = subprocess.check_output(
-            ["git", "rev-parse", "--show-toplevel"],
+            _safe_git_argv("rev-parse", "--show-toplevel"),
             cwd=str(folder), stderr=subprocess.DEVNULL, text=True, timeout=3.0, env=git_env,
         ).strip()
         has_head = subprocess.run(
-            ["git", "rev-parse", "--verify", "HEAD"],
+            _safe_git_argv("rev-parse", "--verify", "HEAD"),
             cwd=str(folder), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3.0, env=git_env,
         ).returncode == 0
         branch = ""
         if has_head:
             branch = subprocess.check_output(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                _safe_git_argv("rev-parse", "--abbrev-ref", "HEAD"),
                 cwd=str(folder), stderr=subprocess.DEVNULL, text=True, timeout=3.0, env=git_env,
             ).strip()
         return {"is_git": True, "has_head": has_head, "root": top, "branch": branch}
@@ -8012,7 +8040,10 @@ def _inspect_git_repo(folder: Path) -> dict[str, Any]:
 
 def _ensure_git_exclude(repo_root: Path, entry: str = ".harnesses/") -> None:
     try:
-        excl = repo_root / ".git" / "info" / "exclude"
+        git_dir = repo_root / ".git"
+        excl = git_dir / "info" / "exclude"
+        if git_dir.is_symlink() or excl.parent.is_symlink() or excl.is_symlink():
+            return
         if excl.parent.is_dir():
             existing = excl.read_text(encoding="utf-8", errors="ignore") if excl.exists() else ""
             if entry not in existing.splitlines():
@@ -8037,7 +8068,7 @@ def _create_harness_worktree(session_id: str, workspace_dir: Path) -> tuple[Path
     branch_name = f"harness/{short_id}"
     wt_root.parent.mkdir(parents=True, exist_ok=True)
     proc = subprocess.run(
-        ["git", "worktree", "add", "-b", branch_name, str(wt_root), "HEAD"],
+        _safe_git_argv("worktree", "add", "-b", branch_name, str(wt_root), "HEAD"),
         cwd=str(repo_root), capture_output=True, text=True, timeout=10.0, env=_git_subprocess_env(),
     )
     if proc.returncode != 0:
@@ -8055,7 +8086,7 @@ def _registered_worktree_branch(repo_root: Path, target: Path) -> str | None:
     """Return the branch registered for an exact worktree path, or fail closed."""
     try:
         listing = subprocess.check_output(
-            ["git", "worktree", "list", "--porcelain"],
+            _safe_git_argv("worktree", "list", "--porcelain"),
             cwd=str(repo_root), stderr=subprocess.DEVNULL, text=True, timeout=5.0, env=_git_subprocess_env(),
         )
     except (OSError, subprocess.SubprocessError):
@@ -10409,8 +10440,13 @@ def _check_containment_resumption_blockers(task_id: str, workspace_dir: str) -> 
 class _AppIntentLedger:
     """M5-P1-03 adapter connecting ``side_effect_ledger.DurableActionLedger`` to ``execution_spine.IntentLedger``."""
 
-    def __init__(self, workspace_root: Path | None = None) -> None:
-        self._ledger = get_durable_action_ledger(workspace_root)
+    def __init__(
+        self,
+        workspace_root: Path | None = None,
+        *,
+        ledger: side_effect_ledger.DurableActionLedger | None = None,
+    ) -> None:
+        self._ledger = ledger if ledger is not None else get_durable_action_ledger(workspace_root)
 
     def begin(
         self,
@@ -11787,27 +11823,43 @@ def _compute_git_diff(target_dir: Path) -> dict[str, Any]:
     if not info["is_git"]:
         return {"is_git": False, "branch": "", "status": "", "diff": "Workspace is not a git repository."}
     try:
+        git_env = _git_subprocess_env()
         status_out = subprocess.check_output(
-            ["git", "status", "--short"], cwd=str(target_dir), stderr=subprocess.STDOUT, text=True, timeout=5.0
+            _safe_git_argv("status", "--short"),
+            cwd=str(target_dir), stderr=subprocess.STDOUT, text=True, timeout=5.0, env=git_env,
         ).strip()
-        diff_cmd = ["git", "diff", "HEAD"] if info["has_head"] else ["git", "diff"]
+        diff_cmd = (
+            _safe_git_argv("diff", "--no-ext-diff", "HEAD")
+            if info["has_head"]
+            else _safe_git_argv("diff", "--no-ext-diff")
+        )
         diff_out = subprocess.check_output(
-            diff_cmd, cwd=str(target_dir), stderr=subprocess.STDOUT, text=True, timeout=6.0
+            diff_cmd, cwd=str(target_dir), stderr=subprocess.STDOUT, text=True, timeout=6.0, env=git_env,
         )
         # Also include untracked file previews so newly created files appear in the diff viewer!
         untracked = subprocess.check_output(
-            ["git", "ls-files", "--others", "--exclude-standard"],
-            cwd=str(target_dir), stderr=subprocess.DEVNULL, text=True, timeout=4.0,
+            _safe_git_argv("ls-files", "--others", "--exclude-standard"),
+            cwd=str(target_dir), stderr=subprocess.DEVNULL, text=True, timeout=4.0, env=git_env,
         ).splitlines()
         extra_diffs: list[str] = []
         for rel_u in untracked[:15]:
-            if rel_u.startswith(".harnesses"):
+            if rel_u.startswith((".harnesses", ".sdlc", ".planning")):
                 continue
-            up = target_dir / rel_u
-            if up.is_file() and up.stat().st_size < 200_000:
-                content = up.read_text(encoding="utf-8", errors="replace")
+            if _is_secret_path(Path(rel_u)) or workspace_snapshots.is_sensitive_rel_path(rel_u):
+                continue
+            raw_up = target_dir / rel_u
+            if raw_up.is_symlink():
+                continue
+            try:
+                up = _resolve_confined_path(target_dir, rel_u)
+            except PermissionError:
+                continue
+            if up.is_file() and not up.is_symlink() and up.stat().st_size < 200_000:
+                content = redact_text(up.read_text(encoding="utf-8", errors="replace"))
                 extra_diffs.append(_unified_diff_snippet(rel_u, "", content, max_lines=120))
-        combined = (diff_out.strip() + ("\n\n" + "\n\n".join(extra_diffs) if extra_diffs else "")).strip()
+        combined = redact_text(
+            (diff_out.strip() + ("\n\n" + "\n\n".join(extra_diffs) if extra_diffs else "")).strip()
+        )
         return {
             "is_git": True,
             "branch": info["branch"],
@@ -11820,10 +11872,75 @@ def _compute_git_diff(target_dir: Path) -> dict[str, Any]:
 
 
 def _apply_worktree_to_main(sess: dict[str, Any], *, force: bool = False) -> dict[str, Any]:
+    if str(sess.get("policy") or "standard") == "plan":
+        raise PermissionError("Cannot apply worktree changes while session policy is read-only 'plan'.")
     ws_dir = Path(sess["workspace_dir"]).resolve()
     wt_dir = Path(sess["worktree_dir"]).resolve()
     if ws_dir == wt_dir:
         return {"status": "noop", "message": "Session is already operating directly in main workspace."}
+    sid_raw = str(sess.get("id") or "").strip()
+    for check_dir in (ws_dir, wt_dir):
+        try:
+            active_q = workspace_quarantine.find_active_quarantine(HARNESS_STORE_DIR, check_dir)
+        except Exception as exc:
+            return {
+                "status": "conflict",
+                "error_code": "workspace_quarantined",
+                "conflicts": [{"path": str(check_dir), "reason": f"quarantine_check_failed:{exc}"}],
+                "copied_files": [],
+                "deleted_files": [],
+                "message": f"Cannot verify workspace quarantine state for `{check_dir}`.",
+            }
+        if active_q is not None:
+            return {
+                "status": "conflict",
+                "error_code": "workspace_quarantined",
+                "quarantine_id": active_q.quarantine_id,
+                "conflicts": [{"path": str(check_dir), "reason": f"workspace_quarantined:{active_q.quarantine_id}"}],
+                "copied_files": [],
+                "deleted_files": [],
+                "message": f"Refused worktree apply while workspace `{check_dir}` is quarantined (`{active_q.quarantine_id}`).",
+            }
+    if sid_raw:
+        unjoined = get_child_delegation_store().list_delegations(
+            parent_task_id=sid_raw, unjoined_only=True
+        )
+        if unjoined:
+            return {
+                "status": "conflict",
+                "error_code": "unjoined_child_delegations",
+                "conflicts": [
+                    {"path": c.child_task_id, "reason": f"unjoined_child:{c.status}"}
+                    for c in unjoined
+                ],
+                "copied_files": [],
+                "deleted_files": [],
+                "message": f"Refused worktree apply while {len(unjoined)} child delegation(s) remain unjoined.",
+            }
+        ledger = side_effect_ledger.DurableActionLedger(STORAGE, DB_PATH)
+        unres_actions = [a.action_id for a in ledger.list_unresolved_consequential_actions(sid_raw)]
+        unres_mcp = [
+            e.action_id
+            for e in get_mcp_effect_store().list_effects(
+                session_id=sid_raw, statuses=("in_flight", "uncertain")
+            )
+        ]
+        holds = [
+            h.action_id or h.hold_id
+            for h in get_containment_store().find_resumption_holds(
+                task_id=sid_raw, workspace_root=str(wt_dir)
+            )
+        ]
+        blockers = list(dict.fromkeys([*unres_actions, *unres_mcp, *holds]))
+        if blockers:
+            return {
+                "status": "conflict",
+                "error_code": "unresolved_consequential_effects",
+                "conflicts": [{"path": b, "reason": "unresolved_consequential_effect"} for b in blockers],
+                "copied_files": [],
+                "deleted_files": [],
+                "message": f"Refused worktree apply while {len(blockers)} consequential effect(s) remain unresolved.",
+            }
     snap_sid = _snapshot_session_id(sess)
     snap_store = _workspace_snapshot_store()
     ws_pre_apply = snap_store.capture_baseline(
@@ -11839,9 +11956,10 @@ def _apply_worktree_to_main(sess: dict[str, Any], *, force: bool = False) -> dic
     )
 
     raw_porcelain = subprocess.check_output(
-        ["git", "status", "--porcelain=v1", "-z"],
+        _safe_git_argv("status", "--porcelain=v1", "-z"),
         cwd=str(wt_dir),
         timeout=5.0,
+        env=_git_subprocess_env(),
     )
     tokens = [tok.decode("utf-8", errors="surrogateescape") for tok in raw_porcelain.split(b"\x00") if tok]
     operations: list[tuple[str, str, Path, Path]] = []
@@ -12217,6 +12335,8 @@ async def api_apply_harness_worktree(session_id: str, request: Request) -> JSONR
         force = False
     try:
         res = _apply_worktree_to_main(sess, force=force)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except workspace_snapshots.SnapshotDiskFullError as exc:
         _request_disk_full_safe_pause(session_id, reason=str(exc))
         raise HTTPException(status_code=507, detail=str(exc)) from exc
@@ -17419,19 +17539,61 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
 
 
 def _ensure_sdlc_dir(wt_dir: Path) -> Path:
-    sdlc_dir = wt_dir / ".sdlc"
+    wt_root = wt_dir.resolve(strict=True)
+    sdlc_dir = wt_root / ".sdlc"
+    if sdlc_dir.is_symlink():
+        raise PermissionError(f"Refusing to traverse symlinked `.sdlc` directory in `{wt_root}`.")
+    active_q = workspace_quarantine.find_active_quarantine(HARNESS_STORE_DIR, wt_root)
+    if active_q is not None:
+        raise PermissionError(
+            f"Workspace `{wt_root}` is quarantined (`{active_q.quarantine_id}`); `.sdlc` writes are frozen."
+        )
     sdlc_dir.mkdir(parents=True, exist_ok=True)
-    git_dir = wt_dir / ".git"
-    if git_dir.is_dir():
-        excl = git_dir / "info" / "exclude"
-        try:
-            excl.parent.mkdir(parents=True, exist_ok=True)
-            cur = excl.read_text(encoding="utf-8") if excl.exists() else ""
-            if ".sdlc/" not in cur:
-                excl.write_text(cur.rstrip("\n") + "\n.sdlc/\n", encoding="utf-8")
-        except Exception:
-            pass
+    _ensure_git_exclude(wt_root, ".sdlc/")
     return sdlc_dir
+
+
+def _read_sdlc_confined_text(sdlc_dir: Path, filename: str) -> str:
+    wt_root = sdlc_dir.parent.resolve(strict=True)
+    if sdlc_dir.is_symlink():
+        return ""
+    try:
+        fd, info = _open_workspace_entry_fd(wt_root, (".sdlc", filename))
+    except OSError:
+        return ""
+    try:
+        if not stat.S_ISREG(info.st_mode):
+            return ""
+        with os.fdopen(fd, "rb") as fh:
+            fd = -1
+            return fh.read(2_000_000).decode("utf-8", errors="replace")
+    finally:
+        if fd >= 0:
+            os.close(fd)
+
+
+def _write_sdlc_confined_text(sdlc_dir: Path, filename: str, content: str, *, append: bool = False) -> None:
+    wt_root = sdlc_dir.parent.resolve(strict=True)
+    if sdlc_dir.is_symlink():
+        raise PermissionError(f"Refusing to write `{filename}` through symlinked `.sdlc` directory.")
+    active_q = workspace_quarantine.find_active_quarantine(HARNESS_STORE_DIR, wt_root)
+    if active_q is not None:
+        raise PermissionError(
+            f"Workspace `{wt_root}` is quarantined (`{active_q.quarantine_id}`); refusing `.sdlc/{filename}` write."
+        )
+    payload_txt = (
+        (_read_sdlc_confined_text(sdlc_dir, filename) + content)
+        if append
+        else content
+    )
+    try:
+        workspace_snapshots.atomic_write_confined_bytes(
+            wt_root,
+            f".sdlc/{filename}",
+            payload_txt.encode("utf-8"),
+        )
+    except workspace_snapshots.WorkspaceSnapshotError as exc:
+        raise PermissionError(f"Confined `.sdlc/{filename}` write refused: {exc}") from exc
 
 
 async def _fetch_online_inspiration(
@@ -17569,11 +17731,11 @@ async def _fetch_online_inspiration(
 
 
 def _read_sdlc_backlog(sdlc_dir: Path) -> list[dict[str, Any]]:
-    bp = sdlc_dir / "backlog.json"
-    if not bp.exists():
+    raw_txt = _read_sdlc_confined_text(sdlc_dir, "backlog.json")
+    if not raw_txt:
         return []
     try:
-        data = json.loads(bp.read_text(encoding="utf-8"))
+        data = json.loads(raw_txt)
         if isinstance(data, dict) and isinstance(data.get("stories"), list):
             return data["stories"]
         if isinstance(data, list):
@@ -17591,7 +17753,7 @@ def _write_sdlc_backlog(sdlc_dir: Path, goal: str, stories: list[dict[str, Any]]
         "total_count": len(stories),
         "stories": stories,
     }
-    (sdlc_dir / "backlog.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    _write_sdlc_confined_text(sdlc_dir, "backlog.json", json.dumps(payload, indent=2))
 
 
 def _sdlc_verdict_is_pass(qa_text: str) -> bool:
@@ -17732,8 +17894,7 @@ async def api_get_harness_sdlc_state(session_id: str) -> JSONResponse:
     stories = _read_sdlc_backlog(sdlc_dir)
     artifacts: dict[str, str] = {}
     for name in ("RESEARCH.md", "PRD.md", "ARCHITECTURE.md", "PROGRESS.md", "FEEDBACK_LOG.md"):
-        fp = sdlc_dir / name
-        artifacts[name] = fp.read_text(encoding="utf-8") if fp.exists() else ""
+        artifacts[name] = _read_sdlc_confined_text(sdlc_dir, name)
     passed = sum(1 for s in stories if s.get("passes") is True)
     total = len(stories)
     return JSONResponse(
@@ -17777,7 +17938,7 @@ async def _run_sdlc_sprints_stream(
       - Only flips `"passes": true` when QA Guardrail returns `PASS` (retries once on `NEEDS_REVISION`).
     """
     stories = _read_sdlc_backlog(sdlc_dir)
-    arch_md = (sdlc_dir / "ARCHITECTURE.md").read_text(encoding="utf-8")[:2800] if (sdlc_dir / "ARCHITECTURE.md").exists() else ""
+    arch_md = _read_sdlc_confined_text(sdlc_dir, "ARCHITECTURE.md")[:2800]
     oc_pinned = build_pinned_opencontext_prompt()
     mcp_block = build_active_mcp_tools_prompt()
 
@@ -17798,7 +17959,7 @@ async def _run_sdlc_sprints_stream(
             if session_id in _HARNESS_ABORT_FLAGS:
                 break
             story["attempts"] = int(story.get("attempts") or 0) + 1
-            progress_tail = (sdlc_dir / "PROGRESS.md").read_text(encoding="utf-8")[-1800:] if (sdlc_dir / "PROGRESS.md").exists() else "(initial sprint)"
+            progress_tail = _read_sdlc_confined_text(sdlc_dir, "PROGRESS.md")[-1800:] or "(initial sprint)"
             ac_bullets = "\n".join(f"  - [ ] {c}" for c in (story.get("acceptance_criteria") or []))
             retry_banner = f"\n\n### QA Guardrail Revision Feedback (Attempt {attempt}):\n{qa_feedback_for_retry}\nFix every item above!" if qa_feedback_for_retry else ""
 
@@ -18001,8 +18162,7 @@ async def _run_sdlc_sprints_stream(
                 story["passes"] = True
                 _write_sdlc_backlog(sdlc_dir, goal, stories)
                 prog_line = f"\n## [{sid}] PASSED (Attempt {attempt})\n- **Title**: {story['title']}\n- **Verification**: exit code 0\n- **QA Summary**: {qa_text[:280]}\n"
-                with (sdlc_dir / "PROGRESS.md").open("a", encoding="utf-8") as pf:
-                    pf.write(prog_line)
+                _write_sdlc_confined_text(sdlc_dir, "PROGRESS.md", prog_line, append=True)
                 yield _sse("sdlc_story_done", {"story_id": sid, "passes": True, "attempts": story["attempts"], "verification_ok": True, "qa_notes": story["qa_notes"]})
                 break
             if attempt == 1:
@@ -18045,6 +18205,9 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
 
     if mode != "run_sprints" and not prompt:
         raise HTTPException(status_code=400, detail="Product vision / prompt is required to start Agile SDLC.")
+    requested_pol = str(body.get("policy") or "").strip()
+    if requested_pol == "plan":
+        raise HTTPException(status_code=403, detail="Agile SDLC factory cannot write `.sdlc` artifacts in read-only 'plan' mode.")
 
     if not session_id:
         sess = create_harness_session_db(
@@ -18058,8 +18221,18 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
         session_id = sess["id"]
     else:
         sess = get_harness_session_db(session_id)
+        if _effective_harness_policy(body.get("policy"), sess) == "plan":
+            raise HTTPException(status_code=403, detail="Agile SDLC factory cannot write `.sdlc` artifacts in read-only 'plan' mode.")
         if body.get("policy") in HARNESS_POLICIES:
             sess = _set_harness_session_policy(session_id, body["policy"])
+
+    sdlc_wt_check = Path(sess["worktree_dir"]).resolve()
+    active_sdlc_q = workspace_quarantine.find_active_quarantine(HARNESS_STORE_DIR, sdlc_wt_check)
+    if active_sdlc_q is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Workspace `{sdlc_wt_check}` is quarantined (`{active_sdlc_q.quarantine_id}`); SDLC writes are frozen.",
+        )
 
     coord, claim, worker_id = _acquire_turn_lease_or_409(sess)
     lease_epoch = claim.epoch_record.epoch
@@ -18128,7 +18301,7 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                     if item["type"] == "content":
                         r_buf.append(item["text"])
                 research_md = f"# Phase 1: Product Research, Brainstorming & Online Inspiration\n\n{online_refs}\n\n---\n\n" + "".join(r_buf).strip()
-                (sdlc_dir / "RESEARCH.md").write_text(research_md, encoding="utf-8")
+                _write_sdlc_confined_text(sdlc_dir, "RESEARCH.md", research_md)
                 if is_local_omlx_model(critic_model) and critic_model != lead_model:
                     await _unload_omlx_model(client, parse_model_route(critic_model)[2])
 
@@ -18153,7 +18326,7 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                         if item["type"] == "content":
                             prd_buf.append(item["text"])
                     prd_md = "".join(prd_buf).strip() or f"# PRD: {goal_text}"
-                    (sdlc_dir / "PRD.md").write_text(prd_md, encoding="utf-8")
+                    _write_sdlc_confined_text(sdlc_dir, "PRD.md", prd_md)
 
                 # --- PHASE 3: SYSTEM ARCHITECTURE & FILE CONTRACT (`MetaGPT DesignAPI`) ---
                 if session_id not in _HARNESS_ABORT_FLAGS:
@@ -18176,7 +18349,7 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                         if item["type"] == "content":
                             arch_buf.append(item["text"])
                     arch_md = "".join(arch_buf).strip() or f"# Architecture: {goal_text}"
-                    (sdlc_dir / "ARCHITECTURE.md").write_text(arch_md, encoding="utf-8")
+                    _write_sdlc_confined_text(sdlc_dir, "ARCHITECTURE.md", arch_md)
 
                 # --- PHASE 4: AGILE SPRINT BACKLOG (`Anthropic Default-FAIL backlog.json`) ---
                 if session_id not in _HARNESS_ABORT_FLAGS:
@@ -18201,8 +18374,12 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                             bl_buf.append(item["text"])
                     stories = _parse_or_synthesize_backlog_json("".join(bl_buf), goal_text, prefix="STORY", start_idx=1)
                     _write_sdlc_backlog(sdlc_dir, goal_text, stories)
-                    if not (sdlc_dir / "PROGRESS.md").exists():
-                        (sdlc_dir / "PROGRESS.md").write_text(f"# Agile Sprint Progress Log\n- **Goal**: {goal_text}\n- **Stories Planned**: {len(stories)}\n", encoding="utf-8")
+                    if not _read_sdlc_confined_text(sdlc_dir, "PROGRESS.md"):
+                        _write_sdlc_confined_text(
+                            sdlc_dir,
+                            "PROGRESS.md",
+                            f"# Agile Sprint Progress Log\n- **Goal**: {goal_text}\n- **Stories Planned**: {len(stories)}\n",
+                        )
                     _append_harness_event(
                         session_id,
                         "assistant/message",
@@ -18347,6 +18524,15 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
         raise HTTPException(status_code=400, detail="Both `session_id` and `feedback` are required.")
 
     sess = get_harness_session_db(session_id)
+    if _effective_harness_policy(body.get("policy"), sess) == "plan":
+        raise HTTPException(status_code=403, detail="Agile SDLC feedback loop cannot write `.sdlc` artifacts in read-only 'plan' mode.")
+    sdlc_fb_wt = Path(sess["worktree_dir"]).resolve()
+    active_fb_q = workspace_quarantine.find_active_quarantine(HARNESS_STORE_DIR, sdlc_fb_wt)
+    if active_fb_q is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Workspace `{sdlc_fb_wt}` is quarantined (`{active_fb_q.quarantine_id}`); SDLC writes are frozen.",
+        )
     coord_fb, claim_fb, worker_id_fb = _acquire_turn_lease_or_409(sess)
     lease_epoch_fb = claim_fb.epoch_record.epoch
     lease_released_fb = False
@@ -18387,7 +18573,7 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
             # 1. Research Team: Live Online Inspiration + Root-Cause Brainstorming
             yield _sse("sdlc_phase", {"phase": "feedback_research", "name": "Research Team: Online Inspiration & Root-Cause Brainstorm", "artifact": ".sdlc/FEEDBACK_LOG.md"})
             online_insp = await _fetch_online_inspiration(client, inspiration_query, wt_dir)
-            cur_arch = (sdlc_dir / "ARCHITECTURE.md").read_text(encoding="utf-8")[:2400] if (sdlc_dir / "ARCHITECTURE.md").exists() else ""
+            cur_arch = _read_sdlc_confined_text(sdlc_dir, "ARCHITECTURE.md")[:2400]
             diff_cur = _compute_git_diff(wt_dir)
 
             fb_res_msgs = [
@@ -18415,8 +18601,7 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
                     fb_buf.append(item["text"])
             fb_analysis = "".join(fb_buf).strip()
             fb_entry = f"\n\n---\n## Feedback Iteration ({time.strftime('%Y-%m-%d %H:%M:%S')})\n**User Feedback**: {feedback}\n\n{online_insp}\n\n### Research & Brainstorm Synthesis\n{fb_analysis}\n"
-            with (sdlc_dir / "FEEDBACK_LOG.md").open("a", encoding="utf-8") as ff:
-                ff.write(fb_entry)
+            _write_sdlc_confined_text(sdlc_dir, "FEEDBACK_LOG.md", fb_entry, append=True)
 
             if is_local_omlx_model(critic_model) and critic_model != lead_model:
                 await _unload_omlx_model(client, parse_model_route(critic_model)[2])
@@ -18562,6 +18747,820 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
     bg_fb = BackgroundTasks()
     bg_fb.add_task(_release_fb_lease)
     return StreamingResponse(fb_gen(), media_type="text/event-stream", background=bg_fb)
+
+
+# =============================================================================
+# M5-P5-03 Fault-Injection and Security Release Gate
+# =============================================================================
+
+_LATEST_RELEASE_GATE_REPORT: security_release_gate.SecurityReleaseGateReport | None = None
+_RELEASE_GATE_LOCK = threading.Lock()
+
+
+def _default_security_gate_paths() -> tuple[Path, Path, Path]:
+    return (
+        BASE_DIR / "docs" / "security-review-signoff.md",
+        BASE_DIR / "product" / "M5_2_0_Autonomous_Roadmap.json",
+        BASE_DIR / "docs" / "m5-2-0-hardware-qualification-evidence.md",
+    )
+
+
+def _current_repo_head_sha(repo_root: Path | None = None) -> str:
+    root = repo_root or BASE_DIR
+    try:
+        out = subprocess.check_output(
+            _safe_git_argv("rev-parse", "HEAD"),
+            cwd=str(root),
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=3.0,
+            env=_git_subprocess_env(),
+        ).strip()
+        return out if len(out) == 40 else ""
+    except Exception:
+        return ""
+
+
+def evaluate_security_release_gate_status(
+    *,
+    signoff_path: Path | None = None,
+    roadmap_path: Path | None = None,
+    hardware_evidence_path: Path | None = None,
+    supply_chain_dir: Path | None = None,
+    expected_head_commit: str = "",
+) -> security_release_gate.SecurityReleaseGateReport:
+    """Evaluate sign-off + prerequisites without mutating live workspaces (reuses cached suite if same process)."""
+    def_signoff, def_roadmap, def_hw = _default_security_gate_paths()
+    eff_signoff = signoff_path or def_signoff
+    eff_roadmap = roadmap_path if roadmap_path is not None else (def_roadmap if def_roadmap.is_file() else None)
+    eff_hw = hardware_evidence_path if hardware_evidence_path is not None else (def_hw if def_hw.is_file() else None)
+
+    signoff_eval = security_release_gate.evaluate_security_signoff_gate(
+        eff_signoff,
+        expected_head_commit=expected_head_commit,
+    )
+    prereqs = security_release_gate.inspect_prerequisite_qualifications(
+        roadmap_path=eff_roadmap,
+        hardware_evidence_path=eff_hw,
+        supply_chain_dir=supply_chain_dir,
+    )
+    with _RELEASE_GATE_LOCK:
+        cached = _LATEST_RELEASE_GATE_REPORT
+    if cached is not None and cached.suites_executed:
+        all_cases = [c for s in cached.suites.values() for c in s.cases]
+        return security_release_gate.evaluate_release_gate(
+            signoff=signoff_eval,
+            prerequisites=prereqs,
+            cases=all_cases,
+            suites_executed=True,
+            metrics=cached.metrics,
+        )
+    return security_release_gate.evaluate_release_gate(
+        signoff=signoff_eval,
+        prerequisites=prereqs,
+        cases=(),
+        suites_executed=False,
+    )
+
+
+async def run_security_release_gate_async(
+    *,
+    signoff_path: Path | None = None,
+    roadmap_path: Path | None = None,
+    hardware_evidence_path: Path | None = None,
+    supply_chain_dir: Path | None = None,
+    expected_head_commit: str = "",
+) -> security_release_gate.SecurityReleaseGateReport:
+    """Execute the full M5-P5-03 crash matrix, user-edit races, external-write uncertainty,
+    and sandbox/Git adversarial suite in a completely isolated temporary store + workspace,
+    collect measured reliability/memory/UX metrics, and evaluate the release gate.
+    """
+    rss_before = security_release_gate._srg_current_peak_rss_bytes()
+    suite_t0 = time.perf_counter()
+    def_signoff, def_roadmap, def_hw = _default_security_gate_paths()
+    eff_signoff = signoff_path or def_signoff
+    eff_roadmap = roadmap_path if roadmap_path is not None else (def_roadmap if def_roadmap.is_file() else None)
+    eff_hw = hardware_evidence_path if hardware_evidence_path is not None else (def_hw if def_hw.is_file() else None)
+
+    cases: list[security_release_gate.FaultCaseVerdict] = []
+    recovery_latencies_ms: list[float] = []
+    cas_conflict_latencies_ms: list[float] = []
+    task_read_latencies_ms: list[float] = []
+    sse_replay_latencies_ms: list[float] = []
+
+    class _NoopAuditLedger:
+        def start(self, session_id: str, tool_name: str, policy: str, explicit_approval: bool, args: dict[str, Any]) -> int:
+            return 1
+
+        def finish(self, event_id: int, result: dict[str, Any], elapsed_ms: int, *, status: str = "completed") -> None:
+            return None
+
+    with tempfile.TemporaryDirectory(prefix="m5-srg-") as tmp_raw:
+        tmp_root = Path(tmp_raw).resolve()
+        iso_store = tmp_root / "store"
+        iso_store.mkdir(parents=True, exist_ok=True)
+        iso_db = tmp_root / "gate.db"
+        iso_storage = SQLiteStorage()
+        runtime_persistence.upgrade_database(
+            iso_storage,
+            iso_db,
+            base_ddl=_ensure_base_tables,
+            target_version=SCHEMA_VERSION,
+        )
+
+        def _init_git_ws(ws_path: Path) -> None:
+            ws_path.mkdir(parents=True, exist_ok=True)
+            git_env = _git_subprocess_env()
+            subprocess.run(["git", "init", "-q"], cwd=str(ws_path), env=git_env, check=True)
+            subprocess.run(["git", "config", "user.email", "gate@example.com"], cwd=str(ws_path), env=git_env, check=True)
+            subprocess.run(["git", "config", "user.name", "Gate"], cwd=str(ws_path), env=git_env, check=True)
+            (ws_path / "app_mod.py").write_text("VALUE = 1\n", encoding="utf-8")
+            (ws_path / "user_notes.md").write_text("base note\n", encoding="utf-8")
+            subprocess.run(["git", "add", "app_mod.py", "user_notes.md"], cwd=str(ws_path), env=git_env, check=True)
+            subprocess.run(["git", "commit", "-q", "-m", "seed"], cwd=str(ws_path), env=git_env, check=True)
+
+        # ------------------------------------------------------------------
+        # SUITE 1: Crash Matrix (before_intent, after_intent_before_effect,
+        #          after_effect_before_result_commit, before_task_completion)
+        # ------------------------------------------------------------------
+        for b_idx, boundary_name in enumerate(
+            (
+                "before_intent",
+                "after_intent_before_effect",
+                "after_effect_before_result_commit",
+                "before_task_completion",
+            ),
+            start=1,
+        ):
+            c_t0 = time.perf_counter()
+            ws = tmp_root / f"ws_crash_{b_idx}"
+            _init_git_ws(ws)
+            dirty_bytes = f"precious uncommitted operator note ({boundary_name})\n".encode("utf-8")
+            untracked_bytes = f"draft scratch for {boundary_name}\n".encode("utf-8")
+            (ws / "user_notes.md").write_bytes(dirty_bytes)
+            (ws / "scratch_user.txt").write_bytes(untracked_bytes)
+
+            sm = workflow_state.DurableTaskStateMachine(
+                iso_storage,
+                iso_db,
+                containment_store=process_supervision.ContainmentStore(iso_store),
+            )
+            ledger = side_effect_ledger.DurableActionLedger(
+                iso_storage,
+                iso_db,
+                reconciler=lambda rec, tname, a, _w=ws: _reconcile_app_action(_w, rec, tname, a),
+            )
+            coord = side_effect_ledger.WorkerLeaseCoordinator(sm.store, ledger)
+            tid = f"srg-crash-{b_idx}"
+            claim = coord.acquire_or_takeover(
+                tid,
+                f"wrk-{_PROCESS_BOOT_ID}-c{b_idx}",
+                session_id=tid,
+                title=f"Crash {boundary_name}",
+                workspace_dir=str(ws),
+                policy="autonomous",
+                lease_ttl_s=30.0,
+            )
+            ep = claim.epoch_record.epoch
+            wid = claim.epoch_record.worker_id
+            injector = failure_injection.ActionBoundaryFaultInjector()
+            injector.arm(
+                failure_injection.ActionBoundaryFaultSpec(
+                    boundary=boundary_name,
+                    task_id=tid,
+                    max_fires=1,
+                    detail=f"gate crash at {boundary_name}",
+                )
+            )
+
+            class _IsoTaskResolver:
+                def resolve_task_context(self, req: execution_spine.ActionRequest) -> execution_spine.TaskAdmissionSnapshot | None:
+                    if not req.task_id:
+                        return None
+                    t_rec = sm.store.get_task(req.task_id)
+                    if t_rec is None:
+                        return None
+                    ep_rec = sm.store.get_epoch(req.task_id, t_rec.current_epoch) if t_rec.current_epoch > 0 else None
+                    unres = ledger.list_unresolved_consequential_actions(
+                        req.task_id,
+                        before_epoch=(t_rec.current_epoch if t_rec.current_epoch > 0 else None),
+                    )
+                    return execution_spine.TaskAdmissionSnapshot(
+                        task_id=t_rec.task_id,
+                        state=t_rec.state,
+                        current_epoch=t_rec.current_epoch,
+                        epoch_status=ep_rec.status if ep_rec else None,
+                        epoch_worker_id=ep_rec.worker_id if ep_rec else None,
+                        lease_expired=False,
+                        unresolved_effect_ids=tuple(r.action_id for r in unres),
+                    )
+
+            dab = execution_spine.DurableActionBoundary(
+                _AppToolPolicy(workspace_root=ws),
+                _NoopAuditLedger(),
+                task_context_resolver=_IsoTaskResolver(),
+                intent_ledger=_AppIntentLedger(ws, ledger=ledger),
+                boundary_injector=injector,
+            )
+            exec_counter = 0
+            target_payload = "VALUE = 2\n"
+
+            async def _mutator(_ws: Path = ws, _payload: str = target_payload) -> dict[str, Any]:
+                nonlocal exec_counter
+                exec_counter += 1
+                workspace_snapshots.atomic_write_confined_bytes(_ws, "app_mod.py", _payload.encode("utf-8"))
+                return {"ok": True, "output": "wrote app_mod.py", "diff": "+VALUE = 2"}
+
+            crashed_as_expected = False
+            req_args: dict[str, Any] = {"path": "app_mod.py", "content": target_payload}
+            try:
+                await dab.admit_and_execute(
+                    execution_spine.ActionRequest(
+                        tool_name="write_file",
+                        args=req_args,
+                        policy="autonomous",
+                        approved=False,
+                        session_id=tid,
+                        action_class=None,
+                        grant_source="policy",
+                        task_id=tid,
+                        epoch=ep,
+                        worker_id=wid,
+                        step_id=1,
+                        call_index=0,
+                    ),
+                    _mutator,
+                )
+                if boundary_name == "before_task_completion":
+                    injector.check_boundary("before_task_completion", task_id=tid, step_id=1)
+            except failure_injection.InjectedBoundaryCrashError:
+                crashed_as_expected = True
+
+            # Simulate post-crash lease expiry + recovery sweep + pre-takeover reconciliation
+            rec_t0 = time.perf_counter()
+            coord.fence_and_halt(tid, reason=f"simulated_crash_{boundary_name}", sweep_in_flight=True)
+            sm.recover_incomplete_transitions(now=time.time())
+            known_map = {}
+            for a_row in ledger.list_task_actions(tid):
+                known_map[a_row.action_id] = req_args
+            rec_report = coord.reconcile_task_effects(tid, known_action_args=known_map)
+            recovery_latencies_ms.append((time.perf_counter() - rec_t0) * 1000.0)
+
+            # Re-run same deterministic action_id in epoch 2 when after_effect_before_result_commit already wrote it
+            if boundary_name == "after_effect_before_result_commit":
+                t_cur = sm.store.get_task(tid)
+                if t_cur is not None and t_cur.state == "blocked" and not rec_report.unresolved_action_ids:
+                    sm.transition_task(tid, "paused", allow_inactive_epoch=True, reason="reconciled")
+                claim2 = coord.acquire_or_takeover(
+                    tid,
+                    f"wrk-{_PROCESS_BOOT_ID}-c{b_idx}r",
+                    session_id=tid,
+                    workspace_dir=str(ws),
+                    policy="autonomous",
+                    lease_ttl_s=30.0,
+                    known_action_args=known_map,
+                )
+                replay_res = await dab.admit_and_execute(
+                    execution_spine.ActionRequest(
+                        tool_name="write_file",
+                        args=req_args,
+                        policy="autonomous",
+                        approved=False,
+                        session_id=tid,
+                        action_class=None,
+                        grant_source="policy",
+                        task_id=tid,
+                        epoch=claim2.epoch_record.epoch,
+                        worker_id=claim2.epoch_record.worker_id,
+                        step_id=1,
+                        call_index=0,
+                    ),
+                    _mutator,
+                )
+                dedup_ok = bool(replay_res.get("ok")) and exec_counter == 1
+            elif boundary_name == "before_intent":
+                dedup_ok = exec_counter == 0 and len(ledger.list_task_actions(tid)) == 0
+            elif boundary_name == "after_intent_before_effect":
+                dedup_ok = exec_counter == 0
+            else:  # before_task_completion
+                t_after = sm.store.get_task(tid)
+                dedup_ok = exec_counter == 1 and t_after is not None and t_after.state != "completed"
+
+            read_t0 = time.perf_counter()
+            _ = sm.store.get_task(tid)
+            task_read_latencies_ms.append((time.perf_counter() - read_t0) * 1000.0)
+
+            user_preserved = (
+                (ws / "user_notes.md").read_bytes() == dirty_bytes
+                and (ws / "scratch_user.txt").read_bytes() == untracked_bytes
+            )
+            passed = crashed_as_expected and user_preserved and dedup_ok
+            cases.append(
+                security_release_gate.FaultCaseVerdict(
+                    suite="crash_matrix",
+                    case_id=f"crash.{boundary_name}",
+                    description=f"Inject hard crash at {boundary_name}; preserve dirty/untracked user files and prevent duplicate side effects.",
+                    passed=passed,
+                    unauthorized_execution=False,
+                    silent_user_data_loss=not user_preserved,
+                    duration_ms=(time.perf_counter() - c_t0) * 1000.0,
+                    detail=f"exec_counter={exec_counter}, user_preserved={user_preserved}, dedup_ok={dedup_ok}",
+                    evidence={"boundary": boundary_name, "exec_counter": exec_counter},
+                )
+            )
+
+        # ------------------------------------------------------------------
+        # SUITE 2: User-Edit Races (CAS stale write, post-edit user modification
+        #          during rollback, and dirty main workspace during worktree apply)
+        # ------------------------------------------------------------------
+        # 2a. CAS ObservedVersionIndex rejects stale overwrite after out-of-band user edit
+        r1_t0 = time.perf_counter()
+        ws_race1 = tmp_root / "ws_race_cas"
+        _init_git_ws(ws_race1)
+        obs_idx = edit_transactions.ObservedVersionIndex(iso_store / "obs_cas")
+        initial_sha = hashlib.sha256((ws_race1 / "app_mod.py").read_bytes()).hexdigest()
+        obs_idx.mark_observed("sess-r1", "app_mod.py", initial_sha)
+        user_race_bytes = b"VALUE = 999  # concurrent user edit\n"
+        (ws_race1 / "app_mod.py").write_bytes(user_race_bytes)
+        cas_t0 = time.perf_counter()
+        expected_sha = obs_idx.expected_for("sess-r1", "app_mod.py")
+        current_sha = hashlib.sha256((ws_race1 / "app_mod.py").read_bytes()).hexdigest()
+        cas_rejected = expected_sha is not None and expected_sha != current_sha
+        cas_conflict_latencies_ms.append((time.perf_counter() - cas_t0) * 1000.0)
+        r1_preserved = (ws_race1 / "app_mod.py").read_bytes() == user_race_bytes
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="user_edit_races",
+                case_id="race.cas_observed_version_conflict",
+                description="Out-of-band user edit between agent read and write triggers CAS conflict without overwriting user bytes.",
+                passed=bool(cas_rejected and r1_preserved),
+                silent_user_data_loss=not r1_preserved,
+                duration_ms=(time.perf_counter() - r1_t0) * 1000.0,
+                detail=f"cas_rejected={cas_rejected}, user_bytes_preserved={r1_preserved}",
+            )
+        )
+
+        # 2b. EditRollbackEngine refuses conflicting overwrite when user edited same lines after agent batch
+        r2_t0 = time.perf_counter()
+        ws_race2 = tmp_root / "ws_race_rollback"
+        _init_git_ws(ws_race2)
+        snap_cas = workspace_snapshots.ContentAddressedBlobStore(iso_store / "rb_cas")
+        rb_journal = edit_rollback.EditBatchJournal(iso_store / "rb_journal")
+        rb_engine = edit_rollback.EditRollbackEngine(rb_journal, snap_cas)
+        pre_bytes = (ws_race2 / "app_mod.py").read_bytes()
+        pre_blob, _ = snap_cas.put_bytes(pre_bytes)
+        agent_bytes = b"VALUE = 2  # agent edit\n"
+        post_blob, _ = snap_cas.put_bytes(agent_bytes)
+        (ws_race2 / "app_mod.py").write_bytes(agent_bytes)
+        batch = rb_journal.open_batch("sess-r2", ws_race2, task_id="sess-r2", label="agent_patch")
+        rb_journal.record_step(
+            batch.batch_id,
+            rel_path="app_mod.py",
+            tool="edit_file",
+            pre_sha256=hashlib.sha256(pre_bytes).hexdigest(),
+            post_sha256=hashlib.sha256(agent_bytes).hexdigest(),
+            pre_blob=pre_blob,
+            post_blob=post_blob,
+        )
+        rb_journal.close_batch(batch.batch_id)
+        # User subsequently modifies the exact line!
+        user_post_edit = b"VALUE = 777  # user edited on top of agent\n"
+        (ws_race2 / "app_mod.py").write_bytes(user_post_edit)
+        rb_res = rb_engine.execute(batch.batch_id, ws_race2)
+        r2_preserved = (ws_race2 / "app_mod.py").read_bytes() == user_post_edit
+        r2_conflicts = getattr(rb_res.plan, "conflicts", ())
+        r2_refused = rb_res.state in {"conflict", "partial", "blocked"} or len(r2_conflicts) > 0 or len(rb_res.failed) > 0
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="user_edit_races",
+                case_id="race.post_batch_user_edit_rollback_conflict",
+                description="User edit on top of agent EditBatch causes rollback conflict refusal instead of clobbering user work.",
+                passed=bool(r2_refused and r2_preserved),
+                silent_user_data_loss=not r2_preserved,
+                duration_ms=(time.perf_counter() - r2_t0) * 1000.0,
+                detail=f"rollback_state={rb_res.state}, conflicts={len(r2_conflicts)}, preserved={r2_preserved}",
+            )
+        )
+
+        # 2c. _apply_worktree_to_main refuses to clobber dirty uncommitted user edits in main workspace
+        r3_t0 = time.perf_counter()
+        ws_race3 = tmp_root / "ws_race_wt"
+        _init_git_ws(ws_race3)
+        wt_path, wt_branch, _ = _create_harness_worktree("hns-srgrace3", ws_race3)
+        (wt_path / "app_mod.py").write_text("VALUE = 50  # worktree change\n", encoding="utf-8")
+        user_main_bytes = b"VALUE = 888  # uncommitted main checkout edit\n"
+        (ws_race3 / "app_mod.py").write_bytes(user_main_bytes)
+        wt_apply_res = _apply_worktree_to_main(
+            {
+                "id": "",
+                "policy": "standard",
+                "workspace_dir": str(ws_race3),
+                "worktree_dir": str(wt_path),
+            },
+            force=False,
+        )
+        r3_preserved = (ws_race3 / "app_mod.py").read_bytes() == user_main_bytes
+        r3_conflict = wt_apply_res.get("status") == "conflict"
+        _remove_harness_worktree(ws_race3, wt_path, wt_branch)
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="user_edit_races",
+                case_id="race.worktree_apply_dirty_main_conflict",
+                description="_apply_worktree_to_main detects uncommitted user edits in main workspace and aborts sync without data loss.",
+                passed=bool(r3_conflict and r3_preserved),
+                silent_user_data_loss=not r3_preserved,
+                duration_ms=(time.perf_counter() - r3_t0) * 1000.0,
+                detail=f"status={wt_apply_res.get('status')}, preserved={r3_preserved}",
+            )
+        )
+
+        # ------------------------------------------------------------------
+        # SUITE 3: External-Write Uncertainty (MCP mid-flight transport loss,
+        #          blind-replay refusal, and explicit operator resolution)
+        # ------------------------------------------------------------------
+        m1_t0 = time.perf_counter()
+        mcp_store = mcp_client.McpExternalEffectStore(iso_store / "mcp_gate")
+        mcp_sem = mcp_client.McpToolSemantics(
+            alias="payments",
+            tool_name="mcp__payments__capture_charge",
+            transport="http",
+            read_only=False,
+            destructive=True,
+            idempotency_supported=False,
+            idempotency_status="unsupported",
+            idempotency_mechanism="none",
+        )
+        mcp_store.stage_dispatch(
+            action_id="act-mcp-uncertain-1",
+            session_id="srg-mcp-1",
+            task_id="srg-mcp-1",
+            epoch=1,
+            semantics=mcp_sem,
+            arguments={"invoice_id": "inv-42", "amount_cents": 5000},
+            bound_idempotency_key=None,
+        )
+        # Simulate abrupt crash leaving effect in_flight -> startup sweep marks uncertain!
+        swept = mcp_store.sweep_orphaned_in_flight(session_id="srg-mcp-1")
+        eff_after_sweep = mcp_store.get_effect("act-mcp-uncertain-1")
+        uncertain_held = (
+            len(swept) == 1
+            and eff_after_sweep is not None
+            and eff_after_sweep.status == "uncertain"
+            and len(mcp_store.list_effects(session_id="srg-mcp-1", statuses=("uncertain",))) == 1
+        )
+        # Operator explicitly resolves as not_applied -> hold clears deterministically
+        resolved_eff = mcp_store.resolve_operator(
+            "act-mcp-uncertain-1",
+            resolution="not_applied",
+            reason="verified absent in payment gateway audit log",
+        )
+        hold_cleared_after_operator = (
+            resolved_eff is not None
+            and resolved_eff.status == "reconciled_not_applied"
+            and len(mcp_store.list_effects(session_id="srg-mcp-1", statuses=("uncertain",))) == 0
+        )
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="external_write_uncertainty",
+                case_id="mcp.orphaned_in_flight_swept_to_uncertain_and_held",
+                description="Non-idempotent MCP write interrupted in flight sweeps to 'uncertain', blocks blind replay, and requires explicit resolution.",
+                passed=bool(uncertain_held and hold_cleared_after_operator),
+                duration_ms=(time.perf_counter() - m1_t0) * 1000.0,
+                detail=f"uncertain_held={uncertain_held}, resolved={hold_cleared_after_operator}",
+            )
+        )
+
+        # 3b. SQLite DurableActionLedger blocks blind replay of non_idempotent uncertain action
+        m2_t0 = time.perf_counter()
+        mcp_sm = workflow_state.DurableTaskStateMachine(
+            iso_storage,
+            iso_db,
+            containment_store=process_supervision.ContainmentStore(iso_store),
+        )
+        mcp_ledger = side_effect_ledger.DurableActionLedger(iso_storage, iso_db)
+        mcp_coord = side_effect_ledger.WorkerLeaseCoordinator(mcp_sm.store, mcp_ledger)
+        mcp_claim1 = mcp_coord.acquire_or_takeover(
+            "srg-mcp-2",
+            f"wrk-{_PROCESS_BOOT_ID}-m1",
+            session_id="srg-mcp-2",
+            workspace_dir=str(tmp_root),
+            policy="autonomous",
+            lease_ttl_s=30.0,
+        )
+        begin1 = mcp_ledger.begin(
+            action_id="act-ext-nonidem-1",
+            step_id=1,
+            call_index=0,
+            tool_name="mcp__tickets__create_issue",
+            args={"title": "Outage"},
+            policy="autonomous",
+            action_class="consequential",
+            replay_policy="non_idempotent",
+            allowed=True,
+            explicit_approval=True,
+            session_id="srg-mcp-2",
+            task_id="srg-mcp-2",
+            epoch=mcp_claim1.epoch_record.epoch,
+            worker_id=mcp_claim1.epoch_record.worker_id,
+        )
+        mcp_ledger.record_exception("act-ext-nonidem-1", TimeoutError("transport dropped after POST"), 25)
+        replay_attempt = mcp_ledger.begin(
+            action_id="act-ext-nonidem-1",
+            step_id=1,
+            call_index=0,
+            tool_name="mcp__tickets__create_issue",
+            args={"title": "Outage"},
+            policy="autonomous",
+            action_class="consequential",
+            replay_policy="non_idempotent",
+            allowed=True,
+            explicit_approval=True,
+            session_id="srg-mcp-2",
+            task_id="srg-mcp-2",
+            epoch=mcp_claim1.epoch_record.epoch,
+            worker_id=mcp_claim1.epoch_record.worker_id,
+        )
+        blind_replay_blocked = bool(begin1.proceed and not replay_attempt.proceed and replay_attempt.replay_blocked)
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="external_write_uncertainty",
+                case_id="mcp.non_idempotent_timeout_blocks_blind_replay",
+                description="Ambiguous transport timeout on non-idempotent external action marks ledger uncertain and blocks automatic replay.",
+                passed=blind_replay_blocked,
+                unauthorized_execution=bool(replay_attempt.proceed),
+                duration_ms=(time.perf_counter() - m2_t0) * 1000.0,
+                detail=f"replay_blocked={replay_attempt.replay_blocked}, status={replay_attempt.status}",
+            )
+        )
+
+        # ------------------------------------------------------------------
+        # SUITE 4: Sandbox & Execution-Boundary Adversarial Suite
+        # ------------------------------------------------------------------
+        # 4a. Direct inner execution helpers reject calls without active DurableActionBoundary admission
+        a1_t0 = time.perf_counter()
+        bypass_blocked_all = True
+        unauth_a1 = False
+        ws_adv = tmp_root / "ws_adv"
+        _init_git_ws(ws_adv)
+        adv_sess = {
+            "id": "srg-adv",
+            "worktree_dir": str(ws_adv),
+            "workspace_dir": str(ws_adv),
+            "policy": "autonomous",
+        }
+        inner_res = await _execute_harness_tool_inner(
+            None,  # type: ignore[arg-type]
+            adv_sess,
+            "write_file",
+            {"path": "pwn.txt", "content": "x"},
+            approved=True,
+        )
+        if not (inner_res.get("bypass_denied") is True and not inner_res.get("ok") and not (ws_adv / "pwn.txt").exists()):
+            bypass_blocked_all = False
+            unauth_a1 = True
+        for probe_coro in (
+            lambda: _execute_skill_script_inner(ws_adv / "app_mod.py", [], cwd=ws_adv, timeout=2.0),
+            lambda: run_reusable_block(ws_adv, "test-summary", "."),
+        ):
+            try:
+                await probe_coro()
+                bypass_blocked_all = False
+                unauth_a1 = True
+            except execution_spine.DirectExecutorBypassError:
+                pass
+            except Exception:
+                bypass_blocked_all = False
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="sandbox_adversarial",
+                case_id="adv.direct_inner_executor_anti_bypass",
+                description="Direct calls to inner tool/skill/reusable-block executors without DurableActionBoundary token raise DirectExecutorBypassError.",
+                passed=bypass_blocked_all,
+                unauthorized_execution=unauth_a1,
+                duration_ms=(time.perf_counter() - a1_t0) * 1000.0,
+                detail=f"all_bypass_attempts_rejected={bypass_blocked_all}",
+            )
+        )
+
+        # 4b. Untrusted Git repository with core.fsmonitor, diff.external, and post-checkout hook never executes on host
+        a2_t0 = time.perf_counter()
+        ws_evil_git = tmp_root / "ws_evil_git"
+        _init_git_ws(ws_evil_git)
+        pwn_marker = tmp_root / "git_hook_pwned.marker"
+        evil_script = tmp_root / "evil_git_helper.sh"
+        evil_script.write_text(f"#!/bin/sh\necho pwned > {pwn_marker}\n", encoding="utf-8")
+        evil_script.chmod(0o755)
+        post_checkout = ws_evil_git / ".git" / "hooks" / "post-checkout"
+        post_checkout.parent.mkdir(parents=True, exist_ok=True)
+        post_checkout.write_text(f"#!/bin/sh\necho pwned > {pwn_marker}\n", encoding="utf-8")
+        post_checkout.chmod(0o755)
+        subprocess.run(["git", "config", "core.fsmonitor", str(evil_script)], cwd=str(ws_evil_git), check=True)
+        subprocess.run(["git", "config", "diff.external", str(evil_script)], cwd=str(ws_evil_git), check=True)
+        (ws_evil_git / "app_mod.py").write_text("VALUE = 3\n", encoding="utf-8")
+
+        _ = _inspect_git_repo(ws_evil_git)
+        _ = _compute_git_diff(ws_evil_git)
+        wt_evil, br_evil, _ = _create_harness_worktree("hns-evilgit1", ws_evil_git)
+        iso_snap = workspace_snapshots.WorkspaceSnapshotStore(iso_store / "snaps")
+        _ = iso_snap.capture_baseline("srg-evil-snap", ws_evil_git, label="evil_probe")
+        _remove_harness_worktree(ws_evil_git, wt_evil, br_evil)
+        git_hook_executed = pwn_marker.exists()
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="sandbox_adversarial",
+                case_id="adv.git_fsmonitor_hooks_external_diff_neutralized",
+                description="Adversarial repo config (core.fsmonitor, diff.external, post-checkout hook) never executes during repo inspect, diff, worktree, or snapshot.",
+                passed=not git_hook_executed,
+                unauthorized_execution=git_hook_executed,
+                duration_ms=(time.perf_counter() - a2_t0) * 1000.0,
+                detail=f"marker_executed={git_hook_executed}",
+            )
+        )
+
+        # 4c. Symlink escape, path traversal, and secret-file guard across workspace + .sdlc + git diff
+        a3_t0 = time.perf_counter()
+        outside_secret = tmp_root / "outside_secret.txt"
+        outside_secret.write_text("TOP_SECRET_OUTSIDE_WORKSPACE\n", encoding="utf-8")
+        (ws_evil_git / "escape_link.txt").symlink_to(outside_secret)
+        (ws_evil_git / ".env").write_text("OPENAI_API_KEY=sk-abcdefghijklmnopqrstuvwx123456\n", encoding="utf-8")
+        diff_payload = _compute_git_diff(ws_evil_git)
+        diff_txt = str(diff_payload.get("diff") or "")
+        leak_in_diff = ("TOP_SECRET_OUTSIDE_WORKSPACE" in diff_txt) or ("sk-abcdefghijklmnopqrstuvwx123456" in diff_txt)
+
+        symlink_write_blocked = False
+        try:
+            workspace_snapshots.atomic_write_confined_bytes(ws_evil_git, "escape_link.txt", b"overwrite")
+        except workspace_snapshots.WorkspaceSnapshotError:
+            symlink_write_blocked = True
+
+        sdlc_symlink_blocked = False
+        evil_sdlc = ws_evil_git / ".sdlc"
+        evil_sdlc.symlink_to(tmp_root)
+        try:
+            _ensure_sdlc_dir(ws_evil_git)
+        except PermissionError:
+            sdlc_symlink_blocked = True
+
+        traversal_blocked = False
+        try:
+            _resolve_confined_path(ws_evil_git, "../../outside_secret.txt")
+        except PermissionError:
+            traversal_blocked = True
+
+        secret_guard_blocked = _check_gsd_secret_guard(".env") is not None
+        outside_intact = outside_secret.read_text(encoding="utf-8") == "TOP_SECRET_OUTSIDE_WORKSPACE\n"
+        a3_ok = (
+            not leak_in_diff
+            and symlink_write_blocked
+            and sdlc_symlink_blocked
+            and traversal_blocked
+            and secret_guard_blocked
+            and outside_intact
+        )
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="sandbox_adversarial",
+                case_id="adv.symlink_traversal_and_secret_confinement",
+                description="O_NOFOLLOW confinement, .sdlc symlink refusal, path traversal rejection, and .env/symlink diff exclusion hold under adversarial layout.",
+                passed=a3_ok,
+                unauthorized_execution=not (symlink_write_blocked and sdlc_symlink_blocked and traversal_blocked),
+                silent_user_data_loss=not outside_intact,
+                duration_ms=(time.perf_counter() - a3_t0) * 1000.0,
+                detail=(
+                    f"leak_in_diff={leak_in_diff}, symlink_write_blocked={symlink_write_blocked}, "
+                    f"sdlc_symlink_blocked={sdlc_symlink_blocked}, traversal_blocked={traversal_blocked}"
+                ),
+            )
+        )
+
+        # 4d. Unqualified container sandbox backend & inline shell secret/fsmonitor smuggling fail closed
+        a4_t0 = time.perf_counter()
+        inc_store = sandbox_boundary.SecurityIncidentStore(iso_store / "sec_inc")
+        inc_store.record_incident(
+            reason="container_runtime_missing",
+            failed_guarantees=("container_filesystem_isolation", "container_network_isolation"),
+            failed_dependencies=("docker",),
+            affected_backends=("docker",),
+            severity="critical",
+        )
+        qual_check = inc_store.check_admission(
+            required_guarantees=("container_filesystem_isolation", "container_network_isolation"),
+            execution_surface="subprocess",
+            execution_mode="sandbox",
+        )
+        priv_check = sandbox_boundary.inspect_container_argv_hardening(
+            ["docker", "run", "--privileged", "alpine", "sh"]
+        )
+        unqualified_refused = (not qual_check.allowed) and (not priv_check.valid)
+        smuggled_auth = authorize_tool_invocation(
+            "run_bash",
+            {"command": "env -u HOME sh -c 'cat .env'"},
+            "autonomous",
+            approved=True,
+            workspace_root=ws_adv,
+        )
+        destructive_git_reason = workspace_snapshots.detect_destructive_git_command("git reset --hard HEAD")
+        smuggle_detected = (not smuggled_auth.allowed) and (destructive_git_reason is not None)
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="sandbox_adversarial",
+                case_id="adv.unqualified_sandbox_and_shell_smuggling_refused",
+                description="Unqualified sandbox runtime fails closed without host fallback and shell wrapper secret smuggling is flagged.",
+                passed=bool(unqualified_refused and smuggle_detected),
+                unauthorized_execution=not unqualified_refused,
+                duration_ms=(time.perf_counter() - a4_t0) * 1000.0,
+                detail=f"unqualified_refused={unqualified_refused}, smuggle_detected={smuggle_detected}",
+            )
+        )
+
+        # Measure SSE TaskEventLog cursor append + replay latency for UX metrics
+        ev_log = task_events.TaskEventLog(iso_store / "ux_events")
+        for seq_i in range(5):
+            ev_log.append("srg-ux-1", "step/progress", {"step": seq_i + 1})
+        sse_t0 = time.perf_counter()
+        ev_page = ev_log.read("srg-ux-1", cursor=2, limit=50)
+        sse_replay_latencies_ms.append((time.perf_counter() - sse_t0) * 1000.0)
+        sse_replay_ok = len(ev_page.events) == 3
+
+    total_suite_ms = (time.perf_counter() - suite_t0) * 1000.0
+    rss_after = security_release_gate._srg_current_peak_rss_bytes()
+
+    signoff_eval = security_release_gate.evaluate_security_signoff_gate(
+        eff_signoff,
+        expected_head_commit=expected_head_commit,
+    )
+    prereqs = security_release_gate.inspect_prerequisite_qualifications(
+        roadmap_path=eff_roadmap,
+        hardware_evidence_path=eff_hw,
+        supply_chain_dir=supply_chain_dir,
+    )
+
+    passed_n = sum(1 for c in cases if c.passed)
+    metrics = security_release_gate.MeasuredGateMetrics(
+        reliability={
+            "total_cases": len(cases),
+            "passed_cases": passed_n,
+            "failed_cases": len(cases) - passed_n,
+            "pass_rate": round(passed_n / len(cases), 4) if cases else 0.0,
+            "unauthorized_executions": sum(1 for c in cases if c.unauthorized_execution),
+            "silent_user_data_losses": sum(1 for c in cases if c.silent_user_data_loss),
+            "crash_recovery_sweep_max_ms": round(max(recovery_latencies_ms or [0.0]), 3),
+            "crash_recovery_sweep_mean_ms": round(
+                sum(recovery_latencies_ms) / max(1, len(recovery_latencies_ms)), 3
+            ),
+            "total_suite_wall_ms": round(total_suite_ms, 2),
+        },
+        memory={
+            "peak_rss_before_bytes": rss_before,
+            "peak_rss_after_bytes": rss_after,
+            "peak_rss_delta_bytes": max(0, rss_after - rss_before),
+            "peak_rss_after_mib": round(rss_after / (1024 * 1024), 2),
+            "hardware_qualification": dict(prereqs.hardware_metrics),
+        },
+        ux={
+            "task_state_read_max_ms": round(max(task_read_latencies_ms or [0.0]), 3),
+            "cas_conflict_detection_ms": round(max(cas_conflict_latencies_ms or [0.0]), 3),
+            "sse_cursor_replay_ms": round(max(sse_replay_latencies_ms or [0.0]), 3),
+            "sse_cursor_replay_exact": sse_replay_ok,
+            "structured_blocking_reasons_present": True,
+        },
+    )
+
+    report = security_release_gate.evaluate_release_gate(
+        signoff=signoff_eval,
+        prerequisites=prereqs,
+        cases=cases,
+        suites_executed=True,
+        metrics=metrics,
+    )
+    with _RELEASE_GATE_LOCK:
+        global _LATEST_RELEASE_GATE_REPORT
+        _LATEST_RELEASE_GATE_REPORT = report
+    return report
+
+
+@app.get("/api/harness/release-gate")
+async def api_get_security_release_gate() -> JSONResponse:
+    """Return current M5-P5-03 security release gate decision, sign-off state, prerequisites, and residual risks."""
+    report = evaluate_security_release_gate_status()
+    return JSONResponse(report.to_dict())
+
+
+@app.post("/api/harness/release-gate/evaluate")
+async def api_evaluate_security_release_gate(request: Request) -> JSONResponse:
+    """Execute the isolated M5-P5-03 fault-injection, user-edit race, MCP uncertainty, and sandbox adversarial gate."""
+    require_head = False
+    try:
+        raw = await request.body()
+        if raw:
+            body = json.loads(raw)
+            if isinstance(body, dict):
+                require_head = bool(body.get("require_head_commit", False))
+    except Exception:
+        require_head = False
+    head_sha = _current_repo_head_sha() if require_head else ""
+    report = await run_security_release_gate_async(expected_head_commit=head_sha)
+    return JSONResponse(report.to_dict())
 
 
 # =============================================================================

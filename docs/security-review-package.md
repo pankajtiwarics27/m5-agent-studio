@@ -141,3 +141,27 @@ remaining stories are complete** — so AS-031 is `completed` and explicitly not
 `verified`. This package's self-review stands as the only review performed;
 every severity in §6 is unassigned, and the AS-046/AS-049/AS-050 gates (including
 v1.0 publication) remain open until the record is signed.
+
+## 10. M5 2.0 runtime expansion addendum (`M5-P5-03`)
+
+Following the initial AS-031 package, the M5 2.0 autonomous engineering program
+(`M5-P1-01` through `M5-P5-03`) added durable task/lease execution, CAS workspace
+snapshots and rollback, supervised process containment, scoped grants, MCP
+external-effect reconciliation, security incident containment, bounded child
+delegation, workspace quarantine, artifact lineage, and the mechanical security
+release gate (`ADR-0021`). When the independent reviewer conducts the final pass
+over B1–B12, additionally inspect:
+
+- [`m5-2-0-security-release-gate.md`](m5-2-0-security-release-gate.md) — executed
+  13-case crash, race, MCP-uncertainty, and sandbox/Git adversarial suite
+  (`python scripts/security_release_gate.py --json`), measured reliability/memory/UX
+  metrics, residual risks `RR-01`–`RR-05`, and fail-closed `release-blocked`
+  enforcement (`security_release_gate.py`, `scripts/release.py gate`).
+- [`m5-2-0-bypass-inventory.md`](m5-2-0-bypass-inventory.md) — updated mapping of
+  every tool, subprocess, Git/worktree, and `.sdlc`/SQLite write entry point,
+  including `GIT_CONFIG_COUNT` neutralization of untrusted `core.fsmonitor`,
+  `core.hooksPath`, `protocol.file.allow`, and `diff.external`.
+- [`m5-2-0-hardware-qualification-evidence.md`](m5-2-0-hardware-qualification-evidence.md) —
+  measured 24 GiB Apple M5 qualification record and remaining `M5-P3-01`
+  container-isolation host prerequisite.
+

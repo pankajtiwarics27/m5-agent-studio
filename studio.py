@@ -49,6 +49,7 @@ import threading
 from collections import deque
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -467,7 +468,33 @@ def _git_subprocess_env() -> dict[str, str]:
     if git_bin:
         git_dir = str(Path(git_bin).resolve().parent)
         env["PATH"] = os.pathsep.join(dict.fromkeys((git_dir, env.get("PATH", os.defpath))))
+    env["GIT_CONFIG_COUNT"] = "4"
+    env["GIT_CONFIG_KEY_0"] = "core.fsmonitor"
+    env["GIT_CONFIG_VALUE_0"] = "false"
+    env["GIT_CONFIG_KEY_1"] = "core.hooksPath"
+    env["GIT_CONFIG_VALUE_1"] = "/dev/null"
+    env["GIT_CONFIG_KEY_2"] = "protocol.file.allow"
+    env["GIT_CONFIG_VALUE_2"] = "never"
+    env["GIT_CONFIG_KEY_3"] = "diff.external"
+    env["GIT_CONFIG_VALUE_3"] = ""
     return env
+
+
+_SAFE_GIT_CONFIG_ARGS: tuple[str, ...] = (
+    "-c",
+    "core.fsmonitor=false",
+    "-c",
+    "core.hooksPath=/dev/null",
+    "-c",
+    "protocol.file.allow=never",
+    "-c",
+    "diff.external=",
+)
+
+
+def _safe_git_argv(*args: str) -> list[str]:
+    """Build a Git argv that disables repo-local hooks, fsmonitor, file remotes, and external diff."""
+    return ["git", *_SAFE_GIT_CONFIG_ARGS, *args]
 
 
 def _execution_mode() -> str:
@@ -12543,17 +12570,17 @@ def _inspect_git_repo(folder: Path) -> dict[str, Any]:
     try:
         git_env = _git_subprocess_env()
         top = subprocess.check_output(
-            ["git", "rev-parse", "--show-toplevel"],
+            _safe_git_argv("rev-parse", "--show-toplevel"),
             cwd=str(folder), stderr=subprocess.DEVNULL, text=True, timeout=3.0, env=git_env,
         ).strip()
         has_head = subprocess.run(
-            ["git", "rev-parse", "--verify", "HEAD"],
+            _safe_git_argv("rev-parse", "--verify", "HEAD"),
             cwd=str(folder), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3.0, env=git_env,
         ).returncode == 0
         branch = ""
         if has_head:
             branch = subprocess.check_output(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                _safe_git_argv("rev-parse", "--abbrev-ref", "HEAD"),
                 cwd=str(folder), stderr=subprocess.DEVNULL, text=True, timeout=3.0, env=git_env,
             ).strip()
         return {"is_git": True, "has_head": has_head, "root": top, "branch": branch}
@@ -12563,7 +12590,10 @@ def _inspect_git_repo(folder: Path) -> dict[str, Any]:
 
 def _ensure_git_exclude(repo_root: Path, entry: str = ".harnesses/") -> None:
     try:
-        excl = repo_root / ".git" / "info" / "exclude"
+        git_dir = repo_root / ".git"
+        excl = git_dir / "info" / "exclude"
+        if git_dir.is_symlink() or excl.parent.is_symlink() or excl.is_symlink():
+            return
         if excl.parent.is_dir():
             existing = excl.read_text(encoding="utf-8", errors="ignore") if excl.exists() else ""
             if entry not in existing.splitlines():
@@ -12588,7 +12618,7 @@ def _create_harness_worktree(session_id: str, workspace_dir: Path) -> tuple[Path
     branch_name = f"harness/{short_id}"
     wt_root.parent.mkdir(parents=True, exist_ok=True)
     proc = subprocess.run(
-        ["git", "worktree", "add", "-b", branch_name, str(wt_root), "HEAD"],
+        _safe_git_argv("worktree", "add", "-b", branch_name, str(wt_root), "HEAD"),
         cwd=str(repo_root), capture_output=True, text=True, timeout=10.0, env=_git_subprocess_env(),
     )
     if proc.returncode != 0:
@@ -12606,7 +12636,7 @@ def _registered_worktree_branch(repo_root: Path, target: Path) -> str | None:
     """Return the branch registered for an exact worktree path, or fail closed."""
     try:
         listing = subprocess.check_output(
-            ["git", "worktree", "list", "--porcelain"],
+            _safe_git_argv("worktree", "list", "--porcelain"),
             cwd=str(repo_root), stderr=subprocess.DEVNULL, text=True, timeout=5.0, env=_git_subprocess_env(),
         )
     except (OSError, subprocess.SubprocessError):
@@ -14960,8 +14990,13 @@ def _check_containment_resumption_blockers(task_id: str, workspace_dir: str) -> 
 class _AppIntentLedger:
     """M5-P1-03 adapter connecting ``side_effect_ledger.DurableActionLedger`` to ``execution_spine.IntentLedger``."""
 
-    def __init__(self, workspace_root: Path | None = None) -> None:
-        self._ledger = get_durable_action_ledger(workspace_root)
+    def __init__(
+        self,
+        workspace_root: Path | None = None,
+        *,
+        ledger: side_effect_ledger.DurableActionLedger | None = None,
+    ) -> None:
+        self._ledger = ledger if ledger is not None else get_durable_action_ledger(workspace_root)
 
     def begin(
         self,
@@ -16338,27 +16373,43 @@ def _compute_git_diff(target_dir: Path) -> dict[str, Any]:
     if not info["is_git"]:
         return {"is_git": False, "branch": "", "status": "", "diff": "Workspace is not a git repository."}
     try:
+        git_env = _git_subprocess_env()
         status_out = subprocess.check_output(
-            ["git", "status", "--short"], cwd=str(target_dir), stderr=subprocess.STDOUT, text=True, timeout=5.0
+            _safe_git_argv("status", "--short"),
+            cwd=str(target_dir), stderr=subprocess.STDOUT, text=True, timeout=5.0, env=git_env,
         ).strip()
-        diff_cmd = ["git", "diff", "HEAD"] if info["has_head"] else ["git", "diff"]
+        diff_cmd = (
+            _safe_git_argv("diff", "--no-ext-diff", "HEAD")
+            if info["has_head"]
+            else _safe_git_argv("diff", "--no-ext-diff")
+        )
         diff_out = subprocess.check_output(
-            diff_cmd, cwd=str(target_dir), stderr=subprocess.STDOUT, text=True, timeout=6.0
+            diff_cmd, cwd=str(target_dir), stderr=subprocess.STDOUT, text=True, timeout=6.0, env=git_env,
         )
         # Also include untracked file previews so newly created files appear in the diff viewer!
         untracked = subprocess.check_output(
-            ["git", "ls-files", "--others", "--exclude-standard"],
-            cwd=str(target_dir), stderr=subprocess.DEVNULL, text=True, timeout=4.0,
+            _safe_git_argv("ls-files", "--others", "--exclude-standard"),
+            cwd=str(target_dir), stderr=subprocess.DEVNULL, text=True, timeout=4.0, env=git_env,
         ).splitlines()
         extra_diffs: list[str] = []
         for rel_u in untracked[:15]:
-            if rel_u.startswith(".harnesses"):
+            if rel_u.startswith((".harnesses", ".sdlc", ".planning")):
                 continue
-            up = target_dir / rel_u
-            if up.is_file() and up.stat().st_size < 200_000:
-                content = up.read_text(encoding="utf-8", errors="replace")
+            if _is_secret_path(Path(rel_u)) or workspace_snapshots.is_sensitive_rel_path(rel_u):
+                continue
+            raw_up = target_dir / rel_u
+            if raw_up.is_symlink():
+                continue
+            try:
+                up = _resolve_confined_path(target_dir, rel_u)
+            except PermissionError:
+                continue
+            if up.is_file() and not up.is_symlink() and up.stat().st_size < 200_000:
+                content = redact_text(up.read_text(encoding="utf-8", errors="replace"))
                 extra_diffs.append(_unified_diff_snippet(rel_u, "", content, max_lines=120))
-        combined = (diff_out.strip() + ("\n\n" + "\n\n".join(extra_diffs) if extra_diffs else "")).strip()
+        combined = redact_text(
+            (diff_out.strip() + ("\n\n" + "\n\n".join(extra_diffs) if extra_diffs else "")).strip()
+        )
         return {
             "is_git": True,
             "branch": info["branch"],
@@ -16371,10 +16422,75 @@ def _compute_git_diff(target_dir: Path) -> dict[str, Any]:
 
 
 def _apply_worktree_to_main(sess: dict[str, Any], *, force: bool = False) -> dict[str, Any]:
+    if str(sess.get("policy") or "standard") == "plan":
+        raise PermissionError("Cannot apply worktree changes while session policy is read-only 'plan'.")
     ws_dir = Path(sess["workspace_dir"]).resolve()
     wt_dir = Path(sess["worktree_dir"]).resolve()
     if ws_dir == wt_dir:
         return {"status": "noop", "message": "Session is already operating directly in main workspace."}
+    sid_raw = str(sess.get("id") or "").strip()
+    for check_dir in (ws_dir, wt_dir):
+        try:
+            active_q = workspace_quarantine.find_active_quarantine(HARNESS_STORE_DIR, check_dir)
+        except Exception as exc:
+            return {
+                "status": "conflict",
+                "error_code": "workspace_quarantined",
+                "conflicts": [{"path": str(check_dir), "reason": f"quarantine_check_failed:{exc}"}],
+                "copied_files": [],
+                "deleted_files": [],
+                "message": f"Cannot verify workspace quarantine state for `{check_dir}`.",
+            }
+        if active_q is not None:
+            return {
+                "status": "conflict",
+                "error_code": "workspace_quarantined",
+                "quarantine_id": active_q.quarantine_id,
+                "conflicts": [{"path": str(check_dir), "reason": f"workspace_quarantined:{active_q.quarantine_id}"}],
+                "copied_files": [],
+                "deleted_files": [],
+                "message": f"Refused worktree apply while workspace `{check_dir}` is quarantined (`{active_q.quarantine_id}`).",
+            }
+    if sid_raw:
+        unjoined = get_child_delegation_store().list_delegations(
+            parent_task_id=sid_raw, unjoined_only=True
+        )
+        if unjoined:
+            return {
+                "status": "conflict",
+                "error_code": "unjoined_child_delegations",
+                "conflicts": [
+                    {"path": c.child_task_id, "reason": f"unjoined_child:{c.status}"}
+                    for c in unjoined
+                ],
+                "copied_files": [],
+                "deleted_files": [],
+                "message": f"Refused worktree apply while {len(unjoined)} child delegation(s) remain unjoined.",
+            }
+        ledger = side_effect_ledger.DurableActionLedger(STORAGE, DB_PATH)
+        unres_actions = [a.action_id for a in ledger.list_unresolved_consequential_actions(sid_raw)]
+        unres_mcp = [
+            e.action_id
+            for e in get_mcp_effect_store().list_effects(
+                session_id=sid_raw, statuses=("in_flight", "uncertain")
+            )
+        ]
+        holds = [
+            h.action_id or h.hold_id
+            for h in get_containment_store().find_resumption_holds(
+                task_id=sid_raw, workspace_root=str(wt_dir)
+            )
+        ]
+        blockers = list(dict.fromkeys([*unres_actions, *unres_mcp, *holds]))
+        if blockers:
+            return {
+                "status": "conflict",
+                "error_code": "unresolved_consequential_effects",
+                "conflicts": [{"path": b, "reason": "unresolved_consequential_effect"} for b in blockers],
+                "copied_files": [],
+                "deleted_files": [],
+                "message": f"Refused worktree apply while {len(blockers)} consequential effect(s) remain unresolved.",
+            }
     snap_sid = _snapshot_session_id(sess)
     snap_store = _workspace_snapshot_store()
     ws_pre_apply = snap_store.capture_baseline(
@@ -16390,9 +16506,10 @@ def _apply_worktree_to_main(sess: dict[str, Any], *, force: bool = False) -> dic
     )
 
     raw_porcelain = subprocess.check_output(
-        ["git", "status", "--porcelain=v1", "-z"],
+        _safe_git_argv("status", "--porcelain=v1", "-z"),
         cwd=str(wt_dir),
         timeout=5.0,
+        env=_git_subprocess_env(),
     )
     tokens = [tok.decode("utf-8", errors="surrogateescape") for tok in raw_porcelain.split(b"\x00") if tok]
     operations: list[tuple[str, str, Path, Path]] = []
@@ -16768,6 +16885,8 @@ async def api_apply_harness_worktree(session_id: str, request: Request) -> JSONR
         force = False
     try:
         res = _apply_worktree_to_main(sess, force=force)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except workspace_snapshots.SnapshotDiskFullError as exc:
         _request_disk_full_safe_pause(session_id, reason=str(exc))
         raise HTTPException(status_code=507, detail=str(exc)) from exc
@@ -21970,19 +22089,61 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
 
 
 def _ensure_sdlc_dir(wt_dir: Path) -> Path:
-    sdlc_dir = wt_dir / ".sdlc"
+    wt_root = wt_dir.resolve(strict=True)
+    sdlc_dir = wt_root / ".sdlc"
+    if sdlc_dir.is_symlink():
+        raise PermissionError(f"Refusing to traverse symlinked `.sdlc` directory in `{wt_root}`.")
+    active_q = workspace_quarantine.find_active_quarantine(HARNESS_STORE_DIR, wt_root)
+    if active_q is not None:
+        raise PermissionError(
+            f"Workspace `{wt_root}` is quarantined (`{active_q.quarantine_id}`); `.sdlc` writes are frozen."
+        )
     sdlc_dir.mkdir(parents=True, exist_ok=True)
-    git_dir = wt_dir / ".git"
-    if git_dir.is_dir():
-        excl = git_dir / "info" / "exclude"
-        try:
-            excl.parent.mkdir(parents=True, exist_ok=True)
-            cur = excl.read_text(encoding="utf-8") if excl.exists() else ""
-            if ".sdlc/" not in cur:
-                excl.write_text(cur.rstrip("\n") + "\n.sdlc/\n", encoding="utf-8")
-        except Exception:
-            pass
+    _ensure_git_exclude(wt_root, ".sdlc/")
     return sdlc_dir
+
+
+def _read_sdlc_confined_text(sdlc_dir: Path, filename: str) -> str:
+    wt_root = sdlc_dir.parent.resolve(strict=True)
+    if sdlc_dir.is_symlink():
+        return ""
+    try:
+        fd, info = _open_workspace_entry_fd(wt_root, (".sdlc", filename))
+    except OSError:
+        return ""
+    try:
+        if not stat.S_ISREG(info.st_mode):
+            return ""
+        with os.fdopen(fd, "rb") as fh:
+            fd = -1
+            return fh.read(2_000_000).decode("utf-8", errors="replace")
+    finally:
+        if fd >= 0:
+            os.close(fd)
+
+
+def _write_sdlc_confined_text(sdlc_dir: Path, filename: str, content: str, *, append: bool = False) -> None:
+    wt_root = sdlc_dir.parent.resolve(strict=True)
+    if sdlc_dir.is_symlink():
+        raise PermissionError(f"Refusing to write `{filename}` through symlinked `.sdlc` directory.")
+    active_q = workspace_quarantine.find_active_quarantine(HARNESS_STORE_DIR, wt_root)
+    if active_q is not None:
+        raise PermissionError(
+            f"Workspace `{wt_root}` is quarantined (`{active_q.quarantine_id}`); refusing `.sdlc/{filename}` write."
+        )
+    payload_txt = (
+        (_read_sdlc_confined_text(sdlc_dir, filename) + content)
+        if append
+        else content
+    )
+    try:
+        workspace_snapshots.atomic_write_confined_bytes(
+            wt_root,
+            f".sdlc/{filename}",
+            payload_txt.encode("utf-8"),
+        )
+    except workspace_snapshots.WorkspaceSnapshotError as exc:
+        raise PermissionError(f"Confined `.sdlc/{filename}` write refused: {exc}") from exc
 
 
 async def _fetch_online_inspiration(
@@ -22120,11 +22281,11 @@ async def _fetch_online_inspiration(
 
 
 def _read_sdlc_backlog(sdlc_dir: Path) -> list[dict[str, Any]]:
-    bp = sdlc_dir / "backlog.json"
-    if not bp.exists():
+    raw_txt = _read_sdlc_confined_text(sdlc_dir, "backlog.json")
+    if not raw_txt:
         return []
     try:
-        data = json.loads(bp.read_text(encoding="utf-8"))
+        data = json.loads(raw_txt)
         if isinstance(data, dict) and isinstance(data.get("stories"), list):
             return data["stories"]
         if isinstance(data, list):
@@ -22142,7 +22303,7 @@ def _write_sdlc_backlog(sdlc_dir: Path, goal: str, stories: list[dict[str, Any]]
         "total_count": len(stories),
         "stories": stories,
     }
-    (sdlc_dir / "backlog.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    _write_sdlc_confined_text(sdlc_dir, "backlog.json", json.dumps(payload, indent=2))
 
 
 def _sdlc_verdict_is_pass(qa_text: str) -> bool:
@@ -22283,8 +22444,7 @@ async def api_get_harness_sdlc_state(session_id: str) -> JSONResponse:
     stories = _read_sdlc_backlog(sdlc_dir)
     artifacts: dict[str, str] = {}
     for name in ("RESEARCH.md", "PRD.md", "ARCHITECTURE.md", "PROGRESS.md", "FEEDBACK_LOG.md"):
-        fp = sdlc_dir / name
-        artifacts[name] = fp.read_text(encoding="utf-8") if fp.exists() else ""
+        artifacts[name] = _read_sdlc_confined_text(sdlc_dir, name)
     passed = sum(1 for s in stories if s.get("passes") is True)
     total = len(stories)
     return JSONResponse(
@@ -22328,7 +22488,7 @@ async def _run_sdlc_sprints_stream(
       - Only flips `"passes": true` when QA Guardrail returns `PASS` (retries once on `NEEDS_REVISION`).
     """
     stories = _read_sdlc_backlog(sdlc_dir)
-    arch_md = (sdlc_dir / "ARCHITECTURE.md").read_text(encoding="utf-8")[:2800] if (sdlc_dir / "ARCHITECTURE.md").exists() else ""
+    arch_md = _read_sdlc_confined_text(sdlc_dir, "ARCHITECTURE.md")[:2800]
     oc_pinned = build_pinned_opencontext_prompt()
     mcp_block = build_active_mcp_tools_prompt()
 
@@ -22349,7 +22509,7 @@ async def _run_sdlc_sprints_stream(
             if session_id in _HARNESS_ABORT_FLAGS:
                 break
             story["attempts"] = int(story.get("attempts") or 0) + 1
-            progress_tail = (sdlc_dir / "PROGRESS.md").read_text(encoding="utf-8")[-1800:] if (sdlc_dir / "PROGRESS.md").exists() else "(initial sprint)"
+            progress_tail = _read_sdlc_confined_text(sdlc_dir, "PROGRESS.md")[-1800:] or "(initial sprint)"
             ac_bullets = "\n".join(f"  - [ ] {c}" for c in (story.get("acceptance_criteria") or []))
             retry_banner = f"\n\n### QA Guardrail Revision Feedback (Attempt {attempt}):\n{qa_feedback_for_retry}\nFix every item above!" if qa_feedback_for_retry else ""
 
@@ -22552,8 +22712,7 @@ async def _run_sdlc_sprints_stream(
                 story["passes"] = True
                 _write_sdlc_backlog(sdlc_dir, goal, stories)
                 prog_line = f"\n## [{sid}] PASSED (Attempt {attempt})\n- **Title**: {story['title']}\n- **Verification**: exit code 0\n- **QA Summary**: {qa_text[:280]}\n"
-                with (sdlc_dir / "PROGRESS.md").open("a", encoding="utf-8") as pf:
-                    pf.write(prog_line)
+                _write_sdlc_confined_text(sdlc_dir, "PROGRESS.md", prog_line, append=True)
                 yield _sse("sdlc_story_done", {"story_id": sid, "passes": True, "attempts": story["attempts"], "verification_ok": True, "qa_notes": story["qa_notes"]})
                 break
             if attempt == 1:
@@ -22596,6 +22755,9 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
 
     if mode != "run_sprints" and not prompt:
         raise HTTPException(status_code=400, detail="Product vision / prompt is required to start Agile SDLC.")
+    requested_pol = str(body.get("policy") or "").strip()
+    if requested_pol == "plan":
+        raise HTTPException(status_code=403, detail="Agile SDLC factory cannot write `.sdlc` artifacts in read-only 'plan' mode.")
 
     if not session_id:
         sess = create_harness_session_db(
@@ -22609,8 +22771,18 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
         session_id = sess["id"]
     else:
         sess = get_harness_session_db(session_id)
+        if _effective_harness_policy(body.get("policy"), sess) == "plan":
+            raise HTTPException(status_code=403, detail="Agile SDLC factory cannot write `.sdlc` artifacts in read-only 'plan' mode.")
         if body.get("policy") in HARNESS_POLICIES:
             sess = _set_harness_session_policy(session_id, body["policy"])
+
+    sdlc_wt_check = Path(sess["worktree_dir"]).resolve()
+    active_sdlc_q = workspace_quarantine.find_active_quarantine(HARNESS_STORE_DIR, sdlc_wt_check)
+    if active_sdlc_q is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Workspace `{sdlc_wt_check}` is quarantined (`{active_sdlc_q.quarantine_id}`); SDLC writes are frozen.",
+        )
 
     coord, claim, worker_id = _acquire_turn_lease_or_409(sess)
     lease_epoch = claim.epoch_record.epoch
@@ -22679,7 +22851,7 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                     if item["type"] == "content":
                         r_buf.append(item["text"])
                 research_md = f"# Phase 1: Product Research, Brainstorming & Online Inspiration\n\n{online_refs}\n\n---\n\n" + "".join(r_buf).strip()
-                (sdlc_dir / "RESEARCH.md").write_text(research_md, encoding="utf-8")
+                _write_sdlc_confined_text(sdlc_dir, "RESEARCH.md", research_md)
                 if is_local_omlx_model(critic_model) and critic_model != lead_model:
                     await _unload_omlx_model(client, parse_model_route(critic_model)[2])
 
@@ -22704,7 +22876,7 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                         if item["type"] == "content":
                             prd_buf.append(item["text"])
                     prd_md = "".join(prd_buf).strip() or f"# PRD: {goal_text}"
-                    (sdlc_dir / "PRD.md").write_text(prd_md, encoding="utf-8")
+                    _write_sdlc_confined_text(sdlc_dir, "PRD.md", prd_md)
 
                 # --- PHASE 3: SYSTEM ARCHITECTURE & FILE CONTRACT (`MetaGPT DesignAPI`) ---
                 if session_id not in _HARNESS_ABORT_FLAGS:
@@ -22727,7 +22899,7 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                         if item["type"] == "content":
                             arch_buf.append(item["text"])
                     arch_md = "".join(arch_buf).strip() or f"# Architecture: {goal_text}"
-                    (sdlc_dir / "ARCHITECTURE.md").write_text(arch_md, encoding="utf-8")
+                    _write_sdlc_confined_text(sdlc_dir, "ARCHITECTURE.md", arch_md)
 
                 # --- PHASE 4: AGILE SPRINT BACKLOG (`Anthropic Default-FAIL backlog.json`) ---
                 if session_id not in _HARNESS_ABORT_FLAGS:
@@ -22752,8 +22924,12 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                             bl_buf.append(item["text"])
                     stories = _parse_or_synthesize_backlog_json("".join(bl_buf), goal_text, prefix="STORY", start_idx=1)
                     _write_sdlc_backlog(sdlc_dir, goal_text, stories)
-                    if not (sdlc_dir / "PROGRESS.md").exists():
-                        (sdlc_dir / "PROGRESS.md").write_text(f"# Agile Sprint Progress Log\n- **Goal**: {goal_text}\n- **Stories Planned**: {len(stories)}\n", encoding="utf-8")
+                    if not _read_sdlc_confined_text(sdlc_dir, "PROGRESS.md"):
+                        _write_sdlc_confined_text(
+                            sdlc_dir,
+                            "PROGRESS.md",
+                            f"# Agile Sprint Progress Log\n- **Goal**: {goal_text}\n- **Stories Planned**: {len(stories)}\n",
+                        )
                     _append_harness_event(
                         session_id,
                         "assistant/message",
@@ -22898,6 +23074,15 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
         raise HTTPException(status_code=400, detail="Both `session_id` and `feedback` are required.")
 
     sess = get_harness_session_db(session_id)
+    if _effective_harness_policy(body.get("policy"), sess) == "plan":
+        raise HTTPException(status_code=403, detail="Agile SDLC feedback loop cannot write `.sdlc` artifacts in read-only 'plan' mode.")
+    sdlc_fb_wt = Path(sess["worktree_dir"]).resolve()
+    active_fb_q = workspace_quarantine.find_active_quarantine(HARNESS_STORE_DIR, sdlc_fb_wt)
+    if active_fb_q is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Workspace `{sdlc_fb_wt}` is quarantined (`{active_fb_q.quarantine_id}`); SDLC writes are frozen.",
+        )
     coord_fb, claim_fb, worker_id_fb = _acquire_turn_lease_or_409(sess)
     lease_epoch_fb = claim_fb.epoch_record.epoch
     lease_released_fb = False
@@ -22938,7 +23123,7 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
             # 1. Research Team: Live Online Inspiration + Root-Cause Brainstorming
             yield _sse("sdlc_phase", {"phase": "feedback_research", "name": "Research Team: Online Inspiration & Root-Cause Brainstorm", "artifact": ".sdlc/FEEDBACK_LOG.md"})
             online_insp = await _fetch_online_inspiration(client, inspiration_query, wt_dir)
-            cur_arch = (sdlc_dir / "ARCHITECTURE.md").read_text(encoding="utf-8")[:2400] if (sdlc_dir / "ARCHITECTURE.md").exists() else ""
+            cur_arch = _read_sdlc_confined_text(sdlc_dir, "ARCHITECTURE.md")[:2400]
             diff_cur = _compute_git_diff(wt_dir)
 
             fb_res_msgs = [
@@ -22966,8 +23151,7 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
                     fb_buf.append(item["text"])
             fb_analysis = "".join(fb_buf).strip()
             fb_entry = f"\n\n---\n## Feedback Iteration ({time.strftime('%Y-%m-%d %H:%M:%S')})\n**User Feedback**: {feedback}\n\n{online_insp}\n\n### Research & Brainstorm Synthesis\n{fb_analysis}\n"
-            with (sdlc_dir / "FEEDBACK_LOG.md").open("a", encoding="utf-8") as ff:
-                ff.write(fb_entry)
+            _write_sdlc_confined_text(sdlc_dir, "FEEDBACK_LOG.md", fb_entry, append=True)
 
             if is_local_omlx_model(critic_model) and critic_model != lead_model:
                 await _unload_omlx_model(client, parse_model_route(critic_model)[2])
@@ -23113,6 +23297,820 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
     bg_fb = BackgroundTasks()
     bg_fb.add_task(_release_fb_lease)
     return StreamingResponse(fb_gen(), media_type="text/event-stream", background=bg_fb)
+
+
+# =============================================================================
+# M5-P5-03 Fault-Injection and Security Release Gate
+# =============================================================================
+
+_LATEST_RELEASE_GATE_REPORT: security_release_gate.SecurityReleaseGateReport | None = None
+_RELEASE_GATE_LOCK = threading.Lock()
+
+
+def _default_security_gate_paths() -> tuple[Path, Path, Path]:
+    return (
+        BASE_DIR / "docs" / "security-review-signoff.md",
+        BASE_DIR / "product" / "M5_2_0_Autonomous_Roadmap.json",
+        BASE_DIR / "docs" / "m5-2-0-hardware-qualification-evidence.md",
+    )
+
+
+def _current_repo_head_sha(repo_root: Path | None = None) -> str:
+    root = repo_root or BASE_DIR
+    try:
+        out = subprocess.check_output(
+            _safe_git_argv("rev-parse", "HEAD"),
+            cwd=str(root),
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=3.0,
+            env=_git_subprocess_env(),
+        ).strip()
+        return out if len(out) == 40 else ""
+    except Exception:
+        return ""
+
+
+def evaluate_security_release_gate_status(
+    *,
+    signoff_path: Path | None = None,
+    roadmap_path: Path | None = None,
+    hardware_evidence_path: Path | None = None,
+    supply_chain_dir: Path | None = None,
+    expected_head_commit: str = "",
+) -> security_release_gate.SecurityReleaseGateReport:
+    """Evaluate sign-off + prerequisites without mutating live workspaces (reuses cached suite if same process)."""
+    def_signoff, def_roadmap, def_hw = _default_security_gate_paths()
+    eff_signoff = signoff_path or def_signoff
+    eff_roadmap = roadmap_path if roadmap_path is not None else (def_roadmap if def_roadmap.is_file() else None)
+    eff_hw = hardware_evidence_path if hardware_evidence_path is not None else (def_hw if def_hw.is_file() else None)
+
+    signoff_eval = security_release_gate.evaluate_security_signoff_gate(
+        eff_signoff,
+        expected_head_commit=expected_head_commit,
+    )
+    prereqs = security_release_gate.inspect_prerequisite_qualifications(
+        roadmap_path=eff_roadmap,
+        hardware_evidence_path=eff_hw,
+        supply_chain_dir=supply_chain_dir,
+    )
+    with _RELEASE_GATE_LOCK:
+        cached = _LATEST_RELEASE_GATE_REPORT
+    if cached is not None and cached.suites_executed:
+        all_cases = [c for s in cached.suites.values() for c in s.cases]
+        return security_release_gate.evaluate_release_gate(
+            signoff=signoff_eval,
+            prerequisites=prereqs,
+            cases=all_cases,
+            suites_executed=True,
+            metrics=cached.metrics,
+        )
+    return security_release_gate.evaluate_release_gate(
+        signoff=signoff_eval,
+        prerequisites=prereqs,
+        cases=(),
+        suites_executed=False,
+    )
+
+
+async def run_security_release_gate_async(
+    *,
+    signoff_path: Path | None = None,
+    roadmap_path: Path | None = None,
+    hardware_evidence_path: Path | None = None,
+    supply_chain_dir: Path | None = None,
+    expected_head_commit: str = "",
+) -> security_release_gate.SecurityReleaseGateReport:
+    """Execute the full M5-P5-03 crash matrix, user-edit races, external-write uncertainty,
+    and sandbox/Git adversarial suite in a completely isolated temporary store + workspace,
+    collect measured reliability/memory/UX metrics, and evaluate the release gate.
+    """
+    rss_before = security_release_gate._srg_current_peak_rss_bytes()
+    suite_t0 = time.perf_counter()
+    def_signoff, def_roadmap, def_hw = _default_security_gate_paths()
+    eff_signoff = signoff_path or def_signoff
+    eff_roadmap = roadmap_path if roadmap_path is not None else (def_roadmap if def_roadmap.is_file() else None)
+    eff_hw = hardware_evidence_path if hardware_evidence_path is not None else (def_hw if def_hw.is_file() else None)
+
+    cases: list[security_release_gate.FaultCaseVerdict] = []
+    recovery_latencies_ms: list[float] = []
+    cas_conflict_latencies_ms: list[float] = []
+    task_read_latencies_ms: list[float] = []
+    sse_replay_latencies_ms: list[float] = []
+
+    class _NoopAuditLedger:
+        def start(self, session_id: str, tool_name: str, policy: str, explicit_approval: bool, args: dict[str, Any]) -> int:
+            return 1
+
+        def finish(self, event_id: int, result: dict[str, Any], elapsed_ms: int, *, status: str = "completed") -> None:
+            return None
+
+    with tempfile.TemporaryDirectory(prefix="m5-srg-") as tmp_raw:
+        tmp_root = Path(tmp_raw).resolve()
+        iso_store = tmp_root / "store"
+        iso_store.mkdir(parents=True, exist_ok=True)
+        iso_db = tmp_root / "gate.db"
+        iso_storage = SQLiteStorage()
+        runtime_persistence.upgrade_database(
+            iso_storage,
+            iso_db,
+            base_ddl=_ensure_base_tables,
+            target_version=SCHEMA_VERSION,
+        )
+
+        def _init_git_ws(ws_path: Path) -> None:
+            ws_path.mkdir(parents=True, exist_ok=True)
+            git_env = _git_subprocess_env()
+            subprocess.run(["git", "init", "-q"], cwd=str(ws_path), env=git_env, check=True)
+            subprocess.run(["git", "config", "user.email", "gate@example.com"], cwd=str(ws_path), env=git_env, check=True)
+            subprocess.run(["git", "config", "user.name", "Gate"], cwd=str(ws_path), env=git_env, check=True)
+            (ws_path / "app_mod.py").write_text("VALUE = 1\n", encoding="utf-8")
+            (ws_path / "user_notes.md").write_text("base note\n", encoding="utf-8")
+            subprocess.run(["git", "add", "app_mod.py", "user_notes.md"], cwd=str(ws_path), env=git_env, check=True)
+            subprocess.run(["git", "commit", "-q", "-m", "seed"], cwd=str(ws_path), env=git_env, check=True)
+
+        # ------------------------------------------------------------------
+        # SUITE 1: Crash Matrix (before_intent, after_intent_before_effect,
+        #          after_effect_before_result_commit, before_task_completion)
+        # ------------------------------------------------------------------
+        for b_idx, boundary_name in enumerate(
+            (
+                "before_intent",
+                "after_intent_before_effect",
+                "after_effect_before_result_commit",
+                "before_task_completion",
+            ),
+            start=1,
+        ):
+            c_t0 = time.perf_counter()
+            ws = tmp_root / f"ws_crash_{b_idx}"
+            _init_git_ws(ws)
+            dirty_bytes = f"precious uncommitted operator note ({boundary_name})\n".encode("utf-8")
+            untracked_bytes = f"draft scratch for {boundary_name}\n".encode("utf-8")
+            (ws / "user_notes.md").write_bytes(dirty_bytes)
+            (ws / "scratch_user.txt").write_bytes(untracked_bytes)
+
+            sm = workflow_state.DurableTaskStateMachine(
+                iso_storage,
+                iso_db,
+                containment_store=process_supervision.ContainmentStore(iso_store),
+            )
+            ledger = side_effect_ledger.DurableActionLedger(
+                iso_storage,
+                iso_db,
+                reconciler=lambda rec, tname, a, _w=ws: _reconcile_app_action(_w, rec, tname, a),
+            )
+            coord = side_effect_ledger.WorkerLeaseCoordinator(sm.store, ledger)
+            tid = f"srg-crash-{b_idx}"
+            claim = coord.acquire_or_takeover(
+                tid,
+                f"wrk-{_PROCESS_BOOT_ID}-c{b_idx}",
+                session_id=tid,
+                title=f"Crash {boundary_name}",
+                workspace_dir=str(ws),
+                policy="autonomous",
+                lease_ttl_s=30.0,
+            )
+            ep = claim.epoch_record.epoch
+            wid = claim.epoch_record.worker_id
+            injector = failure_injection.ActionBoundaryFaultInjector()
+            injector.arm(
+                failure_injection.ActionBoundaryFaultSpec(
+                    boundary=boundary_name,
+                    task_id=tid,
+                    max_fires=1,
+                    detail=f"gate crash at {boundary_name}",
+                )
+            )
+
+            class _IsoTaskResolver:
+                def resolve_task_context(self, req: execution_spine.ActionRequest) -> execution_spine.TaskAdmissionSnapshot | None:
+                    if not req.task_id:
+                        return None
+                    t_rec = sm.store.get_task(req.task_id)
+                    if t_rec is None:
+                        return None
+                    ep_rec = sm.store.get_epoch(req.task_id, t_rec.current_epoch) if t_rec.current_epoch > 0 else None
+                    unres = ledger.list_unresolved_consequential_actions(
+                        req.task_id,
+                        before_epoch=(t_rec.current_epoch if t_rec.current_epoch > 0 else None),
+                    )
+                    return execution_spine.TaskAdmissionSnapshot(
+                        task_id=t_rec.task_id,
+                        state=t_rec.state,
+                        current_epoch=t_rec.current_epoch,
+                        epoch_status=ep_rec.status if ep_rec else None,
+                        epoch_worker_id=ep_rec.worker_id if ep_rec else None,
+                        lease_expired=False,
+                        unresolved_effect_ids=tuple(r.action_id for r in unres),
+                    )
+
+            dab = execution_spine.DurableActionBoundary(
+                _AppToolPolicy(workspace_root=ws),
+                _NoopAuditLedger(),
+                task_context_resolver=_IsoTaskResolver(),
+                intent_ledger=_AppIntentLedger(ws, ledger=ledger),
+                boundary_injector=injector,
+            )
+            exec_counter = 0
+            target_payload = "VALUE = 2\n"
+
+            async def _mutator(_ws: Path = ws, _payload: str = target_payload) -> dict[str, Any]:
+                nonlocal exec_counter
+                exec_counter += 1
+                workspace_snapshots.atomic_write_confined_bytes(_ws, "app_mod.py", _payload.encode("utf-8"))
+                return {"ok": True, "output": "wrote app_mod.py", "diff": "+VALUE = 2"}
+
+            crashed_as_expected = False
+            req_args: dict[str, Any] = {"path": "app_mod.py", "content": target_payload}
+            try:
+                await dab.admit_and_execute(
+                    execution_spine.ActionRequest(
+                        tool_name="write_file",
+                        args=req_args,
+                        policy="autonomous",
+                        approved=False,
+                        session_id=tid,
+                        action_class=None,
+                        grant_source="policy",
+                        task_id=tid,
+                        epoch=ep,
+                        worker_id=wid,
+                        step_id=1,
+                        call_index=0,
+                    ),
+                    _mutator,
+                )
+                if boundary_name == "before_task_completion":
+                    injector.check_boundary("before_task_completion", task_id=tid, step_id=1)
+            except failure_injection.InjectedBoundaryCrashError:
+                crashed_as_expected = True
+
+            # Simulate post-crash lease expiry + recovery sweep + pre-takeover reconciliation
+            rec_t0 = time.perf_counter()
+            coord.fence_and_halt(tid, reason=f"simulated_crash_{boundary_name}", sweep_in_flight=True)
+            sm.recover_incomplete_transitions(now=time.time())
+            known_map = {}
+            for a_row in ledger.list_task_actions(tid):
+                known_map[a_row.action_id] = req_args
+            rec_report = coord.reconcile_task_effects(tid, known_action_args=known_map)
+            recovery_latencies_ms.append((time.perf_counter() - rec_t0) * 1000.0)
+
+            # Re-run same deterministic action_id in epoch 2 when after_effect_before_result_commit already wrote it
+            if boundary_name == "after_effect_before_result_commit":
+                t_cur = sm.store.get_task(tid)
+                if t_cur is not None and t_cur.state == "blocked" and not rec_report.unresolved_action_ids:
+                    sm.transition_task(tid, "paused", allow_inactive_epoch=True, reason="reconciled")
+                claim2 = coord.acquire_or_takeover(
+                    tid,
+                    f"wrk-{_PROCESS_BOOT_ID}-c{b_idx}r",
+                    session_id=tid,
+                    workspace_dir=str(ws),
+                    policy="autonomous",
+                    lease_ttl_s=30.0,
+                    known_action_args=known_map,
+                )
+                replay_res = await dab.admit_and_execute(
+                    execution_spine.ActionRequest(
+                        tool_name="write_file",
+                        args=req_args,
+                        policy="autonomous",
+                        approved=False,
+                        session_id=tid,
+                        action_class=None,
+                        grant_source="policy",
+                        task_id=tid,
+                        epoch=claim2.epoch_record.epoch,
+                        worker_id=claim2.epoch_record.worker_id,
+                        step_id=1,
+                        call_index=0,
+                    ),
+                    _mutator,
+                )
+                dedup_ok = bool(replay_res.get("ok")) and exec_counter == 1
+            elif boundary_name == "before_intent":
+                dedup_ok = exec_counter == 0 and len(ledger.list_task_actions(tid)) == 0
+            elif boundary_name == "after_intent_before_effect":
+                dedup_ok = exec_counter == 0
+            else:  # before_task_completion
+                t_after = sm.store.get_task(tid)
+                dedup_ok = exec_counter == 1 and t_after is not None and t_after.state != "completed"
+
+            read_t0 = time.perf_counter()
+            _ = sm.store.get_task(tid)
+            task_read_latencies_ms.append((time.perf_counter() - read_t0) * 1000.0)
+
+            user_preserved = (
+                (ws / "user_notes.md").read_bytes() == dirty_bytes
+                and (ws / "scratch_user.txt").read_bytes() == untracked_bytes
+            )
+            passed = crashed_as_expected and user_preserved and dedup_ok
+            cases.append(
+                security_release_gate.FaultCaseVerdict(
+                    suite="crash_matrix",
+                    case_id=f"crash.{boundary_name}",
+                    description=f"Inject hard crash at {boundary_name}; preserve dirty/untracked user files and prevent duplicate side effects.",
+                    passed=passed,
+                    unauthorized_execution=False,
+                    silent_user_data_loss=not user_preserved,
+                    duration_ms=(time.perf_counter() - c_t0) * 1000.0,
+                    detail=f"exec_counter={exec_counter}, user_preserved={user_preserved}, dedup_ok={dedup_ok}",
+                    evidence={"boundary": boundary_name, "exec_counter": exec_counter},
+                )
+            )
+
+        # ------------------------------------------------------------------
+        # SUITE 2: User-Edit Races (CAS stale write, post-edit user modification
+        #          during rollback, and dirty main workspace during worktree apply)
+        # ------------------------------------------------------------------
+        # 2a. CAS ObservedVersionIndex rejects stale overwrite after out-of-band user edit
+        r1_t0 = time.perf_counter()
+        ws_race1 = tmp_root / "ws_race_cas"
+        _init_git_ws(ws_race1)
+        obs_idx = edit_transactions.ObservedVersionIndex(iso_store / "obs_cas")
+        initial_sha = hashlib.sha256((ws_race1 / "app_mod.py").read_bytes()).hexdigest()
+        obs_idx.mark_observed("sess-r1", "app_mod.py", initial_sha)
+        user_race_bytes = b"VALUE = 999  # concurrent user edit\n"
+        (ws_race1 / "app_mod.py").write_bytes(user_race_bytes)
+        cas_t0 = time.perf_counter()
+        expected_sha = obs_idx.expected_for("sess-r1", "app_mod.py")
+        current_sha = hashlib.sha256((ws_race1 / "app_mod.py").read_bytes()).hexdigest()
+        cas_rejected = expected_sha is not None and expected_sha != current_sha
+        cas_conflict_latencies_ms.append((time.perf_counter() - cas_t0) * 1000.0)
+        r1_preserved = (ws_race1 / "app_mod.py").read_bytes() == user_race_bytes
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="user_edit_races",
+                case_id="race.cas_observed_version_conflict",
+                description="Out-of-band user edit between agent read and write triggers CAS conflict without overwriting user bytes.",
+                passed=bool(cas_rejected and r1_preserved),
+                silent_user_data_loss=not r1_preserved,
+                duration_ms=(time.perf_counter() - r1_t0) * 1000.0,
+                detail=f"cas_rejected={cas_rejected}, user_bytes_preserved={r1_preserved}",
+            )
+        )
+
+        # 2b. EditRollbackEngine refuses conflicting overwrite when user edited same lines after agent batch
+        r2_t0 = time.perf_counter()
+        ws_race2 = tmp_root / "ws_race_rollback"
+        _init_git_ws(ws_race2)
+        snap_cas = workspace_snapshots.ContentAddressedBlobStore(iso_store / "rb_cas")
+        rb_journal = edit_rollback.EditBatchJournal(iso_store / "rb_journal")
+        rb_engine = edit_rollback.EditRollbackEngine(rb_journal, snap_cas)
+        pre_bytes = (ws_race2 / "app_mod.py").read_bytes()
+        pre_blob, _ = snap_cas.put_bytes(pre_bytes)
+        agent_bytes = b"VALUE = 2  # agent edit\n"
+        post_blob, _ = snap_cas.put_bytes(agent_bytes)
+        (ws_race2 / "app_mod.py").write_bytes(agent_bytes)
+        batch = rb_journal.open_batch("sess-r2", ws_race2, task_id="sess-r2", label="agent_patch")
+        rb_journal.record_step(
+            batch.batch_id,
+            rel_path="app_mod.py",
+            tool="edit_file",
+            pre_sha256=hashlib.sha256(pre_bytes).hexdigest(),
+            post_sha256=hashlib.sha256(agent_bytes).hexdigest(),
+            pre_blob=pre_blob,
+            post_blob=post_blob,
+        )
+        rb_journal.close_batch(batch.batch_id)
+        # User subsequently modifies the exact line!
+        user_post_edit = b"VALUE = 777  # user edited on top of agent\n"
+        (ws_race2 / "app_mod.py").write_bytes(user_post_edit)
+        rb_res = rb_engine.execute(batch.batch_id, ws_race2)
+        r2_preserved = (ws_race2 / "app_mod.py").read_bytes() == user_post_edit
+        r2_conflicts = getattr(rb_res.plan, "conflicts", ())
+        r2_refused = rb_res.state in {"conflict", "partial", "blocked"} or len(r2_conflicts) > 0 or len(rb_res.failed) > 0
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="user_edit_races",
+                case_id="race.post_batch_user_edit_rollback_conflict",
+                description="User edit on top of agent EditBatch causes rollback conflict refusal instead of clobbering user work.",
+                passed=bool(r2_refused and r2_preserved),
+                silent_user_data_loss=not r2_preserved,
+                duration_ms=(time.perf_counter() - r2_t0) * 1000.0,
+                detail=f"rollback_state={rb_res.state}, conflicts={len(r2_conflicts)}, preserved={r2_preserved}",
+            )
+        )
+
+        # 2c. _apply_worktree_to_main refuses to clobber dirty uncommitted user edits in main workspace
+        r3_t0 = time.perf_counter()
+        ws_race3 = tmp_root / "ws_race_wt"
+        _init_git_ws(ws_race3)
+        wt_path, wt_branch, _ = _create_harness_worktree("hns-srgrace3", ws_race3)
+        (wt_path / "app_mod.py").write_text("VALUE = 50  # worktree change\n", encoding="utf-8")
+        user_main_bytes = b"VALUE = 888  # uncommitted main checkout edit\n"
+        (ws_race3 / "app_mod.py").write_bytes(user_main_bytes)
+        wt_apply_res = _apply_worktree_to_main(
+            {
+                "id": "",
+                "policy": "standard",
+                "workspace_dir": str(ws_race3),
+                "worktree_dir": str(wt_path),
+            },
+            force=False,
+        )
+        r3_preserved = (ws_race3 / "app_mod.py").read_bytes() == user_main_bytes
+        r3_conflict = wt_apply_res.get("status") == "conflict"
+        _remove_harness_worktree(ws_race3, wt_path, wt_branch)
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="user_edit_races",
+                case_id="race.worktree_apply_dirty_main_conflict",
+                description="_apply_worktree_to_main detects uncommitted user edits in main workspace and aborts sync without data loss.",
+                passed=bool(r3_conflict and r3_preserved),
+                silent_user_data_loss=not r3_preserved,
+                duration_ms=(time.perf_counter() - r3_t0) * 1000.0,
+                detail=f"status={wt_apply_res.get('status')}, preserved={r3_preserved}",
+            )
+        )
+
+        # ------------------------------------------------------------------
+        # SUITE 3: External-Write Uncertainty (MCP mid-flight transport loss,
+        #          blind-replay refusal, and explicit operator resolution)
+        # ------------------------------------------------------------------
+        m1_t0 = time.perf_counter()
+        mcp_store = mcp_client.McpExternalEffectStore(iso_store / "mcp_gate")
+        mcp_sem = mcp_client.McpToolSemantics(
+            alias="payments",
+            tool_name="mcp__payments__capture_charge",
+            transport="http",
+            read_only=False,
+            destructive=True,
+            idempotency_supported=False,
+            idempotency_status="unsupported",
+            idempotency_mechanism="none",
+        )
+        mcp_store.stage_dispatch(
+            action_id="act-mcp-uncertain-1",
+            session_id="srg-mcp-1",
+            task_id="srg-mcp-1",
+            epoch=1,
+            semantics=mcp_sem,
+            arguments={"invoice_id": "inv-42", "amount_cents": 5000},
+            bound_idempotency_key=None,
+        )
+        # Simulate abrupt crash leaving effect in_flight -> startup sweep marks uncertain!
+        swept = mcp_store.sweep_orphaned_in_flight(session_id="srg-mcp-1")
+        eff_after_sweep = mcp_store.get_effect("act-mcp-uncertain-1")
+        uncertain_held = (
+            len(swept) == 1
+            and eff_after_sweep is not None
+            and eff_after_sweep.status == "uncertain"
+            and len(mcp_store.list_effects(session_id="srg-mcp-1", statuses=("uncertain",))) == 1
+        )
+        # Operator explicitly resolves as not_applied -> hold clears deterministically
+        resolved_eff = mcp_store.resolve_operator(
+            "act-mcp-uncertain-1",
+            resolution="not_applied",
+            reason="verified absent in payment gateway audit log",
+        )
+        hold_cleared_after_operator = (
+            resolved_eff is not None
+            and resolved_eff.status == "reconciled_not_applied"
+            and len(mcp_store.list_effects(session_id="srg-mcp-1", statuses=("uncertain",))) == 0
+        )
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="external_write_uncertainty",
+                case_id="mcp.orphaned_in_flight_swept_to_uncertain_and_held",
+                description="Non-idempotent MCP write interrupted in flight sweeps to 'uncertain', blocks blind replay, and requires explicit resolution.",
+                passed=bool(uncertain_held and hold_cleared_after_operator),
+                duration_ms=(time.perf_counter() - m1_t0) * 1000.0,
+                detail=f"uncertain_held={uncertain_held}, resolved={hold_cleared_after_operator}",
+            )
+        )
+
+        # 3b. SQLite DurableActionLedger blocks blind replay of non_idempotent uncertain action
+        m2_t0 = time.perf_counter()
+        mcp_sm = workflow_state.DurableTaskStateMachine(
+            iso_storage,
+            iso_db,
+            containment_store=process_supervision.ContainmentStore(iso_store),
+        )
+        mcp_ledger = side_effect_ledger.DurableActionLedger(iso_storage, iso_db)
+        mcp_coord = side_effect_ledger.WorkerLeaseCoordinator(mcp_sm.store, mcp_ledger)
+        mcp_claim1 = mcp_coord.acquire_or_takeover(
+            "srg-mcp-2",
+            f"wrk-{_PROCESS_BOOT_ID}-m1",
+            session_id="srg-mcp-2",
+            workspace_dir=str(tmp_root),
+            policy="autonomous",
+            lease_ttl_s=30.0,
+        )
+        begin1 = mcp_ledger.begin(
+            action_id="act-ext-nonidem-1",
+            step_id=1,
+            call_index=0,
+            tool_name="mcp__tickets__create_issue",
+            args={"title": "Outage"},
+            policy="autonomous",
+            action_class="consequential",
+            replay_policy="non_idempotent",
+            allowed=True,
+            explicit_approval=True,
+            session_id="srg-mcp-2",
+            task_id="srg-mcp-2",
+            epoch=mcp_claim1.epoch_record.epoch,
+            worker_id=mcp_claim1.epoch_record.worker_id,
+        )
+        mcp_ledger.record_exception("act-ext-nonidem-1", TimeoutError("transport dropped after POST"), 25)
+        replay_attempt = mcp_ledger.begin(
+            action_id="act-ext-nonidem-1",
+            step_id=1,
+            call_index=0,
+            tool_name="mcp__tickets__create_issue",
+            args={"title": "Outage"},
+            policy="autonomous",
+            action_class="consequential",
+            replay_policy="non_idempotent",
+            allowed=True,
+            explicit_approval=True,
+            session_id="srg-mcp-2",
+            task_id="srg-mcp-2",
+            epoch=mcp_claim1.epoch_record.epoch,
+            worker_id=mcp_claim1.epoch_record.worker_id,
+        )
+        blind_replay_blocked = bool(begin1.proceed and not replay_attempt.proceed and replay_attempt.replay_blocked)
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="external_write_uncertainty",
+                case_id="mcp.non_idempotent_timeout_blocks_blind_replay",
+                description="Ambiguous transport timeout on non-idempotent external action marks ledger uncertain and blocks automatic replay.",
+                passed=blind_replay_blocked,
+                unauthorized_execution=bool(replay_attempt.proceed),
+                duration_ms=(time.perf_counter() - m2_t0) * 1000.0,
+                detail=f"replay_blocked={replay_attempt.replay_blocked}, status={replay_attempt.status}",
+            )
+        )
+
+        # ------------------------------------------------------------------
+        # SUITE 4: Sandbox & Execution-Boundary Adversarial Suite
+        # ------------------------------------------------------------------
+        # 4a. Direct inner execution helpers reject calls without active DurableActionBoundary admission
+        a1_t0 = time.perf_counter()
+        bypass_blocked_all = True
+        unauth_a1 = False
+        ws_adv = tmp_root / "ws_adv"
+        _init_git_ws(ws_adv)
+        adv_sess = {
+            "id": "srg-adv",
+            "worktree_dir": str(ws_adv),
+            "workspace_dir": str(ws_adv),
+            "policy": "autonomous",
+        }
+        inner_res = await _execute_harness_tool_inner(
+            None,  # type: ignore[arg-type]
+            adv_sess,
+            "write_file",
+            {"path": "pwn.txt", "content": "x"},
+            approved=True,
+        )
+        if not (inner_res.get("bypass_denied") is True and not inner_res.get("ok") and not (ws_adv / "pwn.txt").exists()):
+            bypass_blocked_all = False
+            unauth_a1 = True
+        for probe_coro in (
+            lambda: _execute_skill_script_inner(ws_adv / "app_mod.py", [], cwd=ws_adv, timeout=2.0),
+            lambda: run_reusable_block(ws_adv, "test-summary", "."),
+        ):
+            try:
+                await probe_coro()
+                bypass_blocked_all = False
+                unauth_a1 = True
+            except execution_spine.DirectExecutorBypassError:
+                pass
+            except Exception:
+                bypass_blocked_all = False
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="sandbox_adversarial",
+                case_id="adv.direct_inner_executor_anti_bypass",
+                description="Direct calls to inner tool/skill/reusable-block executors without DurableActionBoundary token raise DirectExecutorBypassError.",
+                passed=bypass_blocked_all,
+                unauthorized_execution=unauth_a1,
+                duration_ms=(time.perf_counter() - a1_t0) * 1000.0,
+                detail=f"all_bypass_attempts_rejected={bypass_blocked_all}",
+            )
+        )
+
+        # 4b. Untrusted Git repository with core.fsmonitor, diff.external, and post-checkout hook never executes on host
+        a2_t0 = time.perf_counter()
+        ws_evil_git = tmp_root / "ws_evil_git"
+        _init_git_ws(ws_evil_git)
+        pwn_marker = tmp_root / "git_hook_pwned.marker"
+        evil_script = tmp_root / "evil_git_helper.sh"
+        evil_script.write_text(f"#!/bin/sh\necho pwned > {pwn_marker}\n", encoding="utf-8")
+        evil_script.chmod(0o755)
+        post_checkout = ws_evil_git / ".git" / "hooks" / "post-checkout"
+        post_checkout.parent.mkdir(parents=True, exist_ok=True)
+        post_checkout.write_text(f"#!/bin/sh\necho pwned > {pwn_marker}\n", encoding="utf-8")
+        post_checkout.chmod(0o755)
+        subprocess.run(["git", "config", "core.fsmonitor", str(evil_script)], cwd=str(ws_evil_git), check=True)
+        subprocess.run(["git", "config", "diff.external", str(evil_script)], cwd=str(ws_evil_git), check=True)
+        (ws_evil_git / "app_mod.py").write_text("VALUE = 3\n", encoding="utf-8")
+
+        _ = _inspect_git_repo(ws_evil_git)
+        _ = _compute_git_diff(ws_evil_git)
+        wt_evil, br_evil, _ = _create_harness_worktree("hns-evilgit1", ws_evil_git)
+        iso_snap = workspace_snapshots.WorkspaceSnapshotStore(iso_store / "snaps")
+        _ = iso_snap.capture_baseline("srg-evil-snap", ws_evil_git, label="evil_probe")
+        _remove_harness_worktree(ws_evil_git, wt_evil, br_evil)
+        git_hook_executed = pwn_marker.exists()
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="sandbox_adversarial",
+                case_id="adv.git_fsmonitor_hooks_external_diff_neutralized",
+                description="Adversarial repo config (core.fsmonitor, diff.external, post-checkout hook) never executes during repo inspect, diff, worktree, or snapshot.",
+                passed=not git_hook_executed,
+                unauthorized_execution=git_hook_executed,
+                duration_ms=(time.perf_counter() - a2_t0) * 1000.0,
+                detail=f"marker_executed={git_hook_executed}",
+            )
+        )
+
+        # 4c. Symlink escape, path traversal, and secret-file guard across workspace + .sdlc + git diff
+        a3_t0 = time.perf_counter()
+        outside_secret = tmp_root / "outside_secret.txt"
+        outside_secret.write_text("TOP_SECRET_OUTSIDE_WORKSPACE\n", encoding="utf-8")
+        (ws_evil_git / "escape_link.txt").symlink_to(outside_secret)
+        (ws_evil_git / ".env").write_text("OPENAI_API_KEY=sk-abcdefghijklmnopqrstuvwx123456\n", encoding="utf-8")
+        diff_payload = _compute_git_diff(ws_evil_git)
+        diff_txt = str(diff_payload.get("diff") or "")
+        leak_in_diff = ("TOP_SECRET_OUTSIDE_WORKSPACE" in diff_txt) or ("sk-abcdefghijklmnopqrstuvwx123456" in diff_txt)
+
+        symlink_write_blocked = False
+        try:
+            workspace_snapshots.atomic_write_confined_bytes(ws_evil_git, "escape_link.txt", b"overwrite")
+        except workspace_snapshots.WorkspaceSnapshotError:
+            symlink_write_blocked = True
+
+        sdlc_symlink_blocked = False
+        evil_sdlc = ws_evil_git / ".sdlc"
+        evil_sdlc.symlink_to(tmp_root)
+        try:
+            _ensure_sdlc_dir(ws_evil_git)
+        except PermissionError:
+            sdlc_symlink_blocked = True
+
+        traversal_blocked = False
+        try:
+            _resolve_confined_path(ws_evil_git, "../../outside_secret.txt")
+        except PermissionError:
+            traversal_blocked = True
+
+        secret_guard_blocked = _check_gsd_secret_guard(".env") is not None
+        outside_intact = outside_secret.read_text(encoding="utf-8") == "TOP_SECRET_OUTSIDE_WORKSPACE\n"
+        a3_ok = (
+            not leak_in_diff
+            and symlink_write_blocked
+            and sdlc_symlink_blocked
+            and traversal_blocked
+            and secret_guard_blocked
+            and outside_intact
+        )
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="sandbox_adversarial",
+                case_id="adv.symlink_traversal_and_secret_confinement",
+                description="O_NOFOLLOW confinement, .sdlc symlink refusal, path traversal rejection, and .env/symlink diff exclusion hold under adversarial layout.",
+                passed=a3_ok,
+                unauthorized_execution=not (symlink_write_blocked and sdlc_symlink_blocked and traversal_blocked),
+                silent_user_data_loss=not outside_intact,
+                duration_ms=(time.perf_counter() - a3_t0) * 1000.0,
+                detail=(
+                    f"leak_in_diff={leak_in_diff}, symlink_write_blocked={symlink_write_blocked}, "
+                    f"sdlc_symlink_blocked={sdlc_symlink_blocked}, traversal_blocked={traversal_blocked}"
+                ),
+            )
+        )
+
+        # 4d. Unqualified container sandbox backend & inline shell secret/fsmonitor smuggling fail closed
+        a4_t0 = time.perf_counter()
+        inc_store = sandbox_boundary.SecurityIncidentStore(iso_store / "sec_inc")
+        inc_store.record_incident(
+            reason="container_runtime_missing",
+            failed_guarantees=("container_filesystem_isolation", "container_network_isolation"),
+            failed_dependencies=("docker",),
+            affected_backends=("docker",),
+            severity="critical",
+        )
+        qual_check = inc_store.check_admission(
+            required_guarantees=("container_filesystem_isolation", "container_network_isolation"),
+            execution_surface="subprocess",
+            execution_mode="sandbox",
+        )
+        priv_check = sandbox_boundary.inspect_container_argv_hardening(
+            ["docker", "run", "--privileged", "alpine", "sh"]
+        )
+        unqualified_refused = (not qual_check.allowed) and (not priv_check.valid)
+        smuggled_auth = authorize_tool_invocation(
+            "run_bash",
+            {"command": "env -u HOME sh -c 'cat .env'"},
+            "autonomous",
+            approved=True,
+            workspace_root=ws_adv,
+        )
+        destructive_git_reason = workspace_snapshots.detect_destructive_git_command("git reset --hard HEAD")
+        smuggle_detected = (not smuggled_auth.allowed) and (destructive_git_reason is not None)
+        cases.append(
+            security_release_gate.FaultCaseVerdict(
+                suite="sandbox_adversarial",
+                case_id="adv.unqualified_sandbox_and_shell_smuggling_refused",
+                description="Unqualified sandbox runtime fails closed without host fallback and shell wrapper secret smuggling is flagged.",
+                passed=bool(unqualified_refused and smuggle_detected),
+                unauthorized_execution=not unqualified_refused,
+                duration_ms=(time.perf_counter() - a4_t0) * 1000.0,
+                detail=f"unqualified_refused={unqualified_refused}, smuggle_detected={smuggle_detected}",
+            )
+        )
+
+        # Measure SSE TaskEventLog cursor append + replay latency for UX metrics
+        ev_log = task_events.TaskEventLog(iso_store / "ux_events")
+        for seq_i in range(5):
+            ev_log.append("srg-ux-1", "step/progress", {"step": seq_i + 1})
+        sse_t0 = time.perf_counter()
+        ev_page = ev_log.read("srg-ux-1", cursor=2, limit=50)
+        sse_replay_latencies_ms.append((time.perf_counter() - sse_t0) * 1000.0)
+        sse_replay_ok = len(ev_page.events) == 3
+
+    total_suite_ms = (time.perf_counter() - suite_t0) * 1000.0
+    rss_after = security_release_gate._srg_current_peak_rss_bytes()
+
+    signoff_eval = security_release_gate.evaluate_security_signoff_gate(
+        eff_signoff,
+        expected_head_commit=expected_head_commit,
+    )
+    prereqs = security_release_gate.inspect_prerequisite_qualifications(
+        roadmap_path=eff_roadmap,
+        hardware_evidence_path=eff_hw,
+        supply_chain_dir=supply_chain_dir,
+    )
+
+    passed_n = sum(1 for c in cases if c.passed)
+    metrics = security_release_gate.MeasuredGateMetrics(
+        reliability={
+            "total_cases": len(cases),
+            "passed_cases": passed_n,
+            "failed_cases": len(cases) - passed_n,
+            "pass_rate": round(passed_n / len(cases), 4) if cases else 0.0,
+            "unauthorized_executions": sum(1 for c in cases if c.unauthorized_execution),
+            "silent_user_data_losses": sum(1 for c in cases if c.silent_user_data_loss),
+            "crash_recovery_sweep_max_ms": round(max(recovery_latencies_ms or [0.0]), 3),
+            "crash_recovery_sweep_mean_ms": round(
+                sum(recovery_latencies_ms) / max(1, len(recovery_latencies_ms)), 3
+            ),
+            "total_suite_wall_ms": round(total_suite_ms, 2),
+        },
+        memory={
+            "peak_rss_before_bytes": rss_before,
+            "peak_rss_after_bytes": rss_after,
+            "peak_rss_delta_bytes": max(0, rss_after - rss_before),
+            "peak_rss_after_mib": round(rss_after / (1024 * 1024), 2),
+            "hardware_qualification": dict(prereqs.hardware_metrics),
+        },
+        ux={
+            "task_state_read_max_ms": round(max(task_read_latencies_ms or [0.0]), 3),
+            "cas_conflict_detection_ms": round(max(cas_conflict_latencies_ms or [0.0]), 3),
+            "sse_cursor_replay_ms": round(max(sse_replay_latencies_ms or [0.0]), 3),
+            "sse_cursor_replay_exact": sse_replay_ok,
+            "structured_blocking_reasons_present": True,
+        },
+    )
+
+    report = security_release_gate.evaluate_release_gate(
+        signoff=signoff_eval,
+        prerequisites=prereqs,
+        cases=cases,
+        suites_executed=True,
+        metrics=metrics,
+    )
+    with _RELEASE_GATE_LOCK:
+        global _LATEST_RELEASE_GATE_REPORT
+        _LATEST_RELEASE_GATE_REPORT = report
+    return report
+
+
+@app.get("/api/harness/release-gate")
+async def api_get_security_release_gate() -> JSONResponse:
+    """Return current M5-P5-03 security release gate decision, sign-off state, prerequisites, and residual risks."""
+    report = evaluate_security_release_gate_status()
+    return JSONResponse(report.to_dict())
+
+
+@app.post("/api/harness/release-gate/evaluate")
+async def api_evaluate_security_release_gate(request: Request) -> JSONResponse:
+    """Execute the isolated M5-P5-03 fault-injection, user-edit race, MCP uncertainty, and sandbox adversarial gate."""
+    require_head = False
+    try:
+        raw = await request.body()
+        if raw:
+            body = json.loads(raw)
+            if isinstance(body, dict):
+                require_head = bool(body.get("require_head_commit", False))
+    except Exception:
+        require_head = False
+    head_sha = _current_repo_head_sha() if require_head else ""
+    report = await run_security_release_gate_async(expected_head_commit=head_sha)
+    return JSONResponse(report.to_dict())
 
 
 # =============================================================================
@@ -46496,6 +47494,57 @@ class SnapshotRestoreReport:
         }
 
 
+_WSNAP_SAFE_GIT_CONFIG_ARGS: tuple[str, ...] = (
+    "-c",
+    "core.fsmonitor=false",
+    "-c",
+    "core.hooksPath=/dev/null",
+    "-c",
+    "protocol.file.allow=never",
+    "-c",
+    "diff.external=",
+)
+
+_WSNAP_UNSAFE_GIT_ENV_KEYS: frozenset[str] = frozenset(
+    {
+        "GIT_CONFIG_PARAMETERS",
+        "GIT_CONFIG_COUNT",
+        "GIT_EXTERNAL_DIFF",
+        "GIT_SSH_COMMAND",
+        "GIT_SSH",
+        "GIT_ASKPASS",
+        "SSH_ASKPASS",
+        "GIT_PROXY_COMMAND",
+        "GIT_UPLOAD_PACK",
+        "GIT_RECEIVE_PACK",
+        "GIT_EXEC_PATH",
+        "GIT_TEMPLATE_DIR",
+        "LD_PRELOAD",
+        "DYLD_INSERT_LIBRARIES",
+    }
+)
+
+
+def _wsnap_git_env() -> dict[str, str]:
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if k not in _WSNAP_UNSAFE_GIT_ENV_KEYS and not k.startswith("GIT_CONFIG_KEY_") and not k.startswith("GIT_CONFIG_VALUE_")
+    }
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GCM_INTERACTIVE"] = "never"
+    env["GIT_CONFIG_COUNT"] = "4"
+    env["GIT_CONFIG_KEY_0"] = "core.fsmonitor"
+    env["GIT_CONFIG_VALUE_0"] = "false"
+    env["GIT_CONFIG_KEY_1"] = "core.hooksPath"
+    env["GIT_CONFIG_VALUE_1"] = "/dev/null"
+    env["GIT_CONFIG_KEY_2"] = "protocol.file.allow"
+    env["GIT_CONFIG_VALUE_2"] = "never"
+    env["GIT_CONFIG_KEY_3"] = "diff.external"
+    env["GIT_CONFIG_VALUE_3"] = ""
+    return env
+
+
 def _wsnap_run_git(
     args: Sequence[str],
     *,
@@ -46504,8 +47553,8 @@ def _wsnap_run_git(
     timeout: float = 8.0,
     check: bool = True,
 ) -> subprocess.CompletedProcess[bytes]:
-    argv = ["git", *args]
-    assert_non_destructive_git_argv(argv)
+    assert_non_destructive_git_argv(["git", *args])
+    argv = ["git", *_WSNAP_SAFE_GIT_CONFIG_ARGS, *args]
     proc = subprocess.run(
         argv,
         cwd=str(cwd),
@@ -46513,10 +47562,11 @@ def _wsnap_run_git(
         capture_output=True,
         timeout=timeout,
         check=False,
+        env=_wsnap_git_env(),
     )
     if check and proc.returncode != 0:
         stderr_txt = proc.stderr.decode("utf-8", errors="replace").strip()[:240]
-        raise WorkspaceSnapshotError(f"Git command {' '.join(argv[:4])} failed ({proc.returncode}): {stderr_txt}")
+        raise WorkspaceSnapshotError(f"Git command {' '.join(['git', *args[:3]])} failed ({proc.returncode}): {stderr_txt}")
     return proc
 
 
@@ -56191,6 +57241,1003 @@ class PortableHandoffStore:
                 )
 
 routing_policy = sys.modules[__name__]
+
+"""M5-P5-03 Fault-injection and security release gate evaluator.
+
+Pure stdlib module (inlined into ``studio.py``) that:
+
+1. Parses and validates ``docs/security-review-signoff.md`` (AS-031) for
+   release-gate readiness without ever allowing an unsigned, deferred,
+   agent-authored, or partially-verified record to pass.
+2. Evaluates mandatory M5 2.0 roadmap prerequisite qualifications (including
+   ``M5-P3-01`` container-backed isolation and ``M5-P4-01`` Apple M5 hardware
+   qualification telemetry) plus optional supply-chain release evidence
+   (``AS-042``).
+3. Aggregates executed fault-injection, user-edit race, external-write
+   uncertainty, and sandbox/Git adversarial suite results alongside measured
+   reliability, memory, and UX metrics.
+4. Produces an auditable ``release-ready`` vs ``release-blocked`` decision
+   satisfying M5-P5-03 Acceptance Criteria 1–3:
+   - AC 1: No known critical unauthorized execution paths
+   - AC 2: No silent user-data loss in injected tests
+   - AC 3: Required security sign-off recorded or release blocked
+"""
+
+
+import json
+import re
+import resource
+import sys
+import time
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+SRG_SCHEMA_VERSION = 1
+
+SRG_EXPECTED_BOUNDARIES: tuple[str, ...] = tuple(f"B{i}" for i in range(1, 13))
+SRG_EXPECTED_KNOWN_FINDINGS: tuple[str, ...] = ("W-1", "F-1", "F-2", "F-3", "F-4", "F-5", "F-6")
+SRG_REQUIRED_SUITES: tuple[str, ...] = (
+    "crash_matrix",
+    "user_edit_races",
+    "external_write_uncertainty",
+    "sandbox_adversarial",
+)
+
+_SRG_COMMENT_BLOCK_RE = re.compile(r"<!--\s*as031-signoff\s*\n(.*?)\n-->", re.DOTALL)
+_SRG_COMMIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+_SRG_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_SRG_REVIEWER_FINDING_RE = re.compile(r"^R-\d+$")
+_SRG_AGENT_REVIEWER_RE = re.compile(
+    r"\b(claude|chatgpt|gpt-4|gpt-5|gemini|grok|qwen|kimi|copilot|cursor|ai\s+agent|autonomous\s+agent|self-review)\b",
+    re.IGNORECASE,
+)
+_SRG_PLACEHOLDER_CELLS: frozenset[str] = frozenset(
+    {"", "_unset_", "_unassigned_", "_unsigned_", "tbd", "todo", "n/a", "pending"}
+)
+_SRG_VALID_STATES: frozenset[str] = frozenset({"unsigned", "deferred", "signed"})
+_SRG_VALID_DECISIONS: frozenset[str] = frozenset({"pending", "accepted", "release-blocked"})
+_SRG_VALID_SEVERITIES: frozenset[str] = frozenset({"unrated", "none", "low", "medium", "high", "critical"})
+_SRG_VALID_VERIFIED: frozenset[str] = frozenset({"not-verified", "verified", "not-applicable"})
+
+
+def _srg_current_peak_rss_bytes() -> int:
+    """Return process peak RSS in bytes across Darwin (bytes) and Linux (KiB)."""
+    raw = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    if sys.platform == "darwin":
+        return max(0, raw)
+    return max(0, raw * 1024)
+
+
+def _srg_parse_kv_comment(text: str) -> dict[str, str] | None:
+    match = _SRG_COMMENT_BLOCK_RE.search(text)
+    if match is None:
+        return None
+    fields: dict[str, str] = {}
+    for raw_line in match.group(1).splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or ":" not in line:
+            continue
+        key, _, raw_val = line.partition(":")
+        val = raw_val.strip()
+        if len(val) >= 2 and val[0] == val[-1] == '"':
+            val = val[1:-1]
+        fields[key.strip()] = val
+    return fields
+
+
+def _srg_parse_markdown_tables(text: str) -> list[list[dict[str, str]]]:
+    tables: list[list[dict[str, str]]] = []
+    lines = text.splitlines()
+    idx = 0
+    while idx < len(lines):
+        if lines[idx].lstrip().startswith("|"):
+            block: list[str] = []
+            while idx < len(lines) and lines[idx].lstrip().startswith("|"):
+                block.append(lines[idx])
+                idx += 1
+            if len(block) >= 3 and set(block[1].replace("|", "").replace(":", "").strip()) <= {"-", " "}:
+                headers = [cell.strip() for cell in block[0].strip().strip("|").split("|")]
+                rows: list[dict[str, str]] = []
+                for row_line in block[2:]:
+                    cells = [cell.strip() for cell in row_line.strip().strip("|").split("|")]
+                    if len(cells) == len(headers):
+                        rows.append(dict(zip(headers, cells, strict=True)))
+                tables.append(rows)
+        else:
+            idx += 1
+    return tables
+
+
+@dataclass(frozen=True)
+class SignoffGateEvaluation:
+    """Structured release-gate evaluation of ``docs/security-review-signoff.md``."""
+
+    signoff_path: str
+    schema_valid: bool
+    state: str
+    decision: str
+    reviewer: str
+    reviewer_independence: str
+    commit: str
+    reviewed_on: str
+    deferral: str
+    boundaries_total: int
+    boundaries_examined_and_adequate: int
+    known_findings_total: int
+    unverified_high_or_critical: tuple[str, ...]
+    passed: bool
+    blocking_reasons: tuple[str, ...]
+    schema_errors: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "signoff_path": self.signoff_path,
+            "schema_valid": self.schema_valid,
+            "state": self.state,
+            "decision": self.decision,
+            "reviewer": self.reviewer,
+            "reviewer_independence": self.reviewer_independence,
+            "commit": self.commit,
+            "reviewed_on": self.reviewed_on,
+            "deferral": self.deferral,
+            "boundaries_total": self.boundaries_total,
+            "boundaries_examined_and_adequate": self.boundaries_examined_and_adequate,
+            "known_findings_total": self.known_findings_total,
+            "unverified_high_or_critical": list(self.unverified_high_or_critical),
+            "passed": self.passed,
+            "blocking_reasons": list(self.blocking_reasons),
+            "schema_errors": list(self.schema_errors),
+        }
+
+
+def evaluate_security_signoff_gate(
+    signoff_path: Path,
+    *,
+    expected_head_commit: str = "",
+) -> SignoffGateEvaluation:
+    """Validate ``docs/security-review-signoff.md`` and decide whether sign-off opens the gate.
+
+    Fail-closed contract:
+    - Any missing file, missing comment block, malformed table, or invalid token
+      fails both ``schema_valid`` and ``passed``.
+    - ``state == "deferred"`` or ``state == "unsigned"`` or ``decision != "accepted"``
+      keeps ``schema_valid == True`` (when properly formatted) while setting
+      ``passed == False`` with explicit ``blocking_reasons`` so the release gate
+      mechanically blocks publication without forging a human review.
+    - ``state == "signed"`` + ``decision == "accepted"`` opens the sign-off gate
+      only when reviewer identity & independence are non-placeholder and
+      non-agent, ``commit`` is a full 40-hex SHA (matching ``expected_head_commit``
+      when provided), ``reviewed_on`` is ``YYYY-MM-DD``, all B1–B12 rows are
+      ``examined`` + ``adequate`` + ``adequate``, every finding is rated &
+      verified, and zero ``critical``/``high`` findings remain ``not-verified``.
+    """
+    path_str = str(signoff_path)
+    if not signoff_path.is_file():
+        reason = f"security_signoff_missing: sign-off file not found at {path_str}"
+        return SignoffGateEvaluation(
+            signoff_path=path_str,
+            schema_valid=False,
+            state="missing",
+            decision="missing",
+            reviewer="",
+            reviewer_independence="",
+            commit="",
+            reviewed_on="",
+            deferral="",
+            boundaries_total=0,
+            boundaries_examined_and_adequate=0,
+            known_findings_total=0,
+            unverified_high_or_critical=(),
+            passed=False,
+            blocking_reasons=(reason,),
+            schema_errors=(reason,),
+        )
+
+    try:
+        raw_text = signoff_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        reason = f"security_signoff_unreadable: {exc}"
+        return SignoffGateEvaluation(
+            signoff_path=path_str,
+            schema_valid=False,
+            state="unreadable",
+            decision="unreadable",
+            reviewer="",
+            reviewer_independence="",
+            commit="",
+            reviewed_on="",
+            deferral="",
+            boundaries_total=0,
+            boundaries_examined_and_adequate=0,
+            known_findings_total=0,
+            unverified_high_or_critical=(),
+            passed=False,
+            blocking_reasons=(reason,),
+            schema_errors=(reason,),
+        )
+
+    schema_errors: list[str] = []
+    blocking_reasons: list[str] = []
+
+    meta = _srg_parse_kv_comment(raw_text)
+    if meta is None:
+        reason = "security_signoff_schema_invalid: missing <!-- as031-signoff ... --> metadata block"
+        return SignoffGateEvaluation(
+            signoff_path=path_str,
+            schema_valid=False,
+            state="invalid",
+            decision="invalid",
+            reviewer="",
+            reviewer_independence="",
+            commit="",
+            reviewed_on="",
+            deferral="",
+            boundaries_total=0,
+            boundaries_examined_and_adequate=0,
+            known_findings_total=0,
+            unverified_high_or_critical=(),
+            passed=False,
+            blocking_reasons=(reason,),
+            schema_errors=(reason,),
+        )
+
+    required_keys = {"state", "reviewer", "reviewer_independence", "commit", "reviewed_on", "decision"}
+    missing_keys = sorted(required_keys - set(meta.keys()))
+    if missing_keys:
+        schema_errors.append(f"security_signoff_schema_invalid: missing metadata keys {missing_keys}")
+
+    state = meta.get("state", "").strip()
+    decision = meta.get("decision", "").strip()
+    reviewer = meta.get("reviewer", "").strip()
+    reviewer_ind = meta.get("reviewer_independence", "").strip()
+    commit = meta.get("commit", "").strip()
+    reviewed_on = meta.get("reviewed_on", "").strip()
+    deferral = meta.get("deferral", "").strip()
+
+    if state not in _SRG_VALID_STATES:
+        schema_errors.append(f"security_signoff_schema_invalid: invalid state {state!r}")
+    if decision not in _SRG_VALID_DECISIONS:
+        schema_errors.append(f"security_signoff_schema_invalid: invalid decision {decision!r}")
+
+    tables = _srg_parse_markdown_tables(raw_text)
+    boundary_rows = next((t for t in tables if t and "Boundary" in t[0]), None)
+    finding_rows = next((t for t in tables if t and "ID" in t[0] and "Reviewer severity" in t[0]), None)
+
+    boundaries_ok = 0
+    boundaries_total = 0
+    if boundary_rows is None:
+        schema_errors.append("security_signoff_schema_invalid: missing B1-B12 boundary coverage table")
+    else:
+        seen_b: list[str] = []
+        for row in boundary_rows:
+            bid = row.get("Boundary", "").split()[0] if row.get("Boundary") else ""
+            seen_b.append(bid)
+            examined = row.get("Reviewer examined", "")
+            ctrl_adeq = row.get("Control adequate", "")
+            tests_adeq = row.get("Tests adequate", "")
+            if examined == "examined" and ctrl_adeq == "adequate" and tests_adeq == "adequate":
+                boundaries_ok += 1
+        boundaries_total = len(seen_b)
+        if tuple(seen_b) != SRG_EXPECTED_BOUNDARIES:
+            schema_errors.append(
+                f"security_signoff_schema_invalid: boundary IDs {seen_b} != {list(SRG_EXPECTED_BOUNDARIES)}"
+            )
+
+    known_total = 0
+    unverified_high: list[str] = []
+    unrated_ids: list[str] = []
+    unverified_any_ids: list[str] = []
+    if finding_rows is None:
+        schema_errors.append("security_signoff_schema_invalid: missing finding register table")
+    else:
+        seen_f: list[str] = []
+        for row in finding_rows:
+            fid = row.get("ID", "").strip()
+            seen_f.append(fid)
+            sev = row.get("Reviewer severity", "").strip()
+            ver = row.get("Fix verified", "").strip()
+            if sev not in _SRG_VALID_SEVERITIES:
+                schema_errors.append(f"security_signoff_schema_invalid: finding {fid} invalid severity {sev!r}")
+            if ver not in _SRG_VALID_VERIFIED:
+                schema_errors.append(f"security_signoff_schema_invalid: finding {fid} invalid fix status {ver!r}")
+            if sev == "unrated":
+                unrated_ids.append(fid)
+            if ver == "not-verified":
+                unverified_any_ids.append(fid)
+                if sev in {"critical", "high"}:
+                    unverified_high.append(fid)
+        known_total = sum(1 for fid in seen_f if fid in SRG_EXPECTED_KNOWN_FINDINGS)
+        if tuple(seen_f[: len(SRG_EXPECTED_KNOWN_FINDINGS)]) != SRG_EXPECTED_KNOWN_FINDINGS:
+            schema_errors.append(
+                "security_signoff_schema_invalid: finding table does not start with W-1, F-1..F-6 in order"
+            )
+        for extra_id in seen_f[len(SRG_EXPECTED_KNOWN_FINDINGS) :]:
+            if not _SRG_REVIEWER_FINDING_RE.match(extra_id):
+                schema_errors.append(
+                    f"security_signoff_schema_invalid: reviewer finding ID {extra_id!r} must match R-<n>"
+                )
+
+    if state in {"unsigned", "deferred"}:
+        if decision != "pending":
+            schema_errors.append(
+                f"security_signoff_schema_invalid: state={state!r} requires decision='pending', got {decision!r}"
+            )
+        if state == "deferred" and len(deferral) < 20:
+            schema_errors.append("security_signoff_schema_invalid: state='deferred' requires explicit deferral note")
+        blocking_reasons.append(
+            f"security_signoff_not_signed: AS-031 independent human security review is state={state!r}, "
+            f"decision={decision!r} (release blocked until signed 'accepted' by an independent human reviewer)."
+        )
+    elif state == "signed":
+        if deferral:
+            schema_errors.append("security_signoff_schema_invalid: state='signed' must clear deferral text")
+        if reviewer.lower() in _SRG_PLACEHOLDER_CELLS:
+            schema_errors.append("security_signoff_reviewer_invalid: signed record has empty/placeholder reviewer")
+        elif _SRG_AGENT_REVIEWER_RE.search(reviewer) or _SRG_AGENT_REVIEWER_RE.search(reviewer_ind):
+            schema_errors.append(
+                "security_signoff_reviewer_invalid: AI/self-review cannot satisfy independent human sign-off"
+            )
+        if reviewer_ind.lower() in _SRG_PLACEHOLDER_CELLS:
+            schema_errors.append("security_signoff_reviewer_invalid: missing reviewer_independence statement")
+        if not _SRG_COMMIT_SHA_RE.match(commit):
+            schema_errors.append(f"security_signoff_commit_invalid: commit {commit!r} is not a 40-char lowercase SHA")
+        if not _SRG_ISO_DATE_RE.match(reviewed_on):
+            schema_errors.append(f"security_signoff_date_invalid: reviewed_on {reviewed_on!r} is not YYYY-MM-DD")
+        if decision == "pending":
+            schema_errors.append("security_signoff_schema_invalid: state='signed' cannot keep decision='pending'")
+        if unrated_ids:
+            schema_errors.append(f"security_signoff_unrated_findings: signed record left unrated findings {unrated_ids}")
+        if unverified_any_ids and decision == "accepted":
+            blocking_reasons.append(
+                f"security_signoff_unverified_findings: decision='accepted' not permitted with unverified findings {unverified_any_ids}"
+            )
+        if unverified_high:
+            blocking_reasons.append(
+                f"security_signoff_unverified_high_finding: critical/high findings not verified: {unverified_high}"
+            )
+        if boundaries_ok != len(SRG_EXPECTED_BOUNDARIES):
+            blocking_reasons.append(
+                f"security_signoff_boundary_gap: only {boundaries_ok}/{len(SRG_EXPECTED_BOUNDARIES)} boundaries marked examined+adequate"
+            )
+        if decision != "accepted":
+            blocking_reasons.append(
+                f"security_signoff_not_accepted: signed security review recorded decision={decision!r}"
+            )
+        if expected_head_commit and _SRG_COMMIT_SHA_RE.match(expected_head_commit) and commit != expected_head_commit:
+            blocking_reasons.append(
+                f"security_signoff_commit_drift: signed commit {commit[:12]} does not match target {expected_head_commit[:12]}"
+            )
+
+    for err in schema_errors:
+        if err not in blocking_reasons:
+            blocking_reasons.insert(0, err)
+
+    schema_valid = len(schema_errors) == 0
+    passed = schema_valid and state == "signed" and decision == "accepted" and len(blocking_reasons) == 0
+    return SignoffGateEvaluation(
+        signoff_path=path_str,
+        schema_valid=schema_valid,
+        state=state,
+        decision=decision,
+        reviewer=reviewer,
+        reviewer_independence=reviewer_ind,
+        commit=commit,
+        reviewed_on=reviewed_on,
+        deferral=deferral,
+        boundaries_total=boundaries_total,
+        boundaries_examined_and_adequate=boundaries_ok,
+        known_findings_total=known_total,
+        unverified_high_or_critical=tuple(unverified_high),
+        passed=passed,
+        blocking_reasons=tuple(blocking_reasons),
+        schema_errors=tuple(schema_errors),
+    )
+
+
+@dataclass(frozen=True)
+class FaultCaseVerdict:
+    """Outcome of one deterministic fault-injection, race, or adversarial test case."""
+
+    suite: str
+    case_id: str
+    description: str
+    passed: bool
+    unauthorized_execution: bool = False
+    silent_user_data_loss: bool = False
+    duration_ms: float = 0.0
+    detail: str = ""
+    evidence: Mapping[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "suite": self.suite,
+            "case_id": self.case_id,
+            "description": self.description,
+            "passed": self.passed,
+            "unauthorized_execution": self.unauthorized_execution,
+            "silent_user_data_loss": self.silent_user_data_loss,
+            "duration_ms": round(float(self.duration_ms), 3),
+            "detail": self.detail,
+            "evidence": dict(self.evidence),
+        }
+
+
+@dataclass(frozen=True)
+class FaultSuiteSummary:
+    """Aggregated summary for one required M5-P5-03 verification suite."""
+
+    suite: str
+    total_cases: int
+    passed_cases: int
+    failed_cases: int
+    unauthorized_executions: int
+    silent_user_data_losses: int
+    duration_ms: float
+    cases: tuple[FaultCaseVerdict, ...]
+
+    @property
+    def passed(self) -> bool:
+        return (
+            self.total_cases > 0
+            and self.failed_cases == 0
+            and self.unauthorized_executions == 0
+            and self.silent_user_data_losses == 0
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "suite": self.suite,
+            "passed": self.passed,
+            "total_cases": self.total_cases,
+            "passed_cases": self.passed_cases,
+            "failed_cases": self.failed_cases,
+            "unauthorized_executions": self.unauthorized_executions,
+            "silent_user_data_losses": self.silent_user_data_losses,
+            "duration_ms": round(float(self.duration_ms), 3),
+            "cases": [c.to_dict() for c in self.cases],
+        }
+
+
+def summarize_fault_cases(cases: Sequence[FaultCaseVerdict]) -> dict[str, FaultSuiteSummary]:
+    """Group ``FaultCaseVerdict`` items into per-suite summaries."""
+    grouped: dict[str, list[FaultCaseVerdict]] = {name: [] for name in SRG_REQUIRED_SUITES}
+    for case in cases:
+        grouped.setdefault(case.suite, []).append(case)
+    out: dict[str, FaultSuiteSummary] = {}
+    for suite_name, items in grouped.items():
+        passed_n = sum(1 for c in items if c.passed)
+        failed_n = len(items) - passed_n
+        unauth_n = sum(1 for c in items if c.unauthorized_execution)
+        loss_n = sum(1 for c in items if c.silent_user_data_loss)
+        dur = sum(float(c.duration_ms) for c in items)
+        out[suite_name] = FaultSuiteSummary(
+            suite=suite_name,
+            total_cases=len(items),
+            passed_cases=passed_n,
+            failed_cases=failed_n,
+            unauthorized_executions=unauth_n,
+            silent_user_data_losses=loss_n,
+            duration_ms=dur,
+            cases=tuple(items),
+        )
+    return out
+
+
+@dataclass(frozen=True)
+class MeasuredGateMetrics:
+    """Measured reliability, memory, and UX responsiveness metrics for M5-P5-03 Task 2."""
+
+    reliability: Mapping[str, Any]
+    memory: Mapping[str, Any]
+    ux: Mapping[str, Any]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "reliability": dict(self.reliability),
+            "memory": dict(self.memory),
+            "ux": dict(self.ux),
+        }
+
+
+@dataclass(frozen=True)
+class PrerequisiteQualificationStatus:
+    """Status of external/host prerequisites and supply-chain evidence."""
+
+    blocked_mandatory_stories: tuple[str, ...]
+    incomplete_mandatory_stories: tuple[str, ...]
+    hardware_qualification_recorded: bool
+    hardware_metrics: Mapping[str, Any]
+    supply_chain_checked: bool
+    supply_chain_ready: bool
+    supply_chain_reasons: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "blocked_mandatory_stories": list(self.blocked_mandatory_stories),
+            "incomplete_mandatory_stories": list(self.incomplete_mandatory_stories),
+            "hardware_qualification_recorded": self.hardware_qualification_recorded,
+            "hardware_metrics": dict(self.hardware_metrics),
+            "supply_chain_checked": self.supply_chain_checked,
+            "supply_chain_ready": self.supply_chain_ready,
+            "supply_chain_reasons": list(self.supply_chain_reasons),
+        }
+
+
+def inspect_prerequisite_qualifications(
+    *,
+    roadmap_path: Path | None = None,
+    hardware_evidence_path: Path | None = None,
+    supply_chain_dir: Path | None = None,
+    ignore_story_ids: Sequence[str] = ("M5-P5-03",),
+) -> PrerequisiteQualificationStatus:
+    """Inspect roadmap mandatory prerequisites, hardware evidence, and supply-chain bundle."""
+    ignored = set(ignore_story_ids)
+    blocked_mandatory: list[str] = []
+    incomplete_mandatory: list[str] = []
+    if roadmap_path is not None and roadmap_path.is_file():
+        try:
+            data = json.loads(roadmap_path.read_text(encoding="utf-8"))
+            for story in data.get("stories", []):
+                if not isinstance(story, dict):
+                    continue
+                sid = str(story.get("id") or "")
+                phase = str(story.get("phase") or "")
+                raw_tracking = story.get("tracking")
+                tracking = raw_tracking if isinstance(raw_tracking, Mapping) else {}
+                status = str(tracking.get("status") or story.get("status") or "")
+                if phase == "P6" or sid in ignored:
+                    continue
+                if status == "blocked":
+                    blocked_mandatory.append(sid)
+                elif status != "done":
+                    incomplete_mandatory.append(sid)
+        except (OSError, ValueError, TypeError):
+            incomplete_mandatory.append("roadmap_unreadable")
+
+    hw_recorded = False
+    hw_metrics: dict[str, Any] = {}
+    if hardware_evidence_path is not None and hardware_evidence_path.is_file():
+        try:
+            hw_text = hardware_evidence_path.read_text(encoding="utf-8")
+            hw_recorded = "M5-P4-01: qualified" in hw_text or "Apple M5" in hw_text
+            mem_match = re.search(r"([\d,]+)\s+bytes\s*=\s*([\d.]+)\s*GiB", hw_text)
+            cold_match = re.search(r"\|\s*1 \(cold load\)\s*\|\s*([\d.]+)\s*s\s*\|\s*([\d,.]+)\s*ms", hw_text)
+            warm_match = re.search(r"\|\s*3\s*\|\s*([\d.]+)\s*s\s*\|\s*([\d,.]+)\s*ms", hw_text)
+            swap_match = re.search(r"growth\s+[\d,]+\s+bytes\s*\(([\d.]+)\s*GiB\)", hw_text)
+            hw_metrics = {
+                "target_chip": "Apple M5" if "Apple M5" in hw_text else "unknown",
+                "unified_memory_bytes": int(mem_match.group(1).replace(",", "")) if mem_match else None,
+                "unified_memory_gib": float(mem_match.group(2)) if mem_match else None,
+                "cold_load_wall_s": float(cold_match.group(1)) if cold_match else None,
+                "cold_first_token_ms": float(cold_match.group(2).replace(",", "")) if cold_match else None,
+                "warm_run_wall_s": float(warm_match.group(1)) if warm_match else None,
+                "warm_first_token_ms": float(warm_match.group(2).replace(",", "")) if warm_match else None,
+                "model_load_swap_growth_gib": float(swap_match.group(1)) if swap_match else None,
+                "thermal_telemetry_status": (
+                    "blocked_non_root_macos"
+                    if "| `p4.thermal` | blocked |" in hw_text
+                    else "recorded"
+                ),
+            }
+        except OSError:
+            hw_recorded = False
+
+    sc_checked = False
+    sc_ready = False
+    sc_reasons: list[str] = []
+    if supply_chain_dir is not None:
+        sc_checked = True
+        ev_file = supply_chain_dir / "evidence.json"
+        sig_file = supply_chain_dir / "signature.json"
+        if not ev_file.is_file():
+            sc_reasons.append(f"supply_chain_evidence_missing: {ev_file} not found")
+        else:
+            try:
+                ev_data = json.loads(ev_file.read_text(encoding="utf-8"))
+                gate_obj = ev_data.get("gate") if isinstance(ev_data, dict) else None
+                if isinstance(gate_obj, dict) and gate_obj.get("ready") is True and sig_file.is_file():
+                    sc_ready = True
+                else:
+                    raw_reasons = gate_obj.get("reasons", []) if isinstance(gate_obj, dict) else []
+                    for r in raw_reasons:
+                        sc_reasons.append(f"supply_chain_gate: {r}")
+                    if not sig_file.is_file() and not sc_reasons:
+                        sc_reasons.append("supply_chain_gate: signature.json is missing")
+            except (OSError, ValueError, TypeError) as exc:
+                sc_reasons.append(f"supply_chain_evidence_invalid: {exc}")
+
+    return PrerequisiteQualificationStatus(
+        blocked_mandatory_stories=tuple(blocked_mandatory),
+        incomplete_mandatory_stories=tuple(incomplete_mandatory),
+        hardware_qualification_recorded=hw_recorded,
+        hardware_metrics=hw_metrics,
+        supply_chain_checked=sc_checked,
+        supply_chain_ready=sc_ready,
+        supply_chain_reasons=tuple(sc_reasons),
+    )
+
+
+@dataclass(frozen=True)
+class ResidualRiskEntry:
+    """Explicit residual risk item documented for the release decision (Task 4)."""
+
+    risk_id: str
+    severity: str
+    area: str
+    summary: str
+    mitigation: str
+    revisit_trigger: str
+    blocks_release: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "risk_id": self.risk_id,
+            "severity": self.severity,
+            "area": self.area,
+            "summary": self.summary,
+            "mitigation": self.mitigation,
+            "revisit_trigger": self.revisit_trigger,
+            "blocks_release": self.blocks_release,
+        }
+
+
+DEFAULT_RESIDUAL_RISKS: tuple[ResidualRiskEntry, ...] = (
+    ResidualRiskEntry(
+        risk_id="RR-01",
+        severity="high",
+        area="independent-security-signoff",
+        summary=(
+            "docs/security-review-signoff.md (AS-031) remains state='deferred', decision='pending'; "
+            "no independent human security reviewer has signed B1-B12 and W-1/F-1..F-6 yet."
+        ),
+        mitigation=(
+            "security_release_gate fails closed with decision='release-blocked' until an independent "
+            "human reviewer signs docs/security-review-signoff.md with decision='accepted'."
+        ),
+        revisit_trigger="Completion of independent human security review before v1.0 tag.",
+        blocks_release=True,
+    ),
+    ResidualRiskEntry(
+        risk_id="RR-02",
+        severity="high",
+        area="container-execution-isolation",
+        summary=(
+            "M5-P3-01 live Docker/Podman container isolation qualification has not been recorded on the "
+            "target host; host execution mode relies on static inspection and process containment, not OS/VM isolation."
+        ),
+        mitigation=(
+            "STUDIO_EXECUTION_MODE defaults to 'disabled'; 'sandbox' mode fails closed when no qualified "
+            "container runtime is available; release gate blocks v1.0 until M5-P3-01 is qualified."
+        ),
+        revisit_trigger="Operator runs ./scripts/qualify_environment.sh with Docker/Podman and records M5-P3-01.",
+        blocks_release=True,
+    ),
+    ResidualRiskEntry(
+        risk_id="RR-03",
+        severity="medium",
+        area="release-artifact-signing",
+        summary=(
+            "CycloneDX SBOM, SLSA provenance, and secret/dependency scans are generated and verified, "
+            "but no maintainer release signing key is provisioned in the repository or CI (AS-042)."
+        ),
+        mitigation=(
+            "scripts/release_supply_chain.py gate and security_release_gate refuse 'release-ready' "
+            "when signature.json is absent or mismatched."
+        ),
+        revisit_trigger="Maintainer signing key provisioning prior to v1.0 artifact publication.",
+        blocks_release=True,
+    ),
+    ResidualRiskEntry(
+        risk_id="RR-04",
+        severity="low",
+        area="hardware-thermal-telemetry",
+        summary=(
+            "Apple M5 24 GiB hardware qualification (M5-P4-01) measured load, TTFT, swap, and single-heavy-model "
+            "admission, but macOS 26.6.1 hid non-root thermal pressure counters (p4.thermal='blocked') and "
+            "per-category --coding-cases prompts were skipped."
+        ),
+        mitigation=(
+            "memory_governor enforces conservative unified-memory admission, single heavy resident model, "
+            "and swap/RSS pressure degradation without assuming thermal counters are readable."
+        ),
+        revisit_trigger="Elevated-privilege thermal run or full --coding-cases benchmark pass on target hardware.",
+        blocks_release=False,
+    ),
+    ResidualRiskEntry(
+        risk_id="RR-05",
+        severity="low",
+        area="host-mode-shell-inspection",
+        summary=(
+            "When an operator explicitly opts into STUDIO_EXECUTION_MODE=host, static shell classification "
+            "and scrubbed environments reduce accidental leakage/destruction but cannot defeat arbitrary "
+            "Turing-complete code run under the same OS user."
+        ),
+        mitigation=(
+            "UI and docs label host mode as non-sandboxed; internal Git commands disable core.fsmonitor, "
+            "core.hooksPath, protocol.file, and diff.external; managed writes enforce O_NOFOLLOW confinement."
+        ),
+        revisit_trigger="Container-backed sandbox qualification (M5-P3-01) becoming default execution backend.",
+        blocks_release=False,
+    ),
+)
+
+
+@dataclass(frozen=True)
+class SecurityReleaseGateReport:
+    """Complete M5-P5-03 fault-injection and security release gate decision record."""
+
+    schema_version: int
+    evaluated_at: float
+    release_decision: str  # "release-ready" | "release-blocked"
+    release_ready: bool
+    acceptance_criteria: Mapping[str, bool]
+    blocking_reasons: tuple[str, ...]
+    suites_executed: bool
+    suites: Mapping[str, FaultSuiteSummary]
+    total_cases: int
+    passed_cases: int
+    failed_cases: int
+    unauthorized_executions: int
+    silent_user_data_losses: int
+    metrics: MeasuredGateMetrics
+    signoff: SignoffGateEvaluation
+    prerequisites: PrerequisiteQualificationStatus
+    residual_risks: tuple[ResidualRiskEntry, ...]
+
+    @property
+    def gate_invariants_satisfied(self) -> bool:
+        """True when all code/test invariants hold and release is either signed-ready or properly blocked."""
+        return bool(
+            self.acceptance_criteria.get("no_critical_unauthorized_execution_paths")
+            and self.acceptance_criteria.get("no_silent_user_data_loss")
+            and self.acceptance_criteria.get("security_signoff_recorded_or_release_blocked")
+            and self.signoff.schema_valid
+            and (not self.suites_executed or self.failed_cases == 0)
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "evaluated_at": self.evaluated_at,
+            "release_decision": self.release_decision,
+            "release_ready": self.release_ready,
+            "gate_invariants_satisfied": self.gate_invariants_satisfied,
+            "acceptance_criteria": dict(self.acceptance_criteria),
+            "blocking_reasons": list(self.blocking_reasons),
+            "suites_executed": self.suites_executed,
+            "summary": {
+                "total_cases": self.total_cases,
+                "passed_cases": self.passed_cases,
+                "failed_cases": self.failed_cases,
+                "unauthorized_executions": self.unauthorized_executions,
+                "silent_user_data_losses": self.silent_user_data_losses,
+            },
+            "suites": {k: v.to_dict() for k, v in self.suites.items()},
+            "metrics": self.metrics.to_dict(),
+            "signoff": self.signoff.to_dict(),
+            "prerequisites": self.prerequisites.to_dict(),
+            "residual_risks": [r.to_dict() for r in self.residual_risks],
+        }
+
+
+def evaluate_release_gate(
+    *,
+    signoff: SignoffGateEvaluation,
+    prerequisites: PrerequisiteQualificationStatus,
+    cases: Sequence[FaultCaseVerdict] = (),
+    suites_executed: bool = True,
+    metrics: MeasuredGateMetrics | None = None,
+    residual_risks: Sequence[ResidualRiskEntry] = DEFAULT_RESIDUAL_RISKS,
+    now: float | None = None,
+) -> SecurityReleaseGateReport:
+    """Combine executed suite verdicts, metrics, prerequisites, and sign-off into a release decision."""
+    ts = float(time.time() if now is None else now)
+    suite_map = summarize_fault_cases(cases)
+    total_cases = sum(s.total_cases for s in suite_map.values())
+    passed_cases = sum(s.passed_cases for s in suite_map.values())
+    failed_cases = sum(s.failed_cases for s in suite_map.values())
+    unauth_execs = sum(s.unauthorized_executions for s in suite_map.values())
+    data_losses = sum(s.silent_user_data_losses for s in suite_map.values())
+
+    blocking_reasons: list[str] = []
+
+    if not suites_executed:
+        blocking_reasons.append(
+            "fault_suites_not_executed: fault-injection and adversarial suites were skipped in status-only check"
+        )
+    else:
+        for req_suite in SRG_REQUIRED_SUITES:
+            summary = suite_map.get(req_suite)
+            if summary is None or summary.total_cases == 0:
+                blocking_reasons.append(f"missing_required_suite: suite {req_suite!r} produced 0 cases")
+            elif not summary.passed:
+                blocking_reasons.append(
+                    f"suite_failed:{req_suite}: {summary.failed_cases} failed, "
+                    f"{summary.unauthorized_executions} unauthorized_executions, "
+                    f"{summary.silent_user_data_losses} silent_user_data_losses"
+                )
+
+    if unauth_execs > 0:
+        blocking_reasons.append(
+            f"critical_unauthorized_execution_detected: {unauth_execs} unauthorized execution path(s) observed"
+        )
+    if data_losses > 0:
+        blocking_reasons.append(
+            f"silent_user_data_loss_detected: {data_losses} silent user-data loss event(s) observed"
+        )
+
+    for reason in signoff.blocking_reasons:
+        blocking_reasons.append(reason)
+
+    if prerequisites.blocked_mandatory_stories:
+        blocking_reasons.append(
+            "mandatory_qualification_blocked: roadmap stories still blocked: "
+            + ", ".join(prerequisites.blocked_mandatory_stories)
+        )
+    if prerequisites.incomplete_mandatory_stories:
+        blocking_reasons.append(
+            "mandatory_stories_incomplete: roadmap stories not yet done: "
+            + ", ".join(prerequisites.incomplete_mandatory_stories)
+        )
+    if prerequisites.supply_chain_checked and not prerequisites.supply_chain_ready:
+        for sc_reason in prerequisites.supply_chain_reasons:
+            blocking_reasons.append(sc_reason)
+
+    release_ready = len(blocking_reasons) == 0
+    release_decision = "release-ready" if release_ready else "release-blocked"
+
+    if suites_executed:
+        ac1_ok = (
+            unauth_execs == 0
+            and suite_map["sandbox_adversarial"].total_cases > 0
+            and suite_map["sandbox_adversarial"].passed
+        )
+        ac2_ok = (
+            data_losses == 0
+            and suite_map["crash_matrix"].total_cases > 0
+            and suite_map["crash_matrix"].passed
+            and suite_map["user_edit_races"].total_cases > 0
+            and suite_map["user_edit_races"].passed
+            and suite_map["external_write_uncertainty"].total_cases > 0
+            and suite_map["external_write_uncertainty"].passed
+        )
+    else:
+        ac1_ok = unauth_execs == 0
+        ac2_ok = data_losses == 0
+
+    ac3_ok = signoff.schema_valid and (
+        (signoff.passed and release_decision == "release-ready")
+        or (not signoff.passed and release_decision == "release-blocked" and len(blocking_reasons) > 0)
+        or (signoff.passed and release_decision == "release-blocked" and len(blocking_reasons) > 0)
+    )
+
+    effective_metrics = metrics or MeasuredGateMetrics(
+        reliability={
+            "suites_executed": suites_executed,
+            "total_cases": total_cases,
+            "passed_cases": passed_cases,
+            "pass_rate": round(passed_cases / total_cases, 4) if total_cases else None,
+            "unauthorized_executions": unauth_execs,
+            "silent_user_data_losses": data_losses,
+        },
+        memory={
+            "process_peak_rss_bytes": _srg_current_peak_rss_bytes(),
+            "process_peak_rss_mib": round(_srg_current_peak_rss_bytes() / (1024 * 1024), 2),
+            "hardware_qualification": dict(prerequisites.hardware_metrics),
+        },
+        ux={},
+    )
+
+    return SecurityReleaseGateReport(
+        schema_version=SRG_SCHEMA_VERSION,
+        evaluated_at=ts,
+        release_decision=release_decision,
+        release_ready=release_ready,
+        acceptance_criteria={
+            "no_critical_unauthorized_execution_paths": ac1_ok,
+            "no_silent_user_data_loss": ac2_ok,
+            "security_signoff_recorded_or_release_blocked": ac3_ok,
+        },
+        blocking_reasons=tuple(blocking_reasons),
+        suites_executed=suites_executed,
+        suites=suite_map,
+        total_cases=total_cases,
+        passed_cases=passed_cases,
+        failed_cases=failed_cases,
+        unauthorized_executions=unauth_execs,
+        silent_user_data_losses=data_losses,
+        metrics=effective_metrics,
+        signoff=signoff,
+        prerequisites=prerequisites,
+        residual_risks=tuple(residual_risks),
+    )
+
+
+def render_release_gate_markdown(report: SecurityReleaseGateReport) -> str:
+    """Render a concise, human-auditable Markdown summary of a gate evaluation."""
+    lines: list[str] = [
+        "# M5-P5-03 Fault-Injection and Security Release Gate Report",
+        "",
+        f"- **Release decision:** `{report.release_decision}` (`release_ready={report.release_ready}`)",
+        f"- **Gate invariants satisfied:** `{report.gate_invariants_satisfied}`",
+        f"- **Sign-off state / decision:** `{report.signoff.state}` / `{report.signoff.decision}`",
+        f"- **Executed cases:** `{report.passed_cases}/{report.total_cases}` passed "
+        f"(`unauthorized_executions={report.unauthorized_executions}`, "
+        f"`silent_user_data_losses={report.silent_user_data_losses}`)",
+        "",
+        "## Acceptance Criteria",
+        "",
+        "| Criterion | Satisfied |",
+        "|---|---|",
+    ]
+    for key, val in report.acceptance_criteria.items():
+        lines.append(f"| `{key}` | `{'yes' if val else 'no'}` |")
+
+    lines.extend(["", "## Blocking Reasons", ""])
+    if report.blocking_reasons:
+        for reason in report.blocking_reasons:
+            lines.append(f"- `{reason}`")
+    else:
+        lines.append("- None (`release-ready`).")
+
+    lines.extend(
+        [
+            "",
+            "## Suite Summary",
+            "",
+            "| Suite | Cases | Passed | Failed | Unauthorized Exec | Silent Data Loss | Duration (ms) |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for sname in SRG_REQUIRED_SUITES:
+        s = report.suites.get(sname)
+        if s is not None:
+            lines.append(
+                f"| `{s.suite}` | {s.total_cases} | {s.passed_cases} | {s.failed_cases} | "
+                f"{s.unauthorized_executions} | {s.silent_user_data_losses} | {s.duration_ms:.1f} |"
+            )
+
+    lines.extend(
+        [
+            "",
+            "## Residual Risks",
+            "",
+            "| ID | Severity | Area | Blocks Release | Summary |",
+            "|---|---|---|---|---|",
+        ]
+    )
+    for risk in report.residual_risks:
+        lines.append(
+            f"| `{risk.risk_id}` | `{risk.severity}` | `{risk.area}` | "
+            f"`{'yes' if risk.blocks_release else 'no'}` | {risk.summary} |"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+__all__ = [
+    "DEFAULT_RESIDUAL_RISKS",
+    "FaultCaseVerdict",
+    "FaultSuiteSummary",
+    "MeasuredGateMetrics",
+    "PrerequisiteQualificationStatus",
+    "ResidualRiskEntry",
+    "SRG_EXPECTED_BOUNDARIES",
+    "SRG_EXPECTED_KNOWN_FINDINGS",
+    "SRG_REQUIRED_SUITES",
+    "SRG_SCHEMA_VERSION",
+    "SecurityReleaseGateReport",
+    "SignoffGateEvaluation",
+    "evaluate_release_gate",
+    "evaluate_security_signoff_gate",
+    "inspect_prerequisite_qualifications",
+    "render_release_gate_markdown",
+    "summarize_fault_cases",
+]
+
+security_release_gate = sys.modules[__name__]
 
 """Provider-neutral orchestration primitives for streamed Studio workflows.
 

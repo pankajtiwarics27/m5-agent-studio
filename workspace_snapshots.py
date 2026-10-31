@@ -1184,6 +1184,57 @@ class SnapshotRestoreReport:
         }
 
 
+_WSNAP_SAFE_GIT_CONFIG_ARGS: tuple[str, ...] = (
+    "-c",
+    "core.fsmonitor=false",
+    "-c",
+    "core.hooksPath=/dev/null",
+    "-c",
+    "protocol.file.allow=never",
+    "-c",
+    "diff.external=",
+)
+
+_WSNAP_UNSAFE_GIT_ENV_KEYS: frozenset[str] = frozenset(
+    {
+        "GIT_CONFIG_PARAMETERS",
+        "GIT_CONFIG_COUNT",
+        "GIT_EXTERNAL_DIFF",
+        "GIT_SSH_COMMAND",
+        "GIT_SSH",
+        "GIT_ASKPASS",
+        "SSH_ASKPASS",
+        "GIT_PROXY_COMMAND",
+        "GIT_UPLOAD_PACK",
+        "GIT_RECEIVE_PACK",
+        "GIT_EXEC_PATH",
+        "GIT_TEMPLATE_DIR",
+        "LD_PRELOAD",
+        "DYLD_INSERT_LIBRARIES",
+    }
+)
+
+
+def _wsnap_git_env() -> dict[str, str]:
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if k not in _WSNAP_UNSAFE_GIT_ENV_KEYS and not k.startswith("GIT_CONFIG_KEY_") and not k.startswith("GIT_CONFIG_VALUE_")
+    }
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GCM_INTERACTIVE"] = "never"
+    env["GIT_CONFIG_COUNT"] = "4"
+    env["GIT_CONFIG_KEY_0"] = "core.fsmonitor"
+    env["GIT_CONFIG_VALUE_0"] = "false"
+    env["GIT_CONFIG_KEY_1"] = "core.hooksPath"
+    env["GIT_CONFIG_VALUE_1"] = "/dev/null"
+    env["GIT_CONFIG_KEY_2"] = "protocol.file.allow"
+    env["GIT_CONFIG_VALUE_2"] = "never"
+    env["GIT_CONFIG_KEY_3"] = "diff.external"
+    env["GIT_CONFIG_VALUE_3"] = ""
+    return env
+
+
 def _wsnap_run_git(
     args: Sequence[str],
     *,
@@ -1192,8 +1243,8 @@ def _wsnap_run_git(
     timeout: float = 8.0,
     check: bool = True,
 ) -> subprocess.CompletedProcess[bytes]:
-    argv = ["git", *args]
-    assert_non_destructive_git_argv(argv)
+    assert_non_destructive_git_argv(["git", *args])
+    argv = ["git", *_WSNAP_SAFE_GIT_CONFIG_ARGS, *args]
     proc = subprocess.run(
         argv,
         cwd=str(cwd),
@@ -1201,10 +1252,11 @@ def _wsnap_run_git(
         capture_output=True,
         timeout=timeout,
         check=False,
+        env=_wsnap_git_env(),
     )
     if check and proc.returncode != 0:
         stderr_txt = proc.stderr.decode("utf-8", errors="replace").strip()[:240]
-        raise WorkspaceSnapshotError(f"Git command {' '.join(argv[:4])} failed ({proc.returncode}): {stderr_txt}")
+        raise WorkspaceSnapshotError(f"Git command {' '.join(['git', *args[:3]])} failed ({proc.returncode}): {stderr_txt}")
     return proc
 
 
