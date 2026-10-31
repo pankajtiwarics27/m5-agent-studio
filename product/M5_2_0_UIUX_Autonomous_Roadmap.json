@@ -100,11 +100,13 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": null,
-    "active_stories": [],
+    "active_story": "UIUX-P1-01",
+    "active_stories": [
+      "UIUX-P1-01"
+    ],
     "last_completed_story": "UIUX-P0-06",
     "next_recommended_story": "UIUX-P1-01",
-    "last_checkpoint": "2026-10-31T20:35:00Z",
+    "last_checkpoint": "2026-10-31T20:50:00Z",
     "last_session_id": "arena/9110aa1b-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
@@ -1372,13 +1374,13 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P1-01 (Define tokens typography density and themes). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-31T20:50:00Z",
+        "updated_at": "2026-10-31T20:50:00Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/9110aa1b-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -1388,7 +1390,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "next_action": "Make the token layer auditable: one scale for type, space, radius and density, both themes, with a generator that refuses drift",
         "readme_updated": false
       },
       "required_evidence": [
