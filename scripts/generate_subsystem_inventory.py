@@ -148,6 +148,7 @@ def _subsystem(path: str) -> str:
         ("/api/opencontext/", "OpenContext memory"),
         ("/api/codegraph/", "Workspace code analysis"),
         ("/api/harness/", "Harness, GSD, and SDLC workflows"),
+        ("/api/security/", "Security incident containment and qualification"),
     )
     for prefix, label in prefixes:
         if path.startswith(prefix):
@@ -178,6 +179,8 @@ def _authorization(path: str) -> str:
         return "Shared API bearer/host/Origin boundary; returns the local history bundle with best-effort secret redaction applied; credential/configuration and audit tables are excluded by construction; no separate user/tenant role check is implemented."
     if path == "/api/history/retention/run":
         return "Shared API bearer/host/Origin boundary; applies configured retention to aged conversation/telemetry/context-vault rows and FTS copies plus inactive harness sessions/transcripts; never touches credentials, the tool audit trail, or OpenContext documents; no separate user/tenant role check is implemented."
+    if path.startswith("/api/security/"):
+        return "Shared API bearer/host/Origin boundary; single-operator security incident containment, disjoint-dependency fallback qualification, and post-incident requalification/restoration."
     if path.startswith(("/api/", "/v1/")):
         return "Shared API bearer/host/Origin boundary; no user/tenant role check is implemented."
     raise InventoryError(f"No authorization mapping for registered endpoint {path!r}")
@@ -304,6 +307,7 @@ def render(source: str | None = None, routes: Iterable[Any] | None = None) -> st
         "| Skills | Skill files below configured local roots; no SQLite table | GitHub shallow clone on install; optional local `search.py` process | `/api/skills*`; HTTPS GitHub source validation; downloaded code execution off unless `STUDIO_ALLOW_SKILL_CODE=1` |",
         "| Council Hall | `hall_sessions`, `hall_messages` | Configured model/provider routing | `/api/hall/*`; shared API bearer boundary |",
         "| Harness / GSD / SDLC | `harness_sessions`, `tool_audit_events`, local JSONL/message files and Git worktrees | Configured model/provider and MCP calls; local Git; shell/Python via disabled/sandbox/explicit host mode | `/api/harness/*`; shared bearer plus workflow/tool policy and approval checks; worktree apply is a separate authenticated route action |",
+        "| Security incident containment and qualification | `$HARNESS_STORE_DIR/security_incidents/state.json` and `$HARNESS_STORE_DIR/containment/state.json` (`0600` owner-only fsynced state; no SQLite table) | Local process-tree signal delivery (`ProcessSupervisor`) on containment; no outbound network calls | `/api/security/*`; shared bearer boundary; fail-closed suspension, shared-dependency fallback checks, and post-incident requalification |",
         "| OpenContext and context vault | `opencontext_docs`, `opencontext_fts`, `ctx_vault_chunks`, `ctx_vault_fts`, `ctx_session_metrics` | Local SQLite/FTS5 and workspace files | `/api/opencontext/*`, context tools; shared API bearer boundary |",
         "| Telemetry and performance | `perf_samples` and cached in-process telemetry | Local system/container CLI probes and local OMLX admin HTTP endpoints | `/api/telemetry`; shared bearer boundary; telemetry may fall back to demo data when local backend is unavailable |",
         "| Guided onboarding preflight | Read-only view of settings, `cloud_providers`/`model_combos` rows, workspace permissions, and container-CLI presence | None: deliberately no outbound calls, keyring reads, or DNS resolution | `/api/onboarding/preflight`; shared bearer boundary, local-only snapshot, no secrets in the response |",

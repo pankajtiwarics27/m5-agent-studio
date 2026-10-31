@@ -370,6 +370,32 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   [`docs/mcp-idempotency.md`](docs/mcp-idempotency.md)
   ([`ADR-0015`](docs/adr/0015-mcp-idempotency-and-external-effect-reconciliation.md)).
 
+- **Security incident containment, configuration generation tracking, and
+  shared-dependency fallback qualification (`M5-P3-06`, ADR-0016):**
+  `sandbox_boundary.py` models container backend dependency graphs
+  (`SandboxBackendProfile`: runtime, OCI runtime, kernel/VM boundary, image
+  digest, network/cgroup/mount drivers, and mandatory hardening flags) and
+  monotonic `ConfigurationGeneration` records in
+  `$HARNESS_STORE_DIR/security_incidents/state.json` (`0600` atomic write +
+  file/directory `fsync`), cross-linked to `hold-{incident_id}` barriers in
+  `ContainmentStore`. Hardening regressions, configuration drift on qualified
+  backends, or failing qualification checks immediately open a
+  `SecurityIncidentRecord`, deny dependent admissions via
+  `UnifiedExecutionCoordinator` and `_start_code_process`
+  (`security_guarantee_suspended`) while blocking `STUDIO_EXECUTION_MODE=host`
+  bypass (`unsafe_host_fallback_forbidden`), and terminate matching running
+  subprocesses via `ProcessSupervisor.contain_by_capability_async`. Alternative
+  container backends (`POST /api/security/incidents/{id}/fallback`) must be
+  disjoint from `incident.failed_dependencies` (`409 shared_failed_dependency`
+  on shared VM kernel, OCI runtime, or compromised image digest) and carry
+  post-incident qualification covering every failed guarantee; restoration
+  (`POST /api/security/incidents/{id}/restore`) requires fresh post-incident
+  requalification on the remediated configuration generation and zero
+  `lingering_pids`. Pinned by 9 end-to-end tests
+  (`tests/test_security_incident_containment.py`) and documented in
+  [`docs/security-incident-containment.md`](docs/security-incident-containment.md)
+  ([`ADR-0016`](docs/adr/0016-security-incident-containment-and-fallback-qualification.md)).
+
 - **The execution boundary is extracted and its coverage is inventoried
   (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`–`M5-P1-04`):**
   `execution_spine.py` and `side_effect_ledger.py` form a stdlib-only seam
@@ -758,11 +784,16 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
   `$HARNESS_STORE_DIR/grants/state.json`, non-renewable finite expiry,
   event-driven revocation with cross-tool anti-bypass, capability-specific
   in-flight containment, and subprocess secret/injection environment scrubbing),
-  **and `M5-P3-05`** (fail-closed MCP connector idempotency classification with
+  **`M5-P3-05`** (fail-closed MCP connector idempotency classification with
   explicit unsupported marking, action-ID/idempotency-key binding, strict
   read-only queryable-outcome reconciliation without duplicate external effects,
   uncertain non-idempotent write session pause and operator resolution routes,
-  and wire-level `tools/call` central admission enforcement).
+  and wire-level `tools/call` central admission enforcement), **and `M5-P3-06`**
+  (security backend dependency graphs, monotonic configuration generations,
+  prompt guarantee-scoped suspension and subprocess termination, disjoint
+  shared-dependency fallback qualification, post-incident requalification before
+  restoration, and crash-durable `$HARNESS_STORE_DIR/security_incidents/state.json`
+  + `ContainmentStore` barriers).
   `M5-P3-01` and `M5-P4-01` remain `blocked` pending operator
   qualification runs (`scripts/qualify_environment.py`,
   [`docs/qualification-suite.md`](docs/qualification-suite.md)) — a live Docker
