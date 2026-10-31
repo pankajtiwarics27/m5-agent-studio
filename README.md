@@ -296,10 +296,29 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   pre-existing tampering or undeclared exact-scope mutations `uncertain` so
   `IntentLedger` blocks follow-up consequential actions. `app._sandbox_command`
   now delegates hardened container CLI construction to
-  `sandbox_boundary.build_container_invocation`. Pinned by 12 end-to-end profile
+  `sandbox_boundary.build_container_invocation`. Pinned by 16 end-to-end profile
   tests (`tests/test_execution_profiles.py`) + 5 sandbox-boundary tests
   (`tests/test_sandbox_boundary.py`) and documented in
   [`docs/execution-profiles.md`](docs/execution-profiles.md) (ADR-0012).
+- **Process supervision and durable in-flight containment (`M5-P3-03`):**
+  `process_supervision.py` (stdlib only, inlined into `studio.py`) tracks every
+  spawned subprocess (`_start_code_process`/`_execute_limited`,
+  `_execute_skill_script_inner`, `_mcp_stdio_rpc`) by `(pid, pgid, uid,
+  start_fingerprint, container_name, supervision_id)`, executes bounded
+  cooperative `SIGTERM` → `SIGKILL` escalation across both process groups and
+  `os.setsid()` detached descendants carrying `M5_SUPERVISION_ID` (sweeping
+  orphaned background daemons on normal leader exit as well), persists
+  `in_flight_processes`, `persisted_barriers`, `fenced_origins`, and
+  `incident_history` atomically in `$HARNESS_STORE_DIR/containment/state.json`
+  (`0700` dir / `0600` file, `O_NOFOLLOW`) across restarts, denies stale,
+  foreign-boot, cancelled, and `POST /api/harness/sessions/{id}/contain`
+  quarantined origins across all action classes (`stale_origin_fenced`), and
+  blocks conflicting mutations and conflicting task/workspace resumptions until
+  unresolved side effects are reconciled (failing closed across all overlapping
+  actions while any unkillable `lingering_pids` process remains alive). Pinned
+  by 13 process-supervision tests (`tests/test_process_supervision.py`) and
+  documented in [`docs/process-supervision.md`](docs/process-supervision.md)
+  (ADR-0013).
 
 - **The execution boundary is extracted and its coverage is inventoried
   (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`–`M5-P1-04`):**
@@ -320,7 +339,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
   pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
   plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
-- **22 of 50 shipped Python modules are wired into the served app**
+- **23 of 51 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`, `execution_spine` since `M5-P0-06`,
   `runtime_persistence` since `M5-P1-01`, `side_effect_ledger` since `M5-P1-03`,
@@ -329,8 +348,9 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   `M5-P1-07`, `sandbox_boundary` + `workspace_snapshots` since `M5-P2-01`, and
   `edit_transactions` since `M5-P2-02`, `edit_rollback` since `M5-P2-03`, and
   `verification_evidence` since `M5-P2-04`, `recovery_guard` since
-  `M5-P2-05`, `resource_admission` + `model_admission` since `M5-P4-01`, and
-  `execution_profiles` since `M5-P3-02`;
+  `M5-P2-05`, `resource_admission` + `model_admission` since `M5-P4-01`,
+  `execution_profiles` since `M5-P3-02`, and `process_supervision` since
+  `M5-P3-03`;
   5 of 42 at the time of the audit table). Together they govern
   schema upgrades, SQLite transactions, authoritative task-state / lease-epoch
   checks at admission (`M5-P1-02`), durable `runtime_actions`
@@ -444,16 +464,16 @@ are not guarantees):
 Observed structure (see [`docs/architecture.md`](docs/architecture.md) and the
 generated [`docs/subsystem-dependency-inventory.md`](docs/subsystem-dependency-inventory.md)):
 
-- **Backend:** one FastAPI process — `app.py` plus 49 small contract modules
+- **Backend:** one FastAPI process — `app.py` plus 50 small contract modules
   listed in `pyproject.toml`. `studio.py` is a **generated** standalone
-  artifact (`scripts/build_studio.py` inlines 22 sibling modules — including
+  artifact (`scripts/build_studio.py` inlines 23 sibling modules — including
   `runtime_persistence`, `side_effect_ledger`, `execution_budget`,
   `workflow_checkpoints`, `workflow_state`, `mcp_client`, `context_store`,
   `onboarding_preflight`, `failure_injection`, `execution_spine`, `task_events`,
   `sandbox_boundary`, `workspace_snapshots`, `edit_transactions`,
   `edit_rollback`, `verification_evidence`, `recovery_guard`,
-  `resource_admission`, `model_admission`, `execution_profiles`,
-  `history_privacy`, and `workflow_orchestration`, and embeds
+  `resource_admission`, `model_admission`, `process_supervision`,
+  `execution_profiles`, `history_privacy`, and `workflow_orchestration`, and embeds
   `static/index.html`); never hand-edit it.
 - **Frontend:** `static/index.html`, vanilla HTML/CSS/JS, no build step.
 - **Storage:** SQLite (`studio_history.db`, `SCHEMA_VERSION = 3`) in WAL mode
@@ -576,22 +596,27 @@ requires `STUDIO_ALLOW_SKILL_CODE=1`; private-URL access requires
 3. **A git worktree is not an operating-system sandbox.** Worktree isolation
    protects the main checkout from agent edits; it does not confine processes.
 4. **`side_effect_ledger.py` (`M5-P1-03`), `sandbox_boundary` (`M5-P2-01` /
-   `M5-P3-02`), and `execution_profiles.py` (`M5-P3-02`) are integrated, with
-   bounded external and subprocess caveats.** `DurableActionLedger` commits
+   `M5-P3-02`), `execution_profiles.py` (`M5-P3-02`), and
+   `process_supervision.py` (`M5-P3-03`) are integrated, with bounded external
+   and host-mode caveats.** `DurableActionLedger` commits
    durable `runtime_actions` intent rows before admitted consequential actions,
    transitions missing results and ambiguous MCP/timeout outcomes to `uncertain`
    (never `failed`), forwards `Idempotency-Key` on outbound HTTP MCP
    `tools/call`, and refuses blind replay of `non_idempotent` or unverified
    `uncertain` writes; `_resolve_confined_path`, `workspace_snapshots.py`, and
    `execution_profiles.py` enforce workspace confinement, secret/VCS-hook
-   refusal, and admission barriers, and `app._sandbox_command` delegates
-   container flag construction to `sandbox_boundary.build_container_invocation`.
+   refusal, and admission barriers, `process_supervision.py` supervises process
+   groups + `M5_SUPERVISION_ID` detached trees and persists containment holds
+   across restarts, and `app._sandbox_command` delegates container flag
+   construction to `sandbox_boundary.build_container_invocation`.
    However, globally exactly-once external effects still cannot be guaranteed
    when a third-party MCP server ignores `Idempotency-Key`, static shell/AST
    inspection cannot decide arbitrary Turing-complete obfuscation before runtime
    (relying on post-execution quarantine/`uncertain` marking when container
-   isolation is unverified), and not all subprocess descendants can be
-   guaranteed terminable (`M5-P3-03`).
+   isolation is unverified), and in `STUDIO_EXECUTION_MODE=host` a process that
+   deliberately scrubs `M5_SUPERVISION_ID` and double-forks before tree
+   discovery cannot be kernel-guaranteed without OS cgroups/PID namespaces
+   (`M5-P3-01`).
 5. **Live container isolation is unqualified (smoke test 2026-10-30, `M5-P0-04`).**
    No Docker/Podman exists in the evidence environment; the live probes were
    **attempted and failed closed** (`RuntimeError: Sandbox runtime 'docker' is
@@ -672,12 +697,18 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
   **and `M5-P2-05`** (durable failure memory with evidence fingerprints,
   stagnation/oscillation detection, bounded retry/replan/rollback budgets that
   survive a crash, and recovery that requires changed evidence or conditions;
-  phase P2 100%). `M5-P3-01` and `M5-P4-01` are the two stories still open: both
-  now have their code and their evidence tooling (`scripts/qualify_environment.py`,
-  [`docs/qualification-suite.md`](docs/qualification-suite.md)), and both stay
-  `blocked` until a qualified record exists — a live Docker run for the sandbox and
-  a 24 GB pressure measurement for the model story. `P4-01`'s serving-path half is
-  implemented and tested ([`docs/model-admission.md`](docs/model-admission.md)).
+  phase P2 100%), **`M5-P3-02`** (unified execution profiles, quote/inline-shell
+  and Python AST policy parity, conservative footprints, admission barriers, and
+  post-execution reconciliation), **and `M5-P3-03`** (process supervision across
+  process groups and `os.setsid()` detached trees, cooperative `SIGTERM` →
+  bounded `SIGKILL` escalation, durable `$HARNESS_STORE_DIR/containment/state.json`
+  origin fencing and conflicting barrier holds across restarts, and incident
+  containment). `M5-P3-01` and `M5-P4-01` remain `blocked` pending operator
+  qualification runs (`scripts/qualify_environment.py`,
+  [`docs/qualification-suite.md`](docs/qualification-suite.md)) — a live Docker
+  run for the sandbox and a 24 GB pressure measurement for the model story.
+  `P4-01`'s serving-path half is implemented and tested
+  ([`docs/model-admission.md`](docs/model-admission.md)).
   Planned work is not implemented product behavior.
 - **AS program (Adaptive Runtime)** —
   [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json)
