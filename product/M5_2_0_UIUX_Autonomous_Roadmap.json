@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 8,
+  "revision": 9,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -100,14 +100,12 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": "UIUX-P1-05",
-    "active_stories": [
-      "UIUX-P1-05"
-    ],
-    "last_completed_story": "UIUX-P1-04",
-    "next_recommended_story": "UIUX-P1-05",
-    "last_checkpoint": "2026-11-01T09:30:00Z",
-    "last_session_id": "arena/ea9340ed-m5-agent-studio",
+    "active_story": null,
+    "active_stories": [],
+    "last_completed_story": "UIUX-P1-05",
+    "next_recommended_story": "UIUX-P2-01",
+    "last_checkpoint": "2026-11-01T10:20:00Z",
+    "last_session_id": "arena/22bea3a6-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
     "last_verified_commit": "c50be66",
@@ -224,7 +222,7 @@
       "id": "P1",
       "name": "Shell and design system",
       "title": "Shell and design system",
-      "status": "in_progress",
+      "status": "done",
       "story_ids": [
         "UIUX-P1-01",
         "UIUX-P1-02",
@@ -233,11 +231,11 @@
         "UIUX-P1-05"
       ],
       "total": 5,
-      "done": 4,
-      "in_progress": 1,
+      "done": 5,
+      "in_progress": 0,
       "blocked": 0,
       "not_started": 0,
-      "percent_complete": 80
+      "percent_complete": 100
     },
     {
       "id": "P2",
@@ -341,11 +339,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 10,
-    "in_progress": 1,
+    "done": 11,
+    "in_progress": 0,
     "blocked": 0,
     "not_started": 29,
-    "percent_complete": 25
+    "percent_complete": 28
   },
   "stories": [
     {
@@ -2048,8 +2046,8 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "Implement shared empty error and recovery presentations with no loss of existing functionality.",
+      "current_behavior": "Recorded at P1-05: four surfaces wrote \"Error: \" + exception message into a neighbouring element (refreshOnboarding replaced the checklist with one blocked row, sendChat appended the error to an empty assistant bubble, installSkill, runMcpPlayground, openHarnessDiffModal), and the harness event stream said nothing when it dropped, retrying every four seconds in silence. Council had a bespoke centred empty block; Compare and Chat opened blank.",
+      "target_behavior": "One presentation shape with a required cause, a required what-is-kept line, at least one action, and a kind (empty, error, recovery) that sets the tone; wired into five live paths with the behaviour each path needs (checklist preserved on a failed pre-check, transcript preserved and placeholder rolled back on a failed reply, cursor and event count on a resumed stream).",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
         "Trace relevant DOM, JS handlers, API and backend state transitions",
@@ -2091,23 +2089,126 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P1-05 (Implement shared empty error and recovery presentations). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 40,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-11-01T09:30:00Z",
-        "updated_at": "2026-11-01T09:30:00Z",
-        "completed_at": null,
+        "updated_at": "2026-11-01T10:20:00Z",
+        "completed_at": "2026-11-01T10:20:00Z",
         "owner_session": "arena/22bea3a6-m5-agent-studio",
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "commit_sha": "bc166f93f302aa3a47b5d255d97d8cddbecf1c4a",
+        "changed_files": [
+          "static/index.html",
+          "studio.py",
+          "scripts/uiux_presentation_inventory.py",
+          "scripts/presentation_walk.mjs",
+          "tests/test_presentations.py",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-program.md",
+          "docs/README.md",
+          "docs/media/presentations/start-error.png",
+          "docs/media/presentations/chat-error.png",
+          "docs/media/presentations/harness-recovery.png",
+          "docs/media/presentations/compare-empty.png",
+          "docs/media/presentations/README.md",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "The defect was that the shell had four ways to say nothing useful and one way to say nothing at all. A refused request pasted \"Error: \" plus the exception message into whichever element happened to be nearby; a dropped harness event stream said nothing and retried every four seconds, so a frozen timeline and a stopped task looked identical. None of them said what was kept or what a reader could do next, which is the difference between a failure and a recovery.",
+          "The component is one shape with three kinds. empty says nothing has happened yet and what will appear; error says something failed and carries role=alert so a screen reader hears it; recovery says the state was interrupted and how it resumes. The kind sets the tone - a hairline for empty, --rose for error, --amber for recovery - and nothing else.",
+          "The cause and the what-is-kept line are required arguments, not prose a caller remembers to write. presentInto() throws 'presentation refused: ...' on an unknown kind, a blank title, cause or context, no actions, or an action whose run is not a function. The labels 'Cause: ' and 'Kept: ' are drawn by the stylesheet through ::before, so a call site supplies the sentence and cannot ship without the label.",
+          "Five live paths are wired, and each one changed behaviour rather than only appearance. Start: a failed preflight no longer replaces the checklist with one blocked row - the steps from the last successful read stay, and the presentation says nothing was changed by the attempt. Chat: the old handler appended the error to the assistant bubble and left an empty bubble behind, so a retry duplicated the message; the placeholder is now rolled back, the transcript is kept, and Retry re-sends exactly once. Harness: a dropped stream names its cause, the number of events still shown and the cursor it resumes from, and offers both Reconnect now and Reload from snapshot. Council and Compare now open with the empty presentation and the action that starts them instead of a bespoke centred block and a blank column.",
+          "Proof is measured twice, because a source check cannot prove behaviour and a browser check cannot prove the shape holds everywhere. scripts/uiux_presentation_inventory.py fails on a declared-but-unstyled kind, a missing Cause:/Kept: label, a builder that stops validating a field, a container that can be empty or broken but nothing presents into, a call with no cause or no kept line or no action, a raw \"Error: \" writer inside a converted handler, and an empty pane that is not drawn at startup. scripts/presentation_walk.mjs then starves the app on purpose with request interception and asserts the rendered result, including that Retry restores the checklist and that Reconnect clears the recovery presentation.",
+          "The honest limit: three raw \"Error: \" writers remain (installSkill, openHarnessDiffModal, runMcpPlayground). They are listed with their line numbers in the generated page and pinned by a ceiling in the test, rather than converted here, because they belong to panes P2 to P4 rebuild and a story about the component should not quietly become a pane rewrite.",
+          "Council's empty state is covered by the walk's assertion rather than a fifth capture: the demo session seeds a message into Council, so a screenshot would show the seeded transcript and prove nothing about the empty path. This ledger records that difference instead of presenting a picture of the wrong thing.",
+          "Acceptance is the reviewer's call. This record states what was measured on this tree; the pull request is where the story is reviewed against its criteria, and the ledger does not treat its own closure as that review.",
+          "README.md was not touched: the story changes how failures are presented, not what a user can do or which capability exists, and the readme contract requires an explicit statement rather than a silent skip.",
+          "Closed in the commit that carries this record; the suite, the four browser walks and the captures ran on the tree of bc166f93f302aa3a47b5d255d97d8cddbecf1c4a, which differs from it only by ledger and regenerated-artifact content."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "1778 passed, 26 skipped (after git fetch --unshallow; a shallow clone fails test_baseline for a missing pinned commit, which is an environment artifact, not a code failure)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest tests/test_presentations.py tests/test_uiux_roadmap.py -q",
+            "exit_code": 0,
+            "result": "41 passed"
+          },
+          {
+            "command": "node scripts/presentation_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway> --screenshots docs/media/presentations",
+            "exit_code": 0,
+            "result": "20 of 20 checks passed (refused preflight, refused chat stream, disconnected harness stream, builder refusals, empty Compare, no page errors, no presentation left open)"
+          },
+          {
+            "command": "node scripts/overlay_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "78 passed, 0 failed, 1 blocked (harnessDiffModal needs an active Harness session)"
+          },
+          {
+            "command": "node scripts/keyboard_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "22 of 22 checks passed"
+          },
+          {
+            "command": "node scripts/status_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "74 of 74 checks passed"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_presentation_inventory.py --check",
+            "exit_code": 0,
+            "result": "3 kinds, 5 call sites across 5 containers, 3 raw writers left, 0 findings"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py",
+            "exit_code": 0,
+            "result": "Documentation validation passed (5 required pages, 139 files scanned)"
+          },
+          {
+            "command": ".venv/bin/python -m ruff check . && .venv/bin/python -m ruff format --check scripts/uiux_presentation_inventory.py tests/test_presentations.py",
+            "exit_code": 0,
+            "result": "clean"
+          },
+          {
+            "command": ".venv/bin/python scripts/build_studio.py && .venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "studio.py rebuilt (3,052,996 bytes); one inline script block parses"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_preservation_signoff.py --check",
+            "exit_code": 0,
+            "result": "up to date: historical-approval-unbound, 21 capabilities across 6 panes, 168 markup controls, 37 state-changing routes traced"
+          }
+        ],
+        "visual_evidence": [
+          "docs/media/presentations/start-error.png - a refused preflight: CHECK FAILED in the header, all six steps from the last read still on the pane, and the error presentation naming the cause with Re-check and Providers.",
+          "docs/media/presentations/chat-error.png - a refused chat stream: the typed message kept in the transcript, no empty assistant bubble, Retry and Dismiss.",
+          "docs/media/presentations/harness-recovery.png - an aborted harness event stream: amber, cause, the count of events still shown and the cursor it resumes from, Reconnect now and Reload from snapshot.",
+          "docs/media/presentations/compare-empty.png - Compare with nothing run: the neutral empty presentation and the one action that starts it.",
+          "Captured by scripts/presentation_walk.mjs --screenshots while the requests were aborted, not from a mock: docs/media/presentations/README.md records the command and what each picture shows."
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "A presentation without a cause or a what-is-kept line is refused rather than defaulted. A template that fills in 'something went wrong' would make every call site look complete while telling a reader nothing, which is the defect this story exists to remove.",
+          "The 'Cause: ' and 'Kept: ' labels live in the stylesheet, not in the call site. Six call sites will drift; one ::before cannot.",
+          "An unusable presentation throws. It does not fall back to a bare error string: silently degrading to the thing being replaced would hide the bug rather than show it, and the error kind is already how bugs are presented.",
+          "Retry re-sends the same text through the same function, and the empty assistant placeholder is rolled back before the presentation appears. The old behaviour left a blank bubble, so a retry produced two messages for one question.",
+          "The harness recovery offers two paths, not one. Reconnect resumes the stream from the cursor; Reload from snapshot re-reads the authoritative state. A stream can reconnect and still have missed an event, so the second path is not decoration.",
+          "The three remaining raw error writers are pinned by a ceiling and listed by line instead of converted. Converting them here would mean rewriting three panes inside a component story, and the ledger would then claim pane work that P2 to P4 have not measured."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Empty, error and recovery presentations with a required cause, a what-is-kept line and the actions that exist, wired into five live paths",
+        "handoff_note": "Presentations go through window.M5Presentations.present(target, {kind, title, cause, context, actions}) - do not build one by hand, and do not write \"Error: \" + message anywhere new. scripts/uiux_presentation_inventory.py --check is the cheap source gate; scripts/presentation_walk.mjs is the behavioural one and needs a browser, a running demo tour and a throwaway token. The three remaining raw writers (installSkill, openHarnessDiffModal, runMcpPlayground) are the first migration targets in P2 and P4; the test's RAW_WRITER_CEILING may only go down. The stored baseline captures in docs/media/screenshots predate this layer and are refreshed with the P1 gate, not silently here.",
+        "next_action": "None. UIUX-P2-01 (Start readiness and actionable onboarding) is next.",
         "readme_updated": false
       },
       "required_evidence": [
