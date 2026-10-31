@@ -343,14 +343,129 @@ class SQLiteStorage:
 STORAGE: Storage = SQLiteStorage()
 
 
+def _collect_registered_secret_values(*, exclude_mcp_alias: str | None = None) -> tuple[str, ...]:
+    """Gather configured Studio, cloud provider, and MCP secret values for child-env scrubbing."""
+    secrets_found: list[str] = []
+    if STUDIO_API_TOKEN and len(STUDIO_API_TOKEN) >= 6:
+        secrets_found.append(STUDIO_API_TOKEN)
+    db_file = Path(DB_PATH)
+    if not db_file.exists():
+        return tuple(secrets_found)
+    excl = str(exclude_mcp_alias or "").strip().lower()
+    try:
+        def _read_secrets(conn: sqlite3.Connection) -> tuple[list[Any], list[Any]]:
+            prov_rows: list[Any] = []
+            mcp_rows: list[Any] = []
+            try:
+                prov_rows = conn.execute(
+                    "SELECT api_key FROM cloud_providers WHERE api_key != ''"
+                ).fetchall()
+            except sqlite3.OperationalError:
+                pass
+            try:
+                mcp_rows = conn.execute(
+                    "SELECT alias, auth_token, headers_json, env_json FROM mcp_servers"
+                ).fetchall()
+            except sqlite3.OperationalError:
+                pass
+            return prov_rows, mcp_rows
+
+        prov_rows, mcp_rows = runtime_persistence.run_read(STORAGE, DB_PATH, _read_secrets)
+        for (raw_key,) in prov_rows:
+            resolved = _keyring_read(str(raw_key or ""))
+            if resolved and len(resolved) >= 6:
+                secrets_found.append(resolved)
+        for alias_val, raw_tok, hdrs_json, env_json in mcp_rows:
+            row_alias = str(alias_val or "").strip().lower()
+            tok_val = _keyring_read(str(raw_tok or ""))
+            if tok_val and len(tok_val) >= 6:
+                secrets_found.append(tok_val)
+            try:
+                hdr_map = json.loads(hdrs_json) if hdrs_json else {}
+                if isinstance(hdr_map, dict):
+                    for hk, hv in hdr_map.items():
+                        if _is_sensitive_name(str(hk)):
+                            hv_res = _keyring_read(str(hv or ""))
+                            if hv_res and len(hv_res) >= 6:
+                                secrets_found.append(hv_res)
+            except Exception:
+                pass
+            if excl and row_alias == excl:
+                continue
+            try:
+                env_map = json.loads(env_json) if env_json else {}
+                if isinstance(env_map, dict):
+                    for ek, ev in env_map.items():
+                        if _is_sensitive_name(str(ek)) or scoped_grants.is_secret_env_key(str(ek)):
+                            ev_res = _keyring_read(str(ev or ""))
+                            if ev_res and len(ev_res) >= 6:
+                                secrets_found.append(ev_res)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return tuple(secrets_found)
+
+
 def _minimal_execution_env(extra: dict[str, Any] | None = None) -> dict[str, str]:
-    """Build a deliberately small child-process environment; never inherit API-key env by default."""
-    keep = {"SYSTEMROOT", "WINDIR", "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL", "TERM"}
-    env = {k: v for k, v in os.environ.items() if k.upper() in keep}
+    """Build a secret-scrubbed child-process environment; never inherit API-key or injection env."""
     interpreter_dir = str(Path(sys.executable).resolve().parent)
-    env["PATH"] = os.pathsep.join(dict.fromkeys((interpreter_dir, os.defpath)))
-    if extra:
-        env.update({str(k): str(v) for k, v in extra.items()})
+    return scoped_grants.sanitize_subprocess_env(
+        os.environ,
+        interpreter_dir=interpreter_dir,
+        extra=extra,
+        allow_scoped_mcp_env=True,
+        known_secret_values=_collect_registered_secret_values(),
+    )
+
+
+def _arbitrary_subprocess_env(extra: dict[str, Any] | None = None) -> dict[str, str]:
+    """Strict environment for arbitrary shell, Python, skill, and telemetry child processes."""
+    interpreter_dir = str(Path(sys.executable).resolve().parent)
+    return scoped_grants.sanitize_subprocess_env(
+        os.environ,
+        interpreter_dir=interpreter_dir,
+        extra=extra,
+        allow_scoped_mcp_env=False,
+        known_secret_values=_collect_registered_secret_values(),
+    )
+
+
+def _mcp_stdio_env(alias: str, srv_env: Mapping[str, Any] | None = None) -> dict[str, str]:
+    """Build a scoped child environment for one enabled stdio MCP server (excluding all other secrets)."""
+    interpreter_dir = str(Path(sys.executable).resolve().parent)
+    return scoped_grants.sanitize_subprocess_env(
+        os.environ,
+        interpreter_dir=interpreter_dir,
+        extra=srv_env,
+        allow_scoped_mcp_env=True,
+        known_secret_values=_collect_registered_secret_values(exclude_mcp_alias=alias),
+    )
+
+
+def _git_subprocess_env() -> dict[str, str]:
+    """Build a non-interactive, secret-scrubbed environment for internal Git worktree commands."""
+    interpreter_dir = str(Path(sys.executable).resolve().parent)
+    env = scoped_grants.sanitize_subprocess_env(
+        os.environ,
+        interpreter_dir=interpreter_dir,
+        allow_scoped_mcp_env=False,
+        known_secret_values=_collect_registered_secret_values(),
+        extra_allowed_host_keys=(
+            "HOME",
+            "GIT_AUTHOR_NAME",
+            "GIT_AUTHOR_EMAIL",
+            "GIT_COMMITTER_NAME",
+            "GIT_COMMITTER_EMAIL",
+            "GIT_CONFIG_NOSYSTEM",
+            "GIT_CONFIG_GLOBAL",
+        ),
+        include_git_non_interactive=True,
+    )
+    git_bin = shutil.which("git")
+    if git_bin:
+        git_dir = str(Path(git_bin).resolve().parent)
+        env["PATH"] = os.pathsep.join(dict.fromkeys((git_dir, env.get("PATH", os.defpath))))
     return env
 
 
@@ -364,13 +479,32 @@ def _execution_mode() -> str:
 
 
 def _sandbox_cli_env(runtime_path: str) -> dict[str, str]:
-    env = _minimal_execution_env()
+    interpreter_dir = str(Path(sys.executable).resolve().parent)
+    env = scoped_grants.sanitize_subprocess_env(
+        os.environ,
+        interpreter_dir=interpreter_dir,
+        allow_scoped_mcp_env=False,
+        known_secret_values=_collect_registered_secret_values(),
+        extra_allowed_host_keys=(
+            "HOME",
+            "DOCKER_HOST",
+            "DOCKER_CONTEXT",
+            "DOCKER_CONFIG",
+            "DOCKER_TLS_VERIFY",
+            "DOCKER_CERT_PATH",
+            "CONTAINER_HOST",
+        ),
+    )
     cli_dir = str(Path(runtime_path).resolve().parent)
     env["PATH"] = os.pathsep.join(dict.fromkeys((cli_dir, env.get("PATH", os.defpath))))
-    for key in ("HOME", "DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CONFIG", "DOCKER_TLS_VERIFY", "DOCKER_CERT_PATH", "CONTAINER_HOST"):
-        if key in os.environ:
-            env[key] = os.environ[key]
     return env
+
+
+def _docker_telemetry_env() -> dict[str, str]:
+    docker_bin = shutil.which("docker")
+    if docker_bin:
+        return _sandbox_cli_env(docker_bin)
+    return _arbitrary_subprocess_env()
 
 
 def _sandbox_workspace_preflight(root: Path) -> None:
@@ -489,6 +623,32 @@ def get_containment_store() -> process_supervision.ContainmentStore:
     return process_supervision.ContainmentStore(HARNESS_STORE_DIR)
 
 
+_SCOPED_GRANT_STORE: scoped_grants.ScopedGrantStore | None = None
+_SCOPED_GRANT_STORE_DIR: Path | None = None
+_SCOPED_GRANT_STORE_LOCK = threading.Lock()
+
+
+def get_scoped_grant_store() -> scoped_grants.ScopedGrantStore:
+    """Return the durable M5-P3-04 scoped grant, policy-revision, and revocation store."""
+    global _SCOPED_GRANT_STORE, _SCOPED_GRANT_STORE_DIR
+    cur_dir = Path(HARNESS_STORE_DIR).resolve()
+    with _SCOPED_GRANT_STORE_LOCK:
+        if _SCOPED_GRANT_STORE is None or _SCOPED_GRANT_STORE_DIR != cur_dir:
+            _SCOPED_GRANT_STORE = scoped_grants.ScopedGrantStore(cur_dir)
+            _SCOPED_GRANT_STORE_DIR = cur_dir
+        return _SCOPED_GRANT_STORE
+
+
+def _reset_scoped_grant_store(store: scoped_grants.ScopedGrantStore | None = None) -> None:
+    """Replace or clear the cached scoped grant store (tests / clock injection)."""
+    global _SCOPED_GRANT_STORE, _SCOPED_GRANT_STORE_DIR
+    with _SCOPED_GRANT_STORE_LOCK:
+        _SCOPED_GRANT_STORE = store
+        _SCOPED_GRANT_STORE_DIR = (
+            Path(HARNESS_STORE_DIR).resolve() if store is not None else None
+        )
+
+
 def get_process_supervisor() -> process_supervision.ProcessSupervisor:
     """Return the authoritative M5-P3-03 process supervisor bound to ``HARNESS_STORE_DIR``."""
     global _PROCESS_SUPERVISOR, _PROCESS_SUPERVISOR_STORE_DIR
@@ -512,20 +672,36 @@ def _register_active_subprocess(
     root: Path,
     default_tool: str,
     container_name: str | None = None,
+    explicit_resource_scopes: Sequence[str] = (),
 ) -> process_supervision.SupervisedProcessRecord | None:
     if not proc.pid or proc.pid <= 1:
         return None
     scope = execution_spine.current_admission_scope()
+    eff_tool = scope.tool_name if scope is not None else default_tool
     ws_str = str(root.resolve()) if root is not None else ""
     barriers = (
         scope.barriers
         if (scope is not None and scope.barriers)
-        else ((f"workspace:{ws_str}", "exclusive"),) if ws_str else ()
+        else (() if eff_tool.startswith("mcp__") else (((f"workspace:{ws_str}", "exclusive"),) if ws_str else ()))
+    )
+    caps = (
+        scope.capabilities
+        if (scope is not None and scope.capabilities)
+        else scoped_grants.resolve_tool_capabilities(eff_tool)
+    )
+    res_scopes = (
+        tuple(explicit_resource_scopes)
+        if explicit_resource_scopes
+        else (
+            scope.resource_scopes
+            if (scope is not None and scope.resource_scopes)
+            else tuple(t for t, _ in barriers)
+        )
     )
     return supervisor.register_process(
         proc,
         supervision_id=supervision_id,
-        tool_name=(scope.tool_name if scope is not None else default_tool),
+        tool_name=eff_tool,
         workspace_root=root,
         container_name=container_name,
         session_id=(scope.session_id if scope is not None else "standalone"),
@@ -535,6 +711,9 @@ def _register_active_subprocess(
         boot_id=_PROCESS_BOOT_ID,
         action_id=(scope.action_id if scope is not None else ""),
         barriers=barriers,
+        grant_id=(scope.grant_id if scope is not None else None),
+        capabilities=caps,
+        resource_scopes=res_scopes,
     )
 
 
@@ -566,13 +745,13 @@ async def _start_code_process(root: Path, command: str, *, python_code: bool = F
         proc = await asyncio.create_subprocess_exec(
             *argv, cwd=str(root), stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-            start_new_session=True, env=_minimal_execution_env(extra_env),
+            start_new_session=True, env=_arbitrary_subprocess_env(extra_env),
         )
     else:
         proc = await asyncio.create_subprocess_shell(
             command, cwd=str(root), stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-            start_new_session=True, env=_minimal_execution_env(extra_env),
+            start_new_session=True, env=_arbitrary_subprocess_env(extra_env),
         )
     return proc, None
 
@@ -752,7 +931,7 @@ async def _execute_skill_script_inner(
             sys.executable, str(script), *args,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
             cwd=str(cwd), start_new_session=True,
-            env=_minimal_execution_env({process_supervision.SUPERVISION_ENV_KEY: sup_id}),
+            env=_arbitrary_subprocess_env({process_supervision.SUPERVISION_ENV_KEY: sup_id}),
         )
         if proc.pid:
             sup_rec = _register_active_subprocess(
@@ -1590,6 +1769,7 @@ def init_db() -> None:
     _sup_reports = get_process_supervisor().recover_on_startup(
         current_boot_id=_PROCESS_BOOT_ID
     )
+    get_scoped_grant_store().sweep_expired_grants()
     _rp_store = runtime_persistence.RuntimePersistenceStore(STORAGE, DB_PATH)
     _rp_store.expire_stale_leases()
     _fenced_boot = _rp_store.fence_foreign_boot_leases(
@@ -2446,7 +2626,7 @@ async def install_skills_native_git(spec: dict[str, Any]) -> tuple[list[str], st
     with tempfile.TemporaryDirectory(prefix="m5_skill_") as tmpdir:
         proc = await asyncio.create_subprocess_exec(
             "git", "clone", "--depth", "1", spec["git_url"], tmpdir,
-            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, env=_minimal_execution_env(),
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, env=_git_subprocess_env(),
         )
         out, _ = await asyncio.wait_for(proc.communicate(), timeout=60.0)
         if proc.returncode != 0:
@@ -2533,7 +2713,8 @@ async def get_docker_telemetry() -> dict[str, Any]:
     containers: list[dict[str, Any]] = []
     docker_reachable = False
     try:
-        proc = await asyncio.create_subprocess_exec("docker", "ps", "--format", "{{json .}}", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        docker_env = _docker_telemetry_env()
+        proc = await asyncio.create_subprocess_exec("docker", "ps", "--format", "{{json .}}", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=docker_env)
         stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=2.0)
         if proc.returncode == 0:
             docker_reachable = True
@@ -2545,7 +2726,7 @@ async def get_docker_telemetry() -> dict[str, Any]:
                 cid = row.get("Names") or row.get("ID", "")
                 ps_map[cid] = {"name": row.get("Names", ""), "id": row.get("ID", ""), "image": row.get("Image", ""), "status": row.get("Status", ""), "cpu_pct": 0.0, "mem_bytes": 0, "mem_formatted": "0 MB"}
             if ps_map:
-                sproc = await asyncio.create_subprocess_exec("docker", "stats", "--no-stream", "--format", "{{json .}}", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+                sproc = await asyncio.create_subprocess_exec("docker", "stats", "--no-stream", "--format", "{{json .}}", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=docker_env)
                 s_out, _ = await asyncio.wait_for(sproc.communicate(), timeout=2.5)
                 if sproc.returncode == 0:
                     for line in s_out.decode(errors="ignore").splitlines():
@@ -9739,6 +9920,34 @@ def upsert_mcp_server(payload: dict[str, Any]) -> dict[str, Any]:
             ),
         ),
     )
+    if prev is not None:
+        prev_enabled = bool(prev.get("enabled"))
+        prev_tools = set(prev.get("enabled_tools") or [])
+        removed_tools = prev_tools - set(enabled_tools)
+        policy_tightened = (
+            prev.get("approval_policy") == "auto" and approval_policy != "auto"
+        )
+        if (prev_enabled and not enabled) or removed_tools or policy_tightened:
+            try:
+                get_scoped_grant_store().bump_global_policy_revision(
+                    reason=f"mcp_server_reconfigured:{alias}",
+                    mcp_alias=alias,
+                    mcp_server_disabled_or_deleted=(not enabled or policy_tightened),
+                    removed_mcp_tools=removed_tools,
+                )
+            except Exception:
+                pass
+            if not enabled:
+                try:
+                    get_process_supervisor().contain_by_capability_sync(
+                        reason=f"mcp_server_disabled:{alias}",
+                        session_id="*",
+                        capabilities=("external_mcp",),
+                        resource_scopes=(f"mcp:{alias}",),
+                        persist_hold=False,
+                    )
+                except Exception:
+                    pass
     return get_mcp_server(alias, include_secret=False)
 
 
@@ -9829,9 +10038,10 @@ async def _mcp_stdio_rpc(
     args = [str(a) for a in (srv.get("args") or [])]
     supervisor = get_process_supervisor()
     sup_id = supervisor.new_supervision_id()
+    srv_alias = str(srv.get("alias") or "stdio").strip().lower()
     raw_srv_env = dict(srv.get("env") or {})
     raw_srv_env[process_supervision.SUPERVISION_ENV_KEY] = sup_id
-    merged_env = _minimal_execution_env(raw_srv_env)
+    merged_env = _mcp_stdio_env(srv_alias, raw_srv_env)
     resolved_cwd = (cwd or WORKSPACE_ROOT).resolve()
     work_cwd = str(resolved_cwd)
     sup_rec: process_supervision.SupervisedProcessRecord | None = None
@@ -9855,7 +10065,8 @@ async def _mcp_stdio_rpc(
                 proc,
                 supervision_id=sup_id,
                 root=resolved_cwd,
-                default_tool=f"mcp__{srv.get('alias') or 'stdio'}__{method}",
+                default_tool=f"mcp__{srv_alias}__{method}",
+                explicit_resource_scopes=(f"mcp:{srv_alias}",),
             )
         assert proc.stdin is not None and proc.stdout is not None
 
@@ -10234,6 +10445,24 @@ async def api_delete_mcp_server(alias: str) -> JSONResponse:
         DB_PATH,
         lambda conn: conn.execute("DELETE FROM mcp_servers WHERE alias = ?", (clean,)),
     )
+    try:
+        get_scoped_grant_store().bump_global_policy_revision(
+            reason=f"mcp_server_deleted:{clean}",
+            mcp_alias=clean,
+            mcp_server_disabled_or_deleted=True,
+        )
+    except Exception:
+        pass
+    try:
+        await get_process_supervisor().contain_by_capability_async(
+            reason=f"mcp_server_deleted:{clean}",
+            session_id="*",
+            capabilities=("external_mcp",),
+            resource_scopes=(f"mcp:{clean}",),
+            persist_hold=False,
+        )
+    except Exception:
+        pass
     return JSONResponse({"status": "deleted", "servers": list_mcp_servers(include_secret=False)})
 
 
@@ -11289,11 +11518,81 @@ _HARNESS_ABORT_FLAGS: set[str] = set()
 def _create_pending_tool_approval(session_id: str, step: int, tool: str, args: dict[str, Any]) -> dict[str, Any]:
     approval_id = f"apr-{uuid.uuid4().hex[:10]}"
     event = asyncio.Event()
-    slot = {"event": event, "session_id": session_id, "decision": "pending", "note": ""}
+    safe_args = dict(args) if isinstance(args, Mapping) else {}
+    slot = {
+        "event": event,
+        "session_id": session_id,
+        "tool": tool,
+        "args": safe_args,
+        "decision": "pending",
+        "note": "",
+        "ttl_seconds": scoped_grants.SG_DEFAULT_GRANT_TTL_SECONDS,
+    }
     _PENDING_APPROVALS[approval_id] = slot
     _update_harness_session_state(session_id, status="waiting_approval")
-    _append_harness_event(session_id, "approval/request", {"step": step, "approval_id": approval_id, "tool": tool, "args": args})
-    return {"approval_id": approval_id, "event": event, "tool": tool, "args": args, "step": step, "session_id": session_id}
+    _append_harness_event(session_id, "approval/request", {"step": step, "approval_id": approval_id, "tool": tool, "args": safe_args})
+    return {"approval_id": approval_id, "event": event, "tool": tool, "args": safe_args, "step": step, "session_id": session_id}
+
+
+def _persist_approval_grant_outcome(
+    approval_id: str,
+    decision: str,
+    *,
+    session_id: str,
+    tool_name: str,
+    args: Mapping[str, Any] | None,
+    note: str = "",
+    ttl_seconds: float | None = None,
+) -> None:
+    if not approval_id or not session_id:
+        return
+    eff_ttl = float(
+        ttl_seconds if ttl_seconds is not None else scoped_grants.SG_DEFAULT_GRANT_TTL_SECONDS
+    )
+    try:
+        store = get_scoped_grant_store()
+        if store.has_grant_or_tombstone(approval_id):
+            return
+        if decision != "approve":
+            store.record_rejected_approval(
+                approval_id,
+                session_id=session_id,
+                reason=note or "rejected",
+            )
+            return
+        if not tool_name:
+            return
+        sess_pol = "standard"
+        ws_root: Path | None = WORKSPACE_ROOT
+        try:
+            sess_row = get_harness_session_db(session_id)
+            sess_pol = str(sess_row.get("policy") or "standard")
+            if sess_row.get("worktree_dir"):
+                ws_root = Path(sess_row["worktree_dir"]).resolve()
+        except Exception:
+            pass
+        caps = scoped_grants.resolve_tool_capabilities(tool_name, args)
+        scopes = scoped_grants.resolve_tool_resource_scopes(
+            tool_name,
+            args,
+            workspace_root=ws_root,
+        )
+        store.issue_grant(
+            grant_id=approval_id,
+            session_id=session_id,
+            capabilities=caps,
+            resource_scopes=scopes,
+            tool_names=(tool_name,),
+            exact_args=args if isinstance(args, Mapping) else {},
+            ttl_seconds=eff_ttl,
+            max_uses=1,
+            current_policy=sess_pol,
+            issued_by="operator_approval",
+            note=note,
+            workspace_root=ws_root,
+        )
+    except Exception:
+        pass
 
 
 def _resolve_pending_tool_approval(
@@ -11303,6 +11602,7 @@ def _resolve_pending_tool_approval(
     note: str = "",
     session_id: str | None = None,
     remember: bool = True,
+    ttl_seconds: float | None = None,
 ) -> None:
     """Finalize a pending approval exactly once and retain a bounded replay tombstone.
 
@@ -11328,6 +11628,19 @@ def _resolve_pending_tool_approval(
     _PENDING_APPROVALS.pop(approval_id, None)
     slot["decision"] = decision
     slot["note"] = slot.get("note") or note
+    if ttl_seconds is not None:
+        slot["ttl_seconds"] = float(ttl_seconds)
+    scoping_session = session_id or slot.get("session_id")
+    if remember and isinstance(scoping_session, str) and scoping_session:
+        _persist_approval_grant_outcome(
+            approval_id,
+            decision,
+            session_id=scoping_session,
+            tool_name=str(slot.get("tool") or ""),
+            args=(slot.get("args") if isinstance(slot.get("args"), Mapping) else {}),
+            note=str(slot.get("note") or ""),
+            ttl_seconds=float(slot.get("ttl_seconds") or scoped_grants.SG_DEFAULT_GRANT_TTL_SECONDS),
+        )
     slot["event"].set()
     if remember:
         _record_replay_tombstone(approval_id, decision)
@@ -11405,6 +11718,15 @@ async def _await_tool_approval(pending: dict[str, Any], timeout: float = 600.0) 
         remember=True,
     )
     approved = slot.get("decision") == "approve"
+    _persist_approval_grant_outcome(
+        approval_id,
+        "approve" if approved else "reject",
+        session_id=session_id,
+        tool_name=str(pending.get("tool") or slot.get("tool") or ""),
+        args=(pending.get("args") if isinstance(pending.get("args"), Mapping) else {}),
+        note=str(slot.get("note") or ""),
+        ttl_seconds=float(slot.get("ttl_seconds") or scoped_grants.SG_DEFAULT_GRANT_TTL_SECONDS),
+    )
     decision = {"approved": approved, "note": slot.get("note") or "", "approval_id": approval_id, "decision": "approve" if approved else "reject"}
     _append_harness_event(
         session_id,
@@ -11736,19 +12058,20 @@ def _inspect_git_repo(folder: Path) -> dict[str, Any]:
     if not folder.is_dir():
         return {"is_git": False, "has_head": False, "root": str(folder), "branch": ""}
     try:
+        git_env = _git_subprocess_env()
         top = subprocess.check_output(
             ["git", "rev-parse", "--show-toplevel"],
-            cwd=str(folder), stderr=subprocess.DEVNULL, text=True, timeout=3.0,
+            cwd=str(folder), stderr=subprocess.DEVNULL, text=True, timeout=3.0, env=git_env,
         ).strip()
         has_head = subprocess.run(
             ["git", "rev-parse", "--verify", "HEAD"],
-            cwd=str(folder), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3.0,
+            cwd=str(folder), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3.0, env=git_env,
         ).returncode == 0
         branch = ""
         if has_head:
             branch = subprocess.check_output(
                 ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                cwd=str(folder), stderr=subprocess.DEVNULL, text=True, timeout=3.0,
+                cwd=str(folder), stderr=subprocess.DEVNULL, text=True, timeout=3.0, env=git_env,
             ).strip()
         return {"is_git": True, "has_head": has_head, "root": top, "branch": branch}
     except Exception:
@@ -11783,7 +12106,7 @@ def _create_harness_worktree(session_id: str, workspace_dir: Path) -> tuple[Path
     wt_root.parent.mkdir(parents=True, exist_ok=True)
     proc = subprocess.run(
         ["git", "worktree", "add", "-b", branch_name, str(wt_root), "HEAD"],
-        cwd=str(repo_root), capture_output=True, text=True, timeout=10.0,
+        cwd=str(repo_root), capture_output=True, text=True, timeout=10.0, env=_git_subprocess_env(),
     )
     if proc.returncode != 0:
         raise RuntimeError(f"Unable to create isolated worktree; refusing direct-folder fallback: {proc.stderr.strip()[:240]}")
@@ -11801,7 +12124,7 @@ def _registered_worktree_branch(repo_root: Path, target: Path) -> str | None:
     try:
         listing = subprocess.check_output(
             ["git", "worktree", "list", "--porcelain"],
-            cwd=str(repo_root), stderr=subprocess.DEVNULL, text=True, timeout=5.0,
+            cwd=str(repo_root), stderr=subprocess.DEVNULL, text=True, timeout=5.0, env=_git_subprocess_env(),
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -11848,10 +12171,11 @@ def _remove_harness_worktree(workspace_dir: Path, worktree_dir: Path, branch_nam
     registered_branch = _registered_worktree_branch(repo_root, wt_target)
     if registered_branch != f"refs/heads/{branch_name}":
         return
+    git_env = _git_subprocess_env()
     try:
         removed = subprocess.run(
             ["git", "worktree", "remove", "--force", str(wt_target)],
-            cwd=str(repo_root), capture_output=True, text=True, timeout=8.0,
+            cwd=str(repo_root), capture_output=True, text=True, timeout=8.0, env=git_env,
         )
     except (OSError, subprocess.SubprocessError):
         # On timeout/error preserve the worktree and its uncommitted data.
@@ -11861,7 +12185,7 @@ def _remove_harness_worktree(workspace_dir: Path, worktree_dir: Path, branch_nam
     try:
         subprocess.run(
             ["git", "branch", "-D", "--", branch_name],
-            cwd=str(repo_root), capture_output=True, text=True, timeout=5.0, check=True,
+            cwd=str(repo_root), capture_output=True, text=True, timeout=5.0, check=True, env=git_env,
         )
     except (OSError, subprocess.SubprocessError):
         # The worktree is already removed; a leftover branch is safer than
@@ -13099,7 +13423,13 @@ async def _execute_harness_tool_inner(
         mutating_or_executing = tool_name in ("run_bash", "ctx_execute_python") or (
             tool_name == "ctx_run_block" and norm_block in execution_spine.CONSEQUENTIAL_BLOCKS
         )
-        if policy == "standard" and mutating_or_executing and not approved:
+        active_scope = execution_spine.current_admission_scope()
+        eff_inner_approved = approved or (
+            active_scope is not None
+            and active_scope.grant_source in execution_spine.EXPLICIT_APPROVAL_GRANT_SOURCES
+            and active_scope.grant_id is not None
+        )
+        if policy == "standard" and mutating_or_executing and not eff_inner_approved:
             return {"ok": False, "output": f"Denied: `{tool_name}` requires an explicit approval in standard policy.", "diff": "", "elapsed_ms": 1}
         if tool_name == "list_files":
             try:
@@ -14010,6 +14340,16 @@ def _on_worker_epochs_fenced(
     reason: str,
 ) -> None:
     supervisor = get_process_supervisor()
+    epoch_nums = [ep.epoch for ep in epochs]
+    if epoch_nums:
+        try:
+            get_scoped_grant_store().revoke_by_lifecycle_event(
+                task_id=task_id,
+                epochs=epoch_nums,
+                reason=f"epoch_fenced:{reason}",
+            )
+        except Exception:
+            pass
     for ep in epochs:
         supervisor.store.fence_origin(
             reason=reason,
@@ -14649,6 +14989,7 @@ async def _run_authorized_tool(
     action_class: execution_spine.ActionClass | None = None,
     grant_source: str = "unspecified",
     approval_id: str | None = None,
+    grant_id: str | None = None,
     task_id: str | None = None,
     task_state: str | None = None,
     epoch: int | None = None,
@@ -14664,11 +15005,38 @@ async def _run_authorized_tool(
     Thin adapter over the extracted execution-spine boundary
     (``execution_spine.DurableActionBoundary``; see ADR-0002): action-class
     separation, grant provenance, task-state/epoch fencing, policy evaluation,
-    unified execution profiles & resource barriers (M5-P3-02), durable
-    ``runtime_actions`` intent/result ledger + ``tool_audit_events`` auditing,
-    replay safety, post-execution footprint reconciliation, and scoped
-    anti-bypass admission tokens are enforced there."""
+    unified execution profiles & resource barriers (M5-P3-02), scoped grants &
+    revocation (M5-P3-04), durable ``runtime_actions`` intent/result ledger +
+    ``tool_audit_events`` auditing, replay safety, post-execution footprint
+    reconciliation, and scoped anti-bypass admission tokens are enforced there."""
     db_path_obj = Path(DB_PATH)
+    grant_store = get_scoped_grant_store()
+    eff_approved = approved
+    eff_grant_source = grant_source
+    eff_grant_id = grant_id
+    if (
+        not eff_approved
+        and eff_grant_id is None
+        and approval_id is None
+        and eff_grant_source in {"policy", "unspecified"}
+        and tool_requires_approval(tool_name, args, policy)
+    ):
+        try:
+            matched_grant = grant_store.find_matching_grant(
+                session_id=session_id,
+                task_id=task_id,
+                epoch=epoch,
+                tool_name=tool_name,
+                args=args,
+                workspace_root=workspace_root,
+            )
+        except scoped_grants.GrantStoreIntegrityError:
+            matched_grant = None
+        if matched_grant is not None:
+            eff_approved = True
+            eff_grant_source = "scoped_grant"
+            eff_grant_id = matched_grant.grant_id
+
     profile_coord = _execution_profile_controller().bind(
         workspace_root=workspace_root,
         store_dir=HARNESS_STORE_DIR,
@@ -14682,6 +15050,7 @@ async def _run_authorized_tool(
         execution_mode_fn=_safe_execution_mode_label,
         on_reconciled=_on_footprint_reconciled,
         containment_store=get_containment_store(),
+        grant_store=grant_store,
         current_boot_id=_PROCESS_BOOT_ID,
         sql_task_fencing=True,
     )
@@ -14698,13 +15067,14 @@ async def _run_authorized_tool(
             tool_name=tool_name,
             args=args,
             policy=policy,
-            approved=approved,
+            approved=eff_approved,
             session_id=session_id,
             additional_denial=additional_denial,
             denial_as_exception=denial_as_exception,
             action_class=action_class,
-            grant_source=grant_source,
+            grant_source=eff_grant_source,
             approval_id=approval_id,
+            grant_id=eff_grant_id,
             task_id=task_id,
             task_state=task_state,
             epoch=epoch,
@@ -14730,6 +15100,7 @@ async def execute_mcp_tool_call(
     session_id: str = "mcp-direct",
     grant_source: str = "unspecified",
     approval_id: str | None = None,
+    grant_id: str | None = None,
     task_id: str | None = None,
     task_state: str | None = None,
     epoch: int | None = None,
@@ -14743,7 +15114,7 @@ async def execute_mcp_tool_call(
     effective_grant = (
         grant_source
         if grant_source != "unspecified"
-        else ("operator_one_call" if approved else "policy")
+        else ("scoped_grant" if (grant_id and approved) else ("operator_one_call" if approved else "policy"))
     )
     return await _run_authorized_tool(
         tool_name,
@@ -14755,6 +15126,7 @@ async def execute_mcp_tool_call(
         denial_as_exception=True,
         grant_source=effective_grant,
         approval_id=approval_id,
+        grant_id=grant_id,
         task_id=task_id,
         task_state=task_state,
         epoch=epoch,
@@ -14776,6 +15148,7 @@ async def _execute_harness_tool(
     policy_denial: str | None = None,
     grant_source: str = "unspecified",
     approval_id: str | None = None,
+    grant_id: str | None = None,
     task_id: str | None = None,
     task_state: str | None = None,
     epoch: int | None = None,
@@ -14799,7 +15172,7 @@ async def _execute_harness_tool(
     effective_grant = (
         grant_source
         if grant_source != "unspecified"
-        else ("operator_approval" if approved else "policy")
+        else ("scoped_grant" if (grant_id and approved) else ("operator_approval" if approved else "policy"))
     )
     session_scope = str(sess.get("id") or "unknown")
     resolved_action_id = action_id
@@ -14834,6 +15207,7 @@ async def _execute_harness_tool(
         additional_denial=policy_denial,
         grant_source=effective_grant,
         approval_id=approval_id,
+        grant_id=grant_id,
         task_id=resolved_task_id,
         task_state=resolved_task_state,
         epoch=resolved_epoch,
@@ -15126,7 +15500,8 @@ async def api_patch_harness_session(session_id: str, request: Request) -> JSONRe
         sess = get_harness_session_db(session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    pol = body.get("policy") if body.get("policy") in HARNESS_POLICIES else sess["policy"]
+    prev_pol = sess["policy"]
+    pol = body.get("policy") if body.get("policy") in HARNESS_POLICIES else prev_pol
     lead = body.get("lead_model") or sess["lead_model"]
     critic = body.get("critic_model") or sess["critic_model"]
     now = time.time()
@@ -15138,6 +15513,43 @@ async def api_patch_harness_session(session_id: str, request: Request) -> JSONRe
             (pol, lead, critic, now, session_id),
         ),
     )
+    if pol != prev_pol:
+        new_rev, revoked_grants = get_scoped_grant_store().bump_session_policy_revision(
+            session_id,
+            new_policy=pol,
+            reason=f"policy_changed:{prev_pol}->{pol}",
+        )
+        if pol == "plan":
+            for aid, slot in list(_PENDING_APPROVALS.items()):
+                if slot.get("session_id") == session_id and not slot["event"].is_set():
+                    _resolve_pending_tool_approval(
+                        aid,
+                        "reject",
+                        note=f"Session policy tightened to `{pol}`.",
+                        session_id=session_id,
+                        remember=True,
+                    )
+            await get_process_supervisor().contain_by_capability_async(
+                reason=f"policy_tightened_to_{pol}",
+                session_id=session_id,
+                capabilities=("code_execution", "workspace_write", "external_mcp"),
+            )
+        elif revoked_grants:
+            await get_process_supervisor().contain_by_capability_async(
+                reason=f"policy_revision_{new_rev}",
+                session_id=session_id,
+                grant_ids=[g.grant_id for g in revoked_grants],
+            )
+        _safe_append_harness_event(
+            session_id,
+            "security/policy_revision",
+            {
+                "previous_policy": prev_pol,
+                "new_policy": pol,
+                "policy_revision": new_rev,
+                "revoked_grant_ids": [g.grant_id for g in revoked_grants],
+            },
+        )
     return JSONResponse(get_harness_session_db(session_id, include_events=True))
 
 
@@ -15171,6 +15583,7 @@ async def api_delete_harness_session(session_id: str) -> JSONResponse:
             p.unlink(missing_ok=True)
     _workspace_snapshot_store().delete_session_snapshots(session_id)
     execution_profiles.FootprintReconciliationLedger(HARNESS_STORE_DIR).purge_session(session_id)
+    get_scoped_grant_store().purge_session(session_id)
     if (
         not del_reports
         or (
@@ -15276,8 +15689,29 @@ async def api_approve_harness_tool(request: Request) -> JSONResponse:
             detail="Approval is scoped to its originating session; session_id must match.",
         )
 
+    raw_ttl = body.get("ttl_seconds")
+    ttl_seconds: float | None = None
+    if raw_ttl is not None:
+        try:
+            ttl_val = float(raw_ttl)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail="`ttl_seconds` must be a positive finite number.") from exc
+        if ttl_val <= 0.0 or ttl_val > scoped_grants.SG_MAX_GRANT_TTL_SECONDS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"`ttl_seconds` must be within (0, {scoped_grants.SG_MAX_GRANT_TTL_SECONDS}].",
+            )
+        ttl_seconds = ttl_val
+
     final_decision = "approve" if decision == "approve" else "reject"
-    _resolve_pending_tool_approval(aid, final_decision, note=note, session_id=request_session, remember=True)
+    _resolve_pending_tool_approval(
+        aid,
+        final_decision,
+        note=note,
+        session_id=request_session,
+        remember=True,
+        ttl_seconds=ttl_seconds,
+    )
     return JSONResponse({"status": "ok", "approval_id": aid, "decision": final_decision, "session_id": request_session})
 
 
@@ -15287,6 +15721,11 @@ async def api_abort_harness(session_id: str) -> JSONResponse:
     for aid, slot in list(_PENDING_APPROVALS.items()):
         if slot.get("session_id") == session_id and not slot["event"].is_set():
             _resolve_pending_tool_approval(aid, "reject", note="Run aborted by user.", session_id=session_id, remember=True)
+    get_scoped_grant_store().revoke_by_lifecycle_event(
+        session_id=session_id,
+        task_id=session_id,
+        reason="aborted_by_operator",
+    )
     abort_reports = await get_process_supervisor().contain_by_scope_async(
         session_id=session_id,
         task_id=session_id,
@@ -15857,6 +16296,11 @@ async def api_cancel_harness_session(session_id: str, request: Request) -> JSONR
     for aid, slot in list(_PENDING_APPROVALS.items()):
         if slot.get("session_id") == session_id and not slot["event"].is_set():
             _resolve_pending_tool_approval(aid, "reject", note="Run cancelled by operator.", session_id=session_id, remember=True)
+    get_scoped_grant_store().revoke_by_lifecycle_event(
+        session_id=session_id,
+        task_id=session_id,
+        reason=reason,
+    )
     supervisor = get_process_supervisor()
     cancel_reports = await supervisor.contain_by_scope_async(
         session_id=session_id,
@@ -15956,6 +16400,11 @@ async def api_contain_harness_session(session_id: str, request: Request) -> JSON
             _resolve_pending_tool_approval(
                 aid, "reject", note="Contained due to security incident.", session_id=session_id, remember=True
             )
+    get_scoped_grant_store().revoke_by_lifecycle_event(
+        session_id=session_id,
+        task_id=session_id,
+        reason=f"security_incident:{reason}",
+    )
     wt_path = Path(sess["worktree_dir"]).resolve() if sess.get("worktree_dir") else None
     supervisor = get_process_supervisor()
     reports = await supervisor.contain_by_scope_async(
@@ -16025,6 +16474,193 @@ async def api_contain_harness_session(session_id: str, request: Request) -> JSON
             "contained_processes": len(reports),
             "unresolved_action_ids": unresolved,
             "containment": _containment_summary_or_none(session_id),
+        }
+    )
+
+
+@app.get("/api/harness/sessions/{session_id}/grants")
+async def api_list_harness_session_grants(session_id: str) -> JSONResponse:
+    """Inspect active and historical scoped grants, policy revisions, and revocations (M5-P3-04)."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    try:
+        summary = get_scoped_grant_store().summary(
+            session_id=session_id,
+            current_policy=str(sess.get("policy") or "standard"),
+        )
+    except scoped_grants.GrantStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return JSONResponse(summary)
+
+
+@app.post("/api/harness/sessions/{session_id}/grants")
+async def api_issue_harness_session_grant(session_id: str, request: Request) -> JSONResponse:
+    """Issue an auditable, finite-expiry, non-renewable scoped grant bound to current policy revision."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Request body must be a JSON object.")
+    wt_root = Path(sess["worktree_dir"]).resolve() if sess.get("worktree_dir") else WORKSPACE_ROOT
+    raw_caps = body.get("capabilities") or []
+    raw_scopes = body.get("resource_scopes") or ["workspace:."]
+    raw_tools = body.get("tool_names") or []
+    if not isinstance(raw_caps, list) or not isinstance(raw_scopes, list) or not isinstance(raw_tools, list):
+        raise HTTPException(status_code=400, detail="`capabilities`, `resource_scopes`, and `tool_names` must be lists.")
+    ttl_seconds = body.get("ttl_seconds", scoped_grants.SG_DEFAULT_GRANT_TTL_SECONDS)
+    max_uses = body.get("max_uses")
+    exact_args = body.get("exact_args")
+    if exact_args is not None and not isinstance(exact_args, dict):
+        raise HTTPException(status_code=400, detail="`exact_args` must be a JSON object when provided.")
+    try:
+        grant = get_scoped_grant_store().issue_grant(
+            session_id=session_id,
+            task_id=(str(body["task_id"]).strip() if body.get("task_id") else None),
+            epoch=(int(body["epoch"]) if body.get("epoch") is not None else None),
+            capabilities=[str(c) for c in raw_caps],
+            resource_scopes=[str(s) for s in raw_scopes],
+            tool_names=[str(t) for t in raw_tools],
+            exact_args=exact_args,
+            ttl_seconds=ttl_seconds,
+            max_uses=max_uses,
+            current_policy=str(sess.get("policy") or "standard"),
+            issued_by="operator_api",
+            note=str(body.get("note") or "")[:240],
+            workspace_root=wt_root,
+        )
+    except scoped_grants.InvalidGrantSpecError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except scoped_grants.GrantStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    _safe_append_harness_event(
+        session_id,
+        "security/grant_issued",
+        {
+            "grant_id": grant.grant_id,
+            "capabilities": list(grant.capabilities),
+            "resource_scopes": list(grant.resource_scopes),
+            "tool_names": list(grant.tool_names),
+            "expires_at": grant.expires_at,
+            "max_uses": grant.max_uses,
+            "session_policy_revision": grant.session_policy_revision,
+        },
+    )
+    return JSONResponse(
+        {
+            "status": "issued",
+            "grant": grant.to_mapping(),
+            "summary": get_scoped_grant_store().summary(
+                session_id=session_id,
+                current_policy=str(sess.get("policy") or "standard"),
+            ),
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/grants/revoke")
+async def api_revoke_harness_session_grant(session_id: str, request: Request) -> JSONResponse:
+    """Revoke a grant or capability/resource scope and contain matching in-flight subprocesses (`AC 1` & `AC 3`)."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Request body must be a JSON object.")
+    wt_root = Path(sess["worktree_dir"]).resolve() if sess.get("worktree_dir") else WORKSPACE_ROOT
+    reason = str(body.get("reason") or "operator_revoked")[:160]
+    grant_id_in = str(body.get("grant_id") or "").strip()
+    block_scope = bool(body.get("block_scope", True))
+    store = get_scoped_grant_store()
+    supervisor = get_process_supervisor()
+
+    revoked_list: list[dict[str, Any]] = []
+    rule_map: dict[str, Any] | None = None
+    contained_outcomes: list[process_supervision.TerminationOutcome] = []
+
+    try:
+        if grant_id_in:
+            rev_rec, rule = store.revoke_grant(
+                grant_id_in,
+                session_id=session_id,
+                reason=reason,
+                block_scope=block_scope,
+            )
+            if rev_rec is None:
+                raise HTTPException(status_code=404, detail=f"Grant {grant_id_in!r} not found.")
+            revoked_list.append(rev_rec.to_mapping())
+            if rule is not None:
+                rule_map = rule.to_mapping()
+            persist_ws_hold = any(c in {"code_execution", "workspace_write"} for c in rev_rec.capabilities)
+            contained_outcomes = await supervisor.contain_by_capability_async(
+                reason=f"grant_revoked:{grant_id_in}",
+                session_id=session_id,
+                grant_ids=(grant_id_in,),
+                capabilities=(rev_rec.capabilities if block_scope else ()),
+                resource_scopes=(rev_rec.resource_scopes if block_scope else ()),
+                persist_hold=persist_ws_hold,
+            )
+        else:
+            raw_caps = body.get("capabilities") or []
+            raw_scopes = body.get("resource_scopes") or []
+            raw_tools = body.get("tool_names") or []
+            if not isinstance(raw_caps, list) or not isinstance(raw_scopes, list) or not isinstance(raw_tools, list):
+                raise HTTPException(
+                    status_code=400,
+                    detail="`capabilities`, `resource_scopes`, and `tool_names` must be lists.",
+                )
+            rule, rev_grants = store.revoke_scope(
+                session_id=session_id,
+                task_id=(str(body["task_id"]).strip() if body.get("task_id") else None),
+                capabilities=[str(c) for c in raw_caps],
+                resource_scopes=[str(s) for s in raw_scopes],
+                tool_names=[str(t) for t in raw_tools],
+                reason=reason,
+                workspace_root=wt_root,
+            )
+            rule_map = rule.to_mapping()
+            revoked_list = [g.to_mapping() for g in rev_grants]
+            persist_ws_hold = any(c in {"code_execution", "workspace_write"} for c in rule.capabilities)
+            contained_outcomes = await supervisor.contain_by_capability_async(
+                reason=f"capability_revoked:{rule.revocation_id}",
+                session_id=session_id,
+                grant_ids=[g.grant_id for g in rev_grants],
+                capabilities=rule.capabilities,
+                resource_scopes=rule.resource_scopes,
+                tool_names=rule.tool_names,
+                persist_hold=persist_ws_hold,
+            )
+    except scoped_grants.InvalidGrantSpecError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except scoped_grants.GrantStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    _safe_append_harness_event(
+        session_id,
+        "security/grant_revoked",
+        {
+            "reason": reason,
+            "revoked_grant_ids": [g["grant_id"] for g in revoked_list],
+            "revocation_rule": rule_map,
+            "contained_processes": len(contained_outcomes),
+        },
+    )
+    return JSONResponse(
+        {
+            "status": "revoked",
+            "session_id": session_id,
+            "revoked_grants": revoked_list,
+            "revocation_rule": rule_map,
+            "contained_processes": len(contained_outcomes),
+            "summary": store.summary(
+                session_id=session_id,
+                current_policy=str(sess.get("policy") or "standard"),
+            ),
         }
     )
 
@@ -16429,7 +17065,45 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     approved = False
                     grant_source = "policy"
                     approval_id: str | None = None
+                    resolved_grant_id: str | None = None
                     reject_note = ""
+
+                    if needs_approval:
+                        live_wt = Path(sess_live["worktree_dir"]).resolve() if sess_live.get("worktree_dir") else WORKSPACE_ROOT
+                        g_store = get_scoped_grant_store()
+                        t_caps = scoped_grants.resolve_tool_capabilities(t_name, t_args)
+                        t_scopes = scoped_grants.resolve_tool_resource_scopes(
+                            t_name, t_args, workspace_root=live_wt
+                        )
+                        try:
+                            rev_check = g_store.check_revocation_denials(
+                                session_id=session_id,
+                                task_id=session_id,
+                                tool_name=t_name,
+                                action_capabilities=t_caps,
+                                action_scopes=t_scopes,
+                            )
+                        except scoped_grants.GrantStoreIntegrityError:
+                            rev_check = None
+                        if rev_check is not None:
+                            needs_approval = False
+                        else:
+                            try:
+                                pre_grant = g_store.find_matching_grant(
+                                    session_id=session_id,
+                                    task_id=session_id,
+                                    epoch=lease_epoch,
+                                    tool_name=t_name,
+                                    args=t_args,
+                                    workspace_root=live_wt,
+                                )
+                            except scoped_grants.GrantStoreIntegrityError:
+                                pre_grant = None
+                            if pre_grant is not None:
+                                needs_approval = False
+                                approved = True
+                                grant_source = "scoped_grant"
+                                resolved_grant_id = pre_grant.grant_id
 
                     if needs_approval:
                         pending = _create_pending_tool_approval(session_id, step_idx, t_name, t_args)
@@ -16470,6 +17144,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         approved=approved,
                         grant_source=grant_source,
                         approval_id=approval_id,
+                        grant_id=resolved_grant_id,
                         step_id=step_idx,
                         call_index=tc_idx,
                     )
@@ -25397,7 +26072,7 @@ Guarantees:
 
 
 import asyncio
-from collections.abc import Awaitable, Callable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Collection, Mapping, Sequence
 import contextlib
 import contextvars
 from dataclasses import dataclass
@@ -25490,6 +26165,9 @@ class SupervisedProcessRecord:
     started_at: float
     status: str = "running"
     containment_reason: str = ""
+    grant_id: str | None = None
+    capabilities: tuple[str, ...] = ()
+    resource_scopes: tuple[str, ...] = ()
 
     def to_mapping(self) -> dict[str, Any]:
         return {
@@ -25511,6 +26189,9 @@ class SupervisedProcessRecord:
             "started_at": self.started_at,
             "status": self.status,
             "containment_reason": self.containment_reason,
+            "grant_id": self.grant_id,
+            "capabilities": list(self.capabilities),
+            "resource_scopes": list(self.resource_scopes),
         }
 
     @classmethod
@@ -25524,6 +26205,8 @@ class SupervisedProcessRecord:
                 raise ContainmentIntegrityError("Malformed barrier pair in SupervisedProcessRecord.")
             parsed_barriers.append((str(item[0]), str(item[1])))
         epoch_raw = raw.get("epoch")
+        raw_caps = raw.get("capabilities") or ()
+        raw_scopes = raw.get("resource_scopes") or ()
         return cls(
             supervision_id=str(raw["supervision_id"]),
             pid=int(raw["pid"]),
@@ -25543,6 +26226,9 @@ class SupervisedProcessRecord:
             started_at=float(raw.get("started_at") or 0.0),
             status=str(raw.get("status") or "running"),
             containment_reason=str(raw.get("containment_reason") or ""),
+            grant_id=(str(raw["grant_id"]) if raw.get("grant_id") else None),
+            capabilities=tuple(str(c) for c in raw_caps if str(c).strip()),
+            resource_scopes=tuple(str(s) for s in raw_scopes if str(s).strip()),
         )
 
 
@@ -26703,6 +27389,9 @@ class ProcessSupervisor:
         boot_id: str = "",
         action_id: str = "",
         barriers: Sequence[tuple[str, str]] = (),
+        grant_id: str | None = None,
+        capabilities: Sequence[str] = (),
+        resource_scopes: Sequence[str] = (),
     ) -> SupervisedProcessRecord:
         pid = int(proc.pid or 0)
         if pid <= 1:
@@ -26721,8 +27410,11 @@ class ProcessSupervisor:
             with contextlib.suppress(OSError):
                 ws_str = str(workspace_root.resolve())
         eff_barriers = tuple(barriers)
-        if not eff_barriers and ws_str:
+        if not eff_barriers and ws_str and not tool_name.startswith("mcp__"):
             eff_barriers = ((f"workspace:{ws_str}", "exclusive"),)
+        eff_scopes = tuple(str(s) for s in resource_scopes if str(s).strip())
+        if not eff_scopes:
+            eff_scopes = tuple(t for t, _ in eff_barriers)
 
         record = SupervisedProcessRecord(
             supervision_id=supervision_id,
@@ -26742,6 +27434,9 @@ class ProcessSupervisor:
             barriers=eff_barriers,
             started_at=time.time(),
             status="running",
+            grant_id=(str(grant_id) if grant_id else None),
+            capabilities=tuple(str(c) for c in capabilities if str(c).strip()),
+            resource_scopes=eff_scopes,
         )
         self._store.record_process_started(record)
         with self._lock:
@@ -27200,6 +27895,171 @@ class ProcessSupervisor:
             )
         return outcomes
 
+    @staticmethod
+    def _ps_scope_overlaps(scope_a: str, scope_b: str) -> bool:
+        if scope_a in {"*", "global:*"} or scope_b in {"*", "global:*"} or scope_a == scope_b:
+            return True
+        for wider, narrower in ((scope_a, scope_b), (scope_b, scope_a)):
+            if wider.startswith("workspace:"):
+                ws = wider.removeprefix("workspace:")
+                if narrower.startswith(f"path:{ws}:") or narrower.startswith(f"dir:{ws}:"):
+                    return True
+            elif wider.startswith("dir:") and ":" in wider.removeprefix("dir:"):
+                ws, rel = wider.removeprefix("dir:").rsplit(":", 1)
+                rel = rel.strip("/")
+                if narrower.startswith(f"path:{ws}:") or narrower.startswith(f"dir:{ws}:"):
+                    n_rel = narrower.split(":", 2)[2].strip("/")
+                    if n_rel == rel or n_rel.startswith(rel + "/"):
+                        return True
+            elif wider.startswith("mcp:") and narrower.startswith("mcp:"):
+                w_parts = wider.split(":")
+                n_parts = narrower.split(":")
+                if len(w_parts) == 2 and (w_parts[1] == "*" or w_parts[1] == n_parts[1]):
+                    return True
+        return False
+
+    def _select_capability_records(
+        self,
+        *,
+        session_id: str | None = None,
+        task_id: str | None = None,
+        grant_ids: Collection[str] = (),
+        capabilities: Collection[str] = (),
+        resource_scopes: Collection[str] = (),
+        tool_names: Collection[str] = (),
+    ) -> list[SupervisedProcessRecord]:
+        gid_set = {str(g) for g in grant_ids if str(g).strip()}
+        cap_set = {str(c) for c in capabilities if str(c).strip()}
+        scope_list = [str(s) for s in resource_scopes if str(s).strip()]
+        tool_set = {str(t) for t in tool_names if str(t).strip()}
+        if not gid_set and not cap_set and not scope_list and not tool_set:
+            return []
+
+        candidates: dict[str, SupervisedProcessRecord] = {}
+        with self._lock:
+            for sup_id, entry in self._live.items():
+                candidates[sup_id] = entry.record
+        for persisted in self._store.list_in_flight_processes():
+            candidates.setdefault(persisted.supervision_id, persisted)
+
+        matched: list[SupervisedProcessRecord] = []
+        for rec in candidates.values():
+            if (
+                session_id is not None
+                and session_id != "*"
+                and rec.session_id != session_id
+                and rec.task_id != session_id
+            ):
+                continue
+            if task_id is not None and rec.task_id != task_id and rec.session_id != task_id:
+                continue
+            if gid_set and rec.grant_id and rec.grant_id in gid_set:
+                matched.append(rec)
+                continue
+            if not cap_set and not scope_list and not tool_set:
+                continue
+            cap_ok = (not cap_set) or bool(set(rec.capabilities) & cap_set)
+            tool_ok = bool(tool_set) and (rec.tool_name in tool_set)
+            if cap_set and not cap_ok and not tool_ok:
+                continue
+            if tool_set and not cap_set and not tool_ok:
+                continue
+            rec_scopes = list(rec.resource_scopes) or [t for t, _ in rec.barriers]
+            scope_ok = (not scope_list) or any(
+                self._ps_scope_overlaps(r_sc, p_sc)
+                for r_sc in scope_list
+                for p_sc in (rec_scopes or ["global:*"])
+            )
+            if scope_ok:
+                matched.append(rec)
+        return matched
+
+    def contain_by_capability_sync(
+        self,
+        *,
+        reason: str,
+        session_id: str | None = None,
+        task_id: str | None = None,
+        grant_ids: Collection[str] = (),
+        capabilities: Collection[str] = (),
+        resource_scopes: Collection[str] = (),
+        tool_names: Collection[str] = (),
+        persist_hold: bool = True,
+    ) -> list[TerminationOutcome]:
+        """Contain ONLY in-flight subprocesses matching the revoked grant/capability/resource scope.
+
+        Fences only each terminated subprocess's ``supervision_id`` (not the
+        entire worker/epoch/session), preserving unrelated live capabilities.
+        """
+        records = self._select_capability_records(
+            session_id=session_id,
+            task_id=task_id,
+            grant_ids=grant_ids,
+            capabilities=capabilities,
+            resource_scopes=resource_scopes,
+            tool_names=tool_names,
+        )
+        outcomes: list[TerminationOutcome] = []
+        for rec in records:
+            self._store.fence_origin(
+                reason=reason,
+                session_id=rec.session_id,
+                task_id=rec.task_id,
+                supervision_id=rec.supervision_id,
+                quarantine_session=False,
+            )
+            outcomes.append(
+                self.terminate_record_sync(
+                    rec,
+                    reason=reason,
+                    persist_hold=persist_hold,
+                    fence_origin=False,
+                    quarantine_session=False,
+                )
+            )
+        return outcomes
+
+    async def contain_by_capability_async(
+        self,
+        *,
+        reason: str,
+        session_id: str | None = None,
+        task_id: str | None = None,
+        grant_ids: Collection[str] = (),
+        capabilities: Collection[str] = (),
+        resource_scopes: Collection[str] = (),
+        tool_names: Collection[str] = (),
+        persist_hold: bool = True,
+    ) -> list[TerminationOutcome]:
+        """Asynchronously contain ONLY in-flight subprocesses matching a revoked grant/capability/scope."""
+        records = self._select_capability_records(
+            session_id=session_id,
+            task_id=task_id,
+            grant_ids=grant_ids,
+            capabilities=capabilities,
+            resource_scopes=resource_scopes,
+            tool_names=tool_names,
+        )
+        outcomes: list[TerminationOutcome] = []
+        for rec in records:
+            self._store.fence_origin(
+                reason=reason,
+                session_id=rec.session_id,
+                task_id=rec.task_id,
+                supervision_id=rec.supervision_id,
+                quarantine_session=False,
+            )
+            outcomes.append(
+                await self.terminate_record_async(
+                    rec,
+                    reason=reason,
+                    persist_hold=persist_hold,
+                    fence_origin=False,
+                    quarantine_session=False,
+                )
+            )
+        return outcomes
+
     def recover_on_startup(self, *, current_boot_id: str) -> StartupContainmentReport:
         """Sweep crashed in-flight subprocesses on startup, terminate survivors, and persist holds."""
         orphaned = self._store.list_in_flight_processes()
@@ -27265,6 +28125,2086 @@ __all__ = [
 ]
 
 process_supervision = sys.modules[__name__]
+
+"""Auditable operation/resource/task scoped grants, expiry, revocation, and subprocess env hygiene (M5-P3-04).
+
+This stdlib-only module provides:
+1. Canonical capability & resource scope mapping across all Studio execution
+   surfaces (`resolve_tool_capabilities`, `resolve_tool_resource_scopes`) so
+   grant coverage checks require subsumption while revocation checks block any
+   overlapping tool/surface (`AC 3`: revocation cannot be bypassed through
+   another tool).
+2. Durable, atomic `ScopedGrantStore` (`$HARNESS_STORE_DIR/grants/state.json`,
+   `0700` dir / `0600` file, `O_NOFOLLOW`, `fsync`) persisting grant scopes,
+   monotonic session & global policy revisions, mandatory finite `expires_at`
+   timestamps with **zero automatic renewal** (`AC 1` & `AC 2`), bounded use
+   counts, active revocation rules, and an auditable event trail.
+3. Subprocess environment sanitization (`sanitize_subprocess_env`,
+   `is_secret_env_key`) keeping API keys, bearer tokens, keyring secrets, and
+   dynamic-linker/startup injection variables out of arbitrary subprocesses.
+
+This module is inlined into standalone `studio.py` by `scripts/build_studio.py`
+(`INLINED_MODULES`); keep all imports strictly to the Python standard library
+and all private module-level helpers prefixed with `_sg_` / `_SG_`.
+"""
+
+
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
+from dataclasses import dataclass
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import posixpath
+import re
+import stat
+import tempfile
+import threading
+import time
+from typing import Any, Literal
+import uuid
+
+SG_SCHEMA_VERSION = 1
+SG_DEFAULT_GRANT_TTL_SECONDS = 600.0
+SG_MAX_GRANT_TTL_SECONDS = 86_400.0
+SG_MAX_AUDIT_EVENTS = 500
+
+GrantStatus = Literal["active", "consumed", "revoked", "expired"]
+
+SG_CAPABILITY_TAXONOMY: frozenset[str] = frozenset(
+    {
+        "workspace_read",
+        "workspace_write",
+        "code_execution",
+        "context_write",
+        "subagent_delegation",
+        "council_mutation",
+        "external_mcp",
+    }
+)
+
+_SG_READ_BLOCKS: frozenset[str] = frozenset({"json-peek", "csv-peek", "shortcut-debt"})
+_SG_EXEC_BLOCKS: frozenset[str] = frozenset({"test-summary", "first-error"})
+
+_SG_WORKSPACE_READ_ONLY_TOOLS: frozenset[str] = frozenset(
+    {
+        "list_files",
+        "grep_search",
+        "read_file",
+        "codegraph_architecture",
+        "codegraph_context",
+        "codegraph_impact",
+        "codegraph_path",
+        "codegraph_quality",
+        "oc_lint",
+        "ctx_search",
+        "oc_search",
+        "oc_read",
+        "list_edit_batches",
+        "reconcile_task_actions",
+        "mcp_bridge__get_current_session_data",
+        "mcp_bridge__get_harness_diff",
+        "mcp_bridge__oc_search",
+        "mcp_bridge__oc_lint",
+        "mcp_bridge__codegraph_query",
+    }
+)
+
+_SG_MANAGED_WRITE_TOOLS: frozenset[str] = frozenset(
+    {"write_file", "edit_file", "rollback_edits"}
+)
+
+_SG_CODE_EXEC_TOOLS: frozenset[str] = frozenset(
+    {"run_bash", "ctx_execute_python", "skill_execute_script"}
+)
+
+_SG_CONTEXT_WRITE_TOOLS: frozenset[str] = frozenset(
+    {"oc_save_doc", "mcp_bridge__oc_save_doc"}
+)
+
+_SG_COUNCIL_MUTATION_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp_bridge__start_council",
+        "mcp_bridge__send_response",
+        "mcp_bridge__summon_omlx_agent",
+        "mcp_bridge__close_council",
+        "mcp_bridge__create_harness_worktree",
+    }
+)
+
+SG_SAFE_BASE_ENV_KEYS: frozenset[str] = frozenset(
+    {"SYSTEMROOT", "WINDIR", "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL", "TERM"}
+)
+
+SG_FORBIDDEN_INJECTION_ENV_KEYS: frozenset[str] = frozenset(
+    {
+        "LD_PRELOAD",
+        "LD_LIBRARY_PATH",
+        "LD_AUDIT",
+        "LD_DEBUG_OUTPUT",
+        "DYLD_INSERT_LIBRARIES",
+        "DYLD_LIBRARY_PATH",
+        "DYLD_FRAMEWORK_PATH",
+        "DYLD_FALLBACK_LIBRARY_PATH",
+        "PYTHONPATH",
+        "PYTHONSTARTUP",
+        "PYTHONHOME",
+        "PYTHONINSPECT",
+        "BASH_ENV",
+        "ENV",
+        "ZDOTDIR",
+        "SHELLOPTS",
+        "BASHOPTS",
+        "CDPATH",
+        "IFS",
+        "PROMPT_COMMAND",
+        "NODE_OPTIONS",
+        "RUBYOPT",
+        "PERL5OPT",
+        "PERL5LIB",
+        "JAVA_TOOL_OPTIONS",
+        "GIT_SSH_COMMAND",
+        "GIT_ASKPASS",
+        "SSH_ASKPASS",
+        "SSH_AUTH_SOCK",
+        "GIT_EXEC_PATH",
+        "GIT_TEMPLATE_DIR",
+        "GIT_CONFIG_PARAMETERS",
+        "GIT_CONFIG_COUNT",
+        "STUDIO_API_TOKEN",
+    }
+)
+
+_SG_SECRET_ENV_KEY_PREFIXES: tuple[str, ...] = (
+    "OPENAI_",
+    "ANTHROPIC_",
+    "GEMINI_",
+    "GOOGLE_API_",
+    "GROQ_",
+    "MISTRAL_",
+    "COHERE_",
+    "XAI_",
+    "DEEPSEEK_",
+    "OPENROUTER_",
+    "TOGETHER_",
+    "FIREWORKS_",
+    "AWS_",
+    "AZURE_",
+    "GCP_",
+    "HUGGING_FACE_",
+    "HF_",
+    "GITHUB_",
+    "GH_",
+    "GITLAB_",
+    "NPM_",
+    "PYPI_",
+)
+
+_SG_SECRET_ENV_KEY_RE = re.compile(
+    r"(?:^|_)(?:API_?KEY|SECRET|TOKEN|PASSWORD|PASSWD|CREDENTIAL|CREDENTIALS|"
+    r"PRIVATE_?KEY|ACCESS_?KEY|SESSION_?KEY|CLIENT_?SECRET|AUTH|BEARER|COOKIE|WEBHOOK)(?:$|_)",
+    re.IGNORECASE,
+)
+
+
+class ScopedGrantError(RuntimeError):
+    """Base error for scoped grant persistence and validation failures."""
+
+
+class GrantStoreIntegrityError(ScopedGrantError):
+    """Raised when the persisted grant store is corrupted, tampered, or symlinked."""
+
+
+class InvalidGrantSpecError(ValueError):
+    """Raised when grant issuance or revocation parameters violate safety invariants."""
+
+
+def _sg_clean_text(value: Any, field: str, *, allow_empty: bool = False) -> str:
+    if value is None:
+        if allow_empty:
+            return ""
+        raise InvalidGrantSpecError(f"{field} must be a non-empty string.")
+    text = str(value).strip()
+    if "\x00" in text:
+        raise InvalidGrantSpecError(f"{field} must not contain NUL bytes.")
+    if not text and not allow_empty:
+        raise InvalidGrantSpecError(f"{field} must be a non-empty string.")
+    return text
+
+
+def _sg_canonical_args_sha256(args: Mapping[str, Any] | None) -> str:
+    payload = dict(args) if isinstance(args, Mapping) else {}
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode(
+        "utf-8"
+    )
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _sg_norm_rel_path(raw: str) -> str:
+    cleaned = raw.replace("\\", "/").strip()
+    if not cleaned:
+        return ""
+    norm = posixpath.normpath(cleaned)
+    if norm in {".", "/"}:
+        return ""
+    return norm.lstrip("/")
+
+
+def _sg_canonical_ws_rel_path(ws_str: str, raw: str) -> str:
+    """Resolve `raw` inside `ws_str` (collapsing `..`, `.`, `//`, and internal symlinks)."""
+    if not ws_str:
+        return _sg_norm_rel_path(raw)
+    cleaned = str(raw or "").replace("\\", "/").strip()
+    if not cleaned:
+        return ""
+    try:
+        ws_path = Path(ws_str).resolve()
+        cand = Path(cleaned) if cleaned.startswith("/") else (ws_path / cleaned)
+        resolved = cand.resolve()
+        rel = resolved.relative_to(ws_path).as_posix()
+        return "" if rel == "." else rel
+    except (OSError, ValueError):
+        return ""
+
+
+def _sg_normalize_workspace_str(workspace_root: Path | str | None) -> str:
+    if workspace_root is None:
+        return ""
+    raw = str(workspace_root).strip()
+    if not raw:
+        return ""
+    try:
+        return str(Path(raw).expanduser().resolve())
+    except OSError:
+        return raw.rstrip("/")
+
+
+def normalize_resource_scope(
+    raw_scope: str,
+    *,
+    workspace_root: Path | str | None = None,
+) -> str:
+    """Normalize a resource scope string into canonical `kind:...` form."""
+    text = _sg_clean_text(raw_scope, "resource_scope")
+    ws_str = _sg_normalize_workspace_str(workspace_root)
+    if text == "*" or text == "global:*":
+        return "global:*"
+    if text.startswith("workspace:"):
+        rest = text.removeprefix("workspace:").strip()
+        if rest in {"", ".", "*"} and ws_str:
+            return f"workspace:{ws_str}"
+        return f"workspace:{_sg_normalize_workspace_str(rest) or rest}"
+    if text.startswith("path:"):
+        rest = text.removeprefix("path:").strip()
+        if ws_str and not rest.startswith("/"):
+            rel = _sg_canonical_ws_rel_path(ws_str, rest) or _sg_norm_rel_path(rest)
+            return f"path:{ws_str}:{rel}" if rel else f"workspace:{ws_str}"
+        if ":" in rest and rest.startswith("/"):
+            prefix, rel = rest.rsplit(":", 1)
+            if prefix.startswith("/") and not rel.startswith("/"):
+                norm_ws = _sg_normalize_workspace_str(prefix)
+                rel_canon = _sg_canonical_ws_rel_path(norm_ws, rel) or _sg_norm_rel_path(rel)
+                return f"path:{norm_ws}:{rel_canon}" if rel_canon else f"workspace:{norm_ws}"
+        if ws_str and rest.startswith(ws_str + "/"):
+            rel = _sg_canonical_ws_rel_path(ws_str, rest) or _sg_norm_rel_path(
+                rest[len(ws_str) + 1 :]
+            )
+            return f"path:{ws_str}:{rel}" if rel else f"workspace:{ws_str}"
+        return f"path:{rest}"
+    if text.startswith("dir:"):
+        rest = text.removeprefix("dir:").strip()
+        if ws_str and not rest.startswith("/"):
+            rel = _sg_canonical_ws_rel_path(ws_str, rest) or _sg_norm_rel_path(rest)
+            return f"dir:{ws_str}:{rel}" if rel else f"workspace:{ws_str}"
+        if ":" in rest and rest.startswith("/"):
+            prefix, rel = rest.rsplit(":", 1)
+            norm_ws = _sg_normalize_workspace_str(prefix)
+            rel_norm = _sg_canonical_ws_rel_path(norm_ws, rel) or _sg_norm_rel_path(rel)
+            return f"dir:{norm_ws}:{rel_norm}" if rel_norm else f"workspace:{norm_ws}"
+        return f"dir:{rest.rstrip('/')}"
+    if text.startswith("mcp:"):
+        parts = [p.strip() for p in text.split(":") if p.strip()]
+        if len(parts) == 2:
+            return f"mcp:{parts[1].lower()}"
+        if len(parts) >= 3:
+            return f"mcp:{parts[1].lower()}:{parts[2]}"
+        raise InvalidGrantSpecError(f"Malformed MCP resource scope: {raw_scope!r}")
+    if text.startswith("context:"):
+        folder = text.removeprefix("context:").strip() or "*"
+        return f"context:{folder}"
+    # Bare relative file path when workspace_root is known:
+    if ws_str and not text.startswith("/"):
+        rel = _sg_norm_rel_path(text)
+        return f"path:{ws_str}:{rel}" if rel else f"workspace:{ws_str}"
+    raise InvalidGrantSpecError(
+        f"Unsupported resource_scope {raw_scope!r}; expected workspace:..., path:..., dir:..., mcp:..., context:..., or global:*."
+    )
+
+
+def resolve_tool_capabilities(
+    tool_name: str,
+    args: Mapping[str, Any] | None = None,
+) -> tuple[str, ...]:
+    """Deterministically map a tool invocation to the canonical capabilities it exercises."""
+    clean = str(tool_name or "").strip()
+    safe_args = args if isinstance(args, Mapping) else {}
+    if not clean:
+        return ("code_execution", "workspace_read", "workspace_write", "external_mcp")
+    if clean == "ctx_run_block":
+        block = str(safe_args.get("block") or "").strip().lower()
+        if block in _SG_READ_BLOCKS:
+            return ("workspace_read",)
+        if block in _SG_EXEC_BLOCKS:
+            return ("code_execution", "workspace_read", "workspace_write")
+        return ("code_execution", "workspace_read", "workspace_write")
+    if clean in _SG_CODE_EXEC_TOOLS:
+        return ("code_execution", "workspace_read", "workspace_write")
+    if clean in _SG_MANAGED_WRITE_TOOLS:
+        return ("workspace_write", "workspace_read")
+    if clean in _SG_WORKSPACE_READ_ONLY_TOOLS:
+        return ("workspace_read",)
+    if clean in _SG_CONTEXT_WRITE_TOOLS:
+        return ("context_write",)
+    if clean == "delegate_subagent":
+        return ("subagent_delegation",)
+    if clean in _SG_COUNCIL_MUTATION_TOOLS:
+        return ("council_mutation",)
+    if clean.startswith("mcp__"):
+        return ("external_mcp",)
+    return ("code_execution", "workspace_read", "workspace_write", "external_mcp")
+
+
+def resolve_tool_resource_scopes(
+    tool_name: str,
+    args: Mapping[str, Any] | None = None,
+    *,
+    workspace_root: Path | str | None = None,
+    candidate_rel_paths: Sequence[str] = (),
+    barriers: Sequence[tuple[str, str]] = (),
+) -> tuple[str, ...]:
+    """Derive canonical resource scopes accessed or reserved by a tool invocation."""
+    clean = str(tool_name or "").strip()
+    safe_args = args if isinstance(args, Mapping) else {}
+    ws_str = _sg_normalize_workspace_str(workspace_root)
+    scopes: list[str] = []
+
+    def _add(item: str) -> None:
+        if item and item not in scopes:
+            scopes.append(item)
+
+    if clean.startswith("mcp__"):
+        parts = clean.split("__", 2)
+        if len(parts) == 3 and parts[1] and parts[2]:
+            alias = parts[1].strip().lower()
+            rtool = parts[2].strip()
+            _add(f"mcp:{alias}:{rtool}")
+        else:
+            _add("mcp:*")
+        return tuple(scopes)
+
+    if clean in _SG_CONTEXT_WRITE_TOOLS:
+        folder = str(safe_args.get("folder") or "decisions").strip() or "decisions"
+        _add(f"context:{folder}")
+        return tuple(scopes)
+
+    if clean in {"write_file", "edit_file", "read_file"} and ws_str:
+        raw_p = str(safe_args.get("path") or safe_args.get("file_path") or "").strip()
+        if raw_p:
+            rel = _sg_canonical_ws_rel_path(ws_str, raw_p)
+            if rel:
+                _add(f"path:{ws_str}:{rel}")
+        if not scopes:
+            _add(f"workspace:{ws_str}")
+        return tuple(scopes)
+
+    if clean == "rollback_edits" and ws_str:
+        raw_paths = safe_args.get("paths")
+        if isinstance(raw_paths, Sequence) and not isinstance(raw_paths, (str, bytes)):
+            for rp in raw_paths:
+                rel = _sg_canonical_ws_rel_path(ws_str, str(rp or ""))
+                if rel:
+                    _add(f"path:{ws_str}:{rel}")
+        if not scopes:
+            _add(f"workspace:{ws_str}")
+        return tuple(scopes)
+
+    # Subprocess, grep/list/codegraph, and conservative barriers:
+    for target, _mode in barriers:
+        if target.startswith("path:") or target.startswith("workspace:"):
+            _add(normalize_resource_scope(target, workspace_root=ws_str))
+    for rel_cand in candidate_rel_paths:
+        rel_norm = _sg_canonical_ws_rel_path(ws_str, rel_cand)
+        if ws_str and rel_norm:
+            _add(f"path:{ws_str}:{rel_norm}")
+    if clean == "ctx_run_block" and ws_str:
+        raw_bp = str(safe_args.get("path") or "").strip()
+        if raw_bp:
+            rel_bp = _sg_canonical_ws_rel_path(ws_str, raw_bp)
+            if rel_bp:
+                _add(f"path:{ws_str}:{rel_bp}")
+    if ws_str and not any(s.startswith("workspace:") for s in scopes):
+        if clean in _SG_CODE_EXEC_TOOLS or clean in {"grep_search", "list_files"} or not scopes:
+            _add(f"workspace:{ws_str}")
+    if not scopes:
+        _add("global:*")
+    return tuple(scopes)
+
+
+def _sg_parse_ws_scope(scope: str) -> tuple[str, str, str] | None:
+    """Return `(kind, ws, rel)` for `workspace:{ws}`, `dir:{ws}:{rel}`, or `path:{ws}:{rel}`."""
+    if scope.startswith("workspace:"):
+        return ("workspace", scope.removeprefix("workspace:"), "")
+    if scope.startswith("dir:"):
+        rest = scope.removeprefix("dir:")
+        if ":" in rest:
+            ws, rel = rest.rsplit(":", 1)
+            return ("dir", ws, _sg_norm_rel_path(rel))
+    if scope.startswith("path:"):
+        rest = scope.removeprefix("path:")
+        if ":" in rest:
+            ws, rel = rest.rsplit(":", 1)
+            return ("path", ws, _sg_norm_rel_path(rel))
+    return None
+
+
+def scope_subsumes(grant_scope: str, action_scope: str) -> bool:
+    """Return True iff `grant_scope` is at least as broad as `action_scope`."""
+    if grant_scope == "global:*" or grant_scope == action_scope:
+        return True
+    if grant_scope.startswith("mcp:") and action_scope.startswith("mcp:"):
+        g_parts = grant_scope.split(":")
+        a_parts = action_scope.split(":")
+        if len(g_parts) == 2 and g_parts[1] == "*":
+            return True
+        if len(g_parts) == 2 and len(a_parts) >= 2 and g_parts[1] == a_parts[1]:
+            return True
+        if (
+            len(g_parts) == 3
+            and len(a_parts) == 3
+            and g_parts[1] == a_parts[1]
+            and (g_parts[2] == "*" or g_parts[2] == a_parts[2])
+        ):
+            return True
+        return False
+    if grant_scope.startswith("context:") and action_scope.startswith("context:"):
+        g_folder = grant_scope.removeprefix("context:")
+        return g_folder == "*" or grant_scope == action_scope
+
+    g_ws = _sg_parse_ws_scope(grant_scope)
+    a_ws = _sg_parse_ws_scope(action_scope)
+    if g_ws is not None and a_ws is not None:
+        g_kind, g_root, g_rel = g_ws
+        a_kind, a_root, a_rel = a_ws
+        if g_root != a_root:
+            return False
+        if g_kind == "workspace":
+            return True
+        if g_kind == "dir":
+            if a_kind == "workspace":
+                return False
+            return a_rel == g_rel or a_rel.startswith(g_rel + "/")
+        if g_kind == "path":
+            return a_kind == "path" and a_rel == g_rel
+    return False
+
+
+def scopes_overlap(scope_a: str, scope_b: str) -> bool:
+    """Symmetric non-empty intersection check used by revocation enforcement (`AC 3`)."""
+    return scope_subsumes(scope_a, scope_b) or scope_subsumes(scope_b, scope_a)
+
+
+def is_secret_env_key(key: str) -> bool:
+    """Return True if an environment variable name is secret-bearing or injection-sensitive."""
+    upper = str(key or "").strip().upper()
+    if not upper:
+        return False
+    if upper in {"M5_SUPERVISION_ID", "PATH", "HOME"} | SG_SAFE_BASE_ENV_KEYS:
+        return False
+    if upper in SG_FORBIDDEN_INJECTION_ENV_KEYS or upper.startswith(
+        ("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_")
+    ):
+        return True
+    if any(upper.startswith(prefix) for prefix in _SG_SECRET_ENV_KEY_PREFIXES):
+        return True
+    return bool(_SG_SECRET_ENV_KEY_RE.search(upper))
+
+
+def sanitize_subprocess_env(
+    host_env: Mapping[str, str],
+    *,
+    interpreter_dir: str,
+    extra: Mapping[str, Any] | None = None,
+    allow_scoped_mcp_env: bool = False,
+    known_secret_values: Iterable[str] = (),
+    extra_allowed_host_keys: Collection[str] = (),
+    include_git_non_interactive: bool = False,
+) -> dict[str, str]:
+    """Construct a minimal, secret-scrubbed environment for child subprocesses.
+
+    - Arbitrary subprocesses (`allow_scoped_mcp_env=False`: `run_bash`,
+      `ctx_execute_python`, `ctx_run_block`, `skill_execute_script`, `git`,
+      `docker`) NEVER inherit secret-named keys or values matching registered
+      Studio/provider/MCP credentials, and NEVER inherit loader/startup
+      injection variables (`LD_PRELOAD`, `DYLD_*`, `PYTHONPATH`, `BASH_ENV`, etc.).
+    - Scoped stdio MCP servers (`allow_scoped_mcp_env=True`) receive ONLY their
+      explicitly configured `extra` mapping plus safe base keys, while still
+      blocking `SG_FORBIDDEN_INJECTION_ENV_KEYS`, `STUDIO_API_TOKEN`, and any
+      unrelated Studio/provider secrets passed in `known_secret_values`.
+    """
+    secrets_to_scrub = tuple(
+        sorted(
+            {str(s) for s in known_secret_values if isinstance(s, str) and len(s) >= 6},
+            key=len,
+            reverse=True,
+        )
+    )
+
+    def _contains_known_secret(val: str) -> bool:
+        return any(sec in val for sec in secrets_to_scrub)
+
+    allowed_host = SG_SAFE_BASE_ENV_KEYS | {str(k).upper() for k in extra_allowed_host_keys}
+    env: dict[str, str] = {}
+    for raw_k, raw_v in host_env.items():
+        k_str = str(raw_k)
+        k_up = k_str.upper()
+        if "\x00" in k_str or k_up in SG_FORBIDDEN_INJECTION_ENV_KEYS:
+            continue
+        if k_up not in allowed_host:
+            continue
+        if k_up not in extra_allowed_host_keys and is_secret_env_key(k_up):
+            continue
+        v_str = str(raw_v).replace("\x00", "")
+        if _contains_known_secret(v_str):
+            continue
+        env[k_str] = v_str
+
+    clean_interp = str(interpreter_dir or "").replace("\x00", "").strip()
+    path_parts = [p for p in (clean_interp, os.defpath) if p and not _contains_known_secret(p)]
+    env["PATH"] = os.pathsep.join(dict.fromkeys(path_parts)) or os.defpath
+
+    if include_git_non_interactive:
+        env["GIT_TERMINAL_PROMPT"] = "0"
+
+    if extra:
+        for raw_ek, raw_ev in extra.items():
+            ek = str(raw_ek).strip()
+            if not ek or "\x00" in ek:
+                continue
+            ek_up = ek.upper()
+            if (
+                ek_up in SG_FORBIDDEN_INJECTION_ENV_KEYS
+                or ek_up.startswith(("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_"))
+                or ek_up == "PATH"
+            ):
+                continue
+            ev = str(raw_ev).replace("\x00", "")
+            if _contains_known_secret(ev):
+                continue
+            if not allow_scoped_mcp_env and is_secret_env_key(ek_up):
+                continue
+            env[ek] = ev
+
+    return env
+
+
+@dataclass(frozen=True, slots=True)
+class PolicyRevisionRecord:
+    session_id: str
+    revision: int
+    policy: str
+    updated_at: float
+    reason: str = "initial"
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "revision": self.revision,
+            "policy": self.policy,
+            "updated_at": self.updated_at,
+            "reason": self.reason,
+        }
+
+    @classmethod
+    def from_mapping(cls, raw: Mapping[str, Any]) -> PolicyRevisionRecord:
+        rev = int(raw["revision"])
+        if rev < 1:
+            raise GrantStoreIntegrityError("PolicyRevisionRecord.revision must be >= 1.")
+        return cls(
+            session_id=_sg_clean_text(raw["session_id"], "session_id"),
+            revision=rev,
+            policy=_sg_clean_text(raw.get("policy") or "standard", "policy"),
+            updated_at=float(raw["updated_at"]),
+            reason=str(raw.get("reason") or ""),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ScopedGrantRecord:
+    """Immutable, finite-lifetime scoped permission grant (`AC 1`, `AC 2`)."""
+
+    grant_id: str
+    session_id: str
+    task_id: str | None
+    epoch: int | None
+    capabilities: tuple[str, ...]
+    tool_names: tuple[str, ...]
+    resource_scopes: tuple[str, ...]
+    args_sha256: str
+    session_policy_revision: int
+    global_policy_revision: int
+    issued_at: float
+    expires_at: float
+    max_uses: int | None
+    uses_consumed: int
+    status: GrantStatus
+    issued_by: str = "operator"
+    note: str = ""
+    revoked_at: float | None = None
+    revoked_reason: str = ""
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "grant_id": self.grant_id,
+            "session_id": self.session_id,
+            "task_id": self.task_id,
+            "epoch": self.epoch,
+            "capabilities": list(self.capabilities),
+            "tool_names": list(self.tool_names),
+            "resource_scopes": list(self.resource_scopes),
+            "args_sha256": self.args_sha256,
+            "session_policy_revision": self.session_policy_revision,
+            "global_policy_revision": self.global_policy_revision,
+            "issued_at": self.issued_at,
+            "expires_at": self.expires_at,
+            "max_uses": self.max_uses,
+            "uses_consumed": self.uses_consumed,
+            "status": self.status,
+            "issued_by": self.issued_by,
+            "note": self.note,
+            "revoked_at": self.revoked_at,
+            "revoked_reason": self.revoked_reason,
+        }
+
+    @classmethod
+    def from_mapping(cls, raw: Mapping[str, Any]) -> ScopedGrantRecord:
+        status = str(raw["status"])
+        if status not in {"active", "consumed", "revoked", "expired"}:
+            raise GrantStoreIntegrityError(f"Invalid grant status in store: {status!r}")
+        issued_at = float(raw["issued_at"])
+        expires_at = float(raw["expires_at"])
+        if not (math.isfinite(issued_at) and math.isfinite(expires_at)) or expires_at <= issued_at:
+            raise GrantStoreIntegrityError("Grant timestamps in store are non-finite or non-positive.")
+        caps = tuple(str(c) for c in (raw.get("capabilities") or ()))
+        if not caps or any(c not in SG_CAPABILITY_TAXONOMY for c in caps):
+            raise GrantStoreIntegrityError(f"Invalid grant capabilities in store: {caps!r}")
+        max_uses_raw = raw.get("max_uses")
+        max_uses = int(max_uses_raw) if max_uses_raw is not None else None
+        if max_uses is not None and max_uses < 1:
+            raise GrantStoreIntegrityError("Grant max_uses in store must be >= 1.")
+        epoch_raw = raw.get("epoch")
+        return cls(
+            grant_id=_sg_clean_text(raw["grant_id"], "grant_id"),
+            session_id=_sg_clean_text(raw["session_id"], "session_id"),
+            task_id=(str(raw["task_id"]).strip() if raw.get("task_id") else None),
+            epoch=(int(epoch_raw) if epoch_raw is not None else None),
+            capabilities=caps,
+            tool_names=tuple(str(t) for t in (raw.get("tool_names") or ()) if str(t).strip()),
+            resource_scopes=tuple(
+                str(s) for s in (raw.get("resource_scopes") or ()) if str(s).strip()
+            ),
+            args_sha256=str(raw.get("args_sha256") or ""),
+            session_policy_revision=int(raw["session_policy_revision"]),
+            global_policy_revision=int(raw["global_policy_revision"]),
+            issued_at=issued_at,
+            expires_at=expires_at,
+            max_uses=max_uses,
+            uses_consumed=int(raw.get("uses_consumed", 0)),
+            status=status,  # type: ignore[arg-type]
+            issued_by=str(raw.get("issued_by") or "operator"),
+            note=str(raw.get("note") or ""),
+            revoked_at=(float(raw["revoked_at"]) if raw.get("revoked_at") is not None else None),
+            revoked_reason=str(raw.get("revoked_reason") or ""),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class RevocationRuleRecord:
+    """Active capability/resource/tool revocation rule enforced across all tools (`AC 3`)."""
+
+    revocation_id: str
+    session_id: str
+    task_id: str | None
+    capabilities: tuple[str, ...]
+    resource_scopes: tuple[str, ...]
+    tool_names: tuple[str, ...]
+    source_grant_id: str
+    reason: str
+    created_at: float
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "revocation_id": self.revocation_id,
+            "session_id": self.session_id,
+            "task_id": self.task_id,
+            "capabilities": list(self.capabilities),
+            "resource_scopes": list(self.resource_scopes),
+            "tool_names": list(self.tool_names),
+            "source_grant_id": self.source_grant_id,
+            "reason": self.reason,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_mapping(cls, raw: Mapping[str, Any]) -> RevocationRuleRecord:
+        caps = tuple(str(c) for c in (raw.get("capabilities") or ()) if str(c).strip())
+        if any(c not in SG_CAPABILITY_TAXONOMY for c in caps):
+            raise GrantStoreIntegrityError(f"Invalid revocation capabilities: {caps!r}")
+        return cls(
+            revocation_id=_sg_clean_text(raw["revocation_id"], "revocation_id"),
+            session_id=_sg_clean_text(raw["session_id"], "session_id"),
+            task_id=(str(raw["task_id"]).strip() if raw.get("task_id") else None),
+            capabilities=caps,
+            resource_scopes=tuple(
+                str(s) for s in (raw.get("resource_scopes") or ()) if str(s).strip()
+            ),
+            tool_names=tuple(str(t) for t in (raw.get("tool_names") or ()) if str(t).strip()),
+            source_grant_id=str(raw.get("source_grant_id") or ""),
+            reason=str(raw.get("reason") or "revoked"),
+            created_at=float(raw["created_at"]),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class GrantValidationOutcome:
+    allowed: bool
+    grant_id: str | None = None
+    error_code: str | None = None
+    reason: str = ""
+    grant: ScopedGrantRecord | None = None
+
+
+class ScopedGrantStore:
+    """Durable, atomic store for scoped grants, policy revisions, and revocations."""
+
+    def __init__(
+        self,
+        store_root: Path | str,
+        *,
+        clock: Callable[[], float] = time.time,
+    ) -> None:
+        self._root = Path(store_root)
+        self._dir = self._root / "grants"
+        self._state_path = self._dir / "state.json"
+        self._clock = clock
+        self._lock = threading.RLock()
+
+    @property
+    def state_path(self) -> Path:
+        return self._state_path
+
+    def _ensure_dir_secure(self) -> None:
+        if self._root.exists() and self._root.is_symlink():
+            raise GrantStoreIntegrityError(
+                f"Grant store root {self._root} must not be a symlink."
+            )
+        self._root.mkdir(parents=True, exist_ok=True)
+        if self._dir.exists() and self._dir.is_symlink():
+            raise GrantStoreIntegrityError(
+                f"Grant store directory {self._dir} must not be a symlink."
+            )
+        self._dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+        try:
+            os.chmod(self._dir, 0o700)
+        except OSError:
+            pass
+
+    def _empty_state(self) -> dict[str, Any]:
+        return {
+            "schema_version": SG_SCHEMA_VERSION,
+            "global_policy_revision": 1,
+            "session_policy_revisions": {},
+            "grants": {},
+            "revocations": {},
+            "rejected_approvals": {},
+            "audit_events": [],
+        }
+
+    def _load_locked(self) -> dict[str, Any]:
+        if self._dir.exists() and self._dir.is_symlink():
+            raise GrantStoreIntegrityError(
+                f"Grant store directory {self._dir} is a symlink; refusing access."
+            )
+        try:
+            st = os.lstat(self._state_path)
+        except FileNotFoundError:
+            return self._empty_state()
+        except OSError as exc:
+            raise GrantStoreIntegrityError(f"Cannot stat grant store: {exc}") from exc
+
+        if stat.S_ISLNK(st.st_mode) or not stat.S_ISREG(st.st_mode):
+            raise GrantStoreIntegrityError(
+                f"Grant state file {self._state_path} must be a regular non-symlink file."
+            )
+
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            fd = os.open(self._state_path, flags)
+            try:
+                raw_bytes = os.read(fd, 16 * 1024 * 1024)
+            finally:
+                os.close(fd)
+        except OSError as exc:
+            raise GrantStoreIntegrityError(f"Cannot read grant state file: {exc}") from exc
+
+        try:
+            parsed = json.loads(raw_bytes.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise GrantStoreIntegrityError(f"Corrupted grant store JSON: {exc}") from exc
+
+        if not isinstance(parsed, dict) or parsed.get("schema_version") != SG_SCHEMA_VERSION:
+            raise GrantStoreIntegrityError(
+                f"Unsupported grant store schema_version: {parsed.get('schema_version') if isinstance(parsed, dict) else type(parsed).__name__}"
+            )
+        global_rev = parsed.get("global_policy_revision")
+        if not isinstance(global_rev, int) or global_rev < 1:
+            raise GrantStoreIntegrityError("Invalid global_policy_revision in grant store.")
+        for key in ("session_policy_revisions", "grants", "revocations", "rejected_approvals"):
+            if not isinstance(parsed.get(key), dict):
+                raise GrantStoreIntegrityError(f"Invalid `{key}` mapping in grant store.")
+        if not isinstance(parsed.get("audit_events"), list):
+            raise GrantStoreIntegrityError("Invalid `audit_events` list in grant store.")
+
+        try:
+            for k, v in parsed["session_policy_revisions"].items():
+                if not isinstance(v, Mapping) or v.get("session_id") != k:
+                    raise GrantStoreIntegrityError(f"Mismatched session_policy_revisions entry {k!r}.")
+                PolicyRevisionRecord.from_mapping(v)
+            for k, v in parsed["grants"].items():
+                if not isinstance(v, Mapping) or v.get("grant_id") != k:
+                    raise GrantStoreIntegrityError(f"Mismatched grant entry {k!r}.")
+                ScopedGrantRecord.from_mapping(v)
+            for k, v in parsed["revocations"].items():
+                if not isinstance(v, Mapping) or v.get("revocation_id") != k:
+                    raise GrantStoreIntegrityError(f"Mismatched revocation entry {k!r}.")
+                RevocationRuleRecord.from_mapping(v)
+        except (KeyError, TypeError, ValueError) as exc:
+            if isinstance(exc, GrantStoreIntegrityError):
+                raise
+            raise GrantStoreIntegrityError(f"Malformed record in grant store: {exc}") from exc
+        return parsed
+
+    def _save_locked(self, state: dict[str, Any]) -> None:
+        self._ensure_dir_secure()
+        if self._state_path.exists() and self._state_path.is_symlink():
+            raise GrantStoreIntegrityError(
+                f"Refusing to overwrite symlinked grant store {self._state_path}."
+            )
+        if len(state["audit_events"]) > SG_MAX_AUDIT_EVENTS:
+            state["audit_events"] = state["audit_events"][-SG_MAX_AUDIT_EVENTS:]
+        encoded = (json.dumps(state, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        fd, tmp_name = tempfile.mkstemp(dir=str(self._dir), prefix=".grants-", suffix=".tmp")
+        try:
+            os.fchmod(fd, 0o600)
+            os.write(fd, encoded)
+            os.fsync(fd)
+            os.close(fd)
+            fd = -1
+            os.replace(tmp_name, self._state_path)
+            try:
+                dir_fd = os.open(self._dir, os.O_RDONLY)
+                try:
+                    os.fsync(dir_fd)
+                finally:
+                    os.close(dir_fd)
+            except OSError:
+                pass
+        except Exception:
+            if fd >= 0:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                pass
+            raise
+
+    def _append_audit_locked(
+        self,
+        state: dict[str, Any],
+        event_type: str,
+        payload: dict[str, Any],
+        *,
+        now: float,
+    ) -> None:
+        state["audit_events"].append(
+            {
+                "event_id": f"gev-{uuid.uuid4().hex[:14]}",
+                "type": event_type,
+                "ts": now,
+                **payload,
+            }
+        )
+
+    def _expire_due_locked(self, state: dict[str, Any], *, now: float) -> list[ScopedGrantRecord]:
+        expired: list[ScopedGrantRecord] = []
+        for gid, raw in list(state["grants"].items()):
+            rec = ScopedGrantRecord.from_mapping(raw)
+            if rec.status == "active" and now >= rec.expires_at:
+                updated = ScopedGrantRecord(
+                    grant_id=rec.grant_id,
+                    session_id=rec.session_id,
+                    task_id=rec.task_id,
+                    epoch=rec.epoch,
+                    capabilities=rec.capabilities,
+                    tool_names=rec.tool_names,
+                    resource_scopes=rec.resource_scopes,
+                    args_sha256=rec.args_sha256,
+                    session_policy_revision=rec.session_policy_revision,
+                    global_policy_revision=rec.global_policy_revision,
+                    issued_at=rec.issued_at,
+                    expires_at=rec.expires_at,
+                    max_uses=rec.max_uses,
+                    uses_consumed=rec.uses_consumed,
+                    status="expired",
+                    issued_by=rec.issued_by,
+                    note=rec.note,
+                    revoked_at=rec.revoked_at,
+                    revoked_reason="ttl_expired",
+                )
+                state["grants"][gid] = updated.to_mapping()
+                expired.append(updated)
+                self._append_audit_locked(
+                    state,
+                    "grant_expired",
+                    {
+                        "grant_id": gid,
+                        "session_id": rec.session_id,
+                        "expires_at": rec.expires_at,
+                    },
+                    now=now,
+                )
+        return expired
+
+    def sweep_expired_grants(self) -> tuple[ScopedGrantRecord, ...]:
+        """Mark any past-`expires_at` active grants as `expired` on disk (`init_db` / maintenance)."""
+        with self._lock:
+            state = self._load_locked()
+            if not state["grants"]:
+                return ()
+            now = self._clock()
+            expired = self._expire_due_locked(state, now=now)
+            if expired:
+                self._save_locked(state)
+            return tuple(expired)
+
+    def get_revisions(
+        self,
+        session_id: str,
+        *,
+        current_policy: str = "standard",
+    ) -> tuple[int, int]:
+        """Return `(session_policy_revision, global_policy_revision)` without mutating disk if default."""
+        sid = _sg_clean_text(session_id, "session_id")
+        with self._lock:
+            state = self._load_locked()
+            raw = state["session_policy_revisions"].get(sid)
+            if raw is None:
+                return (1, int(state["global_policy_revision"]))
+            rec = PolicyRevisionRecord.from_mapping(raw)
+            _ = current_policy
+            return (rec.revision, int(state["global_policy_revision"]))
+
+    def ensure_session_policy(
+        self,
+        session_id: str,
+        policy: str,
+        *,
+        reason: str = "session_initialized",
+    ) -> PolicyRevisionRecord:
+        sid = _sg_clean_text(session_id, "session_id")
+        pol = _sg_clean_text(policy or "standard", "policy")
+        with self._lock:
+            state = self._load_locked()
+            now = self._clock()
+            existing_raw = state["session_policy_revisions"].get(sid)
+            if existing_raw is None:
+                rec = PolicyRevisionRecord(
+                    session_id=sid,
+                    revision=1,
+                    policy=pol,
+                    updated_at=now,
+                    reason=reason,
+                )
+                state["session_policy_revisions"][sid] = rec.to_mapping()
+                self._save_locked(state)
+                return rec
+            existing = PolicyRevisionRecord.from_mapping(existing_raw)
+            if existing.policy == pol:
+                return existing
+            rev_num, _ = self.bump_session_policy_revision(
+                sid, new_policy=pol, reason=reason
+            )
+            return PolicyRevisionRecord(
+                session_id=sid,
+                revision=rev_num,
+                policy=pol,
+                updated_at=now,
+                reason=reason,
+            )
+
+    def bump_session_policy_revision(
+        self,
+        session_id: str,
+        *,
+        new_policy: str,
+        reason: str = "policy_updated",
+    ) -> tuple[int, tuple[ScopedGrantRecord, ...]]:
+        """Atomically bump a session's `policy_revision` and revoke all prior-revision active grants."""
+        sid = _sg_clean_text(session_id, "session_id")
+        pol = _sg_clean_text(new_policy or "standard", "policy")
+        with self._lock:
+            state = self._load_locked()
+            now = self._clock()
+            self._expire_due_locked(state, now=now)
+            existing_raw = state["session_policy_revisions"].get(sid)
+            prev_rev = (
+                PolicyRevisionRecord.from_mapping(existing_raw).revision
+                if existing_raw is not None
+                else 1
+            )
+            next_rev = prev_rev + 1
+            rec = PolicyRevisionRecord(
+                session_id=sid,
+                revision=next_rev,
+                policy=pol,
+                updated_at=now,
+                reason=reason,
+            )
+            state["session_policy_revisions"][sid] = rec.to_mapping()
+            revoked: list[ScopedGrantRecord] = []
+            for gid, g_raw in list(state["grants"].items()):
+                g = ScopedGrantRecord.from_mapping(g_raw)
+                if g.session_id == sid and g.status == "active":
+                    upd = ScopedGrantRecord(
+                        grant_id=g.grant_id,
+                        session_id=g.session_id,
+                        task_id=g.task_id,
+                        epoch=g.epoch,
+                        capabilities=g.capabilities,
+                        tool_names=g.tool_names,
+                        resource_scopes=g.resource_scopes,
+                        args_sha256=g.args_sha256,
+                        session_policy_revision=g.session_policy_revision,
+                        global_policy_revision=g.global_policy_revision,
+                        issued_at=g.issued_at,
+                        expires_at=g.expires_at,
+                        max_uses=g.max_uses,
+                        uses_consumed=g.uses_consumed,
+                        status="revoked",
+                        issued_by=g.issued_by,
+                        note=g.note,
+                        revoked_at=now,
+                        revoked_reason=f"policy_revision_changed:{reason}",
+                    )
+                    state["grants"][gid] = upd.to_mapping()
+                    revoked.append(upd)
+            self._append_audit_locked(
+                state,
+                "policy_revision_bumped",
+                {
+                    "session_id": sid,
+                    "new_revision": next_rev,
+                    "new_policy": pol,
+                    "reason": reason,
+                    "revoked_grant_ids": [r.grant_id for r in revoked],
+                },
+                now=now,
+            )
+            self._save_locked(state)
+            return (next_rev, tuple(revoked))
+
+    def bump_global_policy_revision(
+        self,
+        *,
+        reason: str = "global_policy_updated",
+        mcp_alias: str | None = None,
+        mcp_server_disabled_or_deleted: bool = False,
+        removed_mcp_tools: Collection[str] = (),
+    ) -> tuple[int, tuple[ScopedGrantRecord, ...]]:
+        """Increment `global_policy_revision` and revoke affected MCP grants/capabilities."""
+        with self._lock:
+            state = self._load_locked()
+            now = self._clock()
+            self._expire_due_locked(state, now=now)
+            next_global = int(state["global_policy_revision"]) + 1
+            state["global_policy_revision"] = next_global
+
+            clean_alias = str(mcp_alias or "").strip().lower()
+            removed_set = {str(t).strip() for t in removed_mcp_tools if str(t).strip()}
+            revoked: list[ScopedGrantRecord] = []
+
+            for gid, g_raw in list(state["grants"].items()):
+                g = ScopedGrantRecord.from_mapping(g_raw)
+                if g.status != "active":
+                    continue
+                should_revoke = False
+                if clean_alias:
+                    alias_prefix = f"mcp:{clean_alias}"
+                    touches_alias = any(
+                        sc == "mcp:*" or sc == alias_prefix or sc.startswith(alias_prefix + ":")
+                        for sc in g.resource_scopes
+                    ) or any(
+                        tn.startswith(f"mcp__{clean_alias}__") for tn in g.tool_names
+                    )
+                    if touches_alias and mcp_server_disabled_or_deleted:
+                        should_revoke = True
+                    elif touches_alias and removed_set:
+                        if any(
+                            sc == alias_prefix
+                            or sc in {f"mcp:{clean_alias}:{rt}" for rt in removed_set}
+                            for sc in g.resource_scopes
+                        ):
+                            should_revoke = True
+                else:
+                    should_revoke = True
+
+                if should_revoke:
+                    upd = ScopedGrantRecord(
+                        grant_id=g.grant_id,
+                        session_id=g.session_id,
+                        task_id=g.task_id,
+                        epoch=g.epoch,
+                        capabilities=g.capabilities,
+                        tool_names=g.tool_names,
+                        resource_scopes=g.resource_scopes,
+                        args_sha256=g.args_sha256,
+                        session_policy_revision=g.session_policy_revision,
+                        global_policy_revision=g.global_policy_revision,
+                        issued_at=g.issued_at,
+                        expires_at=g.expires_at,
+                        max_uses=g.max_uses,
+                        uses_consumed=g.uses_consumed,
+                        status="revoked",
+                        issued_by=g.issued_by,
+                        note=g.note,
+                        revoked_at=now,
+                        revoked_reason=reason,
+                    )
+                    state["grants"][gid] = upd.to_mapping()
+                    revoked.append(upd)
+
+            self._append_audit_locked(
+                state,
+                "global_policy_revision_bumped",
+                {
+                    "new_global_revision": next_global,
+                    "mcp_alias": clean_alias,
+                    "reason": reason,
+                    "revoked_grant_ids": [r.grant_id for r in revoked],
+                },
+                now=now,
+            )
+            self._save_locked(state)
+            return (next_global, tuple(revoked))
+
+    def record_rejected_approval(
+        self,
+        approval_id: str,
+        *,
+        session_id: str,
+        reason: str = "operator_rejected",
+    ) -> None:
+        aid = _sg_clean_text(approval_id, "approval_id")
+        sid = _sg_clean_text(session_id or "unknown", "session_id")
+        with self._lock:
+            state = self._load_locked()
+            now = self._clock()
+            state["rejected_approvals"][aid] = {
+                "approval_id": aid,
+                "session_id": sid,
+                "reason": reason,
+                "ts": now,
+            }
+            self._append_audit_locked(
+                state,
+                "approval_rejected",
+                {"approval_id": aid, "session_id": sid, "reason": reason},
+                now=now,
+            )
+            self._save_locked(state)
+
+    def has_grant_or_tombstone(self, grant_id: str) -> bool:
+        gid = str(grant_id or "").strip()
+        if not gid:
+            return False
+        with self._lock:
+            state = self._load_locked()
+            return gid in state["grants"] or gid in state["rejected_approvals"]
+
+    def get_grant(self, grant_id: str) -> ScopedGrantRecord | None:
+        gid = str(grant_id or "").strip()
+        if not gid:
+            return None
+        with self._lock:
+            state = self._load_locked()
+            now = self._clock()
+            expired = self._expire_due_locked(state, now=now)
+            if expired:
+                self._save_locked(state)
+            raw = state["grants"].get(gid)
+            return ScopedGrantRecord.from_mapping(raw) if raw is not None else None
+
+    def list_grants(
+        self,
+        *,
+        session_id: str | None = None,
+        include_inactive: bool = True,
+    ) -> tuple[ScopedGrantRecord, ...]:
+        with self._lock:
+            state = self._load_locked()
+            now = self._clock()
+            expired = self._expire_due_locked(state, now=now)
+            if expired:
+                self._save_locked(state)
+            out: list[ScopedGrantRecord] = []
+            for raw in state["grants"].values():
+                rec = ScopedGrantRecord.from_mapping(raw)
+                if session_id is not None and rec.session_id != session_id:
+                    continue
+                if not include_inactive and rec.status != "active":
+                    continue
+                out.append(rec)
+            out.sort(key=lambda r: r.issued_at)
+            return tuple(out)
+
+    def list_revocations(
+        self,
+        *,
+        session_id: str | None = None,
+    ) -> tuple[RevocationRuleRecord, ...]:
+        with self._lock:
+            state = self._load_locked()
+            out: list[RevocationRuleRecord] = []
+            for raw in state["revocations"].values():
+                rec = RevocationRuleRecord.from_mapping(raw)
+                if session_id is not None and rec.session_id not in {session_id, "*"}:
+                    continue
+                out.append(rec)
+            out.sort(key=lambda r: r.created_at)
+            return tuple(out)
+
+    def issue_grant(
+        self,
+        *,
+        session_id: str,
+        capabilities: Sequence[str],
+        resource_scopes: Sequence[str],
+        ttl_seconds: float = SG_DEFAULT_GRANT_TTL_SECONDS,
+        grant_id: str | None = None,
+        task_id: str | None = None,
+        epoch: int | None = None,
+        tool_names: Sequence[str] = (),
+        exact_args: Mapping[str, Any] | None = None,
+        current_policy: str = "standard",
+        max_uses: int | None = None,
+        issued_by: str = "operator",
+        note: str = "",
+        workspace_root: Path | str | None = None,
+    ) -> ScopedGrantRecord:
+        """Persist a new scoped, finite-expiry grant bound to the current policy revision."""
+        sid = _sg_clean_text(session_id, "session_id")
+        if (
+            not isinstance(ttl_seconds, (int, float))
+            or isinstance(ttl_seconds, bool)
+            or not math.isfinite(float(ttl_seconds))
+            or float(ttl_seconds) <= 0.0
+            or float(ttl_seconds) > SG_MAX_GRANT_TTL_SECONDS
+        ):
+            raise InvalidGrantSpecError(
+                f"ttl_seconds must be finite and within (0, {SG_MAX_GRANT_TTL_SECONDS}]."
+            )
+        caps = tuple(dict.fromkeys(_sg_clean_text(c, "capability") for c in capabilities))
+        if not caps or any(c not in SG_CAPABILITY_TAXONOMY for c in caps):
+            raise InvalidGrantSpecError(
+                f"capabilities must be a non-empty subset of {sorted(SG_CAPABILITY_TAXONOMY)}."
+            )
+        norm_scopes = tuple(
+            dict.fromkeys(
+                normalize_resource_scope(s, workspace_root=workspace_root)
+                for s in resource_scopes
+            )
+        )
+        if not norm_scopes:
+            raise InvalidGrantSpecError("resource_scopes must be non-empty.")
+
+        clean_tools = tuple(
+            dict.fromkeys(_sg_clean_text(t, "tool_name") for t in tool_names if str(t).strip())
+        )
+        if max_uses is not None:
+            if isinstance(max_uses, bool) or not isinstance(max_uses, int) or max_uses < 1:
+                raise InvalidGrantSpecError("max_uses must be a positive integer or None.")
+
+        gid = (
+            _sg_clean_text(grant_id, "grant_id")
+            if grant_id is not None
+            else f"grant-{uuid.uuid4().hex[:16]}"
+        )
+        args_digest = _sg_canonical_args_sha256(exact_args) if exact_args is not None else ""
+
+        with self._lock:
+            state = self._load_locked()
+            now = self._clock()
+            self._expire_due_locked(state, now=now)
+            if gid in state["grants"] or gid in state["rejected_approvals"]:
+                raise InvalidGrantSpecError(f"Grant ID {gid!r} already exists and cannot be reused.")
+
+            pol_raw = state["session_policy_revisions"].get(sid)
+            if pol_raw is None:
+                pol_rec = PolicyRevisionRecord(
+                    session_id=sid,
+                    revision=1,
+                    policy=_sg_clean_text(current_policy or "standard", "policy"),
+                    updated_at=now,
+                    reason="grant_issuance_init",
+                )
+                state["session_policy_revisions"][sid] = pol_rec.to_mapping()
+            else:
+                pol_rec = PolicyRevisionRecord.from_mapping(pol_raw)
+
+            rec = ScopedGrantRecord(
+                grant_id=gid,
+                session_id=sid,
+                task_id=(str(task_id).strip() if task_id else None),
+                epoch=(int(epoch) if epoch is not None else None),
+                capabilities=caps,
+                tool_names=clean_tools,
+                resource_scopes=norm_scopes,
+                args_sha256=args_digest,
+                session_policy_revision=pol_rec.revision,
+                global_policy_revision=int(state["global_policy_revision"]),
+                issued_at=now,
+                expires_at=now + float(ttl_seconds),
+                max_uses=max_uses,
+                uses_consumed=0,
+                status="active",
+                issued_by=_sg_clean_text(issued_by or "operator", "issued_by"),
+                note=str(note or ""),
+            )
+            state["grants"][gid] = rec.to_mapping()
+
+            # Issuing an explicit fresh grant lifts only exact-matching prior revocation rules
+            # ONLY when explicitly re-granted? NO — revocations stay authoritative unless cleared;
+            # never silently clear security revocations!
+            self._append_audit_locked(
+                state,
+                "grant_issued",
+                {
+                    "grant_id": gid,
+                    "session_id": sid,
+                    "task_id": rec.task_id,
+                    "epoch": rec.epoch,
+                    "capabilities": list(caps),
+                    "tool_names": list(clean_tools),
+                    "resource_scopes": list(norm_scopes),
+                    "session_policy_revision": rec.session_policy_revision,
+                    "global_policy_revision": rec.global_policy_revision,
+                    "expires_at": rec.expires_at,
+                    "max_uses": max_uses,
+                    "issued_by": rec.issued_by,
+                },
+                now=now,
+            )
+            self._save_locked(state)
+            return rec
+
+    def _grant_matches_action_locked(
+        self,
+        rec: ScopedGrantRecord,
+        *,
+        session_id: str,
+        task_id: str | None,
+        epoch: int | None,
+        tool_name: str,
+        args: Mapping[str, Any] | None,
+        action_capabilities: Sequence[str],
+        action_scopes: Sequence[str],
+        current_session_rev: int,
+        current_global_rev: int,
+        now: float,
+    ) -> tuple[bool, str, str]:
+        if rec.status == "revoked":
+            return (
+                False,
+                "grant_revoked",
+                f"Scoped grant `{rec.grant_id}` was revoked ({rec.revoked_reason or 'revoked'}).",
+            )
+        if rec.status == "expired" or now >= rec.expires_at:
+            return (
+                False,
+                "grant_expired",
+                f"Scoped grant `{rec.grant_id}` expired at {rec.expires_at:.3f} (no automatic renewal).",
+            )
+        if rec.status == "consumed" or (
+            rec.max_uses is not None and rec.uses_consumed >= rec.max_uses
+        ):
+            return (
+                False,
+                "grant_consumed",
+                f"Scoped grant `{rec.grant_id}` exhausted its allowed uses ({rec.uses_consumed}/{rec.max_uses}); no automatic renewal.",
+            )
+        if rec.session_id != session_id:
+            return (
+                False,
+                "grant_scope_mismatch",
+                f"Scoped grant `{rec.grant_id}` belongs to session `{rec.session_id}`, not `{session_id}`.",
+            )
+        if rec.task_id is not None and task_id != rec.task_id:
+            return (
+                False,
+                "grant_scope_mismatch",
+                f"Scoped grant `{rec.grant_id}` is bound to task `{rec.task_id}`, not `{task_id}`.",
+            )
+        if rec.epoch is not None and epoch != rec.epoch:
+            return (
+                False,
+                "grant_scope_mismatch",
+                f"Scoped grant `{rec.grant_id}` is bound to epoch {rec.epoch}, not {epoch}.",
+            )
+        if rec.session_policy_revision != current_session_rev:
+            return (
+                False,
+                "grant_policy_stale",
+                f"Scoped grant `{rec.grant_id}` was issued at session policy revision {rec.session_policy_revision} (current {current_session_rev}).",
+            )
+        if rec.global_policy_revision != current_global_rev:
+            return (
+                False,
+                "grant_policy_stale",
+                f"Scoped grant `{rec.grant_id}` was issued at global policy revision {rec.global_policy_revision} (current {current_global_rev}).",
+            )
+        if rec.tool_names and tool_name not in rec.tool_names:
+            return (
+                False,
+                "grant_scope_mismatch",
+                f"Scoped grant `{rec.grant_id}` permits tools {list(rec.tool_names)}, not `{tool_name}`.",
+            )
+        if rec.args_sha256 and _sg_canonical_args_sha256(args) != rec.args_sha256:
+            return (
+                False,
+                "grant_scope_mismatch",
+                f"Scoped grant `{rec.grant_id}` is bound to exact approved tool arguments.",
+            )
+        if not set(action_capabilities).issubset(set(rec.capabilities)):
+            missing = sorted(set(action_capabilities) - set(rec.capabilities))
+            return (
+                False,
+                "grant_scope_mismatch",
+                f"Scoped grant `{rec.grant_id}` does not grant required capability {missing} for `{tool_name}`.",
+            )
+        for act_sc in action_scopes:
+            if not any(scope_subsumes(g_sc, act_sc) for g_sc in rec.resource_scopes):
+                return (
+                    False,
+                    "grant_scope_mismatch",
+                    f"Scoped grant `{rec.grant_id}` resource scopes {list(rec.resource_scopes)} do not cover `{act_sc}`.",
+                )
+        return (True, "", "")
+
+    def check_revocation_denials(
+        self,
+        *,
+        session_id: str,
+        task_id: str | None,
+        tool_name: str,
+        action_capabilities: Sequence[str],
+        action_scopes: Sequence[str],
+    ) -> GrantValidationOutcome | None:
+        """Check whether ANY active revocation rule blocks this tool/capability/resource (`AC 3`)."""
+        sid = str(session_id or "").strip()
+        with self._lock:
+            state = self._load_locked()
+            if not state["revocations"]:
+                return None
+            act_caps = set(action_capabilities)
+            for raw in state["revocations"].values():
+                rule = RevocationRuleRecord.from_mapping(raw)
+                if rule.session_id not in {sid, "*"}:
+                    continue
+                if rule.task_id is not None and task_id is not None and rule.task_id != task_id:
+                    continue
+                # Tool-name match OR capability overlap:
+                cap_hit = (not rule.capabilities) or bool(act_caps & set(rule.capabilities))
+                tool_hit = bool(rule.tool_names) and (tool_name in rule.tool_names)
+                if rule.capabilities and not cap_hit and not tool_hit:
+                    continue
+                if rule.tool_names and not rule.capabilities and not tool_hit:
+                    continue
+                # Resource scope overlap (symmetric! conservative subprocess `workspace:{ws}`
+                # overlaps a revoked `path:{ws}:{rel}` so shell cannot bypass file revocation!):
+                scope_hit = (not rule.resource_scopes) or any(
+                    scopes_overlap(r_sc, a_sc)
+                    for r_sc in rule.resource_scopes
+                    for a_sc in action_scopes
+                )
+                if not scope_hit:
+                    continue
+                return GrantValidationOutcome(
+                    allowed=False,
+                    grant_id=(rule.source_grant_id or None),
+                    error_code="capability_revoked",
+                    reason=(
+                        f"Capability/resource revoked ({rule.revocation_id}: {rule.reason}); "
+                        f"`{tool_name}` cannot execute or bypass revocation."
+                    ),
+                )
+            return None
+
+    def find_matching_grant(
+        self,
+        *,
+        session_id: str,
+        task_id: str | None,
+        epoch: int | None,
+        tool_name: str,
+        args: Mapping[str, Any] | None,
+        workspace_root: Path | str | None = None,
+        candidate_rel_paths: Sequence[str] = (),
+        barriers: Sequence[tuple[str, str]] = (),
+    ) -> ScopedGrantRecord | None:
+        """Read-only lookup of a currently valid active grant (never extends `expires_at` or consumes)."""
+        sid = str(session_id or "").strip()
+        if not sid:
+            return None
+        act_caps = resolve_tool_capabilities(tool_name, args)
+        act_scopes = resolve_tool_resource_scopes(
+            tool_name,
+            args,
+            workspace_root=workspace_root,
+            candidate_rel_paths=candidate_rel_paths,
+            barriers=barriers,
+        )
+        if self.check_revocation_denials(
+            session_id=sid,
+            task_id=task_id,
+            tool_name=tool_name,
+            action_capabilities=act_caps,
+            action_scopes=act_scopes,
+        ) is not None:
+            return None
+
+        with self._lock:
+            state = self._load_locked()
+            now = self._clock()
+            expired = self._expire_due_locked(state, now=now)
+            if expired:
+                self._save_locked(state)
+            pol_raw = state["session_policy_revisions"].get(sid)
+            sess_rev = PolicyRevisionRecord.from_mapping(pol_raw).revision if pol_raw else 1
+            glob_rev = int(state["global_policy_revision"])
+
+            for raw in state["grants"].values():
+                rec = ScopedGrantRecord.from_mapping(raw)
+                if rec.status != "active":
+                    continue
+                ok, _, _ = self._grant_matches_action_locked(
+                    rec,
+                    session_id=sid,
+                    task_id=task_id,
+                    epoch=epoch,
+                    tool_name=tool_name,
+                    args=args,
+                    action_capabilities=act_caps,
+                    action_scopes=act_scopes,
+                    current_session_rev=sess_rev,
+                    current_global_rev=glob_rev,
+                    now=now,
+                )
+                if ok:
+                    return rec
+            return None
+
+    def validate_and_consume(
+        self,
+        *,
+        grant_id: str,
+        session_id: str,
+        task_id: str | None,
+        epoch: int | None,
+        tool_name: str,
+        args: Mapping[str, Any] | None,
+        action_capabilities: Sequence[str],
+        action_scopes: Sequence[str],
+    ) -> GrantValidationOutcome:
+        """Atomically validate `grant_id` at admission time and consume 1 use (`AC 1`, `AC 2`)."""
+        gid = str(grant_id or "").strip()
+        sid = str(session_id or "").strip()
+        if not gid:
+            return GrantValidationOutcome(
+                allowed=False,
+                error_code="grant_not_found",
+                reason="Missing grant_id for scoped grant admission.",
+            )
+
+        rev_denial = self.check_revocation_denials(
+            session_id=sid,
+            task_id=task_id,
+            tool_name=tool_name,
+            action_capabilities=action_capabilities,
+            action_scopes=action_scopes,
+        )
+        if rev_denial is not None:
+            return rev_denial
+
+        with self._lock:
+            state = self._load_locked()
+            now = self._clock()
+            expired = self._expire_due_locked(state, now=now)
+            if gid in state["rejected_approvals"]:
+                if expired:
+                    self._save_locked(state)
+                rej = state["rejected_approvals"][gid]
+                return GrantValidationOutcome(
+                    allowed=False,
+                    grant_id=gid,
+                    error_code="grant_revoked",
+                    reason=f"Approval `{gid}` was rejected or cancelled ({rej.get('reason') or 'rejected'}).",
+                )
+            raw = state["grants"].get(gid)
+            if raw is None:
+                if expired:
+                    self._save_locked(state)
+                return GrantValidationOutcome(
+                    allowed=False,
+                    grant_id=gid,
+                    error_code="grant_not_found",
+                    reason=f"Scoped grant `{gid}` does not exist.",
+                )
+
+            rec = ScopedGrantRecord.from_mapping(raw)
+            pol_raw = state["session_policy_revisions"].get(sid)
+            sess_rev = PolicyRevisionRecord.from_mapping(pol_raw).revision if pol_raw else 1
+            glob_rev = int(state["global_policy_revision"])
+
+            ok, err_code, err_reason = self._grant_matches_action_locked(
+                rec,
+                session_id=sid,
+                task_id=task_id,
+                epoch=epoch,
+                tool_name=tool_name,
+                args=args,
+                action_capabilities=action_capabilities,
+                action_scopes=action_scopes,
+                current_session_rev=sess_rev,
+                current_global_rev=glob_rev,
+                now=now,
+            )
+            if not ok:
+                self._append_audit_locked(
+                    state,
+                    "grant_denied",
+                    {
+                        "grant_id": gid,
+                        "session_id": sid,
+                        "tool_name": tool_name,
+                        "error_code": err_code,
+                        "reason": err_reason,
+                    },
+                    now=now,
+                )
+                self._save_locked(state)
+                return GrantValidationOutcome(
+                    allowed=False,
+                    grant_id=gid,
+                    error_code=err_code,
+                    reason=err_reason,
+                    grant=rec,
+                )
+
+            # Consume 1 use WITHOUT touching `expires_at` (strictly NO automatic renewal!).
+            new_uses = rec.uses_consumed + 1
+            new_status: GrantStatus = (
+                "consumed" if (rec.max_uses is not None and new_uses >= rec.max_uses) else "active"
+            )
+            consumed_rec = ScopedGrantRecord(
+                grant_id=rec.grant_id,
+                session_id=rec.session_id,
+                task_id=rec.task_id,
+                epoch=rec.epoch,
+                capabilities=rec.capabilities,
+                tool_names=rec.tool_names,
+                resource_scopes=rec.resource_scopes,
+                args_sha256=rec.args_sha256,
+                session_policy_revision=rec.session_policy_revision,
+                global_policy_revision=rec.global_policy_revision,
+                issued_at=rec.issued_at,
+                expires_at=rec.expires_at,
+                max_uses=rec.max_uses,
+                uses_consumed=new_uses,
+                status=new_status,
+                issued_by=rec.issued_by,
+                note=rec.note,
+                revoked_at=rec.revoked_at,
+                revoked_reason=rec.revoked_reason,
+            )
+            state["grants"][gid] = consumed_rec.to_mapping()
+            self._append_audit_locked(
+                state,
+                "grant_consumed",
+                {
+                    "grant_id": gid,
+                    "session_id": sid,
+                    "tool_name": tool_name,
+                    "uses_consumed": new_uses,
+                    "max_uses": rec.max_uses,
+                    "expires_at": rec.expires_at,
+                    "status": new_status,
+                },
+                now=now,
+            )
+            self._save_locked(state)
+            return GrantValidationOutcome(
+                allowed=True,
+                grant_id=gid,
+                grant=consumed_rec,
+            )
+
+    def revoke_grant(
+        self,
+        grant_id: str,
+        *,
+        session_id: str | None = None,
+        reason: str = "operator_revoked",
+        block_scope: bool = True,
+    ) -> tuple[ScopedGrantRecord | None, RevocationRuleRecord | None]:
+        """Revoke `grant_id` and (when `block_scope=True`) persist a scope revocation rule
+        preventing bypass through any other tool (`AC 3`)."""
+        gid = _sg_clean_text(grant_id, "grant_id")
+        with self._lock:
+            state = self._load_locked()
+            now = self._clock()
+            self._expire_due_locked(state, now=now)
+            raw = state["grants"].get(gid)
+            if raw is None:
+                return (None, None)
+            rec = ScopedGrantRecord.from_mapping(raw)
+            if session_id is not None and rec.session_id != session_id:
+                raise InvalidGrantSpecError(
+                    f"Grant `{gid}` belongs to session `{rec.session_id}`, not `{session_id}`."
+                )
+            updated = ScopedGrantRecord(
+                grant_id=rec.grant_id,
+                session_id=rec.session_id,
+                task_id=rec.task_id,
+                epoch=rec.epoch,
+                capabilities=rec.capabilities,
+                tool_names=rec.tool_names,
+                resource_scopes=rec.resource_scopes,
+                args_sha256=rec.args_sha256,
+                session_policy_revision=rec.session_policy_revision,
+                global_policy_revision=rec.global_policy_revision,
+                issued_at=rec.issued_at,
+                expires_at=rec.expires_at,
+                max_uses=rec.max_uses,
+                uses_consumed=rec.uses_consumed,
+                status="revoked",
+                issued_by=rec.issued_by,
+                note=rec.note,
+                revoked_at=now,
+                revoked_reason=reason,
+            )
+            state["grants"][gid] = updated.to_mapping()
+            rule: RevocationRuleRecord | None = None
+            if block_scope:
+                rev_id = f"rev-{hashlib.sha256(f'{gid}:{now}'.encode('utf-8')).hexdigest()[:14]}"
+                conseq_caps = tuple(c for c in rec.capabilities if c != "workspace_read")
+                rule_caps = conseq_caps if conseq_caps else rec.capabilities
+                rule = RevocationRuleRecord(
+                    revocation_id=rev_id,
+                    session_id=rec.session_id,
+                    task_id=rec.task_id,
+                    capabilities=rule_caps,
+                    resource_scopes=rec.resource_scopes,
+                    tool_names=(),  # Enforce at capability + resource level so no other tool can bypass!
+                    source_grant_id=gid,
+                    reason=reason,
+                    created_at=now,
+                )
+                state["revocations"][rev_id] = rule.to_mapping()
+
+            self._append_audit_locked(
+                state,
+                "grant_revoked",
+                {
+                    "grant_id": gid,
+                    "session_id": rec.session_id,
+                    "reason": reason,
+                    "block_scope": block_scope,
+                    "revocation_id": (rule.revocation_id if rule else None),
+                },
+                now=now,
+            )
+            self._save_locked(state)
+            return (updated, rule)
+
+    def revoke_scope(
+        self,
+        *,
+        session_id: str,
+        capabilities: Sequence[str] = (),
+        resource_scopes: Sequence[str] = (),
+        tool_names: Sequence[str] = (),
+        task_id: str | None = None,
+        reason: str = "operator_scope_revoked",
+        workspace_root: Path | str | None = None,
+    ) -> tuple[RevocationRuleRecord, tuple[ScopedGrantRecord, ...]]:
+        """Persist a capability/resource/tool revocation rule and revoke overlapping grants."""
+        sid = _sg_clean_text(session_id, "session_id")
+        caps = tuple(dict.fromkeys(_sg_clean_text(c, "capability") for c in capabilities if str(c).strip()))
+        if any(c not in SG_CAPABILITY_TAXONOMY for c in caps):
+            raise InvalidGrantSpecError(
+                f"Invalid capability in revocation: {caps!r}; expected {sorted(SG_CAPABILITY_TAXONOMY)}."
+            )
+        norm_scopes = tuple(
+            dict.fromkeys(
+                normalize_resource_scope(s, workspace_root=workspace_root)
+                for s in resource_scopes
+                if str(s).strip()
+            )
+        )
+        clean_tools = tuple(
+            dict.fromkeys(_sg_clean_text(t, "tool_name") for t in tool_names if str(t).strip())
+        )
+        if not caps and not norm_scopes and not clean_tools:
+            raise InvalidGrantSpecError(
+                "revoke_scope requires at least one of capabilities, resource_scopes, or tool_names."
+            )
+        # If only `tool_names` was specified without explicit `capabilities`, derive capabilities
+        # from those tools so no sibling tool with the same capability can bypass the revocation!
+        effective_caps = caps
+        if not effective_caps and clean_tools:
+            derived: list[str] = []
+            for tn in clean_tools:
+                for c in resolve_tool_capabilities(tn):
+                    if c not in derived:
+                        derived.append(c)
+            effective_caps = tuple(derived)
+
+        with self._lock:
+            state = self._load_locked()
+            now = self._clock()
+            self._expire_due_locked(state, now=now)
+            rev_id = f"rev-{uuid.uuid4().hex[:14]}"
+            rule = RevocationRuleRecord(
+                revocation_id=rev_id,
+                session_id=sid,
+                task_id=(str(task_id).strip() if task_id else None),
+                capabilities=effective_caps,
+                resource_scopes=norm_scopes,
+                tool_names=clean_tools,
+                source_grant_id="",
+                reason=reason,
+                created_at=now,
+            )
+            state["revocations"][rev_id] = rule.to_mapping()
+
+            revoked_grants: list[ScopedGrantRecord] = []
+            for gid, g_raw in list(state["grants"].items()):
+                g = ScopedGrantRecord.from_mapping(g_raw)
+                if g.status != "active":
+                    continue
+                if sid != "*" and g.session_id != sid:
+                    continue
+                if rule.task_id is not None and g.task_id is not None and g.task_id != rule.task_id:
+                    continue
+                cap_overlap = (not effective_caps) or bool(set(g.capabilities) & set(effective_caps))
+                scope_overlap = (not norm_scopes) or any(
+                    scopes_overlap(r_sc, g_sc)
+                    for r_sc in norm_scopes
+                    for g_sc in g.resource_scopes
+                )
+                if cap_overlap and scope_overlap:
+                    upd = ScopedGrantRecord(
+                        grant_id=g.grant_id,
+                        session_id=g.session_id,
+                        task_id=g.task_id,
+                        epoch=g.epoch,
+                        capabilities=g.capabilities,
+                        tool_names=g.tool_names,
+                        resource_scopes=g.resource_scopes,
+                        args_sha256=g.args_sha256,
+                        session_policy_revision=g.session_policy_revision,
+                        global_policy_revision=g.global_policy_revision,
+                        issued_at=g.issued_at,
+                        expires_at=g.expires_at,
+                        max_uses=g.max_uses,
+                        uses_consumed=g.uses_consumed,
+                        status="revoked",
+                        issued_by=g.issued_by,
+                        note=g.note,
+                        revoked_at=now,
+                        revoked_reason=reason,
+                    )
+                    state["grants"][gid] = upd.to_mapping()
+                    revoked_grants.append(upd)
+
+            self._append_audit_locked(
+                state,
+                "scope_revoked",
+                {
+                    "revocation_id": rev_id,
+                    "session_id": sid,
+                    "capabilities": list(effective_caps),
+                    "resource_scopes": list(norm_scopes),
+                    "tool_names": list(clean_tools),
+                    "reason": reason,
+                    "revoked_grant_ids": [r.grant_id for r in revoked_grants],
+                },
+                now=now,
+            )
+            self._save_locked(state)
+            return (rule, tuple(revoked_grants))
+
+    def revoke_by_lifecycle_event(
+        self,
+        *,
+        session_id: str | None = None,
+        task_id: str | None = None,
+        epochs: Sequence[int] = (),
+        reason: str = "lifecycle_revoked",
+    ) -> tuple[ScopedGrantRecord, ...]:
+        """Event-driven revocation for lease epoch fencing, task cancellation, abort, or incident."""
+        epoch_set = {int(e) for e in epochs}
+        with self._lock:
+            state = self._load_locked()
+            if not state["grants"]:
+                return ()
+            now = self._clock()
+            self._expire_due_locked(state, now=now)
+            revoked: list[ScopedGrantRecord] = []
+            for gid, g_raw in list(state["grants"].items()):
+                g = ScopedGrantRecord.from_mapping(g_raw)
+                if g.status != "active":
+                    continue
+                if session_id is not None and g.session_id != session_id:
+                    continue
+                if task_id is not None and g.task_id != task_id and g.session_id != task_id:
+                    continue
+                if epoch_set and (g.epoch is None or g.epoch not in epoch_set):
+                    continue
+                upd = ScopedGrantRecord(
+                    grant_id=g.grant_id,
+                    session_id=g.session_id,
+                    task_id=g.task_id,
+                    epoch=g.epoch,
+                    capabilities=g.capabilities,
+                    tool_names=g.tool_names,
+                    resource_scopes=g.resource_scopes,
+                    args_sha256=g.args_sha256,
+                    session_policy_revision=g.session_policy_revision,
+                    global_policy_revision=g.global_policy_revision,
+                    issued_at=g.issued_at,
+                    expires_at=g.expires_at,
+                    max_uses=g.max_uses,
+                    uses_consumed=g.uses_consumed,
+                    status="revoked",
+                    issued_by=g.issued_by,
+                    note=g.note,
+                    revoked_at=now,
+                    revoked_reason=reason,
+                )
+                state["grants"][gid] = upd.to_mapping()
+                revoked.append(upd)
+            if revoked:
+                self._append_audit_locked(
+                    state,
+                    "lifecycle_grants_revoked",
+                    {
+                        "session_id": session_id,
+                        "task_id": task_id,
+                        "epochs": sorted(epoch_set),
+                        "reason": reason,
+                        "revoked_grant_ids": [r.grant_id for r in revoked],
+                    },
+                    now=now,
+                )
+                self._save_locked(state)
+            return tuple(revoked)
+
+    def purge_session(self, session_id: str) -> None:
+        sid = str(session_id or "").strip()
+        if not sid:
+            return
+        with self._lock:
+            state = self._load_locked()
+            changed = False
+            if sid in state["session_policy_revisions"]:
+                state["session_policy_revisions"].pop(sid, None)
+                changed = True
+            for gid in [
+                k for k, v in state["grants"].items() if v.get("session_id") == sid
+            ]:
+                state["grants"].pop(gid, None)
+                changed = True
+            for rid in [
+                k for k, v in state["revocations"].items() if v.get("session_id") == sid
+            ]:
+                state["revocations"].pop(rid, None)
+                changed = True
+            for aid in [
+                k for k, v in state["rejected_approvals"].items() if v.get("session_id") == sid
+            ]:
+                state["rejected_approvals"].pop(aid, None)
+                changed = True
+            if changed:
+                self._save_locked(state)
+
+    def summary(
+        self,
+        *,
+        session_id: str,
+        current_policy: str = "standard",
+    ) -> dict[str, Any]:
+        sid = _sg_clean_text(session_id, "session_id")
+        with self._lock:
+            state = self._load_locked()
+            now = self._clock()
+            expired = self._expire_due_locked(state, now=now)
+            if expired:
+                self._save_locked(state)
+            pol_raw = state["session_policy_revisions"].get(sid)
+            sess_rev = PolicyRevisionRecord.from_mapping(pol_raw).revision if pol_raw else 1
+            pol_name = PolicyRevisionRecord.from_mapping(pol_raw).policy if pol_raw else current_policy
+            grants = [
+                ScopedGrantRecord.from_mapping(v).to_mapping()
+                for v in state["grants"].values()
+                if v.get("session_id") == sid
+            ]
+            revocations = [
+                RevocationRuleRecord.from_mapping(v).to_mapping()
+                for v in state["revocations"].values()
+                if v.get("session_id") in {sid, "*"}
+            ]
+            recent_events = [
+                dict(ev)
+                for ev in state["audit_events"]
+                if ev.get("session_id") in {sid, None, "*"}
+            ][-25:]
+            return {
+                "schema_version": SG_SCHEMA_VERSION,
+                "session_id": sid,
+                "policy": pol_name,
+                "session_policy_revision": sess_rev,
+                "global_policy_revision": int(state["global_policy_revision"]),
+                "active_grants": [g for g in grants if g["status"] == "active"],
+                "grants": grants,
+                "revocations": revocations,
+                "recent_events": recent_events,
+            }
+
+scoped_grants = sys.modules[__name__]
 
 """Persisted workflow and durable root-task/milestone state machine (M5-P1-05)."""
 
@@ -30993,6 +33933,7 @@ GRANT_SOURCES: frozenset[str] = frozenset(
         "policy",
         "operator_approval",
         "operator_one_call",
+        "scoped_grant",
         "skill_opt_in",
         "model_output",
     }
@@ -31003,7 +33944,7 @@ GRANT_SOURCES: frozenset[str] = frozenset(
 # `ActionRequest(..., approved=True)` directly; `"model_output"`, `"none"`, and `"policy"`
 # can never confer an explicit approval grant.
 EXPLICIT_APPROVAL_GRANT_SOURCES: frozenset[str] = frozenset(
-    {"unspecified", "operator_approval", "operator_one_call", "skill_opt_in"}
+    {"unspecified", "operator_approval", "operator_one_call", "scoped_grant", "skill_opt_in"}
 )
 
 # Keys inside model-emitted tool arguments that are untrusted data and are never
@@ -31014,6 +33955,7 @@ MODEL_UNTRUSTED_AUTHORITY_KEYS: frozenset[str] = frozenset(
         "user_approved",
         "auto_approve",
         "grant",
+        "grant_id",
         "grant_source",
         "approval_id",
         "policy",
@@ -31119,6 +34061,7 @@ class ActionRequest:
     action_class: ActionClass | None = None
     grant_source: str = "unspecified"
     approval_id: str | None = None
+    grant_id: str | None = None
     task_id: str | None = None
     task_state: str | None = None
     epoch: int | None = None
@@ -31149,6 +34092,9 @@ class ActiveAdmissionScope:
     lease_id: str | None = None
     footprint_scope: str = ""
     barriers: tuple[tuple[str, str], ...] = ()
+    grant_id: str | None = None
+    capabilities: tuple[str, ...] = ()
+    resource_scopes: tuple[str, ...] = ()
 
 
 _ACTIVE_ADMISSION_SCOPE: contextvars.ContextVar[ActiveAdmissionScope | None] = contextvars.ContextVar(
@@ -31289,6 +34235,9 @@ class ProfileAdmissionOutcome:
     conflicting_barriers: tuple[str, ...] = ()
     exhausted_resources: tuple[str, ...] = ()
     barriers: tuple[tuple[str, str], ...] = ()
+    grant_id: str | None = None
+    capabilities: tuple[str, ...] = ()
+    resource_scopes: tuple[str, ...] = ()
     profile: dict[str, Any] | None = None
     handle: Any = None
 
@@ -31548,10 +34497,39 @@ class DurableActionBoundary:
             if task_denial is None:
                 task_denial = _validate_task_state_and_epoch(request, action_class, snapshot)
 
+        profile_outcome: ProfileAdmissionOutcome | None = None
+        profile_handle: Any = None
+        profile_released = False
+        pre_policy_denial: ProfileAdmissionOutcome | None = None
+        if pre_denial is None and task_denial is None and self._profile_coordinator is not None:
+            pre_fn = getattr(self._profile_coordinator, "check_pre_policy_denial", None)
+            if callable(pre_fn):
+                try:
+                    pre_policy_denial = pre_fn(
+                        request,
+                        effective_policy=effective,
+                        action_class=action_class,
+                    )
+                except Exception:
+                    pre_policy_denial = ProfileAdmissionOutcome(
+                        allowed=False,
+                        reason="Grant/revocation pre-admission verification failed; invocation denied.",
+                        error_code="grant_store_corrupted",
+                    )
+
         if pre_denial is not None:
             decision = AdmissionDecision(False, pre_denial, False, action_class)
         elif task_denial is not None:
             decision = AdmissionDecision(False, task_denial, False, action_class)
+        elif pre_policy_denial is not None and not pre_policy_denial.allowed:
+            profile_outcome = pre_policy_denial
+            decision = AdmissionDecision(
+                False,
+                pre_policy_denial.reason or "Capability or grant revoked; invocation denied.",
+                False,
+                action_class,
+                pre_policy_denial.error_code,
+            )
         else:
             try:
                 raw_decision = self._policy.authorize(
@@ -31581,9 +34559,6 @@ class DurableActionBoundary:
                 action_class,
             )
 
-        profile_outcome: ProfileAdmissionOutcome | None = None
-        profile_handle: Any = None
-        profile_released = False
         if decision.allowed and self._profile_coordinator is not None:
             try:
                 profile_outcome = self._profile_coordinator.admit_profile(
@@ -31598,10 +34573,13 @@ class DurableActionBoundary:
                     error_code="admission_failed",
                 )
             if not profile_outcome.allowed:
+                is_grant_denial = str(profile_outcome.error_code or "").startswith(
+                    ("grant_", "capability_revoked")
+                )
                 decision = AdmissionDecision(
                     False,
                     profile_outcome.reason or "Execution profile denied invocation.",
-                    decision.requires_approval,
+                    False if is_grant_denial else decision.requires_approval,
                     action_class,
                     profile_outcome.error_code,
                 )
@@ -31788,6 +34766,13 @@ class DurableActionBoundary:
                 lease_id=(profile_outcome.lease_id if profile_outcome is not None else None),
                 footprint_scope=(profile_outcome.footprint_scope if profile_outcome is not None else ""),
                 barriers=(profile_outcome.barriers if profile_outcome is not None else ()),
+                grant_id=(
+                    profile_outcome.grant_id
+                    if profile_outcome is not None and profile_outcome.grant_id
+                    else (request.grant_id or request.approval_id)
+                ),
+                capabilities=(profile_outcome.capabilities if profile_outcome is not None else ()),
+                resource_scopes=(profile_outcome.resource_scopes if profile_outcome is not None else ()),
             )
             try:
                 scope_token = _ACTIVE_ADMISSION_SCOPE.set(scope)
@@ -39718,6 +42703,7 @@ class UnifiedExecutionController:
         container_qualified: bool = False,
         on_reconciled: Callable[[str, ExecutionProfile, FootprintReconciliation], None] | None = None,
         containment_store: process_supervision.ContainmentStore | None = None,
+        grant_store: scoped_grants.ScopedGrantStore | None = None,
         current_boot_id: str | None = None,
         sql_task_fencing: bool = False,
     ) -> UnifiedExecutionCoordinator:
@@ -39730,6 +42716,7 @@ class UnifiedExecutionController:
             container_qualified=container_qualified,
             on_reconciled=on_reconciled,
             containment_store=containment_store,
+            grant_store=grant_store,
             current_boot_id=current_boot_id,
             sql_task_fencing=sql_task_fencing,
         )
@@ -39749,6 +42736,7 @@ class UnifiedExecutionCoordinator:
         container_qualified: bool = False,
         on_reconciled: Callable[[str, ExecutionProfile, FootprintReconciliation], None] | None = None,
         containment_store: process_supervision.ContainmentStore | None = None,
+        grant_store: scoped_grants.ScopedGrantStore | None = None,
         current_boot_id: str | None = None,
         sql_task_fencing: bool = False,
     ) -> None:
@@ -39762,8 +42750,106 @@ class UnifiedExecutionCoordinator:
         self._containment_store = containment_store or (
             process_supervision.ContainmentStore(store_dir) if store_dir is not None else None
         )
+        self._grant_store = grant_store or (
+            scoped_grants.ScopedGrantStore(store_dir) if store_dir is not None else None
+        )
         self._current_boot_id = current_boot_id
         self._sql_task_fencing = bool(sql_task_fencing)
+
+    def _derive_grant_capabilities_and_scopes(
+        self,
+        request: execution_spine.ActionRequest,
+        profile: ExecutionProfile,
+    ) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        caps = scoped_grants.resolve_tool_capabilities(request.tool_name, request.args)
+        barrier_tuples = tuple((b.target, b.mode) for b in profile.footprint.barriers)
+        scopes = scoped_grants.resolve_tool_resource_scopes(
+            request.tool_name,
+            request.args,
+            workspace_root=self._workspace_root,
+            candidate_rel_paths=(
+                *profile.footprint.declared_write_paths,
+                *profile.footprint.declared_read_paths,
+            ),
+            barriers=barrier_tuples,
+        )
+        return (caps, scopes)
+
+    def check_pre_policy_denial(
+        self,
+        request: execution_spine.ActionRequest,
+        *,
+        effective_policy: str,
+        action_class: execution_spine.ActionClass,
+    ) -> execution_spine.ProfileAdmissionOutcome | None:
+        """Enforce active revocations & explicit grant denials BEFORE policy `requires_approval` (`AC 1` & `AC 3`)."""
+        _ = (effective_policy, action_class)
+        if self._grant_store is None:
+            return None
+        mode = self._current_execution_mode()
+        profile = derive_execution_profile(
+            request.tool_name,
+            request.args,
+            workspace_root=self._workspace_root,
+            session_id=request.session_id,
+            execution_mode=mode,
+            container_qualified=self._container_qualified,
+        )
+        caps, scopes = self._derive_grant_capabilities_and_scopes(request, profile)
+        rev = self._grant_store.check_revocation_denials(
+            session_id=request.session_id,
+            task_id=request.task_id,
+            tool_name=request.tool_name,
+            action_capabilities=caps,
+            action_scopes=scopes,
+        )
+        if rev is not None:
+            return execution_spine.ProfileAdmissionOutcome(
+                allowed=False,
+                reason=rev.reason,
+                error_code=rev.error_code or "capability_revoked",
+                grant_id=rev.grant_id,
+                capabilities=caps,
+                resource_scopes=scopes,
+                footprint_scope=profile.footprint.scope,
+                profile=profile.to_mapping(),
+            )
+
+        # If caller supplied an explicit grant_id / registered approval_id while `approved=False`,
+        # validate immediately so expired/revoked grants deny hard rather than prompting.
+        eff_gid = str(request.grant_id or request.approval_id or "").strip()
+        if not request.approved and (
+            request.grant_source == "scoped_grant"
+            or (
+                eff_gid
+                and (
+                    eff_gid.startswith("grant-")
+                    or self._grant_store.has_grant_or_tombstone(eff_gid)
+                )
+            )
+        ):
+            val = self._grant_store.validate_and_consume(
+                grant_id=eff_gid,
+                session_id=request.session_id,
+                task_id=request.task_id,
+                epoch=request.epoch,
+                tool_name=request.tool_name,
+                args=request.args,
+                action_capabilities=caps,
+                action_scopes=scopes,
+            )
+            if not val.allowed:
+                return execution_spine.ProfileAdmissionOutcome(
+                    allowed=False,
+                    reason=val.reason,
+                    error_code=val.error_code or "grant_denied",
+                    grant_id=val.grant_id or (eff_gid or None),
+                    capabilities=caps,
+                    resource_scopes=scopes,
+                    footprint_scope=profile.footprint.scope,
+                    profile=profile.to_mapping(),
+                )
+        return None
 
     def _current_execution_mode(self) -> str:
         if self._execution_mode_fn is None:
@@ -39967,6 +43053,71 @@ class UnifiedExecutionCoordinator:
                 profile=profile.to_mapping(),
             )
 
+        caps, scopes = self._derive_grant_capabilities_and_scopes(request, profile)
+        eff_gid = str(request.grant_id or request.approval_id or "").strip()
+        validated_gid: str | None = eff_gid or None
+
+        if self._grant_store is not None:
+            try:
+                rev_outcome = self._grant_store.check_revocation_denials(
+                    session_id=request.session_id,
+                    task_id=request.task_id,
+                    tool_name=request.tool_name,
+                    action_capabilities=caps,
+                    action_scopes=scopes,
+                )
+            except Exception:
+                self._controller.release(decision.lease_id)
+                raise
+            if rev_outcome is not None:
+                self._controller.release(decision.lease_id)
+                return execution_spine.ProfileAdmissionOutcome(
+                    allowed=False,
+                    reason=rev_outcome.reason,
+                    error_code=rev_outcome.error_code or "capability_revoked",
+                    grant_id=rev_outcome.grant_id,
+                    capabilities=caps,
+                    resource_scopes=scopes,
+                    footprint_scope=profile.footprint.scope,
+                    profile=profile.to_mapping(),
+                )
+
+            must_validate = (request.grant_source == "scoped_grant") or bool(
+                eff_gid
+                and (
+                    eff_gid.startswith("grant-")
+                    or self._grant_store.has_grant_or_tombstone(eff_gid)
+                )
+            )
+            if must_validate:
+                try:
+                    val_outcome = self._grant_store.validate_and_consume(
+                        grant_id=eff_gid,
+                        session_id=request.session_id,
+                        task_id=request.task_id,
+                        epoch=request.epoch,
+                        tool_name=request.tool_name,
+                        args=request.args,
+                        action_capabilities=caps,
+                        action_scopes=scopes,
+                    )
+                except Exception:
+                    self._controller.release(decision.lease_id)
+                    raise
+                if not val_outcome.allowed:
+                    self._controller.release(decision.lease_id)
+                    return execution_spine.ProfileAdmissionOutcome(
+                        allowed=False,
+                        reason=val_outcome.reason,
+                        error_code=val_outcome.error_code or "grant_denied",
+                        grant_id=val_outcome.grant_id or (eff_gid or None),
+                        capabilities=caps,
+                        resource_scopes=scopes,
+                        footprint_scope=profile.footprint.scope,
+                        profile=profile.to_mapping(),
+                    )
+                validated_gid = val_outcome.grant_id
+
         # Capture pre-execution workspace state under the acquired barrier so no
         # concurrent writer can race with our baseline snapshot.
         should_observe = self._workspace_root is not None and (
@@ -40001,6 +43152,9 @@ class UnifiedExecutionCoordinator:
             lease_id=decision.lease_id,
             footprint_scope=profile.footprint.scope,
             barriers=barrier_tuples,
+            grant_id=validated_gid,
+            capabilities=caps,
+            resource_scopes=scopes,
             profile=profile.to_mapping(),
             handle=handle,
         )
@@ -40090,6 +43244,34 @@ class UnifiedExecutionCoordinator:
                         f"Denied post-execution: `{handle.tool_name}` mutated undeclared workspace path(s) ({bad_paths})."
                         + (f"\n{prior_out}" if prior_out else "")
                     )
+                elif (
+                    self._grant_store is not None
+                    and handle.workspace_root is not None
+                    and reconciliation.touched_paths
+                ):
+                    try:
+                        ws_resolved = str(handle.workspace_root.expanduser().resolve())
+                    except OSError:
+                        ws_resolved = str(handle.workspace_root)
+                    touched_scopes = [
+                        f"path:{ws_resolved}:{rel_p}" for rel_p in reconciliation.touched_paths
+                    ]
+                    dyn_rev = self._grant_store.check_revocation_denials(
+                        session_id=handle.session_id,
+                        task_id=handle.task_id,
+                        tool_name=handle.tool_name,
+                        action_capabilities=("workspace_write",),
+                        action_scopes=touched_scopes,
+                    )
+                    if dyn_rev is not None:
+                        prior_out = str(updated.get("output") or "")
+                        updated["ok"] = False
+                        updated["error_code"] = dyn_rev.error_code or "capability_revoked"
+                        updated["uncertain"] = True
+                        updated["output"] = (
+                            f"Denied post-execution: `{handle.tool_name}` mutated a revoked resource ({dyn_rev.reason})."
+                            + (f"\n{prior_out}" if prior_out else "")
+                        )
 
             exc_uncertain = exc is not None and side_effect_ledger.is_ambiguous_exception(exc)
             res_uncertain = updated is not None and bool(updated.get("uncertain"))

@@ -23,6 +23,7 @@ INLINED_MODULES = (
     "recovery_guard",
     "verification_evidence",
     "process_supervision",
+    "scoped_grants",
     "workflow_state",
     "mcp_client",
     "context_store",
