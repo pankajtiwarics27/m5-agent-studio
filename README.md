@@ -345,6 +345,31 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   and documented in [`docs/scoped-grants.md`](docs/scoped-grants.md)
   (ADR-0014).
 
+- **MCP connector idempotency semantics, strict queryable-outcome
+  reconciliation, uncertain-write safe pause, and wire-level gate enforcement
+  (`M5-P3-05`, ADR-0015):** `mcp_client.py` classifies MCP tools fail-closed so
+  non-read-only tools default to `idempotency_supported=False`,
+  `idempotency_status="unsupported"`, and `replay_policy="non_idempotent"` (or
+  `"reconcilable"` when a valid `McpReconciliationSpec` is configured), binds
+  `m5.studio/actionId` and `m5.studio/idempotencyStatus` into JSON-RPC
+  `params._meta` while emitting `idempotencyKey` / optional `argument_field`
+  injection only when supported, and persists secret-redacted external-effect
+  records in `$HARNESS_STORE_DIR/mcp_effects/state.json` (`0600` atomic write +
+  file/directory `fsync`). Read-only `McpReconciliationSpec` lookups run through
+  the central `execute_mcp_tool_call` gate across replay,
+  `WorkerLeaseCoordinator` takeover, `/mcp-effects/reconcile`, and `/resume` so
+  `verified_committed` writes short-circuit without duplicate external effects
+  and `verified_not_applied` writes require `authoritative_not_found=True`.
+  Ambiguous non-idempotent MCP writes pause single-agent and GSD Wave 2 turns
+  (`pause_reason="uncertain_external_effect"`), block subsequent writes and
+  `/resume` (`409`) until reconciled or resolved via
+  `POST /api/harness/sessions/{id}/mcp-effects/{action_id}/resolve`, and
+  `_mcp_http_rpc` / `_mcp_stdio_rpc` enforce `require_active_admission` on
+  `tools/call`. Pinned by 8 end-to-end tests
+  (`tests/test_mcp_idempotency_reconciliation.py`) and documented in
+  [`docs/mcp-idempotency.md`](docs/mcp-idempotency.md)
+  ([`ADR-0015`](docs/adr/0015-mcp-idempotency-and-external-effect-reconciliation.md)).
+
 - **The execution boundary is extracted and its coverage is inventoried
   (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`–`M5-P1-04`):**
   `execution_spine.py` and `side_effect_ledger.py` form a stdlib-only seam
@@ -729,10 +754,15 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
   process groups and `os.setsid()` detached trees, cooperative `SIGTERM` →
   bounded `SIGKILL` escalation, durable `$HARNESS_STORE_DIR/containment/state.json`
   origin fencing and conflicting barrier holds across restarts, and incident
-  containment), **and `M5-P3-04`** (operation/resource/task-scoped grants in
+  containment), **`M5-P3-04`** (operation/resource/task-scoped grants in
   `$HARNESS_STORE_DIR/grants/state.json`, non-renewable finite expiry,
   event-driven revocation with cross-tool anti-bypass, capability-specific
-  in-flight containment, and subprocess secret/injection environment scrubbing).
+  in-flight containment, and subprocess secret/injection environment scrubbing),
+  **and `M5-P3-05`** (fail-closed MCP connector idempotency classification with
+  explicit unsupported marking, action-ID/idempotency-key binding, strict
+  read-only queryable-outcome reconciliation without duplicate external effects,
+  uncertain non-idempotent write session pause and operator resolution routes,
+  and wire-level `tools/call` central admission enforcement).
   `M5-P3-01` and `M5-P4-01` remain `blocked` pending operator
   qualification runs (`scripts/qualify_environment.py`,
   [`docs/qualification-suite.md`](docs/qualification-suite.md)) — a live Docker

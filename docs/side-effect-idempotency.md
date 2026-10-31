@@ -14,4 +14,7 @@ stores hashes and status metadata, not side-effect payloads or credentials.
 
 `tests/test_side_effect_ledger.py` covers atomic duplicate claims, conflicting
 request rejection, completion/finalization rules, explicit failed-operation
-retry, and persistence across a new ledger instance.
+retry, and persistence across a new ledger instance. For remote MCP connector
+idempotency semantics, external-effect reconciliation, and uncertain-write
+session pauses (`M5-P3-05`), see [`mcp-idempotency.md`](mcp-idempotency.md) and
+[`ADR-0015`](adr/0015-mcp-idempotency-and-external-effect-reconciliation.md).

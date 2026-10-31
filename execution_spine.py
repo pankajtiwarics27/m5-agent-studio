@@ -834,6 +834,7 @@ class DurableActionBoundary:
                         "attempt_id": intent_decision.attempt_id,
                         "ledger_status": intent_decision.status,
                         "replay_policy": intent_decision.replay_policy,
+                        "already_committed": True,
                         "reconciled": True,
                     }
                     try:

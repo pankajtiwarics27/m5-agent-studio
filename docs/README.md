@@ -46,6 +46,7 @@ contain placeholder text, and every relative link must resolve.
 | [`security-review-signoff.md`](security-review-signoff.md) | Reviewer record and release gate — currently unsigned |
 | [`sandbox-boundary.md`](sandbox-boundary.md) | Sandbox and filesystem boundary hardening |
 | [`execution-profiles.md`](execution-profiles.md) | Unified capability descriptors, conservative footprints, admission barriers, and expansion reconciliation |
+| [`mcp-idempotency.md`](mcp-idempotency.md) | MCP connector idempotency semantics, queryable-outcome reconciliation, and uncertain-write safe pause |
 | [`qualification-suite.md`](qualification-suite.md) | Operator-run sandbox and hardware qualification (what is measured, how to run it, how to read the record) |
 
 ## Subsystem contracts
@@ -62,7 +63,8 @@ declared acceptance coverage),
 [`recovery-guard.md`](recovery-guard.md) (durable failure memory, stagnation and
 oscillation verdicts, retry/replan/rollback budgets, safe pause),
 [`workflow-checkpoints.md`](workflow-checkpoints.md),
-[`execution-budgets.md`](execution-budgets.md), [`side-effect-idempotency.md`](side-effect-idempotency.md).
+[`execution-budgets.md`](execution-budgets.md), [`side-effect-idempotency.md`](side-effect-idempotency.md),
+[`mcp-idempotency.md`](mcp-idempotency.md) (MCP idempotency binding, queryable-outcome reconciliation, uncertain-write safe pause).
 
 Model and provider: [`provider-adapters.md`](provider-adapters.md),
 [`api-provider-contracts.md`](api-provider-contracts.md),

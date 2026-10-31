@@ -577,7 +577,8 @@ class DurableActionLedger:
             prior = self.get_action(aid)
             if prior is not None and prior.tool_name == tname and prior.args_sha256 == digest:
                 if prior.status in ("uncertain", "in_flight") or (
-                    prior.status == "committed" and prior.error_code == "pre_takeover_verified_committed"
+                    prior.status == "committed"
+                    and prior.error_code in ("pre_takeover_verified_committed", "mcp_query_verified_committed")
                 ):
                     try:
                         reconcile_verdict = self._reconciler(prior, tname, safe_args)
@@ -846,7 +847,7 @@ class DurableActionLedger:
                     )
                 if (
                     resolved_replay == "reconcilable"
-                    and existing.error_code == "pre_takeover_verified_committed"
+                    and existing.error_code in ("pre_takeover_verified_committed", "mcp_query_verified_committed")
                     and reconcile_verdict == "verified_committed"
                 ):
                     conn.execute(
@@ -1402,16 +1403,22 @@ class WorkerLeaseCoordinator:
         reconciled_committed: list[str] = []
         reconciled_not_applied: list[str] = []
         reconciler = self._ledger.reconciler
-        if reconciler is not None and known_action_args:
+        if reconciler is not None:
             uncertain_rows = self._ledger.list_task_actions(tid, statuses=("uncertain",))
             for rec in uncertain_rows:
                 if rec.replay_policy != "reconcilable":
                     continue
-                cand_args = known_action_args.get(rec.action_id)
-                if cand_args is None or canonical_args_sha256(cand_args) != rec.args_sha256:
+                cand_args = known_action_args.get(rec.action_id) if known_action_args else None
+                if cand_args is not None:
+                    if canonical_args_sha256(cand_args) != rec.args_sha256:
+                        continue
+                    probe_args: Mapping[str, Any] = cand_args
+                elif rec.tool_name.startswith("mcp__"):
+                    probe_args = {}
+                else:
                     continue
                 try:
-                    verdict = reconciler(rec, rec.tool_name, cand_args)
+                    verdict = reconciler(rec, rec.tool_name, probe_args)
                 except Exception:
                     verdict = "unresolved"
                 if verdict == "verified_committed":
