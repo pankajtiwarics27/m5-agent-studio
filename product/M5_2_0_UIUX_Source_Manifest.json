@@ -54,9 +54,9 @@
     {
       "path": "scripts/capture_screenshots.mjs",
       "role": "the only accepted way to capture visual evidence",
-      "sha256": "8311e2c2f4dc425b4729720dfab119e0e98aa47a2eec5ee0cf2fe1c6e881d8b4",
-      "bytes": 10070,
-      "lines": 263
+      "sha256": "3649238dd1f3ee2f1e70c09c0873cf99c1dccb4c8d74d89b738441fa2767d37d",
+      "bytes": 14839,
+      "lines": 350
     },
     {
       "path": "scripts/validate_screenshots.py",

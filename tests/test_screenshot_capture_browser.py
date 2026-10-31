@@ -59,6 +59,7 @@ def page(
     *,
     inert: bool = False,
     hidden: bool = False,
+    transparent_parent: bool = False,
     navigate: str = "",
     broken_auth: bool = False,
 ) -> bytes:
@@ -93,7 +94,7 @@ def page(
         else ""
     )
     return f"""<!doctype html><style>.pane {{display:none}} .pane.active {{display:{"none" if hidden else "block"}}}</style>
-      <nav>{buttons}</nav>{panes}{iframe}<script>{auth}
+      <nav>{buttons}</nav><main style="opacity:{0 if transparent_parent else 1}">{panes}</main>{iframe}<script>{auth}
       function switchTab(tab) {{{switch} {navigation}}} switchTab('harness');</script>""".encode()
 
 
@@ -192,6 +193,7 @@ def test_capture_positive_and_cross_origin_frame_is_not_seeded(
         "unrelated",
         "inert",
         "hidden",
+        "transparent-parent",
         "bad-token",
         "auth-disabled",
         "redirect",
@@ -253,6 +255,7 @@ def test_capture_rejects_invalid_pages_auth_and_redirects(
                     else page(
                         inert=kind == "inert",
                         hidden=kind == "hidden",
+                        transparent_parent=kind == "transparent-parent",
                         navigate=target if kind == "late-navigation" else "",
                         broken_auth=kind == "browser-unauthenticated",
                     )
@@ -284,7 +287,7 @@ def test_capture_rejects_invalid_pages_auth_and_redirects(
     assert TOKEN not in result.stdout + result.stderr
     if kind == "unrelated":
         assert "missing or ambiguous tab" in result.stderr
-    if kind in {"inert", "hidden"}:
+    if kind in {"inert", "hidden", "transparent-parent"}:
         assert "did not display the expected pane" in result.stderr
     if kind == "bad-token":
         assert "did not accept the supplied token" in result.stderr
@@ -353,6 +356,7 @@ def test_real_isolated_demo_captures_all_six_panes(
         ] == list(TABS)
         assert banner["token"] not in result.stdout + result.stderr
         assert sentinel.read_bytes() == before
+        assert [p for p in store.rglob("*") if p.is_file()] == [sentinel]
     finally:
         if demo.poll() is None:
             os.killpg(demo.pid, signal.SIGINT)

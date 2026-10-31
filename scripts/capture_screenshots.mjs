@@ -293,10 +293,12 @@ async function capture(args, manifest) {
         const pane = document.getElementById(`pane-${tab}`);
         if (buttons.length !== 1 || buttons[0].dataset.tab !== tab ||
             buttons[0].getAttribute('aria-current') !== 'page' || panes.length !== 1 || panes[0] !== pane) return false;
-        const style = getComputedStyle(pane);
+        for (let node = pane; node; node = node.parentElement) {
+          const style = getComputedStyle(node);
+          if (style.display === 'none' || style.visibility !== 'visible' || Number(style.opacity) <= 0) return false;
+        }
         const rect = pane.getBoundingClientRect();
-        return style.display !== 'none' && style.visibility === 'visible' && Number(style.opacity) > 0 &&
-          rect.width > 0 && rect.height > 0 && rect.right > 0 && rect.bottom > 0 &&
+        return rect.width > 0 && rect.height > 0 && rect.right > 0 && rect.bottom > 0 &&
           rect.left < innerWidth && rect.top < innerHeight;
       }, shot.tab);
       if (!valid) throw new Error(`tab did not display the expected pane for ${shot.id}`);

@@ -19,4 +19,7 @@ prove historical image provenance. Publication may be partial if filesystem writ
 fail; the validator checks file consistency, not pane identity. Continue using
 disposable source and a throwaway demo environment. Existing captures remain
 historical until separately reviewed; this work does not claim or sign off a
-UI/UX story.
+UI/UX story. Regeneration updates the current manifest hash reported in the
+preservation package, not the owner's historical signature. That signature must
+not be construed as approval of these new input hashes; [#126](https://github.com/pankajtiwarics27/m5-agent-studio/issues/126)
+tracks the missing binding between the decision and its approved inputs.
