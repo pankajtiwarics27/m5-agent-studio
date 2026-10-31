@@ -100,17 +100,15 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": "UIUX-P1-04",
-    "active_stories": [
-      "UIUX-P1-04"
-    ],
+    "active_story": null,
+    "active_stories": [],
     "last_completed_story": "UIUX-P1-02",
-    "next_recommended_story": "UIUX-P1-04",
-    "last_checkpoint": "2026-11-01T06:10:00Z",
+    "next_recommended_story": "UIUX-P1-05",
+    "last_checkpoint": "2026-11-01T08:30:00Z",
     "last_session_id": "arena/9110aa1b-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "aa94025",
+    "last_verified_commit": "b4ccc026b5e1be28fae7c54dbb3615688718a52d",
     "last_updated": "2026-11-01",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -233,8 +231,8 @@
         "UIUX-P1-05"
       ],
       "total": 5,
-      "done": 3,
-      "in_progress": 1,
+      "done": 4,
+      "in_progress": 0,
       "blocked": 0,
       "not_started": 1,
       "percent_complete": 0
@@ -341,11 +339,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 9,
-    "in_progress": 1,
+    "done": 10,
+    "in_progress": 0,
     "blocked": 0,
     "not_started": 30,
-    "percent_complete": 22
+    "percent_complete": 25
   },
   "stories": [
     {
@@ -1892,23 +1890,128 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P1-04 (Implement accessible overlays toasts and keyboard shortcuts). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 10,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-11-01T06:10:00Z",
-        "updated_at": "2026-11-01T06:10:00Z",
-        "completed_at": null,
+        "updated_at": "2026-11-01T08:30:00Z",
+        "completed_at": "2026-11-01T08:30:00Z",
         "owner_session": "arena/ea9340ed-m5-agent-studio",
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
+        "commit_sha": "b4ccc026b5e1be28fae7c54dbb3615688718a52d",
+        "changed_files": [
+          "static/index.html",
+          "studio.py",
+          "scripts/uiux_overlay_inventory.py",
+          "scripts/overlay_walk.mjs",
+          "tests/test_overlays.py",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-program.md",
+          "docs/README.md",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "The defect was structural, not cosmetic: nine backdrops carried role=dialog, each open function added .open and each close function removed it, Escape removed it from all nine at once, no dialog trapped focus and exactly one of the nine remembered where focus came from. A keyboard user tabbed out of an open dialog into the page behind it and, on close, landed on the document body.",
+          "There is one controller now. openOverlay(id) records the return target, paints the backdrop, sets aria-modal, makes every element sibling of the backdrop inert and focuses the first control inside after the frame that paints it; closeOverlay(id) reverses all four in one place. Because the return lives there, Escape, a Close button and a backdrop click all return focus to the same control instead of three different outcomes.",
+          "The trap is belt and braces on purpose: inert is what actually stops Tab, clicks and screen-reader traversal reaching the background, and the Tab handler is the fallback for a browser without it, wrapping the cycle inside the dialog. The walk proves the fallback matters: two full cycles of Tab past the last control never left the dialog, on all nine.",
+          "Escape closes the top overlay only, not every overlay. The old one-liner lost the stack, so a dialog opened from another dialog vanished without returning focus to the one underneath - a behaviour no screenshot would show.",
+          "Focus return has a fallback for the case that made the old code give up: a chord pressed with the page focused has no opener, so the controller remembers the last control the user actually used (focusin) and returns there rather than to nothing. This is what makes Ctrl+K then Escape land on the palette's trigger.",
+          "The shortcut situation had the same shape as the statuses did in P1-03: the rail's Alt+N lived in data-shortcut, the palette's key lived in the handler, and the palette's hints were string literals beside neither, which is how Alt+6 stayed advertised and dead until P1-02. One registry now feeds the handler, the palette rows and the markup: every rail tab gained aria-keyshortcuts, and palette rows name their shortcut by id, resolved when the list is drawn.",
+          "Two palette rows were added because the story's acceptance criterion is keyboard reachability for every dialog: Start (which had no palette row at all) and the official Harness bridge. All nine dialogs now have a keyboard path, six through the palette and three through their own controls.",
+          "The inspector was a drawer with unstated behaviour. It declares aria-modal only while it covers the page (set on open, removed on close, never the invalid 'false'), takes focus when it opens below 1100px, returns focus to its toggle when Escape closes it, and drops the modal claim on resize when it becomes a column again.",
+          "Proof is measured, not asserted. scripts/uiux_overlay_inventory.py fails on a dialog that writes .open itself, a dialog without a label, a duplicate shortcut id or key, a palette item naming a shortcut that does not exist, a hard-coded Alt+N hint, an Escape handler that closes everything, and an inspector that never declares itself modal. tests/test_overlays.py proves each rule by breaking a temporary copy of the frontend, so a check that cannot fail would fail the suite.",
+          "scripts/overlay_walk.mjs presses real keys: for each dialog it opens from that dialog's own keyboard path, asserts focus landed inside, tabs two full cycles (max(2n+2, 6) presses) and asserts focus never escaped, asserts the page behind was inert, presses Escape and asserts the dialog closed and focus came back, then checks the page is usable again. It also exercises the palette (Ctrl+K, focus in the search box, ArrowDown moving aria-selected, Escape returning focus to the trigger, aria-keyshortcuts advertised) and the drawer at 420px.",
+          "Measured on this tree: overlay walk 78 passed, 1 blocked, 0 failed; keyboard walk 22 of 22 (P1-02 still holds); status walk 74 of 74 (P1-03 still holds); pytest -q 1758 passed, 25 skipped; browser-backed capture tests 29 passed.",
+          "One dialog is blocked and it is recorded as blocked, not passed: harnessDiffModal's open function refuses with a toast unless a Harness session is active ('Start or select a Harness session first to inspect its Git Diff.'). The walk captures that message as the prerequisite and asserts the refusal is actionable - a dialog that cannot be used says why instead of opening empty - but its trap-and-return behaviour is not exercised here, and this ledger does not claim it was.",
+          "Closed at b4ccc026b5e1be28fae7c54dbb3615688718a52d: the commit whose tree the overlay walk, the keyboard walk, the status walk, the capture tests and the suite ran on."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "1758 passed, 25 skipped"
+          },
+          {
+            "command": "node scripts/overlay_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "78 passed, 0 failed, 1 blocked (harnessDiffModal needs an active Harness session)"
+          },
+          {
+            "command": "node scripts/keyboard_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "22 of 22 checks passed"
+          },
+          {
+            "command": "node scripts/status_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "74 of 74 checks passed"
+          },
+          {
+            "command": "STUDIO_SCREENSHOT_CHROME=... .venv/bin/python -m pytest -q tests/test_screenshot_capture_browser.py",
+            "exit_code": 0,
+            "result": "29 passed"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_overlay_inventory.py --check",
+            "exit_code": 0,
+            "result": "9 dialogs through the controller, 4 registry entries, 6 rail shortcuts, 0 findings"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_route_map.py --check",
+            "exit_code": 0,
+            "result": "53 call sites, 0 findings"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_control_inventory.py --check",
+            "exit_code": 0,
+            "result": "170 markup controls (101 chrome, 69 panes), 30 script-rendered"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_tokens.py --check",
+            "exit_code": 0,
+            "result": "45 tokens in 7 groups, 20 contrast pairs (lowest 4.69:1)"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_status_components.py --check",
+            "exit_code": 0,
+            "result": "10 states, 6 tones, 6 surfaces, 0 findings"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_preservation_signoff.py --check",
+            "exit_code": 0,
+            "result": "up to date: historical-approval-unbound, 21 capabilities across 6 panes"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py",
+            "exit_code": 0,
+            "result": "136 files scanned"
+          },
+          {
+            "command": ".venv/bin/python scripts/build_studio.py && .venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "studio.py rebuilt; one inline script block parses"
+          }
+        ],
         "visual_evidence": [],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "inert is the trap, with the Tab handler as a fallback. A keydown-only trap leaks focus to the URL bar and to anything that receives focus programmatically; inert stops the background at the source, and the fallback keeps the promise on a browser without it.",
+          "Escape closes the top overlay rather than all of them. A stack is what makes nested dialogs coherent, and the old one-liner was a stack bug that looked like a feature.",
+          "aria-modal is set on open and removed on close, never set to \"false\". The attribute asserts that the dialog covers the page, and a closed drawer does not.",
+          "The return target falls back to the last control used, not to the document. Returning focus to <body> is the same as losing it; a chord pressed with nothing focused should still put the user back where they were.",
+          "Palette hints are resolved from the registry at render time instead of being written beside it. Two lists that can disagree is exactly how Alt+6 stayed advertised and dead; one list cannot disagree with itself.",
+          "The walk records a refusal as blocked, not as a pass. harnessDiffModal needs an active Harness session, the app says so, and this ledger says so - inventing a session to make the check green would prove nothing about the dialog."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "One overlay controller so every dialog opens, traps, closes and returns focus; one shortcut registry; toasts that announce",
+        "handoff_note": "Dialogs open and close only through openOverlay()/closeOverlay(); do not touch .open elsewhere. Keys live in the SHORTCUTS registry plus data-shortcut on the rail - add there, not in the handler. scripts/overlay_walk.mjs is the behavioural check for any overlay, palette or drawer change and needs a browser; it reports blocked separately from failed. harnessDiffModal's end-to-end trap/return is still unproven and needs an active Harness session in the walk.",
+        "next_action": "None. UIUX-P1-05 (empty, error and recovery presentations) is next.",
         "readme_updated": false
       },
       "required_evidence": [
