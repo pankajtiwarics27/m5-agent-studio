@@ -512,9 +512,12 @@ def test_frontend_gap_predicate_requires_snapshot_resync_and_merges_without_dupl
     assert [ev["seq"] for ev in out["merged"]] == [1, 2, 3]  # type: ignore[index]
     assert [ev["seq"] for ev in out["dedupeReplay"]] == [1, 2]  # type: ignore[index]
     assert out["cursorOf"] == 9
-    assert out["statusWaiting"] == {"cls": "amber", "label": "WAITING APPROVAL"}
-    assert out["statusPaused"] == {"cls": "amber", "label": "PAUSED"}
-    assert out["statusCompleted"] == {"cls": "green", "label": "COMPLETED"}
+    # UIUX-P1-03: harnessStatusBadge() returns a status tone, not a colour class -
+    # setStatus() takes the tone and the label together so the two cannot drift.
+    # The words are the contract and stay identical; only the vocabulary changed.
+    assert out["statusWaiting"] == {"cls": "warn", "label": "WAITING APPROVAL"}
+    assert out["statusPaused"] == {"cls": "warn", "label": "PAUSED"}
+    assert out["statusCompleted"] == {"cls": "ok", "label": "COMPLETED"}
 
 
 def test_frontend_reload_and_resync_paths_use_the_durable_endpoints() -> None:
