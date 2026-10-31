@@ -123,10 +123,10 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "M5-P5-02",
     "last_completed_story": "M5-P5-01",
-    "last_checkpoint": "2026-10-31T07:40:00Z",
-    "last_session_id": "arena/98681cc6-m5-agent-studio",
+    "last_checkpoint": "2026-10-31T09:05:00Z",
+    "last_session_id": "arena/6da06a20-m5-agent-studio",
     "next_recommended_story": "M5-P5-02",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
@@ -3033,13 +3033,13 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P5-02: Artifact lifecycle, provenance and selective invalidation. Objective: Track relevant lineage and trust without a general proof engine. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Separate content hash from provenance and confidentiality; Record derived artifact refs and operation restrictions; Invalidate affected evidence after source/security changes; Implement retention with active-task protection. Acceptance: Deduplicated content does not merge trust histories; Stale evidence not accepted; Active recovery artifacts protected from GC. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-31T09:05:00Z",
+        "updated_at": "2026-10-31T09:05:00Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/6da06a20-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -3047,7 +3047,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "next_action": "Inspect context_store.py, verification_evidence.py, workspace_quarantine.py, workspace_snapshots.py, and app.py artifact/evidence call paths before designing provenance separation and invalidation.",
         "readme_updated": false
       }
     },
