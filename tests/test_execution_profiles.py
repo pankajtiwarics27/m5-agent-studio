@@ -349,6 +349,103 @@ def test_no_shell_or_python_bypass_of_workspace_confinement_and_symlinks(
     assert spawned == []
 
 
+@pytest.mark.parametrize(
+    "command",
+    [
+        # A wrapper whose option takes a separate value used to hide the real
+        # executable: "env -u X sh -c ..." landed on "X", so no shell was seen.
+        "env -u HOME sh -c 'cat .env'",
+        "env --unset HOME sh -c 'cat .env'",
+        "env -C /tmp sh -c 'cat .env'",
+        "nice -n 5 sh -c 'cat .env'",
+        "nice --adjustment 5 sh -c 'cat .env'",
+        "time -f %s sh -c 'cat .env'",
+        "time -o out.txt sh -c 'cat .env'",
+        "env -i FOO=1 python3 -c \"open('.env').read()\"",
+        # Glued `-e<payload>` is one token and eluded the payload extractor.
+        "perl -e'open(F, \".env\")'",
+        "ruby -e'p File.read(\".env\")'",
+        "node -e'require(\"fs\").readFileSync(\".env\")'",
+        # `-s` makes a shell read its command from stdin even with arguments.
+        "bash -s < payload.sh",
+        "sh -s",
+        "sh -es",
+    ],
+)
+def test_wrapper_options_glued_payloads_and_stdin_shells_are_inspected(
+    command: str, isolated_env: Path
+) -> None:
+    """Second pass over the inline-inspection fix — with the gaps it still had.
+
+    Verified at the policy layer (no process is spawned) so the cases run the
+    same way on every platform.
+    """
+    sess_policy = "autonomous"
+    descriptor = ep.resolve_capability_descriptor(
+        "run_bash", {"command": command}, execution_mode="host"
+    )
+    violation = ep.evaluate_unified_policy(
+        descriptor,
+        "run_bash",
+        {"command": command},
+        effective_policy=sess_policy,
+        workspace_root=isolated_env,
+    )
+    assert violation is not None, command
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "env FOO=1 python3 -m pytest -q",
+        "env -u HOME make build",
+        "nice -n 5 make build",
+        "node -p '1 + 1'",
+        "node -e 'console.log(1)'",
+        "sh -c 'npm test'",
+        "bash scripts/build.sh",
+        "python3 -c 'print(1)'",
+        "git status",
+    ],
+)
+def test_ordinary_wrapped_and_inline_commands_stay_allowed(
+    command: str, isolated_env: Path
+) -> None:
+    """The wrappers and glued forms are common in build scripts; inspecting them
+    must not turn normal commands into refusals."""
+    descriptor = ep.resolve_capability_descriptor(
+        "run_bash", {"command": command}, execution_mode="host"
+    )
+    violation = ep.evaluate_unified_policy(
+        descriptor,
+        "run_bash",
+        {"command": command},
+        effective_policy="autonomous",
+        workspace_root=isolated_env,
+    )
+    assert violation is None, (command, violation)
+
+
+def _ep_skip_wrapper_cases() -> list[tuple[list[str], int]]:
+    return [
+        (["env", "-u", "HOME", "sh", "-c", "x"], 3),
+        (["env", "--unset", "HOME", "sh"], 3),
+        (["env", "--unset=HOME", "sh"], 2),
+        (["env", "-i", "A=1", "python3"], 3),
+        (["nice", "-n", "5", "make"], 3),
+        (["nice", "-5", "make"], 2),
+        (["time", "-f", "%s", "make"], 3),
+        (["command", "--", "make"], 2),
+    ]
+
+
+@pytest.mark.parametrize(("tokens", "expected"), _ep_skip_wrapper_cases())
+def test_wrapper_skipping_lands_on_the_real_executable(
+    tokens: list[str], expected: int
+) -> None:
+    assert ep._ep_skip_wrapper(tokens, 0) == expected
+
+
 def test_inline_shell_and_interpreter_payloads_cannot_bypass_the_policy(
     isolated_env: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
