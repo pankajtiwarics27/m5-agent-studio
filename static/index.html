@@ -152,7 +152,14 @@
   .toast.ok { border-left-color: var(--emerald); }
   .toast.warn { border-left-color: var(--amber); }
   .toast.err { border-left-color: var(--rose); }
+  .toast-dismiss {
+    flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; margin: -3px -5px 0 0; border: 0; border-radius: 5px;
+    color: var(--text-dim); background: transparent; cursor: pointer;
+  }
+  .toast-dismiss:hover { background: var(--bg-hover); color: var(--text); }
   @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
 
   .cmd-list { display: flex; flex-direction: column; gap: 4px; max-height: 360px; overflow-y: auto; padding: 8px; }
   .cmd-item {
@@ -874,17 +881,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 </header>
 
 <!-- NON-BLOCKING ACCESSIBLE TOAST STACK (`ui-ux-pro-max` Priority 8) -->
-<div id="toastStack" class="toast-stack" role="status" aria-live="polite" aria-atomic="false"></div>
+<div id="toastStack" class="toast-stack" role="region" aria-label="Notifications" aria-live="polite" aria-atomic="false"></div>
 
 <!-- GLOBAL `⌘K` COMMAND PALETTE MODAL -->
 <div id="cmdPaletteModal" class="modal-backdrop" onclick="if(event.target===this)closeCommandPalette()">
   <div class="modal" style="max-width:580px;" role="dialog" aria-modal="true" aria-label="Command Palette">
     <div style="padding:12px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:9px;">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true" style="color:var(--cyan);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="cmdSearchInput" placeholder="Search actions, tools, and settings…" style="flex:1; border:none; background:transparent; font-size:13.8px; outline:none;" oninput="renderCommandPaletteList(this.value)" />
+      <input type="text" id="cmdSearchInput" role="combobox" aria-label="Search actions" aria-autocomplete="list" aria-controls="cmdPaletteList" aria-expanded="false" placeholder="Search actions, tools, and settings…" autocomplete="off" style="flex:1; border:none; background:transparent; font-size:13.8px;" oninput="renderCommandPaletteList(this.value)" />
       <span class="kbd">ESC</span>
     </div>
-    <div id="cmdPaletteList" class="cmd-list"></div>
+    <div id="cmdPaletteList" class="cmd-list" role="listbox" aria-label="Actions and destinations"></div>
   </div>
 </div>
 
@@ -1849,15 +1856,68 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     info:  '<svg class="svg-ico" style="width:13px;height:13px;" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
   };
 
+  const dismissToastByElement = new WeakMap();
   function showToast(msg, kind = "info") {
     const stack = document.getElementById("toastStack");
     if (!stack) return;
+    const tone = kind === "error" ? "err" : ["ok", "warn", "err", "info"].includes(kind) ? kind : "info";
     const el = document.createElement("div");
-    el.className = `toast ${kind}`;
-    const ico = kind === "ok" ? UI_ICONS.check : (kind === "err" || kind === "warn" ? UI_ICONS.warn : UI_ICONS.info);
-    el.innerHTML = `<span style="margin-top:2px;">${ico}</span><div style="flex:1; line-height:1.45;">${escapeHtml(String(msg || ""))}</div>`;
+    el.className = `toast ${tone}`;
+    const icon = document.createElement("span");
+    icon.setAttribute("aria-hidden", "true");
+    icon.style.marginTop = "2px";
+    icon.innerHTML = tone === "ok" ? UI_ICONS.check : (tone === "err" || tone === "warn" ? UI_ICONS.warn : UI_ICONS.info);
+    const message = document.createElement("div");
+    message.style.cssText = "flex:1; line-height:1.45;";
+    message.textContent = String(msg ?? "");
+    const dismiss = document.createElement("button");
+    dismiss.type = "button";
+    dismiss.className = "toast-dismiss";
+    dismiss.setAttribute("aria-label", "Dismiss notification");
+    dismiss.title = "Dismiss notification";
+    dismiss.innerHTML = UI_ICONS.close;
+    const returnFocus = document.activeElement;
+    let remainingMs = 5000;
+    let timer = null;
+    let startedAt = 0;
+    let dismissed = false;
+    const dismissToast = () => {
+      if (dismissed) return;
+      dismissed = true;
+      if (timer !== null) clearTimeout(timer);
+      timer = null;
+      if (el.contains(document.activeElement) && returnFocus?.isConnected && !el.contains(returnFocus)) {
+        returnFocus.focus();
+      }
+      el.remove();
+    };
+    dismissToastByElement.set(el, dismissToast);
+    const pauseToast = () => {
+      if (timer === null) return;
+      clearTimeout(timer);
+      timer = null;
+      remainingMs = Math.max(0, remainingMs - (performance.now() - startedAt));
+    };
+    const resumeToast = () => {
+      if (dismissed || !el.isConnected || timer !== null || el.matches(":hover") || el.contains(document.activeElement)) return;
+      startedAt = performance.now();
+      timer = setTimeout(dismissToast, remainingMs);
+    };
+    dismiss.addEventListener("click", dismissToast);
+    el.addEventListener("pointerenter", pauseToast);
+    el.addEventListener("pointerleave", resumeToast);
+    el.addEventListener("focusin", pauseToast);
+    el.addEventListener("focusout", () => {
+      if (!el.contains(document.activeElement)) resumeToast();
+    });
+    el.append(icon, message, dismiss);
     stack.appendChild(el);
-    setTimeout(() => { el.style.opacity = "0"; setTimeout(() => el.remove(), 220); }, 4200);
+    const liveToasts = [...stack.querySelectorAll(".toast")];
+    if (liveToasts.length > 5) {
+      const oldestDismissible = liveToasts.find(toast => !toast.contains(document.activeElement) && !toast.matches(":hover"));
+      if (oldestDismissible && oldestDismissible !== el) dismissToastByElement.get(oldestDismissible)?.();
+    }
+    resumeToast();
   }
 
   // An item that is a rail destination names its shortcut by id. The hint is looked
@@ -1971,6 +2031,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const [entry] = overlayStack.splice(index, 1);
     entry.backdrop.classList.remove("open");
     if (entry.dialog) entry.dialog.removeAttribute("aria-modal");
+    if (entry.id === "cmdPaletteModal") {
+      const search = document.getElementById("cmdSearchInput");
+      search?.setAttribute("aria-expanded", "false");
+      search?.removeAttribute("aria-activedescendant");
+    }
     if (!overlayStack.length) {
       overlayInert(false);
       delete document.body.dataset.overlay;
@@ -2073,11 +2138,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   let commandPaletteIndex = 0;
   function openCommandPalette() {
-    document.getElementById("cmdSearchInput").value = "";
+    const input = document.getElementById("cmdSearchInput");
+    input.value = "";
+    input.setAttribute("aria-expanded", "true");
     renderCommandPaletteList("");
     openOverlay("cmdPaletteModal", { focus: "#cmdSearchInput" });
   }
   function closeCommandPalette() {
+    document.getElementById("cmdSearchInput")?.setAttribute("aria-expanded", "false");
+    document.getElementById("cmdSearchInput")?.removeAttribute("aria-activedescendant");
     closeOverlay("cmdPaletteModal");
   }
 
@@ -2092,18 +2161,24 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       return it.label.toLowerCase().includes(ql) || paletteItemHint(it).toLowerCase().includes(ql);
     });
     const box = document.getElementById("cmdPaletteList");
+    const input = document.getElementById("cmdSearchInput");
     if (!list.length) {
       box.innerHTML = `<div style="padding:12px; font-size:12px; color:var(--text-faint);">No matching commands.</div>`;
+      input.removeAttribute("aria-activedescendant");
       return;
     }
     commandPaletteIndex = 0;
     box.setAttribute("role", "listbox");
     box.setAttribute("aria-label", "Actions and destinations");
-    box.innerHTML = list.map((it, idx) => `
-      <button class="cmd-item ${idx === 0 ? 'selected' : ''}" role="option" aria-selected="${idx === 0 ? 'true' : 'false'}" onclick="runPaletteIndex(${CMD_PALETTE_ITEMS.indexOf(it)})">
+    box.innerHTML = list.map((it, idx) => {
+      const itemIndex = CMD_PALETTE_ITEMS.indexOf(it);
+      return `
+      <button id="cmd-option-${itemIndex}" class="cmd-item ${idx === 0 ? 'selected' : ''}" role="option" aria-selected="${idx === 0 ? 'true' : 'false'}" onclick="runPaletteIndex(${itemIndex})">
         <span>${escapeHtml(it.label)}</span>
         <span class="kbd">${escapeHtml(paletteItemHint(it))}</span>
-      </button>`).join("");
+      </button>`;
+    }).join("");
+    input.setAttribute("aria-activedescendant", `cmd-option-${CMD_PALETTE_ITEMS.indexOf(list[0])}`);
   }
   function runPaletteIndex(idx) {
     closeCommandPalette();
@@ -2146,6 +2221,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             option.classList.toggle("selected", selected);
             option.setAttribute("aria-selected", selected ? "true" : "false");
           });
+          document.getElementById("cmdSearchInput")?.setAttribute("aria-activedescendant", options[commandPaletteIndex].id);
         }
       }
       return;

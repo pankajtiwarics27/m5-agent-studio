@@ -45,12 +45,12 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| `#sdlcProgressBadge` | `neutral` | no | 1279 |
-| `#onboardingSummary` | `neutral` | yes | 1426 |
-| `#harnessActiveStatusBadge` | `info` | yes | 1545 |
-| `#hallStatusBadge` | `warn` | yes | 1588 |
-| (unnamed) | `ok` | no | 1785 |
-| `#dockerStateBadge` | `neutral` | no | 1832 |
+| `#sdlcProgressBadge` | `neutral` | no | 1286 |
+| `#onboardingSummary` | `neutral` | yes | 1433 |
+| `#harnessActiveStatusBadge` | `info` | yes | 1552 |
+| `#hallStatusBadge` | `warn` | yes | 1595 |
+| (unnamed) | `ok` | no | 1792 |
+| `#dockerStateBadge` | `neutral` | no | 1839 |
 
 ## Writers
 

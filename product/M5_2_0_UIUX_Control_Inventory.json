@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "afa9f5d69d22c9e7588157cb62e9a52d29208b5ef35e7b457b2cf5e86e873eaa",
+  "frontend_sha256": "1a8de9c17f0e39e1da267801cf302d1619f506dd997209caedaa2bfad2ba934d",
   "panes": [
     {
       "dom_id": "start",
@@ -616,6 +616,8 @@
         "tag": "input",
         "id": "cmdSearchInput",
         "type": "text",
+        "role": "combobox",
+        "aria-label": "Search actions",
         "placeholder": "Search actions, tools, and settings…",
         "oninput": "renderCommandPaletteList(this.value)"
       },

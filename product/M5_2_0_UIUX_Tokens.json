@@ -37,7 +37,7 @@
   "totals": {
     "tokens": 45,
     "groups": 7,
-    "references": 630,
+    "references": 633,
     "theme_overrides": 18,
     "density_overrides": 5,
     "contrast_pairs": 20,
@@ -143,7 +143,7 @@
         "light": "#eff0ed"
       },
       "density_override": null,
-      "references": 17
+      "references": 18
     },
     {
       "name": "--bg-code",
@@ -183,7 +183,7 @@
         "light": "#202326"
       },
       "density_override": null,
-      "references": 41
+      "references": 42
     },
     {
       "name": "--text-dim",
@@ -193,7 +193,7 @@
         "light": "#555c62"
       },
       "density_override": null,
-      "references": 76
+      "references": 77
     },
     {
       "name": "--text-faint",
