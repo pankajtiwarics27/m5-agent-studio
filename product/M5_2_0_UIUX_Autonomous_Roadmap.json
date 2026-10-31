@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 9,
+  "revision": 10,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,13 +102,13 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P1-05",
-    "next_recommended_story": "UIUX-P2-01",
-    "last_checkpoint": "2026-11-01T10:20:00Z",
-    "last_session_id": "arena/22bea3a6-m5-agent-studio",
+    "last_completed_story": "UIUX-P2-01",
+    "next_recommended_story": "UIUX-P2-02",
+    "last_checkpoint": "2026-11-01T12:05:00Z",
+    "last_session_id": "arena/ef50dc33-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "c50be66",
+    "last_verified_commit": "089237f",
     "last_updated": "2026-11-01",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -241,7 +241,7 @@
       "id": "P2",
       "name": "Start and Chat",
       "title": "Start and Chat",
-      "status": "not_started",
+      "status": "in_progress",
       "story_ids": [
         "UIUX-P2-01",
         "UIUX-P2-02",
@@ -251,11 +251,11 @@
         "UIUX-P2-06"
       ],
       "total": 6,
-      "done": 0,
+      "done": 1,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 6,
-      "percent_complete": 0
+      "not_started": 5,
+      "percent_complete": 17
     },
     {
       "id": "P3",
@@ -339,11 +339,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 11,
+    "done": 12,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 29,
-    "percent_complete": 28
+    "not_started": 28,
+    "percent_complete": 30
   },
   "stories": [
     {
@@ -2243,8 +2243,8 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "Start readiness and actionable onboarding with no loss of existing functionality.",
+      "current_behavior": "Recorded at P2-01: the pane fetched /api/onboarding/preflight and rendered six equal-weight rows; the pill showed the summary string; Run was disabled unless ready with no reason anywhere; next_step, completed_count and total_count were unused; a step with no action rendered as a bare row with no explanation; and Re-check inside the error presentation left focus on <body> because the button it lived in was removed.",
+      "target_behavior": "The pane prints the server's verdict once - count, next step title and detail, and the action label the preflight attached - marks that row with aria-current=\"step\" and a visible chip, explains a row with no action as following the next one, and states why Run is off both visibly and as its aria-describedby. Clearing a presentation returns focus to a caller-named live node.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
         "Trace relevant DOM, JS handlers, API and backend state transitions",
@@ -2286,23 +2286,129 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P2-01 (Start readiness and actionable onboarding). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-01T11:20:00Z",
+        "updated_at": "2026-11-01T12:05:00Z",
+        "completed_at": "2026-11-01T12:05:00Z",
+        "owner_session": "arena/ef50dc33-m5-agent-studio",
+        "commit_sha": "8ad52c5a29fbc25635bc2c686021503d58f79d2b",
+        "changed_files": [
+          "static/index.html",
+          "studio.py",
+          "scripts/uiux_onboarding_inventory.py",
+          "scripts/start_walk.mjs",
+          "tests/test_start_readiness.py",
+          "docs/uiux-2-0-start.md",
+          "docs/uiux-2-0-program.md",
+          "docs/README.md",
+          "docs/media/start/lead.png",
+          "docs/media/start/narrow.png",
+          "docs/media/start/README.md",
+          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "The gap was not missing data, it was unused data. /api/onboarding/preflight has returned ready, blocked, completed_count, total_count and exactly one next_step since AS-039; the pane rendered six equal-weight rows, put the summary in a pill and disabled the Run button with no reason printed anywhere. A first-run reader had to read six paragraphs to find their one, and a keyboard user met a control that refused without saying why.",
+          "The pane now prints the server's answer once, above the list: '3 of 6 steps ready', 'Next: Connect a model source', that step's own detail, and the action label the preflight attached to it. The row it named carries aria-current=\"step\" and a visible NEXT chip, so the eye and the screen reader resolve to the same row; the pill now states the verdict (Ready / Needs you / Blocked) instead of repeating the count, so a progress line has exactly one home.",
+          "A step the server gives no action is printed as following the next one rather than as a button that does nothing. first-task is action-required with no action whenever no model is selectable, and the thing to click in that state is the model step above it - which the matrix confirms is always actionable: in all 13 input combinations that produced a next step, it carried both an action token and a label.",
+          "Run stays disabled when the preflight is not ready, but the refusal is now stated twice on purpose: a visible line naming the step that is holding it up, and the same text as the button's aria-describedby. That is the ledger's invariant about disabled controls - a disabled control must reflect an authoritative refusal - made readable instead of merely true.",
+          "Two focus bugs surfaced while wiring this, both real and both fixed: clearPresentation() destroyed the button that held focus and left the reader on <body>, so it now hands focus to a caller-named target (a successful re-check returns to the lead; dismissing a chat error returns to the composer); and handing focus to the lead before rebuilding it dropped focus anyway, because the very next line replaced the focused node. The walk caught the second one after the first fix, which is why the walk reads document.activeElement rather than trusting the code.",
+          "Proof is measured in two places. scripts/uiux_onboarding_inventory.py calls the pure preflight module for 13 input combinations (auth, provider variants, local probe states, workspace, three execution modes) and fails on a next step with no action, a step with no title, a pane that recounts readiness or counts steps client-side, an invented aria-current, a missing waiting line, a Run button whose description stops naming the blocker, a clearPresentation() that drops focus, a focus hand-off to a node about to be re-rendered, or a state with no rule. scripts/start_walk.mjs reads the same response the pane read and holds the pane against it in a browser, including a refused preflight and a keyboard-pressed Re-check.",
+          "The walk records one limit honestly: this host is not ready (3 of 6), so the ready-state branch is asserted through the preflight contract and the matrix rather than by making the machine ready. Nothing in this record claims a ready journey was walked on this host.",
+          "Acceptance is the reviewer's call. This record states what was measured on this tree; the pull request is where the story is reviewed against its criteria, and the ledger does not treat its own closure as that review.",
+          "README.md was not touched: the preflight, its route and its six steps are unchanged, and the story changes how the pane presents an answer the product already gave."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "1804 passed, 26 skipped (one test_baseline failure on the first run was the shallow clone missing the pinned commit; git fetch --unshallow resolved it and the suite was re-run clean)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest tests/test_start_readiness.py tests/test_presentations.py tests/test_uiux_roadmap.py -q",
+            "exit_code": 0,
+            "result": "63 passed"
+          },
+          {
+            "command": "node scripts/start_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway> --screenshots docs/media/start",
+            "exit_code": 0,
+            "result": "18 of 18 checks passed (lead counts and state match the API, aria-current names the next step, Run explains itself, the action opens Providers, Tab stays on the pane, refused preflight then keyboard Re-check restores the list with focus on the lead, 900px viewport, no page errors)"
+          },
+          {
+            "command": "node scripts/presentation_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "20 of 20 checks passed"
+          },
+          {
+            "command": "node scripts/overlay_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "78 passed, 0 failed, 1 blocked (harnessDiffModal needs an active Harness session)"
+          },
+          {
+            "command": "node scripts/keyboard_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "22 of 22 checks passed"
+          },
+          {
+            "command": "node scripts/status_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "74 of 74 checks passed"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_onboarding_inventory.py --check",
+            "exit_code": 0,
+            "result": "13 cases, next step actionable in every one, 7 actions, 0 findings"
+          },
+          {
+            "command": ".venv/bin/python -m ruff check . && .venv/bin/python -m mypy",
+            "exit_code": 0,
+            "result": "clean; no issues in 58 source files"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py",
+            "exit_code": 0,
+            "result": "Documentation validation passed (5 required pages, 142 files scanned)"
+          },
+          {
+            "command": ".venv/bin/python scripts/build_studio.py && .venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "studio.py rebuilt (3,067,240 bytes); one inline script block parses"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_preservation_signoff.py --check",
+            "exit_code": 0,
+            "result": "up to date: historical-approval-unbound, 21 capabilities across 6 panes"
+          }
+        ],
+        "visual_evidence": [
+          "docs/media/start/lead.png - the real state of this host: 3 of 6 ready, the lead naming Connect a model source with its Open providers action, the NEXT chip and accent hairline on that row, the waiting line under Ask a model to say READY, and the disabled Run button above its stated reason.",
+          "docs/media/start/narrow.png - the same pane at 900px, lead height 150px and no horizontal overflow, action still on screen.",
+          "Captured by scripts/start_walk.mjs --screenshots while the walk held the pane against the API response; docs/media/start/README.md records the command."
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "The pane renders the server's verdict and never recounts it. A client-side 'every step is ready' would be able to claim a readiness the preflight never measured, which is the invariant the whole program rests on.",
+          "The count lives in the lead and nowhere else; the status pill states the verdict instead. Two places printing '3 of 6' is how a progress line and a badge start disagreeing after one of them is edited.",
+          "aria-current is derived from next_step.id, not from the first amber row. The visual accent and the announced state then cannot disagree, and a row that merely looks urgent is not presented as the one to do.",
+          "A step with no action says it follows the next one instead of rendering a disabled button. The server is the one that knows the dependency; the pane says so in words rather than inventing an enablement rule.",
+          "Run is disabled, not hidden. Removing it would remove a capability; keeping it visible with its reason attached is the honest version of a refusal the server already made.",
+          "clearPresentation() gained a focus target rather than each caller re-focusing afterwards, because there are five call sites and each one would get it slightly differently - which is exactly how the focus was lost in the first place.",
+          "The lead is rebuilt before focus is handed to it. The first fix looked correct and still dropped focus on <body>; the ordering is now a rule in the generator rather than a comment."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "The Start pane prints next_step, completed_count, total_count, ready and blocked from /api/onboarding/preflight; do not compute any of them in the browser. renderOnboardingLead() owns the lead, list.innerHTML owns the rows, and the row marked aria-current must be the one the server named. Run's reason lives in #onboardingRunHint and is wired through aria-describedby - keep them together. If a step builder in onboarding_preflight.py gains a branch, run scripts/uiux_onboarding_inventory.py: a next step with no action fails there rather than shipping as a dead lead. Focus handed to a node that is about to be re-rendered falls to <body>; the walk checks document.activeElement for that reason. P2-02 (Start recent sessions and task launch) is next.",
+        "next_action": "None. UIUX-P2-02 (Start recent sessions and task launch) is next.",
         "readme_updated": false
       },
       "required_evidence": [

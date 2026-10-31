@@ -52,7 +52,7 @@
         "Re-check",
         "Providers"
       ],
-      "line": 2429
+      "line": 2590
     },
     {
       "container": "hallStream",
@@ -66,7 +66,7 @@
         "Ask one model",
         "Configure providers"
       ],
-      "line": 2671
+      "line": 2850
     },
     {
       "container": "debateSynthesisArea",
@@ -78,7 +78,7 @@
       "actions": [
         "Start Compare"
       ],
-      "line": 2685
+      "line": 2864
     },
     {
       "container": "chatState",
@@ -91,7 +91,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 2695
+      "line": 2874
     },
     {
       "container": "harnessStreamState",
@@ -104,7 +104,7 @@
         "Reconnect now",
         "Reload from snapshot"
       ],
-      "line": 2709
+      "line": 2888
     }
   ],
   "containers": [
@@ -141,15 +141,15 @@
   ],
   "remaining_raw_writers": [
     {
-      "line": 2978,
+      "line": 3157,
       "handler": "installSkill"
     },
     {
-      "line": 4346,
+      "line": 4525,
       "handler": "openHarnessDiffModal"
     },
     {
-      "line": 4822,
+      "line": 5001,
       "handler": "runMcpPlayground"
     }
   ],

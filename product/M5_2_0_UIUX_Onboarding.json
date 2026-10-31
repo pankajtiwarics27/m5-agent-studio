@@ -1,0 +1,758 @@
+{
+  "schema_version": "1.0.0",
+  "story": "UIUX-P2-01",
+  "statement": "The preflight decides what a first-run reader should do next and the Start pane prints that answer once: how far along, which step is next, and the action the server attached to it. The pane never recounts readiness, a step with no action is shown as following the next one, and Run is disabled only with a stated reason.",
+  "source": {
+    "frontend": "static/index.html",
+    "preflight": "onboarding_preflight.py",
+    "route": "GET /api/onboarding/preflight"
+  },
+  "steps_contract": {
+    "order": [
+      "auth",
+      "model-source",
+      "model-available",
+      "workspace",
+      "execution",
+      "first-task"
+    ],
+    "ready_statuses": [
+      "optional",
+      "ready"
+    ],
+    "first_task_prompt": "Reply with the single word READY. This confirms Studio can reach the selected model, so we can start the real task next."
+  },
+  "actions": [
+    {
+      "action": "fix-workspace",
+      "label": "Check workspace"
+    },
+    {
+      "action": "open-chat",
+      "label": "Open Chat"
+    },
+    {
+      "action": "open-providers",
+      "label": "Open providers"
+    },
+    {
+      "action": "probe-local-models",
+      "label": "Check local models"
+    },
+    {
+      "action": "restart-server",
+      "label": "Restart Studio"
+    },
+    {
+      "action": "review-execution",
+      "label": "Review execution mode"
+    },
+    {
+      "action": "run-first-task",
+      "label": "Run first task"
+    }
+  ],
+  "statuses_seen": {
+    "blocked": 1,
+    "action-required": 24,
+    "optional": 11,
+    "ready": 42
+  },
+  "matrix": [
+    {
+      "case": "fresh install, nothing configured",
+      "ready": false,
+      "blocked": true,
+      "completed_count": 1,
+      "total_count": 6,
+      "next_step": "auth",
+      "next_step_title": "Studio has no API token",
+      "next_step_action": "restart-server",
+      "next_step_action_label": "Restart Studio",
+      "steps": [
+        {
+          "id": "auth",
+          "status": "blocked",
+          "title": "Studio has no API token",
+          "has_action": true
+        },
+        {
+          "id": "model-source",
+          "status": "action-required",
+          "title": "Connect a model source",
+          "has_action": true
+        },
+        {
+          "id": "model-available",
+          "status": "action-required",
+          "title": "Choose a model",
+          "has_action": true
+        },
+        {
+          "id": "workspace",
+          "status": "action-required",
+          "title": "Fix the workspace directory",
+          "has_action": true
+        },
+        {
+          "id": "execution",
+          "status": "optional",
+          "title": "Code execution is off (fine for a first chat)",
+          "has_action": false
+        },
+        {
+          "id": "first-task",
+          "status": "action-required",
+          "title": "Ask a model to say READY",
+          "has_action": false
+        }
+      ]
+    },
+    {
+      "case": "signed in, no model source",
+      "ready": false,
+      "blocked": false,
+      "completed_count": 3,
+      "total_count": 6,
+      "next_step": "model-source",
+      "next_step_title": "Connect a model source",
+      "next_step_action": "open-providers",
+      "next_step_action_label": "Open providers",
+      "steps": [
+        {
+          "id": "auth",
+          "status": "ready",
+          "title": "Studio is running and protected",
+          "has_action": false
+        },
+        {
+          "id": "model-source",
+          "status": "action-required",
+          "title": "Connect a model source",
+          "has_action": true
+        },
+        {
+          "id": "model-available",
+          "status": "action-required",
+          "title": "Choose a model",
+          "has_action": true
+        },
+        {
+          "id": "workspace",
+          "status": "ready",
+          "title": "Workspace is writable",
+          "has_action": false
+        },
+        {
+          "id": "execution",
+          "status": "optional",
+          "title": "Code execution is off (fine for a first chat)",
+          "has_action": false
+        },
+        {
+          "id": "first-task",
+          "status": "action-required",
+          "title": "Ask a model to say READY",
+          "has_action": false
+        }
+      ]
+    },
+    {
+      "case": "provider saved without a key",
+      "ready": false,
+      "blocked": false,
+      "completed_count": 3,
+      "total_count": 6,
+      "next_step": "model-source",
+      "next_step_title": "Connect a model source",
+      "next_step_action": "open-providers",
+      "next_step_action_label": "Open providers",
+      "steps": [
+        {
+          "id": "auth",
+          "status": "ready",
+          "title": "Studio is running and protected",
+          "has_action": false
+        },
+        {
+          "id": "model-source",
+          "status": "action-required",
+          "title": "Connect a model source",
+          "has_action": true
+        },
+        {
+          "id": "model-available",
+          "status": "action-required",
+          "title": "Choose a model",
+          "has_action": true
+        },
+        {
+          "id": "workspace",
+          "status": "ready",
+          "title": "Workspace is writable",
+          "has_action": false
+        },
+        {
+          "id": "execution",
+          "status": "optional",
+          "title": "Code execution is off (fine for a first chat)",
+          "has_action": false
+        },
+        {
+          "id": "first-task",
+          "status": "action-required",
+          "title": "Ask a model to say READY",
+          "has_action": false
+        }
+      ]
+    },
+    {
+      "case": "provider saved and disabled",
+      "ready": false,
+      "blocked": false,
+      "completed_count": 3,
+      "total_count": 6,
+      "next_step": "model-source",
+      "next_step_title": "Connect a model source",
+      "next_step_action": "open-providers",
+      "next_step_action_label": "Open providers",
+      "steps": [
+        {
+          "id": "auth",
+          "status": "ready",
+          "title": "Studio is running and protected",
+          "has_action": false
+        },
+        {
+          "id": "model-source",
+          "status": "action-required",
+          "title": "Connect a model source",
+          "has_action": true
+        },
+        {
+          "id": "model-available",
+          "status": "action-required",
+          "title": "Choose a model",
+          "has_action": true
+        },
+        {
+          "id": "workspace",
+          "status": "ready",
+          "title": "Workspace is writable",
+          "has_action": false
+        },
+        {
+          "id": "execution",
+          "status": "optional",
+          "title": "Code execution is off (fine for a first chat)",
+          "has_action": false
+        },
+        {
+          "id": "first-task",
+          "status": "action-required",
+          "title": "Ask a model to say READY",
+          "has_action": false
+        }
+      ]
+    },
+    {
+      "case": "cloud provider with models",
+      "ready": true,
+      "blocked": false,
+      "completed_count": 6,
+      "total_count": 6,
+      "next_step": null,
+      "next_step_title": null,
+      "next_step_action": null,
+      "next_step_action_label": null,
+      "steps": [
+        {
+          "id": "auth",
+          "status": "ready",
+          "title": "Studio is running and protected",
+          "has_action": false
+        },
+        {
+          "id": "model-source",
+          "status": "ready",
+          "title": "A model source is configured",
+          "has_action": false
+        },
+        {
+          "id": "model-available",
+          "status": "ready",
+          "title": "Models are available",
+          "has_action": false
+        },
+        {
+          "id": "workspace",
+          "status": "ready",
+          "title": "Workspace is writable",
+          "has_action": false
+        },
+        {
+          "id": "execution",
+          "status": "optional",
+          "title": "Code execution is off (fine for a first chat)",
+          "has_action": false
+        },
+        {
+          "id": "first-task",
+          "status": "ready",
+          "title": "Ask a model to say READY",
+          "has_action": true
+        }
+      ]
+    },
+    {
+      "case": "local runtime configured, never probed",
+      "ready": false,
+      "blocked": false,
+      "completed_count": 3,
+      "total_count": 6,
+      "next_step": "model-source",
+      "next_step_title": "Connect a model source",
+      "next_step_action": "open-providers",
+      "next_step_action_label": "Open providers",
+      "steps": [
+        {
+          "id": "auth",
+          "status": "ready",
+          "title": "Studio is running and protected",
+          "has_action": false
+        },
+        {
+          "id": "model-source",
+          "status": "action-required",
+          "title": "Connect a model source",
+          "has_action": true
+        },
+        {
+          "id": "model-available",
+          "status": "action-required",
+          "title": "Confirm which models exist",
+          "has_action": true
+        },
+        {
+          "id": "workspace",
+          "status": "ready",
+          "title": "Workspace is writable",
+          "has_action": false
+        },
+        {
+          "id": "execution",
+          "status": "optional",
+          "title": "Code execution is off (fine for a first chat)",
+          "has_action": false
+        },
+        {
+          "id": "first-task",
+          "status": "action-required",
+          "title": "Ask a model to say READY",
+          "has_action": false
+        }
+      ]
+    },
+    {
+      "case": "local runtime probed and empty",
+      "ready": false,
+      "blocked": false,
+      "completed_count": 3,
+      "total_count": 6,
+      "next_step": "model-source",
+      "next_step_title": "Connect a model source",
+      "next_step_action": "open-providers",
+      "next_step_action_label": "Open providers",
+      "steps": [
+        {
+          "id": "auth",
+          "status": "ready",
+          "title": "Studio is running and protected",
+          "has_action": false
+        },
+        {
+          "id": "model-source",
+          "status": "action-required",
+          "title": "Connect a model source",
+          "has_action": true
+        },
+        {
+          "id": "model-available",
+          "status": "action-required",
+          "title": "The local runtime reported no models",
+          "has_action": true
+        },
+        {
+          "id": "workspace",
+          "status": "ready",
+          "title": "Workspace is writable",
+          "has_action": false
+        },
+        {
+          "id": "execution",
+          "status": "optional",
+          "title": "Code execution is off (fine for a first chat)",
+          "has_action": false
+        },
+        {
+          "id": "first-task",
+          "status": "action-required",
+          "title": "Ask a model to say READY",
+          "has_action": false
+        }
+      ]
+    },
+    {
+      "case": "local runtime probed with models",
+      "ready": true,
+      "blocked": false,
+      "completed_count": 6,
+      "total_count": 6,
+      "next_step": null,
+      "next_step_title": null,
+      "next_step_action": null,
+      "next_step_action_label": null,
+      "steps": [
+        {
+          "id": "auth",
+          "status": "ready",
+          "title": "Studio is running and protected",
+          "has_action": false
+        },
+        {
+          "id": "model-source",
+          "status": "ready",
+          "title": "The local runtime is serving models",
+          "has_action": false
+        },
+        {
+          "id": "model-available",
+          "status": "ready",
+          "title": "Models are available",
+          "has_action": false
+        },
+        {
+          "id": "workspace",
+          "status": "ready",
+          "title": "Workspace is writable",
+          "has_action": false
+        },
+        {
+          "id": "execution",
+          "status": "optional",
+          "title": "Code execution is off (fine for a first chat)",
+          "has_action": false
+        },
+        {
+          "id": "first-task",
+          "status": "ready",
+          "title": "Ask a model to say READY",
+          "has_action": true
+        }
+      ]
+    },
+    {
+      "case": "local runtime unreachable",
+      "ready": false,
+      "blocked": false,
+      "completed_count": 3,
+      "total_count": 6,
+      "next_step": "model-source",
+      "next_step_title": "Connect a model source",
+      "next_step_action": "open-providers",
+      "next_step_action_label": "Open providers",
+      "steps": [
+        {
+          "id": "auth",
+          "status": "ready",
+          "title": "Studio is running and protected",
+          "has_action": false
+        },
+        {
+          "id": "model-source",
+          "status": "action-required",
+          "title": "Connect a model source",
+          "has_action": true
+        },
+        {
+          "id": "model-available",
+          "status": "action-required",
+          "title": "The local runtime did not answer",
+          "has_action": true
+        },
+        {
+          "id": "workspace",
+          "status": "ready",
+          "title": "Workspace is writable",
+          "has_action": false
+        },
+        {
+          "id": "execution",
+          "status": "optional",
+          "title": "Code execution is off (fine for a first chat)",
+          "has_action": false
+        },
+        {
+          "id": "first-task",
+          "status": "action-required",
+          "title": "Ask a model to say READY",
+          "has_action": false
+        }
+      ]
+    },
+    {
+      "case": "workspace not writable",
+      "ready": false,
+      "blocked": false,
+      "completed_count": 5,
+      "total_count": 6,
+      "next_step": "workspace",
+      "next_step_title": "Fix the workspace directory",
+      "next_step_action": "fix-workspace",
+      "next_step_action_label": "Check workspace",
+      "steps": [
+        {
+          "id": "auth",
+          "status": "ready",
+          "title": "Studio is running and protected",
+          "has_action": false
+        },
+        {
+          "id": "model-source",
+          "status": "ready",
+          "title": "The local runtime is serving models",
+          "has_action": false
+        },
+        {
+          "id": "model-available",
+          "status": "ready",
+          "title": "Models are available",
+          "has_action": false
+        },
+        {
+          "id": "workspace",
+          "status": "action-required",
+          "title": "Fix the workspace directory",
+          "has_action": true
+        },
+        {
+          "id": "execution",
+          "status": "optional",
+          "title": "Code execution is off (fine for a first chat)",
+          "has_action": false
+        },
+        {
+          "id": "first-task",
+          "status": "ready",
+          "title": "Ask a model to say READY",
+          "has_action": true
+        }
+      ]
+    },
+    {
+      "case": "sandbox selected with no runtime",
+      "ready": false,
+      "blocked": false,
+      "completed_count": 5,
+      "total_count": 6,
+      "next_step": "execution",
+      "next_step_title": "Container runtime not found",
+      "next_step_action": "review-execution",
+      "next_step_action_label": "Review execution mode",
+      "steps": [
+        {
+          "id": "auth",
+          "status": "ready",
+          "title": "Studio is running and protected",
+          "has_action": false
+        },
+        {
+          "id": "model-source",
+          "status": "ready",
+          "title": "The local runtime is serving models",
+          "has_action": false
+        },
+        {
+          "id": "model-available",
+          "status": "ready",
+          "title": "Models are available",
+          "has_action": false
+        },
+        {
+          "id": "workspace",
+          "status": "ready",
+          "title": "Workspace is writable",
+          "has_action": false
+        },
+        {
+          "id": "execution",
+          "status": "action-required",
+          "title": "Container runtime not found",
+          "has_action": true
+        },
+        {
+          "id": "first-task",
+          "status": "ready",
+          "title": "Ask a model to say READY",
+          "has_action": true
+        }
+      ]
+    },
+    {
+      "case": "sandbox selected and available",
+      "ready": true,
+      "blocked": false,
+      "completed_count": 6,
+      "total_count": 6,
+      "next_step": null,
+      "next_step_title": null,
+      "next_step_action": null,
+      "next_step_action_label": null,
+      "steps": [
+        {
+          "id": "auth",
+          "status": "ready",
+          "title": "Studio is running and protected",
+          "has_action": false
+        },
+        {
+          "id": "model-source",
+          "status": "ready",
+          "title": "The local runtime is serving models",
+          "has_action": false
+        },
+        {
+          "id": "model-available",
+          "status": "ready",
+          "title": "Models are available",
+          "has_action": false
+        },
+        {
+          "id": "workspace",
+          "status": "ready",
+          "title": "Workspace is writable",
+          "has_action": false
+        },
+        {
+          "id": "execution",
+          "status": "ready",
+          "title": "Container sandbox is ready",
+          "has_action": false
+        },
+        {
+          "id": "first-task",
+          "status": "ready",
+          "title": "Ask a model to say READY",
+          "has_action": true
+        }
+      ]
+    },
+    {
+      "case": "host execution enabled",
+      "ready": true,
+      "blocked": false,
+      "completed_count": 6,
+      "total_count": 6,
+      "next_step": null,
+      "next_step_title": null,
+      "next_step_action": null,
+      "next_step_action_label": null,
+      "steps": [
+        {
+          "id": "auth",
+          "status": "ready",
+          "title": "Studio is running and protected",
+          "has_action": false
+        },
+        {
+          "id": "model-source",
+          "status": "ready",
+          "title": "The local runtime is serving models",
+          "has_action": false
+        },
+        {
+          "id": "model-available",
+          "status": "ready",
+          "title": "Models are available",
+          "has_action": false
+        },
+        {
+          "id": "workspace",
+          "status": "ready",
+          "title": "Workspace is writable",
+          "has_action": false
+        },
+        {
+          "id": "execution",
+          "status": "optional",
+          "title": "Host execution is enabled (unsandboxed)",
+          "has_action": false
+        },
+        {
+          "id": "first-task",
+          "status": "ready",
+          "title": "Ask a model to say READY",
+          "has_action": true
+        }
+      ]
+    }
+  ],
+  "frontend": {
+    "lead_container": {
+      "present": true,
+      "line": 1478
+    },
+    "renderer": {
+      "present": true,
+      "uses_next_step": true,
+      "uses_counts": true,
+      "uses_ready": true,
+      "announces_blocked": true,
+      "action_attached": true,
+      "no_action_branch": true
+    },
+    "steps": {
+      "aria_current": true,
+      "aria_current_from_next": true,
+      "waiting_line": true,
+      "waiting_rule": true,
+      "action_button": true
+    },
+    "run_button": {
+      "described_by": true,
+      "hint_element": true,
+      "hint_written": true,
+      "reason_names_next": true
+    },
+    "focus": {
+      "clear_restores": true,
+      "refresh_names_target": true,
+      "rendered_before_focus": true
+    },
+    "readiness": {
+      "uses_server_ready": true,
+      "recomputes_ready": false,
+      "counts_client_side": false
+    },
+    "styles": {
+      "lead_rule": true,
+      "lead_states": true,
+      "chip": true,
+      "waiting": true,
+      "next_row": true
+    }
+  },
+  "totals": {
+    "cases": 13,
+    "steps_per_case": 6,
+    "next_step_is_actionable_always": true,
+    "actions": 7,
+    "findings": 0
+  },
+  "findings": [],
+  "limits": [
+    "the matrix runs the pure preflight module, so it covers every branch of the six step builders but not the app adapter that fills PreflightInputs from live state",
+    "a browser check cannot make a machine ready, so scripts/start_walk.mjs asserts the lead against the same API response the pane received rather than against an invented ready state",
+    "the readiness of a real install depends on the machine; this artifact says what the pane does with the answer"
+  ]
+}

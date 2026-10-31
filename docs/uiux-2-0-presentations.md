@@ -24,11 +24,11 @@ is a bug in the caller, and the `error` kind is already how bugs are shown.
 
 | Container | Pane | Kind | Actions | Line |
 |---|---|---|---|---|
-| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 2429 |
-| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 2671 |
-| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 2685 |
-| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 2695 |
-| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 2709 |
+| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 2590 |
+| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 2850 |
+| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 2864 |
+| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 2874 |
+| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 2888 |
 
 5 call sites across 5 of 5 containers: 2 empty, 2 error, 1 recovery.
 
@@ -54,9 +54,9 @@ should not quietly become a pane rewrite:
 
 | Handler | Line |
 |---|---|
-| `installSkill()` | 2978 |
-| `openHarnessDiffModal()` | 4346 |
-| `runMcpPlayground()` | 4822 |
+| `installSkill()` | 3157 |
+| `openHarnessDiffModal()` | 4525 |
+| `runMcpPlayground()` | 5001 |
 
 ## Checks and limits
 

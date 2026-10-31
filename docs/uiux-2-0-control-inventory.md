@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `1a8de9c17f0e39e1da267801cf302d1619f506dd997209caedaa2bfad2ba934d`.
+* Frontend digest: `63e470ef350d1632e71777b7b0169ca29d319360c37b8793ef7a81bf2ee33c33`.
 * Panes: 6 · controls in panes: 67 · controls in the
   shared chrome: 101 · script-rendered: 30.
 
