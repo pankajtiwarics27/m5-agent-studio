@@ -4217,6 +4217,67 @@ body[data-density="compact"] .council-settings { padding-block: var(--strip-pad-
 .diff-add { color: var(--emerald); background: var(--bg-card); }
 .diff-del { color: var(--rose); background: var(--bg-card); }
 .diff-hdr { color: var(--text-dim); }
+/* ── Status ──────────────────────────────────────────────────────────────────
+   One vocabulary for "what state is this in": a tone, a dot, a hairline and
+   words. The words carry the state; the tone is reinforcement that survives
+   greyscale only as a shape difference, so nothing here depends on seeing colour.
+   That is why the label is --text (12.98:1 dark, 15.79:1 light on --bg-card) and
+   the tone paints the dot and the border instead: the dark --accent reads 3.30:1,
+   fine for a redundant graphic and wrong for text.
+
+   Before this the redesign layer had flattened every .badge variant onto the same
+   two tokens, so .badge.green and .badge.red painted identically and the colour
+   vocabulary survived only in the words. scripts/uiux_status_components.py now
+   fails a tone that names no token, a tone nobody writes, or a colour literal in
+   a tone rule. */
+.status {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  padding: 2px var(--space-3); border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hi); background: var(--bg-card); color: var(--text);
+  font: var(--weight-medium) var(--text-xs)/var(--lh-tight) var(--sans);
+  white-space: nowrap;
+}
+.status::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--text-dim); flex: 0 0 auto;
+}
+/* Two declarations per tone - the hairline and the dot - because a component-local
+   custom property would be a token the token checker cannot see, and inventing one
+   to save five lines is how a design system stops being checkable. */
+.status[data-tone="ok"] { border-color: var(--emerald); }
+.status[data-tone="ok"]::before { background: var(--emerald); }
+.status[data-tone="warn"] { border-color: var(--amber); }
+.status[data-tone="warn"]::before { background: var(--amber); }
+.status[data-tone="danger"] { border-color: var(--rose); }
+.status[data-tone="danger"]::before { background: var(--rose); }
+.status[data-tone="info"] { border-color: var(--cyan); }
+.status[data-tone="info"]::before { background: var(--cyan); }
+.status[data-tone="busy"] { border-color: var(--accent); }
+.status[data-tone="busy"]::before { background: var(--accent); }
+.status[data-tone="neutral"] { border-color: var(--border-hi); }
+.status[data-tone="neutral"]::before { background: var(--text-dim); }
+
+/* ── Evidence ────────────────────────────────────────────────────────────────
+   A claim and the basis it stands on, together. The four bases are the whole
+   vocabulary: measured, derived, unverified, unavailable. A claim shown without
+   one is the failure this component exists to prevent, which is why the basis is
+   a required attribute rather than a sentence someone remembers to add. */
+.evidence {
+  border-left: 2px solid var(--border-hi); padding: var(--space-2) 0 var(--space-2) var(--space-3);
+  margin: var(--space-3) 0; color: var(--text-dim);
+  font-size: var(--text-xs); line-height: var(--lh-base);
+}
+.evidence-basis { display: block; color: var(--text); font-weight: var(--weight-semibold); }
+.evidence[data-basis="measured"] { border-left-color: var(--emerald); }
+.evidence[data-basis="derived"] { border-left-color: var(--cyan); }
+.evidence[data-basis="unverified"] { border-left-color: var(--amber); }
+.evidence[data-basis="unavailable"] { border-left-color: var(--rose); }
+.evidence-copy {
+  display: block; margin-top: var(--space-2); padding: 0; border: 0; background: none;
+  color: var(--text-faint); font: inherit; text-decoration: underline; cursor: pointer;
+}
+.evidence-copy:hover { color: var(--text); }
+
 .toast { background: var(--bg-elev); color: var(--text); border-color: var(--border); box-shadow: 0 8px 24px rgba(0,0,0,.18); font-size: 13px; }
 .toast.ok { border-left-color: var(--emerald); }
 .toast.warn { border-left-color: var(--amber); }
@@ -4812,7 +4873,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div style="font-size:11.6px; color:var(--text-dim);">Research, planning, implementation, verification, and feedback in one guided workflow.</div>
       </div>
       <div style="display:flex; gap:6px; align-items:center;">
-        <span id="sdlcProgressBadge" class="badge green">0 / 0 Passed</span>
+        <span id="sdlcProgressBadge" class="status" data-tone="neutral">0 / 0 Passed</span>
         <button class="btn btn-xs" onclick="refreshSdlcBoard()">Refresh</button>
         <button class="btn btn-xs" onclick="closeSdlcModal()">Close</button>
       </div>
@@ -4959,7 +5020,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div class="m-card">
           <div class="m-head">
             <span>Guided first run</span>
-            <span id="onboardingSummary" class="badge green">Checking...</span>
+            <span id="onboardingSummary" class="status" data-tone="neutral" role="status">Checking...</span>
           </div>
           <p class="onboarding-lede">
             Studio checks your local configuration and tells you the one next thing to click.
@@ -4973,6 +5034,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           </div>
           <div id="onboardingFirstTask" class="onboarding-note" hidden></div>
           <div id="onboardingNotes" class="onboarding-note"></div>
+          <!-- The summary above is a claim; this says what it stands on, in the same
+               place, so a reader never has to guess whether a check ran. -->
+          <div class="evidence" id="onboardingEvidence" data-basis="measured">
+            <span class="evidence-basis">Basis: measured locally</span>
+            Each step reads local configuration and, where offered, one explicit request to a
+            loopback runtime when you press the button. Nothing here contacts a cloud provider,
+            and a step that cannot be checked is reported as unavailable rather than passed.
+          </div>
         </div>
       </div>
     </section>
@@ -5069,7 +5138,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <span id="harnessActiveLabel">New session — choose a project directory and model, then describe the task.</span>
             <div style="display:flex; gap:6px; align-items:center;">
               <span id="harnessCtxSavingsBadge" class="badge green" style="display:none;" title="Context-Mode SQLite FTS5 KV-Cache Compression Savings">Ctx Saved 0%</span>
-              <span id="harnessActiveStatusBadge" class="badge cyan">READY</span>
+              <span id="harnessActiveStatusBadge" class="status" data-tone="info" role="status">READY</span>
             </div>
           </div>
 
@@ -5111,7 +5180,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <div style="min-width:0;">
               <div style="display:flex; align-items:center; gap:8px;">
                 <strong id="hallTitle" style="font-size:14.8px;">Spawn or select a Council Session</strong>
-                <span id="hallStatusBadge" class="badge amber">IDLE</span>
+                <span id="hallStatusBadge" class="status" data-tone="warn" role="status">IDLE</span>
               </div>
               <div id="hallRoster" class="avatar-stack" style="margin-top:5px;"></div>
             </div>
@@ -5318,7 +5387,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   <!-- ================= RIGHT MONITORING RAIL ================= -->
   <aside id="monitorRail" class="monitor-rail">
     <div class="m-card">
-      <div class="m-head"><span>M5 Unified Memory (24 GB)</span><span class="badge green">OK</span></div>
+      <div class="m-head"><span>M5 Unified Memory (24 GB)</span><span class="status" data-tone="ok">OK</span></div>
       <div style="display:flex; justify-content:space-between; font-size:11.6px; margin-bottom:2px;">
         <span id="ramUsedSummary" class="mono">-- / 24.0 GB</span>
         <span id="ramCeilingSummary" class="mono" style="color:var(--rose);">Cap: 20.8 GB</span>
@@ -5365,7 +5434,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </div>
 
     <div class="m-card">
-      <div class="m-head"><span>OrbStack &amp; Containers</span><span id="dockerStateBadge" class="badge">Checking</span></div>
+      <div class="m-head"><span>OrbStack &amp; Containers</span><span id="dockerStateBadge" class="status" data-tone="neutral">Checking</span></div>
       <div style="display:flex; justify-content:space-between; font-size:11.4px; color:var(--text-dim); margin-bottom:4px;">
         <span>RAM: <strong id="dockerRam" class="mono" style="color:var(--text)">0.00 GB</strong></span>
         <span>CPU: <strong id="dockerCpu" class="mono" style="color:var(--text)">0.0%</strong></span>
@@ -5660,8 +5729,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const payload = await response.json();
       onboardingReport = payload.preflight || null;
       if (!onboardingReport) throw new Error("empty preflight");
-      summary.textContent = onboardingReport.ready ? "Ready" : onboardingReport.summary;
-      summary.className = "badge " + (onboardingReport.ready ? "green" : (onboardingReport.blocked ? "red" : "amber"));
+      setStatus(
+        summary,
+        onboardingReport.ready ? "ok" : onboardingReport.blocked ? "danger" : "warn",
+        onboardingReport.ready ? "Ready" : onboardingReport.summary,
+      );
       list.innerHTML = onboardingReport.steps.map(step => `
         <div class="${onboardingStepClass(step.status)}" role="listitem">
           <span class="onboarding-glyph" aria-hidden="true">${onboardingStepIcon(step.status)}</span>
@@ -5673,9 +5745,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         </div>`).join("");
       notes.textContent = (onboardingReport.notes || []).join(" ");
       if (runBtn) runBtn.disabled = !onboardingReport.ready;
+      const checked = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      evidenceNote(
+        "onboardingEvidence",
+        probeLocal ? "measured" : "derived",
+        probeLocal
+          ? `Preflight run at ${checked}: ${onboardingReport.ready ? "ready" : onboardingReport.summary}. Steps were checked against local configuration and the local runtime.`
+          : `Preflight read at ${checked}: ${onboardingReport.ready ? "ready" : onboardingReport.summary}. Read from local configuration only, without contacting the runtime.`,
+        { copyText: `Preflight ${checked}: ${onboardingReport.summary}` },
+      );
     } catch (error) {
-      summary.textContent = "Check failed";
-      summary.className = "badge red";
+      setStatus(summary, "danger", "Check failed");
       list.innerHTML = `<div class="onboarding-step blocked" role="listitem"><span class="onboarding-glyph" aria-hidden="true">!</span><div><div class="onboarding-title">Could not read the preflight</div><div class="onboarding-detail">${error.message}. Reload the page or check the server log.</div></div></div>`;
     }
   }
@@ -5759,6 +5839,68 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const horizontal = window.matchMedia("(max-width: 1100px)").matches;
     rail.setAttribute("aria-orientation", horizontal ? "horizontal" : "vertical");
   }
+  // Status and evidence have one vocabulary each, and these are the only things that
+  // write them. A caller passes a tone and a label together, so the colour and the
+  // word cannot drift apart - which is how a badge ends up saying green "FAILED"
+  // after somebody edits one line of a two-line update.
+  const STATUS_TONES = ["ok", "warn", "danger", "info", "busy", "neutral"];
+  const EVIDENCE_BASES = ["measured", "derived", "unverified", "unavailable"];
+  function setStatus(target, tone, text, title) {
+    const node = typeof target === "string" ? document.getElementById(target) : target;
+    if (!node) return null;
+    if (!STATUS_TONES.includes(tone)) throw new Error(`unknown status tone: ${tone}`);
+    // Only write when something differs. A live region announces what changed, so a
+    // re-render of the same state would otherwise say "IDLE" again every poll.
+    const nextText = text === undefined || text === null ? node.textContent : String(text);
+    const unchanged = node.classList.contains("status") && node.dataset.tone === tone && node.textContent === nextText;
+    if (unchanged && (title === undefined || node.title === title)) return node;
+    node.classList.remove("badge", "green", "amber", "red", "cyan", "indigo", "purple");
+    node.classList.add("status");
+    node.dataset.tone = tone;
+    if (node.textContent !== nextText) node.textContent = nextText;
+    if (title !== undefined) node.title = title;
+    return node;
+  }
+  function evidenceNote(container, basis, claim, options = {}) {
+    const node = typeof container === "string" ? document.getElementById(container) : container;
+    if (!node) return null;
+    if (!EVIDENCE_BASES.includes(basis)) throw new Error(`unknown evidence basis: ${basis}`);
+    node.classList.add("evidence");
+    node.dataset.basis = basis;
+    node.innerHTML = "";
+    const label = document.createElement("span");
+    label.className = "evidence-basis";
+    label.textContent = `Basis: ${basis}`;
+    const text = document.createElement("span");
+    text.textContent = ` ${claim}`;
+    node.append(label, text);
+    // The copy affordance carries the provenance line with it, so a pasted claim
+    // still says what it stood on once it leaves the screen it was read on.
+    if (options.copyText) {
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "evidence-copy";
+      copy.textContent = options.copyLabel || "Copy with basis";
+      copy.addEventListener("click", async () => {
+        const payload = `${options.copyText}\n(basis: ${basis})`;
+        try {
+          await navigator.clipboard.writeText(payload);
+          copy.textContent = "Copied";
+        } catch (error) {
+          copy.textContent = "Copy unavailable";
+        }
+        window.setTimeout(() => { copy.textContent = options.copyLabel || "Copy with basis"; }, 1800);
+      });
+      node.append(copy);
+    }
+    return node;
+  }
+  window.M5Status = {
+    tones: STATUS_TONES,
+    bases: EVIDENCE_BASES,
+    set: setStatus,
+    evidence: evidenceNote,
+  };
   function toggleMonitorRail() {
     const layout = document.getElementById("mainLayout");
     const btn = document.getElementById("monitorToggleBtn");
@@ -6059,8 +6201,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const s = activeHallData;
     document.getElementById("hallTitle").textContent = s.title;
     const badge = document.getElementById("hallStatusBadge");
-    badge.textContent = s.status.toUpperCase();
-    badge.className = "badge " + (s.status === "active" ? "green" : "amber");
+    setStatus(badge, s.status === "active" ? "ok" : "warn", s.status.toUpperCase());
 
     const fileBadges = (s.context_files || []).map(f => `<span class="badge cyan">@${escapeHtml(f)}</span>`).join("");
     const roster = (s.participants || []).map(p => {
@@ -6452,8 +6593,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     ).join("");
 
     const dk = d.docker || {}, dBadge = document.getElementById("dockerStateBadge");
-    dBadge.textContent = (dk.state || "stopped").toUpperCase();
-    dBadge.className = "badge " + (dk.state === "running" ? "cyan" : dk.state === "idle" ? "green" : "");
+    setStatus(
+      dBadge,
+      dk.state === "running" ? "info" : dk.state === "idle" ? "ok" : "neutral",
+      (dk.state || "stopped").toUpperCase(),
+    );
     document.getElementById("dockerRam").textContent = `${(dk.vm_footprint_gb || 0).toFixed(2)} GB`;
     document.getElementById("dockerCpu").textContent = `${(dk.total_cpu_pct || 0).toFixed(1)}%`;
     document.getElementById("dockerContainersBox").innerHTML = (!dk.containers || !dk.containers.length)
@@ -6545,7 +6689,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           else if (st.c && !thinkEl.dataset.autoClosed) { thinkEl.open = false; thinkEl.dataset.autoClosed = "1"; }
         }
         document.getElementById(`stage-md-${k}`).innerHTML = st.c ? renderMarkdown(st.c) : `<div style="color:var(--text-faint); font-size:13px;">Streaming...</div>`;
-        if (st.u) { const pill = document.getElementById(`stage-pill-${k}`); pill.className = "badge green"; pill.textContent = `${st.u.decode_tps} tok/s • TTFT ${st.u.ttft}s • ${st.u.completion_tokens} tok`; }
+        if (st.u) { const pill = document.getElementById(`stage-pill-${k}`); setStatus(pill, "ok", `${st.u.decode_tps} tok/s • TTFT ${st.u.ttft}s • ${st.u.completion_tokens} tok`); }
       }
     });
   }
@@ -6716,8 +6860,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     harnessSnapshot = null;
     closeHarnessEventStream();
     document.getElementById("harnessActiveLabel").textContent = "New Harness Draft — choose workspace, worktree isolation, & policy, then run your task below.";
-    const b = document.getElementById("harnessActiveStatusBadge");
-    b.className = "badge cyan"; b.textContent = "NEW DRAFT";
+    setStatus("harnessActiveStatusBadge", "neutral", "NEW DRAFT");
     renderHarnessStarter();
     renderHarnessSidebar();
   }
@@ -6832,8 +6975,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       : `Direct Workspace -> ${sess.worktree_dir}`;
     document.getElementById("harnessActiveLabel").textContent = `${sess.id} • ${wtInfo}`;
     const b = document.getElementById("harnessActiveStatusBadge");
-    b.textContent = (sess.status || "idle").toUpperCase();
-    b.className = "badge " + (sess.status === "completed" ? "green" : sess.status === "waiting_approval" ? "amber" : "cyan");
+    setStatus(
+      b,
+      sess.status === "completed" ? "ok" : sess.status === "waiting_approval" ? "warn" : "info",
+      (sess.status || "idle").toUpperCase(),
+    );
     updateHarnessCtxBadge(sess.ctx_metrics);
     if (sess.policy) document.getElementById("harnessPolicy").value = sess.policy;
     if (sess.lead_model && unifiedCatalog.some(x => x.id === sess.lead_model)) document.getElementById("harnessLeadModel").value = sess.lead_model;
@@ -6972,19 +7118,22 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function harnessStatusBadge(state) {
     const status = String((state && (state.status || state.task_status)) || "idle").toLowerCase();
+    // Tones, not colour names: the old map painted failed, error and cancelled the
+    // same amber as paused, so a failed run and a paused one were the same colour
+    // with different words. Failure is danger now, cancellation is neutral.
     const map = {
-      waiting_approval: ["amber", "WAITING APPROVAL"],
-      running: ["cyan", "WORKFLOW RUNNING"],
-      paused: ["amber", "PAUSED"],
-      blocked: ["amber", "BLOCKED"],
-      pending: ["cyan", "READY"],
-      idle: ["cyan", "READY"],
-      completed: ["green", "COMPLETED"],
-      cancelled: ["amber", "CANCELLED"],
-      failed: ["amber", "FAILED"],
-      error: ["amber", "ERROR"],
+      waiting_approval: ["warn", "WAITING APPROVAL"],
+      running: ["busy", "WORKFLOW RUNNING"],
+      paused: ["warn", "PAUSED"],
+      blocked: ["danger", "BLOCKED"],
+      pending: ["info", "READY"],
+      idle: ["info", "READY"],
+      completed: ["ok", "COMPLETED"],
+      cancelled: ["neutral", "CANCELLED"],
+      failed: ["danger", "FAILED"],
+      error: ["danger", "ERROR"],
     };
-    const hit = map[status] || ["cyan", status.toUpperCase()];
+    const hit = map[status] || ["info", status.toUpperCase()];
     return { cls: hit[0], label: hit[1] };
   }
   /* M5-P1-07-PURE-END */
@@ -7034,7 +7183,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (!state) return;
     const badge = document.getElementById("harnessActiveStatusBadge");
     const b = harnessStatusBadge(state);
-    if (badge) { badge.className = "badge " + b.cls; badge.textContent = b.label; }
+    if (badge) setStatus(badge, b.cls, b.label);
     const label = document.getElementById("harnessActiveLabel");
     if (label && state.session) {
       const approvals = state.approvals || {};
@@ -7270,7 +7419,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function appendWorkflowApprovalCard(target, d) {
     const statusBadge = document.getElementById("harnessActiveStatusBadge");
-    if (statusBadge) { statusBadge.className = "badge amber"; statusBadge.textContent = "WAITING APPROVAL"; }
+    if (statusBadge) setStatus(statusBadge, "warn", "WAITING APPROVAL");
     const card = document.createElement("div");
     card.id = `apr-card-${d.approval_id}`;
     card.className = "h-tool-card wait";
@@ -7281,7 +7430,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function updateWorkflowApprovalCard(d) {
     const statusBadge = document.getElementById("harnessActiveStatusBadge");
-    if (statusBadge) { statusBadge.className = "badge green"; statusBadge.textContent = "WORKFLOW RUNNING"; }
+    if (statusBadge) setStatus(statusBadge, "ok", "WORKFLOW RUNNING");
     const card = document.getElementById(`apr-card-${d.approval_id}`);
     if (card) card.innerHTML = `<div class="mono" style="font-size:11.3px;color:${d.decision === 'approve' ? '#6ee7b7' : '#fda4af'};">${d.decision === 'approve' ? UI_ICONS.check + ' Approved — executing...' : UI_ICONS.close + ' Rejected'}</div>`;
   }
@@ -7430,11 +7579,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         st.el.querySelector(`#h-live-md-${d.step}`).innerHTML = d.clean_content ? renderMarkdown(d.clean_content) : "";
         const u = d.usage || {};
         const b = st.el.querySelector(`[id^="h-live-badge-"]`);
-        if (b) { b.className = "badge green"; b.textContent = u.decode_tps ? `${u.decode_tps} tok/s • ${u.completion_tokens || 0} tok` : "Step Done"; }
+        if (b) setStatus(b, "ok", u.decode_tps ? `${u.decode_tps} tok/s • ${u.completion_tokens || 0} tok` : "Step Done");
       },
       approval_required(d) {
-        const b = document.getElementById("harnessActiveStatusBadge");
-        b.className = "badge amber"; b.textContent = "WAITING APPROVAL";
+        setStatus("harnessActiveStatusBadge", "warn", "WAITING APPROVAL");
         const toolsBox = ensureLiveStepCard(d.step, "").el.querySelector(`#h-live-tools-${d.step}`);
         const aprDiv = document.createElement("div");
         aprDiv.id = `apr-card-${d.approval_id}`;
@@ -7895,13 +8043,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         const st = ensureWaveStep(d.step, "");
         st.el.querySelector(`#gsd-md-${d.step}`).innerHTML = d.clean_content ? renderMarkdown(d.clean_content) : "";
         const b = st.el.querySelector(".badge");
-        if (b) { b.className = "badge green"; b.textContent = "Done"; }
+        if (b) setStatus(b, "ok", "Done");
       },
       gsd_wave_done(d) {
         const key = d.wave === 1 ? 1 : (d.wave === 3 ? 99 : null);
         if (key && liveSteps[key]) {
           const b = liveSteps[key].el.querySelector(".badge");
-          if (b) { b.className = "badge green"; b.textContent = `Saved ${d.artifact}`; }
+          if (b) setStatus(b, "ok", `Saved ${d.artifact}`);
         }
       },
       approval_required(d) {
@@ -8163,7 +8311,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const sdlcBtn = document.getElementById("harnessSdlcBtn");
     if (sdlcBtn) sdlcBtn.disabled = true;
     document.getElementById("harnessAbortBtn").style.display = "inline-flex";
-    document.getElementById("harnessActiveStatusBadge").textContent = "SDLC RUNNING";
+    setStatus("harnessActiveStatusBadge", "busy", "SDLC RUNNING");
 
     setHarnessRunActive(true);
     consumeSSE(url, payload, {

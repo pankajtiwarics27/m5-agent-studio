@@ -1,0 +1,234 @@
+{
+  "schema_version": "1.0.0",
+  "story": "UIUX-P1-03",
+  "statement": "One status component (tone, dot, hairline, label) written by one function, and one evidence component that makes the basis of a claim part of the claim. Checks prove the vocabulary is closed and every state has words; they do not prove a screen looks right.",
+  "source": {
+    "frontend": "static/index.html",
+    "tokens": "product/M5_2_0_UIUX_Tokens.json"
+  },
+  "vocabulary": {
+    "tones": [
+      "ok",
+      "warn",
+      "danger",
+      "info",
+      "busy",
+      "neutral"
+    ],
+    "bases": [
+      "measured",
+      "derived",
+      "unverified",
+      "unavailable"
+    ],
+    "tone_meaning": {
+      "ok": "finished and verified",
+      "warn": "needs a decision, or waiting on one",
+      "danger": "failed, blocked or refused",
+      "info": "in progress or ready",
+      "busy": "running now",
+      "neutral": "idle, cancelled, or not yet known"
+    }
+  },
+  "surfaces": [
+    {
+      "id": "sdlcProgressBadge",
+      "tone": "neutral",
+      "live": false,
+      "line": 1249
+    },
+    {
+      "id": "onboardingSummary",
+      "tone": "neutral",
+      "live": true,
+      "line": 1396
+    },
+    {
+      "id": "harnessActiveStatusBadge",
+      "tone": "info",
+      "live": true,
+      "line": 1514
+    },
+    {
+      "id": "hallStatusBadge",
+      "tone": "warn",
+      "live": true,
+      "line": 1556
+    },
+    {
+      "id": null,
+      "tone": "ok",
+      "live": false,
+      "line": 1763
+    },
+    {
+      "id": "dockerStateBadge",
+      "tone": "neutral",
+      "live": false,
+      "line": 1810
+    }
+  ],
+  "state_matrix": [
+    {
+      "state": "waiting_approval",
+      "tone": "warn",
+      "label": "WAITING APPROVAL"
+    },
+    {
+      "state": "running",
+      "tone": "busy",
+      "label": "WORKFLOW RUNNING"
+    },
+    {
+      "state": "paused",
+      "tone": "warn",
+      "label": "PAUSED"
+    },
+    {
+      "state": "blocked",
+      "tone": "danger",
+      "label": "BLOCKED"
+    },
+    {
+      "state": "pending",
+      "tone": "info",
+      "label": "READY"
+    },
+    {
+      "state": "idle",
+      "tone": "info",
+      "label": "READY"
+    },
+    {
+      "state": "completed",
+      "tone": "ok",
+      "label": "COMPLETED"
+    },
+    {
+      "state": "cancelled",
+      "tone": "neutral",
+      "label": "CANCELLED"
+    },
+    {
+      "state": "failed",
+      "tone": "danger",
+      "label": "FAILED"
+    },
+    {
+      "state": "error",
+      "tone": "danger",
+      "label": "ERROR"
+    }
+  ],
+  "writers": {
+    "set_status_calls": 15,
+    "legacy_badge_writers": 0,
+    "evidence_calls": 1,
+    "evidence_blocks": 1
+  },
+  "contrast": {
+    "labels": [
+      {
+        "theme": "dark",
+        "pair": "--text on --bg-card",
+        "ratio": 12.98
+      },
+      {
+        "theme": "light",
+        "pair": "--text on --bg-card",
+        "ratio": 15.79
+      }
+    ],
+    "tone_graphics": [
+      {
+        "theme": "dark",
+        "tone": "busy",
+        "token": "--accent",
+        "ratio": 3.3
+      },
+      {
+        "theme": "light",
+        "tone": "busy",
+        "token": "--accent",
+        "ratio": 4.73
+      },
+      {
+        "theme": "dark",
+        "tone": "danger",
+        "token": "--rose",
+        "ratio": 5.43
+      },
+      {
+        "theme": "light",
+        "tone": "danger",
+        "token": "--rose",
+        "ratio": 6.82
+      },
+      {
+        "theme": "dark",
+        "tone": "info",
+        "token": "--cyan",
+        "ratio": 6.92
+      },
+      {
+        "theme": "light",
+        "tone": "info",
+        "token": "--cyan",
+        "ratio": 5.77
+      },
+      {
+        "theme": "dark",
+        "tone": "neutral",
+        "token": "--text-dim",
+        "ratio": 7.56
+      },
+      {
+        "theme": "light",
+        "tone": "neutral",
+        "token": "--text-dim",
+        "ratio": 6.79
+      },
+      {
+        "theme": "dark",
+        "tone": "ok",
+        "token": "--emerald",
+        "ratio": 6.53
+      },
+      {
+        "theme": "light",
+        "tone": "ok",
+        "token": "--emerald",
+        "ratio": 6.11
+      },
+      {
+        "theme": "dark",
+        "tone": "warn",
+        "token": "--amber",
+        "ratio": 7.2
+      },
+      {
+        "theme": "light",
+        "tone": "warn",
+        "token": "--amber",
+        "ratio": 6.33
+      }
+    ],
+    "text_floor": 4.5,
+    "graphic_floor": 3.0
+  },
+  "totals": {
+    "tones": 6,
+    "bases": 4,
+    "status_surfaces": 6,
+    "live_regions": 3,
+    "states": 10,
+    "set_status_calls": 15,
+    "findings": 0
+  },
+  "findings": [],
+  "limits": [
+    "declarations agree and every state has a tone and a word; a rendering that looks wrong is the browser walk's job",
+    "contrast is computed from the token values the rules name, not sampled from a screen",
+    "the tone is redundant with the label, so the floors differ: text 4.5:1, the dot 3:1"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "captured_at": "2026-10-31T19:40:40.165Z",
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "device_scale_factor": 2
+  },
+  "variant": {
+    "theme": null,
+    "density": null
+  },
+  "shots": [
+    {
+      "id": "start",
+      "tab": "start",
+      "file": "start.png",
+      "bytes": 350528,
+      "sha256": "a2131d4b48812c92be1ea025a5745b54475fa0c62d29616bdff5c07936080668"
+    },
+    {
+      "id": "harness",
+      "tab": "harness",
+      "file": "harness.png",
+      "bytes": 364070,
+      "sha256": "8625330c756c6e3b4298a5d33ff0ded60149a6b44722e2e55a7c66186910be02"
+    }
+  ]
+}
