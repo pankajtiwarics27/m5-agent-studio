@@ -761,7 +761,9 @@ requires `STUDIO_ALLOW_SKILL_CODE=1`; private-URL access requires
    `/sys/fs/cgroup/memory.max` read `536870912`. The limit is configured but was
    not refused on that engine; whether swap let the allocation escape the cap or
    the cgroup was simply not enforced is still open, so nothing is claimed and
-   nothing is waived.
+   nothing is waived. The candidates, their product consequences and the controls
+   that would settle it are recorded in
+   [`docs/m5-2-0-sandbox-memory-limit-finding.md`](docs/m5-2-0-sandbox-memory-limit-finding.md).
 6. **`pip-audit` reports 21 advisories** in venv bootstrap packages
    (`pip` 23.0.1, `setuptools` 66.1.1); runtime dependencies are clean.
 7. **Independent security review (`AS-031`) is `completed`, not `verified`** —

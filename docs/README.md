@@ -131,6 +131,8 @@ known-bypass inventory for the extracted execution boundary, ADR-0002) ·
 codes, blocked measurements) ·
 [`m5-2-0-hardware-qualification-evidence.md`](m5-2-0-hardware-qualification-evidence.md)
 (operator-run 24 GB Apple M5 hardware qualification for `M5-P4-01`, 2026-10-31) ·
+[`m5-2-0-sandbox-memory-limit-finding.md`](m5-2-0-sandbox-memory-limit-finding.md)
+(open sandbox memory-limit finding for `M5-P3-01`: 3 GiB allocated under a 512 MiB cap) ·
 [`../M5_2_0_AGENT_PROMPT.md`](../M5_2_0_AGENT_PROMPT.md) (parallel-agent
 prompt and the multi-agent claim/review/merge protocol).
 

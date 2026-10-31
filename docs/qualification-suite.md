@@ -320,7 +320,10 @@ repository is still a run; the numbers are transcribed where the record lives.
 | 2026-10-30 | Linux x86_64 CI container, ~4 GB RAM | `--all` | `blocked` — no container runtime, not the target hardware | [`m5-2-0-baseline-evidence.md`](m5-2-0-baseline-evidence.md) |
 
 The sandbox failure is recorded, not waived: `M5-P3-01` stays `blocked` and
-container isolation stays unavailable until a re-run is `qualified`. The first
+container isolation stays unavailable until a re-run is `qualified`; what it could
+mean for the product and which controls would settle it are tracked in
+[`m5-2-0-sandbox-memory-limit-finding.md`](m5-2-0-sandbox-memory-limit-finding.md).
+The first
 hardware attempt on that machine (`qualification-20261031T074346Z`) was also
 `unqualified`, because the operator's own command inlined an empty `--server-pid`
 subshell; the corrected invocation and both records are described in the hardware
