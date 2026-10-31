@@ -346,3 +346,34 @@ def test_capture_script_refuses_to_run_without_a_browser(tmp_path: Path) -> None
     assert result.returncode == 1
     assert "capture_screenshots:" in result.stderr
     assert list(tmp_path.glob("*.png")) == []
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is not installed")
+@pytest.mark.parametrize("invalid", ["unknown-tab", "duplicate-file", "hidden-file"])
+def test_capture_plan_rejects_unsafe_manifest(tmp_path: Path, invalid: str) -> None:
+    manifest_path, _ = _workspace(tmp_path)
+    manifest = _manifest(tmp_path)
+    if invalid == "unknown-tab":
+        manifest["shots"][0]["tab"] = "ghost"
+    elif invalid == "duplicate-file":
+        manifest["shots"][1]["file"] = manifest["shots"][0]["file"]
+    else:
+        manifest["shots"][0]["file"] = ".hidden.png"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    result = subprocess.run(
+        ["node", str(CAPTURE), "--manifest", str(manifest_path), "--dry-run"],
+        capture_output=True, text=True, timeout=10, cwd=ROOT,
+    )
+    assert result.returncode != 0
+    assert result.stdout == ""
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is not installed")
+@pytest.mark.parametrize("url", ["https://example.com", "http://127.0.0.1/path", "http://user:pass@127.0.0.1/"])
+def test_capture_plan_rejects_non_demo_url_without_printing_it(url: str) -> None:
+    result = subprocess.run(
+        ["node", str(CAPTURE), "--base-url", url, "--dry-run"],
+        capture_output=True, text=True, timeout=10, cwd=ROOT,
+    )
+    assert result.returncode != 0
+    assert url not in result.stdout + result.stderr

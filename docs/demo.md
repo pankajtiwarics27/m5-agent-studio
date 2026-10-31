@@ -89,13 +89,15 @@ show, plus the viewport (1440×900 at 2× device scale).
 
 **Status in this repository: the manifest and all six images are committed.**
 The set was captured at `2026-10-31T17:54:48Z` from a disposable `git archive`
-copy of the pinned commit. `--serve` now keeps its harness and workspace state in a
-throwaway root of its own ([`demo-isolation-safety.md`](demo-isolation-safety.md)),
-so a capture no longer reads a checkout's state; the copy was the stricter
-condition available at the time.
+copy of the pinned commit. The demo isolates its harness and workspace state in a
+throwaway root ([`demo-isolation-safety.md`](demo-isolation-safety.md)); use a
+disposable source checkout for capture pending independent review of
+[#108](https://github.com/pankajtiwarics27/m5-agent-studio/issues/108).
 `python3 scripts/validate_screenshots.py` reports `6 of 6 captured and consistent
-with the manifest`. `index.json` records each image's sha256, size and viewport, so
-a later drift is a failing check rather than a silent substitution.
+with the manifest`: the index checks hashes, sizes and dimensions, not the origin,
+authentication or pane identity. The historical capture predates the safeguards
+below; [#122](https://github.com/pankajtiwarics27/m5-agent-studio/issues/122)
+tracks its outstanding provenance and safety review.
 
 ```bash
 # terminal 1
@@ -133,15 +135,24 @@ network namespace; the script reads them from the environment so no per-machine
 launch recipe is hard-coded into the repository. The committed images were
 produced exactly this way, with no hand-editing afterwards.
 
-`capture_screenshots.mjs` sets the token in `sessionStorage`, switches to each
-pane through the UI's own tab control, and writes the PNGs plus
-`media/screenshots/index.json` (sha256, size, viewport, capture time for each
-image). It fails closed: if no browser or no `puppeteer-core` is available, or any
-pane fails, it writes nothing and exits non-zero, so a partial or fabricated set
-cannot be mistaken for the real thing. `--dry-run` prints the capture plan without
-a browser.
+`capture_screenshots.mjs` accepts only a loopback demo origin, checks that the
+API rejects an unauthenticated request and accepts the supplied throwaway token,
+then seeds that token only in the main frame at that origin. It rejects main-frame
+redirects, checks browser authentication, and verifies each tab's active, visible
+pane before buffering the images. If a pane or those checks fail, it does not write
+the capture set. A filesystem failure during publication can still leave partial
+output; verify the result before publishing. These checks are not a cryptographic
+attestation of server identity or image contents. Use only a trusted, isolated demo;
+command-line tokens are visible to other local processes, so never pass a real
+credential. `--dry-run` prints the capture plan without a browser.
 
-`validate_screenshots.py` is what keeps the set honest over time:
+To run the opt-in browser regressions, set `STUDIO_SCREENSHOT_CHROME` and
+`STUDIO_PUPPETEER_CORE` (plus the platform-specific flags above if needed), then
+run `python3 -m pytest -q tests/test_screenshot_capture_browser.py`. They use
+synthetic tokens and loopback servers, plus a demo in a disposable source copy;
+they skip when the browser paths are not configured.
+
+`validate_screenshots.py` checks the set's file consistency over time:
 
 ```bash
 python3 scripts/validate_screenshots.py        # CI runs this
