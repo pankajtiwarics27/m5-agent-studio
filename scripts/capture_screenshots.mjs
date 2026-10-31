@@ -21,7 +21,17 @@
  * Flags:
  *   --manifest PATH   screenshot manifest (default docs/media/screenshots/manifest.json)
  *   --out DIR         output directory (default docs/media/screenshots)
+ *   --panes LIST      capture only these panes, comma separated (default: all)
+ *   --emulate-theme T seed localStorage m5_theme = T before the first document, so
+ *                     the shell boots in that theme instead of the OS preference
+ *   --emulate-density D set body[data-density] after load; the stylesheet reads it
+ *   --viewport WxH    override the manifest viewport's CSS pixels (scale is kept)
  *   --dry-run         print the capture plan and exit; needs no browser
+ *
+ * The variant flags exist so a theme or a density is photographed rather than
+ * described. They change nothing about the manifest: a variant set is written to
+ * its own --out directory with its own index.json, and the baseline set stays the
+ * one scripts/validate_screenshots.py checks.
  *
  * The script writes the PNGs plus docs/media/screenshots/index.json, which
  * records sha256, size, viewport, and capture time. It refuses to write partial
@@ -56,6 +66,10 @@ function parseArgs(argv) {
       case "--base-url": args.baseUrl = next(); break;
       case "--token": args.token = next(); break;
       case "--timeout-ms": args.timeoutMs = Number(next()); break;
+      case "--panes": args.panes = next().split(",").map((name) => name.trim()).filter(Boolean); break;
+      case "--emulate-theme": args.emulateTheme = next(); break;
+      case "--emulate-density": args.emulateDensity = next(); break;
+      case "--viewport": args.viewport = next(); break;
       case "--dry-run": args.dryRun = true; break;
       case "--help":
       case "-h":
@@ -74,11 +88,27 @@ function usage() {
     "Capture Studio onboarding screenshots from a seeded demo instance.",
     "",
     "  node scripts/capture_screenshots.mjs --base-url URL --token TOKEN [--out DIR]",
+    "  node scripts/capture_screenshots.mjs --base-url URL --token TOKEN --panes start,chat \\",
+    "      --emulate-theme light --emulate-density compact --viewport 900x800 --out DIR",
     "  node scripts/capture_screenshots.mjs --dry-run",
     "",
     "Needs a Chrome/Chromium binary (STUDIO_SCREENSHOT_CHROME) and puppeteer-core",
     "(STUDIO_PUPPETEER_CORE). See docs/demo.md.",
   ].join("\n");
+}
+
+const THEMES = ["dark", "light"];
+const DENSITIES = ["comfortable", "compact"];
+
+function viewportOverride(value) {
+  const match = /^(\d{2,4})x(\d{2,4})$/.exec(String(value || "").trim());
+  if (!match) throw new Error(`--viewport must look like 900x800, got ${JSON.stringify(value)}`);
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  if (width < 320 || height < 320) {
+    throw new Error(`--viewport ${value} is smaller than the 320px floor a phone-class render needs`);
+  }
+  return { width, height };
 }
 
 function validateManifest(manifest) {
@@ -109,12 +139,39 @@ function validateManifest(manifest) {
   return manifest;
 }
 
+function selectedShots(args, manifest) {
+  if (args.emulateTheme && !THEMES.includes(args.emulateTheme)) {
+    throw new Error(`--emulate-theme must be one of ${THEMES.join(", ")}, got ${args.emulateTheme}`);
+  }
+  if (args.emulateDensity && !DENSITIES.includes(args.emulateDensity)) {
+    throw new Error(`--emulate-density must be one of ${DENSITIES.join(", ")}, got ${args.emulateDensity}`);
+  }
+  if (!args.panes || args.panes.length === 0) return manifest.shots;
+  const known = new Set(manifest.shots.map((shot) => shot.id));
+  const unknown = args.panes.filter((name) => !known.has(name));
+  if (unknown.length > 0) {
+    throw new Error(
+      `--panes names ${unknown.join(", ")}, which the manifest does not plan; it plans ${[...known].join(", ")}`,
+    );
+  }
+  // Keep manifest order so a subset is a subset of the same capture, not a reordered one.
+  return manifest.shots.filter((shot) => args.panes.includes(shot.id));
+}
+
 function plan(args, manifest) {
+  const shots = selectedShots(args, manifest);
+  const override = args.viewport ? viewportOverride(args.viewport) : null;
   return {
     baseUrl: args.baseUrl || "<start scripts/demo_tour.py --serve>",
     out: resolve(args.out),
-    viewport: manifest.viewport,
-    shots: manifest.shots.map((shot) => ({
+    viewport: override
+      ? { ...manifest.viewport, width: override.width, height: override.height }
+      : manifest.viewport,
+    variant: {
+      theme: args.emulateTheme || null,
+      density: args.emulateDensity || null,
+    },
+    shots: shots.map((shot) => ({
       id: shot.id,
       tab: shot.tab,
       file: join(resolve(args.out), shot.file),
@@ -168,6 +225,8 @@ function resolveChrome() {
 async function capture(args, manifest) {
   if (!args.baseUrl) throw new Error("--base-url is required (start scripts/demo_tour.py --serve)");
   if (!args.token) throw new Error("--token is required (printed by scripts/demo_tour.py --serve)");
+  const shots = selectedShots(args, manifest);
+  const planViewport = plan(args, manifest).viewport;
   const puppeteer = await loadPuppeteer();
   const executablePath = resolveChrome();
   const extraArgs = (process.env.STUDIO_SCREENSHOT_CHROME_ARGS || "")
@@ -188,10 +247,18 @@ async function capture(args, manifest) {
   try {
     const page = await browser.newPage();
     await page.setViewport({
-      width: manifest.viewport.width,
-      height: manifest.viewport.height,
-      deviceScaleFactor: manifest.viewport.device_scale_factor || 1,
+      width: planViewport.width,
+      height: planViewport.height,
+      deviceScaleFactor: planViewport.device_scale_factor || 1,
     });
+    if (args.emulateTheme) {
+      // The shell picks its theme at boot from localStorage, falling back to the OS
+      // preference. Seeding the preference before the first document is the only way
+      // to photograph a theme the machine does not use.
+      await page.emulateMediaFeatures([
+        { name: "prefers-color-scheme", value: args.emulateTheme },
+      ]);
+    }
     const errors = [];
     page.on("pageerror", (error) => errors.push(String(error)));
     // Seed the token before the first document exists. The shell starts fetching
@@ -210,11 +277,28 @@ async function capture(args, manifest) {
       args.tokenKey,
       args.token,
     );
+    if (args.emulateTheme || args.emulateDensity) {
+      // Seed the shell's own persisted preferences rather than poking the DOM after
+      // load: the app restores theme and density from localStorage on boot, so this
+      // is the same path a returning user takes, and a re-render cannot undo it.
+      await page.evaluateOnNewDocument(
+        (theme, density) => {
+          try {
+            if (theme) window.localStorage.setItem("m5_theme", theme);
+            if (density) window.localStorage.setItem("m5_ui_density", density);
+          } catch (_error) {
+            // Same reasoning as the token: a document without storage fails loudly later.
+          }
+        },
+        args.emulateTheme,
+        args.emulateDensity,
+      );
+    }
     await page.goto(args.baseUrl, { waitUntil: "domcontentloaded", timeout: args.timeoutMs });
     // The shell holds streaming connections open for its whole lifetime, so
     // networkidle never arrives. Settle for the same window used between panes.
     await new Promise((done) => setTimeout(done, args.settleMs));
-    for (const shot of manifest.shots) {
+    for (const shot of shots) {
       await page.evaluate((tab) => {
         if (typeof window.switchTab === "function") window.switchTab(tab);
         else document.querySelector(`.mode-tab[data-tab="${tab}"]`)?.click();
@@ -229,7 +313,13 @@ async function capture(args, manifest) {
     await browser.close();
   }
   await mkdir(resolve(args.out), { recursive: true });
-  const index = { schema: 1, captured_at: new Date().toISOString(), viewport: manifest.viewport, shots: [] };
+  const index = {
+    schema: 1,
+    captured_at: new Date().toISOString(),
+    viewport: planViewport,
+    variant: { theme: args.emulateTheme || null, density: args.emulateDensity || null },
+    shots: [],
+  };
   for (const { shot, png } of captured) {
     await writeFile(join(resolve(args.out), shot.file), png);
     index.shots.push({
@@ -260,4 +350,4 @@ main().catch((error) => {
   process.exit(1);
 });
 
-export { validateManifest, parseArgs, plan };
+export { validateManifest, parseArgs, plan, selectedShots, viewportOverride };

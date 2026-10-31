@@ -19,12 +19,12 @@
     "statement": "Signed in the ledger; this page only reports the record."
   },
   "inputs": {
-    "ledger_sha256": "633b578097edd3a15bb2a70fdadca5ae3166a1129c9d155b99e5a09b9d667fa5",
-    "source_manifest_sha256": "3e205449724dbef830928f631eff8f85a7b281e6629187bc2fe1f1dc3e2e7c12",
-    "control_inventory_sha256": "be781825bdbfc50b11ed7547b96bd3d3969d3fbe8ba5639857a090c442c95615",
-    "route_map_sha256": "85fa79650b506df93fb4d0e9feb91dbd5288be20818d7cbda900a2e1b49b636e",
-    "authorization_trace_sha256": "20bb832c396d3430579a2a9e4072a321762cfce7b3a774e9e391b25f9ad1abb7",
-    "frontend_sha256": "3137cb7d05bcbdd29155576bd9952f49172705b85e70a0c0a2484c81bc80a66a"
+    "ledger_sha256": "9a267e15df512153e5a456080385b5c61b9afee64363fda0e4549d3c4fb92ed5",
+    "source_manifest_sha256": "c4b6d8c9901e96163b8243be03824e2bf8d32a63df6614df46395c8ed1b4bf0b",
+    "control_inventory_sha256": "d39b771ea629a818854c83fc4be58a837caaad706a5598f08fb341f7668867bb",
+    "route_map_sha256": "fb22b4c96280f55d20e6ab341d4325403fbf45a68b5d8a86da675d1d2eed103d",
+    "authorization_trace_sha256": "f1083cab6ac4e9130dde35ce5fdeacd85a54ced35e80231093095c53164a3b6a",
+    "frontend_sha256": "ad6057a361133a14010a7c7b5bf291c5043dfa65defcb91065a478ddd2e2c50b"
   },
   "approval_request": [
     {
