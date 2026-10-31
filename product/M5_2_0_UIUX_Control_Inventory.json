@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "ad6057a361133a14010a7c7b5bf291c5043dfa65defcb91065a478ddd2e2c50b",
+  "frontend_sha256": "e7013225886ec86db5d807e7e2444160e5064b770e74f0dea9c385b591d034ae",
   "panes": [
     {
       "dom_id": "start",
@@ -519,60 +519,78 @@
     "controls": [
       {
         "tag": "button",
+        "id": "tab-start",
+        "role": "tab",
         "class": "mode-tab",
         "title": "Guided first run (Alt+6)",
         "onclick": "switchTab('start')",
         "data": {
+          "data-shortcut": "Alt+6",
           "data-tab": "start"
         },
         "text": "Start"
       },
       {
         "tag": "button",
+        "id": "tab-harness",
+        "role": "tab",
         "class": "mode-tab active",
         "title": "Agent harness (Alt+1)",
         "onclick": "switchTab('harness')",
         "data": {
+          "data-shortcut": "Alt+1",
           "data-tab": "harness"
         },
         "text": "Harness"
       },
       {
         "tag": "button",
+        "id": "tab-hall",
+        "role": "tab",
         "class": "mode-tab",
         "title": "Council sessions (Alt+2)",
         "onclick": "switchTab('hall')",
         "data": {
+          "data-shortcut": "Alt+2",
           "data-tab": "hall"
         },
         "text": "Council"
       },
       {
         "tag": "button",
+        "id": "tab-council",
+        "role": "tab",
         "class": "mode-tab",
         "title": "Four-stage pipeline (Alt+3)",
         "onclick": "switchTab('council')",
         "data": {
+          "data-shortcut": "Alt+3",
           "data-tab": "council"
         },
         "text": "Pipeline"
       },
       {
         "tag": "button",
+        "id": "tab-debate",
+        "role": "tab",
         "class": "mode-tab",
         "title": "Compare model responses (Alt+4)",
         "onclick": "switchTab('debate')",
         "data": {
+          "data-shortcut": "Alt+4",
           "data-tab": "debate"
         },
         "text": "Compare"
       },
       {
         "tag": "button",
+        "id": "tab-chat",
+        "role": "tab",
         "class": "mode-tab",
         "title": "Model chat (Alt+5)",
         "onclick": "switchTab('chat')",
         "data": {
+          "data-shortcut": "Alt+5",
           "data-tab": "chat"
         },
         "text": "Chat"
