@@ -247,9 +247,12 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   re-pulled to a different digest cannot inherit an old qualification. **No
   container-isolation or 24 GB claim is made anywhere in this repository**, both
   stories stay `blocked` in the roadmap until the owner produces a qualified record
-  on the target machine. Pinned by 94 tests (`tests/test_qualify_environment.py`)
-  and documented in [`docs/qualification-suite.md`](docs/qualification-suite.md)
-  (ADR-0010).
+  on the target machine. The model-call half has a ready-made stdlib probe
+  (`scripts/model_probe.py`, OpenAI-compatible, streams for a real
+  time-to-first-token, and omits any metric the server did not report). Pinned by
+  94 tests (`tests/test_qualify_environment.py`) and by 12 for the probe
+  (`tests/test_model_probe.py`); documented in
+  [`docs/qualification-suite.md`](docs/qualification-suite.md) (ADR-0010).
 - **A second heavy local model request is refused by policy in the serving path
   (`M5-P4-01`, code half — the story stays blocked on measurement):**
   `model_admission.py` (stdlib only, inlined into `studio.py`) wraps
@@ -278,7 +281,12 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   quote-aware shell and Python AST policy parity across `run_bash`,
   `ctx_execute_python`, `ctx_run_block`, `_run_skill_script`, and managed file
   tools so shell invocations cannot bypass `.env`/secret, `.git/hooks`/`.git/config`,
-  symlink, or workspace-confinement rules, reserves conservative
+  symlink, or workspace-confinement rules — including *inside* a command: inline
+  `sh -c`/`bash -lc` payloads are re-parsed as command lines (three levels deep),
+  a shell that would read its command from stdin is refused outright, and the
+  path tokens of `perl`/`ruby`/`node`/`php`/`lua` inline code are checked, with
+  the remaining limits of text inspection (script file contents, runtime-built
+  paths, encoded payloads) stated in the docs instead of glossed over, reserves conservative
   `workspace:{ws}` `exclusive` footprints for arbitrary shell/Python/MCP/unknown
   side effects while allowing concurrent shared reads and disjoint-path managed
   edits through `UnifiedExecutionController` (`ResourceAdmissionScheduler`-backed)
@@ -288,7 +296,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   pre-existing tampering or undeclared exact-scope mutations `uncertain` so
   `IntentLedger` blocks follow-up consequential actions. `app._sandbox_command`
   now delegates hardened container CLI construction to
-  `sandbox_boundary.build_container_invocation`. Pinned by 11 end-to-end profile
+  `sandbox_boundary.build_container_invocation`. Pinned by 12 end-to-end profile
   tests (`tests/test_execution_profiles.py`) + 5 sandbox-boundary tests
   (`tests/test_sandbox_boundary.py`) and documented in
   [`docs/execution-profiles.md`](docs/execution-profiles.md) (ADR-0012).
