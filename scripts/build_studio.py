@@ -34,6 +34,7 @@ INLINED_MODULES = (
     "workspace_snapshots",
     "edit_rollback",
     "resource_admission",
+    "execution_profiles",
     "model_admission",
 )
 
