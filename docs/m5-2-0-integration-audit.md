@@ -33,7 +33,7 @@ Verified states against this checkout:
 | 6 | `mcp_client` imported but no invocation call sites found | **Refuted** | `mcp_client` is imported (L67) and **invoked**: `mcp_client.adaptive_call` (L4643), `mcp_client.SessionStore` (L4650), `mcp_client.TransportResponse.from_httpx` (L4620) inside `_mcp_http_rpc` (L4623). |
 | 7 | Frontend is `static/index.html` vanilla JS | **Confirmed** | `static/index.html` (4,228 lines), single inline `<script>` block (L1685); zero matches for React/Vue/Angular/Svelte/webpack/`import … from`/`require(`. |
 | 8 | SQLite WAL and FTS5 used | **Confirmed** | `PRAGMA journal_mode=WAL` (L1039); FTS5 tables `opencontext_fts` (L1181) and `ctx_vault_fts` (L1200) created `USING fts5(...)`; FTS5 search paths L5820-5928 via `context_store.sanitize_fts5_query`. |
-| 9 | 24 GB peak memory unmeasured | **Confirmed (still unmeasured)** | This environment is Linux x86_64 with ~4 GB RAM (`MemTotal: 4034452 kB`), not a 24 GB Apple Silicon Mac; no oMLX runtime present. No memory measurement was taken or invented. |
+| 9 | 24 GB peak memory unmeasured | **Confirmed as of this audit (2026-10-30); superseded 2026-10-31** | This environment is Linux x86_64 with ~4 GB RAM (`MemTotal: 4034452 kB`), not a 24 GB Apple Silicon Mac; no oMLX runtime present. No memory measurement was taken or invented. An operator run on a 24 GiB Apple M5 on 2026-10-31 measured it — see [`m5-2-0-hardware-qualification-evidence.md`](m5-2-0-hardware-qualification-evidence.md); this row keeps the audit's own state. |
 
 ## 2. Route → effect trace (FastAPI to subprocess, SQLite writes, MCP)
 

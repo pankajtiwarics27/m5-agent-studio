@@ -124,14 +124,14 @@
   },
   "session_state": {
     "active_story": null,
-    "last_completed_story": "M5-P4-03",
-    "last_checkpoint": "2026-10-31T07:59:00Z",
-    "last_session_id": "arena/956dd396-m5-agent-studio",
+    "last_completed_story": "M5-P4-01",
+    "last_checkpoint": "2026-10-31T11:40:00Z",
+    "last_session_id": "arena/8acf27f6-m5-agent-studio",
     "next_recommended_story": "M5-P5-03",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
-      "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). The operator-run suite scripts/qualify_environment.py --sandbox (docs/qualification-suite.md, ADR-0010) is now the qualification path; M5-P3-01 stays blocked until it returns qualified on a Docker/Podman host.",
-      "24 GB Apple Silicon memory/swap and oMLX measurements are still missing (M5-P4-01): serving-path heavy-model admission is implemented and tested (docs/model-admission.md, ADR-0011), but the story stays blocked until scripts/qualify_environment.py --hardware --pressure-gb N --model-command CMD produces a qualified record on target hardware.",
+      "Container isolation UNQUALIFIED (M5-P0-04, M5-P3-01): the first operator run on real hardware (2026-10-31, Apple M5, Docker Desktop 29.5.3) passed 11 of 12 sandbox checks and failed p3.adversarial.memory_limit - a 3 GiB allocation completed under --memory 512m (exit 0) while the container's own /sys/fs/cgroup/memory.max read 536870912. Whether swap let the allocation escape the cap or the cgroup was simply not enforced is undecided. dependent_execution stays blocked (fail closed) and M5-P3-01 stays blocked until a re-run is qualified; nothing is waived.",
+      "RESOLVED 2026-10-31 (M5-P4-01): the 24 GB Apple Silicon memory/swap measurements now exist - 16 GiB touched pressure with 0.00 GiB swap growth (machine already 6.18 GiB into swap) and a 3/3 model-probe run against Gemma-4-21B-REAP-4bit (1.29 GiB swap growth) on an Apple M5, recorded in docs/m5-2-0-hardware-qualification-evidence.md. Still missing from that record: thermal pressure (blocked), per-category coding cases (skipped), model digest and per-process peak memory. The 80% admission reservation remains a policy constant.",
       "Unified execution profiles and resource barriers (execution_profiles.py, M5-P3-02) enforce shared/exclusive barriers and capacity slots within a single application process (matching worker leases, task events, and model admission); static shell/AST inspection cannot decide arbitrary Turing-complete obfuscation pre-execution when container isolation is unqualified, relying on post-execution quarantine/uncertain marking until M5-P3-01 live container qualification passes.",
       "Multi-agent parallel work active: product/M5_2_0_Autonomous_Roadmap.json tracking blocks are the shared claim ledger; claim protocol and PR/merge rules live in M5_2_0_AGENT_PROMPT.md",
       "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1) recorded in the M5-P0-05 baseline evidence; runtime dependencies clean.",
@@ -144,7 +144,7 @@
       "M5-P3-02 review, third pass (on the first fix's own code): the inline-payload inspection added in PR #62 still had two holes, found by re-testing it adversarially. (a) The wrapper skip consumed only tokens starting with '-', so for wrappers whose option takes a separate value the option's VALUE was read as the executable: `env -u HOME sh -c 'cat .env'`, `nice -n 5 sh -c ...`, `time -f %s sh -c ...` all skipped the shell entirely. (b) The inline-code path scan matched only paths containing a separator, so a bare secret name in interpreter code (`node --eval 'require(\"fs\").readFileSync(\".env\")'`, `perl -e'open(F,\".env\")'`) was invisible. Fixed by resolving wrapper options with their values (_ep_skip_wrapper), accepting the glued `-e<payload>` form, matching bare dotted names, and refusing a shell asked to read its command from stdin (`-s`). The lesson generalises: a fix for a security boundary needs the same adversarial pass as the code it replaced.",
       "M5-P3-02 review, fourth pass: the `.git/config` fix (#63) judged configuration as a FILE, but git accepts the same directives in-band. `git -c include.path=/tmp/evil.cfg status` was allowed: the command-line guard was a regex over the raw text, so it missed `include.path` entirely, and shell quoting (`git -c core.\"fs\"monitor=...`) defeats text matching even for the keys it did list. `-c`, glued `-ckey=value`, `--config-env`, `git config key value` and `GIT_CONFIG_KEY_<n>`/`GIT_CONFIG_PARAMETERS` are now judged from parsed tokens against one shared predicate (_ep_git_config_key_is_dangerous) used by both the file parser and the command scanner, so the two cannot drift again. Same lesson as the previous pass: a security fix has to cover every way the underlying tool accepts the setting, not just the way the report named."
     ],
-    "last_readme_sync": "2026-10-31T07:59:00Z",
+    "last_readme_sync": "2026-10-31T11:40:00Z",
     "last_verified_commit": "fe5a84b",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md",
     "last_updated": "2026-10-31",
@@ -2707,14 +2707,14 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P4-01: Measured model qualification and RAM admission. Objective: Route from real evidence and enforce one heavy resident model. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Build representative per-category coding cases; Record completed case evidence and uncertainty; Measure load/prefill/swap/thermal behavior; Implement one-heavy-model admission and optional sequential switching. Acceptance: Second simultaneous heavy load rejected under policy; Routing does not treat public priors as verified; 24 GB pressure measured. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "blocked",
-        "progress_percent": 60,
-        "attempts": 1,
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 2,
         "started_at": "2026-10-30T19:31:57Z",
-        "updated_at": "2026-10-31T03:37:43Z",
-        "completed_at": null,
-        "owner_session": "arena/a528f54d-m5-agent-studio",
-        "commit_sha": "8adc404",
+        "updated_at": "2026-10-31T11:40:00Z",
+        "completed_at": "2026-10-31T11:40:00Z",
+        "owner_session": "arena/8acf27f6-m5-agent-studio",
+        "commit_sha": "dd2ba01",
         "changed_files": [
           "README.md",
           "app.py",
@@ -2734,7 +2734,11 @@
           "tests/test_model_admission.py",
           "tests/test_qualify_environment.py",
           "scripts/model_probe.py",
-          "tests/test_model_probe.py"
+          "tests/test_model_probe.py",
+          "docs/m5-2-0-hardware-qualification-evidence.md",
+          "docs/m5-2-0-integration-audit.md",
+          "docs/m5-2-0-roadmap-reconciliation.md",
+          "docs/supported-hardware.md"
         ],
         "evidence": [
           "AC 'second simultaneous heavy load rejected under policy' now holds in the serving path (code + tests, not yet measured): model_admission.HeavyModelAdmission wraps resource_admission.ResourceAdmissionScheduler with local-inference policy (capacity = detected unified memory or STUDIO_HEAVY_MODEL_MEMORY_BYTES; one request = 80% of capacity; one slot; one distinct resident model) and typed denials heavy_model_slot_busy / heavy_model_memory_exceeded / heavy_model_resident carrying the policy snapshot. Evidence: tests/test_model_admission.py::test_first_request_is_admitted_and_the_second_is_refused, ::test_memory_capacity_is_enforced_independently_of_slots, ::test_a_different_model_is_refused_while_one_is_resident, ::test_concurrent_threads_admit_exactly_one_request.",
@@ -2747,7 +2751,15 @@
           "Task 1/2 (representative per-category coding cases + recorded uncertainty): --coding-cases takes a case set (id/category/prompt, optional declared categories) and runs every case through --model-command with STUDIO_QUALIFY_CASE_ID/CATEGORY/PROMPT in the environment, --case-runs times each. p4.coding_cases records per-case exit codes, success rate, wall_s_median, wall_s_spread_ratio, per-category completion and an explicit uncertainty block (incl. single_run_cases) instead of a bare pass. A malformed case set (duplicate/missing id, missing category, undeclared category, invalid JSON) aborts with exit 2 and writes no record. Tests: test_load_coding_cases_* , test_coding_case_probe_passes_case_identity_through_the_environment, test_coding_case_probe_records_failures_and_uncertainty, test_coding_case_probe_measures_wall_time_spread, test_malformed_coding_cases_abort_the_run_without_a_verdict.",
           "Task 3 (thermal): p4.thermal samples thermal pressure during every load phase \u2014 macOS via `pmset -g therm` CPU_Speed_Limit (no root; powermetrics is never invoked because it needs root), Linux via /sys/class/thermal/thermal_zone*/temp \u2014 and records stress min/max plus whether throttling was observed. Where the platform exposes no readable source the check is `blocked` with the reason (this container: 35 samples, none readable) rather than a fabricated temperature. Tests: test_thermal_snapshot_parses_pmset_thermal_pressure, test_linux_thermal_readings_convert_millidegrees, test_thermal_sampler_summarises_throttling, test_thermal_check_blocks_when_the_platform_cannot_report, test_thermal_check_passes_with_readings_under_load.",
           "The measurement path is now executable end to end instead of 'write a harness first': scripts/model_probe.py (stdlib only, OpenAI-compatible) performs one real request and prints one JSON line in the contract the suite already parses. first_token_ms is timed from the request being sent, not from the response headers - the first version of this probe timed from the headers and reported 0.0 ms, which excluded prefill; the regression is pinned by tests/test_model_probe.py::test_first_token_latency_includes_the_wait_for_the_first_token. Token counts come only from the server's usage block, peak_memory_bytes only from a readable --server-pid; anything unobserved is omitted and explained in a notes field rather than defaulted.",
-          "Observed in this environment against a local OpenAI-compatible endpoint (record: /tmp/rec3.json, not committed): p4.model_load pass (3/3 runs, first_token_ms and output_tokens carried through to a loadable model_calibration profile), p4.coding_cases pass (3/3 cases across 3 categories, per-case success_rate 1.0 and wall_s_spread_ratio recorded, case_id/case_category echoed by the probe so a per-case measurement says which case it came from), p4.thermal blocked (no readable thermal source in a container), p4.machine.fingerprint blocked off-target. The story therefore stays blocked: this is evidence that the instrument works, not that a 24 GB Apple Silicon machine qualified."
+          "Observed in this environment against a local OpenAI-compatible endpoint (record: /tmp/rec3.json, not committed): p4.model_load pass (3/3 runs, first_token_ms and output_tokens carried through to a loadable model_calibration profile), p4.coding_cases pass (3/3 cases across 3 categories, per-case success_rate 1.0 and wall_s_spread_ratio recorded, case_id/case_category echoed by the probe so a per-case measurement says which case it came from), p4.thermal blocked (no readable thermal source in a container), p4.machine.fingerprint blocked off-target. The story therefore stays blocked: this is evidence that the instrument works, not that a 24 GB Apple Silicon machine qualified.",
+          "MEASURED on the target machine 2026-10-31 (operator run, Apple M5 / arm64 / 24.0 GiB / macOS 26.6.1 / Docker Desktop 29.5.3, main at d0e47f0): scripts/qualify_environment.py --hardware --pressure-gb 16 --model-runs 3 --profile-out dist/model-profile.jsonl returned QUALIFIED, checks_run=8, failed=[], not_executed=[]. Record: docs/m5-2-0-hardware-qualification-evidence.md (artifact qualification-20261031T074929Z.json on the operator's machine; dist/ is git-ignored).",
+          "AC '24 GB pressure measured' MET: p4.pressure requested 16.0 GiB over 40.176 s with swap before 6,638,209,597 B, peak 6,638,209,597 B, after 6,621,432,381 B, growth 0. Recorded honestly as 'no growth on a machine already 6.18 GiB into swap', not as headroom.",
+          "AC 'second simultaneous heavy load rejected under policy' now MEASURED in the serving path: p4.single_heavy_model (first=admitted; second=refused; after_release=admitted) and p4.admission_wired (real app.stream_any_model: second stream refused while resident=True, admitted after release).",
+          "AC 'routing does not treat public priors as verified' MET on the same run: p4.priors_not_verified level=unknown, note 'no comparable benchmark profile'. The persisted calibration profile carries model_digest 'unknown' because the probe ran without --model-digest, so it cannot be matched to a routing prior - consistent with the policy, and recorded rather than glossed.",
+          "p4.model_load: 3/3 runs exited 0 against Gemma-4-21B-REAP-4bit (31 prompt tokens, 64 output tokens, temperature 0.0). Run 1 (cold) 19.856 s wall / 16,893.7 ms first token; run 2 3.323 s / 185.0 ms; run 3 3.194 s / 159.4 ms. Swap across the check grew 1,384,969,667 B (1.29 GiB). peak_memory_bytes is null in every run (no --server-pid), so no per-process peak is claimed.",
+          "Gaps recorded with the pass, not hidden: p4.thermal BLOCKED (2,054 samples, 0 readable - pmset -g therm printed no CPU_Speed_Limit on this machine), p4.coding_cases SKIPPED (no case file supplied, so 'completed case evidence and uncertainty' is still not exercised on hardware), no model digest, no per-process peak, and the 80% reservation constant remains a policy constant rather than a per-model footprint.",
+          "The first hardware attempt on this machine (qualification-20261031T074346Z) was UNQUALIFIED: p4.model_load 0/3 because the operator inlined $(pgrep -f mlx_lm.server | head -1) into --model-command outside the quotes, pgrep matched nothing, and --server-pid '' made all three runs die in argparse. The invocation was corrected (dropped --server-pid) and re-run once; both records are documented in the evidence page so the failure is not erased.",
+          "The SAME machine's sandbox suite (qualification-20261031T074459Z) was UNQUALIFIED: p3.adversarial.memory_limit allocated 3 GiB under --memory 512m with exit 0 while /sys/fs/cgroup/memory.max inside the container read 536870912. Recorded as an open isolation finding for M5-P3-01 (swap escaping the cap versus an unenforced cgroup is undecided); nothing about container isolation is claimed by this story and nothing was waived."
         ],
         "test_results": [
           {
@@ -2779,6 +2791,31 @@
             "command": ".venv/bin/python scripts/qualify_environment.py --hardware --pressure-gb 0.2 --case-runs 2 --coding-cases /tmp/cases.json --model-command '.venv/bin/python scripts/model_probe.py --base-url http://127.0.0.1:18080/v1' --json /tmp/rec3.json",
             "exit_code": 2,
             "result": "M5-P4-01 blocked (machine fingerprint off-target) with p4.model_load pass (3/3), p4.coding_cases pass (3/3 cases, 3 categories), p4.pressure pass, p4.thermal blocked (38 samples, none readable)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "1404 passed, 1 skipped (opt-in live container test), 1 warning in 99.90s"
+          },
+          {
+            "command": ".venv/bin/ruff check .",
+            "exit_code": 0,
+            "result": "All checks passed"
+          },
+          {
+            "command": ".venv/bin/mypy",
+            "exit_code": 0,
+            "result": "Success: no issues found in 53 source files"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py && scripts/validate_adrs.py && scripts/validate_governance.py",
+            "exit_code": 0,
+            "result": "docs (107 files, 5 required pages), ADR and governance validation all passed"
+          },
+          {
+            "command": ".venv/bin/python scripts/build_studio.py",
+            "exit_code": 0,
+            "result": "studio.py unchanged (no module changed by this story step)"
           }
         ],
         "decisions": [
@@ -2786,14 +2823,15 @@
           "A second local request is refused with a stable code and the policy snapshot rather than queued: queueing needs fairness/timeout/cancel semantics no acceptance criterion asks for, and hiding the capacity limit would misrepresent it.",
           "Residency rule (one distinct model) is enforced on top of the single slot, so raising STUDIO_HEAVY_MODEL_SLOTS cannot introduce two resident models.",
           "The admission probe in the qualification suite mutates module state inside a temporary directory and restores it in finally; a source scan would have been cheaper but would not prove wiring.",
-          "P4-02 owns deliberate sequential switching and load-path policy; this story refuses a second model instead of queuing or evicting it."
+          "P4-02 owns deliberate sequential switching and load-path policy; this story refuses a second model instead of queuing or evicting it.",
+          "The story is closed on the strength of an operator-run record produced outside CI, transcribed into docs/m5-2-0-hardware-qualification-evidence.md with the artifact names, because no 24 GB Apple Silicon machine exists in CI. Both earlier unqualified records from the same machine are kept and explained rather than replaced, so the qualification path stays auditable."
         ],
         "blockers": [
-          "AC '24 GB pressure measured' is unmeasured: no 24 GB Apple Silicon target in this evidence environment (Linux x86_64 container). Run scripts/qualify_environment.py --hardware --pressure-gb N --model-command CMD on the target machine.",
-          "The admission policy is per-process, consistent with the documented single-process worker-lease assumption; a second application process would enforce its own limit."
+          "The admission policy is per-process, consistent with the documented single-process worker-lease assumption; a second application process would enforce its own limit.",
+          "Container isolation is NOT qualified (M5-P3-01): the sandbox suite failed p3.adversarial.memory_limit on the same machine, so anything that depends on a qualified sandbox remains unavailable and is not part of this story's claim."
         ],
-        "handoff_note": "Code for AC1 and AC2 is complete, tested and observed by the qualification suite; only the measured 24 GB pressure evidence is missing. Do not flip status without a qualified hardware record.",
-        "next_action": "Owner: run ./scripts/qualify_environment.sh --hardware --pressure-gb 16 --model-command '<omlx probe>' on the 24 GB Mac and attach the record; then this story can move to done. Agent: keep it blocked until that record exists.",
+        "handoff_note": "Done on measured evidence: the 2026-10-31 operator run on the target Apple M5 is qualified (24 GB pressure with 0.00 GiB swap growth, 3/3 model-probe runs, one-heavy-model admission observed through app.stream_any_model). Read docs/m5-2-0-hardware-qualification-evidence.md for the numbers and for what is explicitly NOT measured: thermal (blocked), coding cases (skipped, no case file), model digest (unknown), per-process peak memory (null). The 80% reservation remains a policy constant. Do not upgrade those gaps from this record.",
+        "next_action": "Follow-ups that would strengthen the record, none of which this story claims: run p4.coding_cases with a real case file; re-run the probe with --model-digest and --server-pid so the profile names its weights and records a peak; and resolve whether p4.thermal can read anything on Apple Silicon. The sandbox memory-limit finding belongs to M5-P3-01.",
         "readme_updated": true
       }
     },
