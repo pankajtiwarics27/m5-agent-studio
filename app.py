@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import contextlib
 import contextvars
 import difflib
 import errno
@@ -562,6 +563,74 @@ def _sandbox_workspace_preflight(root: Path) -> None:
         raise PermissionError("Known secret-bearing files exist inside the writable sandbox mount; remove them or use a clean worktree before executing code.")
 
 
+def get_security_incident_store() -> sandbox_boundary.SecurityIncidentStore:
+    """Return the crash-durable M5-P3-06 security incident & backend qualification store."""
+    return sandbox_boundary.SecurityIncidentStore(
+        HARNESS_STORE_DIR,
+        containment_store=get_containment_store(),
+    )
+
+
+def _current_primary_backend_profile(
+    *,
+    runtime_path_override: str | None = None,
+) -> sandbox_boundary.SandboxBackendProfile:
+    rt_raw = str(STUDIO_SANDBOX_RUNTIME or "docker").strip()
+    rt_base = Path(rt_raw).name.lower()
+    rt_kind = rt_base if rt_base in {"docker", "podman"} else "docker"
+    resolved_rt_path = runtime_path_override or shutil.which(rt_raw) or rt_raw
+    img_ref = str(STUDIO_SANDBOX_IMAGE or "python:3.12-slim").strip() or "python:3.12-slim"
+
+    persisted: sandbox_boundary.SandboxBackendProfile | None = None
+    with contextlib.suppress(Exception):
+        summary = get_security_incident_store().summary()
+        raw_b = summary.get("backends", {}).get(rt_kind)
+        if isinstance(raw_b, Mapping):
+            persisted = sandbox_boundary.SandboxBackendProfile.from_mapping(raw_b)
+
+    env_oci = (os.environ.get("STUDIO_SANDBOX_OCI_RUNTIME") or "").strip()
+    env_kernel = (os.environ.get("STUDIO_SANDBOX_KERNEL_BOUNDARY") or "").strip()
+    env_digest = (os.environ.get("STUDIO_SANDBOX_IMAGE_DIGEST") or "").strip()
+
+    oci_rt = env_oci or (persisted.oci_runtime if persisted is not None else "runc")
+    kernel_bnd = env_kernel or (
+        persisted.kernel_boundary if persisted is not None else "host_linux_kernel"
+    )
+    img_digest = env_digest or (
+        persisted.image_digest
+        if (persisted is not None and persisted.image == img_ref)
+        else ""
+    )
+    if "@sha256:" in img_ref and not img_digest:
+        img_digest = "sha256:" + img_ref.split("@sha256:", 1)[1]
+    return sandbox_boundary.SandboxBackendProfile(
+        backend_id=rt_kind,
+        runtime=rt_kind,
+        runtime_path=resolved_rt_path,
+        image=img_ref,
+        image_digest=img_digest,
+        runtime_version=(persisted.runtime_version if persisted is not None else ""),
+        oci_runtime=oci_rt,
+        kernel_boundary=kernel_bnd,
+        network_driver=(persisted.network_driver if persisted is not None else "netns_none"),
+        cgroup_driver=(persisted.cgroup_driver if persisted is not None else "cgroup_v2"),
+        mount_driver=(persisted.mount_driver if persisted is not None else "bindfs"),
+        extra_dependencies=(persisted.extra_dependencies if persisted is not None else ()),
+    )
+
+
+def _resolve_active_sandbox_runtime_path() -> str | None:
+    with contextlib.suppress(Exception):
+        active_fb = get_security_incident_store().active_sandbox_backend()
+        if active_fb is not None:
+            found = shutil.which(active_fb.runtime_path) or (
+                active_fb.runtime_path if os.path.isabs(active_fb.runtime_path) else shutil.which(active_fb.runtime)
+            )
+            if found:
+                return found
+    return shutil.which(STUDIO_SANDBOX_RUNTIME)
+
+
 def _sandbox_command(root: Path, command: str, *, python_code: bool = False, container_name: str | None = None) -> list[str]:
     """Construct a least-privilege, no-network container invocation for untrusted code."""
     resolved = root.resolve(strict=True)
@@ -570,19 +639,76 @@ def _sandbox_command(root: Path, command: str, *, python_code: bool = False, con
     _sandbox_workspace_preflight(resolved)
     if "," in str(resolved):
         raise ValueError("Sandbox workspace paths containing commas are unsupported by Docker --mount syntax.")
-    if not STUDIO_SANDBOX_IMAGE or STUDIO_SANDBOX_IMAGE.startswith("-"):
-        raise ValueError("STUDIO_SANDBOX_IMAGE must be a configured, trusted image name or digest.")
-    runtime_path = shutil.which(STUDIO_SANDBOX_RUNTIME)
-    if not runtime_path:
-        raise RuntimeError(f"Sandbox runtime `{STUDIO_SANDBOX_RUNTIME}` is not installed or not on PATH.")
-    return sandbox_boundary.build_container_invocation(
+
+    sec_store: sandbox_boundary.SecurityIncidentStore | None = None
+    active_fb: sandbox_boundary.SandboxBackendProfile | None = None
+    try:
+        sec_store = get_security_incident_store()
+        # Only route through a distinct fallback backend when an un-restored incident mitigated to it.
+        has_fallback_incident = any(
+            inc.status == "mitigated_via_fallback" and inc.fallback_backend_id
+            for inc in sec_store.list_incidents(include_restored=False)
+        )
+        if has_fallback_incident:
+            active_fb = sec_store.active_sandbox_backend()
+    except sandbox_boundary.SecurityIncidentIntegrityError as exc:
+        raise PermissionError(f"Security incident store integrity failure (fail closed): {exc}") from exc
+
+    if active_fb is not None:
+        eff_image = active_fb.image
+        runtime_path = shutil.which(active_fb.runtime_path) or (
+            active_fb.runtime_path
+            if os.path.isabs(active_fb.runtime_path) and os.path.exists(active_fb.runtime_path)
+            else shutil.which(active_fb.runtime)
+        )
+        if not runtime_path:
+            raise RuntimeError(
+                f"Qualified fallback sandbox runtime `{active_fb.backend_id}` ({active_fb.runtime_path}) is not installed or not on PATH."
+            )
+        target_profile = sandbox_boundary.SandboxBackendProfile(
+            backend_id=active_fb.backend_id,
+            runtime=active_fb.runtime,
+            runtime_path=runtime_path,
+            image=eff_image,
+            image_digest=active_fb.image_digest,
+            runtime_version=active_fb.runtime_version,
+            oci_runtime=active_fb.oci_runtime,
+            kernel_boundary=active_fb.kernel_boundary,
+            network_driver=active_fb.network_driver,
+            cgroup_driver=active_fb.cgroup_driver,
+            mount_driver=active_fb.mount_driver,
+            hardening_flags=active_fb.hardening_flags,
+            extra_dependencies=active_fb.extra_dependencies,
+        )
+    else:
+        if not STUDIO_SANDBOX_IMAGE or STUDIO_SANDBOX_IMAGE.startswith("-"):
+            raise ValueError("STUDIO_SANDBOX_IMAGE must be a configured, trusted image name or digest.")
+        eff_image = STUDIO_SANDBOX_IMAGE
+        runtime_path = shutil.which(STUDIO_SANDBOX_RUNTIME)
+        if not runtime_path:
+            raise RuntimeError(f"Sandbox runtime `{STUDIO_SANDBOX_RUNTIME}` is not installed or not on PATH.")
+        target_profile = _current_primary_backend_profile(runtime_path_override=runtime_path)
+
+    argv = sandbox_boundary.build_container_invocation(
         resolved,
         command,
         runtime_path=runtime_path,
-        image=STUDIO_SANDBOX_IMAGE,
+        image=eff_image,
         python_code=python_code,
         container_name=container_name,
     )
+    if sec_store is not None:
+        _gen, hard_inc = sec_store.observe_configuration(
+            target_profile,
+            execution_mode=_execution_mode(),
+            allow_host_execution=bool(STUDIO_ALLOW_HOST_EXECUTION),
+            sample_argv=argv,
+        )
+        if hard_inc is not None:
+            raise PermissionError(
+                f"Sandbox execution suspended by security regression `{hard_inc.incident_id}`: {hard_inc.reason}"
+            )
+    return argv
 
 
 _LAST_SUBPROCESS_CONTAINED: ContextVar[bool] = ContextVar(
@@ -592,7 +718,7 @@ _LAST_SUBPROCESS_CONTAINED: ContextVar[bool] = ContextVar(
 
 
 def _cleanup_sandbox_container_sync(name: str) -> None:
-    runtime_path = shutil.which(STUDIO_SANDBOX_RUNTIME)
+    runtime_path = _resolve_active_sandbox_runtime_path()
     if not runtime_path:
         return
     try:
@@ -610,7 +736,7 @@ def _cleanup_sandbox_container_sync(name: str) -> None:
 
 
 async def _cleanup_sandbox_container(name: str) -> None:
-    runtime_path = shutil.which(STUDIO_SANDBOX_RUNTIME)
+    runtime_path = _resolve_active_sandbox_runtime_path()
     if not runtime_path:
         return
     try:
@@ -772,6 +898,21 @@ async def _start_code_process(root: Path, command: str, *, python_code: bool = F
     mode = _execution_mode()
     if mode == "disabled":
         raise PermissionError("Code execution is disabled. Set STUDIO_EXECUTION_MODE=sandbox with a local container runtime, or explicitly enable host execution and accept the security risk.")
+    try:
+        sec_dec = get_security_incident_store().check_admission(
+            required_guarantees=(
+                *sandbox_boundary.CONTAINER_ISOLATION_GUARANTEES,
+                "workspace_confinement",
+                "secret_and_vcs_protection",
+            ),
+            execution_surface="subprocess",
+            execution_mode=mode,
+            workspace_root=root,
+        )
+    except sandbox_boundary.SecurityIncidentIntegrityError as exc:
+        raise PermissionError(f"Security incident store integrity failure (fail closed): {exc}") from exc
+    if not sec_dec.allowed:
+        raise PermissionError(sec_dec.reason)
     sup_id = process_supervision.current_supervision_id()
     extra_env = {process_supervision.SUPERVISION_ENV_KEY: sup_id} if sup_id else None
     if mode == "sandbox":
@@ -1816,6 +1957,8 @@ def init_db() -> None:
         target_version=SCHEMA_VERSION,
     )
     _containment = get_containment_store()
+    with contextlib.suppress(sandbox_boundary.SecurityIncidentIntegrityError):
+        get_security_incident_store().reconcile_persisted_holds()
     _sup_reports = get_process_supervisor().recover_on_startup(
         current_boot_id=_PROCESS_BOOT_ID
     )
@@ -10856,6 +10999,7 @@ async def _run_authorized_tool(
         on_reconciled=_on_footprint_reconciled,
         containment_store=get_containment_store(),
         grant_store=grant_store,
+        security_incident_store=get_security_incident_store(),
         current_boot_id=_PROCESS_BOOT_ID,
         sql_task_fencing=True,
         allow_readonly_inspection=bool(mcp_sem is not None and mcp_sem.read_only),
@@ -12543,6 +12687,8 @@ async def api_contain_harness_session(session_id: str, request: Request) -> JSON
         raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
     reason = "security_incident"
     quarantine_session = True
+    failed_guarantees_in: list[str] = []
+    failed_dependencies_in: list[str] = []
     try:
         body = await request.json()
         if isinstance(body, dict):
@@ -12550,6 +12696,10 @@ async def api_contain_harness_session(session_id: str, request: Request) -> JSON
                 reason = str(body["reason"])[:160]
             if "quarantine_session" in body:
                 quarantine_session = bool(body["quarantine_session"])
+            if isinstance(body.get("failed_guarantees"), list):
+                failed_guarantees_in = [str(x) for x in body["failed_guarantees"] if str(x).strip()]
+            if isinstance(body.get("failed_dependencies"), list):
+                failed_dependencies_in = [str(x) for x in body["failed_dependencies"] if str(x).strip()]
     except Exception:
         pass
     _HARNESS_ABORT_FLAGS.add(session_id)
@@ -12611,6 +12761,24 @@ async def api_contain_harness_session(session_id: str, request: Request) -> JSON
             "unresolved_action_ids": unresolved,
         },
     )
+    sec_incident_map: dict[str, Any] | None = None
+    if failed_guarantees_in:
+        try:
+            all_lingering = [
+                pair for rep in reports for pair in rep.lingering_pids
+            ]
+            sec_inc = get_security_incident_store().record_incident(
+                reason=reason,
+                failed_guarantees=failed_guarantees_in,
+                failed_dependencies=failed_dependencies_in,
+                source="session_containment",
+                session_id=session_id,
+                workspace_root=(str(wt_path) if wt_path is not None else ""),
+                lingering_pids=all_lingering,
+            )
+            sec_incident_map = sec_inc.to_mapping()
+        except sandbox_boundary.SandboxBoundaryError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
     _update_harness_session_state(session_id, status="blocked")
     _append_harness_event(
         session_id,
@@ -12621,19 +12789,268 @@ async def api_contain_harness_session(session_id: str, request: Request) -> JSON
             "quarantine_session": quarantine_session,
             "contained_processes": len(reports),
             "unresolved_action_ids": unresolved,
+            "security_incident_id": sec_incident_map["incident_id"] if sec_incident_map else None,
         },
     )
-    return JSONResponse(
-        {
-            "status": "contained",
-            "session_id": session_id,
-            "incident_id": incident["incident_id"],
-            "quarantine_session": quarantine_session,
-            "contained_processes": len(reports),
-            "unresolved_action_ids": unresolved,
-            "containment": _containment_summary_or_none(session_id),
-        }
+    resp_payload: dict[str, Any] = {
+        "status": "contained",
+        "session_id": session_id,
+        "incident_id": incident["incident_id"],
+        "quarantine_session": quarantine_session,
+        "contained_processes": len(reports),
+        "unresolved_action_ids": unresolved,
+        "containment": _containment_summary_or_none(session_id),
+    }
+    if sec_incident_map is not None:
+        resp_payload["security_incident"] = sec_incident_map
+    return JSONResponse(resp_payload)
+
+
+async def trigger_security_incident_async(
+    *,
+    reason: str,
+    failed_guarantees: Sequence[str],
+    failed_dependencies: Sequence[str] = (),
+    affected_backends: Sequence[str] = (),
+    source: str = "operator",
+    severity: str = "critical",
+    session_id: str = "",
+    workspace_root: Path | str = "",
+    details: Mapping[str, Any] | None = None,
+) -> tuple[sandbox_boundary.SecurityIncidentRecord, list[process_supervision.TerminationOutcome]]:
+    """Promptly contain affected in-flight subprocesses and record a crash-durable security incident."""
+    norm_guarantees = {str(g).strip() for g in failed_guarantees if str(g).strip()}
+    target_caps: list[str] = []
+    if norm_guarantees & (
+        sandbox_boundary.CONTAINER_ISOLATION_GUARANTEES
+        | {"workspace_confinement", "secret_and_vcs_protection"}
+    ):
+        target_caps.append("code_execution")
+    if "mcp_transport_boundary" in norm_guarantees:
+        target_caps.append("external_mcp")
+
+    contained: list[process_supervision.TerminationOutcome] = []
+    if target_caps:
+        contained = await get_process_supervisor().contain_by_capability_async(
+            reason=f"security_incident:{reason[:80]}",
+            session_id=(session_id or None),
+            capabilities=target_caps,
+            persist_hold=True,
+        )
+    lingering = [pair for out in contained for pair in out.lingering_pids]
+    sec_store = get_security_incident_store()
+    # Ensure primary backend configuration generation is observed prior to opening global container incidents.
+    if not session_id and (norm_guarantees & sandbox_boundary.CONTAINER_ISOLATION_GUARANTEES):
+        with contextlib.suppress(Exception):
+            sec_store.observe_configuration(
+                _current_primary_backend_profile(),
+                execution_mode=_execution_mode(),
+                allow_host_execution=bool(STUDIO_ALLOW_HOST_EXECUTION),
+            )
+    inc = sec_store.record_incident(
+        reason=reason,
+        failed_guarantees=failed_guarantees,
+        failed_dependencies=failed_dependencies,
+        affected_backends=affected_backends,
+        source=source,
+        severity=severity,
+        session_id=session_id,
+        workspace_root=workspace_root,
+        lingering_pids=lingering,
+        details=details,
     )
+    return inc, contained
+
+
+@app.get("/api/security/incidents")
+async def api_get_security_incidents() -> JSONResponse:
+    """Inspect configuration generations, backend dependency graphs, qualifications, and security incidents."""
+    sec_store = get_security_incident_store()
+    try:
+        with contextlib.suppress(sandbox_boundary.SandboxBoundaryError):
+            sec_store.observe_configuration(
+                _current_primary_backend_profile(),
+                execution_mode=_execution_mode(),
+                allow_host_execution=bool(STUDIO_ALLOW_HOST_EXECUTION),
+            )
+        summary = sec_store.summary()
+    except sandbox_boundary.SecurityIncidentIntegrityError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return JSONResponse(summary)
+
+
+@app.post("/api/security/incidents")
+async def api_create_security_incident(request: Request) -> JSONResponse:
+    """Trigger a security incident or ingest a qualification report (M5-P3-06 Task 1 & 2)."""
+    try:
+        body = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Request body must be valid JSON.") from exc
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Request body must be a JSON object.")
+
+    sec_store = get_security_incident_store()
+    try:
+        if isinstance(body.get("qualification_report"), Mapping):
+            raw_backend = body.get("backend")
+            backend = (
+                sandbox_boundary.SandboxBackendProfile.from_mapping(raw_backend)
+                if isinstance(raw_backend, Mapping)
+                else _current_primary_backend_profile()
+            )
+            outcome = sec_store.ingest_qualification_report(
+                body["qualification_report"],
+                backend=backend,
+                execution_mode=_execution_mode(),
+                allow_host_execution=bool(STUDIO_ALLOW_HOST_EXECUTION),
+            )
+            contained_count = 0
+            if outcome.incident is not None:
+                contained = await get_process_supervisor().contain_by_capability_async(
+                    reason=f"qualification_regression:{outcome.incident.incident_id}",
+                    capabilities=("code_execution",),
+                    persist_hold=True,
+                )
+                contained_count = len(contained)
+            status_code = 200 if outcome.ok else (201 if outcome.incident is not None else 409)
+            return JSONResponse(
+                {
+                    **outcome.to_mapping(),
+                    "contained_processes": contained_count,
+                    "summary": sec_store.summary(),
+                },
+                status_code=status_code,
+            )
+
+        raw_guarantees = body.get("failed_guarantees")
+        if not isinstance(raw_guarantees, list) or not raw_guarantees:
+            raise HTTPException(
+                status_code=400,
+                detail="failed_guarantees must be a non-empty list of security guarantee identifiers.",
+            )
+        raw_deps = body.get("failed_dependencies") or []
+        if not isinstance(raw_deps, list):
+            raise HTTPException(status_code=400, detail="failed_dependencies must be a list.")
+        raw_backends = body.get("affected_backends") or []
+        if not isinstance(raw_backends, list):
+            raise HTTPException(status_code=400, detail="affected_backends must be a list.")
+
+        inc, contained = await trigger_security_incident_async(
+            reason=str(body.get("reason") or "security_incident")[:240],
+            failed_guarantees=[str(x) for x in raw_guarantees],
+            failed_dependencies=[str(x) for x in raw_deps],
+            affected_backends=[str(x) for x in raw_backends],
+            source=str(body.get("source") or "operator")[:80],
+            severity=str(body.get("severity") or "critical")[:40],
+            session_id=str(body.get("session_id") or ""),
+            workspace_root=str(body.get("workspace_root") or ""),
+            details=(body.get("details") if isinstance(body.get("details"), Mapping) else None),
+        )
+        return JSONResponse(
+            {
+                "status": "suspended",
+                "incident": inc.to_mapping(),
+                "contained_processes": len(contained),
+                "summary": sec_store.summary(),
+            },
+            status_code=201,
+        )
+    except sandbox_boundary.SandboxBoundaryError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except sandbox_boundary.SecurityIncidentIntegrityError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/api/security/incidents/{incident_id}/fallback")
+async def api_qualify_security_incident_fallback(incident_id: str, request: Request) -> JSONResponse:
+    """Qualify an alternative sandbox backend against incident-specific shared dependencies (Task 3, AC 2)."""
+    try:
+        body = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Request body must be valid JSON.") from exc
+    if not isinstance(body, dict) or not isinstance(body.get("backend"), Mapping):
+        raise HTTPException(status_code=400, detail="Request body must contain a `backend` object.")
+
+    sec_store = get_security_incident_store()
+    try:
+        candidate = sandbox_boundary.SandboxBackendProfile.from_mapping(body["backend"])
+    except (sandbox_boundary.SandboxBoundaryError, sandbox_boundary.SecurityIncidentIntegrityError) as exc:
+        msg = str(exc)
+        err_code = (
+            "unsafe_host_fallback_forbidden"
+            if "Unsandboxed" in msg or "docker or podman" in msg or "'docker' or 'podman'" in msg
+            else "invalid_backend_profile"
+        )
+        return JSONResponse(
+            {"ok": False, "error_code": err_code, "reason": msg},
+            status_code=403 if err_code == "unsafe_host_fallback_forbidden" else 400,
+        )
+
+    qual_report = body.get("qualification_report")
+    if qual_report is not None and not isinstance(qual_report, Mapping):
+        raise HTTPException(status_code=400, detail="qualification_report must be a JSON object.")
+
+    try:
+        outcome = sec_store.qualify_fallback_backend(
+            incident_id,
+            candidate,
+            qualification_report=qual_report,
+        )
+        if not outcome.ok:
+            status_code = 404 if outcome.error_code == "incident_not_found" else 409
+            return JSONResponse(outcome.to_mapping(), status_code=status_code)
+        return JSONResponse(
+            {
+                **outcome.to_mapping(),
+                "summary": sec_store.summary(),
+            }
+        )
+    except sandbox_boundary.SandboxBoundaryError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except sandbox_boundary.SecurityIncidentIntegrityError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/api/security/incidents/{incident_id}/restore")
+async def api_restore_security_incident(incident_id: str, request: Request) -> JSONResponse:
+    """Requalify remediated backend before restoring suspended guarantees and releasing holds (Task 4)."""
+    try:
+        body = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Request body must be valid JSON.") from exc
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Request body must be a JSON object.")
+
+    sec_store = get_security_incident_store()
+    try:
+        raw_backend = body.get("backend")
+        remediated = (
+            sandbox_boundary.SandboxBackendProfile.from_mapping(raw_backend)
+            if isinstance(raw_backend, Mapping)
+            else _current_primary_backend_profile()
+        )
+        qual_report = body.get("qualification_report")
+        if qual_report is not None and not isinstance(qual_report, Mapping):
+            raise HTTPException(status_code=400, detail="qualification_report must be a JSON object.")
+
+        outcome = sec_store.requalify_and_restore(
+            incident_id,
+            remediated,
+            qualification_report=qual_report,
+        )
+        if not outcome.ok:
+            status_code = 404 if outcome.error_code == "incident_not_found" else 409
+            return JSONResponse(outcome.to_mapping(), status_code=status_code)
+        return JSONResponse(
+            {
+                **outcome.to_mapping(),
+                "summary": sec_store.summary(),
+            }
+        )
+    except sandbox_boundary.SandboxBoundaryError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except sandbox_boundary.SecurityIncidentIntegrityError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.get("/api/harness/sessions/{session_id}/grants")
