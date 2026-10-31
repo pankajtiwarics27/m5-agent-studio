@@ -1253,6 +1253,37 @@ class _PSLiveEntry:
     contained_outcome: TerminationOutcome | None = None
 
 
+@dataclass(slots=True)
+class _PSPendingSpawn:
+    placeholder_record: SupervisedProcessRecord
+    loop: asyncio.AbstractEventLoop | None
+    settled_event: asyncio.Event | None
+    containment_done_event: asyncio.Event | None
+    attached_record: SupervisedProcessRecord | None = None
+    aborted: bool = False
+    pending_containment_reason: str | None = None
+    pending_persist_hold: bool = True
+    pending_quarantine_session: bool = False
+    pending_async_waiters: int = 0
+
+
+def _ps_signal_async_event(
+    loop: asyncio.AbstractEventLoop | None,
+    ev: asyncio.Event | None,
+) -> None:
+    if loop is None or ev is None or loop.is_closed():
+        return
+    try:
+        running = asyncio.get_running_loop()
+    except RuntimeError:
+        running = None
+    if running is loop:
+        ev.set()
+    else:
+        with contextlib.suppress(RuntimeError):
+            loop.call_soon_threadsafe(ev.set)
+
+
 class ProcessSupervisor:
     """Supervises subprocess groups, detached children, bounded cancellation, and restart recovery."""
 
@@ -1284,6 +1315,8 @@ class ProcessSupervisor:
         self._kill_timeout_s = max(0.05, float(kill_timeout_s))
         self._lock = threading.RLock()
         self._live: dict[str, _PSLiveEntry] = {}
+        self._pending_spawns: dict[str, _PSPendingSpawn] = {}
+        self._pending_settled: dict[str, _PSPendingSpawn] = {}
         self._contained_outcomes: dict[str, TerminationOutcome] = {}
 
     @property
@@ -1329,6 +1362,133 @@ class ProcessSupervisor:
         finally:
             _PS_ACTIVE_SUPERVISION_ID.reset(tok)
 
+    def begin_spawn(
+        self,
+        *,
+        supervision_id: str,
+        tool_name: str,
+        workspace_root: Path | None,
+        container_name: str | None = None,
+        session_id: str = "",
+        task_id: str | None = None,
+        epoch: int | None = None,
+        worker_id: str | None = None,
+        boot_id: str = "",
+        action_id: str = "",
+        barriers: Sequence[tuple[str, str]] = (),
+        grant_id: str | None = None,
+        capabilities: Sequence[str] = (),
+        resource_scopes: Sequence[str] = (),
+    ) -> None:
+        """Pre-register a subprocess BEFORE ``asyncio.create_subprocess_*`` yields to the event loop.
+
+        Closes the TOCTOU window where the OS child has already forked inside
+        ``create_subprocess_exec`` while asyncio is still awaiting pipe setup:
+        any grant revocation or session/epoch containment that fires during that
+        window matches this pending spawn, fences ``supervision_id``, and
+        contains the child deterministically as soon as the handle settles.
+        """
+        if not _PS_SUPERVISION_ID_RE.match(supervision_id):
+            raise ValueError(f"Invalid supervision_id: {supervision_id!r}")
+        fenced, reason = self._store.is_origin_fenced(
+            session_id=session_id,
+            task_id=task_id,
+            epoch=epoch,
+            worker_id=worker_id,
+            supervision_id=supervision_id,
+            current_boot_id=boot_id,
+        )
+        if fenced:
+            raise StaleOriginFencedError(reason)
+        ws_str = ""
+        if workspace_root is not None:
+            with contextlib.suppress(OSError):
+                ws_str = str(workspace_root.resolve())
+        eff_barriers = tuple(barriers)
+        if not eff_barriers and ws_str and not tool_name.startswith("mcp__"):
+            eff_barriers = ((f"workspace:{ws_str}", "exclusive"),)
+        eff_scopes = tuple(str(s) for s in resource_scopes if str(s).strip())
+        if not eff_scopes:
+            eff_scopes = tuple(t for t, _ in eff_barriers)
+
+        placeholder = SupervisedProcessRecord(
+            supervision_id=supervision_id,
+            pid=0,
+            pgid=0,
+            uid=_ps_current_uid(),
+            start_fingerprint="",
+            container_name=container_name,
+            tool_name=tool_name,
+            session_id=session_id,
+            task_id=task_id,
+            epoch=epoch,
+            worker_id=worker_id,
+            boot_id=boot_id,
+            action_id=action_id,
+            workspace_root=ws_str,
+            barriers=eff_barriers,
+            started_at=time.time(),
+            status="spawning",
+            grant_id=(str(grant_id) if grant_id else None),
+            capabilities=tuple(str(c) for c in capabilities if str(c).strip()),
+            resource_scopes=eff_scopes,
+        )
+        try:
+            running_loop: asyncio.AbstractEventLoop | None = asyncio.get_running_loop()
+            settled_ev: asyncio.Event | None = asyncio.Event()
+            done_ev: asyncio.Event | None = asyncio.Event()
+        except RuntimeError:
+            running_loop = None
+            settled_ev = None
+            done_ev = None
+
+        with self._lock:
+            self._pending_spawns[supervision_id] = _PSPendingSpawn(
+                placeholder_record=placeholder,
+                loop=running_loop,
+                settled_event=settled_ev,
+                containment_done_event=done_ev,
+            )
+
+    def abort_spawn(self, supervision_id: str) -> None:
+        """Clear a pre-registered spawn if ``create_subprocess_*`` failed before ``register_process``."""
+        with self._lock:
+            pending = self._pending_spawns.pop(supervision_id, None)
+            self._pending_settled.pop(supervision_id, None)
+            if pending is None:
+                return
+            pending.aborted = True
+        _ps_signal_async_event(pending.loop, pending.settled_event)
+        _ps_signal_async_event(pending.loop, pending.containment_done_event)
+
+    async def await_pending_containment_async(
+        self,
+        supervision_id: str,
+        *,
+        timeout_s: float = 5.0,
+    ) -> TerminationOutcome | None:
+        """Wait for any containment latched during ``create_subprocess_*`` to finish reaping."""
+        with self._lock:
+            settled = self._pending_settled.pop(supervision_id, None)
+            already = self._contained_outcomes.get(supervision_id)
+        if settled is None or settled.pending_containment_reason is None:
+            return already
+        if (
+            settled.containment_done_event is not None
+            and settled.loop is not None
+            and not settled.containment_done_event.is_set()
+        ):
+            try:
+                running = asyncio.get_running_loop()
+            except RuntimeError:
+                running = None
+            if running is settled.loop:
+                with contextlib.suppress(asyncio.TimeoutError):
+                    await asyncio.wait_for(
+                        settled.containment_done_event.wait(), timeout=timeout_s
+                    )
+        return self.get_contained_outcome(supervision_id)
+
     def register_process(
         self,
         proc: asyncio.subprocess.Process,
@@ -1350,6 +1510,7 @@ class ProcessSupervisor:
     ) -> SupervisedProcessRecord:
         pid = int(proc.pid or 0)
         if pid <= 1:
+            self.abort_spawn(supervision_id)
             raise ProcessSupervisionError(f"Refusing to register invalid subprocess PID: {pid}")
         pgid = pid
         if hasattr(os, "getpgid"):
@@ -1394,12 +1555,53 @@ class ProcessSupervisor:
             resource_scopes=eff_scopes,
         )
         self._store.record_process_started(record)
+        sync_contain_reason: str | None = None
+        sync_persist_hold = True
+        sync_quarantine = False
         with self._lock:
+            pending = self._pending_spawns.pop(supervision_id, None)
             self._live[supervision_id] = _PSLiveEntry(
                 record=record,
                 proc=proc,
                 cancel_event=threading.Event(),
             )
+            if pending is not None:
+                pending.attached_record = record
+                if pending.pending_containment_reason is not None:
+                    self._pending_settled[supervision_id] = pending
+                    if pending.pending_async_waiters == 0:
+                        sync_contain_reason = pending.pending_containment_reason
+                        sync_persist_hold = pending.pending_persist_hold
+                        sync_quarantine = pending.pending_quarantine_session
+
+        fenced_now, fence_reason = self._store.is_origin_fenced(
+            session_id=session_id,
+            task_id=task_id,
+            epoch=epoch,
+            worker_id=worker_id,
+            supervision_id=supervision_id,
+            current_boot_id=boot_id,
+        )
+        if (
+            fenced_now
+            and sync_contain_reason is None
+            and (pending is None or pending.pending_async_waiters == 0)
+        ):
+            sync_contain_reason = fence_reason or "origin_fenced_during_spawn"
+
+        if pending is not None:
+            _ps_signal_async_event(pending.loop, pending.settled_event)
+
+        if sync_contain_reason is not None:
+            self.terminate_record_sync(
+                record,
+                reason=sync_contain_reason,
+                persist_hold=sync_persist_hold,
+                fence_origin=False,
+                quarantine_session=sync_quarantine,
+            )
+            if pending is not None:
+                _ps_signal_async_event(pending.loop, pending.containment_done_event)
         return record
 
     def get_contained_outcome(self, supervision_id: str) -> TerminationOutcome | None:
@@ -1721,6 +1923,25 @@ class ProcessSupervisor:
         self._store.remove_in_flight_process(supervision_id)
         return None
 
+    @staticmethod
+    def _record_matches_scope(
+        rec: SupervisedProcessRecord,
+        *,
+        session_id: str | None,
+        task_id: str | None,
+        epoch_set: set[int] | None,
+        worker_id: str | None,
+    ) -> bool:
+        if session_id is not None and rec.session_id != session_id and rec.task_id != session_id:
+            return False
+        if task_id is not None and rec.task_id != task_id and rec.session_id != task_id:
+            return False
+        if epoch_set is not None and (rec.epoch is None or rec.epoch not in epoch_set):
+            return False
+        if worker_id is not None and rec.worker_id != worker_id:
+            return False
+        return True
+
     def _select_matching_records(
         self,
         *,
@@ -1737,18 +1958,112 @@ class ProcessSupervisor:
         for persisted in self._store.list_in_flight_processes():
             candidates.setdefault(persisted.supervision_id, persisted)
 
-        matched: list[SupervisedProcessRecord] = []
-        for rec in candidates.values():
-            if session_id is not None and rec.session_id != session_id and rec.task_id != session_id:
-                continue
-            if task_id is not None and rec.task_id != task_id and rec.session_id != task_id:
-                continue
-            if epoch_set is not None and (rec.epoch is None or rec.epoch not in epoch_set):
-                continue
-            if worker_id is not None and rec.worker_id != worker_id:
-                continue
-            matched.append(rec)
-        return matched
+        return [
+            rec
+            for rec in candidates.values()
+            if self._record_matches_scope(
+                rec,
+                session_id=session_id,
+                task_id=task_id,
+                epoch_set=epoch_set,
+                worker_id=worker_id,
+            )
+        ]
+
+    def _latch_pending_scope_spawns(
+        self,
+        *,
+        reason: str,
+        session_id: str | None,
+        task_id: str | None,
+        epochs: Sequence[int] | None,
+        worker_id: str | None,
+        quarantine_session: bool,
+        persist_hold: bool,
+        async_waiter: bool,
+    ) -> list[_PSPendingSpawn]:
+        epoch_set = {int(e) for e in epochs} if epochs else None
+        latched: list[_PSPendingSpawn] = []
+        with self._lock:
+            for pending in self._pending_spawns.values():
+                if self._record_matches_scope(
+                    pending.placeholder_record,
+                    session_id=session_id,
+                    task_id=task_id,
+                    epoch_set=epoch_set,
+                    worker_id=worker_id,
+                ):
+                    pending.pending_containment_reason = reason
+                    pending.pending_persist_hold = persist_hold
+                    pending.pending_quarantine_session = quarantine_session
+                    if async_waiter:
+                        pending.pending_async_waiters += 1
+                    latched.append(pending)
+        for pending in latched:
+            rec = pending.placeholder_record
+            self._store.fence_origin(
+                reason=reason,
+                session_id=rec.session_id,
+                task_id=rec.task_id,
+                epoch=rec.epoch,
+                worker_id=rec.worker_id,
+                supervision_id=rec.supervision_id,
+                quarantine_session=quarantine_session,
+            )
+        return latched
+
+    async def _await_and_terminate_latched_spawns_async(
+        self,
+        latched: Sequence[_PSPendingSpawn],
+        *,
+        reason: str,
+        persist_hold: bool,
+        fence_origin: bool,
+        quarantine_session: bool,
+        already_terminated_ids: set[str],
+    ) -> list[TerminationOutcome]:
+        outcomes: list[TerminationOutcome] = []
+        try:
+            running_loop: asyncio.AbstractEventLoop | None = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+
+        for pending in latched:
+            try:
+                if (
+                    pending.settled_event is not None
+                    and pending.loop is not None
+                    and pending.loop is running_loop
+                    and not pending.settled_event.is_set()
+                ):
+                    with contextlib.suppress(asyncio.TimeoutError):
+                        await asyncio.wait_for(pending.settled_event.wait(), timeout=5.0)
+                rec = pending.attached_record
+                if rec is None or pending.aborted or rec.supervision_id in already_terminated_ids:
+                    continue
+                prior = self.get_contained_outcome(rec.supervision_id)
+                if prior is not None:
+                    already_terminated_ids.add(rec.supervision_id)
+                    outcomes.append(prior)
+                    continue
+                already_terminated_ids.add(rec.supervision_id)
+                outcomes.append(
+                    await self.terminate_record_async(
+                        rec,
+                        reason=reason,
+                        persist_hold=persist_hold,
+                        fence_origin=fence_origin,
+                        quarantine_session=quarantine_session,
+                    )
+                )
+            finally:
+                with self._lock:
+                    pending.pending_async_waiters = max(0, pending.pending_async_waiters - 1)
+                    if pending.pending_async_waiters == 0:
+                        self._pending_settled.pop(pending.placeholder_record.supervision_id, None)
+                if pending.pending_async_waiters == 0:
+                    _ps_signal_async_event(pending.loop, pending.containment_done_event)
+        return outcomes
 
     def contain_by_scope_sync(
         self,
@@ -1781,6 +2096,16 @@ class ProcessSupervisor:
                 quarantine_session=quarantine_session,
             )
 
+        self._latch_pending_scope_spawns(
+            reason=reason,
+            session_id=session_id,
+            task_id=task_id,
+            epochs=epochs,
+            worker_id=worker_id,
+            quarantine_session=quarantine_session,
+            persist_hold=persist_hold,
+            async_waiter=False,
+        )
         records = self._select_matching_records(
             session_id=session_id,
             task_id=task_id,
@@ -1831,6 +2156,16 @@ class ProcessSupervisor:
                 quarantine_session=quarantine_session,
             )
 
+        latched = self._latch_pending_scope_spawns(
+            reason=reason,
+            session_id=session_id,
+            task_id=task_id,
+            epochs=epochs,
+            worker_id=worker_id,
+            quarantine_session=quarantine_session,
+            persist_hold=persist_hold,
+            async_waiter=True,
+        )
         records = self._select_matching_records(
             session_id=session_id,
             task_id=task_id,
@@ -1838,7 +2173,9 @@ class ProcessSupervisor:
             worker_id=worker_id,
         )
         outcomes: list[TerminationOutcome] = []
+        terminated_ids: set[str] = set()
         for rec in records:
+            terminated_ids.add(rec.supervision_id)
             outcomes.append(
                 await self.terminate_record_async(
                     rec,
@@ -1846,6 +2183,17 @@ class ProcessSupervisor:
                     persist_hold=persist_hold,
                     fence_origin=True,
                     quarantine_session=quarantine_session,
+                )
+            )
+        if latched:
+            outcomes.extend(
+                await self._await_and_terminate_latched_spawns_async(
+                    latched,
+                    reason=reason,
+                    persist_hold=persist_hold,
+                    fence_origin=True,
+                    quarantine_session=quarantine_session,
+                    already_terminated_ids=terminated_ids,
                 )
             )
         return outcomes
@@ -1873,6 +2221,45 @@ class ProcessSupervisor:
                     return True
         return False
 
+    def _record_matches_capability(
+        self,
+        rec: SupervisedProcessRecord,
+        *,
+        session_id: str | None,
+        task_id: str | None,
+        gid_set: set[str],
+        cap_set: set[str],
+        scope_list: Sequence[str],
+        tool_set: set[str],
+    ) -> bool:
+        if not gid_set and not cap_set and not scope_list and not tool_set:
+            return False
+        if (
+            session_id is not None
+            and session_id != "*"
+            and rec.session_id != session_id
+            and rec.task_id != session_id
+        ):
+            return False
+        if task_id is not None and rec.task_id != task_id and rec.session_id != task_id:
+            return False
+        if gid_set and rec.grant_id and rec.grant_id in gid_set:
+            return True
+        if not cap_set and not scope_list and not tool_set:
+            return False
+        cap_ok = (not cap_set) or bool(set(rec.capabilities) & cap_set)
+        tool_ok = bool(tool_set) and (rec.tool_name in tool_set)
+        if cap_set and not cap_ok and not tool_ok:
+            return False
+        if tool_set and not cap_set and not tool_ok:
+            return False
+        rec_scopes = list(rec.resource_scopes) or [t for t, _ in rec.barriers]
+        return (not scope_list) or any(
+            self._ps_scope_overlaps(r_sc, p_sc)
+            for r_sc in scope_list
+            for p_sc in (rec_scopes or ["global:*"])
+        )
+
     def _select_capability_records(
         self,
         *,
@@ -1897,37 +2284,68 @@ class ProcessSupervisor:
         for persisted in self._store.list_in_flight_processes():
             candidates.setdefault(persisted.supervision_id, persisted)
 
-        matched: list[SupervisedProcessRecord] = []
-        for rec in candidates.values():
-            if (
-                session_id is not None
-                and session_id != "*"
-                and rec.session_id != session_id
-                and rec.task_id != session_id
-            ):
-                continue
-            if task_id is not None and rec.task_id != task_id and rec.session_id != task_id:
-                continue
-            if gid_set and rec.grant_id and rec.grant_id in gid_set:
-                matched.append(rec)
-                continue
-            if not cap_set and not scope_list and not tool_set:
-                continue
-            cap_ok = (not cap_set) or bool(set(rec.capabilities) & cap_set)
-            tool_ok = bool(tool_set) and (rec.tool_name in tool_set)
-            if cap_set and not cap_ok and not tool_ok:
-                continue
-            if tool_set and not cap_set and not tool_ok:
-                continue
-            rec_scopes = list(rec.resource_scopes) or [t for t, _ in rec.barriers]
-            scope_ok = (not scope_list) or any(
-                self._ps_scope_overlaps(r_sc, p_sc)
-                for r_sc in scope_list
-                for p_sc in (rec_scopes or ["global:*"])
+        return [
+            rec
+            for rec in candidates.values()
+            if self._record_matches_capability(
+                rec,
+                session_id=session_id,
+                task_id=task_id,
+                gid_set=gid_set,
+                cap_set=cap_set,
+                scope_list=scope_list,
+                tool_set=tool_set,
             )
-            if scope_ok:
-                matched.append(rec)
-        return matched
+        ]
+
+    def _latch_pending_capability_spawns(
+        self,
+        *,
+        reason: str,
+        session_id: str | None,
+        task_id: str | None,
+        grant_ids: Collection[str],
+        capabilities: Collection[str],
+        resource_scopes: Collection[str],
+        tool_names: Collection[str],
+        persist_hold: bool,
+        async_waiter: bool,
+    ) -> list[_PSPendingSpawn]:
+        gid_set = {str(g) for g in grant_ids if str(g).strip()}
+        cap_set = {str(c) for c in capabilities if str(c).strip()}
+        scope_list = [str(s) for s in resource_scopes if str(s).strip()]
+        tool_set = {str(t) for t in tool_names if str(t).strip()}
+        if not gid_set and not cap_set and not scope_list and not tool_set:
+            return []
+
+        latched: list[_PSPendingSpawn] = []
+        with self._lock:
+            for pending in self._pending_spawns.values():
+                if self._record_matches_capability(
+                    pending.placeholder_record,
+                    session_id=session_id,
+                    task_id=task_id,
+                    gid_set=gid_set,
+                    cap_set=cap_set,
+                    scope_list=scope_list,
+                    tool_set=tool_set,
+                ):
+                    pending.pending_containment_reason = reason
+                    pending.pending_persist_hold = persist_hold
+                    pending.pending_quarantine_session = False
+                    if async_waiter:
+                        pending.pending_async_waiters += 1
+                    latched.append(pending)
+        for pending in latched:
+            rec = pending.placeholder_record
+            self._store.fence_origin(
+                reason=reason,
+                session_id=rec.session_id,
+                task_id=rec.task_id,
+                supervision_id=rec.supervision_id,
+                quarantine_session=False,
+            )
+        return latched
 
     def contain_by_capability_sync(
         self,
@@ -1946,6 +2364,17 @@ class ProcessSupervisor:
         Fences only each terminated subprocess's ``supervision_id`` (not the
         entire worker/epoch/session), preserving unrelated live capabilities.
         """
+        self._latch_pending_capability_spawns(
+            reason=reason,
+            session_id=session_id,
+            task_id=task_id,
+            grant_ids=grant_ids,
+            capabilities=capabilities,
+            resource_scopes=resource_scopes,
+            tool_names=tool_names,
+            persist_hold=persist_hold,
+            async_waiter=False,
+        )
         records = self._select_capability_records(
             session_id=session_id,
             task_id=task_id,
@@ -1987,6 +2416,17 @@ class ProcessSupervisor:
         persist_hold: bool = True,
     ) -> list[TerminationOutcome]:
         """Asynchronously contain ONLY in-flight subprocesses matching a revoked grant/capability/scope."""
+        latched = self._latch_pending_capability_spawns(
+            reason=reason,
+            session_id=session_id,
+            task_id=task_id,
+            grant_ids=grant_ids,
+            capabilities=capabilities,
+            resource_scopes=resource_scopes,
+            tool_names=tool_names,
+            persist_hold=persist_hold,
+            async_waiter=True,
+        )
         records = self._select_capability_records(
             session_id=session_id,
             task_id=task_id,
@@ -1996,7 +2436,9 @@ class ProcessSupervisor:
             tool_names=tool_names,
         )
         outcomes: list[TerminationOutcome] = []
+        terminated_ids: set[str] = set()
         for rec in records:
+            terminated_ids.add(rec.supervision_id)
             self._store.fence_origin(
                 reason=reason,
                 session_id=rec.session_id,
@@ -2011,6 +2453,17 @@ class ProcessSupervisor:
                     persist_hold=persist_hold,
                     fence_origin=False,
                     quarantine_session=False,
+                )
+            )
+        if latched:
+            outcomes.extend(
+                await self._await_and_terminate_latched_spawns_async(
+                    latched,
+                    reason=reason,
+                    persist_hold=persist_hold,
+                    fence_origin=False,
+                    quarantine_session=False,
+                    already_terminated_ids=terminated_ids,
                 )
             )
         return outcomes

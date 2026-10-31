@@ -1329,3 +1329,402 @@ def test_registered_secret_values_never_reach_a_child_environment() -> None:
     assert "OPENAI_API_KEY" not in env
     assert "STUDIO_API_TOKEN" not in env
     assert all(secret not in v for v in env.values())
+
+
+def test_mid_spawn_grant_revocation_contains_stdio_mcp_before_register_process(
+    isolated_grant_runtime: tuple[Path, _FakeClock],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Deterministically reproduce the Python 3.13 spawn-to-registration race:
+    the OS child has already forked and written its PID file while
+    ``asyncio.create_subprocess_exec`` is still suspended before returning
+    ``proc`` to ``_mcp_stdio_rpc``. Revoking the grant and calling
+    ``contain_by_capability_async`` in that window must return 1 outcome, reap
+    the child, send zero RPC bytes, and preserve unrelated session subprocesses.
+    """
+    ws, _clock = isolated_grant_runtime
+    sess = studio.create_harness_session_db(
+        "mid-spawn-race", str(ws), False, "standard", "local", "critic"
+    )
+    sid = sess["id"]
+    store = studio.get_scoped_grant_store()
+    supervisor = studio.get_process_supervisor()
+
+    slow_mcp = ws / "race_mcp_server.py"
+    rpc_log = ws / "race_mcp_rpc.log"
+    slow_mcp.write_text(
+        textwrap.dedent(
+            f"""\
+            import json, pathlib, sys, time
+            log_path = pathlib.Path({str(rpc_log)!r})
+            for raw in sys.stdin:
+                line = raw.strip()
+                if not line:
+                    continue
+                msg = json.loads(line)
+                mid = msg.get("id")
+                method = msg.get("method", "")
+                with log_path.open("a", encoding="utf-8") as fh:
+                    fh.write(method + "\\n")
+                if method == "initialize":
+                    sys.stdout.write(json.dumps({{"jsonrpc": "2.0", "id": mid, "result": {{"protocolVersion": "2024-11-05", "capabilities": {{}}, "serverInfo": {{"name": "race", "version": "1"}}}}}}) + "\\n")
+                    sys.stdout.flush()
+                elif method == "tools/list":
+                    sys.stdout.write(json.dumps({{"jsonrpc": "2.0", "id": mid, "result": {{"tools": [{{"name": "hang", "description": "hang", "inputSchema": {{"type": "object"}}}}]}}}}) + "\\n")
+                    sys.stdout.flush()
+                elif method == "tools/call":
+                    time.sleep(30.0)
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    bash_worker = ws / "unrelated_bash_worker.py"
+    bash_pid_file = ws / "unrelated_bash.pid"
+    bash_worker.write_text(
+        textwrap.dedent(
+            f"""\
+            import os, pathlib, time
+            pathlib.Path({str(bash_pid_file)!r}).write_text(str(os.getpid()))
+            time.sleep(30.0)
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    async def _scenario() -> None:
+        async with httpx.AsyncClient() as client:
+            studio.upsert_mcp_server(
+                {
+                    "alias": "racemcp",
+                    "name": "Race MCP",
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [str(slow_mcp)],
+                    "approval_policy": "ask",
+                    "enabled": True,
+                }
+            )
+            await studio.sync_mcp_server_tools(client, "racemcp")
+            rpc_log.unlink(missing_ok=True)
+
+            mcp_grant = store.issue_grant(
+                session_id=sid,
+                capabilities=("external_mcp",),
+                resource_scopes=("mcp:racemcp:hang",),
+                ttl_seconds=300.0,
+                current_policy="standard",
+            )
+            exec_grant = store.issue_grant(
+                session_id=sid,
+                capabilities=("code_execution", "workspace_read", "workspace_write"),
+                resource_scopes=("workspace:.",),
+                ttl_seconds=300.0,
+                current_policy="standard",
+                workspace_root=ws,
+            )
+
+            orig_exec = asyncio.create_subprocess_exec
+            child_forked = asyncio.Event()
+            allow_exec_return = asyncio.Event()
+            captured_pids: list[int] = []
+
+            async def _delayed_exec(*args: object, **kwargs: object):
+                proc = await orig_exec(*args, **kwargs)
+                if any(str(a) == str(slow_mcp) for a in args):
+                    assert proc.pid is not None
+                    captured_pids.append(proc.pid)
+                    child_forked.set()
+                    await allow_exec_return.wait()
+                return proc
+
+            monkeypatch.setattr(studio.asyncio, "create_subprocess_exec", _delayed_exec)
+
+            bash_task = asyncio.create_task(
+                studio._execute_harness_tool(
+                    client,
+                    sess,
+                    "run_bash",
+                    {"command": "python3 unrelated_bash_worker.py"},
+                    approved=False,
+                )
+            )
+            deadline = time.monotonic() + 5.0
+            while time.monotonic() < deadline and not bash_pid_file.exists():
+                await asyncio.sleep(0.02)
+            assert bash_pid_file.exists()
+            unrelated_pid = int(bash_pid_file.read_text().strip())
+
+            mcp_task = asyncio.create_task(
+                studio.execute_mcp_tool_call(
+                    client,
+                    "racemcp",
+                    "hang",
+                    {},
+                    cwd=None,
+                    policy="standard",
+                    approved=False,
+                    session_id=sid,
+                )
+            )
+
+            # Wait until OS child is alive in kernel, while create_subprocess_exec
+            # is still suspended BEFORE returning `proc` to `_mcp_stdio_rpc`.
+            await asyncio.wait_for(child_forked.wait(), timeout=5.0)
+            assert len(captured_pids) == 1
+            mcp_pid = captured_pids[0]
+            assert process_supervision.probe_process(mcp_pid) is not None
+
+            # Fire grant revocation + containment right inside the spawn window!
+            rev_rec, _ = store.revoke_grant(mcp_grant.grant_id, session_id=sid, block_scope=True)
+            assert rev_rec is not None
+            contain_task = asyncio.create_task(
+                supervisor.contain_by_capability_async(
+                    reason="revoke_mid_spawn",
+                    session_id=sid,
+                    grant_ids=(mcp_grant.grant_id,),
+                    capabilities=("external_mcp",),
+                    resource_scopes=("mcp:racemcp:hang",),
+                    persist_hold=False,
+                )
+            )
+            await asyncio.sleep(0)
+            allow_exec_return.set()
+
+            mcp_outcomes = await asyncio.wait_for(contain_task, timeout=5.0)
+            assert len(mcp_outcomes) == 1
+            with pytest.raises(Exception):
+                await asyncio.wait_for(mcp_task, timeout=5.0)
+            assert process_supervision.probe_process(mcp_pid) is None
+            assert not rpc_log.exists(), "revoked MCP child must not receive initialize or tools/call"
+
+            # Unrelated bash worker in the same session remains untouched.
+            assert not bash_task.done()
+            assert process_supervision.probe_process(unrelated_pid) is not None
+
+            store.revoke_grant(exec_grant.grant_id, session_id=sid, block_scope=True)
+            exec_outcomes = await supervisor.contain_by_capability_async(
+                reason="cleanup_exec_grant",
+                session_id=sid,
+                grant_ids=(exec_grant.grant_id,),
+                capabilities=exec_grant.capabilities,
+                resource_scopes=exec_grant.resource_scopes,
+                persist_hold=False,
+            )
+            assert len(exec_outcomes) == 1
+            await asyncio.wait_for(bash_task, timeout=5.0)
+            assert process_supervision.probe_process(unrelated_pid) is None
+
+    asyncio.run(_scenario())
+
+
+def test_scope_only_stdio_mcp_containment_preserves_unrelated_mcp_server(
+    isolated_grant_runtime: tuple[Path, _FakeClock],
+) -> None:
+    """Containing narrow resource scope ``mcp:alphamcp:hang_a`` (without passing
+    ``grant_ids``) must terminate only ``alphamcp::hang_a`` and preserve a
+    concurrent ``betamcp::hang_b`` stdio MCP call in the same session.
+    """
+    ws, _clock = isolated_grant_runtime
+    sess = studio.create_harness_session_db(
+        "dual-mcp-scope", str(ws), False, "standard", "local", "critic"
+    )
+    sid = sess["id"]
+    store = studio.get_scoped_grant_store()
+    supervisor = studio.get_process_supervisor()
+
+    dual_mcp = ws / "dual_mcp_server.py"
+    pid_a_file = ws / "hang_a.pid"
+    pid_b_file = ws / "hang_b.pid"
+    dual_mcp.write_text(
+        textwrap.dedent(
+            f"""\
+            import json, os, pathlib, sys, time
+            for raw in sys.stdin:
+                line = raw.strip()
+                if not line:
+                    continue
+                msg = json.loads(line)
+                mid = msg.get("id")
+                method = msg.get("method", "")
+                if method == "initialize":
+                    sys.stdout.write(json.dumps({{"jsonrpc": "2.0", "id": mid, "result": {{"protocolVersion": "2024-11-05", "capabilities": {{}}, "serverInfo": {{"name": "dual", "version": "1"}}}}}}) + "\\n")
+                    sys.stdout.flush()
+                elif method == "tools/list":
+                    tools = [
+                        {{"name": "hang_a", "description": "a", "inputSchema": {{"type": "object"}}}},
+                        {{"name": "hang_b", "description": "b", "inputSchema": {{"type": "object"}}}},
+                    ]
+                    sys.stdout.write(json.dumps({{"jsonrpc": "2.0", "id": mid, "result": {{"tools": tools}}}}) + "\\n")
+                    sys.stdout.flush()
+                elif method == "tools/call":
+                    tname = (msg.get("params") or {{}}).get("name", "")
+                    if tname == "hang_a":
+                        pathlib.Path({str(pid_a_file)!r}).write_text(str(os.getpid()))
+                    elif tname == "hang_b":
+                        pathlib.Path({str(pid_b_file)!r}).write_text(str(os.getpid()))
+                    time.sleep(30.0)
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    async def _scenario() -> None:
+        async with httpx.AsyncClient() as client:
+            for alias in ("alphamcp", "betamcp"):
+                studio.upsert_mcp_server(
+                    {
+                        "alias": alias,
+                        "name": f"{alias} server",
+                        "transport": "stdio",
+                        "command": sys.executable,
+                        "args": [str(dual_mcp)],
+                        "approval_policy": "ask",
+                        "enabled": True,
+                    }
+                )
+                await studio.sync_mcp_server_tools(client, alias)
+
+            grant_a = store.issue_grant(
+                session_id=sid,
+                capabilities=("external_mcp",),
+                resource_scopes=("mcp:alphamcp:hang_a",),
+                ttl_seconds=300.0,
+                current_policy="standard",
+            )
+            grant_b = store.issue_grant(
+                session_id=sid,
+                capabilities=("external_mcp",),
+                resource_scopes=("mcp:betamcp:hang_b",),
+                ttl_seconds=300.0,
+                current_policy="standard",
+            )
+
+            task_a = asyncio.create_task(
+                studio.execute_mcp_tool_call(
+                    client, "alphamcp", "hang_a", {}, policy="standard", approved=False, session_id=sid
+                )
+            )
+            task_b = asyncio.create_task(
+                studio.execute_mcp_tool_call(
+                    client, "betamcp", "hang_b", {}, policy="standard", approved=False, session_id=sid
+                )
+            )
+            try:
+                deadline = time.monotonic() + 5.0
+                while time.monotonic() < deadline:
+                    if pid_a_file.exists() and pid_b_file.exists():
+                        break
+                    await asyncio.sleep(0.03)
+                assert pid_a_file.exists() and pid_b_file.exists()
+                pid_a = int(pid_a_file.read_text().strip())
+                pid_b = int(pid_b_file.read_text().strip())
+
+                # Contain by narrow scope `mcp:alphamcp:hang_a` WITHOUT passing grant_ids!
+                store.revoke_grant(grant_a.grant_id, session_id=sid, block_scope=True)
+                out_a = await supervisor.contain_by_capability_async(
+                    reason="revoke_hang_a_scope",
+                    session_id=sid,
+                    capabilities=("external_mcp",),
+                    resource_scopes=("mcp:alphamcp:hang_a",),
+                    persist_hold=False,
+                )
+                assert len(out_a) == 1
+                with pytest.raises(Exception):
+                    await asyncio.wait_for(task_a, timeout=5.0)
+                assert process_supervision.probe_process(pid_a) is None
+
+                # Unrelated `betamcp::hang_b` in the SAME session stays alive!
+                assert not task_b.done()
+                assert process_supervision.probe_process(pid_b) is not None
+
+                store.revoke_grant(grant_b.grant_id, session_id=sid, block_scope=True)
+                out_b = await supervisor.contain_by_capability_async(
+                    reason="revoke_hang_b_scope",
+                    session_id=sid,
+                    grant_ids=(grant_b.grant_id,),
+                    persist_hold=False,
+                )
+                assert len(out_b) == 1
+                with pytest.raises(Exception):
+                    await asyncio.wait_for(task_b, timeout=5.0)
+                assert process_supervision.probe_process(pid_b) is None
+            finally:
+                for t in (task_a, task_b):
+                    if not t.done():
+                        t.cancel()
+                        with pytest.raises(BaseException):
+                            await t
+
+    asyncio.run(_scenario())
+
+
+def test_sync_containment_and_abort_spawn_cleanup_during_pending_spawn(
+    tmp_path: Path,
+) -> None:
+    """Synchronous containment latched during ``begin_spawn`` terminates the
+    process immediately on ``register_process``, and ``abort_spawn`` clears
+    pending state cleanly when spawn fails before registration.
+    """
+    store = process_supervision.ContainmentStore(tmp_path / "containment")
+    sup = process_supervision.ProcessSupervisor(store)
+
+    # 1. abort_spawn clears pending entries without leaking.
+    aborted_id = sup.new_supervision_id()
+    sup.begin_spawn(
+        supervision_id=aborted_id,
+        tool_name="mcp__srv__hang",
+        workspace_root=tmp_path,
+        session_id="s-sync",
+        grant_id="grant-abort",
+        capabilities=("external_mcp",),
+        resource_scopes=("mcp:srv:hang",),
+    )
+    sup.abort_spawn(aborted_id)
+    assert sup._pending_spawns == {}
+
+    # 2. Synchronous containment latched mid-spawn kills child upon register_process.
+    async def _run_sync_latch() -> None:
+        sup_id = sup.new_supervision_id()
+        sup.begin_spawn(
+            supervision_id=sup_id,
+            tool_name="mcp__srv__hang",
+            workspace_root=tmp_path,
+            session_id="s-sync",
+            grant_id="grant-sync",
+            capabilities=("external_mcp",),
+            resource_scopes=("mcp:srv:hang",),
+        )
+        # Sync containment fires BEFORE proc handle exists!
+        sync_out = sup.contain_by_capability_sync(
+            reason="sync_revoke_mid_spawn",
+            session_id="s-sync",
+            grant_ids=("grant-sync",),
+            persist_hold=False,
+        )
+        assert sync_out == []
+        proc = await asyncio.create_subprocess_exec(
+            sys.executable,
+            "-c",
+            "import time; time.sleep(30)",
+            start_new_session=True,
+        )
+        assert proc.pid is not None
+        child_pid = proc.pid
+        sup.register_process(
+            proc,
+            supervision_id=sup_id,
+            tool_name="mcp__srv__hang",
+            workspace_root=tmp_path,
+            session_id="s-sync",
+            grant_id="grant-sync",
+            capabilities=("external_mcp",),
+            resource_scopes=("mcp:srv:hang",),
+        )
+        outcome = await sup.await_pending_containment_async(sup_id)
+        assert outcome is not None
+        assert outcome.reason == "sync_revoke_mid_spawn"
+        assert process_supervision.probe_process(child_pid) is None
+
+    asyncio.run(_run_sync_latch())
+
