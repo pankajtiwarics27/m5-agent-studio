@@ -123,11 +123,11 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "M5-P3-04",
     "last_completed_story": "M5-P3-03",
-    "last_checkpoint": "2026-10-31T04:42:00Z",
-    "last_session_id": "arena/a770c694-m5-agent-studio",
-    "next_recommended_story": "M5-P3-04",
+    "last_checkpoint": "2026-10-31T04:45:00Z",
+    "last_session_id": "arena/12c5fbaf-m5-agent-studio",
+    "next_recommended_story": "M5-P3-05",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). The operator-run suite scripts/qualify_environment.py --sandbox (docs/qualification-suite.md, ADR-0010) is now the qualification path; M5-P3-01 stays blocked until it returns qualified on a Docker/Podman host.",
@@ -2458,13 +2458,13 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P3-04: Scoped grants, expiry and revocation. Objective: Implement auditable operation/resource/task scoped permissions. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Persist grant scope, policy revision and expiry; Event-driven revocation plus admission-time validation; Apply capability-specific in-flight containment; Keep secrets out of arbitrary subprocess environments. Acceptance: Expired/revoked grant blocks new admission; No automatic renewal; Revocation cannot be bypassed through another tool. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-31T04:45:00Z",
+        "updated_at": "2026-10-31T04:45:00Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/12c5fbaf-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -2472,7 +2472,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "next_action": "Inspect session_trust.py, app.py approval/grant/policy/env paths, execution_spine.py, execution_profiles.py, and process_supervision.py before implementing M5-P3-04.",
         "readme_updated": false
       }
     },
