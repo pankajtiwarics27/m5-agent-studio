@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import shutil
 from pathlib import Path
 
@@ -190,3 +191,70 @@ def test_authored_pages_are_still_scanned_for_markers(tmp_path: Path) -> None:
     errors = validate_docs(tmp_path)
 
     assert any("docs/architecture.md: contains placeholder text" in error for error in errors)
+
+
+def _copy_code(root: Path, destination: Path) -> None:
+    """Mirror the code files the module-count pass reads."""
+    (destination / "scripts").mkdir(parents=True, exist_ok=True)
+    for name in sorted(path.name for path in root.glob("*.py")):
+        shutil.copyfile(root / name, destination / name)
+    shutil.copyfile(root / "pyproject.toml", destination / "pyproject.toml")
+    shutil.copyfile(
+        root / "scripts" / "build_studio.py", destination / "scripts" / "build_studio.py"
+    )
+
+
+def test_module_counts_in_the_readme_match_the_code(tmp_path: Path) -> None:
+    """The counts went stale twice in one afternoon; they are now checked."""
+    _copy_docs(tmp_path)
+    _copy_code(ROOT, tmp_path)
+
+    assert validate_docs(tmp_path) == []
+
+
+def test_validator_reports_a_stale_module_count(tmp_path: Path) -> None:
+    _copy_docs(tmp_path)
+    _copy_code(ROOT, tmp_path)
+    readme = tmp_path / "README.md"
+    text = readme.read_text(encoding="utf-8")
+    wired = re.search(r"(\d+) of (\d+) shipped Python modules", text)
+    assert wired is not None
+    readme.write_text(
+        text.replace(wired.group(0), f"{int(wired.group(1)) - 1} of {int(wired.group(2)) - 1} shipped Python modules", 1),
+        encoding="utf-8",
+    )
+
+    errors = validate_docs(tmp_path)
+
+    assert any("wired modules" in error for error in errors), errors
+    assert any("shipped modules" in error for error in errors), errors
+
+
+def test_validator_reports_an_import_that_the_bundle_does_not_inline(tmp_path: Path) -> None:
+    """A module `app.py` imports but `build_studio.py` skips is missing from studio.py."""
+    _copy_docs(tmp_path)
+    _copy_code(ROOT, tmp_path)
+    (tmp_path / "brand_new_subsystem.py").write_text("VALUE = 1\n", encoding="utf-8")
+    app_source = (tmp_path / "app.py").read_text(encoding="utf-8")
+    (tmp_path / "app.py").write_text(
+        "import brand_new_subsystem\n" + app_source, encoding="utf-8"
+    )
+    readme = tmp_path / "README.md"
+    text = readme.read_text(encoding="utf-8")
+    wired = re.search(r"(\d+) of (\d+) shipped Python modules", text)
+    contract = re.search(r"`app\.py` plus (\d+) small contract modules", text)
+    assert wired is not None and contract is not None
+    text = text.replace(wired.group(0), f"{int(wired.group(1)) + 1} of {int(wired.group(2)) + 1} shipped Python modules", 1)
+    text = text.replace(contract.group(0), f"`app.py` plus {int(contract.group(1)) + 1} small contract modules", 1)
+    readme.write_text(text, encoding="utf-8")
+
+    errors = validate_docs(tmp_path)
+
+    assert any("does not inline" in error for error in errors), errors
+
+
+def test_a_docs_only_tree_skips_the_module_count_pass(tmp_path: Path) -> None:
+    """Scratch trees in the other tests hold documentation only and must not raise."""
+    _copy_docs(tmp_path)
+
+    assert validate_docs(tmp_path) == []
