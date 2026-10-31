@@ -65,13 +65,21 @@ managed file tool executes:
   - Brace-expansion (`{.env,README.md}`), ANSI-C hex/octal escapes (`$'\x2e\x65\x6e\x76'`),
     and command-substitution (`$(...)`, backticks) inspection,
   - Recursive inspection of inline shell payloads — `sh -c`, `bash -lc`, `zsh -c`,
-    `dash -c`, `ksh -c`, `busybox sh -c`, also behind `env`/`nice`/`nohup` — up to three
-    nesting levels, so `sh -c 'cat .env'` is refused exactly like `cat .env`,
+    `dash -c`, `ksh -c`, `busybox sh -c`, also behind `env`/`nice`/`nohup`/`time`/
+    `command`/`exec` — up to three nesting levels, so `sh -c 'cat .env'` is refused
+    exactly like `cat .env`,
+  - Wrapper options that consume the next token are skipped *with their value*
+    (`env -u NAME`, `env -C DIR`, `nice -n 5`, `time -f FMT`), so the executable
+    that follows is the one inspected rather than an option value,
   - Refusal of a shell that *reads its command from stdin* (`curl … | sh`,
     `cat payload.txt | bash`, `sh <<EOF`): no command-line inspection can see it,
   - Inspection of inline program text for interpreters there is no parser for
-    (`perl -e`, `ruby -e`, `node -e`, `php -r`, `lua -e`): every path-like substring
-    is checked against the same secret, VCS-control and confinement rules,
+    (`perl -e`, `ruby -e`, `node -e`, `php -r`, `lua -e`, including the glued
+    `perl -e'…'` form): every path-like substring — absolute, relative with a
+    separator, and bare dotted names such as `.env` — is checked against the same
+    secret, VCS-control and confinement rules,
+  - Refusal of a shell asked to read its command from stdin (`-s`, `--stdin`), which
+    no command-line inspection can see,
   - Python AST constant folding (`open`, `Path(...) / ...`, `os.path.join`, string `+`,
     `str.join`, `os.system`, and `subprocess.*`) for `ctx_execute_python`.
 
@@ -81,7 +89,8 @@ Command inspection is one layer, not the boundary. These are known and are why
 the sandbox (M5-P3-01) is the real containment, and why `unqualified` isolation
 keeps host execution unavailable:
 
-- **script file contents** — `sh build.sh` is inspected as a command line, not read;
+- **script file contents** — `sh build.sh` (and the equivalent `sh < build.sh`) is
+  inspected as a command line, not read;
   the run's *effects* are covered by post-execution footprint reconciliation
   (§4), which quarantines planted secrets, hook scripts and escaping symlinks;
 - **paths assembled at runtime** — `perl -e '$p = ".e"."nv"; open(F,$p)'` builds the

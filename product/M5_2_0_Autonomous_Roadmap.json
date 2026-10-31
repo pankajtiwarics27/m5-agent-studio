@@ -125,7 +125,7 @@
   "session_state": {
     "active_story": null,
     "last_completed_story": "M5-P3-03",
-    "last_checkpoint": "2026-10-31T04:42:00Z",
+    "last_checkpoint": "2026-10-31T04:53:56Z",
     "last_session_id": "arena/a770c694-m5-agent-studio",
     "next_recommended_story": "M5-P3-04",
     "open_risks": [
@@ -141,7 +141,8 @@
       "M5-P3-02 review (post-merge, independent session): docs/execution-profiles.md claimed 'recursive inspection of inline sh -c / bash -c' payloads, but the code only handled python -c, so a quoted payload token (sh -c 'cat .env', bash -c 'echo x > .git/hooks/pre-commit', perl/node/ruby -e '<path>') was allowed where the same command written directly was refused. Fixed in the reviewing session's PR by re-parsing shell -c payloads (bounded to three levels), refusing a shell that reads its command from stdin, and checking the path tokens of perl/ruby/node/php/lua inline code; the remaining limits of pre-execution text inspection (script file contents, runtime-built paths, encoded payloads) are now stated in docs/execution-profiles.md instead of being implied away. The sandbox (M5-P3-01) remains the boundary for those, which is another reason unqualified isolation keeps host execution unavailable.",
       "M5-P3-02 review, second finding: the post-execution reconciliation layer judged a newly created .git/config 'benign' using a regex over raw text, but git writes the sectioned form ([credential]\\n helper = ...), so credential.helper (and filter.*.clean|smudge, include.path, includeIf) went undetected and the run reported clean instead of policy_violation -- no quarantine, no uncertainty, follow-up actions not blocked. Post-execution detection was weaker than the pre-execution rule that refuses the same directives. Fixed by parsing sections/subsections/keys and resolving each directive to its dotted name; a plain git-init-shaped config still passes. The less general point: two layers that enforce the same policy must share the predicate rather than each writing their own matcher.",
       "Process supervision and containment (process_supervision.py, M5-P3-03, ADR-0013) tracks process groups, ppid descendants, and M5_SUPERVISION_ID detached trees within a single Studio process; in STUDIO_EXECUTION_MODE=host a deliberately adversarial child that scrubs M5_SUPERVISION_ID and double-forks before tree enumeration cannot be kernel-guaranteed without OS cgroups/PID namespaces (M5-P3-01)."
-    ],
+    ,
+      "M5-P3-02 review, third pass (on the first fix's own code): the inline-payload inspection added in PR #62 still had two holes, found by re-testing it adversarially. (a) The wrapper skip consumed only tokens starting with '-', so for wrappers whose option takes a separate value the option's VALUE was read as the executable: `env -u HOME sh -c 'cat .env'`, `nice -n 5 sh -c ...`, `time -f %s sh -c ...` all skipped the shell entirely. (b) The inline-code path scan matched only paths containing a separator, so a bare secret name in interpreter code (`node --eval 'require(\"fs\").readFileSync(\".env\")'`, `perl -e'open(F,\".env\")'`) was invisible. Fixed by resolving wrapper options with their values (_ep_skip_wrapper), accepting the glued `-e<payload>` form, matching bare dotted names, and refusing a shell asked to read its command from stdin (`-s`). The lesson generalises: a fix for a security boundary needs the same adversarial pass as the code it replaced."],
     "last_readme_sync": "2026-10-31T04:42:00Z",
     "last_verified_commit": "881d8bc251725fcaa49d928492e61e96918f03f6",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md"

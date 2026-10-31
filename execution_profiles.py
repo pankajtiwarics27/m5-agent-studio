@@ -227,10 +227,26 @@ _EP_SHELL_INTERPRETERS: frozenset[str] = frozenset(
 # substring of it is checked against the same confinement and secret rules.
 _EP_INLINE_CODE_INTERPRETERS: frozenset[str] = frozenset({"perl", "ruby", "node", "nodejs", "php", "lua"})
 _EP_MAX_NESTING = 3
+# Options of the wrapper binaries above that consume the *next* token as their
+# value. Skipping "flags" without consuming that value makes the value look like
+# the executable: `env -u X sh -c '...'` would then be read as running `X`, and
+# the shell payload would never be inspected.
+_EP_WRAPPER_VALUE_OPTS: dict[str, frozenset[str]] = {
+    "env": frozenset({"-u", "--unset", "-C", "--chdir", "-S", "--split-string"}),
+    "nice": frozenset({"-n", "--adjustment"}),
+    "time": frozenset({"-f", "--format", "-o", "--output"}),
+    "command": frozenset(),
+    "exec": frozenset({"-a"}),
+    "nohup": frozenset(),
+}
+_EP_WRAPPER_LONG_VALUE_OPTS: frozenset[str] = frozenset(
+    {"--unset", "--chdir", "--split-string", "--adjustment", "--format", "--output"}
+)
 _EP_INLINE_PATH_RE = re.compile(
-    r"(?:~|\$HOME|\$\{HOME\})(?:/[\w.\-]+)+"  # ~/... and $HOME/... escapes
+    r"(?:~|\$HOME|\$\{HOME\})(?:/[\w.\-]+)*"  # ~ and $HOME, with or without a tail
     r"|/[\w.\-]+(?:/[\w.\-]+)*"  # absolute paths
     r"|(?:[\.]{1,2}/|[\w.\-]+/)+[\w.\-]*"  # relative paths with a separator
+    r"|(?<![\w.\-/])\.[\w.\-]+"  # bare dotted names such as `.env`, `.netrc`
 )
 _EP_FORBIDDEN_PRIV_BINARIES: frozenset[str] = frozenset(
     {"sudo", "su", "doas", "chroot", "nsenter", "unshare", "docker", "podman", " nerdctl".strip()}
@@ -1711,6 +1727,33 @@ def _ep_space_unquoted_redirections(segment: str) -> str:
     return "".join(out)
 
 
+def _ep_skip_wrapper(tokens: Sequence[str], idx: int) -> int:
+    """Index of the token that follows a wrapper invocation (``env``, ``nice`` …).
+
+    Consumes the wrapper's own options *and the values they take*, plus any
+    ``NAME=VALUE`` assignments ``env`` accepts, so the caller lands on the real
+    executable instead of on an option value.
+    """
+    base = tokens[idx].rsplit("/", 1)[-1].lower()
+    value_opts = _EP_WRAPPER_VALUE_OPTS.get(base, frozenset())
+    idx += 1
+    while idx < len(tokens):
+        tok = tokens[idx]
+        if base == "env" and _EP_ENV_ASSIGN_RE.match(tok) is not None:
+            idx += 1
+            continue
+        if tok == "--":
+            return idx + 1
+        if tok.startswith("-") and tok != "-":
+            takes_value = tok in value_opts or (
+                tok in _EP_WRAPPER_LONG_VALUE_OPTS and "=" not in tok
+            )
+            idx += 2 if takes_value else 1
+            continue
+        break
+    return idx
+
+
 def _ep_inline_shell_payload(tokens: Sequence[str], cmd_idx: int) -> str | None:
     """The inline command of ``shell -c "<cmd>"`` (also ``-lc``/``-ec``/``busybox sh -c``).
 
@@ -1749,8 +1792,16 @@ def _ep_inline_code_payload(tokens: Sequence[str], cmd_idx: int) -> str | None:
         tok = tokens[idx]
         if tok.startswith("--eval="):
             return tok.split("=", 1)[1] or None
-        if tok in ("-e", "-r", "--eval", "--print") and idx + 1 < len(tokens):
+        if tok in ("-e", "-r", "-p", "--eval", "--print") and idx + 1 < len(tokens):
             return tokens[idx + 1]
+        # Glued form: `perl -e'open(F,".env")'` arrives as one token.
+        if (
+            not tok.startswith("--")
+            and len(tok) > 2
+            and tok[1] in {"e", "r", "p"}
+            and not tok[2:].startswith("-")
+        ):
+            return tok[2:]
         if not tok.startswith("-"):
             return None
     return None
@@ -1876,9 +1927,7 @@ def inspect_subprocess_policy(
                 continue
             base_cmd = tok.rsplit("/", 1)[-1].lower()
             if base_cmd in _EP_WRAPPER_BINARIES:
-                cmd_idx += 1
-                while cmd_idx < len(tokens) and tokens[cmd_idx].startswith("-"):
-                    cmd_idx += 1
+                cmd_idx = _ep_skip_wrapper(tokens, cmd_idx)
                 continue
             break
 
@@ -1920,12 +1969,23 @@ def inspect_subprocess_policy(
             # A shell with no `-c` payload and no script argument reads its
             # command from stdin (`curl ... | sh`, `sh <<EOF`), which no
             # command-line inspection can see. Fail closed.
+            reads_stdin = any(
+                tok == "--stdin"
+                or (
+                    not tok.startswith("--")
+                    and len(tok) > 1
+                    and tok.startswith("-")
+                    and "s" in tok[1:]
+                    and "c" not in tok[1:]
+                )
+                for tok in tokens[cmd_idx + 1 :]
+            )
             if (
                 exe_base in _EP_SHELL_INTERPRETERS
                 and shell_payload is None
-                and not any(
-                    not tok.startswith("-")
-                    for tok in tokens[cmd_idx + 1 :]
+                and (
+                    reads_stdin
+                    or not any(not tok.startswith("-") for tok in tokens[cmd_idx + 1 :])
                 )
             ):
                 return PolicyViolation(
