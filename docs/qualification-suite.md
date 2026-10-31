@@ -43,6 +43,14 @@ python3 scripts/qualify_environment.py --all \
   --json dist/qualification.json --markdown dist/qualification.md
 ```
 
+Add representative cases and thermal sampling to the hardware run:
+
+```sh
+python3 scripts/qualify_environment.py --hardware \
+  --pressure-gb 16 --case-runs 3 \
+  --coding-cases cases.json --model-command "your-probe-command"
+```
+
 The sandbox suite needs a local image and refuses to fetch one:
 
 ```sh
@@ -155,6 +163,47 @@ can turn it into a pass.
 | `p4.priors_not_verified` | Routing confidence with no measured profile is `unknown` with the note `no comparable benchmark profile`. |
 | `p4.pressure` | With `--pressure-gb`: touches that much anonymous memory while sampling swap; records before/peak/after and the growth. |
 | `p4.model_load` | With `--model-command`: runs the command N times, records each exit code, wall time and reported metrics, plus swap growth. |
+| `p4.coding_cases` | With `--coding-cases` + `--model-command`: runs every representative case, per category, and records per-case completion, success rate, wall-time median and spread, plus an uncertainty summary. Optional check — a case that never completes is reported, not hidden. |
+| `p4.thermal` | Sampled during every load phase. macOS reads thermal pressure from `pmset -g therm` (no root needed; `powermetrics` is never invoked because it needs root); Linux reads `/sys/class/thermal/thermal_zone*/temp`. Records stress min/max and whether throttling was observed; `blocked` when the platform offers no readable source. Optional check. |
+
+### Which story task each check answers
+
+`M5-P4-01`'s implementation tasks, mapped to the checks that produce evidence for
+them, so a gap is visible instead of assumed:
+
+| Task | Checks |
+|---|---|
+| Build representative per-category coding cases | `p4.coding_cases` (case set supplied by the operator) |
+| Record completed case evidence and uncertainty | `p4.coding_cases` (`success_rate`, `wall_s_median`, `wall_s_spread_ratio`, `uncertainty`) |
+| Measure load/prefill/swap/thermal behavior | `p4.model_load` (load/prefill/tokens), `p4.pressure` (swap), `p4.thermal` (heat/throttling) |
+| Implement one-heavy-model admission and optional sequential switching | `p4.single_heavy_model`, `p4.admission_wired` (switching is `M5-P4-02`) |
+
+### Coding cases
+
+A case file is either a bare list or an object with an optional `categories`
+declaration (cases may not use an undeclared category):
+
+```json
+{
+  "categories": ["bugfix", "refactor", "tests"],
+  "cases": [
+    {"id": "bugfix-1", "category": "bugfix", "prompt": "Fix the off-by-one in the paginator."},
+    {"id": "refactor-1", "category": "refactor", "prompt": "Extract the retry loop into a helper."},
+    {"id": "tests-1", "category": "tests", "prompt": "Add a regression test for the cache eviction bug."}
+  ]
+}
+```
+
+Each case runs `--model-command` once per `--case-runs`, with
+`STUDIO_QUALIFY_CASE_ID`, `STUDIO_QUALIFY_CASE_CATEGORY` and
+`STUDIO_QUALIFY_CASE_PROMPT` in the environment — so the probe decides how to
+talk to the model, and the suite only measures. Duplicate ids, a missing id or
+category, or an undeclared category abort the run with exit `2` and no record,
+because a malformed case set is an input error rather than a verdict.
+
+`--case-runs 1` (the default) is recorded as a limitation: with one run per case
+the record cannot separate model variance from case difficulty, and
+`uncertainty.single_run_cases` says how many cases are in that position.
 
 ### The model probe contract
 

@@ -125,8 +125,8 @@
   "session_state": {
     "active_story": null,
     "last_completed_story": "M5-P2-05",
-    "last_checkpoint": "2026-10-31T03:00:54Z",
-    "last_session_id": "arena/2a4164e4-m5-agent-studio",
+    "last_checkpoint": "2026-10-31T03:10:15Z",
+    "last_session_id": "arena/ca2d533a-m5-agent-studio",
     "next_recommended_story": "M5-P3-01",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
@@ -2542,28 +2542,28 @@
         "progress_percent": 60,
         "attempts": 1,
         "started_at": "2026-10-30T19:31:57Z",
-        "updated_at": "2026-10-31T02:51:42Z",
+        "updated_at": "2026-10-31T03:10:15Z",
         "completed_at": null,
         "owner_session": "arena/7cdf26c8-m5-agent-studio",
         "commit_sha": "ed1d15b",
         "changed_files": [
-          "model_admission.py",
+          "README.md",
           "app.py",
-          "scripts/build_studio.py",
-          "scripts/qualify_environment.py",
-          "pyproject.toml",
-          "studio.py",
-          "tests/test_model_admission.py",
-          "tests/test_qualify_environment.py",
-          "docs/model-admission.md",
-          "docs/adr/0011-heavy-local-model-admission.md",
-          "docs/adr/0010-operator-run-environment-qualification.md",
-          "docs/qualification-suite.md",
           "docs/README.md",
+          "docs/adr/0010-operator-run-environment-qualification.md",
+          "docs/adr/0011-heavy-local-model-admission.md",
+          "docs/model-admission.md",
+          "docs/qualification-suite.md",
           "docs/route-security-matrix.md",
           "docs/subsystem-dependency-inventory.md",
-          "README.md",
-          "product/M5_2_0_Autonomous_Roadmap.json"
+          "model_admission.py",
+          "product/M5_2_0_Autonomous_Roadmap.json",
+          "pyproject.toml",
+          "scripts/build_studio.py",
+          "scripts/qualify_environment.py",
+          "studio.py",
+          "tests/test_model_admission.py",
+          "tests/test_qualify_environment.py"
         ],
         "evidence": [
           "AC 'second simultaneous heavy load rejected under policy' now holds in the serving path (code + tests, not yet measured): model_admission.HeavyModelAdmission wraps resource_admission.ResourceAdmissionScheduler with local-inference policy (capacity = detected unified memory or STUDIO_HEAVY_MODEL_MEMORY_BYTES; one request = 80% of capacity; one slot; one distinct resident model) and typed denials heavy_model_slot_busy / heavy_model_memory_exceeded / heavy_model_resident carrying the policy snapshot. Evidence: tests/test_model_admission.py::test_first_request_is_admitted_and_the_second_is_refused, ::test_memory_capacity_is_enforced_independently_of_slots, ::test_a_different_model_is_refused_while_one_is_resident, ::test_concurrent_threads_admit_exactly_one_request.",
@@ -2572,18 +2572,20 @@
           "AC 'routing does not treat public priors as verified' unchanged and re-verified: model_recommendation._confidence(None) is 'unknown' with no comparable benchmark profile (qualification check p4.priors_not_verified).",
           "Qualification tooling now proves the wiring behaviourally instead of scanning source: p4.admission_wired drives the real app.stream_any_model funnel (fake backend) and expects admitted -> refused while resident -> admitted after release; it is now a required check (tests: ::test_admission_wired_check_observes_the_real_serving_path, ::test_admission_probe_reports_a_serving_path_that_bypasses_admission).",
           "AC '24 GB pressure measured' remains UNMEASURED: p4.pressure and p4.model_load need the owner's 24 GB Apple Silicon run (--pressure-gb N --model-command CMD). The 80% reservation is documented as policy, not a measurement (docs/model-admission.md 'What this does not claim'), and the story therefore stays blocked.",
-          "Standalone bundle stays self-contained: resource_admission and model_admission are inlined into studio.py (builder now tolerates a trailing comment on the import line), verified by tests/test_release_manager.py::test_generated_standalone_has_no_local_module_imports and ::test_the_standalone_bundle_carries_the_same_policy."
+          "Standalone bundle stays self-contained: resource_admission and model_admission are inlined into studio.py (builder now tolerates a trailing comment on the import line), verified by tests/test_release_manager.py::test_generated_standalone_has_no_local_module_imports and ::test_the_standalone_bundle_carries_the_same_policy.",
+          "Task 1/2 (representative per-category coding cases + recorded uncertainty): --coding-cases takes a case set (id/category/prompt, optional declared categories) and runs every case through --model-command with STUDIO_QUALIFY_CASE_ID/CATEGORY/PROMPT in the environment, --case-runs times each. p4.coding_cases records per-case exit codes, success rate, wall_s_median, wall_s_spread_ratio, per-category completion and an explicit uncertainty block (incl. single_run_cases) instead of a bare pass. A malformed case set (duplicate/missing id, missing category, undeclared category, invalid JSON) aborts with exit 2 and writes no record. Tests: test_load_coding_cases_* , test_coding_case_probe_passes_case_identity_through_the_environment, test_coding_case_probe_records_failures_and_uncertainty, test_coding_case_probe_measures_wall_time_spread, test_malformed_coding_cases_abort_the_run_without_a_verdict.",
+          "Task 3 (thermal): p4.thermal samples thermal pressure during every load phase — macOS via `pmset -g therm` CPU_Speed_Limit (no root; powermetrics is never invoked because it needs root), Linux via /sys/class/thermal/thermal_zone*/temp — and records stress min/max plus whether throttling was observed. Where the platform exposes no readable source the check is `blocked` with the reason (this container: 35 samples, none readable) rather than a fabricated temperature. Tests: test_thermal_snapshot_parses_pmset_thermal_pressure, test_linux_thermal_readings_convert_millidegrees, test_thermal_sampler_summarises_throttling, test_thermal_check_blocks_when_the_platform_cannot_report, test_thermal_check_passes_with_readings_under_load."
         ],
         "test_results": [
           {
             "command": ".venv/bin/python -m pytest -q",
             "exit_code": 0,
-            "result": "1032 passed, 1 skipped (opt-in live container test), 1 warning in 49.20s"
+            "result": "1059 passed, 1 skipped (opt-in live container test), 1 warning in 49.61s"
           },
           {
-            "command": ".venv/bin/python -m pytest tests/test_model_admission.py -q",
+            "command": ".venv/bin/python -m pytest tests/test_qualify_environment.py -q",
             "exit_code": 0,
-            "result": "35 passed"
+            "result": "78 passed (24 new for thermal + coding cases)"
           },
           {
             "command": ".venv/bin/ruff check .",
@@ -2601,14 +2603,14 @@
             "result": "all passed"
           },
           {
-            "command": ".venv/bin/python scripts/smoke_local.py && .venv/bin/python scripts/smoke_local.py --standalone",
-            "exit_code": 0,
-            "result": "both passed"
+            "command": ".venv/bin/python scripts/qualify_environment.py --hardware --coding-cases cases.json --model-command CMD --pressure-gb 0.2 --json rec.json",
+            "exit_code": 2,
+            "result": "p4.coding_cases pass (3/3 cases, 3 categories), p4.thermal blocked (no readable thermal source in this container), p4.machine.fingerprint blocked (not 24 GB Apple Silicon) -> suite blocked"
           },
           {
-            "command": ".venv/bin/python scripts/qualify_environment.py --hardware --quiet",
-            "exit_code": 2,
-            "result": "p4.single_heavy_model pass, p4.admission_wired pass, p4.priors_not_verified pass, p4.machine.fingerprint blocked (not 24 GB Apple Silicon), p4.pressure/p4.model_load skipped -> blocked"
+            "command": ".venv/bin/python scripts/qualify_environment.py --hardware --dry-run --coding-cases cases.json",
+            "exit_code": 0,
+            "result": "plan lists the case runner and thermal sources; nothing executed"
           }
         ],
         "decisions": [

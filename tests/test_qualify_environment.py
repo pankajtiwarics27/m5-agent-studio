@@ -494,11 +494,11 @@ def test_hardware_suite_blocks_off_target_hardware(monkeypatch: pytest.MonkeyPat
 def test_hardware_suite_qualifies_on_target_hardware(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         qe, "_pressure_probe",
-        lambda gigabytes, timeout: (True, "measured", {"requested_gib": gigabytes}),
+        lambda *args, **kwargs: (True, "measured", {"requested_gib": args[0] if args else 0}),
     )
     monkeypatch.setattr(
         qe, "_model_probe",
-        lambda command, runs, timeout, out: (True, "1/1 runs exited 0", {"runs": []}),
+        lambda command, runs, timeout, out, sampler=None: (True, "1/1 runs exited 0", {"runs": []}),
     )
     monkeypatch.setattr(qe, "_admission_wired", lambda: (True, "confirmed by the stub"))
     recorder = qe.Recorder()
@@ -603,8 +603,8 @@ def test_main_exits_zero_only_for_a_fully_qualified_run(
     monkeypatch.setattr(qe, "_product_sandbox_module", lambda: _FakeStudio())
     monkeypatch.setattr(qe, "detect_runtime", lambda preferred=None: ("/usr/bin/docker", "docker"))
     monkeypatch.setattr(qe, "environment_fingerprint", lambda: _fingerprint(24 * qe.GIB))
-    monkeypatch.setattr(qe, "_pressure_probe", lambda gb, timeout: (True, "measured", {}))
-    monkeypatch.setattr(qe, "_model_probe", lambda command, runs, timeout, out: (True, "ok", {}))
+    monkeypatch.setattr(qe, "_pressure_probe", lambda *args, **kwargs: (True, "measured", {}))
+    monkeypatch.setattr(qe, "_model_probe", lambda command, runs, timeout, out, sampler=None: (True, "ok", {}))
     exit_code = qe.main(
         [
             "--all", "--quiet",
@@ -830,3 +830,265 @@ def test_escape_probe_code_detects_outside_canary_symlink_writable_root_network_
     leaked_items = set(marker.partition(":")[2].split(","))
     assert {"outside-direct", "readonly-root", "symlink", "network", "env"} <= leaked_items
 
+
+
+# ---------------------------------------------------------------------------
+# Thermal behavior (M5-P4-01 task 3)
+# ---------------------------------------------------------------------------
+
+
+def test_thermal_snapshot_parses_pmset_thermal_pressure(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(qe.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(
+        qe, "_capture",
+        lambda argv, timeout=10.0: "Note: No thermal warning level has been recorded\n"
+        "CPU_Speed_Limit              = 85\nGPU_Speed_Limit              = 100\n",
+    )
+    snapshot = qe.thermal_snapshot()
+    assert snapshot["available"] is True
+    assert snapshot["source"] == "pmset -g therm"
+    assert snapshot["readings"]["cpu_speed_limit"] == 85
+    assert qe.thermal_stress(snapshot) == 15.0  # 100 - 85: throttling pressure
+
+
+def test_thermal_snapshot_reports_when_pmset_says_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(qe.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(qe, "_capture", lambda argv, timeout=10.0: "")
+    snapshot = qe.thermal_snapshot()
+    assert snapshot["available"] is False
+    assert "pmset" in str(snapshot["source"])
+
+
+def test_linux_thermal_readings_convert_millidegrees(tmp_path: Path) -> None:
+    for index, value in enumerate(("48500", "52000", "garbage")):
+        zone = tmp_path / f"thermal_zone{index}"
+        zone.mkdir()
+        (zone / "temp").write_text(value, encoding="utf-8")
+    assert qe.linux_thermal_readings(tmp_path) == [48.5, 52.0]
+
+
+def test_thermal_snapshot_without_a_readable_source_is_explicit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(qe.platform, "system", lambda: "Plan9")
+    snapshot = qe.thermal_snapshot()
+    assert snapshot["available"] is False
+    assert "Plan9" in snapshot["note"]
+
+
+def test_thermal_sampler_summarises_throttling(monkeypatch: pytest.MonkeyPatch) -> None:
+    readings = iter(
+        [
+            {"available": True, "source": "pmset -g therm", "readings": {"cpu_speed_limit": 100}},
+            {"available": True, "source": "pmset -g therm", "readings": {"cpu_speed_limit": 70}},
+        ]
+    )
+    monkeypatch.setattr(qe, "thermal_snapshot", lambda: next(readings))
+    sampler = qe.ThermalSampler()
+    sampler.sample()
+    sampler.sample()
+    summary = sampler.summary()
+    assert sampler.available is True
+    assert summary["throttled"] is True
+    assert summary["cpu_speed_limit_min"] == 70
+    assert (summary["stress_min"], summary["stress_max"]) == (0.0, 30.0)
+
+
+def test_thermal_sampler_without_readings_reports_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(qe, "thermal_snapshot", lambda: {"available": False, "source": None, "note": "nope"})
+    sampler = qe.ThermalSampler()
+    sampler.sample()
+    summary = sampler.summary()
+    assert sampler.available is False
+    assert summary["available_samples"] == 0
+    assert summary["stress_max"] is None
+
+
+# ---------------------------------------------------------------------------
+# Per-category coding cases (M5-P4-01 tasks 1-2)
+# ---------------------------------------------------------------------------
+
+
+def _cases_file(tmp_path: Path, payload: object) -> Path:
+    path = tmp_path / "cases.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    return path
+
+
+def test_load_coding_cases_accepts_the_object_form(tmp_path: Path) -> None:
+    cases = qe.load_coding_cases(
+        _cases_file(
+            tmp_path,
+            {
+                "categories": ["bugfix", "tests"],
+                "cases": [
+                    {"id": "b1", "category": "bugfix", "prompt": "fix it"},
+                    {"id": "t1", "category": "tests"},
+                ],
+            },
+        )
+    )
+    assert [case["id"] for case in cases] == ["b1", "t1"]
+    assert cases[1]["prompt"] == ""
+
+
+def test_load_coding_cases_accepts_a_bare_list(tmp_path: Path) -> None:
+    cases = qe.load_coding_cases(_cases_file(tmp_path, [{"id": "a", "category": "c"}]))
+    assert cases == [{"id": "a", "category": "c", "prompt": ""}]
+
+
+@pytest.mark.parametrize(
+    "payload, message",
+    [
+        ({"cases": []}, "non-empty"),
+        ({"cases": [{"category": "c"}]}, "id"),
+        ({"cases": [{"id": "a"}]}, "category"),
+        ({"cases": [{"id": "a", "category": "c"}, {"id": "a", "category": "c"}]}, "duplicate"),
+        ({"cases": ["nope"]}, "object"),
+        ({"categories": ["x"], "cases": [{"id": "a", "category": "c"}]}, "not declared"),
+    ],
+)
+def test_load_coding_cases_rejects_malformed_files(tmp_path: Path, payload: object, message: str) -> None:
+    with pytest.raises(qe.CodingCaseError) as excinfo:
+        qe.load_coding_cases(_cases_file(tmp_path, payload))
+    assert message in str(excinfo.value)
+
+
+def test_load_coding_cases_rejects_invalid_json(tmp_path: Path) -> None:
+    path = tmp_path / "broken.json"
+    path.write_text("{not json", encoding="utf-8")
+    with pytest.raises(qe.CodingCaseError):
+        qe.load_coding_cases(path)
+
+
+def test_coding_case_probe_passes_case_identity_through_the_environment() -> None:
+    sampler = qe.ThermalSampler()
+    ok, detail, evidence = qe._coding_case_probe(
+        [{"id": "case-7", "category": "refactor", "prompt": "do the thing"}],
+        'printf \'{"seen":"%s/%s"}\\n\' "$STUDIO_QUALIFY_CASE_ID" "$STUDIO_QUALIFY_CASE_CATEGORY"',
+        1,
+        30.0,
+        sampler,
+    )
+    assert ok, detail
+    assert evidence["cases"][0]["runs"][0]["reported"]["seen"] == "case-7/refactor"
+
+
+def test_coding_case_probe_records_failures_and_uncertainty() -> None:
+    sampler = qe.ThermalSampler()
+    ok, detail, evidence = qe._coding_case_probe(
+        [
+            {"id": "good", "category": "bugfix", "prompt": ""},
+            {"id": "bad", "category": "bugfix", "prompt": ""},
+        ],
+        'if [ "$STUDIO_QUALIFY_CASE_ID" = bad ]; then exit 3; fi; echo ok',
+        2,
+        30.0,
+        sampler,
+    )
+    assert ok is False
+    assert "incomplete: bad" in detail
+    assert evidence["incomplete_cases"] == ["bad"]
+    assert evidence["categories"] == {"bugfix": {"cases": 2, "completed": 1}}
+    assert evidence["uncertainty"]["cases"] == 2
+    # "good" succeeded twice and "bad" never did, so neither is a single-run case.
+    assert evidence["uncertainty"]["single_run_cases"] == 0
+
+
+def test_coding_case_probe_measures_wall_time_spread() -> None:
+    sampler = qe.ThermalSampler()
+    ok, _detail, evidence = qe._coding_case_probe(
+        [{"id": "slow", "category": "c", "prompt": ""}], "sleep 0.05", 2, 30.0, sampler
+    )
+    assert ok
+    case = evidence["cases"][0]
+    assert case["wall_s_median"] is not None
+    assert case["wall_s_spread_ratio"] is not None
+
+
+# ---------------------------------------------------------------------------
+# Hardware-suite integration for thermal + cases
+# ---------------------------------------------------------------------------
+
+
+def test_thermal_check_is_skipped_without_a_load_phase(monkeypatch: pytest.MonkeyPatch) -> None:
+    recorder = qe.Recorder()
+    qe.hardware_suite(
+        recorder, fingerprint=_fingerprint(24 * qe.GIB), pressure_gb=0.0, model_command="",
+        model_runs=1, profile_out=None, timeout=5.0,
+    )
+    result = next(item for item in recorder.results if item.check_id == "p4.thermal")
+    assert result.status == qe.STATUS_SKIP
+    assert result.required is False
+
+
+def test_thermal_check_blocks_when_the_platform_cannot_report(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(qe, "thermal_snapshot", lambda: {"available": False, "source": "x", "note": "unreadable"})
+    monkeypatch.setattr(qe, "_model_probe", lambda command, runs, timeout, out, sampler=None: (True, "ok", {}))
+    recorder = qe.Recorder()
+    qe.hardware_suite(
+        recorder, fingerprint=_fingerprint(24 * qe.GIB), pressure_gb=0.0, model_command="probe",
+        model_runs=1, profile_out=None, timeout=5.0,
+    )
+    result = next(item for item in recorder.results if item.check_id == "p4.thermal")
+    assert result.status == qe.STATUS_BLOCKED
+    assert "powermetrics" in result.detail
+
+
+def test_thermal_check_passes_with_readings_under_load(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        qe, "thermal_snapshot",
+        lambda: {"available": True, "source": "pmset -g therm", "readings": {"cpu_speed_limit": 90}},
+    )
+    monkeypatch.setattr(qe, "_model_probe", lambda command, runs, timeout, out, sampler=None: (True, "ok", {}))
+    recorder = qe.Recorder()
+    qe.hardware_suite(
+        recorder, fingerprint=_fingerprint(24 * qe.GIB), pressure_gb=0.0, model_command="probe",
+        model_runs=1, profile_out=None, timeout=5.0,
+    )
+    result = next(item for item in recorder.results if item.check_id == "p4.thermal")
+    assert result.status == qe.STATUS_PASS
+    assert "throttling observed" in result.detail
+
+
+def test_coding_cases_check_skips_without_a_file_or_runner(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(qe, "thermal_snapshot", lambda: {"available": True, "source": "s", "readings": {}})
+    cases = [{"id": "a", "category": "c", "prompt": ""}]
+    recorder = qe.Recorder()
+    qe.hardware_suite(
+        recorder, fingerprint=_fingerprint(24 * qe.GIB), pressure_gb=0.0, model_command="",
+        model_runs=1, profile_out=None, timeout=5.0, coding_cases=cases,
+    )
+    result = next(item for item in recorder.results if item.check_id == "p4.coding_cases")
+    assert result.status == qe.STATUS_SKIP
+    assert "--model-command" in result.detail
+
+    recorder = qe.Recorder()
+    qe.hardware_suite(
+        recorder, fingerprint=_fingerprint(24 * qe.GIB), pressure_gb=0.0, model_command="probe",
+        model_runs=1, profile_out=None, timeout=5.0,
+    )
+    result = next(item for item in recorder.results if item.check_id == "p4.coding_cases")
+    assert result.status == qe.STATUS_SKIP
+    assert "--coding-cases" in result.detail
+
+
+def test_malformed_coding_cases_abort_the_run_without_a_verdict(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    bad = tmp_path / "bad.json"
+    bad.write_text('{"cases": [{"id": "a", "category": "c"}, {"id": "a", "category": "c"}]}', encoding="utf-8")
+    exit_code = qe.main(["--hardware", "--coding-cases", str(bad), "--model-command", "true"])
+    assert exit_code == 2
+    assert "duplicate case id" in capsys.readouterr().err
+
+
+def test_dry_run_mentions_coding_cases_and_thermal(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    cases = tmp_path / "cases.json"
+    cases.write_text(json.dumps([{"id": "a", "category": "c"}]), encoding="utf-8")
+    monkeypatch.setattr(qe, "detect_runtime", lambda preferred=None: ("", ""))
+    assert qe.main(["--hardware", "--dry-run", "--coding-cases", str(cases), "--case-runs", "2"]) == 0
+    out = capsys.readouterr().out
+    assert "coding cases" in out
+    assert "STUDIO_QUALIFY_CASE_ID" in out
+    assert "thermal readings" in out
