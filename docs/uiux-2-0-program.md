@@ -17,6 +17,10 @@ claims anything; the binding contract is
 | [`tests/test_uiux_source_manifest.py`](../tests/test_uiux_source_manifest.py) | Re-derives every manifest claim from disk and proves the drift check actually fails. |
 | [`product/M5_2_0_UIUX_Control_Inventory.json`](../product/M5_2_0_UIUX_Control_Inventory.json) + [`uiux-2-0-control-inventory.md`](uiux-2-0-control-inventory.md) | The control inventory (`UIUX-P0-02`): every interactive element attributed to its pane, plus the script-rendered set. Generated — never hand-edited. |
 | [`scripts/uiux_control_inventory.py`](../scripts/uiux_control_inventory.py) | Writes and checks the inventory; `--check` fails CI when a control moves without it. |
+| [`product/M5_2_0_UIUX_Route_Map.json`](../product/M5_2_0_UIUX_Route_Map.json) + [`uiux-2-0-route-map.md`](uiux-2-0-route-map.md) | The route map (`UIUX-P0-03`): every `fetch` call mapped to the route it can hit, with the calls that match nothing and the routes no browser calls. Generated — never hand-edited. |
+| [`scripts/uiux_route_map.py`](../scripts/uiux_route_map.py) | Derives and checks the map from the calls and the route table; `--check` fails CI on drift. |
+| [`product/M5_2_0_UIUX_Authorization_Trace.json`](../product/M5_2_0_UIUX_Authorization_Trace.json) + [`uiux-2-0-authorization-trace.md`](uiux-2-0-authorization-trace.md) | The authorization and state trace (`UIUX-P0-04`): for every state-changing browser call, the shared gates, the handler's own refusals, the authority and durable-state subsystems it references one call deep, and whether it can leave the machine. Generated — never hand-edited. |
+| [`scripts/uiux_authorization_trace.py`](../scripts/uiux_authorization_trace.py) | Derives and checks the trace from `app.py` and the route map; `--check` fails CI on drift. |
 | [`product/M5_2_0_Autonomous_Roadmap.json`](../product/M5_2_0_Autonomous_Roadmap.json) | The runtime program's ledger. Separate scope, separate ownership; a UI/UX session never edits its story tracking. |
 
 ## What the program is for
@@ -74,9 +78,9 @@ The roadmap was written from GitHub web extracts, so its statements about the
 current UI start as hypotheses. `UIUX-P0-01` closed that gap with a manifest
 built from the checkout rather than from prose:
 
-* **12 pinned files** — `static/index.html`, `app.py`, the generated `studio.py`,
-  the design-system contract, the screenshot manifest, the UI audit and the six
-  scripts that build, inventory, verify or map the surface — each with its
+* **13 pinned files** — `static/index.html`, `app.py`, the generated `studio.py`,
+  the design-system contract, the screenshot manifest, the UI audit and the seven
+  scripts that build, inventory, verify, map or trace the surface — each with its
   SHA-256, size and line count;
 * **the six tabs** in document order, with `dom_id`, visible label, `title`
   attribute, shortcut and `switchTab` target, parsed from the markup;
@@ -147,6 +151,31 @@ authorization, request bodies and response handling are out of scope), that a
 dynamic match resolves to one route, or that an unused route is unused anywhere
 but in the browser. Those limits are written into the generated page and a test
 fails if the page drops them.
+
+## The authorization and state trace
+
+`UIUX-P0-03` said where a call goes; `UIUX-P0-04` says what can stop it and what
+it changes. The trace covers the **35 distinct state-changing routes** the
+browser can call, out of 77 non-GET routes in `app.py`.
+
+* **The shared boundary is read from the middleware itself**: host allowlist
+  (400), cross-origin rejection for state-changing methods (403), bearer token
+  compared with `secrets.compare_digest` (401, or 503 when authentication is
+  unconfigured), the rate limit on the six expensive POST paths (429) and the
+  body-size limit (413). `GET /healthz` and `GET /` are the only routes outside
+  the protected prefixes — the shell has to load before the browser has a token.
+* **Handler refusals are read from each handler's own raises**: nine distinct
+  statuses across the 35 routes, plus one raise whose code is computed at runtime
+  and is recorded as *dynamic* rather than guessed into a bucket.
+* **Authority and state are read one call deep.** Ten routes reference an
+  authority subsystem (five directly, five through a helper) and 28 touch durable
+  state; a blank cell means "nothing at this depth", never "unguarded".
+* **Twenty routes can leave the machine** — subprocess, outbound HTTP client or
+  the OS keyring, several of them one helper call away. That is the number a
+  screen has to respect before it prints the word "local".
+
+What it does not claim: that a reference is a guard, that a computed status is
+any particular code, or that a refusal was ever observed — no request was sent.
 
 ## The tab registry
 

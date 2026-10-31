@@ -7,7 +7,7 @@
   "regenerate_with": "python3 scripts/uiux_route_map.py",
   "check_with": "python3 scripts/uiux_route_map.py --check",
   "statement": "Every fetch call in the inline script mapped to the route it can hit, derived from the call sites and the route table. Unmatched calls, method mismatches, dynamic matches and routes with no browser caller are published rather than smoothed over.",
-  "pinned_source_commit": "aa1af27898d98d4633da17a4b711cfd628df27dc",
+  "pinned_source_commit": "e96b30e395bd9e785ad96a08738d65e3249c8cd4",
   "frontend_sha256": "3137cb7d05bcbdd29155576bd9952f49172705b85e70a0c0a2484c81bc80a66a",
   "app_sha256": "e3dd15bef236555d4cb3fca12eac003a55e099b48bbefa20e313489af652f129",
   "totals": {

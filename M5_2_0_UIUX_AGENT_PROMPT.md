@@ -78,8 +78,9 @@ screens simpler.
    `python3 scripts/validate_docs.py`, plus `python3 scripts/build_studio.py`
    whenever `static/index.html` changed (the standalone bundle embeds it and CI
    fails on drift), plus `python3 scripts/uiux_source_manifest.py --check`,
-   `python3 scripts/uiux_control_inventory.py --check` and
-   `python3 scripts/uiux_route_map.py --check`.
+   `python3 scripts/uiux_control_inventory.py --check`,
+   `python3 scripts/uiux_route_map.py --check` and
+   `python3 scripts/uiux_authorization_trace.py --check`.
    **If your story touches any file pinned in
    `product/M5_2_0_UIUX_Source_Manifest.json`, regenerate it in the same commit**
    (`python3 scripts/uiux_source_manifest.py`) — the drift is part of the story,
@@ -89,7 +90,9 @@ screens simpler.
    control regenerates the inventory, because a stale inventory is how a control
    silently disappears between stories; and a story that adds, removes or
    retargets a `fetch` call regenerates `product/M5_2_0_UIUX_Route_Map.json` and
-   `docs/uiux-2-0-route-map.md`.
+   `docs/uiux-2-0-route-map.md`, and a story that adds, removes or retargets a route's
+   refusals or subsystems regenerates `product/M5_2_0_UIUX_Authorization_Trace.json`
+   and `docs/uiux-2-0-authorization-trace.md`.
 9. **Update in the same PR:** the story's `tracking`, `session_state`, the
    `feature_preservation_matrix` row(s) you exercised, the affected screenshot
    manifest entries, and `README.md` only if user-visible behaviour changed and
