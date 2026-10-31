@@ -333,13 +333,15 @@ STEPS: tuple[Step, ...] = (
 
 @dataclass(frozen=True)
 class DemoEnvironment:
-    """A throwaway home, database, and token, plus the environment that points at them."""
+    """A throwaway home, workspace, harness store, database, and token."""
 
     root: Path
     config_dir: Path
     data_dir: Path
     db_path: Path
     token_path: Path
+    workspace_dir: Path
+    harness_dir: Path
 
     def environ(self, base: dict[str, str] | None = None) -> dict[str, str]:
         """Return the environment this demo instance must run under."""
@@ -350,6 +352,7 @@ class DemoEnvironment:
                 "TMPDIR": str(self.root),
                 "STUDIO_ALLOWED_HOSTS": "127.0.0.1,localhost,[::1],testserver",
                 "STUDIO_DB_PATH": str(self.db_path),
+                "STUDIO_WORKSPACE": str(self.workspace_dir),
                 "STUDIO_API_TOKEN": "",
                 "STUDIO_API_TOKEN_FILE": str(self.token_path),
                 "STUDIO_AUTH_DISABLED": "0",
@@ -371,17 +374,27 @@ class DemoEnvironment:
 
 def make_environment(root: Path | None = None) -> DemoEnvironment:
     """Create an isolated demo environment under a temporary directory."""
-    base = Path(root) if root is not None else Path(tempfile.mkdtemp(prefix="m5-demo-"))
+    base = (Path(root).expanduser() if root is not None else Path(tempfile.mkdtemp(prefix="m5-demo-"))).resolve()
+    source = Path(__file__).resolve().parent
+    if base == source or base.is_relative_to(source) or source.is_relative_to(base):
+        raise DemoEnvironmentError("The demo root must be separate from the source checkout.")
     config_dir = base / "config"
     data_dir = base / "data"
-    config_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
-    data_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    workspace_dir = base / "workspace"
+    harness_dir = data_dir / "harness-sessions"
+    for path in (config_dir, data_dir, workspace_dir, harness_dir, data_dir / "studio.db", config_dir / "api-token"):
+        if not path.resolve().is_relative_to(base):
+            raise DemoEnvironmentError(f"Demo path escapes the throwaway root: {path}")
+    for path in (config_dir, data_dir, workspace_dir, harness_dir):
+        path.mkdir(parents=True, exist_ok=True, mode=0o700)
     return DemoEnvironment(
         root=base,
         config_dir=config_dir,
         data_dir=data_dir,
         db_path=data_dir / "studio.db",
         token_path=config_dir / "api-token",
+        workspace_dir=workspace_dir,
+        harness_dir=harness_dir,
     )
 
 
@@ -402,6 +415,13 @@ def assert_isolated(environ: dict[str, str], environment: DemoEnvironment) -> No
         raise DemoEnvironmentError(
             f"The demo database {db_path} is not the throwaway database {environment.db_path}."
         )
+    if Path(environ.get("STUDIO_WORKSPACE", "")).resolve() != environment.workspace_dir.resolve():
+        raise DemoEnvironmentError("The demo requires its throwaway workspace.")
+    if Path(environ.get("STUDIO_API_TOKEN_FILE", "")).resolve() != environment.token_path.resolve():
+        raise DemoEnvironmentError("The demo requires its throwaway token file.")
+    for path in (environment.workspace_dir, environment.harness_dir, environment.db_path, environment.token_path):
+        if not path.resolve().is_relative_to(environment.root.resolve()):
+            raise DemoEnvironmentError(f"Demo path escapes the throwaway root: {path}")
     token_config = environ.get("STUDIO_API_TOKEN", "")
     if token_config:
         raise DemoEnvironmentError("The demo must generate its own token, not use a configured one.")
