@@ -13723,7 +13723,21 @@ async def execute_conservative_model_switch_async(
     except routing_policy.HandoffPortabilityViolationError as exc:
         raise _fail_into_safe_pause("kv_cache_portability_forbidden", str(exc)) from exc
 
-    # 4. Refuse switch while unresolved consequential side effects or budget violations exist (Task 2, AC 2).
+    # 4. Refuse switch while workspace quarantine, unresolved side effects, or budget violations exist (Task 2, AC 2).
+    try:
+        active_ws_q = workspace_quarantine.find_active_quarantine(HARNESS_STORE_DIR, wt_dir)
+    except Exception as exc:
+        raise _fail_into_safe_pause(
+            "handoff_workspace_quarantined",
+            f"Cannot verify workspace quarantine state for `{wt_dir}`: {exc}",
+        ) from exc
+    if active_ws_q is not None:
+        raise _fail_into_safe_pause(
+            "handoff_workspace_quarantined",
+            f"Workspace `{wt_dir}` is quarantined as `{active_ws_q.quarantine_id}`; "
+            "reconstruct and release quarantine before switching models.",
+        )
+
     if post_fence_state == "blocked":
         raise _fail_into_safe_pause(
             "handoff_unresolved_side_effects",

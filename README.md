@@ -269,10 +269,31 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   counters. Denials are typed and stable (`heavy_model_slot_busy`,
   `heavy_model_memory_exceeded`, `heavy_model_resident`). Cloud providers consume
   no slot. **The 80 % reservation is a policy constant, not a measurement**: the
-  24 GB pressure criterion is still unmeasured, sequential model switching is
-  `M5-P4-02`, and the policy is per-process like the worker-lease model. Pinned by
-  34 tests (`tests/test_model_admission.py`) and documented in
-  [`docs/model-admission.md`](docs/model-admission.md) (ADR-0011).
+  24 GB pressure criterion is still unmeasured, and the policy is per-process
+  like the worker-lease model. Pinned by 34 tests (`tests/test_model_admission.py`)
+  and documented in [`docs/model-admission.md`](docs/model-admission.md) (ADR-0011).
+- **Portable model handoffs and conservative sequential switching (`M5-P4-02`,
+  ADR-0018):** `routing_policy.py` (`PortableHandoffStore` at
+  `$HARNESS_STORE_DIR/handoffs/state.json`, `0700` dir / `0600` file, covered by
+  `tests/test_durable_state_contract.py`) and
+  `app.execute_conservative_model_switch_async` route every session model
+  transition (`POST /api/harness/sessions/{id}/switch-model`,
+  `PATCH /api/harness/sessions/{id}`, inline `POST /api/harness/run`, and `combo`
+  failover) through a zero-KV-cache-portability pipeline (`kv_cache_portable=False`,
+  stripping non-portable cache/provider attributes on switch and on the wire),
+  persist separate SHA-256-verified `PortableHandoffCore` and
+  `HarnessPrivateExtensions` envelopes, fence active old worker epochs and revoke
+  epoch-pinned grants first while preserving `TaskBudgetState` and active
+  session/task `ScopedGrant` expiry and remaining uses unchanged, validate
+  workspace-confined file SHA-256 versions and cloud fallback consent, unload
+  idle local oMLX models while refusing busy heavy-model slots, apply selective
+  semantic confirmation on high-risk switches, bound per-session switch retries,
+  and leave failed switches in a safe `paused`/`blocked` state — pinned by 8
+  end-to-end tests (`tests/test_portable_handoff_and_switching.py`) + 17 unit
+  tests (`tests/test_routing_policy.py`, `tests/test_routing_consent_policy.py`)
+  and documented in
+  [`docs/portable-handoff-switching.md`](docs/portable-handoff-switching.md)
+  ([`ADR-0018`](docs/adr/0018-portable-handoff-and-conservative-switching.md)).
 - **Unified execution profiles, conservative footprints, and admission barriers
   govern managed and subprocess actions (`M5-P3-02`):**
   `execution_profiles.py` (stdlib only, inlined into `studio.py`) maps every tool
@@ -415,7 +436,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
   pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
   plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
-- **25 of 53 shipped Python modules are wired into the served app**
+- **26 of 53 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`, `execution_spine` since `M5-P0-06`,
   `runtime_persistence` since `M5-P1-01`, `side_effect_ledger` since `M5-P1-03`,
@@ -426,8 +447,8 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   `verification_evidence` since `M5-P2-04`, `recovery_guard` since
   `M5-P2-05`, `resource_admission` + `model_admission` since `M5-P4-01`,
   `execution_profiles` since `M5-P3-02`, `process_supervision` since
-  `M5-P3-03`, `scoped_grants` since `M5-P3-04`, and `workspace_quarantine`
-  since `M5-P5-01`;
+  `M5-P3-03`, `scoped_grants` since `M5-P3-04`, `workspace_quarantine`
+  since `M5-P5-01`, and `routing_policy` since `M5-P4-02`;
   5 of 42 at the time of the audit table). Together they govern
   schema upgrades, SQLite transactions, authoritative task-state / lease-epoch
   checks at admission (`M5-P1-02`), durable `runtime_actions`
@@ -445,9 +466,10 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   evidence with baseline-aware failure classification (`M5-P2-04`), and durable
   failure memory with bounded retry/replan/rollback budgets and safe pause
   (`M5-P2-05`), one-heavy-local-model admission around the streaming funnel
-  (`M5-P4-01`), and unified execution profiles, conservative footprints,
+  (`M5-P4-01`), portable model handoffs and conservative sequential switching
+  (`M5-P4-02`), and unified execution profiles, conservative footprints,
   admission barriers, and post-execution expansion reconciliation (`M5-P3-02`).
-  The other 28 modules have passing unit tests but **no `app.py` call path**.
+  The other 27 modules have passing unit tests but **no `app.py` call path**.
   Module presence is not integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
 
@@ -544,13 +566,13 @@ generated [`docs/subsystem-dependency-inventory.md`](docs/subsystem-dependency-i
 - **Backend:** one FastAPI process — `app.py` plus 53 small contract modules
   (52 of them type-checked by the `pyproject.toml` `mypy` file list; the
   remainder is `edit_rollback`, which predates that list). `studio.py` is a **generated** standalone
-  artifact (`scripts/build_studio.py` inlines 25 sibling modules — including
+  artifact (`scripts/build_studio.py` inlines 26 sibling modules — including
   `runtime_persistence`, `side_effect_ledger`, `execution_budget`,
   `workflow_checkpoints`, `workflow_state`, `mcp_client`, `context_store`,
   `onboarding_preflight`, `failure_injection`, `execution_spine`, `task_events`,
   `sandbox_boundary`, `workspace_snapshots`, `workspace_quarantine`,
   `edit_transactions`, `edit_rollback`, `verification_evidence`, `recovery_guard`,
-  `resource_admission`, `model_admission`, `process_supervision`,
+  `resource_admission`, `model_admission`, `routing_policy`, `process_supervision`,
   `scoped_grants`, `execution_profiles`, `history_privacy`, and
   `workflow_orchestration`, and embeds `static/index.html`); never hand-edit it.
 - **Frontend:** `static/index.html`, vanilla HTML/CSS/JS, no build step.
