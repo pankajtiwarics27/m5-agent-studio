@@ -329,7 +329,7 @@ is still part of the record.
 
 ## Tests
 
-`tests/test_qualify_environment.py` (97 tests) pins the properties above without a
+`tests/test_qualify_environment.py` (98 tests) pins the properties above without a
 container runtime: verdict semantics, required-versus-optional checks, argv
 parity with the product, the blocked path when no runtime, image or usable
 workspace mount is missing, the failure path when a leak is observed,

@@ -399,6 +399,37 @@ def test_memory_limit_failure_names_the_counters_the_container_saw(
     assert recorder.verdict(qe.STORY_P3) == "unqualified"
 
 
+def test_darwin_memory_snapshot_strips_quoted_vm_stat_labels(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """macOS 26 quotes at least one vm_stat label; the record must not keep it.
+
+    The 2026-10-31 Apple M5 record carries a key that renders as
+    `"translation_faults"` while every neighbouring key is unquoted, so a
+    consumer reading the fingerprint sees two spellings of the same idea.
+    """
+    vm_stat = (
+        "Mach Virtual Memory Statistics: (page size of 16384 bytes)\n"
+        "Pages free:                               38040.\n"
+        '"Translation faults":                      100.\n'
+        "Pages active:                           439249.\n"
+    )
+    swap = "total = 7168.00M  used = 6330.69M  free = 837.31M  (encrypted)\n"
+
+    def _fake_capture(argv: Any, *, timeout: float = 10.0) -> str:
+        return vm_stat if argv[0] == "vm_stat" else swap
+
+    monkeypatch.setattr(qe.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(qe, "_capture", _fake_capture)
+    snapshot = qe._meminfo_snapshot()
+
+    assert snapshot["pages_free"] == 38040 * 16384
+    assert snapshot["translation_faults"] == 100 * 16384
+    assert snapshot["swap_total_bytes"] == 7168 * 1024 * 1024
+    assert snapshot["swap_used_bytes"] == int(6330.69 * 1024 * 1024)
+    assert all('"' not in key and "'" not in key for key in snapshot)
+
+
 def test_memory_probe_code_reports_the_cgroup_counters_it_ran_under() -> None:
     """The probe source is executable and reports its own accounting."""
     import subprocess

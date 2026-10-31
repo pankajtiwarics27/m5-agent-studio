@@ -255,7 +255,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   stdlib probe
   (`scripts/model_probe.py`, OpenAI-compatible, streams for a real
   time-to-first-token, and omits any metric the server did not report). Pinned by
-  97 tests (`tests/test_qualify_environment.py`) and by 12 for the probe
+  98 tests (`tests/test_qualify_environment.py`) and by 12 for the probe
   (`tests/test_model_probe.py`); documented in
   [`docs/qualification-suite.md`](docs/qualification-suite.md) (ADR-0010).
 - **A second heavy local model request is refused by policy in the serving path
