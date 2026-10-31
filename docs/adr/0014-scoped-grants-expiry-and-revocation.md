@@ -3,9 +3,9 @@ id: ADR-0014
 title: scoped-grants-expiry-and-revocation
 status: accepted
 date: 2026-10-31
-review_status: not-reviewed
-reviewed_by: none
-reviewed_on: none
+review_status: reviewed
+reviewed_by: arena/f7973caa-m5-agent-studio
+reviewed_on: 2026-10-31
 ---
 
 # ADR-0014: Operation, resource, and task-scoped permission grants, event-driven revocation, capability containment, and subprocess secret hygiene
@@ -165,5 +165,28 @@ integrate it across `execution_spine.py`, `execution_profiles.py`,
 
 ## Review Status
 
-Not reviewed. Authored and verified by automated implementation tests
-(`tests/test_scoped_grants.py`) in `M5-P3-04`; no independent review is claimed yet.
+Reviewed on 2026-10-31 by `arena/f7973caa-m5-agent-studio`, a session other than the
+implementing one, after merge (PR #70).
+
+The reviewer probed the grant store directly rather than relying on the shipped
+tests: a `path:` grant authorizes exactly its file (and its `.`/`..` aliases) but not
+a sibling; a `dir:` grant refuses `src/../outside/x.py`, `../outside/x.py` and a
+symlink pointing out of the workspace; revoking one path leaves disjoint writes
+possible and still refuses the protected path through an alias; revocation survives a
+fresh store instance; `max_uses = 1` is not double-spent by twelve threads or by two
+store objects on one directory; and a corrupted state file blocks issuance rather
+than resetting. Capability separation, one-way expiry and task/epoch binding all
+behaved as documented.
+
+One defect was found and fixed in PR #70: `SG_FORBIDDEN_INJECTION_ENV_KEYS` blocked
+`RUBYOPT`, `NODE_OPTIONS` and `JAVA_TOOL_OPTIONS` but not `RUBYLIB`, `NODE_PATH`,
+`_JAVA_OPTIONS`, `JDK_JAVA_OPTIONS` or `PERL5DB`, so a configured stdio MCP server's
+`env_json` could install the same loader hook under a sibling name. Tests now assert
+that every key in the set is stripped from the `extra` mapping.
+
+Three residual limits are recorded in `docs/scoped-grants.md` and accepted: sandbox
+environment scrubbing removes inheritance but not same-uid access to Studio's own
+the `/proc/PID/environ` of the Studio process (a containment problem, not an env-filter one); value matching
+ignores registered secrets shorter than six characters; and a managed write tool
+requires both `workspace_write` and `workspace_read`, so a single-capability grant
+authorizes nothing.
