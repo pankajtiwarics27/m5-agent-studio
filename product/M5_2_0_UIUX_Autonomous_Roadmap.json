@@ -202,7 +202,7 @@
       "id": "P0",
       "name": "Evidence baseline and inventory",
       "title": "Evidence baseline and inventory",
-      "status": "not_started",
+      "status": "done",
       "story_ids": [
         "UIUX-P0-01",
         "UIUX-P0-02",
@@ -216,13 +216,13 @@
       "in_progress": 0,
       "blocked": 0,
       "not_started": 0,
-      "percent_complete": 67
+      "percent_complete": 100
     },
     {
       "id": "P1",
       "name": "Shell and design system",
       "title": "Shell and design system",
-      "status": "not_started",
+      "status": "in_progress",
       "story_ids": [
         "UIUX-P1-01",
         "UIUX-P1-02",
@@ -235,7 +235,7 @@
       "in_progress": 0,
       "blocked": 0,
       "not_started": 2,
-      "percent_complete": 0
+      "percent_complete": 60
     },
     {
       "id": "P2",
