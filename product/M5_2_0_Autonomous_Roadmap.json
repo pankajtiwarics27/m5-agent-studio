@@ -123,10 +123,10 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "M5-P4-03",
     "last_completed_story": "M5-P4-02",
     "last_checkpoint": "2026-10-31T07:55:00Z",
-    "last_session_id": "arena/3bd28b17-m5-agent-studio",
+    "last_session_id": "arena/956dd396-m5-agent-studio",
     "next_recommended_story": "M5-P4-03",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
@@ -148,7 +148,9 @@
     "last_verified_commit": "6242f95",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md",
     "last_updated": "2026-10-31",
-    "active_stories": []
+    "active_stories": [
+      "M5-P4-03"
+    ]
   },
   "delivery_phases": [
     {
@@ -2915,13 +2917,13 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P4-03: Bounded child delegation and parent joins. Objective: Introduce subagents only where measured benefit justifies overhead. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Define child task budget and authority subset; Implement durable join/cancel propagation; Prevent conflicting workspace mutations; Benchmark vs single-agent baseline. Acceptance: Child cannot exceed parent permissions; No orphan consequential actions; Delegation preserves or improves verified outcomes. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
+        "status": "in_progress",
         "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "attempts": 1,
+        "started_at": "2026-10-31T07:25:00Z",
+        "updated_at": "2026-10-31T07:25:00Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/956dd396-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -2929,7 +2931,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "next_action": "Inspect workflow_state.py, execution_budget.py, scoped_grants.py, execution_profiles.py, side_effect_ledger.py, workflow_orchestration.py, and app.py call paths.",
         "readme_updated": false
       }
     },
