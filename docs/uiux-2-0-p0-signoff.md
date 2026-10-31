@@ -376,7 +376,7 @@ provenance; a matching snapshot cannot clear separate review holds.
 
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
-| `ledger_content_sha256` | `13ea9cdc193dc5d3d3e1502f4b7519a51eb40affc380d2709e69ec13d2349f54` | `not recorded` |
+| `ledger_content_sha256` | `204e888ae8cd8c4812337f0faa2713d8af201ade664a262b49daa30a1c8959db` | `not recorded` |
 | `source_manifest_sha256` | `3c8807e8d4620b04db8e2c268646cb2f67fb00e1fa48e9cccbf0729d38864159` | `not recorded` |
 | `control_inventory_sha256` | `6eb5b038c7bc9c67bb88f8bbcc3043ac3d63d0a8c1653e2017b949ac28183be6` | `not recorded` |
 | `route_map_sha256` | `c6b9bb85bf516a2633281aef1384140a46b255e8921791a673523ea00aef56ae` | `not recorded` |
