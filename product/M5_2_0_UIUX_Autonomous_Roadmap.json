@@ -100,17 +100,15 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": "UIUX-P0-02",
-    "active_stories": [
-      "UIUX-P0-02"
-    ],
-    "last_completed_story": "UIUX-P0-01",
-    "next_recommended_story": "UIUX-P0-02",
-    "last_checkpoint": "2026-10-31T14:20:00Z",
+    "active_story": null,
+    "active_stories": [],
+    "last_completed_story": "UIUX-P0-02",
+    "next_recommended_story": "UIUX-P0-03",
+    "last_checkpoint": "2026-10-31T14:55:00Z",
     "last_session_id": "arena/be7957d5-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "f223cb6",
+    "last_verified_commit": "836243e",
     "last_updated": "2026-10-31",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -212,11 +210,11 @@
         "UIUX-P0-06"
       ],
       "total": 6,
-      "done": 1,
-      "in_progress": 1,
+      "done": 2,
+      "in_progress": 0,
       "blocked": 0,
       "not_started": 4,
-      "percent_complete": 17
+      "percent_complete": 33
     },
     {
       "id": "P1",
@@ -339,11 +337,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 1,
-    "in_progress": 1,
+    "done": 2,
+    "in_progress": 0,
     "blocked": 0,
     "not_started": 38,
-    "percent_complete": 2
+    "percent_complete": 5
   },
   "stories": [
     {
@@ -553,23 +551,83 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P0-02 (Inventory all six tabs and controls). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 10,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-31T14:20:00Z",
-        "updated_at": "2026-10-31T14:20:00Z",
-        "completed_at": null,
+        "updated_at": "2026-10-31T14:55:00Z",
+        "completed_at": "2026-10-31T14:55:00Z",
         "owner_session": "arena/be7957d5-m5-agent-studio",
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "commit_sha": "836243e21eaf8bfee54424071567b190ad317c2e",
+        "changed_files": [
+          "scripts/uiux_control_inventory.py",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "docs/uiux-2-0-control-inventory.md",
+          "tests/test_uiux_control_inventory.py",
+          "scripts/uiux_source_manifest.py",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "docs/uiux-2-0-program.md",
+          "docs/README.md",
+          "AGENTS.md",
+          "M5_2_0_UIUX_AGENT_PROMPT.md",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "Acceptance criterion 1 (all mapped controls reachable and functionally equivalent): 170 controls in the markup, each attributed to its pane section by an html.parser walk rather than by reading, plus 30 controls rendered by inline-script templates attributed to the function that renders them. No markup or route changed in this story, so this is the exact before-state the later stories are diffed against.",
+          "Acceptance criterion 5 (demonstrable by test): 9 tests in tests/test_uiux_control_inventory.py — totals add up, panes equal the manifest's six tabs in order with the same pin, handlers are call expressions, the generated page carries every pane and every limitation, --check fails on a moved control (proved on a temporary copy) and passes on the tree.",
+          "Acceptance criteria 2 and 3 (no console errors, keyboard and focus states): NOT exercised and not claimed — no browser here, nothing rendered. The inventory says so in not_verified rather than implying a rendering.",
+          "Two inventory facts that constrain the rest of the program: 101 of the 170 markup controls sit in the shared chrome (all six panes have 69 between them), and 58 controls have no id, so no selector-based test can reach them until one exists or a stable hook is introduced.",
+          "Completeness is bounded honestly: script-rendered controls are a separate list, their function attribution is a heuristic, a wrapping label element is not resolved, and the mount for every pane was checked against static/index.html rather than assumed."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q tests/test_uiux_control_inventory.py",
+            "exit_code": 0,
+            "result": "9 passed"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "1495 passed, 1 skipped"
+          },
+          {
+            "command": ".venv/bin/python -m ruff check .",
+            "exit_code": 0,
+            "result": "All checks passed"
+          },
+          {
+            "command": ".venv/bin/python -m mypy",
+            "exit_code": 0,
+            "result": "Success: no issues found in 56 source files"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py",
+            "exit_code": 0,
+            "result": "Documentation validation passed (5 required pages, 116 files scanned)"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_control_inventory.py --check",
+            "exit_code": 0,
+            "result": "170 markup controls across 6 panes, 101 in the chrome, 30 rendered by script"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_source_manifest.py --check",
+            "exit_code": 0,
+            "result": "11 files, 6 tabs, 102 routes, pinned to 28930089d0a4"
+          }
+        ],
+        "visual_evidence": [
+          "None captured, and none claimed: no Chrome/Chromium binary is available here, so no pane was rendered. The inventory is a static reading of the markup."
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "The inventory is generated JSON plus a generated page, not a hand-written audit: a hand-written control list for a 4576-line file is the artifact most likely to look complete and be wrong.",
+          "details elements are excluded and their summary counted: a disclosure container is not a control, and counting both would inflate every pane.",
+          "The new generator joined the pinned source manifest, so the tool that produces an artifact is pinned alongside the artifact it describes."
+        ],
         "blockers": [],
-        "handoff_note": "Claimed right after UIUX-P0-01 merged. The inventory starts from the pinned manifest's tab table, so the six panes are addressed by DOM id (start, harness, hall, council, debate, chat) rather than by the plan's labels.",
-        "next_action": "Enumerate every interactive control inside each of the six pane sections with its element type, id, label, handler and the route it calls, and prove the count is complete by parsing the markup rather than reading it.",
+        "handoff_note": "UIUX-P0-02 closed. The inventory is complete for what it claims and explicit about what it does not: no rendering, heuristic function attribution for script-rendered controls, and 58 controls without ids that the P5 work will have to address.",
+        "next_action": "Claim UIUX-P0-03 (map frontend handlers to API routes) and start from the inventory's inline handlers plus the manifest's 48 /api/ literals; the mapping must be derived from the script's fetch calls, not from handler names.",
         "readme_updated": false
       },
       "required_evidence": [
