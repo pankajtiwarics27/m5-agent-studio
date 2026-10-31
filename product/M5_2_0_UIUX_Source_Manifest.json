@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "63e470ef350d1632e71777b7b0169ca29d319360c37b8793ef7a81bf2ee33c33",
-      "bytes": 329590,
-      "lines": 5518
+      "sha256": "bf1d6b1c255793972df88d5dff3f6cefbe5fca66b54b0326832429fb36f5941e",
+      "bytes": 340923,
+      "lines": 5728
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "20dc9e9bf4722ef67a92865130c24bc2e07032cbffbf9be141e282d436f77a7a",
-      "bytes": 3067240,
-      "lines": 68547
+      "sha256": "91f3f664b15d5268f3fa731f5fafcc26ac8e4de04640a48d133b3bddc4b4816d",
+      "bytes": 3078573,
+      "lines": 68757
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -110,8 +110,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "63e470ef350d1632e71777b7b0169ca29d319360c37b8793ef7a81bf2ee33c33",
-    "lines": 5518,
+    "sha256": "bf1d6b1c255793972df88d5dff3f6cefbe5fca66b54b0326832429fb36f5941e",
+    "lines": 5728,
     "tab_count": 6,
     "tabs": [
       {
@@ -157,7 +157,7 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 53,
+    "fetch_call_count": 54,
     "api_literal_count": 48,
     "api_literals": [
       "/api/cache/clear-ssd",

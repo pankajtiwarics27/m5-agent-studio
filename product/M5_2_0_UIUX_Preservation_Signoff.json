@@ -26,11 +26,11 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "96ba48ec2446e2f3ace942735cc31f2fe9f2db919cec645cd131d6a2acbe4cf4",
-      "source_manifest_sha256": "6badf2cefeb7cad31eeef4744522e077fef7666625d76defa992dd13d7aafb47",
-      "control_inventory_sha256": "a699bfdd9435226903e6ac58af94854b25358e9cd7e6399eeebedf2d55932f6b",
-      "route_map_sha256": "10d2c8c3c883b70597f4ece9a74ed37f2e3ed428a5d00bdd25c6fd377b591b03",
-      "authorization_trace_sha256": "42c3e35ad4f8ae669ca515377509520f4cd408fac9621465723e4f1565a6c060",
-      "frontend_sha256": "63e470ef350d1632e71777b7b0169ca29d319360c37b8793ef7a81bf2ee33c33",
+      "source_manifest_sha256": "3c8807e8d4620b04db8e2c268646cb2f67fb00e1fa48e9cccbf0729d38864159",
+      "control_inventory_sha256": "6eb5b038c7bc9c67bb88f8bbcc3043ac3d63d0a8c1653e2017b949ac28183be6",
+      "route_map_sha256": "c6b9bb85bf516a2633281aef1384140a46b255e8921791a673523ea00aef56ae",
+      "authorization_trace_sha256": "2614abf58c9491141d8eb00a60d35dbba26edb9554ff894615e4ecf0efc32270",
+      "frontend_sha256": "bf1d6b1c255793972df88d5dff3f6cefbe5fca66b54b0326832429fb36f5941e",
       "screenshot_manifest_sha256": "69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92",
       "screenshot_index_sha256": "de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -40,11 +40,11 @@
   },
   "inputs": {
     "ledger_sha256": "88d40b6f3c1565d3cd114e64279c3a2c56ad5085deeb2bb8ca239debea9c4f08",
-    "source_manifest_sha256": "6badf2cefeb7cad31eeef4744522e077fef7666625d76defa992dd13d7aafb47",
-    "control_inventory_sha256": "a699bfdd9435226903e6ac58af94854b25358e9cd7e6399eeebedf2d55932f6b",
-    "route_map_sha256": "10d2c8c3c883b70597f4ece9a74ed37f2e3ed428a5d00bdd25c6fd377b591b03",
-    "authorization_trace_sha256": "42c3e35ad4f8ae669ca515377509520f4cd408fac9621465723e4f1565a6c060",
-    "frontend_sha256": "63e470ef350d1632e71777b7b0169ca29d319360c37b8793ef7a81bf2ee33c33"
+    "source_manifest_sha256": "3c8807e8d4620b04db8e2c268646cb2f67fb00e1fa48e9cccbf0729d38864159",
+    "control_inventory_sha256": "6eb5b038c7bc9c67bb88f8bbcc3043ac3d63d0a8c1653e2017b949ac28183be6",
+    "route_map_sha256": "c6b9bb85bf516a2633281aef1384140a46b255e8921791a673523ea00aef56ae",
+    "authorization_trace_sha256": "2614abf58c9491141d8eb00a60d35dbba26edb9554ff894615e4ecf0efc32270",
+    "frontend_sha256": "bf1d6b1c255793972df88d5dff3f6cefbe5fca66b54b0326832429fb36f5941e"
   },
   "approval_request": [
     {
@@ -55,7 +55,7 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "168 markup controls (101 chrome, 67 panes) plus 30 rendered by script"
+      "evidence": "171 markup controls (101 chrome, 70 panes) plus 30 rendered by script"
     },
     {
       "id": 3,
@@ -76,9 +76,9 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 168,
+    "markup_controls": 171,
     "chrome_controls": 101,
-    "pane_controls": 67,
+    "pane_controls": 70,
     "script_rendered_controls": 30,
     "routes": 115,
     "routes_with_resolved_or_possible_caller": 57,
@@ -88,8 +88,8 @@
     "route_map_unresolved_caller_edges": 0,
     "route_map_unresolved_method_edges": 0,
     "state_changing_routes_traced": 37,
-    "pane_routes_reached": 24,
-    "pane_routes_excluded": 34,
+    "pane_routes_reached": 69,
+    "pane_routes_excluded": 42,
     "route_walk_depth": 2,
     "screenshots_captured": 6,
     "screenshots_planned": 6
@@ -128,9 +128,10 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 3,
+      "control_count": 6,
       "counts": {
-        "button": 3
+        "button": 5,
+        "input": 1
       },
       "controls": [
         {
@@ -153,14 +154,140 @@
           "text": "Providers",
           "onclick": "openProvidersModal()",
           "handler": "openProvidersModal"
+        },
+        {
+          "tag": "input",
+          "id": "startTaskInput",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "startTaskBtn",
+          "text": "Open in Harness",
+          "onclick": "launchTaskFromStart()",
+          "handler": "launchTaskFromStart"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Refresh",
+          "onclick": "loadStartRecent({ force: true })",
+          "handler": "loadStartRecent"
         }
       ],
       "declared_handlers": [
+        "launchTaskFromStart",
+        "loadStartRecent",
         "openProvidersModal",
         "refreshOnboarding",
         "startGuidedFirstTask"
       ],
       "routes_reached": [
+        {
+          "method": "DELETE",
+          "path": "/api/combos/{alias}",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "removeCombo",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "removeCombo"
+          ]
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/harness/sessions/{session_id}",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "deleteHarnessSession",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "deleteHarnessSession"
+          ]
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/mcp/servers/{alias}",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "deleteMcpServer",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "deleteMcpServer"
+          ]
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/opencontext/docs/{doc_id}",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "deleteOpenContextDoc",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "deleteOpenContextDoc"
+          ]
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/providers/{alias}",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "removeProvider",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "removeProvider"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/codegraph/analyze",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "refreshCodeGraphOverview",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "refreshCodeGraphOverview"
+          ]
+        },
         {
           "method": "GET",
           "path": "/api/hall/sessions",
@@ -169,9 +296,35 @@
           "gates": [],
           "handler": "refreshHallSessions",
           "via": [
-            "startGuidedFirstTask",
+            "launchTaskFromStart",
             "switchTab",
             "refreshHallSessions"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/hall/sessions/{session_id}",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "selectHallSession",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "selectHallSession"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/harness/external-configs",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "openExternalHarnessModal",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "openExternalHarnessModal"
           ]
         },
         {
@@ -180,11 +333,100 @@
           "certainty": "certain",
           "state_changing": false,
           "gates": [],
-          "handler": "loadHarnessSessions",
+          "handler": "loadStartRecent",
           "via": [
-            "startGuidedFirstTask",
+            "loadStartRecent"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/harness/sessions/{session_id}",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "selectHarnessSession",
+          "via": [
+            "launchTaskFromStart",
             "switchTab",
-            "loadHarnessSessions"
+            "selectHarnessSession"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/harness/sessions/{session_id}/diff",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "openHarnessDiffModal",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "openHarnessDiffModal"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/harness/sessions/{session_id}/events",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "harnessFetchEventPage",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "harnessFetchEventPage"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/harness/sessions/{session_id}/events/stream",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "openHarnessEventStream",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "openHarnessEventStream"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/harness/sessions/{session_id}/sdlc",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "refreshSdlcBoard",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "refreshSdlcBoard"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/harness/sessions/{session_id}/state",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "openHarnessEventStream",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "openHarnessEventStream"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/mcp/servers",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "loadMcpServers",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "loadMcpServers"
           ]
         },
         {
@@ -200,6 +442,45 @@
         },
         {
           "method": "GET",
+          "path": "/api/opencontext/docs",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "loadOpenContextDocs",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "loadOpenContextDocs"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/opencontext/lint",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "runOpenContextLintUI",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "runOpenContextLintUI"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/opencontext/search",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "searchOpenContextUI",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "searchOpenContextUI"
+          ]
+        },
+        {
+          "method": "GET",
           "path": "/api/providers",
           "certainty": "certain",
           "state_changing": false,
@@ -209,9 +490,480 @@
             "openProvidersModal",
             "loadProviders"
           ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/skills",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "loadSkills",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "loadSkills"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/telemetry",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "refreshTelemetry",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "refreshTelemetry"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/workspace/files",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "openSpawnModal",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "openSpawnModal"
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/api/harness/sessions/{session_id}",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "patchActiveHarnessSettings",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "patchActiveHarnessSettings"
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/api/mcp/servers/{alias}",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "toggleMcpServerEnabled",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "toggleMcpServerEnabled"
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/api/opencontext/docs/{doc_id}",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "togglePinOpenContextDoc",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "togglePinOpenContextDoc"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/cache/clear-ssd",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "clearSsdCache",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "clearSsdCache"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/codegraph/query",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "runCodeGraphPlayground",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "runCodeGraphPlayground"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/combos",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "saveCombo",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "saveCombo"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/hall/sessions",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "confirmSpawnSession",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "confirmSpawnSession"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/hall/sessions/{session_id}/message",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "postHumanHallMessage",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "postHumanHallMessage"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/harness/abort/{session_id}",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "abortHarnessRun",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "abortHarnessRun"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/harness/approve",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "resolveHarnessApproval",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "resolveHarnessApproval"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/harness/sessions/{session_id}/apply",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "applyHarnessWorktree",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "applyHarnessWorktree"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/harness/sessions/{session_id}/compact",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "compactActiveHarness",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "compactActiveHarness"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/mcp/import-json",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "importMcpJson",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "importMcpJson"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/mcp/servers",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "saveMcpServer",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "saveMcpServer"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/mcp/servers/{alias}/call",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "runMcpPlayground",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "runMcpPlayground"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/mcp/servers/{alias}/sync",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "syncMcpServer",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "syncMcpServer"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/models/unload-all",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "unloadAllModels",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "unloadAllModels"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/models/{model_id:path}/load",
+          "certainty": "possible",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "modelAction",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "modelAction"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/models/{model_id:path}/unload",
+          "certainty": "possible",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "modelAction",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "modelAction"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/opencontext/docs",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "saveOpenContextDoc",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "saveOpenContextDoc"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/providers",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "saveProvider",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "saveProvider"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/providers/fetch-models",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "fetchRemoteModels",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "fetchRemoteModels"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/skills/install",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "installSkill",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "installSkill"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/workspace/directory",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "saveWorkspaceDirectory",
+          "via": [
+            "launchTaskFromStart",
+            "switchTab",
+            "saveWorkspaceDirectory"
+          ]
         }
       ],
-      "routes_excluded_by_entry_point": 0
+      "routes_excluded_by_entry_point": 8
     },
     {
       "label": "Harness",

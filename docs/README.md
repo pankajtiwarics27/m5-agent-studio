@@ -134,6 +134,7 @@ measurements without trusting them).
 · [`uiux-2-0-overlays-keyboard.md`](uiux-2-0-overlays-keyboard.md) (P1-04 notification semantics, toast dismissal/timing, and command-palette combobox behavior)
 · [`uiux-2-0-presentations.md`](uiux-2-0-presentations.md) (generated P1-05 presentation layer: one shape for empty, error and recovery, with the cause and the kept state as required arguments)
 · [`uiux-2-0-start.md`](uiux-2-0-start.md) (generated P2-01 Start layer: the server's next step printed once, the marked row, and why Run is off)
+· [`uiux-2-0-recent-work.md`](uiux-2-0-recent-work.md) (generated P2-02 Start layer: recent Harness sessions as buttons, every run state toned, and a task handoff that runs nothing)
 · [`../M5_2_0_UIUX_AGENT_PROMPT.md`](../M5_2_0_UIUX_AGENT_PROMPT.md) (UI/UX claim, review and merge protocol)
 · [`uiux-2-0-coordination.md`](uiux-2-0-coordination.md) (read-only readiness check, current handoff and capture risks)
 · [`uiux-coordination-ledger-drift-followup.md`](uiux-coordination-ledger-drift-followup.md) (reconciled UI/UX phase summaries and status-walk token-exposure follow-up)

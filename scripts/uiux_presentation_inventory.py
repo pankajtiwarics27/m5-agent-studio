@@ -54,6 +54,7 @@ CONTAINERS = {
     "debateSynthesisArea": ("Compare", "no comparison yet"),
     "chatState": ("Chat", "a reply that stopped"),
     "harnessStreamState": ("Harness", "an event stream that dropped"),
+    "startRecentState": ("Start", "recent work that is empty or could not be read"),
 }
 
 # Handlers this story converted. A raw writer inside one of them means the conversion

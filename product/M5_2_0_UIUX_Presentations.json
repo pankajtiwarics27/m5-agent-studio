@@ -52,7 +52,33 @@
         "Re-check",
         "Providers"
       ],
-      "line": 2590
+      "line": 2652
+    },
+    {
+      "container": "startRecentState",
+      "pane": "Start",
+      "kind": "empty",
+      "title": "No recent work yet",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Start a session",
+        "Open Harness"
+      ],
+      "line": 2711
+    },
+    {
+      "container": "startRecentState",
+      "pane": "Start",
+      "kind": "error",
+      "title": "Recent work could not be read",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Retry",
+        "Open Harness"
+      ],
+      "line": 2776
     },
     {
       "container": "hallStream",
@@ -66,7 +92,7 @@
         "Ask one model",
         "Configure providers"
       ],
-      "line": 2850
+      "line": 3059
     },
     {
       "container": "debateSynthesisArea",
@@ -78,7 +104,7 @@
       "actions": [
         "Start Compare"
       ],
-      "line": 2864
+      "line": 3073
     },
     {
       "container": "chatState",
@@ -91,7 +117,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 2874
+      "line": 3083
     },
     {
       "container": "harnessStreamState",
@@ -104,7 +130,7 @@
         "Reconnect now",
         "Reload from snapshot"
       ],
-      "line": 2888
+      "line": 3097
     }
   ],
   "containers": [
@@ -137,30 +163,36 @@
       "pane": "Harness",
       "meaning": "an event stream that dropped",
       "wired": true
+    },
+    {
+      "id": "startRecentState",
+      "pane": "Start",
+      "meaning": "recent work that is empty or could not be read",
+      "wired": true
     }
   ],
   "remaining_raw_writers": [
     {
-      "line": 3157,
+      "line": 3366,
       "handler": "installSkill"
     },
     {
-      "line": 4525,
+      "line": 4734,
       "handler": "openHarnessDiffModal"
     },
     {
-      "line": 5001,
+      "line": 5210,
       "handler": "runMcpPlayground"
     }
   ],
   "totals": {
     "kinds": 3,
-    "surfaces": 5,
-    "containers": 5,
-    "wired_containers": 5,
+    "surfaces": 7,
+    "containers": 6,
+    "wired_containers": 6,
     "by_kind": {
-      "empty": 2,
-      "error": 2,
+      "empty": 3,
+      "error": 3,
       "recovery": 1
     },
     "remaining_raw_writers": 3,
