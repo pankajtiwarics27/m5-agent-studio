@@ -1,0 +1,175 @@
+{
+  "schema_version": "1.0.0",
+  "story": "UIUX-P1-05",
+  "statement": "Three presentations share one shape and one builder: empty says what will appear, error says what failed and what is kept, recovery says what survived and how it resumes. The cause and the kept line are required arguments, so a presentation cannot degrade into a bare error string.",
+  "source": {
+    "frontend": "static/index.html"
+  },
+  "kinds": [
+    {
+      "kind": "empty",
+      "means": "nothing has happened yet",
+      "tone": "neutral (a hairline in --border-hi)",
+      "required": [
+        "title",
+        "cause",
+        "context",
+        "actions"
+      ]
+    },
+    {
+      "kind": "error",
+      "means": "something failed; role=alert so a screen reader hears it",
+      "tone": "danger (--rose)",
+      "required": [
+        "title",
+        "cause",
+        "context",
+        "actions"
+      ]
+    },
+    {
+      "kind": "recovery",
+      "means": "the state was interrupted and resumes from somewhere known",
+      "tone": "warn (--amber)",
+      "required": [
+        "title",
+        "cause",
+        "context",
+        "actions"
+      ]
+    }
+  ],
+  "surfaces": [
+    {
+      "container": "onboardingState",
+      "pane": "Start",
+      "kind": "error",
+      "title": "Could not read the preflight",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Re-check",
+        "Providers"
+      ],
+      "line": 2353
+    },
+    {
+      "container": "hallStream",
+      "pane": "Council",
+      "kind": "empty",
+      "title": "No council round yet",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Start a round",
+        "Ask one model",
+        "Configure providers"
+      ],
+      "line": 2595
+    },
+    {
+      "container": "debateSynthesisArea",
+      "pane": "Compare",
+      "kind": "empty",
+      "title": "No comparison yet",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Start Compare"
+      ],
+      "line": 2609
+    },
+    {
+      "container": "chatState",
+      "pane": "Chat",
+      "kind": "error",
+      "title": "The reply stopped",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Retry",
+        "Dismiss"
+      ],
+      "line": 2619
+    },
+    {
+      "container": "harnessStreamState",
+      "pane": "Harness",
+      "kind": "recovery",
+      "title": "Live updates paused",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Reconnect now",
+        "Reload from snapshot"
+      ],
+      "line": 2633
+    }
+  ],
+  "containers": [
+    {
+      "id": "onboardingState",
+      "pane": "Start",
+      "meaning": "a preflight that could not be read",
+      "wired": true
+    },
+    {
+      "id": "hallStream",
+      "pane": "Council",
+      "meaning": "no round yet",
+      "wired": true
+    },
+    {
+      "id": "debateSynthesisArea",
+      "pane": "Compare",
+      "meaning": "no comparison yet",
+      "wired": true
+    },
+    {
+      "id": "chatState",
+      "pane": "Chat",
+      "meaning": "a reply that stopped",
+      "wired": true
+    },
+    {
+      "id": "harnessStreamState",
+      "pane": "Harness",
+      "meaning": "an event stream that dropped",
+      "wired": true
+    }
+  ],
+  "remaining_raw_writers": [
+    {
+      "line": 2902,
+      "handler": "installSkill"
+    },
+    {
+      "line": 4270,
+      "handler": "openHarnessDiffModal"
+    },
+    {
+      "line": 4746,
+      "handler": "runMcpPlayground"
+    }
+  ],
+  "totals": {
+    "kinds": 3,
+    "surfaces": 5,
+    "containers": 5,
+    "wired_containers": 5,
+    "by_kind": {
+      "empty": 2,
+      "error": 2,
+      "recovery": 1
+    },
+    "remaining_raw_writers": 3,
+    "findings": 0
+  },
+  "findings": [],
+  "limits": [
+    "the remaining raw error writers are listed, not converted: they are pane work for P2 to P4",
+    "the inventory reads the source, so it proves a call passes a cause, not that the cause is useful",
+    "the behaviour - a refused request and a disconnected stream - is scripts/presentation_walk.mjs"
+  ]
+}

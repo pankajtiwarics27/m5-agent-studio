@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "3d6de428fd9ac7915c7bcaa04b5971a8c7b792e13acf918f021f46f1aef213a3",
+  "frontend_sha256": "afa9f5d69d22c9e7588157cb62e9a52d29208b5ef35e7b457b2cf5e86e873eaa",
   "panes": [
     {
       "dom_id": "start",
@@ -165,14 +165,14 @@
     {
       "dom_id": "hall",
       "section_id": "pane-hall",
-      "control_count": 19,
+      "control_count": 17,
       "counts": {
-        "button": 8,
+        "button": 6,
         "select": 8,
         "summary": 2,
         "textarea": 1
       },
-      "controls_without_id": 6,
+      "controls_without_id": 4,
       "controls_without_label": 0,
       "controls": [
         {
@@ -249,18 +249,6 @@
           "title": "Summon only this single selected voice",
           "onclick": "summonSingleAgent()",
           "text": "Ask one model"
-        },
-        {
-          "tag": "button",
-          "class": "btn",
-          "onclick": "openSpawnModal()",
-          "text": "+ Spawn Council Session"
-        },
-        {
-          "tag": "button",
-          "class": "btn btn-cyan",
-          "onclick": "openProvidersModal()",
-          "text": "Configure Cloud Providers"
         },
         {
           "tag": "textarea",
@@ -1185,8 +1173,8 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 170,
-    "pane_controls": 69,
+    "markup_controls": 168,
+    "pane_controls": 67,
     "chrome_controls": 101,
     "script_rendered_controls": 30,
     "script_rendered_by_function": {
