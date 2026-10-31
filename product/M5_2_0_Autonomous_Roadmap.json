@@ -123,10 +123,10 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "M5-P5-03",
     "last_completed_story": "M5-P4-03",
-    "last_checkpoint": "2026-10-31T07:59:00Z",
-    "last_session_id": "arena/956dd396-m5-agent-studio",
+    "last_checkpoint": "2026-10-31T08:06:00Z",
+    "last_session_id": "arena/43209826-m5-agent-studio",
     "next_recommended_story": "M5-P5-03",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
@@ -148,7 +148,9 @@
     "last_verified_commit": "fe5a84b",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md",
     "last_updated": "2026-10-31",
-    "active_stories": []
+    "active_stories": [
+      "M5-P5-03"
+    ]
   },
   "delivery_phases": [
     {
@@ -3195,13 +3197,13 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P5-03: Fault-injection and security release gate. Objective: Prove reliability and obtain documented security decision before release. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Run crash matrix, user-edit races, external-write uncertainty and sandbox adversarial suite; Collect measured reliability, memory and UX metrics; Review docs/security-review-signoff.md with responsible reviewer; Document residual risk and release decision. Acceptance: No known critical unauthorized execution paths; No silent user-data loss in injected tests; Required security sign-off recorded or release blocked. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
+        "status": "in_progress",
         "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "attempts": 1,
+        "started_at": "2026-10-31T08:06:00Z",
+        "updated_at": "2026-10-31T08:06:00Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/43209826-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -3209,7 +3211,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
+        "next_action": "Inspect failure_injection.py, release_manager.py, validate_security_signoff.py, security_review_evidence.py, docs/security-review-signoff.md, and served app.py release/bypass paths.",
         "readme_updated": false
       }
     },
