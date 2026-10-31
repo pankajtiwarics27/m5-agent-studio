@@ -39,24 +39,25 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 | `failed` | `danger` | FAILED |
 | `error` | `danger` | ERROR |
 
-10 states, 6 tones, 4 bases, 6 surfaces using the component, 3 of them live regions.
+10 states, 6 tones, 4 bases, 7 surfaces using the component, 4 of them live regions.
 
 ## Surfaces
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| `#sdlcProgressBadge` | `neutral` | no | 1323 |
-| `#onboardingSummary` | `neutral` | yes | 1470 |
-| `#harnessActiveStatusBadge` | `info` | yes | 1598 |
-| `#hallStatusBadge` | `warn` | yes | 1641 |
-| (unnamed) | `ok` | no | 1838 |
-| `#dockerStateBadge` | `neutral` | no | 1885 |
+| `#sdlcProgressBadge` | `neutral` | no | 1349 |
+| `#onboardingSummary` | `neutral` | yes | 1496 |
+| `#startRecentSummary` | `neutral` | yes | 1536 |
+| `#harnessActiveStatusBadge` | `info` | yes | 1652 |
+| `#hallStatusBadge` | `warn` | yes | 1695 |
+| (unnamed) | `ok` | no | 1892 |
+| `#dockerStateBadge` | `neutral` | no | 1939 |
 
 ## Writers
 
 | Measure | Count |
 |---|---|
-| `setStatus()` call sites | 15 |
+| `setStatus()` call sites | 19 |
 | `evidenceNote()` call sites | 1 |
 | Evidence blocks in markup | 1 |
 | Legacy `className = "badge …"` writers | 0 |

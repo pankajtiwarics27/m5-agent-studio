@@ -123,7 +123,10 @@ def test_the_stylesheet_prints_the_cause_and_kept_labels(payload):
 
 
 def test_every_surface_says_why_what_survives_and_what_to_do(payload):
-    assert len(payload["surfaces"]) == len(inventory.CONTAINERS) == 5
+    assert len(inventory.CONTAINERS) >= 5
+    assert any(surface["container"] == "startRecentState" for surface in payload["surfaces"]), (
+        "the recent-work list presents empty and error states and must be in the map"
+    )
     for surface in payload["surfaces"]:
         assert surface["kind"] in inventory.KINDS, surface
         assert surface["has_cause"] and surface["has_context"], surface

@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 10,
+  "revision": 12,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,13 +102,13 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P2-01",
-    "next_recommended_story": "UIUX-P2-02",
-    "last_checkpoint": "2026-11-01T12:05:00Z",
-    "last_session_id": "arena/ef50dc33-m5-agent-studio",
+    "last_completed_story": "UIUX-P2-02",
+    "next_recommended_story": "UIUX-P2-03",
+    "last_checkpoint": "2026-11-01T14:05:00Z",
+    "last_session_id": "arena/49f97cdd-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "089237f",
+    "last_verified_commit": "20a67e1",
     "last_updated": "2026-11-01",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -251,11 +251,11 @@
         "UIUX-P2-06"
       ],
       "total": 6,
-      "done": 1,
+      "done": 2,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 5,
-      "percent_complete": 17
+      "not_started": 4,
+      "percent_complete": 33
     },
     {
       "id": "P3",
@@ -339,11 +339,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 12,
+    "done": 13,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 28,
-    "percent_complete": 30
+    "not_started": 27,
+    "percent_complete": 32
   },
   "stories": [
     {
@@ -2443,8 +2443,8 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "Start recent sessions and task launch with no loss of existing functionality.",
+      "current_behavior": "Recorded at P2-02: Start showed only the preflight checklist. The Harness kept every session and GET /api/harness/sessions returned them ordered by updated_at DESC, but the landing pane never read it, so past work was reachable only by going to the Harness and remembering it existed. There was no way to begin a task from Start other than the guided first prompt, which goes to Chat.",
+      "target_behavior": "Start shows the five newest Harness sessions as buttons that open each session where it lives, painted through harnessStatusBadge() and bounded at five, with the empty and unreadable cases presented through the P1-05 component; and a composer that carries a task into the Harness without running it, with a note quoting the preflight's verdict. Start issues no write against the session API.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
         "Trace relevant DOM, JS handlers, API and backend state transitions",
@@ -2486,23 +2486,146 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P2-02 (Start recent sessions and task launch). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-01T13:10:00Z",
+        "updated_at": "2026-11-01T14:05:00Z",
+        "completed_at": "2026-11-01T14:05:00Z",
+        "owner_session": "arena/49f97cdd-m5-agent-studio",
+        "commit_sha": "c9dba4e1930203f622d2eb0db0da7e7d5faa447d",
+        "changed_files": [
+          "static/index.html",
+          "studio.py",
+          "scripts/uiux_recent_work_inventory.py",
+          "scripts/start_recent_walk.mjs",
+          "scripts/uiux_presentation_inventory.py",
+          "tests/test_start_recent.py",
+          "tests/test_presentations.py",
+          "docs/uiux-2-0-recent-work.md",
+          "docs/uiux-2-0-program.md",
+          "docs/README.md",
+          "docs/media/start/recent.png",
+          "docs/media/start/handoff.png",
+          "docs/media/start/empty.png",
+          "docs/media/start/README.md",
+          "product/M5_2_0_UIUX_Recent_Work.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "The gap: Start is the pane you land on to begin work, and it could not show a single thing already done. GET /api/harness/sessions returns every session ordered by updated_at DESC, and nothing in the Start pane read it - so past work was reachable only by remembering it existed and going to the Harness.",
+          "The fix is a read, not a second store. renderStartRecent() takes the first five sessions and draws one button each: title, step count, policy and the tail of the workspace path, plus a state pill. Clicking or pressing Enter on a row switches to the Harness and selects that session - the session is opened where it lives, and Start keeps no copy of it.",
+          "Every run state the server writes has words, and Start did not invent its own. The pill is painted by harnessStatusBadge(), the table P1-03 established for all harness surfaces. The inventory reads every _update_harness_session_state(status=...) literal and the column default out of app.py and fails if the table has no row: all eight today (blocked, cancelled, completed, error, idle, paused, running, waiting_approval) map to a tone and a label.",
+          "Start owns nothing. No POST, PATCH or DELETE appears anywhere in the recent-work code: creating, retitling and deleting sessions stay in the Harness, so there is one place that owns them and one place to reason about when they change. The inventory asserts both the route list and the method list.",
+          "The launcher is a handoff, not a launch. launchTaskFromStart() writes the text into #harnessPromptInput, dispatches input so the composer's own listeners see it, focuses it and stops - it makes no request and calls nothing that runs. The workspace, the worktree decision and the execution policy are chosen in the Harness, and a run begun from a pane that cannot show them is a run begun with the wrong ones. The walk proves the claim by counting sessions and stream content before and after: unchanged.",
+          "The handoff note quotes the preflight instead of assuming success. It says ready, or not ready with the next step named, and it is refreshed whenever the preflight is re-read, so it cannot say ready an hour after the lead stopped saying it. The same text is the input's aria-describedby.",
+          "Empty and unreadable both use the P1-05 presentation component, with a cause, what is kept and an action. The unreadable one says 'nothing was changed; the task composer below still opens a task in the Harness' - which is true, and is why the error does not disable the pane. Adding startRecentState to the P1-05 container map was part of this story: that artifact exists so a new empty-or-broken container cannot be introduced without being registered.",
+          "Two of this story's own checks were wrong before they were right, and both were caught by breaking the source: the row check passed on a comment that merely named harnessStatusBadge() until it was narrowed to an assignment, and the handoff-note check passed on the word 'ready' until it was narrowed to the preflight's own verdict. A rule that can be satisfied by prose next to the code is not a rule.",
+          "Limits stated rather than papered over: the recent list is the Harness's ordering, not a notion of recency invented here; a session's step count is what the server stored; and the walk creates the session it shows, so nothing in this evidence depends on demo state it did not make itself.",
+          "Acceptance is the reviewer's call. This record states what was measured on this tree; the pull request is where the story is reviewed against its criteria.",
+          "README.md was not touched: no route, no capability and no execution path changed - Start gained a view of work that already existed and a way to hand a task to the pane that owns it."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "1829 passed, 25 skipped (a shallow clone fails the two pinned-commit tests until git fetch --unshallow; that is the environment, not the change, and the suite was re-run clean)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest tests/test_start_recent.py tests/test_start_readiness.py tests/test_presentations.py -q",
+            "exit_code": 0,
+            "result": "68 passed"
+          },
+          {
+            "command": "node scripts/start_recent_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway> --screenshots docs/media/start",
+            "exit_code": 0,
+            "result": "16 of 16 checks passed (row appears with the shared table label, bounded at 5, Enter opens the session, the handoff carries the text and creates nothing, note quotes the preflight, empty state, refused list with a working Retry, focus kept, 900px viewport, no page errors)"
+          },
+          {
+            "command": "node scripts/start_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "18 of 18 checks passed"
+          },
+          {
+            "command": "node scripts/presentation_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "20 of 20 checks passed"
+          },
+          {
+            "command": "node scripts/overlay_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "78 passed, 0 failed, 1 blocked (harnessDiffModal needs an active Harness session)"
+          },
+          {
+            "command": "node scripts/keyboard_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "22 of 22 checks passed"
+          },
+          {
+            "command": "node scripts/status_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "74 of 74 checks passed"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_recent_work_inventory.py --check",
+            "exit_code": 0,
+            "result": "8 server statuses all toned, limit 5, 1 route read, 0 writes, 0 findings"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_presentation_inventory.py --check",
+            "exit_code": 0,
+            "result": "3 kinds, 7 call sites across 6 containers, 3 raw writers left, 0 findings"
+          },
+          {
+            "command": ".venv/bin/python -m ruff check . && .venv/bin/python -m mypy",
+            "exit_code": 0,
+            "result": "clean; no issues in 58 source files"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py",
+            "exit_code": 0,
+            "result": "Documentation validation passed (5 required pages, 143 files scanned)"
+          },
+          {
+            "command": ".venv/bin/python scripts/build_studio.py && .venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "studio.py rebuilt (3,078,573 bytes); one inline script block parses"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_preservation_signoff.py --check",
+            "exit_code": 0,
+            "result": "up to date: historical-approval-unbound, 21 capabilities across 6 panes"
+          }
+        ],
+        "visual_evidence": [
+          "docs/media/start/recent.png - the card with the session the walk created: title, \"0 steps · standard · workspace\", a READY pill from the shared state table, the composer and Refresh, and the note quoting the preflight (not ready, next: Connect a model source).",
+          "docs/media/start/handoff.png - the Harness after the handoff: the typed task in the composer, focused, with no session created and no stream started.",
+          "docs/media/start/empty.png - the empty presentation with its two actions, reached by deleting the walk's own session.",
+          "Captured by scripts/start_recent_walk.mjs --screenshots while it created and deleted its own state; docs/media/start/README.md records the commands."
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "Start reads the Harness's list and renders it; it never copies sessions into a second store. A copy is a second answer to 'what work exists', and the two drift the first time a session is renamed.",
+          "Rows come from harnessStatusBadge(), not from a Start-specific mapping. P1-03 established that table so a run state cannot mean two things on two panes; the inventory now checks it against every status the server writes.",
+          "Start issues no write against the session API. Deleting a session is a destructive act with a worktree cleanup behind it, and it belongs where the session and its workspace are visible together.",
+          "The launcher hands off instead of running. A run needs a workspace, a worktree decision and a policy; a pane that cannot show them cannot honestly choose them, and the Harness already asks.",
+          "The handoff note quotes the preflight verdict rather than assuming the machine is ready. Handing a task into a Run that will refuse is a failure the reader discovers one click too late.",
+          "The list is bounded at five. Recency is the useful signal on a landing pane; completeness is what the Harness sidebar is for.",
+          "Empty and unreadable both go through the P1-05 presentation component rather than a one-off line of text, and startRecentState was added to that artifact's container map - the map exists to make a new empty-or-broken surface a deliberate act."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "Start's recent list reads GET /api/harness/sessions and nothing else; do not add a write there. Rows must stay <button> elements painted by harnessStatusBadge() through setStatus(). launchTaskFromStart() is a handoff by contract - it writes #harnessPromptInput and returns; anything that starts a run belongs in the Harness, and scripts/uiux_recent_work_inventory.py fails if the launcher gains a fetch. The note under the composer must keep quoting onboardingReport.ready and next_step, and updateStartTaskHint() must keep being called after a preflight read or it goes stale. scripts/start_recent_walk.mjs creates and deletes its own session; do not point it at a store you care about. P2-03 (Start system health and workspace selection) is next.",
+        "next_action": "None. UIUX-P2-03 (Start system health and workspace selection) is next.",
         "readme_updated": false
       },
       "required_evidence": [

@@ -312,6 +312,32 @@
     padding: 1px var(--space-2); margin-left: var(--space-2);
   }
   .onboarding-step-waiting { font-size: var(--text-2xs); color: var(--text-faint); margin-top: var(--space-1); }
+
+  /* ── Recent work and task launch ────────────────────────────────────────────
+     Start used to be a checklist with nothing on it from before this minute: the
+     Harness kept every session, and the pane that exists to start work could not
+     show one. These rows are the five most recent sessions, newest first, each a
+     real button that opens that session where it lives - no copy of the Harness
+     inside Start, and no second place that decides what a session is.
+
+     The launcher is a handoff, not a run: it puts the text in the Harness composer
+     and stops there, because the workspace, the isolation mode and the policy are
+     decisions the Harness makes with the reader. Starting a task from a pane that
+     cannot show those is how a run begins with the wrong directory. */
+  .start-recent { display: flex; flex-direction: column; gap: var(--space-2); }
+  .start-recent-loading { font-size: var(--text-xs); color: var(--text-faint); padding: var(--space-2) 0; }
+  .start-recent-row {
+    display: flex; align-items: center; gap: var(--space-3); width: 100%; text-align: left;
+    padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg-elev); color: var(--text); font: inherit; cursor: pointer;
+  }
+  .start-recent-row:hover { background: var(--bg-hover); }
+  .start-recent-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .start-recent-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+  .start-recent-title { font-size: var(--text-sm); font-weight: var(--weight-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .start-recent-meta { font-size: var(--text-2xs); color: var(--text-faint); font-family: var(--mono); }
+  .start-launch { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; margin-top: var(--space-4); }
+  .start-launch input { flex: 1 1 320px; min-width: 220px; }
   .badge.red { background: rgba(239, 68, 68, 0.18); color: #fca5a5; border-color: rgba(239, 68, 68, 0.45); }
 
   .config-strip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 11px; padding: 12px 14px; margin-bottom: 12px; }
@@ -1500,6 +1526,34 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             and a step that cannot be checked is reported as unavailable rather than passed.
           </div>
         </div>
+
+        <!-- Work that already exists, and the composer for the next task. Both are
+             read from the Harness's own endpoints: Start shows sessions, it does not
+             own them. -->
+        <div class="m-card" style="margin-top: 14px;">
+          <div class="m-head">
+            <span>Recent work and task launch</span>
+            <span id="startRecentSummary" class="status" data-tone="neutral" role="status">Reading…</span>
+          </div>
+          <p class="onboarding-lede">
+            The five most recent Harness sessions on this machine, newest first, plus a composer
+            for the next task. A task opens in the Harness with your text already in it, next to the
+            workspace and policy it will run with; nothing starts from this pane.
+          </p>
+          <div id="startRecentList" class="start-recent" role="list" aria-label="Recent Harness sessions">
+            <div class="start-recent-loading">Reading recent sessions…</div>
+          </div>
+          <div id="startRecentState"></div>
+          <div class="start-launch">
+            <label for="startTaskInput" style="position:absolute; left:-9999px;">Task to open in the Harness</label>
+            <input type="text" id="startTaskInput" autocomplete="off"
+                   placeholder="Describe a task to open in the Harness…"
+                   aria-describedby="startTaskHint" />
+            <button class="btn btn-primary" id="startTaskBtn" type="button" onclick="launchTaskFromStart()" aria-describedby="startTaskHint">Open in Harness</button>
+            <button class="btn" type="button" onclick="loadStartRecent({ force: true })" title="Re-read the session list from the server">Refresh</button>
+          </div>
+          <div id="startTaskHint" class="onboarding-note"></div>
+        </div>
       </div>
     </section>
 
@@ -2403,6 +2457,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function copyCodeBlock(btn) { navigator.clipboard.writeText(btn.closest(".code-wrap").querySelector("code").innerText); const p = btn.textContent; btn.textContent = "Copied!"; setTimeout(() => (btn.textContent = p), 1200); }
   function copyStageMarkdown(s, btn) { navigator.clipboard.writeText(stageBuffers[s].c || stageBuffers[s].r || ""); const p = btn.textContent; btn.textContent = "Copied!"; setTimeout(() => (btn.textContent = p), 1200); }
   let onboardingReport = null;
+  // The last session list Start read. Kept so the launcher's hint can say whether
+  // anything exists without re-reading, and so a tab switch can decide to refresh.
+  let startRecentSessions = [];
+  let startRecentReadAt = 0;
+  const START_RECENT_LIMIT = 5;
 
   const ONBOARDING_ACTION_LABELS = {
     "restart-server": "Restart Studio from your terminal, then reload this page.",
@@ -2493,6 +2552,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       gap.textContent = "This step has no action of its own: it follows a step above it.";
       actions.appendChild(gap);
     }
+    // The launcher's note quotes the same verdict, so it cannot go stale after a
+    // re-check while the lead says something newer.
+    updateStartTaskHint();
     if (!report.ready && next) {
       const note = document.createElement("span");
       note.className = "onboarding-lead-hint";
@@ -2626,6 +2688,147 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (box) { box.hidden = false; box.textContent = ONBOARDING_ACTION_LABELS["run-first-task"]; }
   }
 
+  /* ── Recent work ───────────────────────────────────────────────────────────
+     GET /api/harness/sessions is the Harness's own list, already ordered by
+     updated_at DESC, and it is the only thing Start reads to describe past work.
+     Nothing is copied into a second store: a row is a button that opens that
+     session where it lives. Rendering is capped, because a pane that grows with
+     every session is a pane that eventually takes a second to paint. */
+
+  function startRecentLimitReached() {
+    return startRecentSessions.length >= START_RECENT_LIMIT;
+  }
+
+  function renderStartRecent() {
+    const list = document.getElementById("startRecentList");
+    const summary = document.getElementById("startRecentSummary");
+    if (!list) return null;
+    clearPresentation("startRecentState");
+    list.innerHTML = "";
+
+    if (!startRecentSessions.length) {
+      setStatus(summary, "neutral", "Nothing yet");
+      return presentInto("startRecentState", {
+        kind: "empty",
+        title: "No recent work yet",
+        cause: "no Harness session has been started on this machine",
+        context: "a session appears here as soon as one runs, with its state and step count; the composer below opens a task in the Harness",
+        actions: [
+          { label: "Start a session", run: () => { switchTab("harness"); startFreshHarnessDraft(); }, title: "Open a new Harness draft" },
+          { label: "Open Harness", run: () => switchTab("harness"), title: "Go to the Harness pane" },
+        ],
+      });
+    }
+
+    setStatus(summary, "info", `${startRecentSessions.length} recent${startRecentLimitReached() ? ", newest" : ""}`);
+    startRecentSessions.forEach(session => {
+      // The words for a run's state come from harnessStatusBadge(), the same table
+      // every other harness surface uses - Start does not get its own vocabulary.
+      const badge = harnessStatusBadge(session);
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "start-recent-row";
+      row.dataset.sessionId = session.id;
+      row.setAttribute("role", "listitem");
+      row.title = `Open "${session.title}" in the Harness`;
+
+      const main = document.createElement("span");
+      main.className = "start-recent-main";
+      const title = document.createElement("span");
+      title.className = "start-recent-title";
+      title.textContent = session.title || "Untitled session";
+      const meta = document.createElement("span");
+      meta.className = "start-recent-meta";
+      const steps = Number(session.step_count || 0);
+      meta.textContent = `${steps} step${steps === 1 ? "" : "s"} · ${session.policy || "standard"} · ${(session.workspace_dir || "").split("/").filter(Boolean).slice(-1)[0] || "workspace"}`;
+      main.append(title, meta);
+
+      const pill = document.createElement("span");
+      pill.className = "status";
+      setStatus(pill, badge.cls, badge.label);
+
+      row.append(main, pill);
+      row.addEventListener("click", () => openHarnessSessionFromStart(session.id));
+      list.appendChild(row);
+    });
+    return list;
+  }
+
+  async function loadStartRecent(options = {}) {
+    const list = document.getElementById("startRecentList");
+    const summary = document.getElementById("startRecentSummary");
+    if (!list) return null;
+    if (!options.silent && !startRecentSessions.length) {
+      list.innerHTML = '<div class="start-recent-loading">Reading recent sessions…</div>';
+    }
+    try {
+      const response = await fetch("/api/harness/sessions");
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      startRecentSessions = (payload.sessions || []).slice(0, START_RECENT_LIMIT);
+      startRecentReadAt = Date.now();
+      renderStartRecent();
+      return startRecentSessions;
+    } catch (error) {
+      if (summary) setStatus(summary, "danger", "Unavailable");
+      // The launcher below does not depend on this list, and saying so is the
+      // difference between "Start is broken" and "recent work could not be read".
+      presentInto("startRecentState", {
+        kind: "error",
+        title: "Recent work could not be read",
+        cause: error && error.message ? error.message : "the session list request failed",
+        context: "nothing was changed; the task composer below still opens a task in the Harness",
+        actions: [
+          { label: "Retry", run: () => loadStartRecent({ force: true }), title: "Ask for the session list again" },
+          { label: "Open Harness", run: () => switchTab("harness"), title: "Go to the Harness pane" },
+        ],
+      });
+      return null;
+    }
+  }
+
+  async function openHarnessSessionFromStart(id) {
+    switchTab("harness");
+    await selectHarnessSession(id);
+  }
+
+  /* The launcher is a handoff. It never starts anything: the workspace, the
+     worktree decision and the execution policy are chosen in the Harness, and a run
+     begun from a pane that cannot show them is a run begun with the wrong ones. */
+  function updateStartTaskHint(extra) {
+    const hint = document.getElementById("startTaskHint");
+    if (!hint) return;
+    const ready = Boolean(onboardingReport && onboardingReport.ready);
+    const next = onboardingReport && onboardingReport.next_step ? onboardingReport.next_step : null;
+    const readiness = ready
+      ? "The preflight reports ready, so Run works in the Harness straight away."
+      : `The preflight is not ready yet${next ? ` (next: ${next.title})` : ""}, so Run in the Harness will refuse until that step is done.`;
+    hint.textContent = extra ? `${extra} ${readiness}` : `Type a task, then press Open in Harness. ${readiness}`;
+  }
+
+  function launchTaskFromStart() {
+    const input = document.getElementById("startTaskInput");
+    const text = (input ? input.value : "").trim();
+    if (!text) {
+      updateStartTaskHint("Nothing to open yet: type the task first.");
+      if (input) input.focus();
+      return null;
+    }
+    switchTab("harness");
+    const composer = document.getElementById("harnessPromptInput");
+    if (!composer) {
+      updateStartTaskHint("The Harness composer was not found, so the task was not carried over.");
+      return null;
+    }
+    composer.value = text;
+    composer.dispatchEvent(new Event("input"));
+    composer.focus();
+    if (input) input.value = "";
+    const short = text.length > 60 ? `${text.slice(0, 57)}…` : text;
+    updateStartTaskHint(`"${short}" is in the Harness composer; press Run there when the workspace and policy are right.`);
+    return composer.value;
+  }
+
   // The rail is a tablist: exactly one tab is selected and exactly one tab is in the
   // tab order. Both facts are written here and nowhere else, so a keyboard user and a
   // screen reader see the same state the .active class paints.
@@ -2643,7 +2846,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (options.focus && selected) selected.focus();
     if (tab === "hall") refreshHallSessions();
     if (tab === "harness") loadHarnessSessions();
-    if (tab === "start") refreshOnboarding();
+    if (tab === "start") {
+      refreshOnboarding();
+      // Recent work is a read of the Harness's own list, so it is refreshed on the
+      // way in rather than polled from a pane nobody is looking at.
+      if (Date.now() - startRecentReadAt > 15000) loadStartRecent({ silent: true });
+      updateStartTaskHint();
+    }
   }
 
   // Arrow keys move between tabs, Home/End jump to the ends, and activation follows
@@ -5507,6 +5716,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   loadOpenContextDocs();
   loadProviders();
   refreshOnboarding();
+  loadStartRecent();
   loadSkills();
   loadMcpServers();
   loadHarnessSessions();

@@ -24,13 +24,15 @@ is a bug in the caller, and the `error` kind is already how bugs are shown.
 
 | Container | Pane | Kind | Actions | Line |
 |---|---|---|---|---|
-| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 2590 |
-| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 2850 |
-| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 2864 |
-| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 2874 |
-| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 2888 |
+| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 2652 |
+| `#startRecentState` | Start | `empty` | `Start a session`, `Open Harness` | 2711 |
+| `#startRecentState` | Start | `error` | `Retry`, `Open Harness` | 2776 |
+| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 3059 |
+| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 3073 |
+| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 3083 |
+| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 3097 |
 
-5 call sites across 5 of 5 containers: 2 empty, 2 error, 1 recovery.
+7 call sites across 6 of 6 containers: 3 empty, 3 error, 1 recovery.
 
 ## The paths that were broken before
 
@@ -54,9 +56,9 @@ should not quietly become a pane rewrite:
 
 | Handler | Line |
 |---|---|
-| `installSkill()` | 3157 |
-| `openHarnessDiffModal()` | 4525 |
-| `runMcpPlayground()` | 5001 |
+| `installSkill()` | 3366 |
+| `openHarnessDiffModal()` | 4734 |
+| `runMcpPlayground()` | 5210 |
 
 ## Checks and limits
 

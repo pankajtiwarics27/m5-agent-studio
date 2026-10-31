@@ -1,0 +1,193 @@
+{
+  "schema_version": "1.0.0",
+  "story": "UIUX-P2-02",
+  "statement": "Start shows the five most recent Harness sessions as buttons that open them where they live, painted through the same state table the Harness uses, and offers a composer that carries a task into the Harness without running it. Start reads the session list; it never creates, retitles or deletes a session.",
+  "source": {
+    "frontend": "static/index.html",
+    "server": "app.py",
+    "route": "/api/harness/sessions",
+    "method": "GET"
+  },
+  "status_coverage": [
+    {
+      "status": "blocked",
+      "tone": "danger",
+      "label": "BLOCKED",
+      "app_line": 13532,
+      "occurrences": 1
+    },
+    {
+      "status": "cancelled",
+      "tone": "neutral",
+      "label": "CANCELLED",
+      "app_line": 13407,
+      "occurrences": 7
+    },
+    {
+      "status": "completed",
+      "tone": "ok",
+      "label": "COMPLETED",
+      "app_line": 18592,
+      "occurrences": 4
+    },
+    {
+      "status": "error",
+      "tone": "danger",
+      "label": "ERROR",
+      "app_line": 18723,
+      "occurrences": 4
+    },
+    {
+      "status": "idle",
+      "tone": "info",
+      "label": "READY",
+      "app_line": 2199,
+      "occurrences": 2
+    },
+    {
+      "status": "paused",
+      "tone": "warn",
+      "label": "PAUSED",
+      "app_line": 11583,
+      "occurrences": 11
+    },
+    {
+      "status": "running",
+      "tone": "busy",
+      "label": "WORKFLOW RUNNING",
+      "app_line": 7872,
+      "occurrences": 10
+    },
+    {
+      "status": "waiting_approval",
+      "tone": "warn",
+      "label": "WAITING APPROVAL",
+      "app_line": 7755,
+      "occurrences": 1
+    }
+  ],
+  "session_fields_used": [
+    "id",
+    "title",
+    "status",
+    "step_count",
+    "policy",
+    "workspace_dir",
+    "updated_at"
+  ],
+  "limit": {
+    "declared": true,
+    "applied": true,
+    "value": "5"
+  },
+  "presentations": [
+    {
+      "container": "startRecentState",
+      "kind": "error",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Retry",
+        "Open Harness"
+      ]
+    },
+    {
+      "container": "startRecentState",
+      "kind": "empty",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Start a session",
+        "Open Harness"
+      ]
+    }
+  ],
+  "frontend": {
+    "functions": {
+      "renderStartRecent": true,
+      "loadStartRecent": true,
+      "openHarnessSessionFromStart": true,
+      "launchTaskFromStart": true,
+      "updateStartTaskHint": true
+    },
+    "routes": [
+      "/api/harness/sessions"
+    ],
+    "methods": [],
+    "limit": {
+      "declared": true,
+      "applied": true,
+      "value": "5"
+    },
+    "presentations": [
+      {
+        "container": "startRecentState",
+        "kind": "error",
+        "has_cause": true,
+        "has_context": true,
+        "actions": [
+          "Retry",
+          "Open Harness"
+        ]
+      },
+      {
+        "container": "startRecentState",
+        "kind": "empty",
+        "has_cause": true,
+        "has_context": true,
+        "actions": [
+          "Start a session",
+          "Open Harness"
+        ]
+      }
+    ],
+    "renderer": {
+      "button_rows": true,
+      "no_inline_onclick": true,
+      "uses_state_table": true,
+      "paints_status_via_setStatus": true,
+      "no_badge_class": true,
+      "escapes_text": true
+    },
+    "launcher": {
+      "opens_harness": true,
+      "writes_composer": true,
+      "fetches_nothing": true,
+      "runs_nothing": true,
+      "focuses_composer": true
+    },
+    "hint": {
+      "reads_preflight": true,
+      "names_next_step": true,
+      "states_ready": true,
+      "described_by": true,
+      "element": true,
+      "refreshed_on_recheck": true
+    },
+    "startup": {
+      "loads_on_start": true,
+      "refreshes_on_tab": true
+    },
+    "styles": {
+      "rows": true,
+      "focus_visible": true,
+      "launch": true,
+      "loading": true
+    }
+  },
+  "totals": {
+    "server_statuses": 8,
+    "statuses_with_tone": 8,
+    "recent_limit": 5,
+    "routes_read": 1,
+    "write_methods": 0,
+    "findings": 0
+  },
+  "findings": [],
+  "limits": [
+    "the recent list is the Harness's own ordering (updated_at DESC), not a separate notion of recency invented here",
+    "the launcher hands a task over; whether it runs, and with which workspace and policy, is decided in the Harness",
+    "the browser walk creates and deletes its own sessions, so nothing in this artifact depends on demo state",
+    "a session's step count is what the server stored, not a count the pane recomputes from events"
+  ]
+}
