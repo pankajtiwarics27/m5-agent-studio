@@ -60,6 +60,7 @@ TRACKED_FILES: tuple[tuple[str, str], ...] = (
     ("scripts/check_frontend_syntax.py", "parses the inline script block for syntax errors"),
     ("scripts/uiux_control_inventory.py", "builds and checks the per-pane control inventory"),
     ("scripts/uiux_route_map.py", "maps every fetch call to the route it can hit"),
+    ("scripts/uiux_authorization_trace.py", "traces the authorization and state behind each state-changing call"),
 )
 
 BUTTON_RE = re.compile(

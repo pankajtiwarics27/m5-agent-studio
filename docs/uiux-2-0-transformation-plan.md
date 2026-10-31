@@ -267,9 +267,10 @@ branch-only claims can still race.
 | Item | State |
 |---|---|
 | `UIUX-P0-01`, `P0-02` | done on `main` |
-| `UIUX-P0-03` | marked done on `main` via PR #109, which superseded #104 and separated the runtime work; the merged map still has false-negative caller findings tracked in [#110](https://github.com/pankajtiwarics27/m5-agent-studio/issues/110) |
-| `UIUX-P0-04` | in [PR #111](https://github.com/pankajtiwarics27/m5-agent-studio/pull/111), while the planning session also expressed intent to take it; confirm ownership and resolve #110 before relying on the trace |
-| Review duty | the non-author reviews every story PR; blocking findings on #109 were posted as a comment, not a formal GitHub review |
+| `UIUX-P0-03` | marked done on `main` via PR #109, which superseded #104 and separated the runtime work; false-negative caller findings remain open in [#110](https://github.com/pankajtiwarics27/m5-agent-studio/issues/110) |
+| `UIUX-P0-04` | marked done on `main` via [PR #111](https://github.com/pankajtiwarics27/m5-agent-studio/pull/111); its authorization trace omits the forwarded SDLC calls described in #110 and needs follow-up |
+| `UIUX-P0-05` | the ledger's next recommendation; coordinate the #110 blocker and safe capture prerequisites before proceeding |
+| Review duty | the non-author reviews every story PR; findings on #109 and #111 were posted as comments, not formal GitHub reviews |
 
 **Merge queue.** One story per pull request, reviewed by the other session,
 green on all three CI legs, merged with `gh pr merge <number> --merge` (merge
