@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "3137cb7d05bcbdd29155576bd9952f49172705b85e70a0c0a2484c81bc80a66a",
-      "bytes": 280681,
-      "lines": 4576
+      "sha256": "ad6057a361133a14010a7c7b5bf291c5043dfa65defcb91065a478ddd2e2c50b",
+      "bytes": 283629,
+      "lines": 4639
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "f494a40afcc21523c836d38fd76f2675a778ebab741b50e63403f403ddbfbd77",
-      "bytes": 3018331,
-      "lines": 67605
+      "sha256": "9c517687e7daac868997f23fdcf0a5f1b0487e8af1e2ec363dffc57664896cfa",
+      "bytes": 3021279,
+      "lines": 67668
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -54,9 +54,9 @@
     {
       "path": "scripts/capture_screenshots.mjs",
       "role": "the only accepted way to capture visual evidence",
-      "sha256": "3649238dd1f3ee2f1e70c09c0873cf99c1dccb4c8d74d89b738441fa2767d37d",
-      "bytes": 14839,
-      "lines": 350
+      "sha256": "8e42dcf1528b0efb9a4f3519d0f8288b37589441cbd51f0b34834ba05a772b60",
+      "bytes": 19124,
+      "lines": 433
     },
     {
       "path": "scripts/validate_screenshots.py",
@@ -110,8 +110,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "3137cb7d05bcbdd29155576bd9952f49172705b85e70a0c0a2484c81bc80a66a",
-    "lines": 4576,
+    "sha256": "ad6057a361133a14010a7c7b5bf291c5043dfa65defcb91065a478ddd2e2c50b",
+    "lines": 4639,
     "tab_count": 6,
     "tabs": [
       {

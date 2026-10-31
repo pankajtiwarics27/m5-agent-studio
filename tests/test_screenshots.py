@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import struct
@@ -11,6 +12,10 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
 SCRIPT = ROOT / "scripts" / "validate_screenshots.py"
 CAPTURE = ROOT / "scripts" / "capture_screenshots.mjs"
 MANIFEST = ROOT / "docs" / "media" / "screenshots" / "manifest.json"
@@ -377,3 +382,95 @@ def test_capture_plan_rejects_non_demo_url_without_printing_it(url: str) -> None
     )
     assert result.returncode != 0
     assert url not in result.stdout + result.stderr
+
+
+# ---------------------------------------------------------------------------
+# Variant captures (UIUX-P1-01): a theme or a density is photographed, not described
+# ---------------------------------------------------------------------------
+
+
+def _plan_with(*flags: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["node", str(CAPTURE), "--dry-run", *flags],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        cwd=ROOT,
+    )
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is not installed")
+def test_a_variant_capture_plans_a_subset_in_manifest_order() -> None:
+    result = _plan_with("--panes", "chat,start")
+    assert result.returncode == 0, result.stderr
+    plan = json.loads(result.stdout)
+    # A subset keeps the manifest's order, so two variants of the same pane are comparable.
+    assert [shot["id"] for shot in plan["shots"]] == ["start", "chat"]
+    assert plan["variant"] == {"theme": None, "density": None}
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is not installed")
+def test_a_variant_capture_records_the_theme_and_density_it_emulated() -> None:
+    result = _plan_with("--emulate-theme", "light", "--emulate-density", "compact")
+    assert result.returncode == 0, result.stderr
+    plan = json.loads(result.stdout)
+    assert plan["variant"] == {"theme": "light", "density": "compact"}
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is not installed")
+def test_a_narrow_viewport_keeps_the_declared_scale() -> None:
+    result = _plan_with("--viewport", "900x800")
+    assert result.returncode == 0, result.stderr
+    plan = json.loads(result.stdout)
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    assert plan["viewport"]["width"] == 900
+    assert plan["viewport"]["height"] == 800
+    # The device scale is a property of the capture, not of the window it emulates.
+    assert plan["viewport"]["device_scale_factor"] == manifest["viewport"]["device_scale_factor"]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is not installed")
+@pytest.mark.parametrize(
+    "flags, expected",
+    [
+        (("--panes", "nope"), "does not plan"),
+        (("--emulate-theme", "sepia"), "dark, light"),
+        (("--emulate-density", "tiny"), "comfortable, compact"),
+        (("--viewport", "wide"), "must look like"),
+        (("--viewport", "100x100"), "floor"),
+    ],
+)
+def test_an_impossible_variant_is_refused(flags: tuple[str, ...], expected: str) -> None:
+    """Fail closed: a variant nobody can photograph is an error, not a silent no-op.
+
+    Each of these would otherwise produce a set that looks like evidence for a
+    theme or size that was never rendered.
+    """
+    result = _plan_with(*flags)
+    assert result.returncode != 0
+    assert expected in (result.stderr + result.stdout)
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is not installed")
+def test_a_variant_index_describes_the_images_beside_it() -> None:
+    """Committed variant evidence must not drift from its own index."""
+    directories = sorted(path for path in (ROOT / "docs" / "media" / "tokens").glob("*") if path.is_dir())
+    assert directories, "the token evidence directories are missing"
+    for directory in directories:
+        index = json.loads((directory / "index.json").read_text(encoding="utf-8"))
+        assert index["variant"]["theme"] or index["variant"]["density"], directory
+        for shot in index["shots"]:
+            data = (directory / shot["file"]).read_bytes()
+            assert len(data) == shot["bytes"], f"{directory.name}/{shot['file']} size drifted"
+            assert _sha256(data) == shot["sha256"], f"{directory.name}/{shot['file']} content drifted"
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is not installed")
+def test_variant_capture_requires_a_separate_output_directory() -> None:
+    result = subprocess.run(
+        ["node", str(CAPTURE), "--base-url", "http://127.0.0.1:1", "--token", "t" * 32,
+         "--panes", "start"],
+        capture_output=True, text=True, timeout=10, cwd=ROOT,
+    )
+    assert result.returncode != 0
+    assert "separate --out directory" in result.stderr

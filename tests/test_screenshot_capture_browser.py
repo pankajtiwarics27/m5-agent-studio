@@ -105,6 +105,7 @@ def _run(
     *,
     token: str = TOKEN,
     manifest: Path | None = None,
+    flags: tuple[str, ...] = (),
 ):
     return subprocess.run(
         [
@@ -120,6 +121,7 @@ def _run(
             str(manifest or ROOT / "docs/media/screenshots/manifest.json"),
             "--timeout-ms",
             "4000",
+            *flags,
         ],
         cwd=ROOT,
         env=env,
@@ -200,6 +202,7 @@ def test_capture_positive_and_cross_origin_frame_is_not_seeded(
         "api-redirect",
         "late-navigation",
         "browser-unauthenticated",
+        "variant-not-applied",
         "error-document",
     ],
 )
@@ -280,6 +283,9 @@ def test_capture_rejects_invalid_pages_auth_and_redirects(
                 token="incorrect-synthetic-token-0123456789"
                 if kind == "bad-token"
                 else TOKEN,
+                flags=("--emulate-theme", "light")
+                if kind == "variant-not-applied"
+                else (),
             )
     assert result.returncode != 0, result.stdout
     assert list(out.glob("*.png")) == []
@@ -295,6 +301,8 @@ def test_capture_rejects_invalid_pages_auth_and_redirects(
         assert "did not require authentication" in result.stderr
     if kind == "browser-unauthenticated":
         assert "browser could not authenticate" in result.stderr
+    if kind == "variant-not-applied":
+        assert "theme or density was not applied" in result.stderr
     if kind == "error-document":
         assert "direct successful HTML" in result.stderr
     if kind in {"redirect", "api-redirect", "late-navigation"}:
@@ -355,6 +363,30 @@ def test_real_isolated_demo_captures_all_six_panes(
             for entry in json.loads((out / "index.json").read_text())["shots"]
         ] == list(TABS)
         assert banner["token"] not in result.stdout + result.stderr
+        variant_out = tmp_path / "variant-capture"
+        variant = _run(
+            banner["url"],
+            variant_out,
+            browser_env,
+            token=banner["token"],
+            flags=(
+                "--panes",
+                "chat,start",
+                "--emulate-theme",
+                "light",
+                "--emulate-density",
+                "compact",
+                "--viewport",
+                "900x800",
+            ),
+        )
+        assert variant.returncode == 0, variant.stderr
+        index = json.loads((variant_out / "index.json").read_text())
+        assert index["variant"] == {"theme": "light", "density": "compact"}
+        assert index["viewport"]["width"] == 900 and index["viewport"]["height"] == 800
+        assert [entry["tab"] for entry in index["shots"]] == ["start", "chat"]
+        assert {p.name for p in variant_out.glob("*.png")} == {"start.png", "chat.png"}
+        assert banner["token"] not in variant.stdout + variant.stderr
         assert sentinel.read_bytes() == before
         assert [p for p in store.rglob("*") if p.is_file()] == [sentinel]
     finally:

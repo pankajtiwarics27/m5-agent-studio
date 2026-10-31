@@ -146,6 +146,12 @@ attestation of server identity or image contents. Use only a trusted, isolated d
 command-line tokens are visible to other local processes, so never pass a real
 credential. `--dry-run` prints the capture plan without a browser.
 
+For variants, use `--panes start,chat`, `--emulate-theme light`,
+`--emulate-density compact`, or `--viewport 900x800` with a separate `--out`
+directory. The theme and density preferences are seeded in the main frame and
+checked on the rendered body; existing variant images also predate these safety
+checks. See [`media/tokens/README.md`](media/tokens/README.md).
+
 To run the opt-in browser regressions, set `STUDIO_SCREENSHOT_CHROME` and
 `STUDIO_PUPPETEER_CORE` (plus the platform-specific flags above if needed), then
 run `python3 -m pytest -q tests/test_screenshot_capture_browser.py`. They use

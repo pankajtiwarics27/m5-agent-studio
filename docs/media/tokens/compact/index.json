@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "captured_at": "2026-10-31T18:44:00.092Z",
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "device_scale_factor": 2
+  },
+  "variant": {
+    "theme": null,
+    "density": "compact"
+  },
+  "shots": [
+    {
+      "id": "start",
+      "tab": "start",
+      "file": "start.png",
+      "bytes": 350153,
+      "sha256": "82b8630b2ec71c06a03d5211df7fcabcc32513726c7f048a7e5bbfa6b3564e1f"
+    },
+    {
+      "id": "chat",
+      "tab": "chat",
+      "file": "chat.png",
+      "bytes": 248259,
+      "sha256": "23b1e17434202f87383c3246118acf3b212f6b2801bbe4c3753591bd0287a5c1"
+    }
+  ]
+}
