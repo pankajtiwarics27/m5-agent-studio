@@ -242,10 +242,12 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   *observed* violations: a missing image or a container that cannot see the shared
   workspace is `blocked` (a setup gap must never read as a security failure), and
   `--dry-run` prints every command without executing any of them. The record binds the repository
-  revision, OS build, chip, RAM and detected runtime into JSON and Markdown. **No
+  revision, OS build, chip and RAM, and — for the sandbox — the runtime version,
+  image content id and repo digest and the product's hardening flags, so a tag
+  re-pulled to a different digest cannot inherit an old qualification. **No
   container-isolation or 24 GB claim is made anywhere in this repository**, both
   stories stay `blocked` in the roadmap until the owner produces a qualified record
-  on the target machine. Pinned by 78 tests (`tests/test_qualify_environment.py`)
+  on the target machine. Pinned by 94 tests (`tests/test_qualify_environment.py`)
   and documented in [`docs/qualification-suite.md`](docs/qualification-suite.md)
   (ADR-0010).
 - **A second heavy local model request is refused by policy in the serving path

@@ -44,7 +44,9 @@ argv:
 10. dropped capabilities hold (raw sockets refused);
 11. the suite's own container flags equal the product's, checked at run time;
 12. no silent host fallback: without a working runtime the product path denies;
-13. ``scripts/isolation_smoke.py --live`` exits 0 with its own checks.
+13. ``scripts/isolation_smoke.py --live`` exits 0 with its own checks;
+14. the record is bound to what it measured: runtime version, image content id and
+    repo digest, the product's hardening flags, and the git revision.
 
 Hardware suite (M5-P4-01):
 
@@ -371,6 +373,78 @@ def environment_fingerprint() -> dict[str, Any]:
     }
 
 
+def _first_non_empty_line(text: str) -> str:
+    return next((line.strip() for line in text.splitlines() if line.strip()), "")
+
+
+def runtime_version(runtime: str, *, timeout: float = 30.0) -> str:
+    """The runtime's own version line, e.g. ``Docker version 27.3.1, build ...``.
+
+    Recorded because a guarantee qualified on one runtime build is not a claim
+    about the next one: after an upgrade the same record no longer describes the
+    machine. An unreadable version yields ``""`` rather than an invented one.
+    """
+    if not runtime:
+        return ""
+    proc = run_command([runtime, "--version"], timeout=timeout)
+    # stdout only: an error message on stderr is not a version, and recording one
+    # as the version would mis-bind the evidence.
+    return _first_non_empty_line(proc.stdout or "")
+
+
+def parse_image_identity(stdout: str) -> dict[str, Any]:
+    """Extract the image content id and digest from ``image inspect`` output.
+
+    ``python:3.12-slim`` can be re-pulled to a different digest, so a record that
+    names only the tag cannot say what the probes ran in. Unreadable or
+    non-JSON output yields ``{}``: an absent id is visible, a fabricated one is
+    not.
+    """
+    try:
+        payload = json.loads(stdout or "[]")
+    except json.JSONDecodeError:
+        return {}
+    entry = payload[0] if isinstance(payload, list) and payload else payload
+    if not isinstance(entry, dict):
+        return {}
+    digests = [str(item) for item in entry.get("RepoDigests") or [] if str(item)]
+    tags = [str(item) for item in entry.get("RepoTags") or [] if str(item)]
+    return {
+        "image_id": str(entry.get("Id") or ""),
+        "image_digest": digests[0] if digests else "",
+        "image_tags": tags,
+    }
+
+
+def sandbox_config_fingerprint(studio: Any) -> dict[str, Any]:
+    """The hardening configuration the *product* builds, as a comparable set.
+
+    Read from ``app._sandbox_command`` itself, so the fingerprint cannot drift
+    from the argv the product actually runs. Values of the limit flags are kept
+    because ``--memory=2g`` and ``--memory=8g`` are different configurations.
+    """
+    if studio is None or not hasattr(studio, "_sandbox_command"):
+        return {}
+    import unittest.mock  # noqa: PLC0415 - only needed for this fingerprint
+
+    with tempfile.TemporaryDirectory(prefix="m5-qualify-config-") as td:
+        with unittest.mock.patch.object(studio, "STUDIO_SANDBOX_RUNTIME", "/bin/sh"):
+            argv = studio._sandbox_command(Path(td), "print(1)", container_name="m5-qualify-config")
+    flags = sorted({part.split("=", 1)[0] for part in argv if part.startswith("--")})
+    limits = {
+        part.split("=", 1)[0]: part.split("=", 1)[1]
+        for part in argv
+        if part.startswith("--") and "=" in part
+        and part.split("=", 1)[0] in {"--memory", "--cpus", "--pids-limit", "--network", "--ipc", "--pull"}
+    }
+    return {
+        "hardening_flags": flags,
+        "limits": limits,
+        "bind_mounts": len([part for part in argv if part.startswith("type=bind")]),
+        "privileged": any("--privileged" in part for part in argv),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Process helpers
 # ---------------------------------------------------------------------------
@@ -686,11 +760,16 @@ def sandbox_suite(
     runtime_name: str,
     image: str,
     timeout: float,
-) -> None:
-    """Record the M5-P3-01 checks for one detected runtime."""
+) -> dict[str, Any]:
+    """Record the M5-P3-01 checks for one detected runtime.
+
+    Returns the identity of what was measured (runtime version, image id and
+    digest, product config) so the evidence record can be bound to it.
+    """
     studio = _product_sandbox_module()
     usable = bool(runtime) and bool(runtime_name)
     runtime_ok = False
+    identity: dict[str, Any] = {"runtime": runtime_name, "runtime_path": runtime, "image": image}
 
     if not usable:
         recorder.record(
@@ -706,6 +785,7 @@ def sandbox_suite(
             info = run_command([runtime, "info"], timeout=min(timeout, 60.0))
             detail = (version.stdout or version.stderr or "").strip().splitlines()[:1]
             label = detail[0] if detail else runtime_name
+            identity["runtime_version"] = _first_non_empty_line(version.stdout or "")
             return info.returncode == 0, f"{label} (info exit {info.returncode})"
 
         result = recorder.check(
@@ -715,6 +795,7 @@ def sandbox_suite(
             _runtime_probe,
         )
         runtime_ok = result.status == STATUS_PASS
+
 
     image_reason = "" if runtime_ok else "no reachable container runtime"
 
@@ -733,12 +814,17 @@ def sandbox_suite(
                 ),
             )
             return
+        identity.update(parse_image_identity(inspected.stdout or ""))
         recorder.record(
             "p3.image.local",
             STORY_P3,
             "configured sandbox image is already present",
             STATUS_PASS,
-            detail=f"image {image!r} present",
+            detail=(
+                f"image {image!r} present"
+                + (f" (id {str(identity.get('image_id'))[:19]})" if identity.get("image_id") else "")
+            ),
+            evidence={"image_id": identity.get("image_id", ""), "image_digest": identity.get("image_digest", "")},
         )
 
     if image_reason:
@@ -752,6 +838,44 @@ def sandbox_suite(
     else:
         _image_probe()
     image_ok = recorder.results[-1].status == STATUS_PASS
+
+    # Binding: the record must say *what* it measured. An identity that cannot be
+    # read is a readability gap (blocked), never an accusation that a guarantee
+    # failed — but without it the evidence cannot be attributed to this machine.
+    if not runtime_ok:
+        recorder.record(
+            "p3.environment.bind",
+            STORY_P3,
+            "evidence is bound to this runtime, image and product configuration",
+            STATUS_SKIP,
+            detail="no reachable container runtime",
+        )
+    else:
+        config = sandbox_config_fingerprint(studio)
+        identity["config"] = config
+        problems: list[str] = []
+        if not identity.get("runtime_version"):
+            problems.append(f"`{runtime_name} --version` reported nothing")
+        if not identity.get("image_id"):
+            problems.append(f"`{runtime_name} image inspect {image}` yielded no image id")
+        if not config:
+            problems.append("the product's sandbox argv could not be read (is `app` importable?)")
+        detail = (
+            f"runtime={identity.get('runtime_version') or 'unknown'}; "
+            f"image_id={str(identity.get('image_id') or 'unknown')[:19]}; "
+            f"digest={identity.get('image_digest') or 'none recorded'}; "
+            f"config: {len(config.get('hardening_flags') or [])} flags "
+            f"{config.get('limits') or {}}, bind mounts={config.get('bind_mounts')}, "
+            f"privileged={config.get('privileged')}"
+        )
+        recorder.record(
+            "p3.environment.bind",
+            STORY_P3,
+            "evidence is bound to this runtime, image and product configuration",
+            STATUS_PASS if not problems else STATUS_BLOCKED,
+            detail=detail if not problems else f"{detail}; " + "; ".join(problems),
+            evidence=dict(identity),
+        )
 
     with tempfile.TemporaryDirectory(prefix="m5-qualify-ws-") as workspace_dir:
         workspace = Path(workspace_dir)
@@ -1055,6 +1179,8 @@ def sandbox_suite(
         "scripts/isolation_smoke.py --live passes", _smoke,
         skip_reason="" if runtime_ok else "no reachable container runtime",
     )
+
+    return identity
 
 
 # ---------------------------------------------------------------------------
@@ -1734,6 +1860,7 @@ def build_record(
     runtime_path: str,
     image: str,
     invocation: Sequence[str],
+    sandbox_identity: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble the JSON evidence record."""
     verdicts: dict[str, Any] = {}
@@ -1755,10 +1882,18 @@ def build_record(
         "invocation": list(invocation),
         "suites": list(suites),
         "fingerprint": fingerprint,
+        # The machine block binds the record to this OS/CPU/RAM/revision; the
+        # sandbox block binds it to the runtime build, the image content and the
+        # hardening configuration that was actually probed.
         "sandbox": {
             "runtime": runtime_name,
             "runtime_path": runtime_path,
             "image": image,
+            **{
+                key: value
+                for key, value in (sandbox_identity or {}).items()
+                if key not in {"runtime", "runtime_path", "image"}
+            },
         },
         "checks": [result.to_dict() for result in recorder.results],
         "verdicts": verdicts,
@@ -1794,6 +1929,31 @@ def render_markdown(record: dict[str, Any]) -> str:
             f"- runtime: `{record['sandbox']['runtime'] or 'none detected'}`"
             f" ({record['sandbox']['runtime_path'] or 'not on PATH'})",
             f"- image: `{record['sandbox']['image']}`",
+            *(
+                [f"- image id: `{record['sandbox']['image_id']}`"]
+                if record["sandbox"].get("image_id")
+                else ["- image id: not recorded"]
+            ),
+            *(
+                [f"- image digest: `{record['sandbox']['image_digest']}`"]
+                if record["sandbox"].get("image_digest")
+                else []
+            ),
+            *(
+                [f"- runtime version: {record['sandbox']['runtime_version']}"]
+                if record["sandbox"].get("runtime_version")
+                else []
+            ),
+            *(
+                [
+                    f"- product config: {len(record['sandbox']['config'].get('hardening_flags') or [])} "
+                    f"hardening flags {record['sandbox']['config'].get('limits') or {}}, "
+                    f"{record['sandbox']['config'].get('bind_mounts')} bind mount(s), "
+                    f"privileged={record['sandbox']['config'].get('privileged')}"
+                ]
+                if record["sandbox"].get("config")
+                else []
+            ),
             "",
             "## Checks",
             "",
@@ -1908,6 +2068,8 @@ def render_plan(*, suites: Sequence[str], runtime_name: str, image: str, args: a
                 f"     then `{runtime} ps --quiet --filter name=^<name>$`",
                 "  8. product argv and fail-closed probes through app._sandbox_command / _execute_limited",
                 f"  9. {sys.executable} scripts/isolation_smoke.py --live",
+                " 10. bind the record to what ran: the runtime version, the image content id and",
+                "     digest from `image inspect`, and the product's hardening flags from app",
                 "",
                 "  Every probe runs in a throwaway directory under the system temp dir with",
                 "  --network=none --read-only --cap-drop=ALL --pull=never; nothing outside it is",
@@ -1991,11 +2153,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     runtime_path, runtime_name = ("", "")
+    sandbox_identity: dict[str, Any] = {}
     if STORY_P3 in suites:
         print("\n== M5-P3-01 sandbox backend qualification ==")
         runtime_path, runtime_name = detect_runtime(args.runtime)
         print(f"  runtime: {runtime_name or 'none'} ({runtime_path or 'not on PATH'})")
-        sandbox_suite(
+        sandbox_identity = sandbox_suite(
             recorder,
             runtime=runtime_path,
             runtime_name=runtime_name,
@@ -2035,6 +2198,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runtime_path=runtime_path,
         image=args.image,
         invocation=["qualify_environment.py", *(sys.argv[1:] if argv is None else argv)],
+        sandbox_identity=sandbox_identity,
     )
 
     print("\n== Verdicts ==")
