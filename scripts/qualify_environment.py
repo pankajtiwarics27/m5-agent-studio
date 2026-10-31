@@ -286,6 +286,18 @@ def _total_memory_bytes() -> int | None:
     return None
 
 
+def _vm_stat_key(label: str) -> str:
+    """Normalise a ``vm_stat`` label into a stable snapshot key.
+
+    macOS 26 quotes some labels (``"Translation faults": 100.``) and not others,
+    so stripping only whitespace produced a key with literal quote characters
+    inside it. One record then had both ``translation_faults``-shaped neighbours
+    and a key named with quotes, which is not something a consumer should have to
+    guess about.
+    """
+    return label.strip().strip("\"").strip("'").strip().lower().replace(" ", "_")
+
+
 def _meminfo_snapshot() -> dict[str, int]:
     """Best-effort memory counters, in bytes, for the current platform."""
     snapshot: dict[str, int] = {}
@@ -301,9 +313,7 @@ def _meminfo_snapshot() -> dict[str, int]:
                         page_size = int(match.group(1))
                 parts = line.split(":")
                 if len(parts) == 2 and parts[1].strip().rstrip(".").isdigit():
-                    snapshot[parts[0].strip().lower().replace(" ", "_")] = (
-                        int(parts[1].strip().rstrip(".")) * page_size
-                    )
+                    snapshot[_vm_stat_key(parts[0])] = int(parts[1].strip().rstrip(".")) * page_size
         swap = _capture(["sysctl", "-n", "vm.swapusage"])
         if swap:
             total = re.search(r"total = ([\d.]+)M", swap)
