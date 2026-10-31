@@ -155,8 +155,11 @@ checks. See [`media/tokens/README.md`](media/tokens/README.md).
 To run the opt-in browser regressions, set `STUDIO_SCREENSHOT_CHROME` and
 `STUDIO_PUPPETEER_CORE` (plus the platform-specific flags above if needed), then
 run `python3 -m pytest -q tests/test_screenshot_capture_browser.py`. They use
-synthetic tokens and loopback servers, plus a demo in a disposable source copy;
-they skip when the browser paths are not configured.
+synthetic tokens and loopback servers, plus a demo in a disposable source copy.
+They skip locally when browser paths are not configured. CI installs the locked
+browser dependencies from `tests/browser` and runs them in a dedicated job where
+missing tooling or any skipped test fails the job. Passing these tests does not
+verify historical screenshot provenance.
 
 `validate_screenshots.py` checks the set's file consistency over time:
 

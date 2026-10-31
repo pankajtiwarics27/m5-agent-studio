@@ -32,6 +32,8 @@ def browser_env(tmp_path: Path) -> dict[str, str]:
     if not os.environ.get("STUDIO_SCREENSHOT_CHROME") or not os.environ.get(
         "STUDIO_PUPPETEER_CORE"
     ):
+        if os.environ.get("M5_REQUIRE_BROWSER_TESTS") == "1":
+            pytest.fail("browser regressions are required but Chromium or puppeteer-core is not configured")
         pytest.skip(
             "set STUDIO_SCREENSHOT_CHROME and STUDIO_PUPPETEER_CORE for browser regressions"
         )

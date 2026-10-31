@@ -1,0 +1,10 @@
+{
+  "name": "m5-browser-regression-tests",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Pinned browser tooling for isolated screenshot safety regressions",
+  "dependencies": {
+    "@sparticuz/chromium": "153.0.0",
+    "puppeteer-core": "25.16.0"
+  }
+}
