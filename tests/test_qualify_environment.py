@@ -246,11 +246,12 @@ def test_container_argv_carries_every_hardening_flag(tmp_path: Path) -> None:
     assert "target=/workspace" in binds[0]
 
 
-def test_container_argv_matches_the_product_hardening_flags(tmp_path: Path) -> None:
+def test_container_argv_matches_the_product_hardening_flags(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The suite must not qualify a sandbox the product does not actually build."""
     import unittest.mock
 
     studio = pytest.importorskip("app")
+    monkeypatch.setattr(studio, "HARNESS_STORE_DIR", tmp_path / "harness-sessions")
     with unittest.mock.patch.object(studio, "STUDIO_SANDBOX_RUNTIME", "/bin/sh"):
         product = studio._sandbox_command(tmp_path, "print(1)", container_name="m5-test")
     product_joined = " ".join(product)
@@ -307,11 +308,12 @@ def _run_sandbox_suite(monkeypatch: pytest.MonkeyPatch, *, behaviour: dict[str, 
     return recorder
 
 
-def test_suite_argv_matches_the_product_argv(tmp_path: Path) -> None:
+def test_suite_argv_matches_the_product_argv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The suite must probe the sandbox the product actually builds."""
     import unittest.mock
 
     studio = pytest.importorskip("app")
+    monkeypatch.setattr(studio, "HARNESS_STORE_DIR", tmp_path / "harness-sessions")
     with unittest.mock.patch.object(studio, "STUDIO_SANDBOX_RUNTIME", "/bin/sh"):
         product = studio._sandbox_command(tmp_path, "print(1)", python_code=True, container_name="m5-test")
     suite = qe.container_argv("docker", studio.STUDIO_SANDBOX_IMAGE, tmp_path, "print(1)", name="m5-test")

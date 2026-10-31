@@ -12,6 +12,12 @@ from fastapi.testclient import TestClient
 import app as studio
 
 
+@pytest.fixture(autouse=True)
+def _isolate_harness_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep security tests from writing the source checkout's harness store."""
+    monkeypatch.setattr(studio, "HARNESS_STORE_DIR", tmp_path / "harness-sessions")
+
+
 class MemoryKeyring:
     def __init__(self) -> None:
         self.values: dict[tuple[str, str], str] = {}

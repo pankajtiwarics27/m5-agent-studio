@@ -71,6 +71,7 @@ def test_build_container_invocation_matches_app_sandbox_command_and_rejects_unsa
 
     workspace = tmp_path / "workspace"
     workspace.mkdir()
+    monkeypatch.setattr(studio, "HARNESS_STORE_DIR", tmp_path / "harness-sessions")
     monkeypatch.setattr(studio.shutil, "which", lambda _rt: "/usr/bin/docker")
     monkeypatch.setattr(studio, "STUDIO_SANDBOX_IMAGE", "python:3.12-slim")
 

@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import json
+import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -25,8 +27,11 @@ ROOT = Path(__file__).resolve().parents[1]
 SIGNOFF_DOC = ROOT / "docs" / "security-review-signoff.md"
 ROADMAP_JSON = ROOT / "product" / "M5_2_0_Autonomous_Roadmap.json"
 HW_DOC = ROOT / "docs" / "m5-2-0-hardware-qualification-evidence.md"
-GATE_CLI = ROOT / "scripts" / "security_release_gate.py"
-RELEASE_CLI = ROOT / "scripts" / "release.py"
+
+
+@pytest.fixture(autouse=True)
+def _isolate_harness_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(studio, "HARNESS_STORE_DIR", tmp_path / "harness-sessions")
 
 
 def _init_git_repo(repo: Path) -> None:
@@ -448,10 +453,26 @@ def test_sdlc_confined_helpers_reject_symlinks_and_quarantined_workspaces(
 
 
 def test_security_release_gate_cli_and_release_py_gate_enforce_block_vs_ready(tmp_path: Path) -> None:
-    # Default verify-invariants mode exits 0 on current repo (gate_invariants_satisfied=True)
+    # The CLI's fault suite imports the app in a new process. Use a source copy:
+    # monkeypatching the parent app cannot isolate the child's harness store.
+    source = tmp_path / "source"
+    source.mkdir()
+    for module in ROOT.glob("*.py"):
+        shutil.copy2(module, source / module.name)
+    for directory in ("docs", "product", "scripts", "static"):
+        shutil.copytree(ROOT / directory, source / directory, ignore=shutil.ignore_patterns("__pycache__"))
+    home = tmp_path / "home"
+    home.mkdir()
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env.update({"HOME": str(home), "STUDIO_DB_PATH": str(home / "studio.db")})
+    gate_cli = source / "scripts" / "security_release_gate.py"
+    release_cli = source / "scripts" / "release.py"
+    # Default verify-invariants mode exits 0 (gate_invariants_satisfied=True).
     proc_verify = subprocess.run(
-        [sys.executable, str(GATE_CLI), "--json"],
-        cwd=str(ROOT),
+        [sys.executable, str(gate_cli), "--json"],
+        cwd=str(source),
+        env=env,
         capture_output=True,
         text=True,
         check=False,
@@ -463,8 +484,9 @@ def test_security_release_gate_cli_and_release_py_gate_enforce_block_vs_ready(tm
 
     # --enforce mode exits 1 because sign-off is deferred & M5-P3-01 is blocked
     proc_enforce = subprocess.run(
-        [sys.executable, str(GATE_CLI), "--enforce", "--skip-fault-suite", "--json"],
-        cwd=str(ROOT),
+        [sys.executable, str(gate_cli), "--enforce", "--skip-fault-suite", "--json"],
+        cwd=str(source),
+        env=env,
         capture_output=True,
         text=True,
         check=False,
@@ -475,17 +497,18 @@ def test_security_release_gate_cli_and_release_py_gate_enforce_block_vs_ready(tm
     proc_pkg = subprocess.run(
         [
             sys.executable,
-            str(RELEASE_CLI),
+            str(release_cli),
             "package",
             "--version",
             "9.0.1",
             "--artifact",
-            str(ROOT / "studio.py"),
+            str(source / "studio.py"),
             "--output",
             str(tmp_path / "dist_rel"),
             "--require-release-gate",
         ],
-        cwd=str(ROOT),
+        cwd=str(source),
+        env=env,
         capture_output=True,
         text=True,
         check=False,
