@@ -29,6 +29,7 @@ import pytest
 import artifact_lineage
 import mcp_client
 import process_supervision
+import routing_policy
 import sandbox_boundary
 import scoped_grants
 
@@ -87,6 +88,9 @@ def _write_artifacts(root: Path) -> None:
         trust="trusted",
         size=12,
     )
+def _write_handoffs(root: Path) -> None:
+    store = routing_policy.PortableHandoffStore(root)
+    store.reserve_switch_attempt("sess-contract")
 
 
 WriteFn = Callable[[Path], None]
@@ -124,6 +128,12 @@ STORE_CASES: list[tuple[str, WriteFn, Path, ErrorCls]] = [
         Path("artifacts") / "state.json",
         artifact_lineage.ArtifactLineageIntegrityError,
     ),
+    (
+        "handoffs",
+        _write_handoffs,
+        Path("handoffs") / "state.json",
+        routing_policy.HandoffStoreIntegrityError,
+    ),
 ]
 _CASES = [pytest.param(w, rel, err, id=name) for name, w, rel, err in STORE_CASES]
 
@@ -148,6 +158,7 @@ def test_every_module_with_a_durable_state_file_is_covered() -> None:
         "mcp_effects": "mcp_client",
         "security_incidents": "sandbox_boundary",
         "artifacts": "artifact_lineage",
+        "handoffs": "routing_policy",
     }
     covered = {
         covered_modules[relative.parts[0]] for _name, _write, relative, _err in STORE_CASES

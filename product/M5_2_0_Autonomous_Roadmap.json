@@ -127,7 +127,7 @@
     "last_completed_story": "M5-P5-02",
     "last_checkpoint": "2026-10-31T10:20:00Z",
     "last_session_id": "arena/6da06a20-m5-agent-studio",
-    "next_recommended_story": "M5-P5-03",
+    "next_recommended_story": "M5-P4-03",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). The operator-run suite scripts/qualify_environment.py --sandbox (docs/qualification-suite.md, ADR-0010) is now the qualification path; M5-P3-01 stays blocked until it returns qualified on a Docker/Podman host.",
@@ -143,10 +143,10 @@
       "Process supervision and containment (process_supervision.py, M5-P3-03, ADR-0013) tracks process groups, ppid descendants, and M5_SUPERVISION_ID detached trees within a single Studio process; in STUDIO_EXECUTION_MODE=host a deliberately adversarial child that scrubs M5_SUPERVISION_ID and double-forks before tree enumeration cannot be kernel-guaranteed without OS cgroups/PID namespaces (M5-P3-01).",
       "M5-P3-02 review, third pass (on the first fix's own code): the inline-payload inspection added in PR #62 still had two holes, found by re-testing it adversarially. (a) The wrapper skip consumed only tokens starting with '-', so for wrappers whose option takes a separate value the option's VALUE was read as the executable: `env -u HOME sh -c 'cat .env'`, `nice -n 5 sh -c ...`, `time -f %s sh -c ...` all skipped the shell entirely. (b) The inline-code path scan matched only paths containing a separator, so a bare secret name in interpreter code (`node --eval 'require(\"fs\").readFileSync(\".env\")'`, `perl -e'open(F,\".env\")'`) was invisible. Fixed by resolving wrapper options with their values (_ep_skip_wrapper), accepting the glued `-e<payload>` form, matching bare dotted names, and refusing a shell asked to read its command from stdin (`-s`). The lesson generalises: a fix for a security boundary needs the same adversarial pass as the code it replaced.",
       "M5-P3-02 review, fourth pass: the `.git/config` fix (#63) judged configuration as a FILE, but git accepts the same directives in-band. `git -c include.path=/tmp/evil.cfg status` was allowed: the command-line guard was a regex over the raw text, so it missed `include.path` entirely, and shell quoting (`git -c core.\"fs\"monitor=...`) defeats text matching even for the keys it did list. `-c`, glued `-ckey=value`, `--config-env`, `git config key value` and `GIT_CONFIG_KEY_<n>`/`GIT_CONFIG_PARAMETERS` are now judged from parsed tokens against one shared predicate (_ep_git_config_key_is_dangerous) used by both the file parser and the command scanner, so the two cannot drift again. Same lesson as the previous pass: a security fix has to cover every way the underlying tool accepts the setting, not just the way the report named.",
-      "Program blockage after M5-P5-02 (recorded 2026-10-31): every remaining mandatory story is transitively blocked on M5-P4-01, whose acceptance criterion '24 GB pressure measured' is unmeasured in this environment. M5-P4-02 (#78, other session) claims otherwise while its declared dependency is 'blocked'; that claim needs an explicit decision recorded, not an implicit exception. Until the hardware measurement exists (or M5-P4-01 is explicitly re-scoped), no mandatory story can be claimed without violating the dependency rule."
+      "Program state after M5-P5-02 (#81) and M5-P4-02 (#78) both merged (recorded 2026-10-31): M5-P4-03 is the only mandatory story with all dependencies done. M5-P5-03 ('Fault-injection and security release gate') becomes claimable once M5-P4-03 lands. M5-P4-01 stays 'blocked' on its unmeasured '24 GB pressure' acceptance criterion (operator-run scripts/qualify_environment.py --hardware on a 24 GB machine); P4-02 was completed on #78 before that criterion was met, so P4-01's blockage and P4-02's completion now coexist in the ledger and an explicit decision is still owed on whether P4-02's acceptance depended on it."
     ],
-    "last_readme_sync": "2026-10-31T06:15:00Z",
-    "last_verified_commit": "d642bb0",
+    "last_readme_sync": "2026-10-31T07:55:00Z",
+    "last_verified_commit": "6242f95",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md",
     "last_updated": "2026-10-31",
     "active_stories": []
@@ -222,9 +222,9 @@
         "M5-P4-02",
         "M5-P4-03"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
-      "progress_percent": 0
+      "progress_percent": 33
     },
     {
       "id": "P5",
@@ -234,9 +234,9 @@
         "M5-P5-02",
         "M5-P5-03"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
-      "progress_percent": 0
+      "progress_percent": 33
     },
     {
       "id": "P6",
@@ -2834,22 +2834,50 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P4-02: Portable handoff and conservative switching. Objective: Allow safe sequential model switches without losing task authority. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Persist portable core and harness-private extensions; Validate handoff references, source versions and permissions; Use selective semantic confirmation for high-risk transitions; Fence old worker and bound retries. Acceptance: No KV cache portability assumption; Switch preserves budgets and grants validity; Failed handoff leaves safe paused state. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-10-31T06:50:00Z",
+        "updated_at": "2026-10-31T07:55:00Z",
+        "completed_at": "2026-10-31T07:55:00Z",
+        "owner_session": "arena/3bd28b17-m5-agent-studio",
+        "commit_sha": "6d6a953",
+        "changed_files": [
+          "routing_policy.py",
+          "app.py",
+          "scripts/build_studio.py",
+          "studio.py",
+          "tests/test_durable_state_contract.py",
+          "tests/test_portable_handoff_and_switching.py",
+          "docs/adr/0018-portable-handoff-and-conservative-switching.md",
+          "docs/portable-handoff-switching.md",
+          "docs/storage-migrations.md",
+          "docs/README.md",
+          "docs/route-security-matrix.md",
+          "docs/subsystem-dependency-inventory.md",
+          "README.md",
+          "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "AC1 (No KV cache portability assumption): routing_policy.assert_no_kv_cache_portability_request rejects KV/prompt/SSD/response-state cache transfer keys (409 kv_cache_portability_forbidden), sanitize_portable_messages and sanitize_messages_for_wire scrub non-portable attributes across transcripts and stream_any_model wire calls, and PortableHandoffCore enforces kv_cache_portable=False (discarded_recomputed_from_text) — verified by test_portable_core_and_harness_extensions_persisted_and_no_kv_cache_assumption.",
+          "AC2 (Switch preserves budgets and grants validity): execute_conservative_model_switch_async preserves TaskBudgetState counters/specs unchanged (refusing exhausted-budget laundering with 409 handoff_budget_already_exceeded), preserves active session/task ScopedGrant expires_at and uses_consumed without renewal or reset, and revokes only grants pinned to fenced old epochs — verified by test_switch_preserves_budgets_and_grants_validity_without_renewal_or_reset.",
+          "AC3 (Failed handoff leaves safe paused state): Every failure path (KV-cache violation, invalid/escaped reference, file SHA-256 version drift, permission escalation, unconsented cloud routing, busy heavy-model slot, semantic confirmation mismatch, retry cap exhaustion, or unresolved side effects/quarantine) persists HandoffRecord(status=failed_paused), keeps the prior model binding, and transitions session + durable task into paused (or blocked when unresolved holds exist) — verified across all 8 tests in tests/test_portable_handoff_and_switching.py.",
+          "Tasks 1-4: PortableHandoffStore ($HARNESS_STORE_DIR/handoffs/state.json, 0700/0600, O_EXCL+fsync+dir-fsync, covered by test_durable_state_contract.py); workspace-confined SHA-256 file reference & post-switch activation checks; selective semantic confirmation skipping low-risk transitions and verifying JSON core_sha256/policy/paths/ack_no_kv_cache on high-risk transitions; old-worker epoch fencing + subprocess containment + bounded SessionSwitchBudget retries."
+        ],
+        "test_results": [
+          ".venv/bin/pytest tests/test_portable_handoff_and_switching.py tests/test_routing_policy.py tests/test_routing_consent_policy.py tests/test_durable_state_contract.py -q -> 61 passed (exit 0)",
+          ".venv/bin/pytest -q -> 1369 passed, 1 skipped (exit 0)",
+          ".venv/bin/ruff check . && .venv/bin/mypy -> exit 0 (52 typed source files)",
+          ".venv/bin/python scripts/smoke_local.py && .venv/bin/python scripts/smoke_local.py --standalone -> exit 0",
+          ".venv/bin/python scripts/validate_docs.py && .venv/bin/python scripts/validate_adrs.py -> exit 0"
+        ],
+        "decisions": [
+          "ADR-0019: Extend stdlib-only routing_policy.py (inlined into studio.py) with PortableHandoffStore and route all session model switches (POST /switch-model, PATCH /sessions/{id}, inline POST /api/harness/run, and combo failover) through execute_conservative_model_switch_async."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
-        "readme_updated": false
+        "handoff_note": "M5-P4-02 complete with ADR-0019, docs/portable-handoff-switching.md, 5-store durable state contract coverage, and 1369 passing tests.",
+        "next_action": "Proceed to M5-P4-03 (Bounded worker delegation and verification) on a fresh session branch.",
+        "readme_updated": true
       }
     },
     {
@@ -3054,9 +3082,10 @@
           "tests/test_artifact_lineage.py",
           "tests/test_durable_state_contract.py",
           "docs/artifact-lineage.md",
-          "docs/adr/0018-artifact-lineage-provenance-and-selective-invalidation.md",
+          "docs/adr/0019-artifact-lineage-provenance-and-selective-invalidation.md",
           "docs/storage-migrations.md",
           "docs/subsystem-dependency-inventory.md",
+          "docs/route-security-matrix.md",
           "product/M5_2_0_Autonomous_Roadmap.json"
         ],
         "evidence": [
@@ -3065,20 +3094,19 @@
           "artifact_lineage.py: invalidate() records a reason, cascades to derived artifacts (bounded depth) and moves evidence over the artifact to stale without deleting bytes or history; record_evidence stores source-file digests plus the security generation, and accept_evidence refuses on source_changed / source_missing / subject_invalidated / security_generation_changed and writes the refusal into the record so it cannot be flipped back to valid (AC2)",
           "workflow_state.py + app.py: _verify_task_completion_impl captures the security configuration generation before gathering evidence and again before returning a verdict, returning failure_code=security_configuration_changed_during_verification when it moved; app.py supplies the provider from SecurityIncidentStore.summary()['current_generation_seq'], and no provider means 'not checked' rather than 'unchanged' (AC2 at the live completion gate)",
           "artifact_lineage.py + workspace_quarantine.py: freeze_workspace records the frozen tree digest as an untrusted, confidential artifact denying export/prompt and pins it under quarantine:QUARANTINE_ID; recovery_protection() re-derives the same protection set from unreleased quarantines; plan_retention keeps active-task artifacts, caller protections, pins, valid evidence, secrets and the grace window, returns a reason per survivor, and apply_retention deletes only plan.evictable; release_quarantine lifts the pin without deleting bytes (AC3)",
-          "docs/adr/0018-artifact-lineage-provenance-and-selective-invalidation.md and docs/artifact-lineage.md: decision record (including the rejected lazy import that broke the standalone artifact) plus a capability/limits table; docs/storage-migrations.md now lists the fifth durable JSON store and the conformance suite covers it"
+          "docs/adr/0019-artifact-lineage-provenance-and-selective-invalidation.md and docs/artifact-lineage.md: decision record (including the rejected lazy import that broke the standalone artifact) plus a capability/limits table; docs/storage-migrations.md now lists the fifth durable JSON store and the conformance suite covers it"
         ],
         "test_results": [
           "pytest tests/test_artifact_lineage.py -q: 28 passed",
-          "pytest tests/test_durable_state_contract.py -q: 36 passed (the artifacts store inherits all 8 contract clauses)",
-          "pytest tests/test_workspace_quarantine.py -q: 18 passed (quarantine integration unchanged)",
-          "pytest tests/ -q (full suite): 1389 passed, 1 skipped",
+          "pytest tests/test_durable_state_contract.py -q: 43 passed (six stores, including artifacts and the concurrently merged handoffs store)",
+          "pytest tests/ -q (full suite, merged with main): 1404 passed, 1 skipped",
           "ruff check .: clean; mypy: no issues in 53 source files",
-          "build_studio / route matrix / subsystem inventory / roadmap status --check: clean and idempotent (regeneration produced byte-identical files)",
-          "validate_docs (104 files), validate_adrs, governance, threat model, security sign-off, frontend syntax, demo tour --check, screenshots: pass",
+          "build_studio / route matrix / subsystem inventory / roadmap status --check: clean and idempotent",
+          "validate_docs (106 files), validate_adrs, governance, threat model, security sign-off, frontend syntax, demo tour --check, screenshots: pass",
           "smoke_local.py and smoke_local.py --standalone: pass (the standalone bundle inlines artifact_lineage)"
         ],
         "decisions": [
-          "ADR-0018: dedup the content, never the history (one provenance entry per sighting; weakest-trust / strictest-confidentiality / deny-wins answers); invalidation is recorded and cascading rather than destructive; evidence records the digests and security generation it was computed against and cannot be re-validated after going stale; retention protects active tasks, pins, valid evidence, secrets and the recovery path's own bytes, with a reason recorded per survivor.",
+          "ADR-0019: dedup the content, never the history (one provenance entry per sighting; weakest-trust / strictest-confidentiality / deny-wins answers); invalidation is recorded and cascading rather than destructive; evidence records the digests and security generation it was computed against and cannot be re-validated after going stale; retention protects active tasks, pins, valid evidence, secrets and the recovery path's own bytes, with a reason recorded per survivor.",
           "The registry is not a proof engine and does not decide safety; the live staleness gate is in workflow_state's completion path, and the registry records the lineage.",
           "The quarantine module imports artifact_lineage (freeze records and pins); artifact_lineage does not import workspace_quarantine — the dependency is inverted through recovery_protection() because a lazy import broke the generated standalone artifact (caught by tests/test_release_manager.py)."
         ],
@@ -3086,14 +3114,14 @@
           "Retention is a plan/apply API with no scheduler; nothing runs collection automatically in this build.",
           "The security-generation gate covers the verification window only; a change after completion is not detected by this path."
         ],
-        "handoff_note": "M5-P5-02 is implemented and verified locally (1389 passed, 1 skipped). Content dedup no longer merges trust histories (weakest trust / strictest confidentiality / deny-wins per entry), stale evidence is refused both at the registry API and at the live completion gate (security generation captured before and after the verification run), and quarantine bytes are protected from retention by a recorded pin plus a re-derived protection set. PROGRAM STATE after this story: no mandatory story is currently unblocked. M5-P5-03 needs M5-P4-03, which needs M5-P4-02, which needs M5-P4-01 — and M5-P4-01 stays 'blocked' on the unmeasured 24 GB hardware acceptance criterion (its code shipped in #54/#61). The chain therefore turns on an operator-run hardware measurement, not on more code.",
-        "next_action": "Do not claim M5-P5-03 until M5-P4-01 -> M5-P4-02 -> M5-P4-03 are resolved; the blocking criterion is the operator-run scripts/qualify_environment.py --hardware measurement on a 24 GB machine.",
+        "handoff_note": "M5-P5-02 is implemented and verified locally (1389 passed, 1 skipped). Content dedup no longer merges trust histories (weakest trust / strictest confidentiality / deny-wins per entry), stale evidence is refused both at the registry API and at the live completion gate (security generation captured before and after the verification run), and quarantine bytes are protected from retention by a recorded pin plus a re-derived protection set. PROGRAM STATE at merge time: M5-P4-02 landed concurrently (#78), so M5-P4-03 is the only mandatory story with all dependencies done, and M5-P5-03 becomes claimable after it. M5-P4-01 remains 'blocked' on its unmeasured 24 GB hardware criterion (operator-run qualify_environment.py --hardware); the ledger records that P4-02 completed while that dependency was blocked, which still needs an explicit decision rather than an implicit exception.",
+        "next_action": "Claim M5-P4-03 ('Bounded child delegation and parent joins') after this PR merges; it is the only mandatory story with all dependencies done.",
         "readme_updated": true,
         "test_evidence": [
           "tests/test_artifact_lineage.py",
           "tests/test_durable_state_contract.py",
           "docs/artifact-lineage.md",
-          "docs/adr/0018-artifact-lineage-provenance-and-selective-invalidation.md"
+          "docs/adr/0019-artifact-lineage-provenance-and-selective-invalidation.md"
         ],
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/81",
         "commit_shas": [

@@ -1,5 +1,5 @@
 ---
-id: ADR-0018
+id: ADR-0019
 title: artifact-lineage-provenance-and-selective-invalidation
 status: accepted
 date: 2026-10-31
@@ -8,7 +8,7 @@ reviewed_by: none
 reviewed_on: none
 ---
 
-# ADR-0018: Content identity separated from provenance, per-artifact trust, and evidence that expires
+# ADR-0019: Content identity separated from provenance, per-artifact trust, and evidence that expires
 
 ## Context
 

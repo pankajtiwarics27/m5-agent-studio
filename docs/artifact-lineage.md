@@ -1,7 +1,7 @@
 # Artifact lineage, provenance and retention (`M5-P5-02`)
 
 Design record:
-[`docs/adr/0018-artifact-lineage-provenance-and-selective-invalidation.md`](adr/0018-artifact-lineage-provenance-and-selective-invalidation.md).
+[`docs/adr/0019-artifact-lineage-provenance-and-selective-invalidation.md`](adr/0019-artifact-lineage-provenance-and-selective-invalidation.md).
 
 Module: `artifact_lineage.py` (inlined into the generated `studio.py`). Store:
 `$HARNESS_STORE_DIR/artifacts/state.json`, one of the durable JSON sidecar stores in

@@ -86,6 +86,7 @@ import model_admission
 import artifact_lineage
 import process_supervision
 import resource_admission  # noqa: F401 - inlined into studio.py; execution_profiles/model_admission use it
+import routing_policy
 import scoped_grants
 import verification_evidence
 import workspace_quarantine
@@ -836,6 +837,32 @@ def _reset_mcp_effect_store(store: mcp_client.McpExternalEffectStore | None = No
     with _MCP_EFFECT_STORE_LOCK:
         _MCP_EFFECT_STORE = store
         _MCP_EFFECT_STORE_DIR = (
+            Path(HARNESS_STORE_DIR).resolve() if store is not None else None
+        )
+
+
+_PORTABLE_HANDOFF_STORE: routing_policy.PortableHandoffStore | None = None
+_PORTABLE_HANDOFF_STORE_DIR: Path | None = None
+_PORTABLE_HANDOFF_STORE_LOCK = threading.Lock()
+
+
+def get_portable_handoff_store() -> routing_policy.PortableHandoffStore:
+    """Return the durable M5-P4-02 portable handoff and switch-budget store."""
+    global _PORTABLE_HANDOFF_STORE, _PORTABLE_HANDOFF_STORE_DIR
+    cur_dir = Path(HARNESS_STORE_DIR).resolve()
+    with _PORTABLE_HANDOFF_STORE_LOCK:
+        if _PORTABLE_HANDOFF_STORE is None or _PORTABLE_HANDOFF_STORE_DIR != cur_dir:
+            _PORTABLE_HANDOFF_STORE = routing_policy.PortableHandoffStore(cur_dir)
+            _PORTABLE_HANDOFF_STORE_DIR = cur_dir
+        return _PORTABLE_HANDOFF_STORE
+
+
+def _reset_portable_handoff_store(store: routing_policy.PortableHandoffStore | None = None) -> None:
+    """Replace or clear the cached portable handoff store (tests)."""
+    global _PORTABLE_HANDOFF_STORE, _PORTABLE_HANDOFF_STORE_DIR
+    with _PORTABLE_HANDOFF_STORE_LOCK:
+        _PORTABLE_HANDOFF_STORE = store
+        _PORTABLE_HANDOFF_STORE_DIR = (
             Path(HARNESS_STORE_DIR).resolve() if store is not None else None
         )
 
@@ -4118,17 +4145,59 @@ async def stream_any_model(
         raise RuntimeError("Combo recursion depth exceeded")
     runtime_persistence.assert_no_active_write_transaction("model_inference")
 
+    # Strip any KV-cache, prompt-cache, or provider-opaque attributes before wire dispatch (M5-P4-02 AC 1).
+    clean_messages = routing_policy.sanitize_messages_for_wire(messages)
     kind, meta, rem_model = parse_model_route(model_spec)
 
     if kind == "combo" and meta is not None:
         errors: list[str] = []
-        for idx, target in enumerate(meta["targets"]):
+        targets_list = list(meta["targets"])
+        first_kind = parse_model_route(targets_list[0])[0] if targets_list else "omlx"
+        allow_net_fb = _config_bool(os.environ, "STUDIO_ALLOW_NETWORK_FALLBACK", False) or bool(
+            meta.get("allow_network_fallback")
+        )
+        allow_bill_fb = _config_bool(os.environ, "STUDIO_ALLOW_BILLABLE_FALLBACK", False) or bool(
+            meta.get("allow_billable_fallback")
+        )
+        combo_consent_id = str(meta.get("consent_id") or "").strip() or None
+        fb_policy = routing_policy.FallbackPolicy(
+            allow_network_fallback=allow_net_fb,
+            allow_billable_fallback=allow_bill_fb,
+        )
+        fb_consent = routing_policy.FallbackConsent(
+            consent_id=combo_consent_id,
+            network_approved=bool(combo_consent_id and allow_net_fb),
+            billable_approved=bool(combo_consent_id and allow_bill_fb),
+        )
+        for idx, target in enumerate(targets_list):
             emitted_any = False
+            if idx > 0:
+                t_kind, t_meta, t_rem = parse_model_route(target)
+                if t_kind == "cloud" and first_kind == "omlx":
+                    prov_name = str((t_meta or {}).get("alias") or "cloud")
+                    cand = routing_policy.FallbackCandidate(
+                        model_id=target,
+                        provider=prov_name,
+                        network_required=True,
+                        billable=True,
+                    )
+                    fb_dec = routing_policy.evaluate_fallback((cand,), fb_policy, fb_consent)
+                    if fb_dec.selected is None:
+                        errors.append("; ".join(fb_dec.exclusions) or f"{target}: fallback denied")
+                        continue
+                elif t_kind == "omlx" and _heavy_model_admission().snapshot()["active_leases"] == 0:
+                    await _unload_other_omlx_models(client, t_rem)
             try:
                 if idx > 0:
                     yield {"type": "content", "text": f"> *OmniRoute Fallback activated -> `{target}`*\n\n"}
                 async for item in stream_any_model(
-                    client, target, messages, temperature=temperature, max_tokens=max_tokens, reasoning_mode=reasoning_mode, _depth=_depth + 1
+                    client,
+                    target,
+                    clean_messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    reasoning_mode=reasoning_mode,
+                    _depth=_depth + 1,
                 ):
                     if item["type"] in ("content", "reasoning"):
                         emitted_any = True
@@ -4147,14 +4216,14 @@ async def stream_any_model(
         if adapter is None:
             raise RuntimeError(f"Unsupported provider wire: {wire or '(empty)'}")
         async for item in adapter.stream(
-            client, meta, rem_model, messages, temperature, max_tokens, reasoning_mode
+            client, meta, rem_model, clean_messages, temperature, max_tokens, reasoning_mode
         ):
             yield item
         return
 
     # Local inference is heavy: hold the single heavy-model slot for the stream.
     async with _heavy_model_slot(rem_model):
-        async for item in _stream_omlx_completion(client, rem_model, messages, temperature, max_tokens, reasoning_mode):
+        async for item in _stream_omlx_completion(client, rem_model, clean_messages, temperature, max_tokens, reasoning_mode):
             yield item
 
 
@@ -11868,6 +11937,35 @@ async def api_patch_harness_session(session_id: str, request: Request) -> JSONRe
     pol = body.get("policy") if body.get("policy") in HARNESS_POLICIES else prev_pol
     lead = body.get("lead_model") or sess["lead_model"]
     critic = body.get("critic_model") or sess["critic_model"]
+    if lead != sess["lead_model"] or critic != sess["critic_model"]:
+        try:
+            await execute_conservative_model_switch_async(
+                getattr(request.app.state, "http", None),
+                session_id,
+                target_lead_model=lead,
+                target_critic_model=critic,
+                target_policy=pol,
+                reason=str(body.get("reason") or "session_patch_model_switch"),
+                referenced_files=tuple(body.get("referenced_files") or ()),
+                expected_file_versions=body.get("expected_file_versions"),
+                required_grant_ids=tuple(body.get("required_grant_ids") or ()),
+                target_context_tokens=body.get("target_context_tokens"),
+                max_switch_attempts=body.get("max_switch_attempts"),
+                consent=body.get("consent"),
+                fallback_policy_override=body.get("fallback_policy"),
+                semantic_confirmation=body.get("semantic_confirmation"),
+                high_risk=bool(body.get("high_risk", False)),
+                raw_options=body,
+                allow_policy_change=True,
+            )
+        except routing_policy.HandoffStoreIntegrityError as exc:
+            raise HTTPException(status_code=503, detail={"code": "handoff_state_corrupt", "message": str(exc)}) from exc
+        except routing_policy.HandoffRejectedError as exc:
+            raise HTTPException(status_code=409, detail=exc.to_mapping()) from exc
+        except routing_policy.RoutingPolicyError as exc:
+            raise HTTPException(status_code=400, detail={"code": "invalid_switch_request", "message": str(exc)}) from exc
+        return JSONResponse(get_harness_session_db(session_id, include_events=True))
+
     now = time.time()
     runtime_persistence.run_write_transaction(
         STORAGE,
@@ -11948,6 +12046,8 @@ async def api_delete_harness_session(session_id: str) -> JSONResponse:
     _workspace_snapshot_store().delete_session_snapshots(session_id)
     execution_profiles.FootprintReconciliationLedger(HARNESS_STORE_DIR).purge_session(session_id)
     get_scoped_grant_store().purge_session(session_id)
+    with contextlib.suppress(Exception):
+        get_portable_handoff_store().purge_session(session_id)
     if (
         not del_reports
         or (
@@ -13444,6 +13544,905 @@ async def api_resolve_harness_session_mcp_effect(
     )
 
 
+async def execute_conservative_model_switch_async(
+    client: httpx.AsyncClient | None,
+    session_id: str,
+    *,
+    target_lead_model: str | None = None,
+    target_critic_model: str | None = None,
+    target_policy: str | None = None,
+    reason: str = "operator_model_switch",
+    referenced_files: Sequence[str] = (),
+    expected_file_versions: Mapping[str, str | None] | None = None,
+    required_grant_ids: Sequence[str] = (),
+    target_context_tokens: int | None = None,
+    max_switch_attempts: int | None = None,
+    consent: Mapping[str, Any] | None = None,
+    fallback_policy_override: Mapping[str, Any] | None = None,
+    semantic_confirmation: Mapping[str, Any] | str | None = None,
+    high_risk: bool = False,
+    force_handoff: bool = False,
+    raw_options: Mapping[str, Any] | None = None,
+    allow_policy_change: bool = False,
+) -> dict[str, Any]:
+    """Execute a conservative sequential model switch with a crash-durable portable handoff (M5-P4-02)."""
+    sess = get_harness_session_db(session_id)
+    prev_lead = str(sess["lead_model"])
+    prev_critic = str(sess["critic_model"])
+    prev_pol = str(sess["policy"])
+    next_lead = str(target_lead_model or prev_lead).strip() or prev_lead
+    next_critic = str(target_critic_model or prev_critic).strip() or prev_critic
+    next_pol = str(target_policy).strip() if target_policy in HARNESS_POLICIES else prev_pol
+
+    if next_lead == prev_lead and next_critic == prev_critic and not force_handoff:
+        return {"status": "unchanged", "session": sess, "handoff": None}
+
+    wt_dir = Path(sess["worktree_dir"]).resolve()
+    sm = get_task_state_machine()
+    coord = get_worker_lease_coordinator(wt_dir)
+    ledger = get_durable_action_ledger(wt_dir)
+    handoff_store = get_portable_handoff_store()
+    grant_store = get_scoped_grant_store()
+    now_ts = time.time()
+    handoff_id = f"hof-{uuid.uuid4().hex[:16]}"
+
+    task_rec, budget_before = sm.ensure_root_task(
+        session_id,
+        session_id=session_id,
+        title=str(sess.get("title") or ""),
+        workspace_dir=str(wt_dir),
+        policy=prev_pol,
+        now=now_ts,
+    )
+    if task_rec.state == "cancelled" or budget_before.cancel_requested:
+        raise routing_policy.HandoffRejectedError(
+            "handoff_task_cancelled",
+            f"Task `{session_id}` is cancelled and cannot switch models.",
+        )
+
+    # 1. Fence any active old worker FIRST and contain its running subprocesses (Task 4).
+    _HARNESS_ABORT_FLAGS.add(session_id)
+    fenced_epochs = coord.fence_and_halt(
+        session_id,
+        target_state="paused",
+        reason=f"model_switch:{prev_lead}->{next_lead}",
+        sweep_in_flight=True,
+        now=now_ts,
+    )
+    fenced_epoch_num = max((ep.epoch for ep in fenced_epochs), default=0)
+    fenced_worker_ids = tuple(ep.worker_id for ep in fenced_epochs if ep.worker_id)
+    revoked_epoch_grant_ids: tuple[str, ...] = ()
+    if fenced_epochs:
+        for ep in fenced_epochs:
+            await get_process_supervisor().contain_by_scope_async(
+                session_id=session_id,
+                task_id=session_id,
+                epochs=(ep.epoch,),
+                worker_id=ep.worker_id or None,
+                quarantine_session=False,
+                reason=f"model_switch_fenced_epoch_{ep.epoch}",
+            )
+        revoked_ep = grant_store.revoke_by_lifecycle_event(
+            session_id=session_id,
+            task_id=session_id,
+            epochs=[ep.epoch for ep in fenced_epochs],
+            reason=f"model_switch_fenced_epoch_{fenced_epoch_num}",
+        )
+        revoked_epoch_grant_ids = tuple(g.grant_id for g in revoked_ep)
+
+    grant_store.ensure_session_policy(session_id, prev_pol)
+    sess_rev_before, glob_rev_before = grant_store.get_revisions(session_id, current_policy=prev_pol)
+
+    def _compute_safe_pause_state() -> str:
+        has_unres = bool(
+            ledger.list_unresolved_consequential_actions(session_id)
+            or get_mcp_effect_store().list_effects(session_id=session_id, statuses=("uncertain",))
+            or get_containment_store().find_resumption_holds(task_id=session_id)
+        )
+        return "blocked" if has_unres else "paused"
+
+    post_fence_state = _compute_safe_pause_state()
+    cur_t = sm.store.get_task(session_id)
+    if cur_t is not None and cur_t.state not in {post_fence_state, "cancelled"}:
+        sm.transition_task(
+            session_id,
+            post_fence_state,
+            allow_inactive_epoch=True,
+            reason="safe_boundary_before_model_switch",
+            now=now_ts,
+        )
+    _update_harness_session_state(session_id, status=post_fence_state)
+
+    sw_budget_snap = handoff_store.get_switch_budget(session_id)
+
+    def _fail_into_safe_pause(
+        code: str,
+        err_reason: str,
+        *,
+        core_obj: routing_policy.PortableHandoffCore | None = None,
+        ext_obj: routing_policy.HarnessPrivateExtensions | None = None,
+    ) -> routing_policy.HandoffRejectedError:
+        safe_state = _compute_safe_pause_state()
+        t_latest = sm.store.get_task(session_id)
+        if t_latest is not None and t_latest.state not in {safe_state, "cancelled"}:
+            with contextlib.suppress(Exception):
+                sm.transition_task(
+                    session_id,
+                    safe_state,
+                    allow_inactive_epoch=True,
+                    reason=f"handoff_failed:{code}",
+                    now=time.time(),
+                )
+        _update_harness_session_state(session_id, status=safe_state)
+        cur_sw = handoff_store.get_switch_budget(session_id)
+        fb_core = core_obj or routing_policy.PortableHandoffCore(
+            handoff_id=handoff_id,
+            session_id=session_id,
+            task_id=session_id,
+            source_lead_model=prev_lead,
+            target_lead_model=next_lead,
+            source_critic_model=prev_critic,
+            target_critic_model=next_critic,
+            kv_cache_portable=False,
+            objective=str(sess.get("title") or ""),
+            next_step=max(1, int(sess.get("step_count") or 0) + 1),
+        )
+        fb_ext = ext_obj or routing_policy.HarnessPrivateExtensions(
+            fenced_epoch=fenced_epoch_num,
+            fenced_worker_ids=fenced_worker_ids,
+            policy=prev_pol,
+            session_policy_revision=sess_rev_before,
+            global_policy_revision=glob_rev_before,
+            validated_grants=(),
+            revoked_epoch_grant_ids=revoked_epoch_grant_ids,
+            budget_snapshot=budget_before.to_dict(),
+            switch_attempts_used=cur_sw.switch_attempts_used,
+            max_switch_attempts=cur_sw.max_switch_attempts,
+        )
+        failed_rec = handoff_store.save_handoff(
+            routing_policy.HandoffRecord(
+                handoff_id=handoff_id,
+                session_id=session_id,
+                task_id=session_id,
+                status="failed_paused",
+                portable_core=fb_core,
+                harness_extensions=fb_ext,
+                failure_code=code,
+                failure_reason=err_reason,
+                resulting_task_state=safe_state,
+                created_at=now_ts,
+            ),
+            now=time.time(),
+        )
+        _safe_append_harness_event(
+            session_id,
+            "handoff/failed_paused",
+            {
+                "handoff_id": handoff_id,
+                "code": code,
+                "reason": err_reason,
+                "task_state": safe_state,
+                "source_lead_model": prev_lead,
+                "target_lead_model": next_lead,
+                "fenced_epoch": fenced_epoch_num,
+            },
+        )
+        return routing_policy.HandoffRejectedError(
+            code,
+            err_reason,
+            handoff=failed_rec,
+            task_state=safe_state,
+        )
+
+    # 2. Enforce bounded per-session switch retry budget (Task 4).
+    try:
+        reserved_sw = handoff_store.reserve_switch_attempt(
+            session_id,
+            max_attempts=(int(max_switch_attempts) if max_switch_attempts is not None else None),
+            now=now_ts,
+        )
+    except routing_policy.HandoffRejectedError as exc:
+        raise _fail_into_safe_pause(exc.code, exc.reason) from exc
+
+    # 3. Forbid KV-cache or opaque-state portability assumptions (AC 1).
+    try:
+        routing_policy.assert_no_kv_cache_portability_request(raw_options)
+    except routing_policy.HandoffPortabilityViolationError as exc:
+        raise _fail_into_safe_pause("kv_cache_portability_forbidden", str(exc)) from exc
+
+    # 4. Refuse switch while workspace quarantine, unresolved side effects, or budget violations exist (Task 2, AC 2).
+    try:
+        active_ws_q = workspace_quarantine.find_active_quarantine(HARNESS_STORE_DIR, wt_dir)
+    except Exception as exc:
+        raise _fail_into_safe_pause(
+            "handoff_workspace_quarantined",
+            f"Cannot verify workspace quarantine state for `{wt_dir}`: {exc}",
+        ) from exc
+    if active_ws_q is not None:
+        raise _fail_into_safe_pause(
+            "handoff_workspace_quarantined",
+            f"Workspace `{wt_dir}` is quarantined as `{active_ws_q.quarantine_id}`; "
+            "reconstruct and release quarantine before switching models.",
+        )
+
+    if post_fence_state == "blocked":
+        raise _fail_into_safe_pause(
+            "handoff_unresolved_side_effects",
+            f"Session `{session_id}` has unresolved consequential side effects or containment holds; "
+            "reconcile them before switching models.",
+        )
+
+    budget_before = sm.budgets.get_budget(session_id)
+    budget_violation = budget_before.violation_reason(check_recovery=False)
+    if budget_violation:
+        raise _fail_into_safe_pause(
+            "handoff_budget_already_exceeded",
+            f"Task budget already exceeded ({budget_violation}); model switch cannot launder exhausted budgets.",
+        )
+
+    # 5. Sanitize portable messages, verify checkpoint hash, and validate file references & versions (Task 1, Task 2).
+    raw_msgs = _load_harness_messages(session_id)
+    try:
+        ctx_tok_cap = int(target_context_tokens) if target_context_tokens is not None else None
+        portable_msgs, stripped_fields, truncated_count = routing_policy.sanitize_portable_messages(
+            raw_msgs,
+            max_context_tokens=ctx_tok_cap,
+        )
+    except routing_policy.HandoffRejectedError as exc:
+        raise _fail_into_safe_pause(exc.code, exc.reason) from exc
+
+    auto_expected: dict[str, str | None] = {}
+    for edit_tx in _edit_ledger().list_transactions(session_id):
+        auto_expected[edit_tx.rel_path] = edit_tx.post_sha256
+    for obs_path, obs_sha in _observed_versions().entries(session_id).items():
+        if obs_path in auto_expected:
+            auto_expected[obs_path] = obs_sha
+    merged_expected: dict[str, str | None] = dict(auto_expected)
+    if expected_file_versions:
+        for k_exp, v_exp in expected_file_versions.items():
+            merged_expected[str(k_exp)] = v_exp
+
+    candidate_ref_paths = list(dict.fromkeys([*auto_expected.keys(), *(str(p) for p in referenced_files)]))
+    try:
+        validated_refs = routing_policy.collect_and_validate_file_references(
+            wt_dir,
+            candidate_ref_paths,
+            expected_versions=(merged_expected if merged_expected else None),
+        )
+    except routing_policy.HandoffRejectedError as exc:
+        raise _fail_into_safe_pause(exc.code, exc.reason) from exc
+
+    try:
+        latest_ckpt = sm.checkpoints.load_latest_checkpoint(session_id, verify_integrity=True)
+    except workflow_checkpoints.ResumeRejected as exc:
+        raise _fail_into_safe_pause("handoff_checkpoint_corrupt", str(exc)) from exc
+
+    milestones = sm.list_milestones(session_id)
+    completed_ms = tuple(m.task_id for m in milestones if m.state == "completed")
+    pending_ms = tuple(m.task_id for m in milestones if m.state != "completed")
+    next_step_num = (
+        max(1, latest_ckpt.step + 1)
+        if latest_ckpt is not None
+        else max(1, int(sess.get("step_count") or 0) + 1)
+    )
+    ckpt_evidence = (
+        tuple(ev.to_dict() for ev in latest_ckpt.evidence_refs)
+        if latest_ckpt is not None
+        else ()
+    )
+
+    # 6. Validate permissions, policy non-escalation, and scoped grants validity (Task 2, AC 2).
+    pol_rank = {"plan": 0, "standard": 1, "autonomous": 2}
+    if pol_rank.get(next_pol, 99) > pol_rank.get(prev_pol, -1) and not allow_policy_change:
+        raise _fail_into_safe_pause(
+            "handoff_permission_escalation_forbidden",
+            f"Model switch cannot escalate session policy from `{prev_pol}` to `{next_pol}`.",
+        )
+
+    all_session_grants = {
+        g.grant_id: g for g in grant_store.list_grants(session_id=session_id, include_inactive=True)
+    }
+    for req_gid in required_grant_ids:
+        clean_gid = str(req_gid).strip()
+        g_rec = all_session_grants.get(clean_gid)
+        if g_rec is None:
+            raise _fail_into_safe_pause(
+                "handoff_grant_invalid",
+                f"Required grant `{clean_gid}` does not exist on session `{session_id}`.",
+            )
+        if g_rec.status != "active" or now_ts >= g_rec.expires_at:
+            raise _fail_into_safe_pause(
+                "handoff_grant_invalid",
+                f"Required grant `{clean_gid}` is `{g_rec.status}` (not active) and cannot be carried across switch.",
+            )
+        if g_rec.max_uses is not None and g_rec.uses_consumed >= g_rec.max_uses:
+            raise _fail_into_safe_pause(
+                "handoff_grant_invalid",
+                f"Required grant `{clean_gid}` has exhausted its max_uses ({g_rec.uses_consumed}/{g_rec.max_uses}).",
+            )
+        if (
+            g_rec.session_policy_revision != sess_rev_before
+            or g_rec.global_policy_revision != glob_rev_before
+        ):
+            raise _fail_into_safe_pause(
+                "handoff_grant_invalid",
+                f"Required grant `{clean_gid}` belongs to stale policy revision "
+                f"({g_rec.session_policy_revision}/{g_rec.global_policy_revision}).",
+            )
+
+    active_grants_before = tuple(
+        g
+        for g in grant_store.list_grants(session_id=session_id, include_inactive=False)
+        if g.epoch is None
+    )
+    grant_snapshots = tuple(
+        routing_policy.HandoffGrantSnapshot(
+            grant_id=g.grant_id,
+            capabilities=g.capabilities,
+            resource_scopes=g.resource_scopes,
+            expires_at=g.expires_at,
+            max_uses=g.max_uses,
+            uses_consumed=g.uses_consumed,
+            session_policy_revision=g.session_policy_revision,
+            global_policy_revision=g.global_policy_revision,
+        )
+        for g in active_grants_before
+    )
+
+    # 7. Evaluate routing / network / billable consent & sequential heavy-model admission (M5-P4-01, M5-P4-02).
+    try:
+        src_kind, _, _ = parse_model_route(prev_lead)
+        tgt_kind, tgt_meta, tgt_rem = parse_model_route(next_lead)
+        if next_critic != prev_critic:
+            parse_model_route(next_critic)
+    except Exception as exc:
+        raise _fail_into_safe_pause("handoff_invalid_target_model", str(exc)) from exc
+
+    tgt_touches_cloud = tgt_kind == "cloud"
+    tgt_provider_label = str((tgt_meta or {}).get("alias") or "local-omlx")
+    if tgt_kind == "combo" and tgt_meta is not None:
+        for c_target in tgt_meta.get("targets") or ():
+            try:
+                ct_kind, ct_meta, _ = parse_model_route(str(c_target))
+                if ct_kind == "cloud":
+                    tgt_touches_cloud = True
+                    tgt_provider_label = str((ct_meta or {}).get("alias") or "cloud")
+                    break
+            except Exception as exc:
+                raise _fail_into_safe_pause("handoff_invalid_target_model", str(exc)) from exc
+
+    routing_summary: dict[str, Any] = {
+        "source_kind": src_kind,
+        "target_kind": tgt_kind,
+        "network_required": tgt_touches_cloud,
+        "billable": tgt_touches_cloud,
+        "allowed": True,
+        "consent_id": None,
+        "exclusions": [],
+    }
+    if tgt_touches_cloud and (src_kind == "omlx" or fallback_policy_override is not None or consent is not None):
+        allow_net = _config_bool(os.environ, "STUDIO_ALLOW_NETWORK_FALLBACK", False)
+        allow_bill = _config_bool(os.environ, "STUDIO_ALLOW_BILLABLE_FALLBACK", False)
+        perm_provs: tuple[str, ...] = ()
+        if isinstance(fallback_policy_override, Mapping):
+            allow_net = bool(fallback_policy_override.get("allow_network_fallback", allow_net))
+            allow_bill = bool(fallback_policy_override.get("allow_billable_fallback", allow_bill))
+            raw_pp = fallback_policy_override.get("permitted_providers") or ()
+            if isinstance(raw_pp, (list, tuple)):
+                perm_provs = tuple(str(x) for x in raw_pp if str(x).strip())
+        fb_pol = routing_policy.FallbackPolicy(
+            allow_network_fallback=allow_net,
+            allow_billable_fallback=allow_bill,
+            permitted_providers=perm_provs,
+        )
+        fb_cons = (
+            routing_policy.FallbackConsent(
+                consent_id=(str(consent["consent_id"]).strip() if consent.get("consent_id") else None),
+                network_approved=bool(consent.get("network_approved", False)),
+                billable_approved=bool(consent.get("billable_approved", False)),
+            )
+            if isinstance(consent, Mapping)
+            else routing_policy.FallbackConsent()
+        )
+        cand = routing_policy.FallbackCandidate(
+            model_id=next_lead,
+            provider=tgt_provider_label,
+            network_required=True,
+            billable=True,
+        )
+        dec = routing_policy.evaluate_fallback((cand,), fb_pol, fb_cons)
+        routing_summary = {
+            "source_kind": src_kind,
+            "target_kind": tgt_kind,
+            "network_required": True,
+            "billable": True,
+            "allowed": dec.selected is not None,
+            "consent_id": fb_cons.consent_id,
+            "exclusions": list(dec.exclusions),
+        }
+        if dec.selected is None:
+            raise _fail_into_safe_pause(
+                "handoff_routing_consent_denied",
+                "; ".join(dec.exclusions) or f"Target `{next_lead}` denied by fallback routing policy.",
+            )
+
+    unloaded_local: list[str] = []
+    if tgt_kind == "omlx":
+        adm = _heavy_model_admission()
+        snap_adm = adm.snapshot()
+        if snap_adm["active_leases"] == 0 and next_lead != prev_lead:
+            if client is not None:
+                unloaded_local = await _unload_other_omlx_models(client, tgt_rem)
+            else:
+                async with httpx.AsyncClient(timeout=10.0) as tmp_http:
+                    unloaded_local = await _unload_other_omlx_models(tmp_http, tgt_rem)
+        deny_code = adm.would_deny(tgt_rem)
+        if deny_code is not None:
+            raise _fail_into_safe_pause(
+                "handoff_heavy_model_busy",
+                f"Cannot switch to local model `{tgt_rem}` while heavy-model admission denies with `{deny_code}` "
+                f"(resident={snap_adm.get('resident_model')!r}).",
+            )
+    admission_summary = {
+        "target_local_model": (tgt_rem if tgt_kind == "omlx" else None),
+        "unloaded_models": unloaded_local,
+        "admission_verified": True,
+    }
+
+    # 8. Risk classification & selective semantic confirmation for high-risk transitions (Task 3).
+    committed_conseq = sum(
+        1
+        for a in ledger.list_task_actions(session_id, statuses=("committed",))
+        if a.action_class != "read_only"
+    )
+    risk_level, risk_reasons = routing_policy.classify_switch_risk(
+        source_provider_kind=src_kind,
+        target_provider_kind=("cloud" if tgt_touches_cloud else tgt_kind),
+        steps_used=max(budget_before.steps_used, int(sess.get("step_count") or 0)),
+        committed_consequential_count=committed_conseq,
+        file_reference_count=len(validated_refs),
+        truncated_messages=truncated_count,
+        recoveries_used=budget_before.recoveries_used,
+        consecutive_switch_failures=sw_budget_snap.consecutive_failures,
+        explicit_high_risk=bool(high_risk),
+    )
+
+    core = routing_policy.PortableHandoffCore(
+        handoff_id=handoff_id,
+        session_id=session_id,
+        task_id=session_id,
+        source_lead_model=prev_lead,
+        target_lead_model=next_lead,
+        source_critic_model=prev_critic,
+        target_critic_model=next_critic,
+        kv_cache_portable=False,
+        kv_cache_handling="discarded_recomputed_from_text",
+        stripped_non_portable_fields=stripped_fields,
+        objective=str(sess.get("title") or ""),
+        next_step=next_step_num,
+        completed_milestone_ids=completed_ms,
+        pending_milestone_ids=pending_ms,
+        portable_messages=portable_msgs,
+        truncated_messages=truncated_count,
+        file_references=validated_refs,
+        checkpoint_id=(latest_ckpt.checkpoint_id if latest_ckpt is not None else ""),
+        checkpoint_payload_hash=(latest_ckpt.payload_hash if latest_ckpt is not None else ""),
+        evidence_refs=ckpt_evidence,
+        open_notes=reason[:2000],
+    )
+    staged_ext = routing_policy.HarnessPrivateExtensions(
+        fenced_epoch=fenced_epoch_num,
+        fenced_worker_ids=fenced_worker_ids,
+        policy=next_pol,
+        session_policy_revision=sess_rev_before,
+        global_policy_revision=glob_rev_before,
+        validated_grants=grant_snapshots,
+        revoked_epoch_grant_ids=revoked_epoch_grant_ids,
+        budget_snapshot=budget_before.to_dict(),
+        switch_attempts_used=reserved_sw.switch_attempts_used,
+        max_switch_attempts=reserved_sw.max_switch_attempts,
+        routing_decision=routing_summary,
+        admission_transition=admission_summary,
+        risk_level=risk_level,
+        risk_reasons=risk_reasons,
+        semantic_confirmation={"required": (risk_level == "high"), "status": "pending"},
+    )
+    handoff_store.save_handoff(
+        routing_policy.HandoffRecord(
+            handoff_id=handoff_id,
+            session_id=session_id,
+            task_id=session_id,
+            status="staged",
+            portable_core=core,
+            harness_extensions=staged_ext,
+            resulting_task_state="paused",
+            created_at=now_ts,
+        ),
+        now=now_ts,
+    )
+
+    if risk_level == "high":
+        try:
+            if semantic_confirmation is not None:
+                sem_summary = routing_policy.verify_semantic_confirmation_response(
+                    semantic_confirmation,
+                    core=core,
+                    extensions=staged_ext,
+                )
+                sem_summary["mode"] = "explicit_attestation"
+            else:
+                probe_msgs = routing_policy.build_semantic_confirmation_prompt(core, staged_ext)
+                probe_chunks: list[str] = []
+
+                async def _run_probe_stream(http_c: httpx.AsyncClient) -> None:
+                    async for item in stream_any_model(
+                        http_c,
+                        next_lead,
+                        probe_msgs,
+                        temperature=0.0,
+                        max_tokens=512,
+                        reasoning_mode="off",
+                    ):
+                        if item.get("type") == "content" and isinstance(item.get("text"), str):
+                            probe_chunks.append(item["text"])
+
+                if client is not None:
+                    await _run_probe_stream(client)
+                else:
+                    async with httpx.AsyncClient(timeout=15.0) as tmp_http:
+                        await _run_probe_stream(tmp_http)
+                sem_summary = routing_policy.verify_semantic_confirmation_response(
+                    "".join(probe_chunks),
+                    core=core,
+                    extensions=staged_ext,
+                )
+                sem_summary["mode"] = "target_model_probe"
+        except routing_policy.HandoffRejectedError as exc:
+            raise _fail_into_safe_pause(exc.code, exc.reason, core_obj=core, ext_obj=staged_ext) from exc
+        except Exception as exc:
+            raise _fail_into_safe_pause(
+                "handoff_semantic_confirmation_failed",
+                f"Target model `{next_lead}` semantic confirmation failed: {exc}",
+                core_obj=core,
+                ext_obj=staged_ext,
+            ) from exc
+    else:
+        sem_summary = {
+            "required": False,
+            "status": "skipped_low_risk",
+            "mode": "none",
+        }
+
+    # 9. Commit portable handoff, persist sanitized messages, update session, and verify AC 2 invariants.
+    final_sess_rev = sess_rev_before
+    if next_pol != prev_pol:
+        final_sess_rev, pol_revoked = grant_store.bump_session_policy_revision(
+            session_id,
+            new_policy=next_pol,
+            reason=f"policy_changed_on_switch:{prev_pol}->{next_pol}",
+        )
+        if next_pol == "plan":
+            await get_process_supervisor().contain_by_capability_async(
+                reason="policy_tightened_to_plan_on_switch",
+                session_id=session_id,
+                capabilities=("code_execution", "workspace_write", "external_mcp"),
+            )
+        elif pol_revoked:
+            await get_process_supervisor().contain_by_capability_async(
+                reason=f"policy_revision_{final_sess_rev}_on_switch",
+                session_id=session_id,
+                grant_ids=[g.grant_id for g in pol_revoked],
+            )
+
+    if raw_msgs:
+        sys_head = (
+            {"role": "system", "content": str(raw_msgs[0].get("content") or "")}
+            if raw_msgs[0].get("role") == "system"
+            else {"role": "system", "content": ""}
+        )
+        _save_harness_messages(
+            session_id,
+            [sys_head, *(m.to_wire_message() for m in core.portable_messages)],
+        )
+
+    commit_ts = time.time()
+    runtime_persistence.run_write_transaction(
+        STORAGE,
+        DB_PATH,
+        lambda conn: conn.execute(
+            "UPDATE harness_sessions SET policy = ?, lead_model = ?, critic_model = ?, status = 'paused', updated_at = ? WHERE id = ?",
+            (next_pol, next_lead, next_critic, commit_ts, session_id),
+        ),
+    )
+    t_after = sm.store.get_task(session_id)
+    if t_after is not None and t_after.state != "paused":
+        sm.transition_task(
+            session_id,
+            "paused",
+            allow_inactive_epoch=True,
+            reason="portable_handoff_committed",
+            now=commit_ts,
+        )
+
+    # AC 2 post-condition assertions: task budgets and valid session grants are strictly preserved.
+    budget_after = sm.budgets.get_budget(session_id)
+    if budget_after.to_dict() != budget_before.to_dict():
+        raise _fail_into_safe_pause(
+            "handoff_budget_integrity_error",
+            "Task budget drifted unexpectedly during model switch.",
+            core_obj=core,
+            ext_obj=staged_ext,
+        )
+
+    active_grants_after = tuple(
+        g
+        for g in grant_store.list_grants(session_id=session_id, include_inactive=False)
+        if g.epoch is None
+    )
+    if next_pol == prev_pol:
+        after_by_id = {g.grant_id: g for g in active_grants_after}
+        for g_pre in active_grants_before:
+            if commit_ts >= g_pre.expires_at:
+                continue
+            g_post = after_by_id.get(g_pre.grant_id)
+            if (
+                g_post is None
+                or g_post.expires_at != g_pre.expires_at
+                or g_post.uses_consumed != g_pre.uses_consumed
+                or g_post.max_uses != g_pre.max_uses
+                or g_post.capabilities != g_pre.capabilities
+                or g_post.resource_scopes != g_pre.resource_scopes
+            ):
+                raise _fail_into_safe_pause(
+                    "handoff_grant_integrity_error",
+                    f"Active grant `{g_pre.grant_id}` validity or bounds drifted during model switch.",
+                    core_obj=core,
+                    ext_obj=staged_ext,
+                )
+
+    final_grant_snapshots = tuple(
+        routing_policy.HandoffGrantSnapshot(
+            grant_id=g.grant_id,
+            capabilities=g.capabilities,
+            resource_scopes=g.resource_scopes,
+            expires_at=g.expires_at,
+            max_uses=g.max_uses,
+            uses_consumed=g.uses_consumed,
+            session_policy_revision=g.session_policy_revision,
+            global_policy_revision=g.global_policy_revision,
+        )
+        for g in active_grants_after
+    )
+    committed_ext = routing_policy.HarnessPrivateExtensions(
+        fenced_epoch=fenced_epoch_num,
+        fenced_worker_ids=fenced_worker_ids,
+        policy=next_pol,
+        session_policy_revision=final_sess_rev,
+        global_policy_revision=glob_rev_before,
+        validated_grants=final_grant_snapshots,
+        revoked_epoch_grant_ids=revoked_epoch_grant_ids,
+        budget_snapshot=budget_after.to_dict(),
+        switch_attempts_used=reserved_sw.switch_attempts_used,
+        max_switch_attempts=reserved_sw.max_switch_attempts,
+        routing_decision=routing_summary,
+        admission_transition=admission_summary,
+        risk_level=risk_level,
+        risk_reasons=risk_reasons,
+        semantic_confirmation=sem_summary,
+    )
+    committed_rec = handoff_store.save_handoff(
+        routing_policy.HandoffRecord(
+            handoff_id=handoff_id,
+            session_id=session_id,
+            task_id=session_id,
+            status="committed",
+            portable_core=core,
+            harness_extensions=committed_ext,
+            resulting_task_state="paused",
+            created_at=now_ts,
+        ),
+        now=commit_ts,
+    )
+    _HARNESS_ABORT_FLAGS.discard(session_id)
+    _safe_append_harness_event(
+        session_id,
+        "handoff/committed",
+        {
+            "handoff_id": handoff_id,
+            "core_sha256": core.core_sha256,
+            "source_lead_model": prev_lead,
+            "target_lead_model": next_lead,
+            "source_critic_model": prev_critic,
+            "target_critic_model": next_critic,
+            "risk_level": risk_level,
+            "fenced_epoch": fenced_epoch_num,
+            "kv_cache_portable": False,
+            "semantic_confirmation_status": sem_summary.get("status"),
+        },
+    )
+    return {
+        "status": "switched",
+        "session_id": session_id,
+        "session": get_harness_session_db(session_id),
+        "handoff": committed_rec.to_mapping(),
+        "budget": budget_after.to_dict(),
+        "switch_budget": handoff_store.get_switch_budget(session_id).to_mapping(),
+        "active_grants": [g.to_mapping() for g in active_grants_after],
+    }
+
+
+def _verify_active_session_handoff(
+    sess: Mapping[str, Any],
+    record: routing_policy.HandoffRecord,
+    workspace_root: Path,
+    latest_checkpoint: workflow_checkpoints.TaskCheckpointRecord | None,
+) -> None:
+    """Verify active handoff invariants and source file digests before resuming or executing turns."""
+    sid = str(sess["id"])
+    core = record.portable_core
+    if core.kv_cache_portable is not False:
+        raise routing_policy.HandoffRejectedError(
+            "kv_cache_portability_forbidden",
+            f"Handoff `{record.handoff_id}` violates KV-cache non-portability invariant.",
+        )
+    if (
+        core.target_lead_model != str(sess["lead_model"])
+        or core.target_critic_model != str(sess["critic_model"])
+    ):
+        raise routing_policy.HandoffRejectedError(
+            "handoff_model_mismatch",
+            f"Session models ({sess['lead_model']!r}, {sess['critic_model']!r}) drifted from "
+            f"committed handoff `{record.handoff_id}`.",
+        )
+    pol_rank = {"plan": 0, "standard": 1, "autonomous": 2}
+    cur_pol = str(sess["policy"])
+    if pol_rank.get(cur_pol, 99) > pol_rank.get(record.harness_extensions.policy, -1):
+        raise routing_policy.HandoffRejectedError(
+            "handoff_permission_escalation_forbidden",
+            f"Session policy escalated from `{record.harness_extensions.policy}` to `{cur_pol}` "
+            "without re-validating handoff authority.",
+        )
+    expected_versions: dict[str, str | None] = {
+        ref.path: ref.sha256 for ref in core.file_references
+    }
+    if expected_versions:
+        for tx in _edit_ledger().list_transactions(sid):
+            if tx.recorded_at >= record.updated_at and tx.rel_path in expected_versions:
+                expected_versions[tx.rel_path] = tx.post_sha256
+        for obs_p, obs_sha in _observed_versions().entries(sid).items():
+            if obs_p in expected_versions and _edit_ledger().latest_for_path(sid, obs_p) is None:
+                pass
+        routing_policy.collect_and_validate_file_references(
+            workspace_root,
+            list(expected_versions.keys()),
+            expected_versions=expected_versions,
+        )
+    if (
+        latest_checkpoint is not None
+        and core.checkpoint_id
+        and latest_checkpoint.checkpoint_id == core.checkpoint_id
+        and core.checkpoint_payload_hash
+        and latest_checkpoint.payload_hash != core.checkpoint_payload_hash
+    ):
+        raise routing_policy.HandoffRejectedError(
+            "handoff_checkpoint_corrupt",
+            f"Checkpoint `{core.checkpoint_id}` hash drifted after handoff `{record.handoff_id}`.",
+        )
+
+
+@app.get("/api/harness/sessions/{session_id}/handoffs")
+async def api_list_harness_handoffs(session_id: str) -> JSONResponse:
+    """Inspect portable handoffs and switch retry budgets for a harness session (M5-P4-02)."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    try:
+        store = get_portable_handoff_store()
+        records = store.list_handoffs(session_id=session_id)
+        latest = store.get_latest_handoff(session_id, statuses=("committed",))
+        sw_budget = store.get_switch_budget(session_id)
+    except routing_policy.HandoffStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "handoff_state_corrupt", "message": str(exc)},
+        ) from exc
+    return JSONResponse(
+        {
+            "session_id": session_id,
+            "lead_model": sess["lead_model"],
+            "critic_model": sess["critic_model"],
+            "switch_budget": sw_budget.to_mapping(),
+            "active_handoff": latest.to_mapping() if latest is not None else None,
+            "handoffs": [r.to_mapping() for r in records],
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/switch-model")
+async def api_switch_harness_session_model(session_id: str, request: Request) -> JSONResponse:
+    """Execute a conservative sequential model switch with portable handoff validation (M5-P4-02)."""
+    try:
+        get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    body = await request.json()
+    if not isinstance(body, Mapping):
+        raise HTTPException(status_code=400, detail="Request body must be a JSON object.")
+    target_lead = body.get("target_lead_model") or body.get("lead_model")
+    target_critic = body.get("target_critic_model") or body.get("critic_model")
+    if not target_lead and not target_critic:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "missing_target_model", "message": "Provide `target_lead_model` and/or `target_critic_model`."},
+        )
+    try:
+        outcome = await execute_conservative_model_switch_async(
+            getattr(request.app.state, "http", None),
+            session_id,
+            target_lead_model=(str(target_lead) if target_lead else None),
+            target_critic_model=(str(target_critic) if target_critic else None),
+            target_policy=(str(body["policy"]) if body.get("policy") else None),
+            reason=str(body.get("reason") or "operator_switch_model"),
+            referenced_files=tuple(body.get("referenced_files") or ()),
+            expected_file_versions=body.get("expected_file_versions"),
+            required_grant_ids=tuple(body.get("required_grant_ids") or ()),
+            target_context_tokens=body.get("target_context_tokens"),
+            max_switch_attempts=body.get("max_switch_attempts"),
+            consent=body.get("consent"),
+            fallback_policy_override=body.get("fallback_policy"),
+            semantic_confirmation=body.get("semantic_confirmation"),
+            high_risk=bool(body.get("high_risk", False)),
+            force_handoff=bool(body.get("force_handoff", False)),
+            raw_options=body,
+            allow_policy_change=bool(body.get("allow_policy_change", False)),
+        )
+    except routing_policy.HandoffStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "handoff_state_corrupt", "message": str(exc)},
+        ) from exc
+    except routing_policy.HandoffRejectedError as exc:
+        raise HTTPException(status_code=409, detail=exc.to_mapping()) from exc
+    except routing_policy.RoutingPolicyError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "invalid_switch_request", "message": str(exc)},
+        ) from exc
+    return JSONResponse(outcome)
+
+
+@app.post("/api/harness/sessions/{session_id}/handoffs/reset-budget")
+async def api_reset_harness_switch_budget(session_id: str, request: Request) -> JSONResponse:
+    """Operator reset for an exhausted per-session model-switch retry budget."""
+    try:
+        get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    max_att = int(body.get("max_switch_attempts") or routing_policy.RP_DEFAULT_MAX_SWITCH_ATTEMPTS)
+    try:
+        updated = get_portable_handoff_store().reset_switch_budget(
+            session_id,
+            max_attempts=max_att,
+        )
+    except routing_policy.HandoffStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "handoff_state_corrupt", "message": str(exc)},
+        ) from exc
+    except routing_policy.RoutingPolicyError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "invalid_switch_budget", "message": str(exc)},
+        ) from exc
+    return JSONResponse({"status": "reset", "session_id": session_id, "switch_budget": updated.to_mapping()})
+
+
 @app.post("/api/harness/sessions/{session_id}/resume")
 async def api_resume_harness_session(session_id: str, request: Request) -> JSONResponse:
     """Validate checkpoint integrity, unresolved side effects, and recovery budget before resume."""
@@ -13492,6 +14491,15 @@ async def api_resume_harness_session(session_id: str, request: Request) -> JSONR
         execution_budget.BudgetExceeded,
     ) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if wt_root is not None:
+        try:
+            active_hof = get_portable_handoff_store().get_latest_handoff(session_id, statuses=("committed",))
+            if active_hof is not None:
+                _verify_active_session_handoff(sess, active_hof, wt_root, plan.checkpoint)
+        except routing_policy.HandoffStoreIntegrityError as exc:
+            raise HTTPException(status_code=503, detail={"code": "handoff_state_corrupt", "message": str(exc)}) from exc
+        except routing_policy.HandoffRejectedError as exc:
+            raise HTTPException(status_code=409, detail=exc.to_mapping()) from exc
     _HARNESS_ABORT_FLAGS.discard(session_id)
     _append_harness_event(
         session_id,
@@ -13553,18 +14561,54 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
             pol_u = body.get("policy") if body.get("policy") in HARNESS_POLICIES else sess["policy"]
             lead_u = body.get("lead_model") or sess["lead_model"]
             crit_u = body.get("critic_model") or sess["critic_model"]
-            now_u = time.time()
-            runtime_persistence.run_write_transaction(
-                STORAGE,
-                DB_PATH,
-                lambda conn: conn.execute(
-                    "UPDATE harness_sessions SET policy = ?, lead_model = ?, critic_model = ?, updated_at = ? WHERE id = ?",
-                    (pol_u, lead_u, crit_u, now_u, session_id),
-                ),
-            )
+            if lead_u != sess["lead_model"] or crit_u != sess["critic_model"]:
+                try:
+                    await execute_conservative_model_switch_async(
+                        getattr(request.app.state, "http", None),
+                        session_id,
+                        target_lead_model=lead_u,
+                        target_critic_model=crit_u,
+                        target_policy=pol_u,
+                        reason="inline_turn_model_switch",
+                        consent=body.get("consent"),
+                        fallback_policy_override=body.get("fallback_policy"),
+                        semantic_confirmation=body.get("semantic_confirmation"),
+                        high_risk=bool(body.get("high_risk", False)),
+                        raw_options=body,
+                        allow_policy_change=True,
+                    )
+                except routing_policy.HandoffStoreIntegrityError as exc:
+                    raise HTTPException(status_code=503, detail={"code": "handoff_state_corrupt", "message": str(exc)}) from exc
+                except routing_policy.HandoffRejectedError as exc:
+                    raise HTTPException(status_code=409, detail=exc.to_mapping()) from exc
+            elif pol_u != sess["policy"]:
+                prev_pol_u = sess["policy"]
+                _set_harness_session_policy(session_id, pol_u)
+                get_scoped_grant_store().bump_session_policy_revision(
+                    session_id,
+                    new_policy=pol_u,
+                    reason=f"inline_turn_policy_changed:{prev_pol_u}->{pol_u}",
+                )
             sess = get_harness_session_db(session_id)
 
     wt_dir_resolved = Path(sess["worktree_dir"]).resolve()
+    try:
+        active_turn_handoff = get_portable_handoff_store().get_latest_handoff(
+            session_id,
+            statuses=("committed",),
+        )
+        if active_turn_handoff is not None:
+            latest_c = get_task_state_machine().checkpoints.load_latest_checkpoint(
+                session_id,
+                verify_integrity=True,
+            )
+            _verify_active_session_handoff(sess, active_turn_handoff, wt_dir_resolved, latest_c)
+    except routing_policy.HandoffStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "handoff_state_corrupt", "message": str(exc)}) from exc
+    except routing_policy.HandoffRejectedError as exc:
+        raise HTTPException(status_code=409, detail=exc.to_mapping()) from exc
+    except workflow_checkpoints.ResumeRejected as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     pre_existing_verification = (
         get_task_state_machine().get_verification_spec(session_id)
         if get_task_state_machine().store.get_task(session_id) is not None
@@ -13623,7 +14667,18 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
             mcp_tools_block = build_active_mcp_tools_prompt()
             oc_pinned_block = build_pinned_opencontext_prompt()
             eff_block = build_efficiency_mode_prompt(efficiency_mode)
-            extra_blocks = (eff_block or "") + (oc_pinned_block or "") + (skill_block_raw or "") + (mcp_tools_block or "")
+            handoff_block = (
+                routing_policy.render_portable_handoff_banner(active_turn_handoff)
+                if active_turn_handoff is not None
+                else ""
+            )
+            extra_blocks = (
+                (eff_block or "")
+                + (oc_pinned_block or "")
+                + (skill_block_raw or "")
+                + (mcp_tools_block or "")
+                + handoff_block
+            )
             sys_prompt = HARNESS_SYSTEM_PROMPT_TEMPLATE.format(
                 worktree_dir=sess["worktree_dir"],
                 policy=sess["policy"],
