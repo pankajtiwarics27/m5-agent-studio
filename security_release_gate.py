@@ -661,12 +661,18 @@ DEFAULT_RESIDUAL_RISKS: tuple[ResidualRiskEntry, ...] = (
         severity="high",
         area="container-execution-isolation",
         summary=(
-            "M5-P3-01 live Docker/Podman container isolation qualification has not been recorded on the "
-            "target host; host execution mode relies on static inspection and process containment, not OS/VM isolation."
+            "M5-P3-01 container isolation is UNQUALIFIED, measured: the 2026-10-31 operator run on the target "
+            "host (Apple M5, Docker Desktop 29.5.3) passed 11 of 12 sandbox checks and failed "
+            "p3.adversarial.memory_limit - a 3 GiB allocation completed (exit 0) under '--memory 512m' while the "
+            "container's own /sys/fs/cgroup/memory.max read 536870912, so the memory cap was set but did not "
+            "refuse the allocation. Whether swap let it escape the cap or the cgroup was not enforced is "
+            "undecided (docs/m5-2-0-sandbox-memory-limit-finding.md); host execution mode still relies on "
+            "static inspection and process containment, not OS/VM isolation."
         ),
         mitigation=(
             "STUDIO_EXECUTION_MODE defaults to 'disabled'; 'sandbox' mode fails closed when no qualified "
-            "container runtime is available; release gate blocks v1.0 until M5-P3-01 is qualified."
+            "container runtime is available; dependent_execution stays blocked and the release gate blocks v1.0 "
+            "until M5-P3-01 is qualified, and '--memory-swap' parity is hardened once the finding is triaged."
         ),
         revisit_trigger="Operator runs ./scripts/qualify_environment.sh with Docker/Podman and records M5-P3-01.",
         blocks_release=True,

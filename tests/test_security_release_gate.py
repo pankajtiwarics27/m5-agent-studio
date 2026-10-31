@@ -485,6 +485,41 @@ def test_security_release_gate_cli_and_release_py_gate_enforce_block_vs_ready(tm
     assert "Security release gate blocked packaging" in proc_pkg.stderr
 
 
+def test_residual_risk_02_reports_the_measured_memory_cap_finding_it_blocks_on() -> None:
+    """The isolation residual risk must state what was measured, not that nothing was.
+
+    M5-P3-01 was qualified once on the target host and failed one check, so a
+    summary saying qualification "has not been recorded" is wrong and hides the
+    specific failure an operator needs to see when reading a blocked release
+    decision. The gate must keep blocking, and its claims must be backed by the
+    committed finding rather than drifting away from it.
+    """
+    risks = {r.risk_id: r for r in srg.DEFAULT_RESIDUAL_RISKS}
+    rr02 = risks["RR-02"]
+    assert rr02.blocks_release is True
+    assert rr02.severity == "high"
+
+    summary = rr02.summary
+    assert "has not been recorded on the target host" not in summary
+    assert "UNQUALIFIED" in summary
+    assert "p3.adversarial.memory_limit" in summary
+    assert "3 GiB" in summary
+    assert "536870912" in summary
+    assert "memory.max" in summary
+    assert "m5-2-0-sandbox-memory-limit-finding.md" in summary
+    assert "undecided" in summary, "an untriaged finding must stay untriaged"
+
+    finding = (ROOT / "docs" / "m5-2-0-sandbox-memory-limit-finding.md").read_text(encoding="utf-8")
+    for literal in ("p3.adversarial.memory_limit", "536870912", "3 GiB", "exit 0"):
+        assert literal in finding, f"gate cites {literal!r} but the finding does not record it"
+
+    gate_doc = (ROOT / "docs" / "m5-2-0-security-release-gate.md").read_text(encoding="utf-8")
+    rr02_row = [line for line in gate_doc.splitlines() if line.startswith("| `RR-02`")]
+    assert len(rr02_row) == 1
+    assert "m5-2-0-sandbox-memory-limit-finding.md" in rr02_row[0]
+    assert "p3.adversarial.memory_limit" in rr02_row[0]
+
+
 def test_http_release_gate_endpoints_and_standalone_studio_parity(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
