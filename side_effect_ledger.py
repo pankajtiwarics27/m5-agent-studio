@@ -20,12 +20,13 @@ by ``scripts/build_studio.py``.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import sqlite3
 import time
 import uuid
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, Protocol
@@ -66,6 +67,7 @@ _AMBIGUOUS_EXC_NAMES: frozenset[str] = frozenset(
     {
         "McpAmbiguousOutcomeError",
         "AmbiguousSideEffectError",
+        "CancelledError",
         "ReadTimeout",
         "WriteTimeout",
         "PoolTimeout",
@@ -355,6 +357,7 @@ def is_ambiguous_exception(exc: BaseException) -> bool:
         exc,
         (
             AmbiguousSideEffectError,
+            asyncio.CancelledError,
             TimeoutError,
             ConnectionResetError,
             BrokenPipeError,
@@ -430,6 +433,7 @@ class DurableActionLedger:
         *,
         retry_policy: runtime_persistence.BusyRetryPolicy | None = None,
         reconciler: ActionReconciler | None = None,
+        on_action_resolved: Callable[[str], None] | None = None,
     ) -> None:
         self._storage = storage
         self._db_path = Path(db_path)
@@ -437,6 +441,7 @@ class DurableActionLedger:
             retry_policy or runtime_persistence.DEFAULT_BUSY_RETRY_POLICY
         )
         self._reconciler = reconciler
+        self._on_action_resolved = on_action_resolved
 
     @property
     def reconciler(self) -> ActionReconciler | None:
@@ -1022,9 +1027,15 @@ class DurableActionLedger:
                 error=err_u,
             )
 
-        return runtime_persistence.run_write_transaction(
+        outcome = runtime_persistence.run_write_transaction(
             self._storage, self._db_path, _tx, retry_policy=self._retry_policy
         )
+        if outcome.reconciled and self._on_action_resolved is not None:
+            try:
+                self._on_action_resolved(outcome.action_id)
+            except Exception:
+                pass
+        return outcome
 
     def mark_never_started(
         self,
@@ -1227,9 +1238,15 @@ class DurableActionLedger:
             assert row is not None
             return _sel_row_to_action(row)
 
-        return runtime_persistence.run_write_transaction(
+        rec_resolved = runtime_persistence.run_write_transaction(
             self._storage, self._db_path, _tx, retry_policy=self._retry_policy
         )
+        if self._on_action_resolved is not None:
+            try:
+                self._on_action_resolved(aid)
+            except Exception:
+                pass
+        return rec_resolved
 
     def list_task_actions(
         self,
@@ -1346,9 +1363,14 @@ class WorkerLeaseCoordinator:
         self,
         store: runtime_persistence.RuntimePersistenceStore,
         ledger: DurableActionLedger,
+        *,
+        on_epochs_fenced: Callable[[str, Sequence[runtime_persistence.TaskEpochRecord], str], None] | None = None,
+        resumption_blocker: Callable[[str, str], Sequence[str]] | None = None,
     ) -> None:
         self._store = store
         self._ledger = ledger
+        self._on_epochs_fenced = on_epochs_fenced
+        self._resumption_blocker = resumption_blocker
 
     @property
     def store(self) -> runtime_persistence.RuntimePersistenceStore:
@@ -1458,13 +1480,25 @@ class WorkerLeaseCoordinator:
             fence_reason=fence_reason,
             now=ts,
         )
+        if superseded and self._on_epochs_fenced is not None:
+            try:
+                self._on_epochs_fenced(tid, superseded, fence_reason)
+            except Exception:
+                pass
 
         report = self.reconcile_task_effects(
             tid,
             known_action_args=known_action_args,
             now=ts,
         )
-        if report.has_unresolved_effects:
+        extra_blockers: tuple[str, ...] = ()
+        if self._resumption_blocker is not None:
+            try:
+                extra_blockers = tuple(str(x) for x in self._resumption_blocker(tid, workspace_dir) if str(x))
+            except Exception:
+                extra_blockers = ()
+        if report.has_unresolved_effects or extra_blockers:
+            combined_unresolved = tuple(dict.fromkeys((*report.unresolved_action_ids, *extra_blockers)))
             self._store.release_epoch(
                 tid,
                 epoch_rec.epoch,
@@ -1473,13 +1507,13 @@ class WorkerLeaseCoordinator:
                 reason="unresolved_effects_hold",
                 now=ts,
             )
-            sample = ", ".join(report.unresolved_action_ids[:3])
+            sample = ", ".join(combined_unresolved[:3])
             raise UnresolvedEffectsHoldError(
                 f"Replacement execution on task `{tid}` held (`blocked`) at epoch {epoch_rec.epoch}: "
                 f"unresolved side effects ({sample}) must be reconciled before resuming.",
                 task_id=tid,
                 epoch=epoch_rec.epoch,
-                unresolved_action_ids=report.unresolved_action_ids,
+                unresolved_action_ids=combined_unresolved,
             )
 
         transition_reason = (
@@ -1547,6 +1581,11 @@ class WorkerLeaseCoordinator:
         if task is None:
             return []
         fenced = self._store.fence_active_epoch(tid, reason=reason, now=ts)
+        if fenced and self._on_epochs_fenced is not None:
+            try:
+                self._on_epochs_fenced(tid, fenced, reason)
+            except Exception:
+                pass
         if sweep_in_flight:
             self._ledger.reconcile_missing_results(task_id=tid, error_code=reason, now=ts)
         effective_state = target_state

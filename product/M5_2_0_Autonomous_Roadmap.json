@@ -124,10 +124,10 @@
   },
   "session_state": {
     "active_story": null,
-    "last_completed_story": "M5-P3-02",
-    "last_checkpoint": "2026-10-31T04:31:06Z",
-    "last_session_id": "arena/46877a13-m5-agent-studio",
-    "next_recommended_story": "M5-P3-03",
+    "last_completed_story": "M5-P3-03",
+    "last_checkpoint": "2026-10-31T04:42:00Z",
+    "last_session_id": "arena/a770c694-m5-agent-studio",
+    "next_recommended_story": "M5-P3-04",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). The operator-run suite scripts/qualify_environment.py --sandbox (docs/qualification-suite.md, ADR-0010) is now the qualification path; M5-P3-01 stays blocked until it returns qualified on a Docker/Podman host.",
@@ -137,12 +137,13 @@
       "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1) recorded in the M5-P0-05 baseline evidence; runtime dependencies clean.",
       "Harness task-event store (task_events.py, M5-P1-07) and workspace snapshot store (workspace_snapshots.py, M5-P2-01) assume a single application process per session, matching the worker-lease model; cross-process concurrent appends are unsupported and not claimed safe.",
       "The edit ledger and observed-version index assume one application process per session (same assumption as the durable event stream and worker leases); a second process editing the same workspace is not detected. The .harnesses/edits directory is bounded per session (4 MiB rotation) but has no cross-session pruning (M5-P2-02).",
-      "The M5-P2-03 rollback journal stores both the pre- and post-edit bytes of every managed edit in the edit CAS (.harnesses/edits/blobs) and has no garbage collection; the store grows with edit volume until a retention story adds pruning. Rollback covers managed edits only, and its line-based merge refuses rather than guesses on a user edit inside a region the batch wrote."
-    ,
+      "The M5-P2-03 rollback journal stores both the pre- and post-edit bytes of every managed edit in the edit CAS (.harnesses/edits/blobs) and has no garbage collection; the store grows with edit volume until a retention story adds pruning. Rollback covers managed edits only, and its line-based merge refuses rather than guesses on a user edit inside a region the batch wrote.",
       "M5-P3-02 review (post-merge, independent session): docs/execution-profiles.md claimed 'recursive inspection of inline sh -c / bash -c' payloads, but the code only handled python -c, so a quoted payload token (sh -c 'cat .env', bash -c 'echo x > .git/hooks/pre-commit', perl/node/ruby -e '<path>') was allowed where the same command written directly was refused. Fixed in the reviewing session's PR by re-parsing shell -c payloads (bounded to three levels), refusing a shell that reads its command from stdin, and checking the path tokens of perl/ruby/node/php/lua inline code; the remaining limits of pre-execution text inspection (script file contents, runtime-built paths, encoded payloads) are now stated in docs/execution-profiles.md instead of being implied away. The sandbox (M5-P3-01) remains the boundary for those, which is another reason unqualified isolation keeps host execution unavailable.",
-      "M5-P3-02 review, second finding: the post-execution reconciliation layer judged a newly created .git/config 'benign' using a regex over raw text, but git writes the sectioned form ([credential]\\n helper = ...), so credential.helper (and filter.*.clean|smudge, include.path, includeIf) went undetected and the run reported clean instead of policy_violation -- no quarantine, no uncertainty, follow-up actions not blocked. Post-execution detection was weaker than the pre-execution rule that refuses the same directives. Fixed by parsing sections/subsections/keys and resolving each directive to its dotted name; a plain git-init-shaped config still passes. The less general point: two layers that enforce the same policy must share the predicate rather than each writing their own matcher."],
-    "last_readme_sync": "2026-10-31T03:34:00Z",
-    "last_verified_commit": "3f73d2db4ae6064ac557d2022b617dfa661d44fd",
+      "M5-P3-02 review, second finding: the post-execution reconciliation layer judged a newly created .git/config 'benign' using a regex over raw text, but git writes the sectioned form ([credential]\\n helper = ...), so credential.helper (and filter.*.clean|smudge, include.path, includeIf) went undetected and the run reported clean instead of policy_violation -- no quarantine, no uncertainty, follow-up actions not blocked. Post-execution detection was weaker than the pre-execution rule that refuses the same directives. Fixed by parsing sections/subsections/keys and resolving each directive to its dotted name; a plain git-init-shaped config still passes. The less general point: two layers that enforce the same policy must share the predicate rather than each writing their own matcher.",
+      "Process supervision and containment (process_supervision.py, M5-P3-03, ADR-0013) tracks process groups, ppid descendants, and M5_SUPERVISION_ID detached trees within a single Studio process; in STUDIO_EXECUTION_MODE=host a deliberately adversarial child that scrubs M5_SUPERVISION_ID and double-forks before tree enumeration cannot be kernel-guaranteed without OS cgroups/PID namespaces (M5-P3-01)."
+    ],
+    "last_readme_sync": "2026-10-31T04:42:00Z",
+    "last_verified_commit": "881d8bc251725fcaa49d928492e61e96918f03f6",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md"
   },
   "delivery_phases": [
@@ -205,7 +206,7 @@
       ],
       "status": "in_progress",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
-      "progress_percent": 0
+      "progress_percent": 33
     },
     {
       "id": "P4",
@@ -315,8 +316,8 @@
           "Authority consolidation completed 2026-10-30 on user/owner confirmation; AS roadmap retained unmodified as historical source and AS-status ledger (no history deleted)"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None \u2014 done. Authority consolidation awaits owner confirmation.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None — done. Authority consolidation awaits owner confirmation.",
         "readme_updated": true
       }
     },
@@ -370,14 +371,14 @@
           "docs/README.md"
         ],
         "evidence": [
-          "docs/m5-2-0-integration-audit.md \u00a71: all 9 reported claims verified/refuted with line evidence (claims 1 and 6 refuted; 2,3,4,5,7,8,9 confirmed)",
-          "\u00a72: FastAPI route -> tool/subprocess/SQLite/MCP traces with function and line references",
-          "\u00a73.1: all 17 direct subprocess entry points in app.py enumerated with gates; \u00a73.2: all consequential SQLite/FS write entry points enumerated",
-          "\u00a74: 42-module code-exists/integrated/tested/qualified table (5 integrated, 37 unit-tested-but-unintegrated)"
+          "docs/m5-2-0-integration-audit.md §1: all 9 reported claims verified/refuted with line evidence (claims 1 and 6 refuted; 2,3,4,5,7,8,9 confirmed)",
+          "§2: FastAPI route -> tool/subprocess/SQLite/MCP traces with function and line references",
+          "§3.1: all 17 direct subprocess entry points in app.py enumerated with gates; §3.2: all consequential SQLite/FS write entry points enumerated",
+          "§4: 42-module code-exists/integrated/tested/qualified table (5 integrated, 37 unit-tested-but-unintegrated)"
         ],
         "test_results": [
           {
-            "command": "grep/sed call-path audit (commands listed in audit doc \u00a76)",
+            "command": "grep/sed call-path audit (commands listed in audit doc §6)",
             "exit_code": 0,
             "result": "evidence captured inline"
           }
@@ -388,8 +389,8 @@
           "Skill-code subprocess paths classified as containment targets for M5-P0-03 (app.py:1831 flag-gated but sandbox-bypassing; app.py:8645 ungated)"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None \u2014 done. Containment work continues in M5-P0-03.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None — done. Containment work continues in M5-P0-03.",
         "readme_updated": true
       }
     },
@@ -639,7 +640,7 @@
           "docs/README.md"
         ],
         "evidence": [
-          "docs/m5-2-0-baseline-evidence.md \u00a72: full command log with exit codes",
+          "docs/m5-2-0-baseline-evidence.md §2: full command log with exit codes",
           "pytest: 717 passed, 1 skipped (opt-in live container test), 1 warning, 19.13s",
           "ruff/mypy/compileall/frontend-syntax/smoke_local x2/governance/security-signoff/docs/generators-no-drift/demo-tour/screenshots/adrs: all exit 0",
           "pip_audit exit 1: 21 advisories in venv bootstrap packages pip 23.0.1 + setuptools 66.1.1 only; runtime dependencies clean (recorded undiluted)",
@@ -673,12 +674,12 @@
           }
         ],
         "decisions": [
-          "verify_baseline.py initially failed on the shallow checkout; git fetch --unshallow (documented prerequisite) fixed it \u2014 both outcomes recorded",
-          "Blocked measurements (peak unified memory/swap, oMLX coding task, FTS5 load latency, live isolation) listed in evidence doc \u00a74 and never promoted to claims"
+          "verify_baseline.py initially failed on the shallow checkout; git fetch --unshallow (documented prerequisite) fixed it — both outcomes recorded",
+          "Blocked measurements (peak unified memory/swap, oMLX coding task, FTS5 load latency, live isolation) listed in evidence doc §4 and never promoted to claims"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None \u2014 done. Target-hardware telemetry moves to M5-P4-01 / M5-P0-04 on real hardware.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None — done. Target-hardware telemetry moves to M5-P4-01 / M5-P0-04 on real hardware.",
         "readme_updated": true
       }
     },
@@ -866,8 +867,8 @@
           "Old marketing-forward README content replaced per draft mandate; deep reference material (env vars, API, invariants) preserved in README reference section and docs/ links so validate_docs publication checks stay green"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None \u2014 done. README maintenance rule: refresh with verified behavior after every subsequent story.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None — done. README maintenance rule: refresh with verified behavior after every subsequent story.",
         "readme_updated": true
       }
     },
@@ -1486,7 +1487,7 @@
           "Enforced two-tier false-completion protection: a universal ledger invariant rejecting completion when the latest run_bash action failed without a subsequent passing run, plus full TaskVerificationSpec verification (managed-edit provenance, modified-file SHA-256 deltas, Git diff, protected user-file digests, post-edit test ordering, and independent shell=False test execution)."
         ],
         "blockers": [],
-        "handoff_note": "M5-P1-06 complete: single-agent verified vertical slice, deterministic action-boundary crash injection + session reconciliation, and false-completion rejection are integrated across app.py and standalone studio.py (811 passed, 1 skipped; 12/44 modules integrated; Phase P1 at 86% \u2014 6/7 stories done). Ready for M5-P1-07 (Minimal task events, HTTP commands and existing UI).",
+        "handoff_note": "M5-P1-06 complete: single-agent verified vertical slice, deterministic action-boundary crash injection + session reconciliation, and false-completion rejection are integrated across app.py and standalone studio.py (811 passed, 1 skipped; 12/44 modules integrated; Phase P1 at 86% — 6/7 stories done). Ready for M5-P1-07 (Minimal task events, HTTP commands and existing UI).",
         "next_action": "Claim and implement M5-P1-07 on a fresh branch after M5-P1-06 merges.",
         "readme_updated": true
       }
@@ -2351,7 +2352,14 @@
       "likely_files_to_inspect": [
         "app.py"
       ],
-      "verification_commands": [],
+      "verification_commands": [
+        ".venv/bin/pytest -v tests/test_process_supervision.py",
+        ".venv/bin/pytest -q",
+        ".venv/bin/ruff check .",
+        ".venv/bin/mypy",
+        ".venv/bin/python scripts/validate_docs.py",
+        ".venv/bin/python scripts/smoke_local.py --standalone"
+      ],
       "required_evidence": [
         "git diff / changed-file list",
         "test commands and exit codes",
@@ -2363,22 +2371,54 @@
       ],
       "prompt": "Implement story M5-P3-03: Process supervision and in-flight containment. Objective: Contain actions after cancellation, ownership loss or security incident. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Track subprocess identities and groups; Implement cooperative cancel, bounded termination and reconciliation; Persist unresolved effects/barriers; Test detached child and crash. Acceptance: Stale process cannot admit new actions; Unresolved side effects block conflicting resumption; Containment state survives restart. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-10-31T03:39:00Z",
+        "updated_at": "2026-10-31T04:42:00Z",
+        "completed_at": "2026-10-31T04:42:00Z",
+        "owner_session": "arena/a770c694-m5-agent-studio",
+        "commit_sha": "881d8bc251725fcaa49d928492e61e96918f03f6",
+        "changed_files": [
+          "README.md",
+          "app.py",
+          "docs/adr/0013-process-supervision-and-in-flight-containment.md",
+          "docs/process-supervision.md",
+          "docs/route-security-matrix.md",
+          "docs/subsystem-dependency-inventory.md",
+          "execution_profiles.py",
+          "execution_spine.py",
+          "process_supervision.py",
+          "product/M5_2_0_Autonomous_Roadmap.json",
+          "pyproject.toml",
+          "scripts/build_studio.py",
+          "side_effect_ledger.py",
+          "studio.py",
+          "tests/test_process_supervision.py",
+          "workflow_state.py"
+        ],
+        "evidence": [
+          "Implementation + docs merged at 881d8bc251725fcaa49d928492e61e96918f03f6 across 16 files (process_supervision.py, execution_spine.py, side_effect_ledger.py, execution_profiles.py, workflow_state.py, app.py, studio.py, docs/process-supervision.md, ADR-0013).",
+          "AC 1 (Stale process cannot admit new actions): ContainmentStore.is_origin_fenced + UnifiedExecutionCoordinator.admit_profile reject superseded worker/epoch scopes (task-bound and taskless), foreign-boot workers, cancelled/timed-out subprocess M5_SUPERVISION_ID scopes (including inbound mcp_bridge__* callbacks), and POST /api/harness/sessions/{id}/contain quarantined sessions across read_only, managed_edit, consequential, and external classes (test_ac1_stale_and_cancelled_and_incident_fenced_origins_cannot_admit_new_actions).",
+          "AC 2 (Unresolved side effects block conflicting resumption): PersistedBarrierHold entries in $HARNESS_STORE_DIR/containment/state.json block conflicting mutations (unresolved_containment_barrier) and conflicting task/workspace resumptions across both the interrupted task and other tasks sharing the workspace via WorkerLeaseCoordinator.resumption_blocker and DurableTaskStateMachine.prepare_resume while allowing disjoint workspaces and read-only inspection; lingering unkillable PIDs block all overlapping barriers including reads until exit (test_ac2_in_flight_cancel_contains_subprocess_tree_and_blocks_conflicting_resumption, test_unkillable_lingering_child_blocks_all_overlapping_barriers_including_reads_until_exit).",
+          "AC 3 (Containment state survives restart): Atomic O_NOFOLLOW 0700/0600 JSON persistence in $HARNESS_STORE_DIR/containment/state.json plus init_db -> ProcessSupervisor.recover_on_startup sweep live orphaned leaders and os.setsid() detached descendants verified by (pid, start_fingerprint), fence prior boot workers/supervision IDs, preserve barrier holds and incident history across multiple restarts, and fail closed on file corruption or symlink swap (test_ac3_mid_flight_crash_with_live_detached_child_survives_multiple_restarts, test_containment_store_corruption_and_symlink_fail_closed).",
+          "README.md updated with M5-P3-03 verified behavior, 23/51 wired modules, and explicit host-mode cgroup/PID-namespace caveat."
+        ],
+        "test_results": [
+          ".venv/bin/pytest -v tests/test_process_supervision.py -> 13 passed (exit 0)",
+          ".venv/bin/pytest -q -> 1117 passed, 1 skipped (exit 0)",
+          ".venv/bin/ruff check . -> All checks passed! (exit 0)",
+          ".venv/bin/mypy -> Success: no issues found in 50 source files (exit 0)",
+          ".venv/bin/python scripts/validate_docs.py -> passed (exit 0)",
+          ".venv/bin/python scripts/smoke_local.py && .venv/bin/python scripts/smoke_local.py --standalone -> passed (exit 0)"
+        ],
+        "decisions": [
+          "ADR-0013 (docs/adr/0013-process-supervision-and-in-flight-containment.md): stdlib-only process_supervision.py with (pid, start_fingerprint) recycling protection, M5_SUPERVISION_ID detached-tree discovery, 3-stage cooperative SIGTERM -> bounded SIGKILL -> lingering-PID fail-closed containment, and atomic $HARNESS_STORE_DIR/containment/state.json persistence."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
-        "readme_updated": false
+        "handoff_note": "M5-P3-03 complete with 13 dedicated process-supervision tests and full suite green. Next mandatory story in P3 is M5-P3-04 (Secret lifecycle and redaction guarantees).",
+        "next_action": "Claim and implement M5-P3-04 on a fresh session branch after PR #60 merges.",
+        "readme_updated": true
       }
     },
     {
@@ -2619,7 +2659,7 @@
           "AC '24 GB pressure measured' remains UNMEASURED: p4.pressure and p4.model_load need the owner's 24 GB Apple Silicon run (--pressure-gb N --model-command CMD). The 80% reservation is documented as policy, not a measurement (docs/model-admission.md 'What this does not claim'), and the story therefore stays blocked.",
           "Standalone bundle stays self-contained: resource_admission and model_admission are inlined into studio.py (builder now tolerates a trailing comment on the import line), verified by tests/test_release_manager.py::test_generated_standalone_has_no_local_module_imports and ::test_the_standalone_bundle_carries_the_same_policy.",
           "Task 1/2 (representative per-category coding cases + recorded uncertainty): --coding-cases takes a case set (id/category/prompt, optional declared categories) and runs every case through --model-command with STUDIO_QUALIFY_CASE_ID/CATEGORY/PROMPT in the environment, --case-runs times each. p4.coding_cases records per-case exit codes, success rate, wall_s_median, wall_s_spread_ratio, per-category completion and an explicit uncertainty block (incl. single_run_cases) instead of a bare pass. A malformed case set (duplicate/missing id, missing category, undeclared category, invalid JSON) aborts with exit 2 and writes no record. Tests: test_load_coding_cases_* , test_coding_case_probe_passes_case_identity_through_the_environment, test_coding_case_probe_records_failures_and_uncertainty, test_coding_case_probe_measures_wall_time_spread, test_malformed_coding_cases_abort_the_run_without_a_verdict.",
-          "Task 3 (thermal): p4.thermal samples thermal pressure during every load phase \u2014 macOS via `pmset -g therm` CPU_Speed_Limit (no root; powermetrics is never invoked because it needs root), Linux via /sys/class/thermal/thermal_zone*/temp \u2014 and records stress min/max plus whether throttling was observed. Where the platform exposes no readable source the check is `blocked` with the reason (this container: 35 samples, none readable) rather than a fabricated temperature. Tests: test_thermal_snapshot_parses_pmset_thermal_pressure, test_linux_thermal_readings_convert_millidegrees, test_thermal_sampler_summarises_throttling, test_thermal_check_blocks_when_the_platform_cannot_report, test_thermal_check_passes_with_readings_under_load.",
+          "Task 3 (thermal): p4.thermal samples thermal pressure during every load phase — macOS via `pmset -g therm` CPU_Speed_Limit (no root; powermetrics is never invoked because it needs root), Linux via /sys/class/thermal/thermal_zone*/temp — and records stress min/max plus whether throttling was observed. Where the platform exposes no readable source the check is `blocked` with the reason (this container: 35 samples, none readable) rather than a fabricated temperature. Tests: test_thermal_snapshot_parses_pmset_thermal_pressure, test_linux_thermal_readings_convert_millidegrees, test_thermal_sampler_summarises_throttling, test_thermal_check_blocks_when_the_platform_cannot_report, test_thermal_check_passes_with_readings_under_load.",
           "The measurement path is now executable end to end instead of 'write a harness first': scripts/model_probe.py (stdlib only, OpenAI-compatible) performs one real request and prints one JSON line in the contract the suite already parses. first_token_ms is timed from the request being sent, not from the response headers - the first version of this probe timed from the headers and reported 0.0 ms, which excluded prefill; the regression is pinned by tests/test_model_probe.py::test_first_token_latency_includes_the_wait_for_the_first_token. Token counts come only from the server's usage block, peak_memory_bytes only from a readable --server-pid; anything unobserved is omitted and explained in a notes field rather than defaulted.",
           "Observed in this environment against a local OpenAI-compatible endpoint (record: /tmp/rec3.json, not committed): p4.model_load pass (3/3 runs, first_token_ms and output_tokens carried through to a loadable model_calibration profile), p4.coding_cases pass (3/3 cases across 3 categories, per-case success_rate 1.0 and wall_s_spread_ratio recorded, case_id/case_category echoed by the probe so a per-case measurement says which case it came from), p4.thermal blocked (no readable thermal source in a container), p4.machine.fingerprint blocked off-target. The story therefore stays blocked: this is evidence that the instrument works, not that a 24 GB Apple Silicon machine qualified."
         ],

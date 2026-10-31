@@ -26,6 +26,7 @@ the Python standard library and free of references to ``app``.
 """
 from __future__ import annotations
 
+import asyncio
 import contextvars
 import time
 from collections.abc import Awaitable, Callable, Mapping
@@ -246,6 +247,7 @@ class ActiveAdmissionScope:
     replay_policy: str = "non_idempotent"
     lease_id: str | None = None
     footprint_scope: str = ""
+    barriers: tuple[tuple[str, str], ...] = ()
 
 
 _ACTIVE_ADMISSION_SCOPE: contextvars.ContextVar[ActiveAdmissionScope | None] = contextvars.ContextVar(
@@ -385,6 +387,7 @@ class ProfileAdmissionOutcome:
     conflict_denied: bool = False
     conflicting_barriers: tuple[str, ...] = ()
     exhausted_resources: tuple[str, ...] = ()
+    barriers: tuple[tuple[str, str], ...] = ()
     profile: dict[str, Any] | None = None
     handle: Any = None
 
@@ -883,6 +886,7 @@ class DurableActionBoundary:
                 replay_policy=(intent_decision.replay_policy if intent_decision is not None else "non_idempotent"),
                 lease_id=(profile_outcome.lease_id if profile_outcome is not None else None),
                 footprint_scope=(profile_outcome.footprint_scope if profile_outcome is not None else ""),
+                barriers=(profile_outcome.barriers if profile_outcome is not None else ()),
             )
             try:
                 scope_token = _ACTIVE_ADMISSION_SCOPE.set(scope)
@@ -891,6 +895,52 @@ class DurableActionBoundary:
                 finally:
                     _ACTIVE_ADMISSION_SCOPE.reset(scope_token)
             except failure_injection.InjectedBoundaryCrashError:
+                if profile_handle is not None and self._profile_coordinator is not None:
+                    profile_released = True
+                    abort_fn = getattr(self._profile_coordinator, "abort_on_interrupt", None)
+                    try:
+                        if callable(abort_fn):
+                            abort_fn(profile_handle, action_id=resolved_action_id, reason="boundary_crash")
+                        else:
+                            self._profile_coordinator.release_only(profile_handle)
+                    except Exception:
+                        pass
+                raise
+            except asyncio.CancelledError as cancel_exc:
+                if profile_handle is not None and self._profile_coordinator is not None:
+                    profile_released = True
+                    abort_fn = getattr(self._profile_coordinator, "abort_on_interrupt", None)
+                    try:
+                        if callable(abort_fn):
+                            abort_fn(profile_handle, action_id=resolved_action_id, reason="cancelled_in_flight")
+                        else:
+                            self._profile_coordinator.release_only(profile_handle)
+                    except Exception:
+                        pass
+                cancel_ms = round((time.perf_counter() - started) * 1000)
+                cancel_status = "uncertain" if is_consequential_action_class(action_class) else "failed"
+                if intent_decision is not None and self._intent_ledger is not None:
+                    try:
+                        cancel_status = self._intent_ledger.record_exception(
+                            intent_decision.action_id, cancel_exc, cancel_ms
+                        )
+                    except Exception:
+                        pass
+                try:
+                    self._ledger.finish(
+                        event_id,
+                        {
+                            "ok": False,
+                            "uncertain": cancel_status == "uncertain",
+                            "output": f"Tool `{request.tool_name}` cancelled in flight.",
+                            "diff": "",
+                            "elapsed_ms": cancel_ms,
+                        },
+                        cancel_ms,
+                        status="uncertain" if cancel_status == "uncertain" else "failed",
+                    )
+                except Exception:
+                    pass
                 raise
             except Exception as exc:
                 if profile_handle is not None and self._profile_coordinator is not None:
@@ -929,6 +979,15 @@ class DurableActionBoundary:
                     pass  # The durable started row still proves that execution was attempted.
                 raise
 
+            failure_injection.check_action_boundary(
+                "after_effect_before_result_commit",
+                tool_name=request.tool_name,
+                action_id=resolved_action_id,
+                task_id=resolved_task_key,
+                step_id=request.step_id,
+                injector=self._boundary_injector,
+            )
+
             if profile_handle is not None and self._profile_coordinator is not None:
                 profile_released = True
                 try:
@@ -955,15 +1014,6 @@ class DurableActionBoundary:
                             + str(result.get("output") or "")
                         ),
                     }
-
-            failure_injection.check_action_boundary(
-                "after_effect_before_result_commit",
-                tool_name=request.tool_name,
-                action_id=resolved_action_id,
-                task_id=resolved_task_key,
-                step_id=request.step_id,
-                injector=self._boundary_injector,
-            )
             elapsed = int(result.get("elapsed_ms") or round((time.perf_counter() - started) * 1000))
             if intent_decision is not None and self._intent_ledger is not None:
                 try:
@@ -996,6 +1046,18 @@ class DurableActionBoundary:
         finally:
             if profile_handle is not None and not profile_released and self._profile_coordinator is not None:
                 try:
-                    self._profile_coordinator.release_only(profile_handle)
+                    abort_fn = getattr(self._profile_coordinator, "abort_on_interrupt", None)
+                    if (
+                        callable(abort_fn)
+                        and intent_decision is not None
+                        and intent_decision.proceed
+                    ):
+                        abort_fn(
+                            profile_handle,
+                            action_id=intent_decision.action_id,
+                            reason="interrupted_in_flight",
+                        )
+                    else:
+                        self._profile_coordinator.release_only(profile_handle)
                 except Exception:
                     pass

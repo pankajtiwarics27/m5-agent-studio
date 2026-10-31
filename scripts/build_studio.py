@@ -22,6 +22,7 @@ INLINED_MODULES = (
     "workflow_checkpoints",
     "recovery_guard",
     "verification_evidence",
+    "process_supervision",
     "workflow_state",
     "mcp_client",
     "context_store",

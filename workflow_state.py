@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Literal, Sequence
 
 import execution_budget
+import process_supervision
 import recovery_guard
 import runtime_persistence
 import verification_evidence
@@ -511,10 +512,12 @@ class DurableTaskStateMachine:
         *,
         retry_policy: runtime_persistence.BusyRetryPolicy = runtime_persistence.DEFAULT_BUSY_RETRY_POLICY,
         recovery_memory: recovery_guard.RecoveryGuard | None = None,
+        containment_store: process_supervision.ContainmentStore | None = None,
     ) -> None:
         self._storage = storage
         self._db_path = db_path
         self._retry_policy = retry_policy
+        self._containment_store = containment_store
         self.store = runtime_persistence.RuntimePersistenceStore(storage, db_path, retry_policy=retry_policy)
         self.budgets = execution_budget.DurableTaskBudgetManager(storage, db_path, retry_policy=retry_policy)
         self.checkpoints = workflow_checkpoints.DurableTaskCheckpointStore(
@@ -1308,6 +1311,17 @@ class DurableTaskStateMachine:
             raise workflow_checkpoints.ResumeRejected(
                 f"Task {tid!r} has unresolved consequential action(s): {', '.join(unresolved)}."
             )
+        if self._containment_store is not None:
+            holds = self._containment_store.find_resumption_holds(
+                task_id=tid,
+                workspace_root=task.workspace_dir,
+            )
+            if holds:
+                hold_labels = [h.action_id or h.hold_id for h in holds]
+                raise workflow_checkpoints.ResumeRejected(
+                    f"Task {tid!r} has conflicting containment hold(s) blocking resumption: "
+                    f"{', '.join(hold_labels)}."
+                )
         # Verify checkpoint integrity BEFORE consuming recovery budget.
         ckpt = self.checkpoints.load_latest_checkpoint(tid, verify_integrity=True)
         existing_budget = self.budgets.get_budget(tid)
