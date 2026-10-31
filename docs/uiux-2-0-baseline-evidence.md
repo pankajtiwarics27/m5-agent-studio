@@ -4,7 +4,11 @@
 > checkout while [#108](https://github.com/pankajtiwarics27/m5-agent-studio/issues/108)
 > remains open: the demo can read that checkout's harness data. Use a disposable
 > source copy with an empty `.harnesses` directory and resolve the capture
-> authentication-prompt timeout before accepting screenshots. The dry run only
+> authentication-prompt timeout before accepting screenshots. A passing test can
+> also modify checkout harness data despite isolated HOME and database settings;
+> until [#117](https://github.com/pankajtiwarics27/m5-agent-studio/issues/117)
+> is fixed, run the full suite in a disposable clone or detached worktree with
+> an empty store. The dry run only
 > validates manifest shape and prints a plan; it does **not** check tab IDs against
 > the UI (`scripts/validate_screenshots.py` checks those separately). The test
 > table also mixes results from different revisions: 1,588 tests and the updated

@@ -73,10 +73,14 @@ def test_every_resolved_url_is_classified_exactly_once() -> None:
     assert totals["resolved_urls"] == resolved
     assert totals["exact_matches"] == kinds.get("exact", 0)
     assert totals["dynamic_matches"] == kinds.get("dynamic", 0)
+    assert totals["dynamic_method_matches"] == kinds.get("dynamic_method", 0)
     assert sum(kinds.values()) == resolved
     assert totals["unresolved_call_sites"] == sum(1 for call in calls if not call["urls"] or call["unresolved_edges"])
     assert totals["unresolved_caller_edges"] == sum(len(call["unresolved_edges"]) for call in calls)
-    assert set(kinds) <= {"exact", "dynamic", "method_mismatch", "no_route"}
+    assert totals["unresolved_method_edges"] == sum(
+        1 for call in calls for edge in call["unresolved_edges"] if edge.get("kind") == "unresolved_method"
+    )
+    assert set(kinds) <= {"exact", "dynamic", "dynamic_method", "method_mismatch", "no_route"}
 
 
 def test_every_exact_match_names_a_route_that_exists_for_that_method() -> None:
@@ -85,11 +89,14 @@ def test_every_exact_match_names_a_route_that_exists_for_that_method() -> None:
         for url in call["urls"]:
             if url["kind"] == "exact":
                 assert (call["method"], url["route"]) in routes, f"{call['handler']}: {call['method']} {url['route']}"
-            if url["kind"] == "dynamic":
+            if url["kind"] in {"dynamic", "dynamic_method"}:
                 assert url["candidates"], f"{call['handler']}: dynamic match with no candidates"
                 for candidate in url["candidates"]:
                     assert (candidate["method"], candidate["path"]) in routes
-                    assert candidate["method"] == call["method"]
+                    if url["kind"] == "dynamic":
+                        assert candidate["method"] == call["method"]
+                    else:
+                        assert call["method"] is None
 
 
 def test_a_runtime_chosen_segment_is_never_an_exact_match() -> None:
@@ -253,6 +260,129 @@ def test_multiple_structural_candidates_are_all_possible(
         assert route["possible_callers"] == ["send"]
         assert route["callers"] == []
         assert route["caller_certainty"] == "possible"
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        "{method}",
+        "{method: method}",
+        "options",
+        "{...options}",
+        '{["method"]: method}',
+        '{"\\u006dethod": "POST"}',
+        '{get method() { return "POST"; }}',
+        '{__proto__: options}',
+        '{method: `POST`}',
+        '{method: "POST", method: dynamic}',
+        '{method: "patch"}',
+        '{/* unknown options */ method: "POST"}',
+    ],
+)
+def test_unknown_fetch_method_preserves_all_candidate_routes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, options: str
+) -> None:
+    script = f'function send(method, options) {{ return fetch("/api/known", {options}); }}'
+    mapping = _fixture_map(
+        tmp_path, monkeypatch, script,
+        '@app.get("/api/known")\n@app.post("/api/known")\n@app.post("/api/maybe")\n',
+    )
+    (call,) = mapping["calls"]
+    assert call["method"] is None, "a dynamic request method must not silently become GET"
+    assert call["urls"][0]["kind"] == "dynamic_method"
+    assert {(c["method"], c["path"]) for c in call["urls"][0]["candidates"]} == {
+        ("GET", "/api/known"), ("POST", "/api/known")
+    }
+    assert any(finding["kind"] == "unresolved_method" for finding in mapping["findings"])
+    assert not mapping["caller_resolution"]["complete"]
+    routes = {(row["method"], row["path"]): row for row in mapping["routes"]}
+    for key in (("GET", "/api/known"), ("POST", "/api/known")):
+        assert routes[key]["possible_callers"] == ["send"]
+        assert routes[key]["callers"] == []
+    assert routes[("POST", "/api/maybe")]["used_by_frontend"] is None
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        '{method: "post"}', '{"method": "POST"}', "{'method': 'POST'}",
+        '{method: "POST", headers: {method: "GET"}}',
+        '{method: dynamic, method: "POST"}',
+    ],
+)
+def test_literal_fetch_method_is_scoped_to_the_options_object(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, options: str
+) -> None:
+    mapping = _fixture_map(
+        tmp_path, monkeypatch, f'function send() {{ return fetch("/api/known", {options}); }}',
+        '@app.get("/api/known")\n@app.post("/api/known")\n',
+    )
+    assert mapping["calls"][0]["method"] == "POST"
+    assert mapping["calls"][0]["unresolved_edges"] == []
+    routes = {(row["method"], row["path"]): row for row in mapping["routes"]}
+    assert routes[("POST", "/api/known")]["callers"] == ["send"]
+    assert routes[("GET", "/api/known")]["used_by_frontend"] is False
+
+
+def test_method_like_header_does_not_override_the_fetch_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = _fixture_map(
+        tmp_path, monkeypatch,
+        'function send() { return fetch("/api/known", {headers: {method: "POST"}}); }',
+        '@app.get("/api/known")\n@app.post("/api/known")\n',
+    )
+    assert mapping["calls"][0]["method"] == "GET"
+    assert mapping["calls"][0]["unresolved_edges"] == []
+    routes = {(row["method"], row["path"]): row for row in mapping["routes"]}
+    assert routes[("GET", "/api/known")]["callers"] == ["send"]
+    assert routes[("POST", "/api/known")]["used_by_frontend"] is False
+
+
+def test_unknown_method_stays_possible_even_with_only_one_route_candidate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = _fixture_map(
+        tmp_path, monkeypatch,
+        'function send(options) { return fetch("/api/known", options); }',
+        '@app.post("/api/known")\n',
+    )
+    (route,) = mapping["routes"]
+    assert mapping["calls"][0]["urls"][0]["kind"] == "dynamic_method"
+    assert route["caller_certainty"] == "possible"
+    assert route["callers"] == []
+    assert route["possible_callers"] == ["send"]
+    rendered = _load_generator().render_doc(mapping)
+    assert "unknown" in rendered and "POST /api/known" in rendered
+
+
+def test_unknown_method_with_no_path_candidate_reports_no_route_not_method_mismatch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = _fixture_map(
+        tmp_path, monkeypatch,
+        'function send(options) { return fetch("/api/absent", options); }',
+        '@app.post("/api/known")\n',
+    )
+    assert mapping["calls"][0]["urls"][0]["kind"] == "no_route"
+    assert {finding["kind"] for finding in mapping["findings"]} == {"unresolved_method", "no_route"}
+    assert mapping["routes"][0]["used_by_frontend"] is None
+
+
+def test_unknown_method_does_not_hide_an_unresolved_url_caller(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    script = '''
+      function send(url, options) { return fetch(url, options); }
+      function start() { send("/api/known"); send(window.location.pathname); }
+    '''
+    mapping = _fixture_map(
+        tmp_path, monkeypatch, script, '@app.get("/api/known")\n@app.post("/api/known")\n'
+    )
+    assert {finding["kind"] for finding in mapping["findings"]} >= {"unresolved_method", "unresolved_caller"}
+    assert mapping["totals"]["unresolved_method_edges"] == 1
+    assert mapping["totals"]["unresolved_caller_edges"] >= 2
+    assert all(row["caller_certainty"] == "possible" for row in mapping["routes"])
 
 
 def test_partially_resolved_forwarding_keeps_unknown_edges(

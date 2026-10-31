@@ -5,8 +5,8 @@ It is the `UIUX-P0-04` artifact: for state-changing route candidates resolved by
 what can refuse them and what durable state they touch, derived from `app.py` and the route map.
 
 * Pinned source commit: `ecd781675e58b0735f8b590a67b39aaa2b910e49`.
-* `app.py` digest: `e3dd15bef236555d…` · route map digest: `79179127d21652a1…`.
-* 37 resolved state-changing route candidates, out of 77 in `app.py`; 0 fetch site(s) have 0 unresolved caller edge(s).
+* `app.py` digest: `e3dd15bef236555d…` · route map digest: `8628e5f4027a7713…`.
+* 37 resolved state-changing route candidates, out of 77 in `app.py`; 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * 12 reference an authority subsystem, 30 a durable-state subsystem, 3 contain a SQL write, and 22 can leave the machine.
 
 ## What this page is, and is not
@@ -14,6 +14,8 @@ what can refuse them and what durable state they touch, derived from `app.py` an
 A refusal listed here is a status code the handler can raise, read from its own `raise` statement,
 plus the gates the shared middleware applies to every request. It is not an observed refusal: no
 request was sent. Browser coverage comes from a lexical map and is not a proof of completeness.
+When the browser method is unknown, every path-compatible state-changing candidate is included,
+not asserted to be executed. Unresolved edges may still hide other routes.
 A subsystem reference means the handler mentions that subsystem — it is evidence of
 a consultation, not proof that every path through the handler is guarded, and a check inside a helper
 is invisible here. The UI rule that follows is the same for every row: **render the server's answer;

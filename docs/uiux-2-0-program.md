@@ -143,8 +143,10 @@ structural route candidates. It is derived from calls, not handler names.
 * **57 of 115 routes have a resolved or possible browser caller**. The other 58
   have no caller observed by this scan; that does **not** prove they are unused.
   There are currently no detected unresolved edges, but the analysis is not a
-  complete JavaScript parser. When an edge is unresolved, schema version 2 marks
-  otherwise-unmapped routes `unknown` instead of asserting they have no caller.
+  complete JavaScript parser. When a URL or HTTP method is unresolved, schema
+  version 2 marks otherwise-unmapped routes `unknown` instead of asserting they
+  have no caller. An unknown method also retains every path-compatible method
+  as a possible candidate for the authorization trace.
 * **Line numbers have two frames**: `script_line` inside the inline script and
   `document_line` in `static/index.html`.
 

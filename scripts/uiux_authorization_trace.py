@@ -373,7 +373,7 @@ def build_trace() -> dict[str, object]:
     callers: dict[tuple[str, str], set[str]] = {}
     for call in mapping["calls"]:
         for url in call["urls"]:
-            if url["kind"] in {"exact", "dynamic"}:
+            if url["kind"] in {"exact", "dynamic", "dynamic_method"}:
                 # A structural match may have multiple candidates. Do not drop
                 # possible routes just because the map has a primary match.
                 for candidate in url["candidates"]:
@@ -461,6 +461,7 @@ def build_trace() -> dict[str, object]:
             "traced_routes": len(traced),
             "route_map_unresolved_call_sites": mapping["totals"]["unresolved_call_sites"],
             "route_map_unresolved_caller_edges": mapping["totals"]["unresolved_caller_edges"],
+            "route_map_unresolved_method_edges": mapping["totals"]["unresolved_method_edges"],
             "traced_by_method": {
                 method: sum(1 for row in traced if row["method"] == method)
                 for method in sorted({str(row["method"]) for row in traced})
@@ -555,7 +556,8 @@ def render_doc(trace: dict[str, object]) -> str:
         f"* {totals['traced_routes']} resolved state-changing route candidates, out of "
         f"{totals['state_changing_routes_in_app']} in `app.py`; "
         f"{totals['route_map_unresolved_call_sites']} fetch site(s) have "
-        f"{totals['route_map_unresolved_caller_edges']} unresolved caller edge(s).",
+        f"{totals['route_map_unresolved_caller_edges']} unresolved URL or method edge(s) "
+        f"({totals['route_map_unresolved_method_edges']} method).",
         f"* {totals['routes_with_authority_subsystem']} reference an authority subsystem, "
         f"{totals['routes_with_state_subsystem']} a durable-state subsystem, "
         f"{totals['routes_with_durable_writes']} contain a SQL write, and "
@@ -566,6 +568,8 @@ def render_doc(trace: dict[str, object]) -> str:
         "A refusal listed here is a status code the handler can raise, read from its own `raise` statement,",
         "plus the gates the shared middleware applies to every request. It is not an observed refusal: no",
         "request was sent. Browser coverage comes from a lexical map and is not a proof of completeness.",
+        "When the browser method is unknown, every path-compatible state-changing candidate is included,",
+        "not asserted to be executed. Unresolved edges may still hide other routes.",
         "A subsystem reference means the handler mentions that subsystem — it is evidence of",
         "a consultation, not proof that every path through the handler is guarded, and a check inside a helper",
         "is invisible here. The UI rule that follows is the same for every row: **render the server's answer;",

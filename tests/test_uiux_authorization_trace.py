@@ -62,12 +62,11 @@ def _ui_state_changing_routes() -> set[tuple[str, str]]:
     mapping = json.loads(ROUTE_MAP.read_text(encoding="utf-8"))
     found: set[tuple[str, str]] = set()
     for call in mapping["calls"]:
-        if call["method"] not in STATE_CHANGING:
-            continue
         for url in call["urls"]:
-            if url["kind"] in {"exact", "dynamic"}:
+            if url["kind"] in {"exact", "dynamic", "dynamic_method"}:
                 for candidate in url["candidates"]:
-                    found.add((candidate["method"], candidate["path"]))
+                    if candidate["method"] in STATE_CHANGING:
+                        found.add((candidate["method"], candidate["path"]))
     return found
 
 
@@ -125,6 +124,7 @@ def test_route_map_uncertainty_is_visible_in_the_trace() -> None:
     trace_totals = _trace()["totals"]
     assert trace_totals["route_map_unresolved_call_sites"] == route_totals["unresolved_call_sites"]
     assert trace_totals["route_map_unresolved_caller_edges"] == route_totals["unresolved_caller_edges"]
+    assert trace_totals["route_map_unresolved_method_edges"] == route_totals["unresolved_method_edges"]
     assert any("not proof" in note for note in _trace()["not_verified"])
 
 
@@ -141,7 +141,36 @@ def test_trace_propagates_nonzero_route_map_uncertainty(
     trace = module.build_trace()
     assert trace["totals"]["route_map_unresolved_call_sites"] == 1
     assert trace["totals"]["route_map_unresolved_caller_edges"] == 2
-    assert "1 fetch site(s) have 2 unresolved caller edge(s)" in module.render_doc(trace)
+    assert "1 fetch site(s) have 2 unresolved URL or method edge(s)" in module.render_doc(trace)
+
+
+def test_trace_includes_state_changing_candidates_when_method_is_unknown(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spec = importlib.util.spec_from_file_location("uiux_route_map_fixture", ROOT / "scripts" / "uiux_route_map.py")
+    assert spec and spec.loader
+    map_generator = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = map_generator
+    spec.loader.exec_module(map_generator)
+    frontend = tmp_path / "index.html"
+    frontend.write_text(
+        '<script>function send(method) { return fetch("/api/providers", {method}); }</script>',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(map_generator, "FRONTEND", frontend)
+    mapping = map_generator.build_map()
+    assert {(candidate["method"], candidate["path"]) for candidate in mapping["calls"][0]["urls"][0]["candidates"]} == {
+        ("GET", "/api/providers"), ("POST", "/api/providers")
+    }
+    route_map = tmp_path / "route-map.json"
+    route_map.write_text(json.dumps(mapping), encoding="utf-8")
+    module = _load_generator()
+    monkeypatch.setattr(module, "ROUTE_MAP", route_map)
+    trace = module.build_trace()
+    assert {(row["method"], row["path"]) for row in trace["routes"]} == {("POST", "/api/providers")}
+    assert trace["routes"][0]["ui_callers"] == ["send"]
+    assert trace["totals"]["route_map_unresolved_call_sites"] == 1
+    assert trace["totals"]["route_map_unresolved_method_edges"] == 1
 
 
 def test_trace_rejects_route_map_without_uncertainty_data(
@@ -185,12 +214,11 @@ def test_ui_callers_come_from_the_route_map() -> None:
     mapping = json.loads(ROUTE_MAP.read_text(encoding="utf-8"))
     expected: dict[tuple[str, str], set[str]] = {}
     for call in mapping["calls"]:
-        if call["method"] not in STATE_CHANGING:
-            continue
         for url in call["urls"]:
-            if url["kind"] in {"exact", "dynamic"}:
+            if url["kind"] in {"exact", "dynamic", "dynamic_method"}:
                 for candidate in url["candidates"]:
-                    expected.setdefault((candidate["method"], candidate["path"]), set()).add(call["handler"])
+                    if candidate["method"] in STATE_CHANGING:
+                        expected.setdefault((candidate["method"], candidate["path"]), set()).add(call["handler"])
     for row in _rows():
         assert set(row["ui_callers"]) == expected[(row["method"], row["path"])], row["path"]
         assert row["ui_callers"] == sorted(row["ui_callers"])

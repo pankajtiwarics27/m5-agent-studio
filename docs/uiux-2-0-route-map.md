@@ -7,7 +7,7 @@ route table, not from handler names.
 
 * Pinned source commit: `ecd781675e58b0735f8b590a67b39aaa2b910e49`.
 * Frontend digest: `3137cb7d05bcbdd2…` · `app.py` digest: `e3dd15bef236555d…`.
-* 53 call sites resolve to 61 URLs — exact: 60, dynamic: 1, forwarded through a helper: 1, findings: 0, unresolved sites: 0, unresolved edges: 0.
+* 53 call sites resolve to 61 URLs — exact: 60, dynamic URL: 1, unknown method: 0, forwarded through a helper: 1, findings: 0, unresolved sites: 0, unresolved edges: 0 (0 method).
 * 115 routes exist; 57 have a resolved or possible caller (55 unique structural matches, 2 only possible candidates); 58 have none observed and 0 are unknown due to unresolved edges.
 
 ## What this page is, and is not
@@ -15,8 +15,10 @@ route table, not from handler names.
 A matched call is a request the browser **can construct**, not a route that works: nothing
 here was executed, and authorization, request bodies and response handling are not checked.
 A URL segment chosen at runtime is reported as a *dynamic* match with every candidate route,
-not a certain runtime call. Helper chains appear in `Via`; unresolved edges remain findings
-even when another caller resolves. This is a lexical scan, not a complete JavaScript parser.
+not a certain runtime call. Only top-level literal request methods are read; dynamic options
+leave the method unknown and retain every path-compatible method as a possible candidate.
+Helper chains appear in `Via`; unresolved URL or method edges remain findings even when another
+caller resolves. This is a lexical scan, not a complete JavaScript parser.
 A missing observed caller is not proof of absence; the CLI, demo tour or tests may also call a route.
 
 In JSON, `callers` are unique structural matches and `possible_callers` are ambiguous candidates;
@@ -25,7 +27,10 @@ with `used_by_frontend` respectively true, true, false or null. When any edge is
 routes without known callers are `unknown`, not `none`. In schema 2, the old
 `routes_used_by_frontend` total is `routes_with_resolved_or_possible_caller`;
 `routes_without_frontend_caller` is replaced by `routes_no_caller_observed` and
-`routes_unknown_frontend_caller`. Consumers must handle nullable `used_by_frontend`.
+`routes_unknown_frontend_caller`. Consumers must handle nullable `used_by_frontend` and
+nullable call `method`; `dynamic_method` resolutions contain candidates across methods.
+The existing `unresolved_caller_edges` total includes method edges; the subset is also
+reported as `unresolved_method_edges`.
 
 Line numbers appear in two frames: `Script` is the line inside the inline `<script>` block,
 `Document` is the line in `static/index.html` that a reader of that file needs.
@@ -100,9 +105,9 @@ Line numbers appear in two frames: `Script` is the line inside the inline `<scri
 
 No unmatched URL, method mismatch or unresolved edge was detected in this scan.
 
-## Routes reached only through a runtime-chosen segment
+## Routes with only possible browser callers
 
-2 route(s) have only possible callers in this scan. The actual URL at runtime determines which candidate route is reached, if the call executes.
+2 route(s) have only possible callers in this scan. The actual URL and method at runtime determine which candidate route is reached, if the call executes.
 
 | Method | Route | Possible callers |
 |---|---|---|
@@ -179,6 +184,7 @@ No unmatched URL, method mismatch or unresolved edge was detected in this scan.
 * Nothing here was executed. A matched call is a request the browser can construct, not a route that works: authorization, request bodies and response handling are out of scope.
 * URLs are matched structurally. A URL whose segment is chosen at runtime is reported as a dynamic match with its candidate routes instead of being resolved to one, and every candidate lists that caller as *possible*, never as certain.
 * URL forwarding, assignments and conditional branches are followed at most four resolution steps; helper chains are published as `forwarded_via`. Unsupported, cyclic or deeper paths are recorded as unresolved edges even if another caller resolves.
+* Only a recognizable top-level literal RequestInit method is read; variable options, computed properties, spreads and unsupported forms are unresolved. Their path-compatible routes for all methods are possible candidates, not certain calls.
 * Line numbers are published in two frames: `script_line` is relative to the inline script, `document_line` to static/index.html. Reading a script line as a document line is off by the markup above the script.
 * This lexical scan is not a complete JavaScript parser. No resolved caller does not prove a route is unused; the CLI, demo tour, tests or unrecognized browser paths may call it.
 * When any caller edge is unresolved, routes without known callers have unknown browser usage rather than a false no-caller assertion.
