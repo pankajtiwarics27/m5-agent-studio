@@ -286,6 +286,18 @@ def _total_memory_bytes() -> int | None:
     return None
 
 
+def _vm_stat_key(label: str) -> str:
+    """Normalise a ``vm_stat`` label into a stable snapshot key.
+
+    macOS 26 quotes some labels (``"Translation faults": 100.``) and not others,
+    so stripping only whitespace produced a key with literal quote characters
+    inside it. One record then had both ``translation_faults``-shaped neighbours
+    and a key named with quotes, which is not something a consumer should have to
+    guess about.
+    """
+    return label.strip().strip("\"").strip("'").strip().lower().replace(" ", "_")
+
+
 def _meminfo_snapshot() -> dict[str, int]:
     """Best-effort memory counters, in bytes, for the current platform."""
     snapshot: dict[str, int] = {}
@@ -301,9 +313,7 @@ def _meminfo_snapshot() -> dict[str, int]:
                         page_size = int(match.group(1))
                 parts = line.split(":")
                 if len(parts) == 2 and parts[1].strip().rstrip(".").isdigit():
-                    snapshot[parts[0].strip().lower().replace(" ", "_")] = (
-                        int(parts[1].strip().rstrip(".")) * page_size
-                    )
+                    snapshot[_vm_stat_key(parts[0])] = int(parts[1].strip().rstrip(".")) * page_size
         swap = _capture(["sysctl", "-n", "vm.swapusage"])
         if swap:
             total = re.search(r"total = ([\d.]+)M", swap)
@@ -728,7 +738,74 @@ if failures:
 """
 
 
-_MEMORY_CODE = "import sys\nbuf = bytearray(3 * 1024 ** 3)\nprint('allocated', len(buf))"
+# The adversarial memory probe. It reports the limits in force *before* it
+# allocates, because on a denial the kernel usually kills the process before it
+# can say anything: the pre-allocation report is then the only evidence of what
+# the runtime had actually applied.
+MEMORY_PROBE_BYTES = 3 * 1024 ** 3
+
+_MEMORY_PROBE_TEMPLATE = """import json, os
+SIZE = {size}
+
+
+def cgroup(name):
+    try:
+        with open('/sys/fs/cgroup/' + name) as handle:
+            return ' '.join(handle.read().split())
+    except OSError:
+        return None
+
+
+def meminfo(field):
+    try:
+        with open('/proc/meminfo') as handle:
+            for line in handle:
+                key, _, rest = line.partition(':')
+                if key.strip() == field:
+                    return rest.strip()
+    except OSError:
+        return None
+
+
+def rss():
+    try:
+        with open('/proc/self/statm') as handle:
+            return int(handle.read().split()[1]) * os.sysconf('SC_PAGE_SIZE')
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def report(phase, allocated_bytes=None):
+    print(json.dumps({
+        'phase': phase,
+        'memory_max': cgroup('memory.max'),
+        'memory_high': cgroup('memory.high'),
+        'memory_current': cgroup('memory.current'),
+        'memory_peak': cgroup('memory.peak'),
+        'memory_swap_max': cgroup('memory.swap.max'),
+        'memory_swap_current': cgroup('memory.swap.current'),
+        'memory_events': cgroup('memory.events'),
+        'swap_total': meminfo('SwapTotal'),
+        'rss_bytes': rss(),
+        'allocated_bytes': allocated_bytes,
+    }), flush=True)
+
+
+report('before')
+buf = bytearray(SIZE)
+# Touch every page: an untouched allocation proves nothing about the limit.
+for offset in range(0, SIZE, 4096):
+    buf[offset] = 1
+report('after', len(buf))
+"""
+
+
+def memory_probe_code(size: int = MEMORY_PROBE_BYTES) -> str:
+    """Python source for the memory-limit probe, allocating ``size`` bytes."""
+    return _MEMORY_PROBE_TEMPLATE.replace("{size}", str(size))
+
+
+_MEMORY_CODE = memory_probe_code()
 
 _DESCENDANT_CODE = "import subprocess, sys, time\np = subprocess.Popen(['sleep', '300'])\nprint('spawned', p.pid)\n"
 
@@ -1016,20 +1093,68 @@ def sandbox_suite(
             _credentials, skip_reason=skip or ("" if mount_ok else "workspace bind mount unusable"),
         )
 
+        memory_observed: dict[str, Any] = {}
+
         def _memory_limit() -> tuple[bool, str]:
             proc = run_command(
                 container_argv(runtime, image, workspace, _MEMORY_CODE, memory="512m"),
                 timeout=timeout,
                 env=probe_env,
             )
+            reports: list[dict[str, Any]] = []
+            for line in (proc.stdout or "").splitlines():
+                stripped = line.strip()
+                if not stripped.startswith("{"):
+                    continue
+                try:
+                    parsed = json.loads(stripped)
+                except ValueError:
+                    continue
+                if isinstance(parsed, dict):
+                    reports.append(parsed)
+            before = next((item for item in reports if item.get("phase") == "before"), {})
+            after = next((item for item in reports if item.get("phase") == "after"), {})
+            # `before` survives an OOM kill, `after` only exists if the
+            # allocation was allowed. Both are recorded when present, and their
+            # absence is recorded as absence.
+            memory_observed.clear()
+            memory_observed.update(
+                {
+                    "exit_code": proc.returncode,
+                    "requested_bytes": MEMORY_PROBE_BYTES,
+                    "limits_in_force": before or None,
+                    "post_allocation": after or None,
+                    "stderr_tail": (proc.stderr or "")[-300:],
+                }
+            )
             # Either the kernel kills the process (137) or Python raises MemoryError.
             denied = proc.returncode != 0 or "MemoryError" in (proc.stderr or "")
-            return denied, f"exit {proc.returncode}"
+            limits = before or after
+            detail = f"exit {proc.returncode}"
+            if limits:
+                detail += (
+                    f"; limits: memory.max={limits.get('memory_max')}, "
+                    f"memory.swap.max={limits.get('memory_swap_max')}, "
+                    f"meminfo SwapTotal={limits.get('swap_total')}"
+                )
+            if not denied and after:
+                detail += (
+                    f"; allocated {after.get('allocated_bytes')} B, "
+                    f"rss={after.get('rss_bytes')} B, "
+                    f"memory.current={after.get('memory_current')}, "
+                    f"memory.peak={after.get('memory_peak')}, "
+                    f"swap.current={after.get('memory_swap_current')}, "
+                    f"events={after.get('memory_events')}"
+                )
+            elif not denied:
+                detail += "; the container reported no cgroup counters"
+            return denied, detail
 
         recorder.check(
             "p3.adversarial.memory_limit", STORY_P3,
             "a 3 GiB allocation is refused under --memory 512m",
             _memory_limit, skip_reason=skip or ("" if mount_ok else "workspace bind mount unusable"),
+            evidence=lambda: dict(memory_observed),
         )
 
         def _descendants() -> tuple[bool, str]:

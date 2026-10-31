@@ -33,6 +33,8 @@ anyone who has the files.
 | Swap in use at start | 6,638,209,597 bytes (6.18 GiB) |
 | Pages throttled | 0 |
 
+One key in that record renders as `"translation_faults"`, quotes included: macOS 26 quotes that `vm_stat` label while leaving the others bare, and the parser kept the quotes. The values are unaffected (21967100657664 bytes of page-ins are not in doubt), and the parser now normalises labels, so records generated after that fix spell the key `translation_faults`.
+
 The machine was **already using 6.18 GiB of swap** before any measurement began.
 That is the honest context for every swap number below: a "no growth" result is a
 statement about this already-loaded machine, not about a quiet one.

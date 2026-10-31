@@ -151,7 +151,7 @@ both backends: one run qualifies one runtime.
 | `p3.positive.execute` | Positive compatibility: the container lists `/workspace`, code runs, and its write lands on the host. If the mount is missing/empty or unwritable the check is `blocked` (setup), not failed. |
 | `p3.adversarial.escape_matrix` | Inside the container: a host-only canary file via direct path, `/workspace/..` traversal, and `/proc/1/root`, read-only rootfs write attempts (`/` and `/etc/hostname`), a workspace symlink pointing outside, direct and host-loopback TCP egress, an inherited host environment sentinel, and a raw socket are all refused. |
 | `p3.adversarial.credentials` | Inside the container `HOME` is `/tmp` and `~/.aws/credentials`, `~/.ssh/*`, `~/.netrc`, `~/.docker/config.json`, `~/.kube/config` and the gcloud ADC file are all absent. A host credential store visible in the sandbox fails the check. |
-| `p3.adversarial.memory_limit` | A 3 GiB allocation dies under `--memory 512m`. |
+| `p3.adversarial.memory_limit` | A 3 GiB allocation, with every 4 KiB page written, dies under `--memory 512m`. The probe reports **before** allocating and again afterwards: `memory.max` / `memory.high` / `memory.current` / `memory.peak` / `memory.swap.max` / `memory.swap.current` / `memory.events`, the kernel's `SwapTotal`, and its own RSS. The check records `limits_in_force` (the pre-allocation report) and `post_allocation` separately, so a **denial** still says which limit and how much swap allowance it was enforced under — the pre-allocation line is flushed before the allocation, so an OOM kill cannot take it away — and a **failure** says where the memory went (swap beyond the cap, an unenforced cgroup, or the allocation genuinely fitting) instead of only `exit 0`. A runtime that cannot read its own cgroup files reports `null` there, and that absence is recorded as absence. |
 | `p3.adversarial.descendants` | A background `sleep` descendant does not survive the container (`docker ps --filter name=`). |
 | `p3.product.argv` | The **product's** `_sandbox_command` still carries `--network=none`, `--read-only`, `--cap-drop=ALL`, `--security-opt=no-new-privileges`, `--pull=never`, the pids/memory/cpu limits, exactly one bind mount, and no `--privileged`. |
 | `p3.product.argv_parity` | The argv the suite probes with is compared, **at run time on this machine**, against `app._sandbox_command`: same flag set, exactly one bind mount. If the product changes and the suite is not updated, this fails instead of quietly qualifying stale flags. |
@@ -316,7 +316,7 @@ repository is still a run; the numbers are transcribed where the record lives.
 | Date | Machine | Suite | Verdict | Record |
 |---|---|---|---|---|
 | 2026-10-31 | Apple M5, arm64, 24.0 GiB, macOS 26.6.1, Docker Desktop 29.5.3, `main` at `d0e47f0` | `--hardware --pressure-gb 16 --model-runs 3` | **qualified** (8 checks; `p4.thermal` blocked, `p4.coding_cases` skipped, both non-required) | [`m5-2-0-hardware-qualification-evidence.md`](m5-2-0-hardware-qualification-evidence.md) |
-| 2026-10-31 | same machine | `--sandbox --runtime docker` | **unqualified** — failed `p3.adversarial.memory_limit`: 3 GiB allocated under `--memory 512m` with `memory.max` reading 536870912 inside the container | this page, below |
+| 2026-10-31 | same machine | `--sandbox --runtime docker` | **unqualified** — failed `p3.adversarial.memory_limit`: 3 GiB allocated under `--memory 512m` with `memory.max` reading 536870912 inside the container. That record predates the counter-capture added below, so it says only `exit 0`; the next run on a host where this check fails will name the mechanism | this page, below |
 | 2026-10-30 | Linux x86_64 CI container, ~4 GB RAM | `--all` | `blocked` — no container runtime, not the target hardware | [`m5-2-0-baseline-evidence.md`](m5-2-0-baseline-evidence.md) |
 
 The sandbox failure is recorded, not waived: `M5-P3-01` stays `blocked` and
@@ -329,7 +329,7 @@ is still part of the record.
 
 ## Tests
 
-`tests/test_qualify_environment.py` (94 tests) pins the properties above without a
+`tests/test_qualify_environment.py` (99 tests) pins the properties above without a
 container runtime: verdict semantics, required-versus-optional checks, argv
 parity with the product, the blocked path when no runtime, image or usable
 workspace mount is missing, the failure path when a leak is observed,

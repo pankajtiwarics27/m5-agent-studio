@@ -98,8 +98,10 @@ overrides in `POST /api/harness/run` — execute in a strict fail-closed order:
 - Heavy-model slot residency (`model_admission.py`) and worker leases remain single-process
   controls; running multiple Studio processes against one oMLX server is outside the supported
   deployment contract.
-- Target-hardware 24 GB unified-memory pressure measurement (`M5-P4-01`) remains gated on
-  operator execution of `./scripts/qualify_environment.sh` on target Apple Silicon hardware.
+- The 24 GB unified-memory pressure measurement (`M5-P4-01`) was taken by an operator run
+  of `./scripts/qualify_environment.sh --hardware` on an Apple M5 on 2026-10-31
+  ([record](m5-2-0-hardware-qualification-evidence.md)); it covers one model on one
+  machine, and switching still inherits the single-process limits above.
 
 ## Verification
 

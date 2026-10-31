@@ -74,7 +74,14 @@ def _make_fake_run(behaviour: dict[str, Any] | None = None) -> Any:
             home = behaviour.get("home", "/tmp")
             return _FakeCompleted(0 if leaked == "none" else 3, f"home:{home}\ncredentials:{leaked}\n")
         if "bytearray" in code:
-            return _FakeCompleted(137, "", "Killed")
+            exit_code = int(behaviour.get("memory_exit", 137))
+            lines: list[str] = []
+            if behaviour.get("memory_limits") is not None:
+                lines.append(json.dumps({"phase": "before", **behaviour["memory_limits"]}))
+            if exit_code == 0 and behaviour.get("memory_after") is not None:
+                lines.append(json.dumps({"phase": "after", **behaviour["memory_after"]}))
+            stderr = behaviour.get("memory_stderr", "" if exit_code == 0 else "Killed")
+            return _FakeCompleted(exit_code, "".join(f"{line}\n" for line in lines), stderr)
         if "spawned" in code:
             return _FakeCompleted(0, "spawned 42\n")
         if "ps" in argv:
@@ -350,6 +357,130 @@ def test_sandbox_suite_is_blocked_without_a_container_runtime(monkeypatch: pytes
     # Nothing that requires a container may be reported as passing.
     for check_id in ("p3.image.local", "p3.positive.execute", "p3.adversarial.escape_matrix"):
         assert statuses[check_id] == qe.STATUS_SKIP
+
+
+def test_memory_limit_denial_records_the_exit_code_as_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A refused allocation is a pass, and the record says what was refused."""
+    recorder = _run_sandbox_suite(monkeypatch)
+    result = next(r for r in recorder.results if r.check_id == "p3.adversarial.memory_limit")
+    assert result.status == qe.STATUS_PASS
+    assert result.evidence["exit_code"] == 137
+    assert result.evidence["requested_bytes"] == qe.MEMORY_PROBE_BYTES
+    # The process was killed before it could print; the absence is recorded.
+    assert result.evidence["limits_in_force"] is None
+    assert result.evidence["post_allocation"] is None
+
+
+def test_memory_limit_denial_keeps_the_limits_that_were_in_force(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The pre-allocation report is what a killed run can still tell us.
+
+    On a real denial the kernel kills the probe after it has already printed the
+    limits it was running under, so that first line is the evidence of what the
+    runtime had applied - and of how much swap it was allowed to reach the cap
+    with.
+    """
+    limits = {"memory_max": "536870912", "memory_swap_max": "0", "swap_total": "0 kB"}
+    recorder = _run_sandbox_suite(monkeypatch, behaviour={"memory_limits": limits})
+    result = next(r for r in recorder.results if r.check_id == "p3.adversarial.memory_limit")
+    assert result.status == qe.STATUS_PASS
+    assert result.evidence["limits_in_force"] == {"phase": "before", **limits}
+    assert result.evidence["post_allocation"] is None
+    assert "memory.max=536870912" in result.detail
+    assert "memory.swap.max=0" in result.detail
+
+
+def test_memory_limit_failure_names_the_counters_the_container_saw(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A 3 GiB allocation that survives --memory 512m must say why it is a failure.
+
+    This is the shape the 2026-10-31 Apple M5 run produced: exit 0 with the
+    container's own memory.max below the allocation. The record has to carry the
+    numbers, otherwise the operator cannot tell a swap escape from an
+    unenforced cgroup.
+    """
+    limits = {"memory_max": "536870912", "memory_swap_max": "max", "swap_total": "7516192768 kB"}
+    after = {
+        "allocated_bytes": qe.MEMORY_PROBE_BYTES,
+        "rss_bytes": qe.MEMORY_PROBE_BYTES,
+        "memory_max": "536870912",
+        "memory_current": str(qe.MEMORY_PROBE_BYTES),
+        "memory_peak": str(qe.MEMORY_PROBE_BYTES),
+        "memory_swap_max": "max",
+        "memory_swap_current": "0",
+        "memory_events": "max 0 oom 0 oom_kill 0",
+    }
+    recorder = _run_sandbox_suite(
+        monkeypatch,
+        behaviour={"memory_exit": 0, "memory_limits": limits, "memory_after": after},
+    )
+    result = next(r for r in recorder.results if r.check_id == "p3.adversarial.memory_limit")
+    assert result.status == qe.STATUS_FAIL
+    assert result.evidence["limits_in_force"] == {"phase": "before", **limits}
+    assert result.evidence["post_allocation"] == {"phase": "after", **after}
+    assert "memory.max=536870912" in result.detail
+    assert "memory.swap.max=max" in result.detail
+    assert "events=max 0 oom 0 oom_kill 0" in result.detail
+    assert recorder.verdict(qe.STORY_P3) == "unqualified"
+
+
+def test_darwin_memory_snapshot_strips_quoted_vm_stat_labels(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """macOS 26 quotes at least one vm_stat label; the record must not keep it.
+
+    The 2026-10-31 Apple M5 record carries a key that renders as
+    `"translation_faults"` while every neighbouring key is unquoted, so a
+    consumer reading the fingerprint sees two spellings of the same idea.
+    """
+    vm_stat = (
+        "Mach Virtual Memory Statistics: (page size of 16384 bytes)\n"
+        "Pages free:                               38040.\n"
+        '"Translation faults":                      100.\n'
+        "Pages active:                           439249.\n"
+    )
+    swap = "total = 7168.00M  used = 6330.69M  free = 837.31M  (encrypted)\n"
+
+    def _fake_capture(argv: Any, *, timeout: float = 10.0) -> str:
+        return vm_stat if argv[0] == "vm_stat" else swap
+
+    monkeypatch.setattr(qe.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(qe, "_capture", _fake_capture)
+    snapshot = qe._meminfo_snapshot()
+
+    assert snapshot["pages_free"] == 38040 * 16384
+    assert snapshot["translation_faults"] == 100 * 16384
+    assert snapshot["swap_total_bytes"] == 7168 * 1024 * 1024
+    assert snapshot["swap_used_bytes"] == int(6330.69 * 1024 * 1024)
+    assert all('"' not in key and "'" not in key for key in snapshot)
+
+
+def test_memory_probe_code_reports_the_cgroup_counters_it_ran_under() -> None:
+    """The probe source is executable and reports its own accounting."""
+    import subprocess
+
+    code = qe.memory_probe_code(4 * 1024 * 1024)
+    proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 0, proc.stderr
+    reports = [json.loads(line) for line in proc.stdout.strip().splitlines() if line.startswith("{")]
+    assert [item["phase"] for item in reports] == ["before", "after"]
+    before, after = reports
+    # The pre-allocation report carries no allocation, only the limits in force.
+    assert before["allocated_bytes"] is None
+    assert after["allocated_bytes"] == 4 * 1024 * 1024
+    assert after["rss_bytes"] and after["rss_bytes"] >= 4 * 1024 * 1024
+    for key in (
+        "memory_max",
+        "memory_swap_max",
+        "memory_events",
+        "swap_total",
+        "rss_bytes",
+    ):
+        assert key in before
+    for key in ("memory_current", "memory_peak", "memory_swap_current"):
+        assert key in after
 
 
 def test_sandbox_suite_fails_when_an_escape_is_observed(monkeypatch: pytest.MonkeyPatch) -> None:
