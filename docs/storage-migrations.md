@@ -6,6 +6,37 @@ Application database connections go through the `Storage` protocol and `STORAGE`
 
 `DB_PATH` remains the compatibility setting. No ORM, migration framework, external database, or new dependency is introduced. The standalone `studio.py` is generated from `app.py` and inlines `runtime_persistence.py` alongside the same SQLite storage implementation.
 
+## Durable JSON sidecar stores
+
+Three subsystems keep their own state file under `$HARNESS_STORE_DIR` rather than in
+SQLite, because each must survive a crash *before* the database is usable and each is
+written from a failure path where a transaction is not available:
+
+| Store | Owner module | Path |
+|---|---|---|
+| Containment (fences, holds, in-flight processes) | `process_supervision.py` | `containment/state.json` |
+| Scoped grants, revocations, policy revisions | `scoped_grants.py` | `grants/state.json` |
+| MCP external effects and connector policies | `mcp_client.py` | `mcp_effects/state.json` |
+
+They share one contract, and `tests/test_durable_state_contract.py` asserts every
+clause of it against **every** store:
+
+- the state file is `0600` and its directory `0700`;
+- writes go to an `O_EXCL` temp file in the same directory, which is `fsync`ed, then
+  `os.replace`d, then the containing **directory** is `fsync`ed — syncing only the
+  file leaves the rename in the page cache, so a crash can roll the manifest back
+  behind a record the caller was told was written;
+- a symlinked state file *or* a symlinked state directory is refused;
+- corrupt JSON and a future `schema_version` fail closed rather than starting empty or
+  downgrading a newer manifest;
+- no temporary files are left behind.
+
+The contract is checked per store because the three implementations are hand-written
+and can drift — the directory `fsync` was missing from exactly one of them, and a
+per-store unit test would not have noticed. A fourth store fails
+`test_every_module_with_a_durable_state_file_is_covered`, which discovers the stores
+from source, until it is added to the suite.
+
 ## Migration invariants and persistence discipline
 
 - The current schema is `SCHEMA_VERSION = 3` (mirrored by `RUNTIME_SCHEMA_VERSION = 3` in `runtime_persistence.py`), recorded in `PRAGMA user_version` and `schema_migrations`:
