@@ -7,9 +7,10 @@ coordinated on branch `arena/21d0f2f5-m5-agent-studio`; it does not claim the
 UI/UX screenshot story or alter either program's story tracking.
 
 This follow-up isolates the confirmed audit, prompt-injection, security,
-qualification, sandbox, skill, release-gate and standalone-parity test paths.
-The release-gate CLI test runs in a disposable source copy: a parent-process
-monkeypatch cannot change a child process's store. The regression suite runs
+qualification, sandbox, skill, release-gate, isolation-smoke and standalone-parity
+test paths. The release-gate, qualification and isolation-smoke CLI tests run in
+disposable source copies: a parent-process monkeypatch cannot change a child
+process's store. The regression suite runs
 selected tests against synthetic, colliding session records and a source database
 sentinel, and checks that their bytes and the source store's permissions remain
 unchanged. These tests do not establish that every possible test, subprocess,

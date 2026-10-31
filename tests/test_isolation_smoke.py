@@ -11,23 +11,44 @@ Run in a subprocess so the in-process ``app`` import state stays untouched.
 """
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts" / "isolation_smoke.py"
 
 
-def _run(*args: str) -> subprocess.CompletedProcess[str]:
+@pytest.fixture
+def smoke_source(tmp_path: Path) -> Path:
+    """The smoke CLI imports app in a child, so isolate its source-relative store."""
+    source = tmp_path / "source"
+    source.mkdir()
+    for module in ROOT.glob("*.py"):
+        shutil.copy2(module, source / module.name)
+    (source / "scripts").mkdir()
+    shutil.copy2(ROOT / "scripts" / "isolation_smoke.py", source / "scripts" / "isolation_smoke.py")
+    return source
+
+
+def _run(source: Path, *args: str, overrides: dict[str, str] | None = None, timeout: int = 120) -> subprocess.CompletedProcess[str]:
+    home = source.parent / "home"
+    home.mkdir(exist_ok=True)
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env.update({"HOME": str(home), "STUDIO_DB_PATH": str(home / "studio.db")})
+    env.update(overrides or {})
     return subprocess.run(
-        [sys.executable, str(SCRIPT), *args],
-        capture_output=True, text=True, timeout=120, cwd=ROOT, check=False,
+        [sys.executable, str(source / "scripts" / "isolation_smoke.py"), *args],
+        capture_output=True, text=True, timeout=timeout, cwd=source, env=env, check=False,
     )
 
 
-def test_smoke_script_reports_observable_checks_and_unqualified_status() -> None:
-    result = _run()
+def test_smoke_script_reports_observable_checks_and_unqualified_status(smoke_source: Path) -> None:
+    result = _run(smoke_source)
 
     assert result.returncode == 0, result.stdout + result.stderr
     out = result.stdout
@@ -49,35 +70,26 @@ def test_smoke_script_reports_observable_checks_and_unqualified_status() -> None
     assert "dependent_execution: blocked (fail closed)" in out
 
 
-def test_smoke_script_skips_live_probes_without_opt_in() -> None:
-    result = _run()
+def test_smoke_script_skips_live_probes_without_opt_in(smoke_source: Path) -> None:
+    result = _run(smoke_source)
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "SKIPPED: pass --live" in result.stdout
     assert "live-probes-passed" not in result.stdout
 
 
-def test_smoke_script_never_marks_qualified_without_live_probes() -> None:
-    result = _run()
+def test_smoke_script_never_marks_qualified_without_live_probes(smoke_source: Path) -> None:
+    result = _run(smoke_source)
 
     assert "isolation_status: qualified" not in result.stdout
     assert "released under the observed container boundary" not in result.stdout
 
 
-def test_smoke_script_handles_hung_container_runtime_info_probe(tmp_path: Path) -> None:
+def test_smoke_script_handles_hung_container_runtime_info_probe(tmp_path: Path, smoke_source: Path) -> None:
     fake_rt = tmp_path / "hung-docker"
     fake_rt.write_text("#!/bin/sh\nsleep 30\n", encoding="utf-8")
     fake_rt.chmod(0o755)
-    env = dict(**__import__("os").environ, STUDIO_SANDBOX_RUNTIME=str(fake_rt))
-    result = subprocess.run(
-        [sys.executable, str(SCRIPT)],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        cwd=ROOT,
-        env=env,
-        check=False,
-    )
+    result = _run(smoke_source, overrides={"STUDIO_SANDBOX_RUNTIME": str(fake_rt)}, timeout=30)
     assert result.returncode == 0, result.stdout + result.stderr
     assert "runtime_available: no" in result.stdout
     assert "timed out" in result.stdout
