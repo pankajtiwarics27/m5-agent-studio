@@ -6020,6 +6020,7 @@ async def _execute_mcp_tool_call_inner(
                 eff_action_id,
                 status="uncertain" if is_amb else "failed",
                 error=str(exc),
+                known_secret_values=_collect_registered_secret_values(),
             )
         raise
 
@@ -6031,6 +6032,7 @@ async def _execute_mcp_tool_call_inner(
             status="committed" if ok else "failed",
             output=formatted_out,
             error="" if ok else text_out[:300],
+            known_secret_values=_collect_registered_secret_values(),
         )
     return {
         "ok": ok,
@@ -11169,6 +11171,7 @@ async def reconcile_mcp_effects_async(
                 eff.action_id,
                 verdict="unresolved",
                 reconciled_by="reconciliation_not_configured",
+                known_secret_values=_collect_registered_secret_values(),
             )
             unresolved.append(eff.action_id)
             details.append(
@@ -11189,6 +11192,7 @@ async def reconcile_mcp_effects_async(
                 eff.action_id,
                 verdict="unresolved",
                 reconciled_by="reconciliation_query_tool_not_read_only",
+                known_secret_values=_collect_registered_secret_values(),
             )
             unresolved.append(eff.action_id)
             details.append(
@@ -11234,6 +11238,7 @@ async def reconcile_mcp_effects_async(
                 eff.action_id,
                 verdict="unresolved",
                 reconciled_by="reconciliation_query_args_unavailable",
+                known_secret_values=_collect_registered_secret_values(),
             )
             unresolved.append(eff.action_id)
             details.append(
@@ -11270,6 +11275,7 @@ async def reconcile_mcp_effects_async(
                 eff.action_id,
                 verdict="unresolved",
                 reconciled_by=reason_str,
+                known_secret_values=_collect_registered_secret_values(),
             )
             unresolved.append(eff.action_id)
             details.append(
@@ -11289,6 +11295,7 @@ async def reconcile_mcp_effects_async(
                 eff.action_id,
                 verdict="unresolved",
                 reconciled_by=reason_str,
+                known_secret_values=_collect_registered_secret_values(),
             )
             unresolved.append(eff.action_id)
             details.append(
@@ -11319,6 +11326,7 @@ async def reconcile_mcp_effects_async(
             verdict=verdict,
             reconciled_by=eval_reason,
             reconciled_output=rec_out,
+            known_secret_values=_collect_registered_secret_values(),
         )
         if verdict == "verified_committed":
             try:

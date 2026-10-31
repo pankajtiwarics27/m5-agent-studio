@@ -20,6 +20,13 @@ an immutable `McpToolSemantics` descriptor via `classify_mcp_tool_semantics`:
   `idempotency_supported=False`, `idempotency_status="unsupported"`,
   `idempotency_mechanism="unsupported"`, and `replay_policy="non_idempotent"` (or
   `replay_policy="reconcilable"` when a valid `McpReconciliationSpec` is configured).
+- **The hint is the connector's claim, not Studio's judgement.** `annotations` come
+  from the remote server, so a server that marks a destructive tool `readOnlyHint: true`
+  (and omits `destructiveHint`) is classified read-only, and a failed call to it is
+  retried without the uncertain-write pause. Connectors are operator-configured and
+  reviewable, and an operator `destructive: true` in the connector policy overrides the
+  annotation — but the fail-closed default protects against *unclassified* tools, not
+  against a server that mislabels itself.
 - **Explicit connector opt-in:** Operators or tool descriptors can configure
   `toolPolicies.{tool}` on `/api/mcp/servers` (`idempotencySupported`,
   `idempotencyMechanism` in `http_header | jsonrpc_meta | argument_field | meta_and_arg`,
@@ -36,11 +43,14 @@ and idempotency metadata without mutating undeclared business fields:
   `m5.studio/idempotencyStatus`, while preserving `io.modelcontextprotocol/protocolVersion`
   on stateless `2026-07-28` transports. `tools/list` never carries `idempotencyKey` or
   `m5.studio/actionId`.
-- **Supported idempotency keys:** When `idempotency_supported=True`, Studio derives a
-  deterministic `idempotency_key` (`sha256` over server alias, tool name, `action_id`, and
-  canonicalized arguments) and emits `_meta.idempotencyKey`,
-  `_meta["io.modelcontextprotocol/idempotencyKey"]`, and (when `idempotency_mechanism` is
-  `argument_field` or `meta_and_arg`) `arguments[idempotency_arg_field]`.
+- **Supported idempotency keys:** When `idempotency_supported=True`, the key is the
+  action id itself — one action, one key — and is emitted as `_meta.idempotencyKey`,
+  `_meta["io.modelcontextprotocol/idempotencyKey"]`, and (when `idempotency_mechanism`
+  is `argument_field` or `meta_and_arg`) `arguments[idempotency_arg_field]`. The
+  canonical argument digest (`args_sha256`) is recorded separately on the durable
+  record; it is deliberately *not* folded into the key, because two distinct actions
+  with identical arguments must not share a key, and a re-serialised argument would
+  otherwise look like a new write.
 - **HTTP transport headers:** HTTP `tools/call` emits `X-Studio-Action-Id`,
   `Idempotency-Key` (the derived key when supported, or `action_id` transport fallback), and
   `X-MCP-Idempotency-Supported: true|false`.
@@ -52,6 +62,15 @@ records in `$HARNESS_STORE_DIR/mcp_effects/state.json` (mode `0o600`, temp-file 
 `os.fsync(fd)` + atomic `os.replace` + directory `os.fsync(dir_fd)`), keeping SQLite at
 `SCHEMA_VERSION = 3`:
 
+- **Redaction of the record:** argument names are matched after folding to
+  `snake_case` and splitting camelCase, so `Authorization`, `X-Api-Key`,
+  `accessToken`, `refreshToken`, `sessionKey`, `authentication` and `oauth` are all
+  treated as credentials rather than as ordinary fields. Free text — `last_error`,
+  `reconciled_output`, `reconciled_by` — is scrubbed before it is written: any
+  registered secret value, plus the recognisable `<scheme> <credential>` shape
+  (`Bearer`, `Basic`, `Token`), because those strings are remote-controlled and used
+  to reach disk verbatim. This is a scrubber for shapes that can be recognised, not a
+  guarantee for secrets Studio never held.
 - **Pre-send vs post-send outcomes:** Validation, policy, or pre-connect errors record
   `failed_pre_send`; explicit JSON-RPC or `isError=True` tool responses record
   `failed_remote`; post-dispatch timeouts, resets, malformed payloads, or `stdio` EOF
