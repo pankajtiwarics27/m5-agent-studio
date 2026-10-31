@@ -34,6 +34,7 @@ INLINED_MODULES = (
     "sandbox_boundary",
     "edit_transactions",
     "workspace_snapshots",
+    "workspace_quarantine",
     "edit_rollback",
     "resource_admission",
     "execution_profiles",
