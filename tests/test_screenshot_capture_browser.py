@@ -417,7 +417,7 @@ def test_real_isolated_demo_captures_all_six_panes(
         assert accessibility.returncode == 0, accessibility.stderr
         accessibility_result = json.loads(accessibility.stdout)
         assert accessibility_result["failed"] == 0
-        assert accessibility_result["passed"] == 12
+        assert accessibility_result["passed"] == 13
         assert banner["token"] not in accessibility.stdout + accessibility.stderr
         assert sentinel.read_bytes() == before
         assert [p for p in store.rglob("*") if p.is_file()] == [sentinel]

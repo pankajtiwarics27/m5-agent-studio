@@ -12,8 +12,8 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "484660a563a1e615e8842d573b6f24c77bb36144ed5ebd5cfcaea9c20c6e1475",
-      "bytes": 300912,
+      "sha256": "3a201cd828b3298226a76ec817bb59552f18d69ccd44b7f9035b49315ac57af9",
+      "bytes": 300898,
       "lines": 4973
     },
     {
@@ -26,8 +26,8 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "3749e27e9a7553eeb1562462e6158e423fabbfb4d80c1211c8fc2d4bebced4f6",
-      "bytes": 3038562,
+      "sha256": "0a6249b817475785ac5e1d8f5dec6c6059abf3fd81818b3e8be37d3abb61ec61",
+      "bytes": 3038548,
       "lines": 68002
     },
     {
@@ -110,7 +110,7 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "484660a563a1e615e8842d573b6f24c77bb36144ed5ebd5cfcaea9c20c6e1475",
+    "sha256": "3a201cd828b3298226a76ec817bb59552f18d69ccd44b7f9035b49315ac57af9",
     "lines": 4973,
     "tab_count": 6,
     "tabs": [

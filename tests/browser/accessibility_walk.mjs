@@ -115,11 +115,14 @@ async function main() {
         expanded: input?.getAttribute("aria-expanded"),
         controls: input?.getAttribute("aria-controls"),
         active: input?.getAttribute("aria-activedescendant"),
+        focusOutline: input ? getComputedStyle(input).outlineStyle : null,
+        focusOutlineWidth: input ? getComputedStyle(input).outlineWidth : null,
       };
     });
     results.push(check("Ctrl+K opens a modal command palette with an accessible combobox",
       palette.open && palette.modal === "true" && palette.focus === "cmdSearchInput" &&
-      palette.role === "combobox" && palette.expanded === "true" && palette.controls === "cmdPaletteList" && Boolean(palette.active),
+      palette.role === "combobox" && palette.expanded === "true" && palette.controls === "cmdPaletteList" && Boolean(palette.active) &&
+      palette.focusOutline === "solid" && Number.parseFloat(palette.focusOutlineWidth) >= 2,
       JSON.stringify(palette)));
 
     await page.keyboard.press("ArrowDown");
@@ -178,6 +181,18 @@ async function main() {
     }));
     results.push(check("closing the parent overlay restores the original focus",
       parentClosed.closed && parentClosed.focus === "themeToggleBtn", JSON.stringify(parentClosed)));
+
+    await page.setViewport({ width: 420, height: 800, deviceScaleFactor: 1 });
+    await page.evaluate(() => window.openContextModal());
+    const narrowDialog = await page.evaluate(() => {
+      const rect = document.querySelector("#contextModal [role=dialog]").getBoundingClientRect();
+      return { left: rect.left, right: rect.right, width: rect.width, viewport: innerWidth };
+    });
+    results.push(check("modal fits the 420px narrow viewport",
+      narrowDialog.left >= 0 && narrowDialog.right <= narrowDialog.viewport && narrowDialog.width > 0,
+      JSON.stringify(narrowDialog)));
+    await page.keyboard.press("Escape");
+    await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
 
     // Toasts are named, dismissible, pause while focused and normalize error tone.
     await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);

@@ -4486,7 +4486,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   <div class="modal" style="max-width:580px;" role="dialog" aria-modal="true" aria-label="Command Palette">
     <div style="padding:12px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:9px;">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true" style="color:var(--cyan);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="cmdSearchInput" role="combobox" aria-label="Search actions" aria-autocomplete="list" aria-controls="cmdPaletteList" aria-expanded="false" placeholder="Search actions, tools, and settings…" autocomplete="off" style="flex:1; border:none; background:transparent; font-size:13.8px; outline:none;" oninput="renderCommandPaletteList(this.value)" />
+      <input type="text" id="cmdSearchInput" role="combobox" aria-label="Search actions" aria-autocomplete="list" aria-controls="cmdPaletteList" aria-expanded="false" placeholder="Search actions, tools, and settings…" autocomplete="off" style="flex:1; border:none; background:transparent; font-size:13.8px;" oninput="renderCommandPaletteList(this.value)" />
       <span class="kbd">ESC</span>
     </div>
     <div id="cmdPaletteList" class="cmd-list"></div>
