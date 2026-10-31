@@ -231,6 +231,16 @@ def test_phase_and_overall_counters_match_the_stories() -> None:
             assert phase[status] == sum(1 for s in members if s["tracking"]["status"] == status), (
                 f"{phase['id']}: {status} counter drifted"
             )
+        assert phase["percent_complete"] == round(100 * phase["done"] / phase["total"]), (
+            f"{phase['id']}: percent_complete drifted from the story count"
+        )
+        expected_phase_status = (
+            "done" if phase["done"] == phase["total"]
+            else "blocked" if phase["blocked"]
+            else "in_progress" if phase["done"] or phase["in_progress"]
+            else "not_started"
+        )
+        assert phase["status"] == expected_phase_status, f"{phase['id']}: status drifted from story tracking"
 
     overall = ledger["overall_progress"]
     assert overall["total_stories"] == len(stories)
