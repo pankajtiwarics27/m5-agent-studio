@@ -956,6 +956,7 @@ class ContainmentStore:
         action_class: str,
         candidate_action_id: str = "",
         allow_acknowledged_rollback: bool = False,
+        allow_readonly_inspection: bool = False,
     ) -> tuple[list[PersistedBarrierHold], list[str]]:
         """Check ``requested_barriers`` against durable ``persisted_barriers``.
 
@@ -983,7 +984,7 @@ class ContainmentStore:
         for hold in holds:
             has_live_lingering = bool(hold.lingering_pids)
             if not has_live_lingering:
-                if action_class == "read_only":
+                if action_class == "read_only" or allow_readonly_inspection:
                     continue
                 if allow_acknowledged_rollback:
                     continue

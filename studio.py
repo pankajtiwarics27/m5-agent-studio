@@ -649,6 +649,32 @@ def _reset_scoped_grant_store(store: scoped_grants.ScopedGrantStore | None = Non
         )
 
 
+_MCP_EFFECT_STORE: mcp_client.McpExternalEffectStore | None = None
+_MCP_EFFECT_STORE_DIR: Path | None = None
+_MCP_EFFECT_STORE_LOCK = threading.Lock()
+
+
+def get_mcp_effect_store() -> mcp_client.McpExternalEffectStore:
+    """Return the durable M5-P3-05 MCP connector-semantics and external-effect store."""
+    global _MCP_EFFECT_STORE, _MCP_EFFECT_STORE_DIR
+    cur_dir = Path(HARNESS_STORE_DIR).resolve()
+    with _MCP_EFFECT_STORE_LOCK:
+        if _MCP_EFFECT_STORE is None or _MCP_EFFECT_STORE_DIR != cur_dir:
+            _MCP_EFFECT_STORE = mcp_client.McpExternalEffectStore(cur_dir)
+            _MCP_EFFECT_STORE_DIR = cur_dir
+        return _MCP_EFFECT_STORE
+
+
+def _reset_mcp_effect_store(store: mcp_client.McpExternalEffectStore | None = None) -> None:
+    """Replace or clear the cached MCP external-effect store (tests / clock injection)."""
+    global _MCP_EFFECT_STORE, _MCP_EFFECT_STORE_DIR
+    with _MCP_EFFECT_STORE_LOCK:
+        _MCP_EFFECT_STORE = store
+        _MCP_EFFECT_STORE_DIR = (
+            Path(HARNESS_STORE_DIR).resolve() if store is not None else None
+        )
+
+
 def get_process_supervisor() -> process_supervision.ProcessSupervisor:
     """Return the authoritative M5-P3-03 process supervisor bound to ``HARNESS_STORE_DIR``."""
     global _PROCESS_SUPERVISOR, _PROCESS_SUPERVISOR_STORE_DIR
@@ -1770,6 +1796,10 @@ def init_db() -> None:
         current_boot_id=_PROCESS_BOOT_ID
     )
     get_scoped_grant_store().sweep_expired_grants()
+    try:
+        get_mcp_effect_store().sweep_orphaned_in_flight()
+    except mcp_client.McpEffectStoreIntegrityError:
+        pass
     _rp_store = runtime_persistence.RuntimePersistenceStore(STORAGE, DB_PATH)
     _rp_store.expire_stale_leases()
     _fenced_boot = _rp_store.fence_foreign_boot_leases(
@@ -9753,12 +9783,35 @@ def _clean_mcp_alias(raw: str) -> str:
     return slug[:40]
 
 
+def _normalize_mcp_tool_entry(raw_tool: Mapping[str, Any]) -> dict[str, Any]:
+    entry: dict[str, Any] = {
+        "name": str(raw_tool["name"]),
+        "description": str(raw_tool.get("description") or "")[:320],
+        "inputSchema": raw_tool.get("inputSchema") or {"type": "object", "properties": {}},
+    }
+    if isinstance(raw_tool.get("annotations"), Mapping):
+        entry["annotations"] = dict(raw_tool["annotations"])
+    idem_block = raw_tool.get("idempotency") or raw_tool.get("x-idempotency")
+    if isinstance(idem_block, Mapping):
+        entry["idempotency"] = dict(idem_block)
+    rec_block = raw_tool.get("reconciliation") or raw_tool.get("x-reconciliation")
+    if isinstance(rec_block, Mapping):
+        entry["reconciliation"] = dict(rec_block)
+    if "read_only" in raw_tool:
+        entry["read_only"] = bool(raw_tool["read_only"])
+    return entry
+
+
 def list_mcp_servers(include_secret: bool = False) -> list[dict[str, Any]]:
     def _read_mcp(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
         return conn.execute("SELECT * FROM mcp_servers ORDER BY category ASC, alias ASC").fetchall()
 
     rows = runtime_persistence.run_read(STORAGE, DB_PATH, _read_mcp)
+    try:
+        eff_store: mcp_client.McpExternalEffectStore | None = get_mcp_effect_store()
+    except Exception:
+        eff_store = None
     out: list[dict[str, Any]] = []
     for r in rows:
         d = dict(r)
@@ -9784,10 +9837,31 @@ def list_mcp_servers(include_secret: bool = False) -> list[dict[str, Any]]:
         d["enabled"] = bool(d.get("enabled", 1))
         d["has_token"] = bool(effective_tok)
         d["masked_token"] = _mask_secret(effective_tok)
-        # Compute active tools count
+        conn_pol = eff_store.get_connector_policy(d["alias"]) if eff_store is not None else {}
+        d["connector_semantics"] = conn_pol
+        # Compute active tools count and explicit M5-P3-05 idempotency / reconciliation classification (`AC 2`)
         all_tools = d["tools"] if isinstance(d["tools"], list) else []
-        en_set = set(d["enabled_tools"]) if d["enabled_tools"] else {t.get("name") for t in all_tools if isinstance(t, dict)}
-        d["active_tool_count"] = sum(1 for t in all_tools if isinstance(t, dict) and t.get("name") in en_set)
+        enriched_tools: list[dict[str, Any]] = []
+        unsupported_tools: list[str] = []
+        for t in all_tools:
+            if not isinstance(t, dict) or not t.get("name"):
+                continue
+            t_copy = dict(t)
+            sem = mcp_client.classify_mcp_tool_semantics(
+                d, t_copy, remote_tool=str(t_copy["name"]), connector_policy=conn_pol
+            )
+            t_copy["idempotency_supported"] = sem.idempotency_supported
+            t_copy["idempotency_status"] = sem.idempotency_status
+            t_copy["idempotency_mechanism"] = sem.idempotency_mechanism
+            t_copy["replay_policy"] = sem.replay_policy
+            t_copy["reconciliation_supported"] = sem.reconciliation_supported
+            if sem.idempotency_status == "unsupported":
+                unsupported_tools.append(sem.tool_name)
+            enriched_tools.append(t_copy)
+        d["tools"] = enriched_tools
+        d["unsupported_idempotency_tools"] = unsupported_tools
+        en_set = set(d["enabled_tools"]) if d["enabled_tools"] else {t.get("name") for t in enriched_tools}
+        d["active_tool_count"] = sum(1 for t in enriched_tools if t.get("name") in en_set)
         if include_secret:
             d["effective_token"] = effective_tok
             d["raw_token"] = raw_tok
@@ -9879,10 +9953,26 @@ def upsert_mcp_server(payload: dict[str, Any]) -> dict[str, Any]:
     if approval_policy not in ("auto", "inherit", "always_ask"):
         approval_policy = "inherit"
 
-    tools_list = prev["tools"] if prev else []
+    raw_tools_in = payload.get("tools")
+    if isinstance(raw_tools_in, list):
+        tools_list = [
+            _normalize_mcp_tool_entry(t)
+            for t in raw_tools_in
+            if isinstance(t, Mapping) and t.get("name")
+        ]
+    else:
+        tools_list = [
+            _normalize_mcp_tool_entry(t)
+            for t in (prev["tools"] if prev else [])
+            if isinstance(t, Mapping) and t.get("name")
+        ]
     enabled_tools = payload.get("enabled_tools") if isinstance(payload.get("enabled_tools"), list) else (prev["enabled_tools"] if prev else [])
     enabled = 1 if bool(payload.get("enabled", prev["enabled"] if prev else True)) else 0
     now = time.time()
+
+    raw_conn_sem = payload.get("connector_semantics")
+    if isinstance(raw_conn_sem, Mapping):
+        get_mcp_effect_store().set_connector_policy(alias, raw_conn_sem)
 
     auth_token = _keyring_store(f"mcp:{alias}:auth-token", auth_token) if auth_token and not _is_keyring_ref(auth_token) else auth_token
     headers = _secure_mapping("mcp-header", alias, headers)
@@ -9910,6 +10000,7 @@ def upsert_mcp_server(payload: dict[str, Any]) -> dict[str, Any]:
               url=excluded.url, auth_header=excluded.auth_header, auth_token=excluded.auth_token,
               headers_json=excluded.headers_json, command=excluded.command, args_json=excluded.args_json,
               env_json=excluded.env_json, approval_policy=excluded.approval_policy,
+              tools_json=excluded.tools_json,
               enabled_tools_json=excluded.enabled_tools_json, enabled=excluded.enabled, updated_at=excluded.updated_at
             """,
             (
@@ -9973,6 +10064,45 @@ class _ValidatingMcpPost:
         return mcp_client.TransportResponse.from_httpx(resp)
 
 
+def _resolve_mcp_tool_semantics(
+    srv: Mapping[str, Any], remote_tool: str
+) -> mcp_client.McpToolSemantics:
+    alias = str(srv.get("alias") or "").strip().lower()
+    tool_spec: Mapping[str, Any] | None = None
+    for t in (srv.get("tools") or []):
+        if isinstance(t, Mapping) and str(t.get("name") or "") == remote_tool:
+            tool_spec = t
+            break
+    conn_pol = srv.get("connector_semantics")
+    if not isinstance(conn_pol, Mapping):
+        try:
+            conn_pol = get_mcp_effect_store().get_connector_policy(alias)
+        except Exception:
+            conn_pol = {}
+    return mcp_client.classify_mcp_tool_semantics(
+        srv,
+        tool_spec,
+        remote_tool=remote_tool,
+        connector_policy=conn_pol,
+    )
+
+
+def _resolve_mcp_tool_semantics_for_tool(
+    tool_name: str,
+) -> mcp_client.McpToolSemantics | None:
+    parsed = parse_mcp_namespaced_tool(tool_name)
+    if parsed is None:
+        return None
+    alias, remote_tool = parsed
+    try:
+        srv = get_mcp_server(alias, include_secret=False)
+    except Exception:
+        return mcp_client.classify_mcp_tool_semantics(
+            {"alias": alias, "transport": "http"}, None, remote_tool=remote_tool
+        )
+    return _resolve_mcp_tool_semantics(srv, remote_tool)
+
+
 async def _mcp_http_rpc(
     client: httpx.AsyncClient,
     srv: dict[str, Any],
@@ -9991,6 +10121,15 @@ async def _mcp_http_rpc(
     The negotiation state machine is extracted in `mcp_client.adaptive_call`;
     this adapter supplies the validating transport, presets, and session cache.
     """
+    srv_alias = str(srv.get("alias") or "").strip().lower()
+    semantics: mcp_client.McpToolSemantics | None = None
+    if method == "tools/call":
+        rtool = str((params or {}).get("name") or "").strip()
+        execution_spine.require_active_admission(
+            expected_tool=f"mcp__{srv_alias}__{rtool}",
+            expected_action_classes=frozenset({"external"}),
+        )
+        semantics = _resolve_mcp_tool_semantics(srv, rtool)
     url = srv["url"]
     builtin_local = any(p.get("url") == url for p in MCP_SERVER_PRESETS.values())
     post = _ValidatingMcpPost(client, allow_private=(STUDIO_ALLOW_PRIVATE_URLS or builtin_local))
@@ -10007,6 +10146,7 @@ async def _mcp_http_rpc(
             sessions=mcp_client.SessionStore(_MCP_HTTP_SESSIONS),
             client_version=STUDIO_VERSION,
             action_id=effective_action_id,
+            semantics=semantics,
         )
     except (
         httpx.ReadTimeout,
@@ -10030,15 +10170,30 @@ async def _mcp_stdio_rpc(
     params: dict[str, Any] | None = None,
     cwd: Path | None = None,
     timeout_sec: float = 30.0,
+    action_id: str = "",
 ) -> dict[str, Any]:
     """On-demand JSON-RPC stdio client. Launch requires an explicit operator opt-in."""
+    srv_alias = str(srv.get("alias") or "stdio").strip().lower()
+    active_scope = execution_spine.current_admission_scope()
+    effective_action_id = action_id or (active_scope.action_id if active_scope is not None else "")
+    effective_params: dict[str, Any] = dict(params) if isinstance(params, Mapping) else {}
+    if method == "tools/call":
+        rtool = str(effective_params.get("name") or "").strip()
+        execution_spine.require_active_admission(
+            expected_tool=f"mcp__{srv_alias}__{rtool}",
+            expected_action_classes=frozenset({"external"}),
+        )
+        if effective_action_id:
+            sem = _resolve_mcp_tool_semantics(srv, rtool)
+            effective_params, _bound = mcp_client.bind_tool_call_params(
+                effective_params, action_id=effective_action_id, semantics=sem
+            )
     if not STUDIO_ALLOW_MCP_STDIO:
         raise PermissionError("MCP stdio process launch is disabled by default. Set STUDIO_ALLOW_MCP_STDIO=1 after reviewing the configured command.")
     cmd = srv["command"]
     args = [str(a) for a in (srv.get("args") or [])]
     supervisor = get_process_supervisor()
     sup_id = supervisor.new_supervision_id()
-    srv_alias = str(srv.get("alias") or "stdio").strip().lower()
     raw_srv_env = dict(srv.get("env") or {})
     raw_srv_env[process_supervision.SUPERVISION_ENV_KEY] = sup_id
     merged_env = _mcp_stdio_env(srv_alias, raw_srv_env)
@@ -10109,7 +10264,7 @@ async def _mcp_stdio_rpc(
             await asyncio.wait_for(read_rpc_id(1), timeout=timeout_sec)
 
             notif_msg = {"jsonrpc": "2.0", "method": "notifications/initialized"}
-            req_msg = {"jsonrpc": "2.0", "id": 2, "method": method, "params": params or {}}
+            req_msg = {"jsonrpc": "2.0", "id": 2, "method": method, "params": effective_params}
             if method == "tools/call":
                 post_dispatch_sent = True
             proc.stdin.write((json.dumps(notif_msg) + "\n" + json.dumps(req_msg) + "\n").encode("utf-8"))
@@ -10162,16 +10317,11 @@ async def sync_mcp_server_tools(client: httpx.AsyncClient, alias: str) -> dict[s
         else:
             res = await _mcp_stdio_rpc(srv, "tools/list", {})
         raw_tools = res.get("tools") if isinstance(res, dict) else []
-        cleaned_tools = []
-        for t in (raw_tools or []):
-            if isinstance(t, dict) and t.get("name"):
-                cleaned_tools.append(
-                    {
-                        "name": str(t["name"]),
-                        "description": str(t.get("description") or "")[:320],
-                        "inputSchema": t.get("inputSchema") or {"type": "object", "properties": {}},
-                    }
-                )
+        cleaned_tools = [
+            _normalize_mcp_tool_entry(t)
+            for t in (raw_tools or [])
+            if isinstance(t, dict) and t.get("name")
+        ]
         now = time.time()
         tools_payload = json.dumps(cleaned_tools)
         runtime_persistence.run_write_transaction(
@@ -10241,20 +10391,70 @@ async def _execute_mcp_tool_call_inner(
     enabled_tools = set(srv.get("enabled_tools") or known_tools)
     if remote_tool not in known_tools or remote_tool not in enabled_tools:
         raise PermissionError(f"MCP tool `{alias}::{remote_tool}` is not in the server's enabled-tool allowlist.")
+    if srv["transport"] != "http" and not STUDIO_ALLOW_MCP_STDIO:
+        raise PermissionError("MCP stdio process launch is disabled by default. Set STUDIO_ALLOW_MCP_STDIO=1 after reviewing the configured command.")
+
+    semantics = _resolve_mcp_tool_semantics(srv, remote_tool)
+    active_scope = execution_spine.current_admission_scope()
+    eff_action_id = active_scope.action_id if active_scope is not None else ""
+    eff_session_id = active_scope.session_id if active_scope is not None else ""
+    eff_task_id = active_scope.task_id if active_scope is not None else None
+    eff_epoch = active_scope.epoch if active_scope is not None else 0
+
+    raw_call_params = {"name": remote_tool, "arguments": arguments or {}}
+    wire_params, bound_key = mcp_client.bind_tool_call_params(
+        raw_call_params, action_id=eff_action_id, semantics=semantics
+    )
+
+    effect_store = get_mcp_effect_store()
+    if eff_action_id:
+        effect_store.stage_dispatch(
+            action_id=eff_action_id,
+            session_id=eff_session_id,
+            task_id=eff_task_id,
+            epoch=eff_epoch,
+            semantics=semantics,
+            arguments=arguments or {},
+            bound_idempotency_key=bound_key,
+            known_secret_values=_collect_registered_secret_values(),
+        )
+
     t0 = time.perf_counter()
-    call_params = {"name": remote_tool, "arguments": arguments or {}}
-    if srv["transport"] == "http":
-        res = await _mcp_http_rpc(client, srv, "tools/call", call_params, timeout_sec=45.0)
-    else:
-        if not STUDIO_ALLOW_MCP_STDIO:
-            raise PermissionError("MCP stdio process launch is disabled by default. Set STUDIO_ALLOW_MCP_STDIO=1 after reviewing the configured command.")
-        res = await _mcp_stdio_rpc(srv, "tools/call", call_params, cwd=cwd, timeout_sec=45.0)
+    try:
+        if srv["transport"] == "http":
+            res = await _mcp_http_rpc(client, srv, "tools/call", wire_params, timeout_sec=45.0)
+        else:
+            res = await _mcp_stdio_rpc(srv, "tools/call", wire_params, cwd=cwd, timeout_sec=45.0)
+    except BaseException as exc:
+        if eff_action_id:
+            is_amb = side_effect_ledger.is_ambiguous_exception(exc)
+            effect_store.record_outcome(
+                eff_action_id,
+                status="uncertain" if is_amb else "failed",
+                error=str(exc),
+            )
+        raise
+
     ok, text_out = _format_mcp_tool_output(res)
+    formatted_out = f"[MCP `{alias}::{remote_tool}`]\n{text_out}"
+    if eff_action_id:
+        effect_store.record_outcome(
+            eff_action_id,
+            status="committed" if ok else "failed",
+            output=formatted_out,
+            error="" if ok else text_out[:300],
+        )
     return {
         "ok": ok,
-        "output": f"[MCP `{alias}::{remote_tool}`]\n{text_out}",
+        "output": formatted_out,
         "diff": "",
         "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+        "mcp_idempotency_supported": semantics.idempotency_supported,
+        "mcp_idempotency_status": semantics.idempotency_status,
+        "mcp_idempotency_mechanism": semantics.idempotency_mechanism,
+        "bound_idempotency_key": bound_key,
+        "mcp_reconciliation_supported": semantics.reconciliation_supported,
+        "mcp_raw_result": res if isinstance(res, dict) else {},
     }
 
 
@@ -10267,10 +10467,14 @@ def parse_mcp_namespaced_tool(tool_name: str) -> tuple[str, str] | None:
     return parts[1], parts[2]
 
 
-def mcp_tool_needs_approval(alias: str, harness_policy: str) -> bool:
+def mcp_tool_needs_approval(alias: str, harness_policy: str, remote_tool: str = "") -> bool:
     try:
         srv = get_mcp_server(alias, include_secret=False)
         ap = srv.get("approval_policy") or "inherit"
+        if remote_tool:
+            sem = _resolve_mcp_tool_semantics(srv, remote_tool)
+            if sem.requires_approval_override:
+                return True
     except KeyError:
         ap = "inherit"
     if ap == "always_ask":
@@ -10288,7 +10492,7 @@ def tool_requires_approval(tool_name: str, args: dict[str, Any], policy: str) ->
         return False
     mcp_target = parse_mcp_namespaced_tool(tool_name)
     if mcp_target is not None:
-        return mcp_tool_needs_approval(mcp_target[0], policy)
+        return mcp_tool_needs_approval(mcp_target[0], policy, mcp_target[1])
     block = execution_spine.normalize_reusable_block_name(args.get("block") if isinstance(args, dict) else "")
     return policy == "standard" and (
         tool_name in ("run_bash", "ctx_execute_python")
@@ -10319,7 +10523,19 @@ def build_active_mcp_tools_prompt() -> str:
                 for k, v in list(schema_props.items())[:10]
                 if isinstance(v, dict)
             }
-            lines.append(f"- `{full_name}` ({srv['name']}): {desc} | Arguments: `{json.dumps(arg_sig)}`")
+            idem_status = str(t.get("idempotency_status") or "unsupported")
+            if idem_status == "not_applicable_read_only":
+                safety_tag = "[read-only]"
+            elif idem_status == "supported":
+                mech = str(t.get("idempotency_mechanism") or "supported")
+                safety_tag = f"[idempotency=supported:{mech}]"
+            else:
+                safety_tag = "[idempotency=unsupported; non-idempotent write]"
+            if t.get("reconciliation_supported"):
+                safety_tag += " [reconcilable]"
+            lines.append(
+                f"- `{full_name}` ({srv['name']}) {safety_tag}: {desc} | Arguments: `{json.dumps(arg_sig)}`"
+            )
     return ("\n".join(lines) + "\n") if len(lines) > 2 else ""
 
 
@@ -10423,6 +10639,10 @@ async def api_patch_mcp_server(alias: str, request: Request) -> JSONResponse:
         "enabled_tools": body.get("enabled_tools", existing["enabled_tools"]),
         "enabled": body.get("enabled", existing["enabled"]),
     }
+    if "tools" in body:
+        merged["tools"] = body["tools"]
+    if "connector_semantics" in body:
+        merged["connector_semantics"] = body["connector_semantics"]
     saved = upsert_mcp_server(merged)
     return JSONResponse({"status": "ok", "server": saved, "servers": list_mcp_servers(include_secret=False)})
 
@@ -10431,6 +10651,10 @@ async def api_patch_mcp_server(alias: str, request: Request) -> JSONResponse:
 async def api_delete_mcp_server(alias: str) -> JSONResponse:
     clean = _clean_mcp_alias(alias)
     _MCP_HTTP_SESSIONS.pop(clean, None)
+    try:
+        get_mcp_effect_store().delete_connector_policy(clean)
+    except Exception:
+        pass
     try:
         old = get_mcp_server(clean, include_secret=True)
         _keyring_delete(f"mcp:{clean}:auth-token")
@@ -11908,6 +12132,13 @@ def authorize_tool_invocation(
             return ToolAuthorization(False, reason="MCP server is not configured.", action_class=action_class)
         if not server.get("enabled"):
             return ToolAuthorization(False, reason="MCP server is disabled.", action_class=action_class)
+        if str(server.get("transport") or "http").strip().lower() != "http" and not STUDIO_ALLOW_MCP_STDIO:
+            return ToolAuthorization(
+                False,
+                reason="MCP stdio process launch is disabled by default. Set STUDIO_ALLOW_MCP_STDIO=1 after reviewing the configured command.",
+                action_class=action_class,
+                error_code="mcp_stdio_disabled",
+            )
         known_tools = {
             str(tool.get("name"))
             for tool in (server.get("tools") or [])
@@ -11916,7 +12147,7 @@ def authorize_tool_invocation(
         enabled_tools = set(server.get("enabled_tools") or known_tools)
         if remote_tool not in known_tools or remote_tool not in enabled_tools:
             return ToolAuthorization(False, reason="MCP tool is not in the enabled-tool allowlist.", action_class=action_class)
-        requires_approval = mcp_tool_needs_approval(alias, effective_policy)
+        requires_approval = mcp_tool_needs_approval(alias, effective_policy, remote_tool)
         if requires_approval and not approved:
             return ToolAuthorization(False, True, "MCP tool requires explicit approval.", action_class=action_class)
         return ToolAuthorization(True, requires_approval, action_class=action_class)
@@ -14173,8 +14404,8 @@ async def _execute_harness_tool_inner(
             if policy == "plan":
                 return {"ok": False, "output": "Denied by `plan` (read-only) policy: external MCP tools are disabled.", "diff": "", "elapsed_ms": 1}
             mcp_alias, mcp_remote_tool = mcp_parsed
-            if policy == "standard" and mcp_tool_needs_approval(mcp_alias, policy) and not approved:
-                return {"ok": False, "output": f"Denied: MCP tool `{mcp_alias}::{mcp_remote_tool}` requires explicit approval in standard policy.", "diff": "", "elapsed_ms": 1}
+            if mcp_tool_needs_approval(mcp_alias, policy, mcp_remote_tool) and not approved:
+                return {"ok": False, "output": f"Denied: MCP tool `{mcp_alias}::{mcp_remote_tool}` requires explicit approval.", "diff": "", "elapsed_ms": 1}
             return await _execute_mcp_tool_call_inner(client, mcp_alias, mcp_remote_tool, args, cwd=root)
 
         return {"ok": False, "output": f"Unknown tool `{tool_name}`.", "diff": "", "elapsed_ms": 1}
@@ -14320,7 +14551,39 @@ def _reconcile_app_action(
             return "verified_committed"
         return "unresolved"
 
+    if tool_name.startswith("mcp__"):
+        try:
+            eff = get_mcp_effect_store().get_effect(_record.action_id)
+        except Exception:
+            return "unresolved"
+        if eff is None:
+            return "unresolved"
+        if eff.tool_name != tool_name or eff.args_sha256 != _record.args_sha256:
+            return "unresolved"
+        if eff.reconciliation_verdict == "verified_committed":
+            return "verified_committed"
+        if eff.reconciliation_verdict == "verified_not_applied":
+            return "verified_not_applied"
+        return "unresolved"
+
     return "unresolved"
+
+
+def _on_durable_action_resolved(action_id: str) -> None:
+    get_containment_store().release_holds_for_action(action_id)
+    try:
+        eff_store = get_mcp_effect_store()
+        eff = eff_store.get_effect(action_id)
+        if eff is not None and eff.status in ("uncertain", "in_flight"):
+            act_rec = side_effect_ledger.DurableActionLedger(STORAGE, DB_PATH).get_action(action_id)
+            if act_rec is not None and act_rec.status in ("committed", "failed"):
+                eff_store.resolve_operator(
+                    action_id,
+                    resolution=("committed" if act_rec.status == "committed" else "not_applied"),
+                    reason=act_rec.error_code or "ledger_resolved",
+                )
+    except Exception:
+        pass
 
 
 def get_durable_action_ledger(workspace_root: Path | None = None) -> side_effect_ledger.DurableActionLedger:
@@ -14330,7 +14593,7 @@ def get_durable_action_ledger(workspace_root: Path | None = None) -> side_effect
         STORAGE,
         DB_PATH,
         reconciler=lambda rec, tname, a: _reconcile_app_action(target_root, rec, tname, a),
-        on_action_resolved=lambda aid: get_containment_store().release_holds_for_action(aid),
+        on_action_resolved=_on_durable_action_resolved,
     )
 
 
@@ -14488,6 +14751,12 @@ def _extract_session_known_action_args(session_id: str) -> dict[str, dict[str, A
             except Exception:
                 continue
             known[aid] = dict(targs)
+    try:
+        for eff in get_mcp_effect_store().list_effects(session_id=session_id):
+            if eff.action_id not in known and eff.redacted_args and not eff.args_redacted:
+                known[eff.action_id] = dict(eff.redacted_args)
+    except Exception:
+        pass
     return known
 
 
@@ -14999,6 +15268,8 @@ async def _run_authorized_tool(
     call_index: int | None = None,
     replay_policy: str | None = None,
     workspace_root: Path | None = None,
+    http_client: httpx.AsyncClient | None = None,
+    _reconciling_probe: bool = False,
 ) -> dict[str, Any]:
     """Authorize, durably record intent, execute once inside scoped admission, and record outcome.
 
@@ -15006,7 +15277,8 @@ async def _run_authorized_tool(
     (``execution_spine.DurableActionBoundary``; see ADR-0002): action-class
     separation, grant provenance, task-state/epoch fencing, policy evaluation,
     unified execution profiles & resource barriers (M5-P3-02), scoped grants &
-    revocation (M5-P3-04), durable ``runtime_actions`` intent/result ledger +
+    revocation (M5-P3-04), MCP idempotency & external-effect reconciliation
+    (M5-P3-05), durable ``runtime_actions`` intent/result ledger +
     ``tool_audit_events`` auditing, replay safety, post-execution footprint
     reconciliation, and scoped anti-bypass admission tokens are enforced there."""
     db_path_obj = Path(DB_PATH)
@@ -15037,6 +15309,94 @@ async def _run_authorized_tool(
             eff_grant_source = "scoped_grant"
             eff_grant_id = matched_grant.grant_id
 
+    mcp_sem = _resolve_mcp_tool_semantics_for_tool(tool_name)
+    effective_replay_policy = (
+        replay_policy
+        if replay_policy is not None
+        else (mcp_sem.replay_policy if mcp_sem is not None else None)
+    )
+    candidate_action_id = action_id
+    if candidate_action_id is None and mcp_sem is not None and (step_id is not None or call_index is not None):
+        scope_key = str(task_id or session_id or "default")
+        try:
+            candidate_action_id = side_effect_ledger.derive_action_id(
+                scope_key, tool_name, args, step_id=step_id, call_index=call_index
+            )
+        except Exception:
+            candidate_action_id = None
+
+    if mcp_sem is not None and not mcp_sem.read_only and not _reconciling_probe:
+        pre_auth = authorize_tool_invocation(
+            tool_name, args, policy, approved=eff_approved, workspace_root=workspace_root
+        )
+        if pre_auth.allowed and not additional_denial:
+            eff_store = get_mcp_effect_store()
+            if candidate_action_id:
+                existing_eff = eff_store.get_effect(candidate_action_id)
+                if (
+                    existing_eff is not None
+                    and existing_eff.status in ("uncertain", "in_flight")
+                    and mcp_sem.reconciliation_supported
+                ):
+                    await reconcile_mcp_effects_async(
+                        http_client,
+                        action_id=candidate_action_id,
+                        policy=policy,
+                        approved=eff_approved,
+                        grant_source=eff_grant_source,
+                        grant_id=eff_grant_id,
+                        known_action_args={candidate_action_id: args},
+                    )
+            blockers = eff_store.find_blocking_uncertain_writes(
+                session_id=session_id,
+                alias=mcp_sem.alias,
+                exclude_action_id=candidate_action_id,
+            )
+            if blockers:
+                reconcilable_blockers = [b for b in blockers if b.reconciliation_supported]
+                if reconcilable_blockers:
+                    await reconcile_mcp_effects_async(
+                        http_client,
+                        session_id=session_id,
+                        policy=policy,
+                        approved=eff_approved,
+                        grant_source=eff_grant_source,
+                        grant_id=eff_grant_id,
+                    )
+                    blockers = eff_store.find_blocking_uncertain_writes(
+                        session_id=session_id,
+                        alias=mcp_sem.alias,
+                        exclude_action_id=candidate_action_id,
+                    )
+            if blockers:
+                blocker_ids = [b.action_id for b in blockers]
+                pause_msg = (
+                    f"Paused non-idempotent MCP write `{tool_name}`: session `{session_id}` has unresolved "
+                    f"uncertain external write(s) {blocker_ids} on MCP server `{mcp_sem.alias}`. "
+                    "Reconcile or explicitly resolve the prior external outcome before sending new writes."
+                )
+                _pause_session_on_uncertain_mcp_write(
+                    session_id,
+                    task_id=task_id,
+                    action_id=blocker_ids[0],
+                    tool_name=tool_name,
+                    reason="uncertain_mcp_write_paused",
+                )
+                return {
+                    "ok": False,
+                    "output": pause_msg,
+                    "diff": "",
+                    "elapsed_ms": 0,
+                    "uncertain": True,
+                    "safe_pause_required": True,
+                    "error_code": "uncertain_mcp_write_paused",
+                    "blocking_action_ids": blocker_ids,
+                    "mcp_idempotency_supported": mcp_sem.idempotency_supported,
+                    "mcp_idempotency_status": mcp_sem.idempotency_status,
+                    "mcp_idempotency_mechanism": mcp_sem.idempotency_mechanism,
+                    "mcp_reconciliation_supported": mcp_sem.reconciliation_supported,
+                }
+
     profile_coord = _execution_profile_controller().bind(
         workspace_root=workspace_root,
         store_dir=HARNESS_STORE_DIR,
@@ -15053,6 +15413,7 @@ async def _run_authorized_tool(
         grant_store=grant_store,
         current_boot_id=_PROCESS_BOOT_ID,
         sql_task_fencing=True,
+        allow_readonly_inspection=bool(mcp_sem is not None and mcp_sem.read_only),
     )
     boundary = execution_spine.DurableActionBoundary(
         _AppToolPolicy(workspace_root=workspace_root),
@@ -15062,30 +15423,354 @@ async def _run_authorized_tool(
         intent_ledger=_AppIntentLedger(workspace_root=workspace_root),
         profile_coordinator=profile_coord,
     )
-    return await boundary.admit_and_execute(
-        execution_spine.ActionRequest(
-            tool_name=tool_name,
-            args=args,
-            policy=policy,
-            approved=eff_approved,
+    try:
+        res = await boundary.admit_and_execute(
+            execution_spine.ActionRequest(
+                tool_name=tool_name,
+                args=args,
+                policy=policy,
+                approved=eff_approved,
+                session_id=session_id,
+                additional_denial=additional_denial,
+                denial_as_exception=denial_as_exception,
+                action_class=action_class,
+                grant_source=eff_grant_source,
+                approval_id=approval_id,
+                grant_id=eff_grant_id,
+                task_id=task_id,
+                task_state=task_state,
+                epoch=epoch,
+                worker_id=worker_id,
+                action_id=action_id,
+                step_id=step_id,
+                call_index=call_index,
+                replay_policy=effective_replay_policy,
+            ),
+            executor,
+        )
+    except BaseException as exc:
+        if (
+            mcp_sem is not None
+            and not mcp_sem.read_only
+            and (
+                side_effect_ledger.is_ambiguous_exception(exc)
+                or isinstance(exc, side_effect_ledger.UncertainActionReplayError)
+            )
+        ):
+            _pause_session_on_uncertain_mcp_write(
+                session_id,
+                task_id=task_id,
+                action_id=str(action_id or candidate_action_id or ""),
+                tool_name=tool_name,
+                reason=type(exc).__name__,
+            )
+        raise
+    if mcp_sem is not None:
+        res.setdefault("mcp_idempotency_supported", mcp_sem.idempotency_supported)
+        res.setdefault("mcp_idempotency_status", mcp_sem.idempotency_status)
+        res.setdefault("mcp_idempotency_mechanism", mcp_sem.idempotency_mechanism)
+        res.setdefault("mcp_reconciliation_supported", mcp_sem.reconciliation_supported)
+        final_aid = str(res.get("action_id") or candidate_action_id or "")
+        if res.get("reconciled") and final_aid:
+            eff_rec = get_mcp_effect_store().get_effect(final_aid)
+            if eff_rec is not None and eff_rec.reconciled_output:
+                res["reconciled_output"] = eff_rec.reconciled_output
+                res["output"] = eff_rec.reconciled_output
+        if res.get("uncertain") and not mcp_sem.read_only:
+            res["safe_pause_required"] = True
+            _pause_session_on_uncertain_mcp_write(
+                session_id,
+                task_id=task_id,
+                action_id=final_aid,
+                tool_name=tool_name,
+                reason=str(res.get("error_code") or "uncertain_external_effect"),
+            )
+    return res
+
+
+def _pause_session_on_uncertain_mcp_write(
+    session_id: str,
+    *,
+    task_id: str | None,
+    action_id: str,
+    tool_name: str,
+    reason: str,
+) -> None:
+    """Transition active harness sessions into a safe ``paused`` state on uncertain MCP writes (`Task 4`)."""
+    clean_sid = str(session_id or "").strip()
+    if clean_sid:
+        try:
+            sess = get_harness_session_db(clean_sid)
+        except KeyError:
+            sess = None
+        if sess is not None:
+            if sess.get("status") not in ("paused", "completed", "cancelled"):
+                _update_harness_session_state(clean_sid, status="paused")
+            _safe_append_harness_event(
+                clean_sid,
+                "harness/paused_uncertain_effect",
+                {
+                    "action_id": action_id,
+                    "tool": tool_name,
+                    "reason": reason,
+                },
+            )
+    clean_tid = str(task_id or "").strip()
+    if clean_tid:
+        try:
+            rp = runtime_persistence.RuntimePersistenceStore(STORAGE, DB_PATH)
+            t_rec = rp.get_task(clean_tid)
+            if t_rec is not None and t_rec.state in ("running", "planning", "verifying"):
+                active_ep = (
+                    rp.get_epoch(clean_tid, t_rec.current_epoch)
+                    if t_rec.current_epoch > 0
+                    else None
+                )
+                if active_ep is None or active_ep.status != "active":
+                    rp.record_transition(
+                        clean_tid,
+                        to_state="blocked",
+                        reason=f"uncertain_mcp_effect:{action_id}",
+                        allow_inactive_epoch=True,
+                    )
+        except Exception:
+            pass
+
+
+async def reconcile_mcp_effects_async(
+    client: httpx.AsyncClient | None,
+    *,
+    session_id: str | None = None,
+    task_id: str | None = None,
+    action_id: str | None = None,
+    policy: str = "autonomous",
+    approved: bool = False,
+    grant_source: str = "unspecified",
+    grant_id: str | None = None,
+    known_action_args: Mapping[str, Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Probe queryable remote outcomes for uncertain MCP writes strictly through the central gate (`Task 3`, `AC 1`, `AC 3`)."""
+    eff_store = get_mcp_effect_store()
+    active_scope = execution_spine.current_admission_scope()
+    if active_scope is None:
+        eff_store.sweep_orphaned_in_flight()
+
+    if action_id is not None:
+        rec = eff_store.get_effect(action_id)
+        candidates: tuple[mcp_client.McpExternalEffectRecord, ...] = (
+            (rec,) if rec is not None and rec.status == "uncertain" else ()
+        )
+    else:
+        candidates = eff_store.list_effects(
             session_id=session_id,
-            additional_denial=additional_denial,
-            denial_as_exception=denial_as_exception,
-            action_class=action_class,
-            grant_source=eff_grant_source,
-            approval_id=approval_id,
-            grant_id=eff_grant_id,
             task_id=task_id,
-            task_state=task_state,
-            epoch=epoch,
-            worker_id=worker_id,
-            action_id=action_id,
-            step_id=step_id,
-            call_index=call_index,
-            replay_policy=replay_policy,
-        ),
-        executor,
-    )
+            statuses=("uncertain",),
+        )
+
+    ledger = get_durable_action_ledger()
+    verified_committed: list[str] = []
+    verified_not_applied: list[str] = []
+    unresolved: list[str] = []
+    details: list[dict[str, Any]] = []
+
+    for eff in candidates:
+        write_sem = _resolve_mcp_tool_semantics_for_tool(eff.tool_name)
+        if write_sem is None or write_sem.reconciliation is None:
+            eff_store.record_reconciliation(
+                eff.action_id,
+                verdict="unresolved",
+                reconciled_by="reconciliation_not_configured",
+            )
+            unresolved.append(eff.action_id)
+            details.append(
+                {
+                    "action_id": eff.action_id,
+                    "tool_name": eff.tool_name,
+                    "verdict": "unresolved",
+                    "reason": "reconciliation_not_configured",
+                }
+            )
+            continue
+
+        spec = write_sem.reconciliation
+        query_full_name = f"mcp__{eff.alias}__{spec.query_tool}"
+        query_sem = _resolve_mcp_tool_semantics_for_tool(query_full_name)
+        if query_sem is None or not query_sem.read_only:
+            eff_store.record_reconciliation(
+                eff.action_id,
+                verdict="unresolved",
+                reconciled_by="reconciliation_query_tool_not_read_only",
+            )
+            unresolved.append(eff.action_id)
+            details.append(
+                {
+                    "action_id": eff.action_id,
+                    "tool_name": eff.tool_name,
+                    "verdict": "unresolved",
+                    "reason": "reconciliation_query_tool_not_read_only",
+                }
+            )
+            continue
+
+        query_tool_schema: Mapping[str, Any] | None = None
+        try:
+            srv_q = get_mcp_server(eff.alias, include_secret=False)
+            for t_item in (srv_q.get("tools") or []):
+                if isinstance(t_item, Mapping) and str(t_item.get("name") or "") == spec.query_tool:
+                    raw_isch = t_item.get("inputSchema")
+                    if isinstance(raw_isch, Mapping):
+                        query_tool_schema = raw_isch
+                    break
+        except Exception:
+            query_tool_schema = None
+
+        supplied_args = (known_action_args or {}).get(eff.action_id)
+        write_args_source: Mapping[str, Any] = (
+            supplied_args
+            if (
+                supplied_args is not None
+                and side_effect_ledger.canonical_args_sha256(supplied_args) == eff.args_sha256
+            )
+            else eff.redacted_args
+        )
+        query_args = mcp_client.build_reconciliation_query_args(
+            spec,
+            action_id=eff.action_id,
+            remote_tool=eff.remote_tool,
+            write_args=write_args_source,
+            query_tool_schema=query_tool_schema,
+        )
+        if query_args is None:
+            eff_store.record_reconciliation(
+                eff.action_id,
+                verdict="unresolved",
+                reconciled_by="reconciliation_query_args_unavailable",
+            )
+            unresolved.append(eff.action_id)
+            details.append(
+                {
+                    "action_id": eff.action_id,
+                    "tool_name": eff.tool_name,
+                    "verdict": "unresolved",
+                    "reason": "reconciliation_query_args_unavailable",
+                }
+            )
+            continue
+
+        probe_aid = side_effect_ledger.mint_unique_action_id(
+            eff.session_id or "mcp-reconcile", query_full_name, query_args
+        )
+        try:
+            probe_res = await execute_mcp_tool_call(
+                client,  # type: ignore[arg-type]
+                eff.alias,
+                spec.query_tool,
+                query_args,
+                cwd=None,
+                policy=policy,
+                approved=approved,
+                session_id=eff.session_id or "mcp-reconcile",
+                grant_source=grant_source,
+                grant_id=grant_id,
+                action_id=probe_aid,
+                _reconciling_probe=True,
+            )
+        except Exception as exc:
+            reason_str = f"reconciliation_probe_denied_or_failed:{type(exc).__name__}"
+            eff_store.record_reconciliation(
+                eff.action_id,
+                verdict="unresolved",
+                reconciled_by=reason_str,
+            )
+            unresolved.append(eff.action_id)
+            details.append(
+                {
+                    "action_id": eff.action_id,
+                    "tool_name": eff.tool_name,
+                    "verdict": "unresolved",
+                    "reason": reason_str,
+                    "error": str(exc)[:240],
+                }
+            )
+            continue
+
+        if not probe_res.get("ok"):
+            reason_str = f"reconciliation_probe_failed:{probe_res.get('error_code') or 'tool_error'}"
+            eff_store.record_reconciliation(
+                eff.action_id,
+                verdict="unresolved",
+                reconciled_by=reason_str,
+            )
+            unresolved.append(eff.action_id)
+            details.append(
+                {
+                    "action_id": eff.action_id,
+                    "tool_name": eff.tool_name,
+                    "verdict": "unresolved",
+                    "reason": reason_str,
+                }
+            )
+            continue
+
+        raw_rpc = probe_res.get("mcp_raw_result")
+        verdict, receipt_summary = mcp_client.evaluate_reconciliation_response(
+            spec,
+            raw_rpc if isinstance(raw_rpc, Mapping) else {},
+            action_id=eff.action_id,
+            write_args=write_args_source,
+        )
+        eval_reason = f"query_tool:{spec.query_tool}:{verdict}"
+        rec_out = (
+            f"[MCP `{eff.alias}::{eff.remote_tool}` reconciled via `{spec.query_tool}`]\n{receipt_summary}"
+            if verdict == "verified_committed"
+            else ""
+        )
+        eff_store.record_reconciliation(
+            eff.action_id,
+            verdict=verdict,
+            reconciled_by=eval_reason,
+            reconciled_output=rec_out,
+        )
+        if verdict == "verified_committed":
+            try:
+                ledger.resolve_uncertain_action(
+                    eff.action_id,
+                    resolution="verified_committed",
+                    reason="pre_takeover_verified_committed",
+                )
+            except Exception:
+                pass
+            verified_committed.append(eff.action_id)
+        elif verdict == "verified_not_applied":
+            try:
+                ledger.resolve_uncertain_action(
+                    eff.action_id,
+                    resolution="verified_not_applied",
+                    reason="pre_takeover_verified_not_applied",
+                )
+            except Exception:
+                pass
+            verified_not_applied.append(eff.action_id)
+        else:
+            unresolved.append(eff.action_id)
+        details.append(
+            {
+                "action_id": eff.action_id,
+                "tool_name": eff.tool_name,
+                "query_tool": spec.query_tool,
+                "verdict": verdict,
+                "reason": eval_reason,
+                "reconciled_output": rec_out,
+            }
+        )
+
+    return {
+        "checked": len(candidates),
+        "verified_committed": verified_committed,
+        "verified_not_applied": verified_not_applied,
+        "unresolved": unresolved,
+        "details": details,
+    }
 
 
 async def execute_mcp_tool_call(
@@ -15108,6 +15793,7 @@ async def execute_mcp_tool_call(
     action_id: str | None = None,
     step_id: str | int | None = None,
     call_index: int | None = None,
+    _reconciling_probe: bool = False,
 ) -> dict[str, Any]:
     """Policy-checked and audited MCP entry point; direct denial preserves PermissionError behavior."""
     tool_name = f"mcp__{alias}__{remote_tool}"
@@ -15135,6 +15821,8 @@ async def execute_mcp_tool_call(
         step_id=step_id,
         call_index=call_index,
         workspace_root=cwd,
+        http_client=client,
+        _reconciling_probe=_reconciling_probe,
     )
 
 
@@ -15188,12 +15876,36 @@ async def _execute_harness_tool(
         else:
             resolved_action_id = side_effect_ledger.mint_unique_action_id(scope_key, tool_name, args)
     sess_root = Path(sess["worktree_dir"]) if sess.get("worktree_dir") else WORKSPACE_ROOT
+    eff_approved = approved
+    eff_grant_id = grant_id
+    if (
+        not eff_approved
+        and eff_grant_id is None
+        and approval_id is None
+        and effective_grant in {"policy", "unspecified"}
+        and tool_requires_approval(tool_name, args, policy)
+    ):
+        try:
+            matched_g = get_scoped_grant_store().find_matching_grant(
+                session_id=session_scope,
+                task_id=resolved_task_id,
+                epoch=resolved_epoch,
+                tool_name=tool_name,
+                args=args,
+                workspace_root=sess_root,
+            )
+        except scoped_grants.GrantStoreIntegrityError:
+            matched_g = None
+        if matched_g is not None:
+            eff_approved = True
+            eff_grant_id = matched_g.grant_id
+            effective_grant = "scoped_grant"
 
     async def _executor() -> dict[str, Any]:
         """Run the tool with its own ledger action id visible to ledger-querying tools."""
         token = _CURRENT_TOOL_ACTION_ID.set(resolved_action_id or "")
         try:
-            return await _execute_harness_tool_inner(client, sess, tool_name, args, approved=approved)
+            return await _execute_harness_tool_inner(client, sess, tool_name, args, approved=eff_approved)
         finally:
             _CURRENT_TOOL_ACTION_ID.reset(token)
 
@@ -15201,13 +15913,13 @@ async def _execute_harness_tool(
         tool_name,
         args,
         policy,
-        approved=approved,
+        approved=eff_approved,
         session_id=session_scope,
         executor=_executor,
         additional_denial=policy_denial,
         grant_source=effective_grant,
         approval_id=approval_id,
-        grant_id=grant_id,
+        grant_id=eff_grant_id,
         task_id=resolved_task_id,
         task_state=resolved_task_state,
         epoch=resolved_epoch,
@@ -15217,6 +15929,7 @@ async def _execute_harness_tool(
         call_index=call_index,
         replay_policy=replay_policy,
         workspace_root=sess_root,
+        http_client=client,
     )
 
 
@@ -16665,8 +17378,137 @@ async def api_revoke_harness_session_grant(session_id: str, request: Request) ->
     )
 
 
+@app.get("/api/harness/sessions/{session_id}/mcp-effects")
+async def api_list_harness_session_mcp_effects(session_id: str) -> JSONResponse:
+    """List external MCP effects, idempotency classifications, and reconciliation verdicts (`M5-P3-05`)."""
+    try:
+        get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    try:
+        store = get_mcp_effect_store()
+        effects = [e.to_mapping() for e in store.list_effects(session_id=session_id)]
+        summary = store.summary(session_id=session_id)
+    except mcp_client.McpEffectStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return JSONResponse({"session_id": session_id, "effects": effects, "summary": summary})
+
+
+@app.post("/api/harness/sessions/{session_id}/mcp-effects/reconcile")
+async def api_reconcile_harness_session_mcp_effects(session_id: str, request: Request) -> JSONResponse:
+    """Run queryable-outcome reconciliation for uncertain MCP writes in a session (`Task 3`, `AC 1`, `AC 3`)."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    body: dict[str, Any] = {}
+    try:
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    except Exception:
+        pass
+    target_aid = str(body.get("action_id") or "").strip() or None
+    known_args = _extract_session_known_action_args(session_id)
+    report = await reconcile_mcp_effects_async(
+        getattr(request.app.state, "http", None),
+        session_id=session_id,
+        task_id=session_id,
+        action_id=target_aid,
+        policy=str(sess.get("policy") or "standard"),
+        approved=bool(body.get("approved", True)),
+        grant_source="operator_one_call" if bool(body.get("approved", True)) else "policy",
+        grant_id=(str(body["grant_id"]).strip() if body.get("grant_id") else None),
+        known_action_args=known_args,
+    )
+    sm = get_task_state_machine()
+    t_cur = sm.store.get_task(session_id)
+    if t_cur is not None and t_cur.state == "blocked":
+        rem = get_durable_action_ledger().list_unresolved_consequential_actions(session_id)
+        holds = get_containment_store().find_resumption_holds(task_id=session_id)
+        if not rem and not holds:
+            sm.transition_task(
+                session_id,
+                "paused",
+                allow_inactive_epoch=True,
+                reason="mcp_effects_reconciled",
+            )
+    _safe_append_harness_event(session_id, "mcp/effects_reconciled", report)
+    return JSONResponse(
+        {
+            "status": "ok",
+            "session_id": session_id,
+            "report": report,
+            "summary": get_mcp_effect_store().summary(session_id=session_id),
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/mcp-effects/{action_id}/resolve")
+async def api_resolve_harness_session_mcp_effect(
+    session_id: str, action_id: str, request: Request
+) -> JSONResponse:
+    """Explicitly resolve an unqueryable uncertain MCP write after operator inspection (`Task 4`)."""
+    try:
+        get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Expected a JSON object body.")
+    resolution = str(body.get("resolution") or "").strip().lower()
+    if resolution not in ("committed", "not_applied"):
+        raise HTTPException(
+            status_code=400,
+            detail="`resolution` must be 'committed' or 'not_applied'.",
+        )
+    reason = str(body.get("reason") or f"operator_resolved_{resolution}").strip()[:240]
+    store = get_mcp_effect_store()
+    eff = store.get_effect(action_id)
+    if eff is None or eff.session_id != session_id:
+        raise HTTPException(
+            status_code=404,
+            detail=f"MCP effect {action_id!r} not found for session {session_id!r}.",
+        )
+    updated_eff = store.resolve_operator(action_id, resolution=resolution, reason=reason)  # type: ignore[arg-type]
+    ledger = get_durable_action_ledger()
+    try:
+        ledger.resolve_uncertain_action(
+            action_id,
+            resolution=("verified_committed" if resolution == "committed" else "verified_not_applied"),
+            reason=("pre_takeover_verified_committed" if resolution == "committed" else reason),
+        )
+    except Exception:
+        pass
+    sm = get_task_state_machine()
+    t_cur = sm.store.get_task(session_id)
+    if t_cur is not None and t_cur.state == "blocked":
+        rem = ledger.list_unresolved_consequential_actions(session_id)
+        holds = get_containment_store().find_resumption_holds(task_id=session_id)
+        if not rem and not holds:
+            sm.transition_task(
+                session_id,
+                "paused",
+                allow_inactive_epoch=True,
+                reason="operator_resolved_mcp_effect",
+            )
+    _safe_append_harness_event(
+        session_id,
+        "mcp/effect_operator_resolved",
+        {"action_id": action_id, "resolution": resolution, "reason": reason},
+    )
+    return JSONResponse(
+        {
+            "status": "resolved",
+            "session_id": session_id,
+            "effect": updated_eff.to_mapping(),
+            "summary": store.summary(session_id=session_id),
+        }
+    )
+
+
 @app.post("/api/harness/sessions/{session_id}/resume")
-async def api_resume_harness_session(session_id: str) -> JSONResponse:
+async def api_resume_harness_session(session_id: str, request: Request) -> JSONResponse:
     """Validate checkpoint integrity, unresolved side effects, and recovery budget before resume."""
     try:
         sess = get_harness_session_db(session_id)
@@ -16679,7 +17521,19 @@ async def api_resume_harness_session(session_id: str) -> JSONResponse:
     now_ts = time.time()
     t_cur = sm.store.get_task(session_id)
     known_args = _extract_session_known_action_args(session_id)
-    if t_cur is not None and known_args and t_cur.current_epoch > 0:
+    uncertain_mcp = get_mcp_effect_store().list_effects(session_id=session_id, statuses=("uncertain",))
+    if uncertain_mcp:
+        await reconcile_mcp_effects_async(
+            getattr(request.app.state, "http", None),
+            session_id=session_id,
+            task_id=session_id,
+            policy=str(sess.get("policy") or "standard"),
+            approved=True,
+            grant_source="operator_one_call",
+            known_action_args=known_args,
+        )
+        t_cur = sm.store.get_task(session_id)
+    if t_cur is not None and t_cur.current_epoch > 0:
         coord.store.expire_stale_leases(now=now_ts)
         ep_cur = sm.store.get_epoch(session_id, t_cur.current_epoch)
         if ep_cur is None or ep_cur.status != "active":
@@ -16898,6 +17752,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
             halt_mode: Literal["none", "paused", "cancelled", "budget_exceeded", "max_steps"] = "none"
             halt_reason = ""
             disk_full_pause = False
+            uncertain_effect_pause = False
 
             try:
                 pre_turn_snap = _workspace_snapshot_store().capture_baseline(
@@ -17191,10 +18046,16 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         },
                     )
                     tool_feedback_parts.append(_format_untrusted_tool_response(t_name, res_obj["output"], res_obj["ok"]))
-                    if res_obj.get("safe_pause_required") or res_obj.get("error_code") == "disk_full":
+                    if res_obj.get("error_code") == "disk_full":
                         halt_mode = "paused"
                         disk_full_pause = True
                         halt_reason = f"disk_full_safe_pause:{str(res_obj.get('output') or '')[:140]}"
+                        mid_tool_halt = True
+                        break
+                    if res_obj.get("safe_pause_required") or res_obj.get("uncertain"):
+                        halt_mode = "paused"
+                        uncertain_effect_pause = True
+                        halt_reason = f"uncertain_external_effect:{t_name}:{str(res_obj.get('output') or '')[:140]}"
                         mid_tool_halt = True
                         break
 
@@ -17227,7 +18088,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     break
 
                 if mid_tool_halt:
-                    if not disk_full_pause:
+                    if not disk_full_pause and not uncertain_effect_pause:
                         completed_step = step_idx
                     break
 
@@ -17328,6 +18189,8 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     pause_payload: dict[str, Any] = {"step": completed_step, "reason": halt_reason}
                     if disk_full_pause:
                         pause_payload["error_code"] = "disk_full"
+                    elif uncertain_effect_pause:
+                        pause_payload["error_code"] = "uncertain_external_effect"
                     _safe_append_harness_event(session_id, "turn/paused", pause_payload)
                     if session_id in _HARNESS_ABORT_FLAGS:
                         yield _sse("aborted", {"step": completed_step})
@@ -17797,7 +18660,43 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                                 approved = False
                                 grant_source = "policy"
                                 approval_id: str | None = None
+                                w2_grant_id: str | None = None
                                 reject_note = ""
+                                if needs_approval:
+                                    g_store_w2 = get_scoped_grant_store()
+                                    w2_caps = scoped_grants.resolve_tool_capabilities(t_name, t_args)
+                                    w2_scopes = scoped_grants.resolve_tool_resource_scopes(
+                                        t_name, t_args, workspace_root=wt_dir
+                                    )
+                                    try:
+                                        rev_w2 = g_store_w2.check_revocation_denials(
+                                            session_id=session_id,
+                                            task_id=session_id,
+                                            tool_name=t_name,
+                                            action_capabilities=w2_caps,
+                                            action_scopes=w2_scopes,
+                                        )
+                                    except scoped_grants.GrantStoreIntegrityError:
+                                        rev_w2 = None
+                                    if rev_w2 is not None:
+                                        needs_approval = False
+                                    else:
+                                        try:
+                                            pre_g_w2 = g_store_w2.find_matching_grant(
+                                                session_id=session_id,
+                                                task_id=session_id,
+                                                epoch=lease_epoch,
+                                                tool_name=t_name,
+                                                args=t_args,
+                                                workspace_root=wt_dir,
+                                            )
+                                        except scoped_grants.GrantStoreIntegrityError:
+                                            pre_g_w2 = None
+                                        if pre_g_w2 is not None:
+                                            needs_approval = False
+                                            approved = True
+                                            grant_source = "scoped_grant"
+                                            w2_grant_id = pre_g_w2.grant_id
                                 if needs_approval:
                                     pending = _create_pending_tool_approval(session_id, global_step, t_name, t_args)
                                     try:
@@ -17833,6 +18732,7 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                                     approved=approved,
                                     grant_source=grant_source,
                                     approval_id=approval_id,
+                                    grant_id=w2_grant_id,
                                     step_id=global_step,
                                     call_index=tc_i,
                                 )
@@ -17851,6 +18751,10 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                                     {"step": global_step, "index": tc_i, "tool": t_name, "args": t_args, "ok": res_obj["ok"], "output": comp_out, "diff": res_obj.get("diff", ""), "elapsed_ms": res_obj.get("elapsed_ms", 0), "sandbox": sb_meta},
                                 )
                                 feedback_blocks.append(_format_untrusted_tool_response(t_name, comp_out, res_obj["ok"]))
+                                if res_obj.get("safe_pause_required") or res_obj.get("uncertain"):
+                                    halt_mode = "paused"
+                                    halt_reason = f"uncertain_external_effect:{t_name}:{str(comp_out)[:140]}"
+                                    break
                             if feedback_blocks:
                                 w2_msgs.append({"role": "user", "content": "\n\n".join(feedback_blocks)})
                             try:
@@ -18178,22 +19082,31 @@ async def _fetch_online_inspiration(
     q_clean = re.sub(r"\s+", " ", (query or "").strip())[:140]
     sections: list[str] = []
 
-    # 1. Optional connected Search MCP servers
+    # 1. Optional connected Search MCP servers (read-only allowlisted tools only)
     try:
         for srv in list_mcp_servers(include_secret=True):
             if not srv.get("enabled"):
                 continue
             alias = srv["alias"]
             if any(k in alias.lower() for k in ("exa", "tavily", "search", "deepwiki")):
-                tools = srv.get("tools") or []
-                if tools:
-                    t_first = tools[0]["name"]
+                tools = [t for t in (srv.get("tools") or []) if isinstance(t, dict) and t.get("name")]
+                en_tools = set(srv.get("enabled_tools") or {t["name"] for t in tools})
+                ro_tool = next(
+                    (
+                        str(t["name"])
+                        for t in tools
+                        if t["name"] in en_tools
+                        and _resolve_mcp_tool_semantics(srv, str(t["name"])).read_only
+                    ),
+                    "",
+                )
+                if ro_tool:
                     mcp_res = await execute_mcp_tool_call(
                         client,
                         alias,
-                        t_first,
+                        ro_tool,
                         {"query": q_clean},
-                        cwd=cwd,
+                        cwd=None,
                         policy=policy,
                         approved=False,
                         session_id=session_id,
@@ -18201,9 +19114,11 @@ async def _fetch_online_inspiration(
                         task_id=task_id,
                         epoch=epoch,
                         worker_id=worker_id,
+                        step_id="inspiration_search",
+                        call_index=0,
                     )
                     if mcp_res.get("ok") and mcp_res.get("output"):
-                        sections.append(f"#### Live MCP Search (`{alias}::{t_first}`)\n{mcp_res['output'][:1400]}")
+                        sections.append(f"#### Live MCP Search (`{alias}::{ro_tool}`)\n{mcp_res['output'][:1400]}")
                         break
     except Exception:
         pass
@@ -19356,6 +20271,7 @@ async def _dispatch_mcp_stdio_tool(tname: str, args: dict[str, Any], default_age
                 content=args["content"],
                 folder=args.get("folder") or "decisions",
                 pinned=bool(args.get("pinned", False)),
+                doc_id=str(args.get("doc_id") or ""),
             ),
             indent=2,
         )
@@ -19383,6 +20299,7 @@ async def _execute_mcp_stdio_tool(
     task_state: str | None = None,
     epoch: int | None = None,
     worker_id: str | None = None,
+    action_id: str | None = None,
 ) -> dict[str, Any]:
     return await _run_authorized_tool(
         f"mcp_bridge__{tname}",
@@ -19397,6 +20314,7 @@ async def _execute_mcp_stdio_tool(
         task_state=task_state,
         epoch=epoch,
         worker_id=worker_id,
+        action_id=action_id,
     )
 
 
@@ -19438,13 +20356,22 @@ def run_mcp_stdio_server(default_agent_name: str = "ExternalAgent") -> None:
                 call_params = params if isinstance(params, dict) else {}
                 tname = str(call_params.get("name") or "")
                 raw_args = call_params.get("arguments") or {}
-                args = raw_args if isinstance(raw_args, dict) else {}
+                args = dict(raw_args) if isinstance(raw_args, dict) else {}
+                raw_meta = call_params.get("_meta")
+                meta_map = raw_meta if isinstance(raw_meta, Mapping) else {}
+                inbound_aid = str(
+                    meta_map.get("idempotencyKey")
+                    or meta_map.get("io.modelcontextprotocol/idempotencyKey")
+                    or meta_map.get("m5.studio/actionId")
+                    or ""
+                ).strip() or None
                 bridge_result = asyncio.run(
                     _execute_mcp_stdio_tool(
                         tname,
                         args,
                         default_agent_name,
                         additional_denial=(None if isinstance(raw_args, dict) else "MCP tool arguments must be a JSON object."),
+                        action_id=inbound_aid,
                     )
                 )
                 text = str(bridge_result.get("output") or "")
@@ -22403,7 +23330,8 @@ class DurableActionLedger:
             prior = self.get_action(aid)
             if prior is not None and prior.tool_name == tname and prior.args_sha256 == digest:
                 if prior.status in ("uncertain", "in_flight") or (
-                    prior.status == "committed" and prior.error_code == "pre_takeover_verified_committed"
+                    prior.status == "committed"
+                    and prior.error_code in ("pre_takeover_verified_committed", "mcp_query_verified_committed")
                 ):
                     try:
                         reconcile_verdict = self._reconciler(prior, tname, safe_args)
@@ -22672,7 +23600,7 @@ class DurableActionLedger:
                     )
                 if (
                     resolved_replay == "reconcilable"
-                    and existing.error_code == "pre_takeover_verified_committed"
+                    and existing.error_code in ("pre_takeover_verified_committed", "mcp_query_verified_committed")
                     and reconcile_verdict == "verified_committed"
                 ):
                     conn.execute(
@@ -23228,16 +24156,22 @@ class WorkerLeaseCoordinator:
         reconciled_committed: list[str] = []
         reconciled_not_applied: list[str] = []
         reconciler = self._ledger.reconciler
-        if reconciler is not None and known_action_args:
+        if reconciler is not None:
             uncertain_rows = self._ledger.list_task_actions(tid, statuses=("uncertain",))
             for rec in uncertain_rows:
                 if rec.replay_policy != "reconcilable":
                     continue
-                cand_args = known_action_args.get(rec.action_id)
-                if cand_args is None or canonical_args_sha256(cand_args) != rec.args_sha256:
+                cand_args = known_action_args.get(rec.action_id) if known_action_args else None
+                if cand_args is not None:
+                    if canonical_args_sha256(cand_args) != rec.args_sha256:
+                        continue
+                    probe_args: Mapping[str, Any] = cand_args
+                elif rec.tool_name.startswith("mcp__"):
+                    probe_args = {}
+                else:
                     continue
                 try:
-                    verdict = reconciler(rec, rec.tool_name, cand_args)
+                    verdict = reconciler(rec, rec.tool_name, probe_args)
                 except Exception:
                     verdict = "unresolved"
                 if verdict == "verified_committed":
@@ -27002,6 +27936,7 @@ class ContainmentStore:
         action_class: str,
         candidate_action_id: str = "",
         allow_acknowledged_rollback: bool = False,
+        allow_readonly_inspection: bool = False,
     ) -> tuple[list[PersistedBarrierHold], list[str]]:
         """Check ``requested_barriers`` against durable ``persisted_barriers``.
 
@@ -27029,7 +27964,7 @@ class ContainmentStore:
         for hold in holds:
             has_live_lingering = bool(hold.lingering_pids)
             if not has_live_lingering:
-                if action_class == "read_only":
+                if action_class == "read_only" or allow_readonly_inspection:
                     continue
                 if allow_acknowledged_rollback:
                     continue
@@ -32648,35 +33583,81 @@ def checkpoint_ref_is_none(value: str | None) -> bool:
 
 workflow_state = sys.modules[__name__]
 
-"""MCP wire-protocol boundary: adaptive HTTP transport, parser, and session state.
+"""MCP wire-protocol boundary, connector idempotency semantics, and external-effect reconciliation.
 
-AS-012 boundary extraction. This module owns everything protocol-level about
-talking to a Streamable-HTTP MCP server:
+AS-012 / M5-P3-05 boundary module. Owns:
 
-1. Fast-path: Stateless ``2026-07-28`` (``MCP-Protocol-Version`` + ``_meta`` +
-   ``Mcp-Method`` headers) or a cached ``2025`` ``Mcp-Session-Id``.
-2. Automatic fallback: ``2025-06-18`` ``initialize`` + ``Mcp-Session-Id`` +
-   ``notifications/initialized`` handshake (plus an ``/sse`` -> ``/mcp`` URL
-   retry on HTTP 405).
+1. Wire protocol negotiation (``adaptive_call``):
+   - Fast-path: Stateless ``2026-07-28`` (``MCP-Protocol-Version`` + ``_meta`` +
+     ``Mcp-Method`` headers) or cached ``2025`` ``Mcp-Session-Id``.
+   - Automatic fallback: ``2025-06-18`` ``initialize`` + ``Mcp-Session-Id`` +
+     ``notifications/initialized`` handshake (plus ``/sse`` -> ``/mcp`` URL
+     retry on HTTP 405).
+2. Connector idempotency & replay semantics (``classify_mcp_tool_semantics``,
+   ``bind_tool_call_params``):
+   - Explicitly classifies every MCP tool as ``supported``, ``unsupported``, or
+     ``not_applicable_read_only`` (fail-closed ``unsupported`` default for any
+     non-read-only tool without explicit connector/tool idempotency metadata).
+   - Binds deterministic ``action_id`` and idempotency keys across HTTP headers,
+     JSON-RPC ``_meta``, and opted-in argument fields where supported.
+3. Queryable-outcome reconciliation & durable external-effect journal
+   (``McpReconciliationSpec``, ``build_reconciliation_query_args``,
+   ``evaluate_reconciliation_response``, ``McpExternalEffectStore``):
+   - Persists secret-redacted outbound MCP attempt records in
+     ``$HARNESS_STORE_DIR/mcp_effects/state.json`` (`0700` dir / `0600` file,
+     ``O_NOFOLLOW`` symlink refusal, atomic ``fsync`` replacement).
+   - Evaluates read-only reconciliation query responses strictly (requiring
+     explicit ``authoritative_not_found`` before treating negative lookups as
+     ``verified_not_applied``).
 
-The transport is injected as a single ``post(url, headers, body, timeout)``
-callable returning a :class:`TransportResponse`, so the negotiation state
-machine can be exercised with scripted mock transports (no sockets, no DNS)
-while the application keeps its own validating, redirect-rejecting transport.
-
-URL validation, redirect rejection, and network I/O stay in the application:
-this module never opens a connection.
+URL validation, redirect rejection, central admission, and network/process I/O
+stay in the application: this module never opens a network connection.
 """
 
-import json
-import re
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import stat
+import threading
+import time
+from typing import Any, Literal
 
 CLIENT_NAME = "m5-studio"
 STATELESS_PROTOCOL_VERSION = "2026-07-28"
 STATEFUL_PROTOCOL_VERSION = "2025-06-18"
+MCP_EFFECT_SCHEMA_VERSION = 1
+_MCPC_MAX_STORED_EFFECTS = 500
+
+McpIdempotencyStatus = Literal["supported", "unsupported", "not_applicable_read_only"]
+McpIdempotencyMechanism = Literal[
+    "http_header",
+    "jsonrpc_meta",
+    "argument_field",
+    "intrinsic",
+    "read_only",
+    "unsupported",
+]
+McpReplayPolicy = Literal["idempotent", "reconcilable", "non_idempotent"]
+McpReconciliationMode = Literal["action_receipt", "resource_lookup"]
+McpReconciliationVerdict = Literal["verified_committed", "verified_not_applied", "unresolved"]
+McpEffectStatus = Literal[
+    "in_flight",
+    "committed",
+    "failed",
+    "uncertain",
+    "reconciled_committed",
+    "reconciled_not_applied",
+]
+
+_MCPC_SECRET_ARG_KEY_RE = re.compile(
+    r"(?:^|_|-)(?:api_?key|secret|token|password|passwd|credential|credentials|"
+    r"private_?key|access_?key|client_?secret|auth|bearer|cookie|webhook)(?:$|_|-)",
+    re.IGNORECASE,
+)
 
 
 class McpTransportError(RuntimeError):
@@ -32689,6 +33670,10 @@ class McpRpcError(McpTransportError):
 
 class McpAmbiguousOutcomeError(McpTransportError):
     """Raised when an outbound ``tools/call`` outcome is ambiguous (HTTP 5xx or garbled 200)."""
+
+
+class McpEffectStoreIntegrityError(RuntimeError):
+    """Raised when the persisted MCP external-effect store is corrupted or symlinked."""
 
 
 @dataclass(frozen=True)
@@ -32727,6 +33712,1251 @@ class SessionStore:
 
     def clear(self, alias: str) -> None:
         self._sessions.pop(alias, None)
+
+
+# ---------------------------------------------------------------------------
+# Connector Semantics, Idempotency Classification & Reconciliation Specs
+# ---------------------------------------------------------------------------
+
+
+def _mcpc_canonical_args_sha256(args: Mapping[str, Any] | None) -> str:
+    payload = dict(args) if isinstance(args, Mapping) else {}
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+@dataclass(frozen=True, slots=True)
+class McpReconciliationSpec:
+    """Declarative read-only query contract for reconciling an uncertain MCP write."""
+
+    query_tool: str
+    mode: McpReconciliationMode = "action_receipt"
+    query_arg_map: tuple[tuple[str, str], ...] = ()
+    static_args: tuple[tuple[str, Any], ...] = ()
+    match_fields: tuple[str, ...] = ()
+    result_field: str = ""
+    authoritative_not_found: bool = False
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "query_tool": self.query_tool,
+            "mode": self.mode,
+            "query_arg_map": {k: v for k, v in self.query_arg_map},
+            "static_args": {k: v for k, v in self.static_args},
+            "match_fields": list(self.match_fields),
+            "result_field": self.result_field,
+            "authoritative_not_found": self.authoritative_not_found,
+        }
+
+    @classmethod
+    def from_mapping(cls, raw: Mapping[str, Any] | None) -> "McpReconciliationSpec | None":
+        if not isinstance(raw, Mapping):
+            return None
+        qtool = str(raw.get("query_tool") or raw.get("queryTool") or "").strip()
+        if not qtool:
+            return None
+        raw_mode = str(raw.get("mode") or "").strip().lower()
+        raw_map = raw.get("query_arg_map") or raw.get("queryArgMap")
+        arg_pairs: list[tuple[str, str]] = []
+        if isinstance(raw_map, Mapping):
+            for k, v in raw_map.items():
+                ks, vs = str(k).strip(), str(v).strip()
+                if ks and vs:
+                    arg_pairs.append((ks, vs))
+        if raw_mode in ("action_receipt", "resource_lookup"):
+            mode: McpReconciliationMode = raw_mode  # type: ignore[assignment]
+        else:
+            mode = "resource_lookup" if arg_pairs else "action_receipt"
+        raw_static = raw.get("static_args") or raw.get("staticArgs")
+        static_pairs: list[tuple[str, Any]] = []
+        if isinstance(raw_static, Mapping):
+            for k, v in raw_static.items():
+                ks = str(k).strip()
+                if ks:
+                    static_pairs.append((ks, v))
+        raw_match = raw.get("match_fields") or raw.get("matchFields") or ()
+        match_fields = tuple(
+            str(f).strip()
+            for f in (raw_match if isinstance(raw_match, Sequence) and not isinstance(raw_match, (str, bytes)) else ())
+            if str(f).strip()
+        )
+        return cls(
+            query_tool=qtool,
+            mode=mode,
+            query_arg_map=tuple(arg_pairs),
+            static_args=tuple(static_pairs),
+            match_fields=match_fields,
+            result_field=str(raw.get("result_field") or raw.get("resultField") or "").strip(),
+            authoritative_not_found=bool(
+                raw.get("authoritative_not_found", raw.get("authoritativeNotFound", False))
+            ),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class McpToolSemantics:
+    """Evaluated connector + tool semantics for an outbound MCP tool (`M5-P3-05`)."""
+
+    alias: str
+    tool_name: str
+    transport: str
+    read_only: bool
+    destructive: bool
+    idempotency_supported: bool
+    idempotency_status: McpIdempotencyStatus
+    idempotency_mechanism: McpIdempotencyMechanism
+    idempotency_arg_name: str = ""
+    allow_keyed_replay: bool = False
+    requires_approval_override: bool = False
+    reconciliation: McpReconciliationSpec | None = None
+
+    @property
+    def replay_policy(self) -> McpReplayPolicy:
+        if self.read_only:
+            return "idempotent"
+        if self.reconciliation is not None:
+            return "reconcilable"
+        if self.idempotency_supported and self.allow_keyed_replay:
+            return "idempotent"
+        return "non_idempotent"
+
+    @property
+    def reconciliation_supported(self) -> bool:
+        return self.reconciliation is not None
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "alias": self.alias,
+            "tool_name": self.tool_name,
+            "transport": self.transport,
+            "read_only": self.read_only,
+            "destructive": self.destructive,
+            "idempotency_supported": self.idempotency_supported,
+            "idempotency_status": self.idempotency_status,
+            "idempotency_mechanism": self.idempotency_mechanism,
+            "idempotency_arg_name": self.idempotency_arg_name,
+            "allow_keyed_replay": self.allow_keyed_replay,
+            "requires_approval_override": self.requires_approval_override,
+            "replay_policy": self.replay_policy,
+            "reconciliation_supported": self.reconciliation_supported,
+            "reconciliation": self.reconciliation.to_mapping() if self.reconciliation else None,
+        }
+
+
+def classify_mcp_tool_semantics(
+    server: Mapping[str, Any],
+    tool_spec: Mapping[str, Any] | None = None,
+    *,
+    remote_tool: str = "",
+    connector_policy: Mapping[str, Any] | None = None,
+) -> McpToolSemantics:
+    """Classify MCP tool idempotency, replay policy, and reconciliation contract.
+
+    Fail-closed rules (`AC 2`):
+    - ``read_only`` is True ONLY when explicitly declared via MCP
+      ``annotations.readOnlyHint == True`` (and ``destructiveHint != True``) or
+      explicit ``read_only: True`` tool/connector metadata.
+    - ``idempotency_supported`` is True ONLY when explicitly declared via
+      ``annotations.idempotentHint == True``, tool ``idempotency`` /
+      ``x-idempotency`` metadata, ``inputSchema`` ``x-idempotency-key`` property
+      opt-in, or server ``connector_policy``. Otherwise it is explicitly marked
+      ``idempotency_supported = False``, ``idempotency_status = 'unsupported'``.
+    """
+    alias = str(server.get("alias") or "").strip().lower()
+    transport = str(server.get("transport") or "http").strip().lower() or "http"
+    spec = tool_spec if isinstance(tool_spec, Mapping) else {}
+    tname = str(remote_tool or spec.get("name") or "").strip()
+
+    conn_pol = connector_policy if isinstance(connector_policy, Mapping) else {}
+    srv_inline_pol = server.get("connector_semantics")
+    if not conn_pol and isinstance(srv_inline_pol, Mapping):
+        conn_pol = srv_inline_pol
+    tool_overrides = conn_pol.get("tool_overrides")
+    override: Mapping[str, Any] = (
+        tool_overrides.get(tname, {})
+        if isinstance(tool_overrides, Mapping) and isinstance(tool_overrides.get(tname), Mapping)
+        else {}
+    )
+
+    annotations_raw = spec.get("annotations")
+    annotations: Mapping[str, Any] = (
+        annotations_raw if isinstance(annotations_raw, Mapping) else {}
+    )
+    idem_meta_raw = (
+        override.get("idempotency")
+        or spec.get("idempotency")
+        or spec.get("x-idempotency")
+        or {}
+    )
+    idem_meta: Mapping[str, Any] = idem_meta_raw if isinstance(idem_meta_raw, Mapping) else {}
+
+    destructive = bool(
+        override.get(
+            "destructive",
+            annotations.get("destructiveHint", idem_meta.get("destructive", False)),
+        )
+    )
+    explicit_read_only = bool(
+        override.get(
+            "read_only",
+            spec.get(
+                "read_only",
+                annotations.get("readOnlyHint", idem_meta.get("mode") == "read_only"),
+            ),
+        )
+    )
+    read_only = bool(explicit_read_only and not destructive)
+    requires_approval_override = bool(
+        override.get(
+            "requires_approval",
+            annotations.get("requiresApproval", idem_meta.get("requires_approval", False)),
+        )
+    )
+
+    reconcile_raw = (
+        override.get("reconciliation")
+        or spec.get("reconciliation")
+        or spec.get("x-reconciliation")
+        or conn_pol.get("reconciliation")
+    )
+    reconciliation = (
+        None
+        if read_only
+        else McpReconciliationSpec.from_mapping(
+            reconcile_raw if isinstance(reconcile_raw, Mapping) else None
+        )
+    )
+
+    if read_only:
+        return McpToolSemantics(
+            alias=alias,
+            tool_name=tname,
+            transport=transport,
+            read_only=True,
+            destructive=False,
+            idempotency_supported=True,
+            idempotency_status="not_applicable_read_only",
+            idempotency_mechanism="read_only",
+            idempotency_arg_name="",
+            allow_keyed_replay=True,
+            requires_approval_override=requires_approval_override,
+            reconciliation=None,
+        )
+
+    # Check explicit argument-level idempotency schema opt-in (`x-idempotency-key: true`)
+    schema_arg_name = ""
+    input_schema = spec.get("inputSchema")
+    if isinstance(input_schema, Mapping):
+        props = input_schema.get("properties")
+        if isinstance(props, Mapping):
+            for prop_name, prop_def in props.items():
+                if isinstance(prop_def, Mapping) and bool(prop_def.get("x-idempotency-key")):
+                    schema_arg_name = str(prop_name).strip()
+                    break
+
+    idempotent_hint = bool(annotations.get("idempotentHint", False))
+    srv_supports_key = bool(conn_pol.get("supports_idempotency_key", False))
+    tool_supports_raw = override.get(
+        "idempotency_supported",
+        idem_meta.get("supported", None),
+    )
+
+    if tool_supports_raw is False:
+        supported = False
+    elif tool_supports_raw is True or bool(schema_arg_name) or idempotent_hint or srv_supports_key:
+        supported = True
+    else:
+        supported = False
+
+    if not supported:
+        return McpToolSemantics(
+            alias=alias,
+            tool_name=tname,
+            transport=transport,
+            read_only=False,
+            destructive=destructive,
+            idempotency_supported=False,
+            idempotency_status="unsupported",
+            idempotency_mechanism="unsupported",
+            idempotency_arg_name="",
+            allow_keyed_replay=False,
+            requires_approval_override=requires_approval_override,
+            reconciliation=reconciliation,
+        )
+
+    raw_mech = str(
+        override.get("idempotency_mechanism")
+        or idem_meta.get("mechanism")
+        or conn_pol.get("idempotency_mechanism")
+        or ""
+    ).strip().lower()
+    arg_name = str(
+        override.get("idempotency_arg_name")
+        or idem_meta.get("arg_name")
+        or conn_pol.get("idempotency_arg_name")
+        or schema_arg_name
+        or ""
+    ).strip()
+
+    if raw_mech in ("http_header", "jsonrpc_meta", "argument_field", "intrinsic"):
+        mechanism: McpIdempotencyMechanism = raw_mech  # type: ignore[assignment]
+        if mechanism == "http_header" and transport != "http":
+            mechanism = "jsonrpc_meta"
+        if mechanism == "argument_field" and not arg_name:
+            mechanism = "jsonrpc_meta" if transport != "http" else "http_header"
+    elif arg_name:
+        mechanism = "argument_field"
+    elif idempotent_hint and not srv_supports_key and tool_supports_raw is None:
+        mechanism = "intrinsic"
+    elif transport == "http":
+        mechanism = "http_header"
+    else:
+        mechanism = "jsonrpc_meta"
+
+    allow_keyed_replay = bool(
+        override.get(
+            "allow_keyed_replay",
+            idem_meta.get(
+                "allow_keyed_replay",
+                conn_pol.get("allow_keyed_replay", idempotent_hint),
+            ),
+        )
+    )
+    return McpToolSemantics(
+        alias=alias,
+        tool_name=tname,
+        transport=transport,
+        read_only=False,
+        destructive=destructive,
+        idempotency_supported=True,
+        idempotency_status="supported",
+        idempotency_mechanism=mechanism,
+        idempotency_arg_name=(arg_name if mechanism == "argument_field" else ""),
+        allow_keyed_replay=allow_keyed_replay,
+        requires_approval_override=requires_approval_override,
+        reconciliation=reconciliation,
+    )
+
+
+def bind_tool_call_params(
+    params: Mapping[str, Any] | None,
+    *,
+    action_id: str,
+    semantics: McpToolSemantics | None = None,
+) -> tuple[dict[str, Any], str | None]:
+    """Bind deterministic ``action_id`` and supported idempotency keys into ``tools/call`` params.
+
+    Returns ``(wire_params, bound_idempotency_key)`` without mutating ``params``.
+    When idempotency is ``unsupported``, ``_meta`` explicitly marks
+    ``m5.studio/idempotencyStatus = 'unsupported'`` and never fabricates an
+    ``idempotencyKey`` claim (`AC 2`).
+    """
+    base: dict[str, Any] = dict(params) if isinstance(params, Mapping) else {}
+    clean_aid = str(action_id or "").strip()
+    if not clean_aid:
+        return base, None
+
+    raw_args = base.get("arguments")
+    args_copy: dict[str, Any] = dict(raw_args) if isinstance(raw_args, Mapping) else {}
+    raw_meta = base.get("_meta")
+    meta_copy: dict[str, Any] = dict(raw_meta) if isinstance(raw_meta, Mapping) else {}
+    meta_copy["m5.studio/actionId"] = clean_aid
+
+    bound_key: str | None = None
+    if semantics is None:
+        meta_copy["idempotencyKey"] = clean_aid
+        meta_copy["io.modelcontextprotocol/idempotencyKey"] = clean_aid
+        bound_key = clean_aid
+    else:
+        meta_copy["m5.studio/idempotencyStatus"] = semantics.idempotency_status
+        if semantics.idempotency_supported and not semantics.read_only:
+            meta_copy["idempotencyKey"] = clean_aid
+            meta_copy["io.modelcontextprotocol/idempotencyKey"] = clean_aid
+            if semantics.idempotency_mechanism == "argument_field" and semantics.idempotency_arg_name:
+                existing_val = args_copy.get(semantics.idempotency_arg_name)
+                if existing_val is None or str(existing_val).strip() == "":
+                    args_copy[semantics.idempotency_arg_name] = clean_aid
+                bound_key = str(args_copy[semantics.idempotency_arg_name])
+            else:
+                bound_key = clean_aid
+
+    base["arguments"] = args_copy
+    base["_meta"] = meta_copy
+    return base, bound_key
+
+
+def build_reconciliation_query_args(
+    spec: McpReconciliationSpec,
+    *,
+    action_id: str,
+    remote_tool: str,
+    write_args: Mapping[str, Any] | None,
+    query_tool_schema: Mapping[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Build deterministic arguments for a read-only reconciliation query tool.
+
+    Returns ``None`` if a required mapped field is missing from ``write_args``
+    so callers fail closed (`unresolved`).
+    """
+    clean_aid = str(action_id or "").strip()
+    safe_write = write_args if isinstance(write_args, Mapping) else {}
+    out: dict[str, Any] = {k: v for k, v in spec.static_args}
+
+    if spec.mode == "resource_lookup" or spec.query_arg_map:
+        for query_param, source_ref in spec.query_arg_map:
+            if source_ref == "$action_id":
+                if not clean_aid:
+                    return None
+                out[query_param] = clean_aid
+            elif source_ref == "$tool":
+                out[query_param] = remote_tool
+            else:
+                if (
+                    source_ref not in safe_write
+                    or safe_write[source_ref] is None
+                    or safe_write[source_ref] == "[REDACTED]"
+                ):
+                    return None
+                out[query_param] = safe_write[source_ref]
+        return out
+
+    # Default `action_receipt` mode:
+    default_receipt_args: dict[str, Any] = {
+        "action_id": clean_aid,
+        "idempotency_key": clean_aid,
+        "tool": remote_tool,
+    }
+    if isinstance(query_tool_schema, Mapping) and query_tool_schema.get("additionalProperties") is False:
+        allowed_props = query_tool_schema.get("properties")
+        if isinstance(allowed_props, Mapping) and allowed_props:
+            filtered = {k: v for k, v in default_receipt_args.items() if k in allowed_props}
+            if not filtered:
+                return None
+            out.update(filtered)
+            return out
+    out.update(default_receipt_args)
+    return out
+
+
+def _mcpc_extract_structured_payload(raw_rpc_result: Mapping[str, Any]) -> dict[str, Any] | None:
+    structured = raw_rpc_result.get("structuredContent")
+    if isinstance(structured, Mapping):
+        return dict(structured)
+    content = raw_rpc_result.get("content")
+    if isinstance(content, Sequence) and not isinstance(content, (str, bytes)):
+        for blk in content:
+            if isinstance(blk, Mapping) and blk.get("type") == "text" and isinstance(blk.get("text"), str):
+                txt = blk["text"].strip()
+                if txt.startswith("{") and txt.endswith("}"):
+                    try:
+                        parsed = json.loads(txt)
+                    except json.JSONDecodeError:
+                        continue
+                    if isinstance(parsed, Mapping):
+                        return dict(parsed)
+    return None
+
+
+def _mcpc_fields_match(
+    candidate: Mapping[str, Any],
+    match_fields: Sequence[str],
+    *,
+    action_id: str,
+    write_args: Mapping[str, Any],
+) -> bool:
+    for field in match_fields:
+        if field == "$action_id":
+            actual_aid = str(candidate.get("action_id") or candidate.get("idempotency_key") or "")
+            if actual_aid != action_id:
+                return False
+            continue
+        if field not in candidate or field not in write_args:
+            return False
+        if candidate[field] != write_args[field]:
+            return False
+    return True
+
+
+def evaluate_reconciliation_response(
+    spec: McpReconciliationSpec,
+    raw_rpc_result: Mapping[str, Any] | None,
+    *,
+    action_id: str,
+    write_args: Mapping[str, Any] | None = None,
+) -> tuple[McpReconciliationVerdict, str]:
+    """Strictly evaluate a read-only query tool response into a reconciliation verdict.
+
+    Fail-closed guarantees (`Task 3`, `AC 1`):
+    - Any RPC error, ``isError=True``, or unparseable/non-JSON response yields
+      ``('unresolved', '')``.
+    - Negative responses (``not_found`` / ``found=False`` / empty list) yield
+      ``'verified_not_applied'`` ONLY when ``spec.authoritative_not_found`` is
+      True; otherwise they yield ``'unresolved'`` so eventual consistency never
+      causes a duplicate external write.
+    """
+    if not isinstance(raw_rpc_result, Mapping) or bool(raw_rpc_result.get("isError", False)):
+        return ("unresolved", "")
+    payload = _mcpc_extract_structured_payload(raw_rpc_result)
+    if payload is None:
+        return ("unresolved", "")
+
+    clean_aid = str(action_id or "").strip()
+    safe_write = write_args if isinstance(write_args, Mapping) else {}
+
+    echoed_aid = payload.get("action_id") or payload.get("idempotency_key")
+    if echoed_aid is not None and str(echoed_aid).strip() and str(echoed_aid).strip() != clean_aid:
+        return ("unresolved", "")
+
+    target_obj: Any = payload.get(spec.result_field) if spec.result_field else payload
+
+    # 1. Explicit status / boolean receipt checks:
+    raw_status = str(payload.get("status") or "").strip().lower()
+    if raw_status in {"committed", "succeeded", "completed", "applied", "exists"}:
+        cand_map = target_obj if isinstance(target_obj, Mapping) else payload
+        if spec.match_fields and not _mcpc_fields_match(
+            cand_map, spec.match_fields, action_id=clean_aid, write_args=safe_write
+        ):
+            return ("unresolved", "")
+        return ("verified_committed", json.dumps(payload, sort_keys=True, ensure_ascii=False))
+
+    if raw_status in {"not_found", "never_applied", "absent", "not_started"}:
+        if spec.authoritative_not_found:
+            return ("verified_not_applied", "")
+        return ("unresolved", "")
+
+    if payload.get("committed") is True or payload.get("applied") is True:
+        cand_map = target_obj if isinstance(target_obj, Mapping) else payload
+        if spec.match_fields and not _mcpc_fields_match(
+            cand_map, spec.match_fields, action_id=clean_aid, write_args=safe_write
+        ):
+            return ("unresolved", "")
+        return ("verified_committed", json.dumps(payload, sort_keys=True, ensure_ascii=False))
+
+    # 2. Resource lookup / `found` / `exists` / `items` checks:
+    if payload.get("found") is False or payload.get("exists") is False:
+        return ("verified_not_applied", "") if spec.authoritative_not_found else ("unresolved", "")
+
+    if isinstance(target_obj, Sequence) and not isinstance(target_obj, (str, bytes, Mapping)):
+        matches = [
+            item
+            for item in target_obj
+            if isinstance(item, Mapping)
+            and (
+                not spec.match_fields
+                or _mcpc_fields_match(
+                    item, spec.match_fields, action_id=clean_aid, write_args=safe_write
+                )
+            )
+        ]
+        if len(matches) == 1:
+            return ("verified_committed", json.dumps(dict(matches[0]), sort_keys=True, ensure_ascii=False))
+        if len(target_obj) == 0 and spec.authoritative_not_found:
+            return ("verified_not_applied", "")
+        return ("unresolved", "")
+
+    if target_obj is None and spec.result_field:
+        return ("verified_not_applied", "") if spec.authoritative_not_found else ("unresolved", "")
+
+    if isinstance(target_obj, Mapping):
+        if payload.get("found") is True or payload.get("exists") is True:
+            if not spec.match_fields or _mcpc_fields_match(
+                target_obj, spec.match_fields, action_id=clean_aid, write_args=safe_write
+            ):
+                return ("verified_committed", json.dumps(dict(target_obj), sort_keys=True, ensure_ascii=False))
+            return ("unresolved", "")
+        if spec.match_fields and _mcpc_fields_match(
+            target_obj, spec.match_fields, action_id=clean_aid, write_args=safe_write
+        ):
+            return ("verified_committed", json.dumps(dict(target_obj), sort_keys=True, ensure_ascii=False))
+
+    return ("unresolved", "")
+
+
+# ---------------------------------------------------------------------------
+# Durable MCP External-Effect & Connector-Semantics Store (`$HARNESS_STORE_DIR/mcp_effects/state.json`)
+# ---------------------------------------------------------------------------
+
+
+def _mcpc_redact_value(
+    value: Any,
+    *,
+    secrets: tuple[str, ...],
+    parent_key: str = "",
+) -> tuple[Any, bool]:
+    if parent_key and _MCPC_SECRET_ARG_KEY_RE.search(parent_key):
+        return ("[REDACTED]", True)
+    if isinstance(value, str):
+        if any(sec in value for sec in secrets):
+            return ("[REDACTED]", True)
+        return (value, False)
+    if isinstance(value, Mapping):
+        out_dict: dict[str, Any] = {}
+        changed = False
+        for k, v in value.items():
+            ks = str(k)
+            rv, rc = _mcpc_redact_value(v, secrets=secrets, parent_key=ks)
+            out_dict[ks] = rv
+            changed = changed or rc
+        return (out_dict, changed)
+    if isinstance(value, list):
+        out_list: list[Any] = []
+        changed = False
+        for item in value:
+            rv, rc = _mcpc_redact_value(item, secrets=secrets)
+            out_list.append(rv)
+            changed = changed or rc
+        return (out_list, changed)
+    return (value, False)
+
+
+@dataclass(frozen=True, slots=True)
+class McpExternalEffectRecord:
+    """Durable record of an outbound MCP `tools/call` attempt and reconciliation state."""
+
+    action_id: str
+    session_id: str
+    task_id: str | None
+    epoch: int
+    alias: str
+    remote_tool: str
+    transport: str
+    redacted_args: dict[str, Any]
+    args_redacted: bool
+    args_sha256: str
+    idempotency_supported: bool
+    idempotency_status: McpIdempotencyStatus
+    idempotency_mechanism: McpIdempotencyMechanism
+    bound_idempotency_key: str | None
+    replay_policy: McpReplayPolicy
+    reconciliation_supported: bool
+    query_tool: str
+    status: McpEffectStatus
+    attempts: int
+    remote_dispatches: int
+    reconciled_by: str
+    reconciled_output: str
+    last_error: str
+    created_at: float
+    updated_at: float
+
+    @property
+    def tool_name(self) -> str:
+        return f"mcp__{self.alias}__{self.remote_tool}"
+
+    @property
+    def reconciliation_verdict(self) -> McpReconciliationVerdict:
+        if self.status == "reconciled_committed":
+            return "verified_committed"
+        if self.status == "reconciled_not_applied":
+            return "verified_not_applied"
+        return "unresolved"
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "action_id": self.action_id,
+            "session_id": self.session_id,
+            "task_id": self.task_id,
+            "epoch": self.epoch,
+            "alias": self.alias,
+            "remote_tool": self.remote_tool,
+            "tool_name": self.tool_name,
+            "reconciliation_verdict": self.reconciliation_verdict,
+            "transport": self.transport,
+            "redacted_args": dict(self.redacted_args),
+            "args_redacted": self.args_redacted,
+            "args_sha256": self.args_sha256,
+            "idempotency_supported": self.idempotency_supported,
+            "idempotency_status": self.idempotency_status,
+            "idempotency_mechanism": self.idempotency_mechanism,
+            "bound_idempotency_key": self.bound_idempotency_key,
+            "replay_policy": self.replay_policy,
+            "reconciliation_supported": self.reconciliation_supported,
+            "query_tool": self.query_tool,
+            "status": self.status,
+            "attempts": self.attempts,
+            "remote_dispatches": self.remote_dispatches,
+            "reconciled_by": self.reconciled_by,
+            "reconciled_output": self.reconciled_output,
+            "last_error": self.last_error,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+
+    @classmethod
+    def from_mapping(cls, raw: Mapping[str, Any]) -> "McpExternalEffectRecord":
+        raw_args = raw.get("redacted_args")
+        return cls(
+            action_id=str(raw["action_id"]),
+            session_id=str(raw.get("session_id") or ""),
+            task_id=(str(raw["task_id"]) if raw.get("task_id") is not None else None),
+            epoch=int(raw.get("epoch") or 0),
+            alias=str(raw.get("alias") or ""),
+            remote_tool=str(raw.get("remote_tool") or ""),
+            transport=str(raw.get("transport") or "http"),
+            redacted_args=(dict(raw_args) if isinstance(raw_args, Mapping) else {}),
+            args_redacted=bool(raw.get("args_redacted", False)),
+            args_sha256=str(raw.get("args_sha256") or ""),
+            idempotency_supported=bool(raw.get("idempotency_supported", False)),
+            idempotency_status=str(raw.get("idempotency_status") or "unsupported"),  # type: ignore[arg-type]
+            idempotency_mechanism=str(raw.get("idempotency_mechanism") or "unsupported"),  # type: ignore[arg-type]
+            bound_idempotency_key=(
+                str(raw["bound_idempotency_key"])
+                if raw.get("bound_idempotency_key") is not None
+                else None
+            ),
+            replay_policy=str(raw.get("replay_policy") or "non_idempotent"),  # type: ignore[arg-type]
+            reconciliation_supported=bool(raw.get("reconciliation_supported", False)),
+            query_tool=str(raw.get("query_tool") or ""),
+            status=str(raw.get("status") or "uncertain"),  # type: ignore[arg-type]
+            attempts=int(raw.get("attempts") or 1),
+            remote_dispatches=int(raw.get("remote_dispatches") or 0),
+            reconciled_by=str(raw.get("reconciled_by") or ""),
+            reconciled_output=str(raw.get("reconciled_output") or ""),
+            last_error=str(raw.get("last_error") or ""),
+            created_at=float(raw.get("created_at") or 0.0),
+            updated_at=float(raw.get("updated_at") or 0.0),
+        )
+
+
+def _mcpc_check_no_symlink_chain(base_dir: Path, target_dir: Path) -> None:
+    for candidate in (base_dir, target_dir):
+        if candidate.exists() and candidate.is_symlink():
+            raise McpEffectStoreIntegrityError(
+                f"Refusing symlinked MCP external-effect directory: {candidate}"
+            )
+
+
+class McpExternalEffectStore:
+    """Durable store for MCP connector semantics and outbound external-effect reconciliation."""
+
+    def __init__(
+        self,
+        harness_store_dir: Path | str,
+        *,
+        clock: Callable[[], float] = time.time,
+    ) -> None:
+        self._base_dir = Path(harness_store_dir)
+        self._dir = self._base_dir / "mcp_effects"
+        self._state_path = self._dir / "state.json"
+        self._clock = clock
+        self._lock = threading.RLock()
+
+    @property
+    def state_path(self) -> Path:
+        return self._state_path
+
+    def _empty_state(self) -> dict[str, Any]:
+        return {
+            "schema_version": MCP_EFFECT_SCHEMA_VERSION,
+            "connector_policies": {},
+            "effects": {},
+        }
+
+    def _ensure_dir_locked(self) -> None:
+        _mcpc_check_no_symlink_chain(self._base_dir, self._dir)
+        self._base_dir.mkdir(parents=True, exist_ok=True)
+        self._dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        _mcpc_check_no_symlink_chain(self._base_dir, self._dir)
+        try:
+            os.chmod(self._dir, 0o700)
+        except OSError:
+            pass
+
+    def _load_locked(self) -> dict[str, Any]:
+        _mcpc_check_no_symlink_chain(self._base_dir, self._dir)
+        if not self._state_path.exists():
+            if self._state_path.is_symlink():
+                raise McpEffectStoreIntegrityError(
+                    f"Refusing dangling symlinked MCP effect state file: {self._state_path}"
+                )
+            return self._empty_state()
+        try:
+            st = os.lstat(self._state_path)
+        except OSError as exc:
+            raise McpEffectStoreIntegrityError(f"Cannot stat MCP effect store: {exc}") from exc
+        if stat.S_ISLNK(st.st_mode) or not stat.S_ISREG(st.st_mode):
+            raise McpEffectStoreIntegrityError(
+                f"Refusing non-regular or symlinked MCP effect state file: {self._state_path}"
+            )
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            fd = os.open(str(self._state_path), flags)
+            try:
+                raw_bytes = os.read(fd, 16 * 1024 * 1024)
+            finally:
+                os.close(fd)
+            parsed = json.loads(raw_bytes.decode("utf-8"))
+        except Exception as exc:
+            raise McpEffectStoreIntegrityError(
+                f"Corrupted MCP external-effect state at {self._state_path}: {exc}"
+            ) from exc
+        if not isinstance(parsed, dict) or parsed.get("schema_version") != MCP_EFFECT_SCHEMA_VERSION:
+            raise McpEffectStoreIntegrityError(
+                f"Unsupported MCP external-effect schema at {self._state_path}"
+            )
+        conn_pols = parsed.get("connector_policies")
+        effects = parsed.get("effects")
+        if not isinstance(conn_pols, dict) or not isinstance(effects, dict):
+            raise McpEffectStoreIntegrityError(
+                f"Malformed MCP external-effect collections at {self._state_path}"
+            )
+        return {
+            "schema_version": MCP_EFFECT_SCHEMA_VERSION,
+            "connector_policies": dict(conn_pols),
+            "effects": dict(effects),
+        }
+
+    def _save_locked(self, state: Mapping[str, Any]) -> None:
+        self._ensure_dir_locked()
+        if self._state_path.is_symlink():
+            raise McpEffectStoreIntegrityError(
+                f"Refusing symlinked MCP effect state target: {self._state_path}"
+            )
+        effects_map = dict(state.get("effects") or {})
+        if len(effects_map) > _MCPC_MAX_STORED_EFFECTS:
+            # Prune oldest terminal (`committed` / `failed`) records first; never prune `uncertain` / `in_flight`!
+            removable = sorted(
+                (
+                    (float(v.get("updated_at") or 0.0), k)
+                    for k, v in effects_map.items()
+                    if isinstance(v, Mapping) and v.get("status") in ("committed", "failed")
+                ),
+                key=lambda item: item[0],
+            )
+            excess = len(effects_map) - _MCPC_MAX_STORED_EFFECTS
+            for _ts, rk in removable[:excess]:
+                effects_map.pop(rk, None)
+
+        payload_bytes = (
+            json.dumps(
+                {
+                    "schema_version": MCP_EFFECT_SCHEMA_VERSION,
+                    "connector_policies": dict(state.get("connector_policies") or {}),
+                    "effects": effects_map,
+                },
+                indent=2,
+                sort_keys=True,
+                ensure_ascii=False,
+            )
+            + "\n"
+        ).encode("utf-8")
+
+        tmp_path = self._dir / f".state.{os.getpid()}.{threading.get_ident()}.tmp"
+        if tmp_path.is_symlink():
+            raise McpEffectStoreIntegrityError(f"Refusing symlinked temp path: {tmp_path}")
+        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(str(tmp_path), flags, 0o600)
+        try:
+            os.fchmod(fd, 0o600)
+            os.write(fd, payload_bytes)
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        os.replace(tmp_path, self._state_path)
+        try:
+            dir_fd = os.open(str(self._dir), os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+        except OSError:
+            pass
+
+    def get_connector_policy(self, alias: str) -> dict[str, Any]:
+        clean = str(alias or "").strip().lower()
+        if not clean:
+            return {}
+        with self._lock:
+            state = self._load_locked()
+            raw = state["connector_policies"].get(clean)
+            return dict(raw) if isinstance(raw, Mapping) else {}
+
+    def set_connector_policy(self, alias: str, policy: Mapping[str, Any]) -> dict[str, Any]:
+        clean = str(alias or "").strip().lower()
+        if not clean:
+            raise ValueError("MCP alias is required.")
+        normalized: dict[str, Any] = {
+            "supports_idempotency_key": bool(policy.get("supports_idempotency_key", False)),
+            "idempotency_mechanism": str(policy.get("idempotency_mechanism") or "").strip().lower(),
+            "idempotency_arg_name": str(policy.get("idempotency_arg_name") or "").strip(),
+            "allow_keyed_replay": bool(policy.get("allow_keyed_replay", False)),
+        }
+        rec_raw = policy.get("reconciliation")
+        rec_spec = McpReconciliationSpec.from_mapping(rec_raw if isinstance(rec_raw, Mapping) else None)
+        if rec_spec is not None:
+            normalized["reconciliation"] = rec_spec.to_mapping()
+        overrides_raw = policy.get("tool_overrides")
+        if isinstance(overrides_raw, Mapping):
+            normalized["tool_overrides"] = {
+                str(k): dict(v) for k, v in overrides_raw.items() if isinstance(v, Mapping)
+            }
+        with self._lock:
+            state = self._load_locked()
+            state["connector_policies"][clean] = normalized
+            self._save_locked(state)
+        return normalized
+
+    def delete_connector_policy(self, alias: str) -> None:
+        clean = str(alias or "").strip().lower()
+        if not clean:
+            return
+        with self._lock:
+            state = self._load_locked()
+            if clean in state["connector_policies"]:
+                state["connector_policies"].pop(clean, None)
+                self._save_locked(state)
+
+    def stage_dispatch(
+        self,
+        *,
+        action_id: str,
+        session_id: str,
+        task_id: str | None,
+        epoch: int | None,
+        semantics: McpToolSemantics,
+        arguments: Mapping[str, Any] | None,
+        bound_idempotency_key: str | None,
+        known_secret_values: Iterable[str] = (),
+    ) -> McpExternalEffectRecord:
+        """Persist pre-dispatch MCP effect metadata before contacting the connector."""
+        aid = str(action_id or "").strip()
+        if not aid:
+            raise ValueError("action_id is required when staging an MCP external effect.")
+        safe_args = dict(arguments) if isinstance(arguments, Mapping) else {}
+        digest = _mcpc_canonical_args_sha256(safe_args)
+        secrets = tuple(
+            sorted(
+                {str(s) for s in known_secret_values if isinstance(s, str) and len(s) >= 6},
+                key=len,
+                reverse=True,
+            )
+        )
+        redacted_obj, was_redacted = _mcpc_redact_value(safe_args, secrets=secrets)
+        now = self._clock()
+        with self._lock:
+            state = self._load_locked()
+            prev_raw = state["effects"].get(aid)
+            prev = McpExternalEffectRecord.from_mapping(prev_raw) if isinstance(prev_raw, Mapping) else None
+            rec = McpExternalEffectRecord(
+                action_id=aid,
+                session_id=str(session_id or ""),
+                task_id=(str(task_id) if task_id else None),
+                epoch=max(0, int(epoch or 0)),
+                alias=semantics.alias,
+                remote_tool=semantics.tool_name,
+                transport=semantics.transport,
+                redacted_args=redacted_obj if isinstance(redacted_obj, dict) else {},
+                args_redacted=was_redacted,
+                args_sha256=digest,
+                idempotency_supported=semantics.idempotency_supported,
+                idempotency_status=semantics.idempotency_status,
+                idempotency_mechanism=semantics.idempotency_mechanism,
+                bound_idempotency_key=bound_idempotency_key,
+                replay_policy=semantics.replay_policy,
+                reconciliation_supported=semantics.reconciliation_supported,
+                query_tool=(semantics.reconciliation.query_tool if semantics.reconciliation else ""),
+                status="in_flight",
+                attempts=(prev.attempts + 1 if prev is not None else 1),
+                remote_dispatches=(prev.remote_dispatches + 1 if prev is not None else 1),
+                reconciled_by="",
+                reconciled_output="",
+                last_error="",
+                created_at=(prev.created_at if prev is not None else now),
+                updated_at=now,
+            )
+            state["effects"][aid] = rec.to_mapping()
+            self._save_locked(state)
+            return rec
+
+    def record_outcome(
+        self,
+        action_id: str,
+        *,
+        status: McpEffectStatus,
+        output: str = "",
+        error: str = "",
+    ) -> McpExternalEffectRecord | None:
+        aid = str(action_id or "").strip()
+        if not aid:
+            return None
+        now = self._clock()
+        with self._lock:
+            state = self._load_locked()
+            raw = state["effects"].get(aid)
+            if not isinstance(raw, Mapping):
+                return None
+            prev = McpExternalEffectRecord.from_mapping(raw)
+            updated = McpExternalEffectRecord(
+                action_id=prev.action_id,
+                session_id=prev.session_id,
+                task_id=prev.task_id,
+                epoch=prev.epoch,
+                alias=prev.alias,
+                remote_tool=prev.remote_tool,
+                transport=prev.transport,
+                redacted_args=prev.redacted_args,
+                args_redacted=prev.args_redacted,
+                args_sha256=prev.args_sha256,
+                idempotency_supported=prev.idempotency_supported,
+                idempotency_status=prev.idempotency_status,
+                idempotency_mechanism=prev.idempotency_mechanism,
+                bound_idempotency_key=prev.bound_idempotency_key,
+                replay_policy=prev.replay_policy,
+                reconciliation_supported=prev.reconciliation_supported,
+                query_tool=prev.query_tool,
+                status=status,
+                attempts=prev.attempts,
+                remote_dispatches=prev.remote_dispatches,
+                reconciled_by=prev.reconciled_by,
+                reconciled_output=(output[:12_000] if output else prev.reconciled_output),
+                last_error=(error[:500] if error else prev.last_error),
+                created_at=prev.created_at,
+                updated_at=now,
+            )
+            state["effects"][aid] = updated.to_mapping()
+            self._save_locked(state)
+            return updated
+
+    def record_reconciliation(
+        self,
+        action_id: str,
+        *,
+        verdict: McpReconciliationVerdict,
+        reconciled_by: str,
+        reconciled_output: str = "",
+    ) -> McpExternalEffectRecord | None:
+        aid = str(action_id or "").strip()
+        if not aid:
+            return None
+        now = self._clock()
+        with self._lock:
+            state = self._load_locked()
+            raw = state["effects"].get(aid)
+            if not isinstance(raw, Mapping):
+                return None
+            prev = McpExternalEffectRecord.from_mapping(raw)
+            if verdict == "verified_committed":
+                target_status: McpEffectStatus = "reconciled_committed"
+            elif verdict == "verified_not_applied":
+                target_status = "reconciled_not_applied"
+            else:
+                target_status = prev.status
+            updated = McpExternalEffectRecord(
+                action_id=prev.action_id,
+                session_id=prev.session_id,
+                task_id=prev.task_id,
+                epoch=prev.epoch,
+                alias=prev.alias,
+                remote_tool=prev.remote_tool,
+                transport=prev.transport,
+                redacted_args=prev.redacted_args,
+                args_redacted=prev.args_redacted,
+                args_sha256=prev.args_sha256,
+                idempotency_supported=prev.idempotency_supported,
+                idempotency_status=prev.idempotency_status,
+                idempotency_mechanism=prev.idempotency_mechanism,
+                bound_idempotency_key=prev.bound_idempotency_key,
+                replay_policy=prev.replay_policy,
+                reconciliation_supported=prev.reconciliation_supported,
+                query_tool=prev.query_tool,
+                status=target_status,
+                attempts=prev.attempts,
+                remote_dispatches=prev.remote_dispatches,
+                reconciled_by=(
+                    str(reconciled_by or "")[:120]
+                    if verdict != "unresolved"
+                    else prev.reconciled_by
+                ),
+                reconciled_output=(
+                    reconciled_output[:12_000]
+                    if verdict != "unresolved"
+                    else prev.reconciled_output
+                ),
+                last_error=(
+                    str(reconciled_by or prev.last_error)[:500]
+                    if verdict == "unresolved"
+                    else prev.last_error
+                ),
+                created_at=prev.created_at,
+                updated_at=now,
+            )
+            state["effects"][aid] = updated.to_mapping()
+            self._save_locked(state)
+            return updated
+
+    def resolve_operator(
+        self,
+        action_id: str,
+        *,
+        resolution: Literal["committed", "not_applied"],
+        reason: str = "",
+    ) -> McpExternalEffectRecord:
+        verdict: McpReconciliationVerdict = (
+            "verified_committed" if resolution == "committed" else "verified_not_applied"
+        )
+        tag = f"operator:{reason}" if reason else f"operator:{resolution}"
+        rec = self.record_reconciliation(
+            action_id,
+            verdict=verdict,
+            reconciled_by=tag,
+        )
+        if rec is None:
+            raise KeyError(f"MCP external effect {action_id!r} not found.")
+        return rec
+
+    def summary(self, *, session_id: str | None = None) -> dict[str, Any]:
+        rows = self.list_effects(session_id=session_id)
+        counts: dict[str, int] = {
+            "in_flight": 0,
+            "committed": 0,
+            "failed": 0,
+            "uncertain": 0,
+            "reconciled_committed": 0,
+            "reconciled_not_applied": 0,
+        }
+        unsupported_count = 0
+        blocking_ids: list[str] = []
+        for r in rows:
+            counts[r.status] = counts.get(r.status, 0) + 1
+            if r.idempotency_status == "unsupported":
+                unsupported_count += 1
+            if r.status == "uncertain" and r.idempotency_status != "not_applicable_read_only":
+                blocking_ids.append(r.action_id)
+        return {
+            "total": len(rows),
+            **counts,
+            "unsupported_idempotency_count": unsupported_count,
+            "blocking_action_ids": blocking_ids,
+        }
+
+    def sweep_orphaned_in_flight(
+        self,
+        *,
+        session_id: str | None = None,
+        task_id: str | None = None,
+        active_action_ids: Collection[str] = (),
+    ) -> tuple[McpExternalEffectRecord, ...]:
+        """Transition orphaned `in_flight` MCP writes to `uncertain`."""
+        active_set = set(active_action_ids)
+        now = self._clock()
+        swept: list[McpExternalEffectRecord] = []
+        with self._lock:
+            state = self._load_locked()
+            for aid, raw in list(state["effects"].items()):
+                if aid in active_set or not isinstance(raw, Mapping):
+                    continue
+                rec = McpExternalEffectRecord.from_mapping(raw)
+                if rec.status != "in_flight":
+                    continue
+                if session_id is not None and rec.session_id != session_id:
+                    continue
+                if task_id is not None and rec.task_id != task_id:
+                    continue
+                next_status: McpEffectStatus = (
+                    "failed" if rec.replay_policy == "idempotent" and rec.idempotency_status == "not_applicable_read_only" else "uncertain"
+                )
+                upd = McpExternalEffectRecord(
+                    action_id=rec.action_id,
+                    session_id=rec.session_id,
+                    task_id=rec.task_id,
+                    epoch=rec.epoch,
+                    alias=rec.alias,
+                    remote_tool=rec.remote_tool,
+                    transport=rec.transport,
+                    redacted_args=rec.redacted_args,
+                    args_redacted=rec.args_redacted,
+                    args_sha256=rec.args_sha256,
+                    idempotency_supported=rec.idempotency_supported,
+                    idempotency_status=rec.idempotency_status,
+                    idempotency_mechanism=rec.idempotency_mechanism,
+                    bound_idempotency_key=rec.bound_idempotency_key,
+                    replay_policy=rec.replay_policy,
+                    reconciliation_supported=rec.reconciliation_supported,
+                    query_tool=rec.query_tool,
+                    status=next_status,
+                    attempts=rec.attempts,
+                    remote_dispatches=rec.remote_dispatches,
+                    reconciled_by=rec.reconciled_by,
+                    reconciled_output=rec.reconciled_output,
+                    last_error=rec.last_error or "orphaned_in_flight",
+                    created_at=rec.created_at,
+                    updated_at=now,
+                )
+                state["effects"][aid] = upd.to_mapping()
+                swept.append(upd)
+            if swept:
+                self._save_locked(state)
+        return tuple(swept)
+
+    def get_effect(self, action_id: str) -> McpExternalEffectRecord | None:
+        aid = str(action_id or "").strip()
+        if not aid:
+            return None
+        with self._lock:
+            state = self._load_locked()
+            raw = state["effects"].get(aid)
+            return McpExternalEffectRecord.from_mapping(raw) if isinstance(raw, Mapping) else None
+
+    def list_effects(
+        self,
+        *,
+        session_id: str | None = None,
+        task_id: str | None = None,
+        alias: str | None = None,
+        statuses: Collection[str] | None = None,
+    ) -> tuple[McpExternalEffectRecord, ...]:
+        status_set = set(statuses) if statuses is not None else None
+        clean_alias = str(alias).strip().lower() if alias else None
+        with self._lock:
+            state = self._load_locked()
+            out: list[McpExternalEffectRecord] = []
+            for raw in state["effects"].values():
+                if not isinstance(raw, Mapping):
+                    continue
+                rec = McpExternalEffectRecord.from_mapping(raw)
+                if session_id is not None and rec.session_id != session_id:
+                    continue
+                if task_id is not None and rec.task_id != task_id:
+                    continue
+                if clean_alias is not None and rec.alias != clean_alias:
+                    continue
+                if status_set is not None and rec.status not in status_set:
+                    continue
+                out.append(rec)
+            out.sort(key=lambda r: r.created_at)
+            return tuple(out)
+
+    def find_blocking_uncertain_writes(
+        self,
+        *,
+        session_id: str,
+        alias: str | None = None,
+        exclude_action_id: str | None = None,
+    ) -> tuple[McpExternalEffectRecord, ...]:
+        """Return unreconciled `uncertain` non-read-only MCP writes blocking further writes in `session_id`."""
+        sid = str(session_id or "").strip()
+        if not sid:
+            return ()
+        clean_alias = str(alias).strip().lower() if alias else None
+        with self._lock:
+            state = self._load_locked()
+            blockers: list[McpExternalEffectRecord] = []
+            for raw in state["effects"].values():
+                if not isinstance(raw, Mapping):
+                    continue
+                rec = McpExternalEffectRecord.from_mapping(raw)
+                if rec.session_id != sid:
+                    continue
+                if exclude_action_id and rec.action_id == exclude_action_id:
+                    continue
+                if clean_alias is not None and rec.alias != clean_alias:
+                    continue
+                if rec.idempotency_status == "not_applicable_read_only":
+                    continue
+                if rec.status == "uncertain":
+                    blockers.append(rec)
+            blockers.sort(key=lambda r: r.created_at)
+            return tuple(blockers)
 
 
 # ---------------------------------------------------------------------------
@@ -32784,6 +35014,8 @@ def build_headers(
     tool_name: str = "",
     client_version: str = "",
     action_id: str = "",
+    *,
+    idempotency_status: str = "",
 ) -> dict[str, str]:
     headers: dict[str, str] = {
         "Accept": "application/json, text/event-stream",
@@ -32794,6 +35026,9 @@ def build_headers(
         headers["Mcp-Name"] = tool_name
     if action_id and method == "tools/call":
         headers["Idempotency-Key"] = action_id
+        headers["X-M5-Action-Id"] = action_id
+        if idempotency_status:
+            headers["X-M5-Idempotency-Status"] = idempotency_status
     for k, v in (server.get("headers") or {}).items():
         headers[str(k)] = str(v)
     tok = (server.get("effective_token") or "").strip()
@@ -32807,13 +35042,17 @@ def build_headers(
 
 
 def build_stateless_body(method: str, params: Mapping[str, Any] | None, request_id: int, client_version: str) -> dict[str, Any]:
+    base_params = dict(params) if params else {}
+    existing_meta = base_params.get("_meta")
+    merged_meta = {
+        **(dict(existing_meta) if isinstance(existing_meta, Mapping) else {}),
+        "io.modelcontextprotocol/protocolVersion": STATELESS_PROTOCOL_VERSION,
+        "io.modelcontextprotocol/clientInfo": {"name": CLIENT_NAME, "version": client_version},
+        "io.modelcontextprotocol/clientCapabilities": {},
+    }
     meta_params = {
-        **(dict(params) if params else {}),
-        "_meta": {
-            "io.modelcontextprotocol/protocolVersion": STATELESS_PROTOCOL_VERSION,
-            "io.modelcontextprotocol/clientInfo": {"name": CLIENT_NAME, "version": client_version},
-            "io.modelcontextprotocol/clientCapabilities": {},
-        },
+        **base_params,
+        "_meta": merged_meta,
     }
     return {"jsonrpc": "2.0", "id": request_id, "method": method, "params": meta_params}
 
@@ -32869,6 +35108,7 @@ async def adaptive_call(
     sessions: SessionStore | None = None,
     client_version: str = "",
     action_id: str = "",
+    semantics: McpToolSemantics | None = None,
 ) -> dict[str, Any]:
     """Execute one MCP RPC through the adaptive stateless/stateful transport.
 
@@ -32881,19 +35121,35 @@ async def adaptive_call(
     sessions = sessions or SessionStore()
     alias = str(server.get("alias") or "")
     is_tool_call = method == "tools/call"
-    tool_name = str((params or {}).get("name") or "") if is_tool_call else ""
+    effective_params: Mapping[str, Any] | None = params
+    idem_status = semantics.idempotency_status if semantics is not None else ""
+    if is_tool_call and action_id:
+        effective_params, _bound_key = bind_tool_call_params(
+            params, action_id=action_id, semantics=semantics
+        )
+    tool_name = str((effective_params or {}).get("name") or "") if is_tool_call else ""
     base_headers = build_headers(
-        server, method, tool_name=tool_name, client_version=client_version, action_id=action_id
+        server,
+        method,
+        tool_name=tool_name,
+        client_version=client_version,
+        action_id=action_id,
+        idempotency_status=idem_status,
     )
     cached_sid = sessions.get(alias)
 
     req_id = 2
     if cached_sid:
         h1 = {**base_headers, "Mcp-Session-Id": cached_sid}
-        body1: dict[str, Any] = {"jsonrpc": "2.0", "id": req_id, "method": method, "params": dict(params) if params else {}}
+        body1: dict[str, Any] = {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "method": method,
+            "params": dict(effective_params) if effective_params else {},
+        }
     else:
         h1 = {**base_headers, "MCP-Protocol-Version": STATELESS_PROTOCOL_VERSION}
-        body1 = build_stateless_body(method, params, req_id, client_version)
+        body1 = build_stateless_body(method, effective_params, req_id, client_version)
 
     resp1 = await post(url, h1, body1, timeout)
     retry_target = retry_url_after_405(url) if resp1.status_code == 405 else None
@@ -32927,7 +35183,12 @@ async def adaptive_call(
 
     sid = extract_session_id(init_resp.headers)
     req_headers = build_headers(
-        server, method, tool_name=tool_name, client_version=client_version, action_id=action_id
+        server,
+        method,
+        tool_name=tool_name,
+        client_version=client_version,
+        action_id=action_id,
+        idempotency_status=idem_status,
     )
     notif_headers = build_headers(server, "notifications/initialized", client_version=client_version)
     if sid:
@@ -32943,7 +35204,12 @@ async def adaptive_call(
     final_resp = await post(
         url,
         req_headers,
-        {"jsonrpc": "2.0", "id": 3, "method": method, "params": dict(params) if params else {}},
+        {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": method,
+            "params": dict(effective_params) if effective_params else {},
+        },
         timeout,
     )
     if final_resp.status_code >= 400:
@@ -34650,6 +36916,7 @@ class DurableActionBoundary:
                         "attempt_id": intent_decision.attempt_id,
                         "ledger_status": intent_decision.status,
                         "replay_policy": intent_decision.replay_policy,
+                        "already_committed": True,
                         "reconciled": True,
                     }
                     try:
@@ -40712,8 +42979,9 @@ def derive_execution_profile(
         alias = parts[1].strip() if len(parts) >= 2 and parts[1].strip() else "unknown"
         ext_barriers: list[ResourceBarrier] = [
             ResourceBarrier(f"mcp:{alias}", "exclusive"),
-            ResourceBarrier(f"workspace:{ws_key}", "exclusive"),
         ]
+        if workspace_root is not None:
+            ext_barriers.append(ResourceBarrier(f"workspace:{ws_key}", "exclusive"))
         return ExecutionProfile(
             descriptor=descriptor,
             footprint=ResourceFootprint(
@@ -42681,6 +44949,7 @@ class UnifiedExecutionController:
         grant_store: scoped_grants.ScopedGrantStore | None = None,
         current_boot_id: str | None = None,
         sql_task_fencing: bool = False,
+        allow_readonly_inspection: bool = False,
     ) -> UnifiedExecutionCoordinator:
         return UnifiedExecutionCoordinator(
             self,
@@ -42694,6 +44963,7 @@ class UnifiedExecutionController:
             grant_store=grant_store,
             current_boot_id=current_boot_id,
             sql_task_fencing=sql_task_fencing,
+            allow_readonly_inspection=allow_readonly_inspection,
         )
 
 
@@ -42714,6 +44984,7 @@ class UnifiedExecutionCoordinator:
         grant_store: scoped_grants.ScopedGrantStore | None = None,
         current_boot_id: str | None = None,
         sql_task_fencing: bool = False,
+        allow_readonly_inspection: bool = False,
     ) -> None:
         self._controller = controller
         self._workspace_root = workspace_root
@@ -42730,6 +45001,7 @@ class UnifiedExecutionCoordinator:
         )
         self._current_boot_id = current_boot_id
         self._sql_task_fencing = bool(sql_task_fencing)
+        self._allow_readonly_inspection = bool(allow_readonly_inspection)
 
     def _derive_grant_capabilities_and_scopes(
         self,
@@ -42976,6 +45248,7 @@ class UnifiedExecutionCoordinator:
                 action_class=action_class,
                 candidate_action_id=candidate_action_id,
                 allow_acknowledged_rollback=allow_ack_rollback,
+                allow_readonly_inspection=self._allow_readonly_inspection,
             )
             if holds:
                 conflict_targets = tuple(conflict_targets_list)

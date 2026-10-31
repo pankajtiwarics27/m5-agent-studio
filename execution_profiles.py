@@ -1186,8 +1186,9 @@ def derive_execution_profile(
         alias = parts[1].strip() if len(parts) >= 2 and parts[1].strip() else "unknown"
         ext_barriers: list[ResourceBarrier] = [
             ResourceBarrier(f"mcp:{alias}", "exclusive"),
-            ResourceBarrier(f"workspace:{ws_key}", "exclusive"),
         ]
+        if workspace_root is not None:
+            ext_barriers.append(ResourceBarrier(f"workspace:{ws_key}", "exclusive"))
         return ExecutionProfile(
             descriptor=descriptor,
             footprint=ResourceFootprint(
@@ -3155,6 +3156,7 @@ class UnifiedExecutionController:
         grant_store: scoped_grants.ScopedGrantStore | None = None,
         current_boot_id: str | None = None,
         sql_task_fencing: bool = False,
+        allow_readonly_inspection: bool = False,
     ) -> UnifiedExecutionCoordinator:
         return UnifiedExecutionCoordinator(
             self,
@@ -3168,6 +3170,7 @@ class UnifiedExecutionController:
             grant_store=grant_store,
             current_boot_id=current_boot_id,
             sql_task_fencing=sql_task_fencing,
+            allow_readonly_inspection=allow_readonly_inspection,
         )
 
 
@@ -3188,6 +3191,7 @@ class UnifiedExecutionCoordinator:
         grant_store: scoped_grants.ScopedGrantStore | None = None,
         current_boot_id: str | None = None,
         sql_task_fencing: bool = False,
+        allow_readonly_inspection: bool = False,
     ) -> None:
         self._controller = controller
         self._workspace_root = workspace_root
@@ -3204,6 +3208,7 @@ class UnifiedExecutionCoordinator:
         )
         self._current_boot_id = current_boot_id
         self._sql_task_fencing = bool(sql_task_fencing)
+        self._allow_readonly_inspection = bool(allow_readonly_inspection)
 
     def _derive_grant_capabilities_and_scopes(
         self,
@@ -3450,6 +3455,7 @@ class UnifiedExecutionCoordinator:
                 action_class=action_class,
                 candidate_action_id=candidate_action_id,
                 allow_acknowledged_rollback=allow_ack_rollback,
+                allow_readonly_inspection=self._allow_readonly_inspection,
             )
             if holds:
                 conflict_targets = tuple(conflict_targets_list)
