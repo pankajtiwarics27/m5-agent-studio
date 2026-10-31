@@ -100,12 +100,14 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": null,
-    "active_stories": [],
-    "last_completed_story": "UIUX-P1-02",
+    "active_story": "UIUX-P1-04",
+    "active_stories": [
+      "UIUX-P1-04"
+    ],
+    "last_completed_story": "UIUX-P1-03",
     "next_recommended_story": "UIUX-P1-04",
-    "last_checkpoint": "2026-11-01T05:30:00Z",
-    "last_session_id": "arena/9110aa1b-m5-agent-studio",
+    "last_checkpoint": "2026-10-31T20:13:01Z",
+    "last_session_id": "arena/6200472a-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
     "last_verified_commit": "2dab66e042ccdda01fc31ed1249f0e823fdcb4e0",
@@ -119,7 +121,8 @@
       "A parallel session owns the optional M5 P6 stories (the lessons/retrieval work). If a UI story surfaces a backend defect, it is recorded as a new M5 story or an open risk, never fixed inside a UI pull request.",
       "The program's prose had drifted from the code at the pin: the program page still said 102 routes and 11 pinned files while app.py mounts 115 and the manifest now pins 12. Counts in docs are re-derived from the artifacts, not remembered.",
       "PR #104 was closed rather than merged: its UIUX-P0-03 work was ported to #109 and landed there, but the runtime-program benchmark diagnostics that branch also carried still need their own pull request in the runtime program.",
-      "UIUX-P0-05 cannot be closed in this environment: the six baseline screenshots need Chrome/Chromium and puppeteer-core, neither of which is vendored. The test-results half is capturable here; the visual half needs a machine with a browser, and the owner has said they will capture there."
+      "UIUX-P0-05 cannot be closed in this environment: the six baseline screenshots need Chrome/Chromium and puppeteer-core, neither of which is vendored. The test-results half is capturable here; the visual half needs a machine with a browser, and the owner has said they will capture there.",
+      "Merged PR #132 added scripts/status_walk.mjs, which was observed in a synthetic two-origin browser reproduction to seed its CLI token into a cross-origin frame before failing on a non-Studio page. Do not use that walker with real tokens; track and fix separately from UIUX-P1-04. P1-04 verification must use only synthetic tokens and the mandatory browser safety test harness, not status_walk.mjs."
     ]
   },
   "tab_registry": [
@@ -232,9 +235,9 @@
       ],
       "total": 5,
       "done": 3,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 2,
+      "not_started": 1,
       "percent_complete": 60
     },
     {
@@ -340,9 +343,9 @@
   "overall_progress": {
     "total_stories": 40,
     "done": 9,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 31,
+    "not_started": 30,
     "percent_complete": 22
   },
   "stories": [
@@ -1890,13 +1893,13 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P1-04 (Implement accessible overlays toasts and keyboard shortcuts). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 5,
+        "attempts": 1,
+        "started_at": "2026-10-31T20:13:01Z",
+        "updated_at": "2026-10-31T20:13:01Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/6200472a-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -1906,7 +1909,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "next_action": "Trace existing overlay, toast and shortcut handlers; add focused browser regressions before the smallest compatible change.",
         "readme_updated": false
       },
       "required_evidence": [
