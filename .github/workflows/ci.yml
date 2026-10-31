@@ -130,5 +130,5 @@ jobs:
             echo "M5_REQUIRE_BROWSER_TESTS=1"
           } >> "$GITHUB_ENV"
           LD_LIBRARY_PATH="$RUNNER_TEMP/m5-browser/libs/lib" "$chrome" --version
-      - name: Run browser-backed screenshot safety regressions
+      - name: Run browser-backed screenshot and keyboard safety regressions
         run: python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py --tb=short

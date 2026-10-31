@@ -18,7 +18,9 @@ a demo in disposable source. It sets `M5_REQUIRE_BROWSER_TESTS=1` and uses the
 Ordinary local runs remain opt-in. The lock pins test tooling, not the product's
 runtime dependencies; browser releases and their advisories still need maintenance.
 
-This follow-up does not claim the navigation story, fix or test its keyboard walker,
-close the screenshot provenance hold [#122](https://github.com/pankajtiwarics27/m5-agent-studio/issues/122),
-or modify another session's ledger. CI success does not establish the provenance
-of existing images or protect browser tools not covered by these tests.
+The subsequent [keyboard-walk safety follow-up](keyboard-walk-safety-followup.md)
+adds walker-specific browser tests to the same mandatory job. Neither follow-up
+claims the navigation story, closes the screenshot provenance hold
+[#122](https://github.com/pankajtiwarics27/m5-agent-studio/issues/122), or modifies
+another session's ledger. CI success does not establish the provenance of existing
+images or protect browser tools not covered by these tests.

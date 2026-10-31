@@ -55,6 +55,12 @@ checks the rail, the titles and the ledger registry against each other.
 that tab and leaving the rail on the next press, both arrow axes, `Home`/`End`,
 wrapping, a visible focus ring, all six `Alt+N` shortcuts, and no page errors. It
 fails loudly if no browser is available rather than reporting a pass it did not earn.
+Use only the throwaway token from an isolated demo: the walker checks for an
+HTTP(S) loopback origin, an authenticated API, and direct navigation, and seeds
+only the top-level document at that origin. These checks cannot authenticate a
+malicious loopback server. Browser regressions for the walker run in CI; see
+[the security follow-up](keyboard-walk-safety-followup.md) and
+[issue #130](https://github.com/pankajtiwarics27/m5-agent-studio/issues/130).
 
 ```bash
 python3 scripts/demo_tour.py --serve
