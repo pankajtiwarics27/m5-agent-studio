@@ -1,12 +1,12 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "document_type": "m5_uiux_route_map",
   "program": "M5_2_0_UIUX",
   "story": "UIUX-P0-03",
   "generator": "scripts/uiux_route_map.py",
   "regenerate_with": "python3 scripts/uiux_route_map.py",
   "check_with": "python3 scripts/uiux_route_map.py --check",
-  "statement": "Every fetch call in the inline script mapped to the route it can hit, derived from the call sites and the route table. Unmatched calls, method mismatches, dynamic matches and routes with no browser caller are published rather than smoothed over.",
+  "statement": "A lexical inventory of fetch calls, statically resolved routes and possible dynamic candidates. Unresolved caller edges and routes without a resolved caller are reported without asserting runtime reachability or complete JavaScript analysis.",
   "line_frames": {
     "script_line": "line inside the inline <script> block",
     "document_line": "line in static/index.html, which is what a reader of that file needs"
@@ -17,7 +17,7 @@
   "caller_resolution": {
     "complete": true,
     "unresolved_call_sites": [],
-    "statement": "Every call site resolved to at least one URL, so a route listed as having no browser caller really has none at this depth."
+    "statement": "No unsupported caller edges were detected by this lexical scan. A missing observed caller is not proof of absence."
   },
   "totals": {
     "fetch_call_sites": 53,
@@ -26,12 +26,14 @@
     "dynamic_matches": 1,
     "forwarded_call_sites": 1,
     "unresolved_call_sites": 0,
+    "unresolved_caller_edges": 0,
     "findings": 0,
     "routes": 115,
-    "routes_used_by_frontend": 57,
+    "routes_with_resolved_or_possible_caller": 57,
     "routes_with_certain_caller": 55,
     "routes_only_possible_caller": 2,
-    "routes_without_frontend_caller": 58,
+    "routes_no_caller_observed": 58,
+    "routes_unknown_frontend_caller": 0,
     "resolved_from": {
       "assignment": 1,
       "forwarded": 1,
@@ -71,7 +73,8 @@
           "url": "/api/onboarding/preflight",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "loadProviders",
@@ -93,7 +96,8 @@
           "url": "/api/providers",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "fetchRemoteModels",
@@ -115,7 +119,8 @@
           "url": "/api/providers/fetch-models",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "saveProvider",
@@ -137,7 +142,8 @@
           "url": "/api/providers",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "removeProvider",
@@ -159,7 +165,8 @@
           "url": "/api/providers/{param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "saveCombo",
@@ -181,7 +188,8 @@
           "url": "/api/combos",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "removeCombo",
@@ -203,7 +211,8 @@
           "url": "/api/combos/{param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "loadSkills",
@@ -225,7 +234,8 @@
           "url": "/api/skills",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "installSkill",
@@ -247,7 +257,8 @@
           "url": "/api/skills/install",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "openSpawnModal",
@@ -269,7 +280,8 @@
           "url": "/api/workspace/files",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "confirmSpawnSession",
@@ -291,7 +303,8 @@
           "url": "/api/hall/sessions",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "refreshHallSessions",
@@ -313,7 +326,8 @@
           "url": "/api/hall/sessions",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "selectHallSession",
@@ -335,7 +349,8 @@
           "url": "/api/hall/sessions/{param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "postHumanHallMessage",
@@ -357,7 +372,8 @@
           "url": "/api/hall/sessions",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "postHumanHallMessage",
@@ -379,7 +395,8 @@
           "url": "/api/hall/sessions/{param}/message",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "refreshTelemetry",
@@ -401,7 +418,8 @@
           "url": "/api/telemetry",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "modelAction",
@@ -427,7 +445,8 @@
           "url": "/api/models/{param}/{param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "unloadAllModels",
@@ -449,7 +468,8 @@
           "url": "/api/models/unload-all",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "clearSsdCache",
@@ -471,7 +491,8 @@
           "url": "/api/cache/clear-ssd",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "consumeSSE",
@@ -603,7 +624,8 @@
             "submitSdlcFeedback"
           ]
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "openExternalHarnessModal",
@@ -625,7 +647,8 @@
           "url": "/api/harness/external-configs",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "saveWorkspaceDirectory",
@@ -647,7 +670,8 @@
           "url": "/api/workspace/directory",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "loadHarnessSessions",
@@ -669,7 +693,8 @@
           "url": "/api/harness/sessions",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "selectHarnessSession",
@@ -691,7 +716,8 @@
           "url": "/api/harness/sessions/{param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "patchActiveHarnessSettings",
@@ -713,7 +739,8 @@
           "url": "/api/harness/sessions/{param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "deleteHarnessSession",
@@ -735,7 +762,8 @@
           "url": "/api/harness/sessions/{param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "harnessFetchEventPage",
@@ -757,7 +785,8 @@
           "url": "/api/harness/sessions/{param}/events?cursor={param}&limit={param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "harnessResyncFromSnapshot",
@@ -779,7 +808,8 @@
           "url": "/api/harness/sessions/{param}/state",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "openHarnessEventStream",
@@ -801,7 +831,8 @@
           "url": "/api/harness/sessions/{param}/events/stream?cursor={param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "openHarnessEventStream",
@@ -823,7 +854,8 @@
           "url": "/api/harness/sessions/{param}/state",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "resolveHarnessApproval",
@@ -845,7 +877,8 @@
           "url": "/api/harness/approve",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "abortHarnessRun",
@@ -867,7 +900,8 @@
           "url": "/api/harness/abort/{param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "openHarnessDiffModal",
@@ -889,7 +923,8 @@
           "url": "/api/harness/sessions/{param}/diff",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "applyHarnessWorktree",
@@ -911,7 +946,8 @@
           "url": "/api/harness/sessions/{param}/apply",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "loadMcpServers",
@@ -933,7 +969,8 @@
           "url": "/api/mcp/servers",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "saveMcpServer",
@@ -955,7 +992,8 @@
           "url": "/api/mcp/servers",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "importMcpJson",
@@ -977,7 +1015,8 @@
           "url": "/api/mcp/import-json",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "syncMcpServer",
@@ -999,7 +1038,8 @@
           "url": "/api/mcp/servers/{param}/sync",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "toggleMcpServerEnabled",
@@ -1021,7 +1061,8 @@
           "url": "/api/mcp/servers/{param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "changeMcpApprovalPolicy",
@@ -1043,7 +1084,8 @@
           "url": "/api/mcp/servers/{param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "toggleMcpSingleTool",
@@ -1065,7 +1107,8 @@
           "url": "/api/mcp/servers/{param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "deleteMcpServer",
@@ -1087,7 +1130,8 @@
           "url": "/api/mcp/servers/{param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "runMcpPlayground",
@@ -1109,7 +1153,8 @@
           "url": "/api/mcp/servers/{param}/call",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "compactActiveHarness",
@@ -1131,7 +1176,8 @@
           "url": "/api/harness/sessions/{param}/compact",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "loadOpenContextDocs",
@@ -1153,7 +1199,8 @@
           "url": "/api/opencontext/docs",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "searchOpenContextUI",
@@ -1175,7 +1222,8 @@
           "url": "/api/opencontext/search?q={param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "saveOpenContextDoc",
@@ -1197,7 +1245,8 @@
           "url": "/api/opencontext/docs",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "togglePinOpenContextDoc",
@@ -1219,7 +1268,8 @@
           "url": "/api/opencontext/docs/{param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "deleteOpenContextDoc",
@@ -1241,7 +1291,8 @@
           "url": "/api/opencontext/docs/{param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "runOpenContextLintUI",
@@ -1263,7 +1314,8 @@
           "url": "/api/opencontext/lint",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "refreshCodeGraphOverview",
@@ -1285,7 +1337,8 @@
           "url": "/api/codegraph/analyze?workspace_dir={param}",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "runCodeGraphPlayground",
@@ -1307,7 +1360,8 @@
           "url": "/api/codegraph/query",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     },
     {
       "handler": "refreshSdlcBoard",
@@ -1329,7 +1383,8 @@
           "url": "/api/harness/sessions/{param}/sdlc",
           "forwarded_via": []
         }
-      ]
+      ],
+      "unresolved_edges": []
     }
   ],
   "routes": [
@@ -2376,8 +2431,9 @@
   "not_verified": [
     "Nothing here was executed. A matched call is a request the browser can construct, not a route that works: authorization, request bodies and response handling are out of scope.",
     "URLs are matched structurally. A URL whose segment is chosen at runtime is reported as a dynamic match with its candidate routes instead of being resolved to one, and every candidate lists that caller as *possible*, never as certain.",
-    "A URL forwarded through helper parameters is followed back to the literal that supplies it, at most four helper hops deep, and the chain is published as `forwarded_via`. A deeper or indirect hand-off (a value stored on an object, a callback argument) stays unresolved and makes the caller list a lower bound rather than a proof of disuse.",
+    "URL forwarding, assignments and conditional branches are followed at most four resolution steps; helper chains are published as `forwarded_via`. Unsupported, cyclic or deeper paths are recorded as unresolved edges even if another caller resolves.",
     "Line numbers are published in two frames: `script_line` is relative to the inline script, `document_line` to static/index.html. Reading a script line as a document line is off by the markup above the script.",
-    "Routes without a browser caller are not dead: the CLI, the demo tour and the tests call the same API."
+    "This lexical scan is not a complete JavaScript parser. No resolved caller does not prove a route is unused; the CLI, demo tour, tests or unrecognized browser paths may call it.",
+    "When any caller edge is unresolved, routes without known callers have unknown browser usage rather than a false no-caller assertion."
   ]
 }

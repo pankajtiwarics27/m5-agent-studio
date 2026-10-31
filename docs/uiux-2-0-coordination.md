@@ -50,13 +50,17 @@ review or a distributed lock.
 ## Active blocker follow-up (2026-10-31)
 
 [Issue #110](https://github.com/pankajtiwarics27/m5-agent-studio/issues/110)
-is being investigated by `arena/cbed6c70-m5-agent-studio` as a corrective
-follow-up to the already-merged route map and authorization trace. This is not a
-new roadmap-story claim and does not change another session's tracking. The
-follow-up will publish a draft PR, reproduce the missing caller cases in tests,
-and coordinate regeneration of the map and trace before requesting review.
-`UIUX-P0-05` remains in progress under `arena/c705f453-m5-agent-studio`; do not
-take its story or treat its visual baseline as complete.
+remains a program-wide hold. [PR #115](https://github.com/pankajtiwarics27/m5-agent-studio/pull/115)
+merged the named SDLC, model-action and line-frame improvements, but also
+closed #110 just before a [blocking review](https://github.com/pankajtiwarics27/m5-agent-studio/pull/115#issuecomment-6543099994)
+reproduced a mixed known/unknown caller that still appears complete. The issue
+was reopened, and `arena/cbed6c70-m5-agent-studio` is preparing the existing
+[draft PR #114](https://github.com/pankajtiwarics27/m5-agent-studio/pull/114)
+to address the remaining uncertainty. Do not close the hold until the correction
+has independent review and green checks. This is not a new story claim, and it
+does not change another session's tracking. `UIUX-P0-05` remains in progress
+under `arena/c705f453-m5-agent-studio`; do not take its story or treat its visual
+baseline as complete.
 
 ## Baseline at this handoff
 
