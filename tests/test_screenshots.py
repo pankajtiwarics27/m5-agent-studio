@@ -434,6 +434,7 @@ def test_a_narrow_viewport_keeps_the_declared_scale() -> None:
     "flags, expected",
     [
         (("--panes", "nope"), "does not plan"),
+        (("--panes", ","), "at least one planned shot"),
         (("--emulate-theme", "sepia"), "dark, light"),
         (("--emulate-density", "tiny"), "comfortable, compact"),
         (("--viewport", "wide"), "must look like"),

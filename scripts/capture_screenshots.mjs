@@ -68,7 +68,10 @@ function parseArgs(argv) {
       case "--base-url": args.baseUrl = next(); break;
       case "--token": args.token = next(); break;
       case "--timeout-ms": args.timeoutMs = Number(next()); break;
-      case "--panes": args.panes = next().split(",").map((name) => name.trim()).filter(Boolean); break;
+      case "--panes":
+        args.panes = next().split(",").map((name) => name.trim()).filter(Boolean);
+        if (args.panes.length === 0) throw new Error("--panes must name at least one planned shot");
+        break;
       case "--emulate-theme": args.emulateTheme = next(); break;
       case "--emulate-density": args.emulateDensity = next(); break;
       case "--viewport": args.viewport = next(); break;
