@@ -70,6 +70,7 @@ import json
 import os
 import platform
 import re
+import shlex
 import shutil
 import socket
 import subprocess
@@ -464,8 +465,23 @@ def _looks_denied(text: str) -> bool:
 
 _POSITIVE_CODE = r"""
 import os, pathlib, sys
-pathlib.Path('/workspace/qualification-positive.txt').write_text('ok', encoding='utf-8')
-assert os.getcwd() == '/workspace', os.getcwd()
+
+# Report what the container can actually see before attempting the write: an empty
+# or missing /workspace means the bind mount is not visible to the runtime, which
+# is an environment problem and must not be reported as an isolation failure.
+if os.path.isdir('/workspace'):
+    listing = sorted(os.listdir('/workspace'))
+else:
+    listing = ['<missing-workspace>']
+print('listing:' + ','.join(listing))
+
+try:
+    pathlib.Path('/workspace/qualification-positive.txt').write_text('ok', encoding='utf-8')
+except OSError as exc:
+    print('write-error:%s:%s' % (exc.errno, type(exc).__name__))
+    raise SystemExit(4)
+
+print('cwd:' + os.getcwd())
 print('positive-ok')
 """
 
@@ -603,16 +619,39 @@ def sandbox_suite(
 
     image_reason = "" if runtime_ok else "no reachable container runtime"
 
-    def _image_probe() -> tuple[bool, str]:
+    def _image_probe() -> None:
+        """A missing image is a setup gap: nothing about isolation was observed."""
         inspected = run_command([runtime, "image", "inspect", image], timeout=min(timeout, 60.0))
         if inspected.returncode != 0:
-            return False, f"image {image!r} is not local (pull it first; this suite never pulls)"
-        return True, f"image {image!r} present"
+            recorder.record(
+                "p3.image.local",
+                STORY_P3,
+                "configured sandbox image is already present",
+                STATUS_BLOCKED,
+                detail=(
+                    f"image {image!r} is not local, so no container probe could run "
+                    f"(pull it with `{runtime_name} pull {image}` and re-run; this suite never pulls)"
+                ),
+            )
+            return
+        recorder.record(
+            "p3.image.local",
+            STORY_P3,
+            "configured sandbox image is already present",
+            STATUS_PASS,
+            detail=f"image {image!r} present",
+        )
 
-    recorder.check(
-        "p3.image.local", STORY_P3, "configured sandbox image is already present", _image_probe,
-        skip_reason=image_reason,
-    )
+    if image_reason:
+        recorder.record(
+            "p3.image.local",
+            STORY_P3,
+            "configured sandbox image is already present",
+            STATUS_SKIP,
+            detail=image_reason,
+        )
+    else:
+        _image_probe()
     image_ok = recorder.results[-1].status == STATUS_PASS
 
     with tempfile.TemporaryDirectory(prefix="m5-qualify-ws-") as workspace_dir:
@@ -625,18 +664,75 @@ def sandbox_suite(
 
         skip = "" if image_ok else "container image unavailable"
 
-        def _positive() -> tuple[bool, str]:
-            proc = run_command(
-                container_argv(runtime, image, workspace, _POSITIVE_CODE), timeout=timeout, env=probe_env
+        def _positive() -> None:
+            """Positive compatibility, distinguishing a setup gap from a failure."""
+            if skip:
+                recorder.record(
+                    "p3.positive.execute", STORY_P3,
+                    "sandbox runs code and its workspace write lands on the host",
+                    STATUS_SKIP, detail=skip,
+                )
+                return
+            started = _now()
+            try:
+                proc = run_command(
+                    container_argv(runtime, image, workspace, _POSITIVE_CODE),
+                    timeout=timeout,
+                    env=probe_env,
+                )
+            except Exception as exc:  # noqa: BLE001 - a probe that cannot run has failed
+                recorder.record(
+                    "p3.positive.execute", STORY_P3,
+                    "sandbox runs code and its workspace write lands on the host",
+                    STATUS_FAIL,
+                    detail=f"probe raised {type(exc).__name__}: {exc}",
+                    duration_s=_now() - started,
+                )
+                return
+            landed = (workspace / "qualification-positive.txt").is_file()
+            listing = next(
+                (line.partition(":")[2] for line in proc.stdout.splitlines() if line.startswith("listing:")),
+                "",
             )
-            landed = (workspace / "qualification-positive.txt")
-            ok = proc.returncode == 0 and "positive-ok" in proc.stdout and landed.is_file()
-            return ok, f"exit {proc.returncode}; workspace write landed={landed.is_file()}"
+            write_error = next(
+                (line.partition(":")[2] for line in proc.stdout.splitlines() if line.startswith("write-error:")),
+                "",
+            )
+            detail = (
+                f"exit {proc.returncode}; /workspace lists [{listing}]; write landed={landed}"
+                + (f"; write error {write_error}" if write_error else "")
+            )
+            if proc.returncode == 0 and "positive-ok" in proc.stdout and landed:
+                recorder.record(
+                    "p3.positive.execute", STORY_P3,
+                    "sandbox runs code and its workspace write lands on the host",
+                    STATUS_PASS, detail=detail, duration_s=_now() - started,
+                )
+                return
+            # A container that cannot see the host workspace (or cannot write to it)
+            # says nothing about isolation; it says the runtime is not sharing it.
+            if listing.startswith("<missing-workspace>") or listing == "" or write_error:
+                recorder.record(
+                    "p3.positive.execute", STORY_P3,
+                    "sandbox runs code and its workspace write lands on the host",
+                    STATUS_BLOCKED,
+                    detail=(
+                        f"{detail}. The bind mount is not usable from inside the container, so "
+                        "no isolation probe can be trusted. Check the runtime's file-sharing "
+                        "settings (macOS: Docker Desktop → Resources → File sharing; Linux: "
+                        "SELinux labels on the shared path) and re-run."
+                    ),
+                    duration_s=_now() - started,
+                )
+                return
+            recorder.record(
+                "p3.positive.execute", STORY_P3,
+                "sandbox runs code and its workspace write lands on the host",
+                STATUS_FAIL, detail=detail, duration_s=_now() - started,
+            )
 
-        recorder.check(
-            "p3.positive.execute", STORY_P3,
-            "sandbox runs code and its workspace write lands on the host", _positive, skip_reason=skip,
-        )
+        _positive()
+        mount_ok = recorder.results[-1].status == STATUS_PASS
 
         def _denials() -> tuple[bool, str]:
             listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -676,7 +772,7 @@ def sandbox_suite(
         recorder.check(
             "p3.adversarial.escape_matrix", STORY_P3,
             "outside paths, symlink, network, host env and raw sockets are all refused",
-            _denials, skip_reason=skip,
+            _denials, skip_reason=skip or ("" if mount_ok else "workspace bind mount unusable"),
         )
 
         def _memory_limit() -> tuple[bool, str]:
@@ -691,7 +787,8 @@ def sandbox_suite(
 
         recorder.check(
             "p3.adversarial.memory_limit", STORY_P3,
-            "a 3 GiB allocation is refused under --memory 512m", _memory_limit, skip_reason=skip,
+            "a 3 GiB allocation is refused under --memory 512m",
+            _memory_limit, skip_reason=skip or ("" if mount_ok else "workspace bind mount unusable"),
         )
 
         def _descendants() -> tuple[bool, str]:
@@ -710,7 +807,7 @@ def sandbox_suite(
         recorder.check(
             "p3.adversarial.descendants", STORY_P3,
             "a background descendant does not survive the sandbox lifetime",
-            _descendants, skip_reason=skip,
+            _descendants, skip_reason=skip or ("" if mount_ok else "workspace bind mount unusable"),
         )
 
     outside.unlink(missing_ok=True)
@@ -1296,7 +1393,75 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--model-runs", type=int, default=3, help="how many times to run --model-command")
     parser.add_argument("--profile-out", type=Path, default=None, help="persist a model_calibration profile here")
     parser.add_argument("--quiet", action="store_true", help="do not print per-check lines")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the commands the suite would run, then exit without touching anything",
+    )
     return parser.parse_args(list(argv) if argv is not None else None)
+
+
+def render_plan(*, suites: Sequence[str], runtime_name: str, image: str, args: argparse.Namespace) -> str:
+    """The exact commands the suite would run, without running any of them.
+
+    Used by ``--dry-run`` so an operator can review the sandbox flags and the
+    measurement commands before anything touches their machine.
+    """
+    lines: list[str] = ["", "== Planned qualification =="]
+    if STORY_P3 in suites:
+        runtime = runtime_name or "docker"  # a plan is informative even with nothing installed
+        lines.extend(
+            [
+                "",
+                f"M5-P3-01 sandbox backend (runtime: {runtime})",
+                f"  1. {runtime} --version",
+                f"  2. {runtime} info",
+                f"  3. {runtime} image inspect {image}   (nothing is ever pulled)",
+                "  4. positive compatibility, inside a temporary workspace:",
+                f"     {shlex.join(container_argv(runtime, image, Path('<workspace>'), '<positive probe>'))}",
+                "  5. adversarial matrix (same flags, escape probe):",
+                f"     {shlex.join(container_argv(runtime, image, Path('<workspace>'), '<escape probe>'))}"
+                " <outside-path> /workspace/qualify-link /outside-root-write-probe,/etc/hostname <host-port>",
+                "  6. memory limit: same argv with --memory 512m and a 3 GiB allocation probe",
+                "  7. descendants: same argv with a named container that spawns `sleep 300`,",
+                f"     then `{runtime} ps --quiet --filter name=^<name>$`",
+                "  8. product argv and fail-closed probes through app._sandbox_command / _execute_limited",
+                f"  9. {sys.executable} scripts/isolation_smoke.py --live",
+                "",
+                "  Every probe runs in a throwaway directory under the system temp dir with",
+                "  --network=none --read-only --cap-drop=ALL --pull=never; nothing outside it is",
+                "  written, and no image is downloaded.",
+            ]
+        )
+    if STORY_P4 in suites:
+        lines.extend(["", "M5-P4-01 hardware and model qualification"])
+        lines.extend(
+            [
+                "  1. machine fingerprint (chip, OS, cores, RAM, swap, git revision) — read-only",
+                "  2. one-heavy-model admission through resource_admission — in-process",
+                "  3. serving-path admission through app.stream_any_model — in-process, temp DB",
+                "  4. routing confidence with no measured profile — in-process",
+            ]
+        )
+        if args.pressure_gb > 0:
+            lines.append(f"  5. touch {args.pressure_gb} GiB of anonymous memory and sample swap")
+        else:
+            lines.append("  5. pressure measurement SKIPPED (no --pressure-gb)")
+        if args.model_command:
+            lines.append(
+                f"  6. run `{args.model_command}` x{max(1, args.model_runs)} and record its metrics"
+                + (f", writing a profile to {args.profile_out}" if args.profile_out else "")
+            )
+        else:
+            lines.append("  6. model load measurement SKIPPED (no --model-command)")
+    lines.extend(
+        [
+            "",
+            "Nothing above has been executed: this is a dry run (--dry-run).",
+            "",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def _selected_suites(args: argparse.Namespace) -> list[str]:
@@ -1319,6 +1484,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"({fingerprint.get('cpu_model') or 'unknown cpu'}), "
         f"{fingerprint.get('total_memory_gib')} GiB RAM, {fingerprint.get('cpu_count')} CPUs"
     )
+
+    if args.dry_run:
+        candidate_path, candidate_name = detect_runtime(args.runtime) if STORY_P3 in suites else ("", "")
+        if candidate_name:
+            print(f"  runtime: {candidate_name} ({candidate_path})")
+        else:
+            requested = "auto" if args.runtime in ("", "auto") else args.runtime
+            shown = "docker (assumed, none installed)" if requested == "auto" else requested
+            print(f"  runtime: none detected (requested {requested!r}); the plan uses `{shown}`")
+        print(render_plan(
+            suites=suites,
+            runtime_name=candidate_name,  # empty when nothing is installed; the plan still renders
+            image=args.image,
+            args=args,
+        ))
+        return 0
 
     runtime_path, runtime_name = ("", "")
     if STORY_P3 in suites:

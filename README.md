@@ -227,11 +227,14 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   optionally persisted as a `model_calibration` profile. Every check records `pass` / `fail` / `skip` /
   `blocked` with a reason: a required check that could not run makes its suite
   `blocked`, a failed one makes it `unqualified`, and only an all-passing run is
-  `qualified`; exit codes follow (`0` / `1` / `2`). The record binds the repository
+  `qualified`; exit codes follow (`0` / `1` / `2`). `unqualified` is reserved for
+  *observed* violations: a missing image or a container that cannot see the shared
+  workspace is `blocked` (a setup gap must never read as a security failure), and
+  `--dry-run` prints every command without executing any of them. The record binds the repository
   revision, OS build, chip, RAM and detected runtime into JSON and Markdown. **No
   container-isolation or 24 GB claim is made anywhere in this repository**, both
   stories stay `blocked` in the roadmap until the owner produces a qualified record
-  on the target machine. Pinned by 47 tests (`tests/test_qualify_environment.py`)
+  on the target machine. Pinned by 51 tests (`tests/test_qualify_environment.py`)
   and documented in [`docs/qualification-suite.md`](docs/qualification-suite.md)
   (ADR-0010).
 - **A second heavy local model request is refused by policy in the serving path

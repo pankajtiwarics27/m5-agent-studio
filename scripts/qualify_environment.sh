@@ -32,9 +32,14 @@ if ! command -v "$PYTHON" >/dev/null 2>&1; then
   exit 2
 fi
 
-mkdir -p "$OUT"
+DRY_RUN=0
+for arg in "$@"; do
+  [ "$arg" = "--dry-run" ] && DRY_RUN=1
+done
 
-if ! command -v docker >/dev/null 2>&1 && ! command -v podman >/dev/null 2>&1; then
+[ "$DRY_RUN" = "0" ] && mkdir -p "$OUT"
+
+if [ "$DRY_RUN" = "0" ] && ! command -v docker >/dev/null 2>&1 && ! command -v podman >/dev/null 2>&1; then
   echo "warning: neither docker nor podman is on PATH; the sandbox suite will be blocked." >&2
 fi
 
@@ -47,11 +52,17 @@ set +e
 STATUS=$?
 set -e
 
+if [ "$DRY_RUN" = "1" ]; then
+  echo
+  echo "dry run: nothing was executed and no artifacts were written."
+  exit "$STATUS"
+fi
+
 echo
 case "$STATUS" in
   0) echo "verdict: qualified (both requested suites passed)";;
   1) echo "verdict: UNQUALIFIED — a required check failed; the guarantee does not hold.";;
-  2) echo "verdict: blocked — required checks could not run here (no runtime and/or not the target hardware).";;
+  2) echo "verdict: blocked — required checks could not run here (no runtime, no image, an unusable workspace mount, and/or not the target hardware).";;
   *) echo "verdict: suite error (exit $STATUS)";;
 esac
 echo "artifacts: $JSON $MARKDOWN"
