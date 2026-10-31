@@ -626,6 +626,8 @@ def test_http_endpoints_and_standalone_studio_bundle_parity(
     store_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(studio, "HARNESS_STORE_DIR", store_dir)
     monkeypatch.setattr(modular_app, "HARNESS_STORE_DIR", store_dir)
+    monkeypatch.setattr(studio, "DB_PATH", tmp_path / "standalone.db")
+    monkeypatch.setattr(modular_app, "DB_PATH", tmp_path / "modular.db")
     studio._reset_trusted_transformation_registry(None)
     studio._reset_evidence_lesson_store(None)
     studio._SCOPED_GRANT_STORE = None

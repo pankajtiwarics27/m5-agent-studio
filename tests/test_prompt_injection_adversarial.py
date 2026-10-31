@@ -41,6 +41,7 @@ def isolated_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(studio.keyring, "get_password", get_password)
     monkeypatch.setattr(studio.keyring, "delete_password", delete_password)
     monkeypatch.setattr(studio, "DB_PATH", db)
+    monkeypatch.setattr(studio, "HARNESS_STORE_DIR", tmp_path / "harness-sessions")
     monkeypatch.setattr(studio, "STUDIO_EXECUTION_MODE", "disabled")
     studio.init_db()
     return tmp_path

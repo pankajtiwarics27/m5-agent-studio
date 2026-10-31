@@ -246,11 +246,12 @@ def test_container_argv_carries_every_hardening_flag(tmp_path: Path) -> None:
     assert "target=/workspace" in binds[0]
 
 
-def test_container_argv_matches_the_product_hardening_flags(tmp_path: Path) -> None:
+def test_container_argv_matches_the_product_hardening_flags(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The suite must not qualify a sandbox the product does not actually build."""
     import unittest.mock
 
     studio = pytest.importorskip("app")
+    monkeypatch.setattr(studio, "HARNESS_STORE_DIR", tmp_path / "harness-sessions")
     with unittest.mock.patch.object(studio, "STUDIO_SANDBOX_RUNTIME", "/bin/sh"):
         product = studio._sandbox_command(tmp_path, "print(1)", container_name="m5-test")
     product_joined = " ".join(product)
@@ -307,11 +308,12 @@ def _run_sandbox_suite(monkeypatch: pytest.MonkeyPatch, *, behaviour: dict[str, 
     return recorder
 
 
-def test_suite_argv_matches_the_product_argv(tmp_path: Path) -> None:
+def test_suite_argv_matches_the_product_argv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The suite must probe the sandbox the product actually builds."""
     import unittest.mock
 
     studio = pytest.importorskip("app")
+    monkeypatch.setattr(studio, "HARNESS_STORE_DIR", tmp_path / "harness-sessions")
     with unittest.mock.patch.object(studio, "STUDIO_SANDBOX_RUNTIME", "/bin/sh"):
         product = studio._sandbox_command(tmp_path, "print(1)", python_code=True, container_name="m5-test")
     suite = qe.container_argv("docker", studio.STUDIO_SANDBOX_IMAGE, tmp_path, "print(1)", name="m5-test")
@@ -779,19 +781,33 @@ def test_environment_fingerprint_binds_the_record_to_this_repo() -> None:
     assert len(fingerprint["git_revision"]) in (0, 40)
 
 
-def test_script_is_runnable_end_to_end_in_this_environment() -> None:
+def test_script_is_runnable_end_to_end_in_this_environment(tmp_path: Path) -> None:
     """The suite must always produce a record, and never self-qualify.
 
     ``--runtime`` is pinned at a name that cannot exist so the result does not
     depend on whether the host running this test happens to have Docker (a CI
-    runner does, a minimal container does not).
+    runner does, a minimal container does not). The CLI imports the product in
+    another process, so run it from a disposable source copy.
     """
+    import os
+    import shutil
     import subprocess
 
+    source = tmp_path / "source"
+    source.mkdir()
+    for module in ROOT.glob("*.py"):
+        shutil.copy2(module, source / module.name)
+    for directory in ("docs", "product", "scripts", "static"):
+        shutil.copytree(ROOT / directory, source / directory, ignore=shutil.ignore_patterns("__pycache__"))
+    home = tmp_path / "home"
+    home.mkdir()
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env.update({"HOME": str(home), "STUDIO_DB_PATH": str(home / "studio.db")})
     result = subprocess.run(
-        [sys.executable, str(ROOT / "scripts" / "qualify_environment.py"), "--all", "--quiet",
+        [sys.executable, str(source / "scripts" / "qualify_environment.py"), "--all", "--quiet",
          "--runtime", "m5-no-such-container-runtime"],
-        capture_output=True, text=True, timeout=600, cwd=ROOT, check=False,
+        capture_output=True, text=True, timeout=600, cwd=source, env=env, check=False,
     )
     assert result.returncode == 2, result.stdout + result.stderr
     assert "M5-P3-01: blocked" in result.stdout

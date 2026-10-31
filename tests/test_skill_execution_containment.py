@@ -71,6 +71,7 @@ def _patch_inspiration_seams(monkeypatch: pytest.MonkeyPatch) -> None:
 def _isolated_skill_audit_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     db_file = tmp_path / "skill-audit.db"
     monkeypatch.setattr(studio, "DB_PATH", db_file)
+    monkeypatch.setattr(studio, "HARNESS_STORE_DIR", tmp_path / "harness-sessions")
     studio.init_db()
     return db_file
 
