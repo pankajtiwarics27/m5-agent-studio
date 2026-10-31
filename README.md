@@ -270,6 +270,28 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   `M5-P4-02`, and the policy is per-process like the worker-lease model. Pinned by
   34 tests (`tests/test_model_admission.py`) and documented in
   [`docs/model-admission.md`](docs/model-admission.md) (ADR-0011).
+- **Unified execution profiles, conservative footprints, and admission barriers
+  govern managed and subprocess actions (`M5-P3-02`):**
+  `execution_profiles.py` (stdlib only, inlined into `studio.py`) maps every tool
+  call to a verified `CapabilityDescriptor` (reporting honest `isolation_posture`
+  without claiming container qualification when unverified), applies unified
+  quote-aware shell and Python AST policy parity across `run_bash`,
+  `ctx_execute_python`, `ctx_run_block`, `_run_skill_script`, and managed file
+  tools so shell invocations cannot bypass `.env`/secret, `.git/hooks`/`.git/config`,
+  symlink, or workspace-confinement rules, reserves conservative
+  `workspace:{ws}` `exclusive` footprints for arbitrary shell/Python/MCP/unknown
+  side effects while allowing concurrent shared reads and disjoint-path managed
+  edits through `UnifiedExecutionController` (`ResourceAdmissionScheduler`-backed)
+  inside `DurableActionBoundary`, and reconciles post-execution filesystem
+  expansions into `$HARNESS_STORE_DIR/footprints/{session_id}.jsonl` —
+  quarantining newly planted forbidden artifacts (`O_NOFOLLOW`) and marking
+  pre-existing tampering or undeclared exact-scope mutations `uncertain` so
+  `IntentLedger` blocks follow-up consequential actions. `app._sandbox_command`
+  now delegates hardened container CLI construction to
+  `sandbox_boundary.build_container_invocation`. Pinned by 11 end-to-end profile
+  tests (`tests/test_execution_profiles.py`) + 5 sandbox-boundary tests
+  (`tests/test_sandbox_boundary.py`) and documented in
+  [`docs/execution-profiles.md`](docs/execution-profiles.md) (ADR-0012).
 
 - **The execution boundary is extracted and its coverage is inventoried
   (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`–`M5-P1-04`):**
@@ -290,7 +312,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   execution mode, through `_run_authorized_tool` (`skill_execute_script`) —
   pinned by 9 containment tests (`tests/test_skill_execution_containment.py`)
   plus admission/audit regression tests (`tests/test_action_admission_gate.py`).
-- **21 of 49 shipped Python modules are wired into the served app**
+- **22 of 50 shipped Python modules are wired into the served app**
   (`context_store`, `mcp_client`, `onboarding_preflight`, `history_privacy`,
   `workflow_orchestration`, `execution_spine` since `M5-P0-06`,
   `runtime_persistence` since `M5-P1-01`, `side_effect_ledger` since `M5-P1-03`,
@@ -299,7 +321,8 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   `M5-P1-07`, `sandbox_boundary` + `workspace_snapshots` since `M5-P2-01`, and
   `edit_transactions` since `M5-P2-02`, `edit_rollback` since `M5-P2-03`, and
   `verification_evidence` since `M5-P2-04`, `recovery_guard` since
-  `M5-P2-05`, and `resource_admission` + `model_admission` since `M5-P4-01`;
+  `M5-P2-05`, `resource_admission` + `model_admission` since `M5-P4-01`, and
+  `execution_profiles` since `M5-P3-02`;
   5 of 42 at the time of the audit table). Together they govern
   schema upgrades, SQLite transactions, authoritative task-state / lease-epoch
   checks at admission (`M5-P1-02`), durable `runtime_actions`
@@ -316,8 +339,9 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   with version-checked rollback (`M5-P2-03`), and revision-anchored verification
   evidence with baseline-aware failure classification (`M5-P2-04`), and durable
   failure memory with bounded retry/replan/rollback budgets and safe pause
-  (`M5-P2-05`), and one-heavy-local-model admission around the streaming funnel
-  (`M5-P4-01`).
+  (`M5-P2-05`), one-heavy-local-model admission around the streaming funnel
+  (`M5-P4-01`), and unified execution profiles, conservative footprints,
+  admission barriers, and post-execution expansion reconciliation (`M5-P3-02`).
   The other 28 modules have passing unit tests but **no `app.py` call path**.
   Module presence is not integration. Full table:
   [`docs/m5-2-0-integration-audit.md`](docs/m5-2-0-integration-audit.md) §4.
@@ -412,14 +436,17 @@ are not guarantees):
 Observed structure (see [`docs/architecture.md`](docs/architecture.md) and the
 generated [`docs/subsystem-dependency-inventory.md`](docs/subsystem-dependency-inventory.md)):
 
-- **Backend:** one FastAPI process — `app.py` plus 44 small contract modules
+- **Backend:** one FastAPI process — `app.py` plus 49 small contract modules
   listed in `pyproject.toml`. `studio.py` is a **generated** standalone
-  artifact (`scripts/build_studio.py` inlines 13 sibling modules —
+  artifact (`scripts/build_studio.py` inlines 22 sibling modules — including
   `runtime_persistence`, `side_effect_ledger`, `execution_budget`,
   `workflow_checkpoints`, `workflow_state`, `mcp_client`, `context_store`,
   `onboarding_preflight`, `failure_injection`, `execution_spine`, `task_events`,
-  `sandbox_boundary`, and `workspace_snapshots` — plus `history_privacy` and
-  `workflow_orchestration`, and embeds `static/index.html`); never hand-edit it.
+  `sandbox_boundary`, `workspace_snapshots`, `edit_transactions`,
+  `edit_rollback`, `verification_evidence`, `recovery_guard`,
+  `resource_admission`, `model_admission`, `execution_profiles`,
+  `history_privacy`, and `workflow_orchestration`, and embeds
+  `static/index.html`); never hand-edit it.
 - **Frontend:** `static/index.html`, vanilla HTML/CSS/JS, no build step.
 - **Storage:** SQLite (`studio_history.db`, `SCHEMA_VERSION = 3`) in WAL mode
   with FTS5 tables (`opencontext_fts`, `ctx_vault_fts`) for BM25 context search
@@ -540,20 +567,23 @@ requires `STUDIO_ALLOW_SKILL_CODE=1`; private-URL access requires
    isolation is unqualified; it must never silently fall back to host mode.
 3. **A git worktree is not an operating-system sandbox.** Worktree isolation
    protects the main checkout from agent edits; it does not confine processes.
-4. **`side_effect_ledger.py` (`M5-P1-03`) and `sandbox_boundary.confined_path`
-   (`M5-P2-01`) are integrated, while container-command construction in `app.py`
-   still uses inline helpers.** `DurableActionLedger` commits durable
-   `runtime_actions` intent rows before admitted consequential actions,
+4. **`side_effect_ledger.py` (`M5-P1-03`), `sandbox_boundary` (`M5-P2-01` /
+   `M5-P3-02`), and `execution_profiles.py` (`M5-P3-02`) are integrated, with
+   bounded external and subprocess caveats.** `DurableActionLedger` commits
+   durable `runtime_actions` intent rows before admitted consequential actions,
    transitions missing results and ambiguous MCP/timeout outcomes to `uncertain`
    (never `failed`), forwards `Idempotency-Key` on outbound HTTP MCP
    `tools/call`, and refuses blind replay of `non_idempotent` or unverified
-   `uncertain` writes; `_resolve_confined_path` and `workspace_snapshots.py`
-   enforce `sandbox_boundary.confined_path` against traversal and symlink
-   escapes. However, globally exactly-once external effects still cannot be
-   guaranteed when a third-party MCP server ignores `Idempotency-Key`,
-   `sandbox_boundary.sandbox_command` is not yet unified with `app.py`'s inline
-   `_sandbox_command` (`M5-P3-01`–`M5-P3-03`), and not all subprocess descendants
-   can be guaranteed terminable.
+   `uncertain` writes; `_resolve_confined_path`, `workspace_snapshots.py`, and
+   `execution_profiles.py` enforce workspace confinement, secret/VCS-hook
+   refusal, and admission barriers, and `app._sandbox_command` delegates
+   container flag construction to `sandbox_boundary.build_container_invocation`.
+   However, globally exactly-once external effects still cannot be guaranteed
+   when a third-party MCP server ignores `Idempotency-Key`, static shell/AST
+   inspection cannot decide arbitrary Turing-complete obfuscation before runtime
+   (relying on post-execution quarantine/`uncertain` marking when container
+   isolation is unverified), and not all subprocess descendants can be
+   guaranteed terminable (`M5-P3-03`).
 5. **Live container isolation is unqualified (smoke test 2026-10-30, `M5-P0-04`).**
    No Docker/Podman exists in the evidence environment; the live probes were
    **attempted and failed closed** (`RuntimeError: Sandbox runtime 'docker' is

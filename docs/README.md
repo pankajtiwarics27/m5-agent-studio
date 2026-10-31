@@ -45,6 +45,7 @@ contain placeholder text, and every relative link must resolve.
 | [`security-review-package.md`](security-review-package.md) | The independent-review package and boundary inventory (B1–B12) |
 | [`security-review-signoff.md`](security-review-signoff.md) | Reviewer record and release gate — currently unsigned |
 | [`sandbox-boundary.md`](sandbox-boundary.md) | Sandbox and filesystem boundary hardening |
+| [`execution-profiles.md`](execution-profiles.md) | Unified capability descriptors, conservative footprints, admission barriers, and expansion reconciliation |
 | [`qualification-suite.md`](qualification-suite.md) | Operator-run sandbox and hardware qualification (what is measured, how to run it, how to read the record) |
 
 ## Subsystem contracts
@@ -85,6 +86,7 @@ Execution and policy: [`routing-consent-policy.md`](routing-consent-policy.md),
 [`capability-negotiation.md`](capability-negotiation.md),
 [`resource-admission-scheduler.md`](resource-admission-scheduler.md),
 [`model-admission.md`](model-admission.md),
+[`execution-profiles.md`](execution-profiles.md),
 [`execution-budgets.md`](execution-budgets.md),
 [`tool-authorization.md`](tool-authorization.md),
 [`side-effect-idempotency.md`](side-effect-idempotency.md),

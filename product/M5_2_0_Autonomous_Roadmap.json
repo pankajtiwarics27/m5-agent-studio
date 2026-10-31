@@ -124,22 +124,22 @@
   },
   "session_state": {
     "active_story": null,
-    "last_completed_story": "M5-P2-05",
-    "last_checkpoint": "2026-10-31T03:10:15Z",
-    "last_session_id": "arena/ca2d533a-m5-agent-studio",
-    "next_recommended_story": "M5-P3-01",
+    "last_completed_story": "M5-P3-02",
+    "last_checkpoint": "2026-10-31T03:34:00Z",
+    "last_session_id": "arena/46877a13-m5-agent-studio",
+    "next_recommended_story": "M5-P3-03",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). The operator-run suite scripts/qualify_environment.py --sandbox (docs/qualification-suite.md, ADR-0010) is now the qualification path; M5-P3-01 stays blocked until it returns qualified on a Docker/Podman host.",
       "24 GB Apple Silicon memory/swap and oMLX measurements are still missing (M5-P4-01): serving-path heavy-model admission is implemented and tested (docs/model-admission.md, ADR-0011), but the story stays blocked until scripts/qualify_environment.py --hardware --pressure-gb N --model-command CMD produces a qualified record on target hardware.",
-      "sandbox_boundary.confined_path is integrated into app.py and workspace_snapshots.py (M5-P2-01), while sandbox_boundary.sandbox_command remains separate from app.py inline _sandbox_command (assigned to M5-P3-01/M5-P3-02)",
+      "Unified execution profiles and resource barriers (execution_profiles.py, M5-P3-02) enforce shared/exclusive barriers and capacity slots within a single application process (matching worker leases, task events, and model admission); static shell/AST inspection cannot decide arbitrary Turing-complete obfuscation pre-execution when container isolation is unqualified, relying on post-execution quarantine/uncertain marking until M5-P3-01 live container qualification passes.",
       "Multi-agent parallel work active: product/M5_2_0_Autonomous_Roadmap.json tracking blocks are the shared claim ledger; claim protocol and PR/merge rules live in M5_2_0_AGENT_PROMPT.md",
       "pip-audit exit 1: 21 advisories in venv bootstrap packages (pip 23.0.1, setuptools 66.1.1) recorded in the M5-P0-05 baseline evidence; runtime dependencies clean.",
       "Harness task-event store (task_events.py, M5-P1-07) and workspace snapshot store (workspace_snapshots.py, M5-P2-01) assume a single application process per session, matching the worker-lease model; cross-process concurrent appends are unsupported and not claimed safe.",
       "The edit ledger and observed-version index assume one application process per session (same assumption as the durable event stream and worker leases); a second process editing the same workspace is not detected. The .harnesses/edits directory is bounded per session (4 MiB rotation) but has no cross-session pruning (M5-P2-02).",
       "The M5-P2-03 rollback journal stores both the pre- and post-edit bytes of every managed edit in the edit CAS (.harnesses/edits/blobs) and has no garbage collection; the store grows with edit volume until a retention story adds pruning. Rollback covers managed edits only, and its line-based merge refuses rather than guesses on a user edit inside a region the batch wrote."
     ],
-    "last_readme_sync": "2026-10-30T18:02:00Z",
+    "last_readme_sync": "2026-10-31T03:34:00Z",
     "last_verified_commit": "3f73d2db4ae6064ac557d2022b617dfa661d44fd",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md"
   },
@@ -201,7 +201,7 @@
         "M5-P3-05",
         "M5-P3-06"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "exit_gate": "All mandatory stories complete with evidence; security-critical unknowns fail closed.",
       "progress_percent": 0
     },
@@ -313,8 +313,8 @@
           "Authority consolidation completed 2026-10-30 on user/owner confirmation; AS roadmap retained unmodified as historical source and AS-status ledger (no history deleted)"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. Authority consolidation awaits owner confirmation.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. Authority consolidation awaits owner confirmation.",
         "readme_updated": true
       }
     },
@@ -368,14 +368,14 @@
           "docs/README.md"
         ],
         "evidence": [
-          "docs/m5-2-0-integration-audit.md §1: all 9 reported claims verified/refuted with line evidence (claims 1 and 6 refuted; 2,3,4,5,7,8,9 confirmed)",
-          "§2: FastAPI route -> tool/subprocess/SQLite/MCP traces with function and line references",
-          "§3.1: all 17 direct subprocess entry points in app.py enumerated with gates; §3.2: all consequential SQLite/FS write entry points enumerated",
-          "§4: 42-module code-exists/integrated/tested/qualified table (5 integrated, 37 unit-tested-but-unintegrated)"
+          "docs/m5-2-0-integration-audit.md \u00a71: all 9 reported claims verified/refuted with line evidence (claims 1 and 6 refuted; 2,3,4,5,7,8,9 confirmed)",
+          "\u00a72: FastAPI route -> tool/subprocess/SQLite/MCP traces with function and line references",
+          "\u00a73.1: all 17 direct subprocess entry points in app.py enumerated with gates; \u00a73.2: all consequential SQLite/FS write entry points enumerated",
+          "\u00a74: 42-module code-exists/integrated/tested/qualified table (5 integrated, 37 unit-tested-but-unintegrated)"
         ],
         "test_results": [
           {
-            "command": "grep/sed call-path audit (commands listed in audit doc §6)",
+            "command": "grep/sed call-path audit (commands listed in audit doc \u00a76)",
             "exit_code": 0,
             "result": "evidence captured inline"
           }
@@ -386,8 +386,8 @@
           "Skill-code subprocess paths classified as containment targets for M5-P0-03 (app.py:1831 flag-gated but sandbox-bypassing; app.py:8645 ungated)"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. Containment work continues in M5-P0-03.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. Containment work continues in M5-P0-03.",
         "readme_updated": true
       }
     },
@@ -637,7 +637,7 @@
           "docs/README.md"
         ],
         "evidence": [
-          "docs/m5-2-0-baseline-evidence.md §2: full command log with exit codes",
+          "docs/m5-2-0-baseline-evidence.md \u00a72: full command log with exit codes",
           "pytest: 717 passed, 1 skipped (opt-in live container test), 1 warning, 19.13s",
           "ruff/mypy/compileall/frontend-syntax/smoke_local x2/governance/security-signoff/docs/generators-no-drift/demo-tour/screenshots/adrs: all exit 0",
           "pip_audit exit 1: 21 advisories in venv bootstrap packages pip 23.0.1 + setuptools 66.1.1 only; runtime dependencies clean (recorded undiluted)",
@@ -671,12 +671,12 @@
           }
         ],
         "decisions": [
-          "verify_baseline.py initially failed on the shallow checkout; git fetch --unshallow (documented prerequisite) fixed it — both outcomes recorded",
-          "Blocked measurements (peak unified memory/swap, oMLX coding task, FTS5 load latency, live isolation) listed in evidence doc §4 and never promoted to claims"
+          "verify_baseline.py initially failed on the shallow checkout; git fetch --unshallow (documented prerequisite) fixed it \u2014 both outcomes recorded",
+          "Blocked measurements (peak unified memory/swap, oMLX coding task, FTS5 load latency, live isolation) listed in evidence doc \u00a74 and never promoted to claims"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. Target-hardware telemetry moves to M5-P4-01 / M5-P0-04 on real hardware.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. Target-hardware telemetry moves to M5-P4-01 / M5-P0-04 on real hardware.",
         "readme_updated": true
       }
     },
@@ -864,8 +864,8 @@
           "Old marketing-forward README content replaced per draft mandate; deep reference material (env vars, API, invariants) preserved in README reference section and docs/ links so validate_docs publication checks stay green"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None — done. README maintenance rule: refresh with verified behavior after every subsequent story.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None \u2014 done. README maintenance rule: refresh with verified behavior after every subsequent story.",
         "readme_updated": true
       }
     },
@@ -1484,7 +1484,7 @@
           "Enforced two-tier false-completion protection: a universal ledger invariant rejecting completion when the latest run_bash action failed without a subsequent passing run, plus full TaskVerificationSpec verification (managed-edit provenance, modified-file SHA-256 deltas, Git diff, protected user-file digests, post-edit test ordering, and independent shell=False test execution)."
         ],
         "blockers": [],
-        "handoff_note": "M5-P1-06 complete: single-agent verified vertical slice, deterministic action-boundary crash injection + session reconciliation, and false-completion rejection are integrated across app.py and standalone studio.py (811 passed, 1 skipped; 12/44 modules integrated; Phase P1 at 86% — 6/7 stories done). Ready for M5-P1-07 (Minimal task events, HTTP commands and existing UI).",
+        "handoff_note": "M5-P1-06 complete: single-agent verified vertical slice, deterministic action-boundary crash injection + session reconciliation, and false-completion rejection are integrated across app.py and standalone studio.py (811 passed, 1 skipped; 12/44 modules integrated; Phase P1 at 86% \u2014 6/7 stories done). Ready for M5-P1-07 (Minimal task events, HTTP commands and existing UI).",
         "next_action": "Claim and implement M5-P1-07 on a fresh branch after M5-P1-06 merges.",
         "readme_updated": true
       }
@@ -1855,72 +1855,72 @@
         "owner_session": "arena/e2ce9b9e-m5-agent-studio",
         "commit_sha": "b57b216",
         "changed_files": [
-                "edit_rollback.py",
-                "workspace_snapshots.py",
-                "app.py",
-                "execution_spine.py",
-                "scripts/build_studio.py",
-                "studio.py",
-                "tests/test_edit_rollback.py",
-                "docs/edit-rollback.md",
-                "docs/adr/0007-multi-file-edit-rollback.md",
-                "docs/README.md",
-                "docs/subsystem-dependency-inventory.md",
-                "README.md",
-                "product/M5_2_0_Autonomous_Roadmap.json"
+          "edit_rollback.py",
+          "workspace_snapshots.py",
+          "app.py",
+          "execution_spine.py",
+          "scripts/build_studio.py",
+          "studio.py",
+          "tests/test_edit_rollback.py",
+          "docs/edit-rollback.md",
+          "docs/adr/0007-multi-file-edit-rollback.md",
+          "docs/README.md",
+          "docs/subsystem-dependency-inventory.md",
+          "README.md",
+          "product/M5_2_0_Autonomous_Roadmap.json"
         ],
         "evidence": [
-                "Task 1 (track per-file progress in a durable edit transaction): edit_rollback.EditBatchJournal writes one atomically replaced JSON document per batch (<store>/edits/batches/, 0700 dirs, 0600 files) with per-path tool, pre/post sha256, the CAS blob of both sides, the previous mode and an explicit step state; a per-session pointer names the open batch. app._record_edit_batch_step records the step BEFORE the write (a crash leaves a readable record; a step whose write never happened plans as already_reverted) and marks it skipped when the write is refused. Re-editing a path inside a batch keeps the first pre-image and advances the written side. Evidence: tests/test_edit_rollback.py::test_journal_records_steps_privately_and_keeps_the_first_pre_image, ::test_journal_refuses_unsafe_ids_and_unknown_states, ::test_mark_step_is_durable_and_rejects_a_missing_path, ::test_failed_write_is_not_left_as_an_applied_step, ::test_sensitive_paths_are_never_journalled.",
-                "Task 2 (inverse patch / three-way merge with version checks): EditRollbackEngine.plan decides per path from the bytes on disk (already_reverted, delete_created, revert, revert_merged, conflict); restores go through workspace_snapshots.atomic_write_confined_bytes with expected_sha256 equal to the digest the batch wrote (compare-and-swap at the rename), deletes only a file the batch created whose bytes still match, and applies a line-level three-way merge (post as common base) when the user edited the file afterwards so disjoint hunks both survive. Evidence: tests/test_edit_rollback.py::test_inverse_merge_reverts_the_written_region_and_keeps_user_edits, ::test_inverse_merge_keeps_a_user_insertion_around_the_written_region, ::test_inverse_merge_refuses_when_the_user_inserted_inside_the_written_region, ::test_rollback_restores_replaced_files_and_removes_created_ones, ::test_rollback_merges_around_user_edits_in_unwritten_regions, ::test_dry_run_reports_the_plan_without_writing.",
-                "Task 3 (reconcile uncertain outcomes before rollback): app._reconcile_managed_edit_actions reads the durable runtime_actions ledger for in_flight/uncertain managed-edit actions of the task and blocks the rollback until the caller acknowledges them (batch notes + edit/rollback task event); an unreadable ledger blocks it (fail closed); the tools exclude their own in-flight ledger row via a ContextVar so a call is not evidence against itself. reconcile_task_actions exposes the report read-only. Evidence: tests/test_edit_rollback.py::test_reconciliation_blocks_rollback_while_a_managed_edit_is_unresolved, ::test_reconciliation_fails_closed_when_the_ledger_is_unreadable, ::test_reconcile_tool_reports_a_clean_task, ::test_blocked_reasons_abort_the_rollback_before_any_write, ::test_rollback_is_denied_by_plan_policy.",
-                "Task 4 (test interrupted multi-file edit): an interrupted edit (one file written, one step recorded but never written) and an interrupted rollback (one step already restored and durably marked) both converge to the pre-batch bytes on the next run, redoing only the steps still applied. Evidence: tests/test_edit_rollback.py::test_interrupted_multi_file_edit_is_recoverable, ::test_resumed_rollback_only_redoes_the_steps_still_applied, ::test_resumed_rollback_only_redoes_the_steps_still_applied.",
-                "AC1 (partial failure preserves all user edits): rollback restores only the paths in the batch, from the bytes each edit replaced, and never runs a Git command; files outside the batch are untouched and a later user edit in an unwritten region survives the merge. Evidence: ::test_rollback_restores_replaced_files_and_removes_created_ones (keep.txt untouched), ::test_rollback_merges_around_user_edits_in_unwritten_regions, ::test_managed_edits_are_journalled_and_roll_back_through_the_tool_surface (user.txt untouched), and README documents that a refused plan writes nothing.",
-                "AC2 (rollback refuses conflicting overwrite): a file changed in a region the batch wrote, a created file edited afterwards, a file deleted afterwards, and a target swapped for a symlink all make the plan a conflict; a conflicting or blocked plan performs no writes at all and leaves the batch unresolved with per-path reasons. Evidence: ::test_rollback_refuses_to_overwrite_a_later_user_edit, ::test_rollback_refuses_when_a_created_file_was_edited_afterwards, ::test_rollback_refuses_when_the_file_was_deleted_afterwards, ::test_rollback_refuses_a_symlinked_target, ::test_rollback_tool_reports_an_unresolved_batch_without_writing.",
-                "AC3 (recovery leaves explicit unresolved state if unsafe): blocked or conflicting rollbacks persist state=unresolved with notes per path plus reasons in the result, an interrupted rollback persists partially_rolled_back with per-step state, and the reconciliation gate refuses by default with an explicit reason while an unresolved managed edit exists. Evidence: ::test_blocked_reasons_abort_the_rollback_before_any_write, ::test_resumed_rollback_only_redoes_the_steps_still_applied, ::test_reconciliation_blocks_rollback_while_a_managed_edit_is_unresolved.",
-                "Standalone bundle parity: edit_rollback.py is inlined into studio.py; a private-global collision with edit_transactions._SHA256_RE inside the single-namespace bundle was found and fixed (names prefixed _erb_*), guarded by tests/test_edit_rollback.py::test_rollback_module_globals_do_not_collide_with_the_bundle_namespace and validated by the bundle-based suites (tests/test_workspace_snapshots.py, tests/test_single_agent_vertical_slice.py, tests/test_release_manager.py)."
+          "Task 1 (track per-file progress in a durable edit transaction): edit_rollback.EditBatchJournal writes one atomically replaced JSON document per batch (<store>/edits/batches/, 0700 dirs, 0600 files) with per-path tool, pre/post sha256, the CAS blob of both sides, the previous mode and an explicit step state; a per-session pointer names the open batch. app._record_edit_batch_step records the step BEFORE the write (a crash leaves a readable record; a step whose write never happened plans as already_reverted) and marks it skipped when the write is refused. Re-editing a path inside a batch keeps the first pre-image and advances the written side. Evidence: tests/test_edit_rollback.py::test_journal_records_steps_privately_and_keeps_the_first_pre_image, ::test_journal_refuses_unsafe_ids_and_unknown_states, ::test_mark_step_is_durable_and_rejects_a_missing_path, ::test_failed_write_is_not_left_as_an_applied_step, ::test_sensitive_paths_are_never_journalled.",
+          "Task 2 (inverse patch / three-way merge with version checks): EditRollbackEngine.plan decides per path from the bytes on disk (already_reverted, delete_created, revert, revert_merged, conflict); restores go through workspace_snapshots.atomic_write_confined_bytes with expected_sha256 equal to the digest the batch wrote (compare-and-swap at the rename), deletes only a file the batch created whose bytes still match, and applies a line-level three-way merge (post as common base) when the user edited the file afterwards so disjoint hunks both survive. Evidence: tests/test_edit_rollback.py::test_inverse_merge_reverts_the_written_region_and_keeps_user_edits, ::test_inverse_merge_keeps_a_user_insertion_around_the_written_region, ::test_inverse_merge_refuses_when_the_user_inserted_inside_the_written_region, ::test_rollback_restores_replaced_files_and_removes_created_ones, ::test_rollback_merges_around_user_edits_in_unwritten_regions, ::test_dry_run_reports_the_plan_without_writing.",
+          "Task 3 (reconcile uncertain outcomes before rollback): app._reconcile_managed_edit_actions reads the durable runtime_actions ledger for in_flight/uncertain managed-edit actions of the task and blocks the rollback until the caller acknowledges them (batch notes + edit/rollback task event); an unreadable ledger blocks it (fail closed); the tools exclude their own in-flight ledger row via a ContextVar so a call is not evidence against itself. reconcile_task_actions exposes the report read-only. Evidence: tests/test_edit_rollback.py::test_reconciliation_blocks_rollback_while_a_managed_edit_is_unresolved, ::test_reconciliation_fails_closed_when_the_ledger_is_unreadable, ::test_reconcile_tool_reports_a_clean_task, ::test_blocked_reasons_abort_the_rollback_before_any_write, ::test_rollback_is_denied_by_plan_policy.",
+          "Task 4 (test interrupted multi-file edit): an interrupted edit (one file written, one step recorded but never written) and an interrupted rollback (one step already restored and durably marked) both converge to the pre-batch bytes on the next run, redoing only the steps still applied. Evidence: tests/test_edit_rollback.py::test_interrupted_multi_file_edit_is_recoverable, ::test_resumed_rollback_only_redoes_the_steps_still_applied, ::test_resumed_rollback_only_redoes_the_steps_still_applied.",
+          "AC1 (partial failure preserves all user edits): rollback restores only the paths in the batch, from the bytes each edit replaced, and never runs a Git command; files outside the batch are untouched and a later user edit in an unwritten region survives the merge. Evidence: ::test_rollback_restores_replaced_files_and_removes_created_ones (keep.txt untouched), ::test_rollback_merges_around_user_edits_in_unwritten_regions, ::test_managed_edits_are_journalled_and_roll_back_through_the_tool_surface (user.txt untouched), and README documents that a refused plan writes nothing.",
+          "AC2 (rollback refuses conflicting overwrite): a file changed in a region the batch wrote, a created file edited afterwards, a file deleted afterwards, and a target swapped for a symlink all make the plan a conflict; a conflicting or blocked plan performs no writes at all and leaves the batch unresolved with per-path reasons. Evidence: ::test_rollback_refuses_to_overwrite_a_later_user_edit, ::test_rollback_refuses_when_a_created_file_was_edited_afterwards, ::test_rollback_refuses_when_the_file_was_deleted_afterwards, ::test_rollback_refuses_a_symlinked_target, ::test_rollback_tool_reports_an_unresolved_batch_without_writing.",
+          "AC3 (recovery leaves explicit unresolved state if unsafe): blocked or conflicting rollbacks persist state=unresolved with notes per path plus reasons in the result, an interrupted rollback persists partially_rolled_back with per-step state, and the reconciliation gate refuses by default with an explicit reason while an unresolved managed edit exists. Evidence: ::test_blocked_reasons_abort_the_rollback_before_any_write, ::test_resumed_rollback_only_redoes_the_steps_still_applied, ::test_reconciliation_blocks_rollback_while_a_managed_edit_is_unresolved.",
+          "Standalone bundle parity: edit_rollback.py is inlined into studio.py; a private-global collision with edit_transactions._SHA256_RE inside the single-namespace bundle was found and fixed (names prefixed _erb_*), guarded by tests/test_edit_rollback.py::test_rollback_module_globals_do_not_collide_with_the_bundle_namespace and validated by the bundle-based suites (tests/test_workspace_snapshots.py, tests/test_single_agent_vertical_slice.py, tests/test_release_manager.py)."
         ],
         "test_results": [
-                {
-                        "command": ".venv/bin/python -m pytest tests/test_edit_rollback.py -q",
-                        "exit_code": 0,
-                        "result": "27 passed (inverse merge, journal durability/marking/permissions, plan/execute decisions, conflict refusals that write nothing, merge around user edits, symlink refusal, interrupted edit and interrupted rollback resume, reconciliation gate, fail-closed ledger, plan-policy denial, bundle-namespace collision guard)"
-                },
-                {
-                        "command": ".venv/bin/python -m pytest -q",
-                        "exit_code": 0,
-                        "result": "881 passed, 1 skipped (tests/test_live_sandbox.py opt-in container test), 1 warning in 42.41 s; zero regressions (854 -> 881)"
-                },
-                {
-                        "command": ".venv/bin/ruff check . && .venv/bin/mypy",
-                        "exit_code": 0,
-                        "result": "ruff clean; mypy clean across 45 typed modules (edit_rollback.py added to the ratchet)"
-                },
-                {
-                        "command": ".venv/bin/python scripts/build_studio.py (twice) + sha256sum studio.py",
-                        "exit_code": 0,
-                        "result": "Built studio.py: 1,489,824 bytes; identical sha256 6d70b99590c91025d0e7992e37bd69a122b16cb710b987d64157ab8d2e416a63 on both runs (deterministic)"
-                },
-                {
-                        "command": "scripts/validate_docs.py, validate_adrs.py, validate_governance.py, validate_security_signoff.py, check_frontend_syntax.py, demo_tour.py --check, verify_baseline.py, generate_roadmap_status.py, generate_subsystem_inventory.py",
-                        "exit_code": 0,
-                        "result": "all passed (docs 82 files, ADRs incl. 0007, governance 7 files, sign-off state=deferred, JS syntax OK, demo transcript current, baseline 7904892d verified)"
-                }
+          {
+            "command": ".venv/bin/python -m pytest tests/test_edit_rollback.py -q",
+            "exit_code": 0,
+            "result": "27 passed (inverse merge, journal durability/marking/permissions, plan/execute decisions, conflict refusals that write nothing, merge around user edits, symlink refusal, interrupted edit and interrupted rollback resume, reconciliation gate, fail-closed ledger, plan-policy denial, bundle-namespace collision guard)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "881 passed, 1 skipped (tests/test_live_sandbox.py opt-in container test), 1 warning in 42.41 s; zero regressions (854 -> 881)"
+          },
+          {
+            "command": ".venv/bin/ruff check . && .venv/bin/mypy",
+            "exit_code": 0,
+            "result": "ruff clean; mypy clean across 45 typed modules (edit_rollback.py added to the ratchet)"
+          },
+          {
+            "command": ".venv/bin/python scripts/build_studio.py (twice) + sha256sum studio.py",
+            "exit_code": 0,
+            "result": "Built studio.py: 1,489,824 bytes; identical sha256 6d70b99590c91025d0e7992e37bd69a122b16cb710b987d64157ab8d2e416a63 on both runs (deterministic)"
+          },
+          {
+            "command": "scripts/validate_docs.py, validate_adrs.py, validate_governance.py, validate_security_signoff.py, check_frontend_syntax.py, demo_tour.py --check, verify_baseline.py, generate_roadmap_status.py, generate_subsystem_inventory.py",
+            "exit_code": 0,
+            "result": "all passed (docs 82 files, ADRs incl. 0007, governance 7 files, sign-off state=deferred, JS syntax OK, demo transcript current, baseline 7904892d verified)"
+          }
         ],
         "decisions": [
-                "Rollback is a durable per-batch journal plus a version-checked inverse patch, never `git reset --hard` / `git checkout -- PATH` / `git stash`: the destructive forms discard the user's uncommitted work and cannot be scoped to a runtime batch without assuming a clean tree at a known commit (ADR-0007).",
-                "The journal records the intended step BEFORE the write. The planner decides from bytes on disk, so a step whose write never happened plans as already_reverted (no-op) and a step whose write did happen restores the stored pre-image; recording after the write would lose exactly the step an interrupted run needs.",
-                "A refused plan performs no writes at all, including for the individually safe paths: best-effort partial rollback would leave a third state that is neither before nor after, with no record of it. The batch is persisted as unresolved with per-path reasons plus a dry-run plan.",
-                "Three-way merge with `post` as the common base is used when the file changed after the batch: hunks that turn post back into pre are applied onto the current text and disjoint user edits survive; a collision with a user edit is a conflict rather than a guess.",
-                "The reconciliation gate blocks only on in_flight/uncertain managed-edit actions (write_file/edit_file), because those are the writes rollback could race and its own restores are compare-and-swapped; other tools' unresolved actions are reported as warnings. An unreadable ledger blocks the rollback (fail closed).",
-                "Acknowledgement of unresolved actions is an explicit caller decision (acknowledge_unresolved) recorded in the batch notes and the edit/rollback task event, so a silent override cannot happen.",
-                "Batch documents are atomic JSON files rather than a new SQLite table: they are small, written and read whole, need no schema migration, and keep the edit history out of the exported database (same reasoning as ADR-0006's edit ledger).",
-                "Private module globals in edit_rollback are prefixed _erb_* because the standalone bundle concatenates inlined modules into one namespace; the collision guard test pins that property."
+          "Rollback is a durable per-batch journal plus a version-checked inverse patch, never `git reset --hard` / `git checkout -- PATH` / `git stash`: the destructive forms discard the user's uncommitted work and cannot be scoped to a runtime batch without assuming a clean tree at a known commit (ADR-0007).",
+          "The journal records the intended step BEFORE the write. The planner decides from bytes on disk, so a step whose write never happened plans as already_reverted (no-op) and a step whose write did happen restores the stored pre-image; recording after the write would lose exactly the step an interrupted run needs.",
+          "A refused plan performs no writes at all, including for the individually safe paths: best-effort partial rollback would leave a third state that is neither before nor after, with no record of it. The batch is persisted as unresolved with per-path reasons plus a dry-run plan.",
+          "Three-way merge with `post` as the common base is used when the file changed after the batch: hunks that turn post back into pre are applied onto the current text and disjoint user edits survive; a collision with a user edit is a conflict rather than a guess.",
+          "The reconciliation gate blocks only on in_flight/uncertain managed-edit actions (write_file/edit_file), because those are the writes rollback could race and its own restores are compare-and-swapped; other tools' unresolved actions are reported as warnings. An unreadable ledger blocks the rollback (fail closed).",
+          "Acknowledgement of unresolved actions is an explicit caller decision (acknowledge_unresolved) recorded in the batch notes and the edit/rollback task event, so a silent override cannot happen.",
+          "Batch documents are atomic JSON files rather than a new SQLite table: they are small, written and read whole, need no schema migration, and keep the edit history out of the exported database (same reasoning as ADR-0006's edit ledger).",
+          "Private module globals in edit_rollback are prefixed _erb_* because the standalone bundle concatenates inlined modules into one namespace; the collision guard test pins that property."
         ],
         "blockers": [],
         "handoff_note": "M5-P2-03 complete: durable multi-file edit batches (edit_rollback.py) recorded before the write, per-path rollback planning from bytes on disk (already_reverted/delete_created/revert/revert_merged/conflict), compare-and-swap restores, three-way inverse merge around later user edits, refusal with an explicit unresolved state, action reconciliation before rollback, and resumable interrupted recovery. New tools list_edit_batches / reconcile_task_actions / rollback_edits; rollback_edits is a managed edit at the execution boundary and is denied by plan policy. Documented in docs/edit-rollback.md (ADR-0007). Not implemented: cross-session rollback, CAS garbage collection, rollback of files changed outside managed edits.",
         "next_action": "Claim and implement M5-P2-04 (next P2 story) after this PR merges; check its dependencies and the claim ledger first.",
         "readme_updated": true
-}
+      }
     },
     {
       "id": "M5-P2-04",
@@ -2266,22 +2266,61 @@
       ],
       "prompt": "Implement story M5-P3-02: Unified execution profiles and resource footprints. Objective: Apply consistent permission rules to managed and sandboxed operations. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Define verified capability descriptors; Conservative footprints for arbitrary shell commands; Acquire resource barriers with admission; Observe expansion and reconcile. Acceptance: No shell bypass of managed policy; Unknown side effects reserve conservative scope; Conflicting action admission prevented. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-10-30T19:58:00Z",
+        "updated_at": "2026-10-31T03:34:00Z",
+        "completed_at": "2026-10-31T03:34:00Z",
+        "owner_session": "arena/46877a13-m5-agent-studio",
+        "commit_sha": "e831f27",
+        "changed_files": [
+          "execution_profiles.py",
+          "execution_spine.py",
+          "sandbox_boundary.py",
+          "app.py",
+          "pyproject.toml",
+          "scripts/build_studio.py",
+          "studio.py",
+          "tests/test_execution_profiles.py",
+          "tests/test_sandbox_boundary.py",
+          "docs/execution-profiles.md",
+          "docs/adr/0012-unified-execution-profiles-and-resource-footprints.md",
+          "docs/README.md",
+          "docs/subsystem-dependency-inventory.md",
+          "README.md",
+          "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "Task 1 (define verified capability descriptors): execution_profiles.resolve_capability_descriptor derives immutable CapabilityDescriptor records solely from runtime-owned tool metadata and active execution configuration, ignoring untrusted model-supplied hints in args and reporting honest isolation_posture (in_process_confined, container_qualified, container_hardened_unverified, host_opt_in_unsandboxed, disabled) with verified_isolation=False whenever container qualification is unverified. app._sandbox_command now delegates hardened container CLI construction to sandbox_boundary.build_container_invocation (maintaining flag-for-flag parity verified by scripts/qualify_environment.py p3.product.argv_parity). Evidence: tests/test_execution_profiles.py::test_verified_capability_descriptors_ignore_untrusted_model_hints_and_report_honest_isolation, tests/test_sandbox_boundary.py::test_build_container_invocation_matches_app_sandbox_command_and_rejects_unsafe_inputs, tests/test_qualify_environment.py::test_container_argv_matches_the_product.",
+          "Task 2 & AC2 (conservative footprints for arbitrary shell commands / unknown side effects reserve conservative scope): derive_execution_profile assigns narrow exact_paths footprints (workspace:{ws} shared + path:{ws}:{rel} shared/exclusive) to single-file managed reads/writes and conservative_workspace / external_and_workspace footprints (workspace:{ws} exclusive + conservative memory, subprocess, and mutation slots) to run_bash, ctx_execute_python, consequential ctx_run_block blocks, skill_execute_script, non-dry-run rollback_edits, mcp__* tools, and unregistered tools. Evidence: tests/test_execution_profiles.py::test_unknown_side_effects_reserve_conservative_workspace_footprint.",
+          "Task 3 & AC3 (acquire resource barriers with admission / conflicting action admission prevented): UnifiedExecutionController wraps resource_admission.ResourceAdmissionScheduler and shared/exclusive ResourceBarrier sets inside execution_spine.DurableActionBoundary across the full action lifetime, releasing leases in finally across exceptions, task cancellations, and injected boundary crashes. Same-file write+write and read+write conflicts and any concurrent workspace read/edit/shell during an exclusive conservative run_bash fail closed at admission (error_code='conflicting_action', conflict_denied=True), while concurrent shared reads and disjoint-path writes proceed concurrently. Evidence: tests/test_execution_profiles.py::test_conflicting_concurrent_actions_are_denied_while_compatible_actions_succeed, ::test_barriers_and_subprocess_slots_never_leak_across_exceptions_crashes_or_cancellations.",
+          "Task 4 (observe expansion and reconcile): UnifiedExecutionCoordinator snapshots non-secret workspace metadata before and after execution under the held barrier; legitimate conservative shell mutations reconcile into $HARNESS_STORE_DIR/footprints/{session_id}.jsonl (0600 permissions) as status='reconciled_expansion', newly planted runtime-obfuscated secrets (.env), .git/hooks/* scripts, and escaping symlinks are unlinked via O_NOFOLLOW quarantine (error_code='footprint_policy_violation'), and unauthorized mutations of pre-existing protected files or undeclared exact-scope expansions preserve user files while marking runtime_actions status='uncertain' so IntentLedger blocks follow-up consequential actions. Evidence: tests/test_execution_profiles.py::test_conservative_shell_expansion_is_observed_and_durably_reconciled, ::test_runtime_obfuscated_secret_hook_and_symlink_creations_are_quarantined_post_execution, ::test_obfuscated_mutation_of_existing_secret_marks_task_uncertain_and_blocks_followup_actions, ::test_undeclared_expansion_by_exact_scope_tool_fails_closed_as_scope_violation.",
+          "AC1 (no shell bypass of managed policy): evaluate_unified_policy and inspect_subprocess_policy enforce identical secret-file, targeted-glob, .git/hooks + .git/config + dangerous git config, symlink, and workspace-confinement rules across managed file tools, run_bash, ctx_execute_python, ctx_run_block, and _run_skill_script using quote-aware shell/redirection splitting, brace/ANSI-C decoding, recursive sh -c / python -c inspection, and Python AST constant folding before any subprocess spawns, including in standalone studio.py. Evidence: tests/test_execution_profiles.py::test_no_shell_or_python_bypass_of_managed_secret_and_vcs_policy, ::test_no_shell_or_python_bypass_of_workspace_confinement_and_symlinks, ::test_standalone_studio_bundle_enforces_unified_profiles_in_isolated_directory."
+        ],
+        "test_results": [
+          "pytest -q -> 1087 passed, 1 skipped in 52.19s (skip: tests/test_live_sandbox.py needs explicit live container-runtime opt-in); exit 0",
+          "pytest tests/test_execution_profiles.py tests/test_sandbox_boundary.py -v -> 16 passed in 2.03s; exit 0",
+          "pytest tests/test_qualify_environment.py -q -> 94 passed; exit 0",
+          "ruff check . -> All checks passed!; exit 0",
+          "mypy -> Success: no issues found in 49 source files; exit 0",
+          "python scripts/smoke_local.py and --standalone -> Local smoke test passed (loopback startup, health, token permissions, protected API, Origin rejection, isolated DB path, UI auth helper); exit 0",
+          "python scripts/verify_baseline.py -> Baseline verified: 7904892d759bb66b817bb17b6f4f377874bd6e25; exit 0",
+          "python scripts/validate_docs.py, validate_adrs.py, validate_governance.py, validate_threat_model.py, validate_security_signoff.py, validate_screenshots.py, check_frontend_syntax.py, demo_tour.py --check -> all exit 0",
+          "python scripts/release_supply_chain.py build/verify -> verified=true, artifact-secrets=passed, dependency-vulnerabilities=passed; exit 0",
+          "python scripts/build_studio.py -> Built studio.py: 1,720,848 bytes; generate_route_matrix.py / generate_subsystem_inventory.py / generate_roadmap_status.py --check -> no git diff drift; exit 0"
+        ],
+        "decisions": [
+          "Owner confirmed on 2026-10-30 that M5-P3-01 and M5-P4-01 target-host qualification is handled asynchronously via scripts/qualify_environment.sh and directed proceeding to the next stories while keeping container/24 GB hardware claims unadvertised until operator artifacts land.",
+          "CapabilityDescriptor never sets verified_isolation=True for container mode unless container_qualified=True is explicitly supplied, keeping unverified container isolation fail-closed and unadvertised.",
+          "Conflicting concurrent admissions fail closed immediately (error_code='conflicting_action', conflict_denied=True) rather than queueing on per-path locks, and record status='denied' in IntentLedger so legitimate retries succeed once the active lease releases.",
+          "Post-execution quarantine unlinks only newly planted forbidden files/symlinks via O_NOFOLLOW and never deletes pre-existing user files; pre-existing protected tampering or undeclared exact-scope collateral marks the action uncertain=True so IntentLedger halts subsequent consequential actions.",
+          "app._sandbox_command now delegates to sandbox_boundary.build_container_invocation so product runtime and qualification probes share one canonical hardened container flag builder."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
-        "readme_updated": false
+        "handoff_note": "M5-P3-02 complete at e831f27 (ADR-0012, docs/execution-profiles.md). Managed tools, run_bash, ctx_execute_python, ctx_run_block, and _run_skill_script now share unified policy parity, conservative footprints, ResourceAdmissionScheduler-backed shared/exclusive barriers in DurableActionBoundary, and post-execution expansion reconciliation, and app._sandbox_command delegates to sandbox_boundary.build_container_invocation. Next ready P3 story is M5-P3-03 (Isolated process trees and clean cancellation).",
+        "next_action": "Done. Next ready mandatory story: M5-P3-03 (Isolated process trees and clean cancellation; dependencies M5-P3-02 and M5-P1-04 both done).",
+        "readme_updated": true
       }
     },
     {
@@ -2576,7 +2615,7 @@
           "AC '24 GB pressure measured' remains UNMEASURED: p4.pressure and p4.model_load need the owner's 24 GB Apple Silicon run (--pressure-gb N --model-command CMD). The 80% reservation is documented as policy, not a measurement (docs/model-admission.md 'What this does not claim'), and the story therefore stays blocked.",
           "Standalone bundle stays self-contained: resource_admission and model_admission are inlined into studio.py (builder now tolerates a trailing comment on the import line), verified by tests/test_release_manager.py::test_generated_standalone_has_no_local_module_imports and ::test_the_standalone_bundle_carries_the_same_policy.",
           "Task 1/2 (representative per-category coding cases + recorded uncertainty): --coding-cases takes a case set (id/category/prompt, optional declared categories) and runs every case through --model-command with STUDIO_QUALIFY_CASE_ID/CATEGORY/PROMPT in the environment, --case-runs times each. p4.coding_cases records per-case exit codes, success rate, wall_s_median, wall_s_spread_ratio, per-category completion and an explicit uncertainty block (incl. single_run_cases) instead of a bare pass. A malformed case set (duplicate/missing id, missing category, undeclared category, invalid JSON) aborts with exit 2 and writes no record. Tests: test_load_coding_cases_* , test_coding_case_probe_passes_case_identity_through_the_environment, test_coding_case_probe_records_failures_and_uncertainty, test_coding_case_probe_measures_wall_time_spread, test_malformed_coding_cases_abort_the_run_without_a_verdict.",
-          "Task 3 (thermal): p4.thermal samples thermal pressure during every load phase — macOS via `pmset -g therm` CPU_Speed_Limit (no root; powermetrics is never invoked because it needs root), Linux via /sys/class/thermal/thermal_zone*/temp — and records stress min/max plus whether throttling was observed. Where the platform exposes no readable source the check is `blocked` with the reason (this container: 35 samples, none readable) rather than a fabricated temperature. Tests: test_thermal_snapshot_parses_pmset_thermal_pressure, test_linux_thermal_readings_convert_millidegrees, test_thermal_sampler_summarises_throttling, test_thermal_check_blocks_when_the_platform_cannot_report, test_thermal_check_passes_with_readings_under_load."
+          "Task 3 (thermal): p4.thermal samples thermal pressure during every load phase \u2014 macOS via `pmset -g therm` CPU_Speed_Limit (no root; powermetrics is never invoked because it needs root), Linux via /sys/class/thermal/thermal_zone*/temp \u2014 and records stress min/max plus whether throttling was observed. Where the platform exposes no readable source the check is `blocked` with the reason (this container: 35 samples, none readable) rather than a fabricated temperature. Tests: test_thermal_snapshot_parses_pmset_thermal_pressure, test_linux_thermal_readings_convert_millidegrees, test_thermal_sampler_summarises_throttling, test_thermal_check_blocks_when_the_platform_cannot_report, test_thermal_check_passes_with_readings_under_load."
         ],
         "test_results": [
           {

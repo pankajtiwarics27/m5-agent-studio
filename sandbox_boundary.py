@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import shlex
+import uuid
 from pathlib import Path
 
 
@@ -101,3 +103,65 @@ def sandbox_command(
         args.extend(["--name", container_name])
     args.extend(["--mount", f"type=bind,src={root},dst=/workspace,rw", "--workdir", "/workspace", image, "sh", "-lc", command])
     return args
+
+
+def build_container_invocation(
+    resolved_workspace: Path,
+    command: str,
+    *,
+    runtime_path: str,
+    image: str,
+    python_code: bool = False,
+    container_name: str | None = None,
+) -> list[str]:
+    """Construct the canonical least-privilege, no-network container argv for untrusted code."""
+    if not resolved_workspace.is_dir():
+        raise SandboxBoundaryError("Sandbox workspace must be an existing directory.")
+    if "," in str(resolved_workspace):
+        raise SandboxBoundaryError("Sandbox workspace paths containing commas are unsupported by Docker --mount syntax.")
+    if not image or not image.strip() or image.startswith("-"):
+        raise SandboxBoundaryError("STUDIO_SANDBOX_IMAGE must be a configured, trusted image name or digest.")
+    if not runtime_path or not runtime_path.strip():
+        raise SandboxBoundaryError("Sandbox runtime executable path must be non-empty.")
+    name = container_name or f"m5-studio-{uuid.uuid4().hex[:20]}"
+    if not name.replace("-", "").replace("_", "").isalnum():
+        raise SandboxBoundaryError("container_name contains unsafe characters.")
+    argv = [
+        runtime_path,
+        "run",
+        "--rm",
+        "--pull=never",
+        "--name",
+        name,
+        "--network=none",
+        "--read-only",
+        "--cap-drop=ALL",
+        "--security-opt=no-new-privileges",
+        "--env",
+        "HOME=/tmp",
+        "--env",
+        "TMPDIR=/tmp",
+        "--env",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "--pids-limit=128",
+        "--memory=2g",
+        "--cpus=2",
+        "--ipc=private",
+        "--ulimit",
+        "nofile=1024:1024",
+        "--tmpfs",
+        "/tmp:rw,noexec,nosuid,nodev,size=256m",
+        "--mount",
+        f"type=bind,source={resolved_workspace},target=/workspace",
+        "--workdir",
+        "/workspace",
+        "--entrypoint",
+        "/bin/sh",
+    ]
+    if os.name == "posix" and hasattr(os, "getuid") and hasattr(os, "getgid"):
+        argv.extend(["--user", f"{os.getuid()}:{os.getgid()}"])
+    argv.append(image)
+    shell_command = f"exec python3 -c {shlex.quote(command)}" if python_code else command
+    argv.extend(["-lc", shell_command])
+    return argv
+
