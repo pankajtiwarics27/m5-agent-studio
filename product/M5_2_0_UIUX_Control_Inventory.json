@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "1a8de9c17f0e39e1da267801cf302d1619f506dd997209caedaa2bfad2ba934d",
+  "frontend_sha256": "63e470ef350d1632e71777b7b0169ca29d319360c37b8793ef7a81bf2ee33c33",
   "panes": [
     {
       "dom_id": "start",
@@ -25,6 +25,7 @@
           "id": "onboardingRunBtn",
           "type": "button",
           "class": "btn btn-primary",
+          "aria-describedby": "onboardingRunHint",
           "onclick": "startGuidedFirstTask()",
           "text": "Run the first task"
         },

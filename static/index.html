@@ -275,6 +275,43 @@
   .onboarding-detail { font-size: 11.8px; line-height: 1.5; color: var(--text-dim); margin-top: 2px; }
   .onboarding-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
   .onboarding-note { font-size: 11.6px; line-height: 1.5; color: var(--text-faint); margin-top: 10px; }
+
+  /* ── Readiness lead ─────────────────────────────────────────────────────────
+     /api/onboarding/preflight already answers the question a first-run reader asks
+     before anything else: what is the one thing I should click? It returns
+     next_step, completed_count and total_count, and the pane used to throw all
+     three away - six rows of equal weight, and a Run button that was disabled with
+     no reason printed anywhere. The lead states the count, names the next step and
+     carries the action the server attached to that step.
+
+     Nothing here computes readiness. A pane that decided for itself would be able
+     to claim a readiness the preflight never measured, which is the one thing the
+     ledger's second invariant forbids. A step the server gave no action is printed
+     as following the step marked next, not as a button that does nothing. */
+  .onboarding-lead {
+    border: 1px solid var(--border-hi); border-radius: var(--radius-md);
+    background: var(--bg-elev); padding: var(--space-4); margin-bottom: var(--space-4);
+  }
+  .onboarding-lead[data-state="next"] { border-color: var(--amber); }
+  .onboarding-lead[data-state="blocked"] { border-color: var(--rose); }
+  .onboarding-lead[data-state="ready"] { border-color: var(--emerald); }
+  .onboarding-lead-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  .onboarding-lead-count {
+    font: var(--weight-medium) var(--text-2xs)/var(--lh-tight) var(--mono);
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint);
+  }
+  .onboarding-lead-title { font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--text); margin-top: var(--space-2); }
+  .onboarding-lead-detail { font-size: var(--text-xs); line-height: var(--lh-base); color: var(--text-dim); margin-top: var(--space-1); }
+  .onboarding-lead-actions { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-3); }
+  .onboarding-lead-hint { font-size: var(--text-2xs); color: var(--text-faint); }
+  .onboarding-step.next { border-color: var(--accent); }
+  .onboarding-step-chip {
+    font: var(--weight-medium) var(--text-2xs)/var(--lh-tight) var(--mono);
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint);
+    border: 1px solid var(--border-hi); border-radius: var(--radius-sm);
+    padding: 1px var(--space-2); margin-left: var(--space-2);
+  }
+  .onboarding-step-waiting { font-size: var(--text-2xs); color: var(--text-faint); margin-top: var(--space-1); }
   .badge.red { background: rgba(239, 68, 68, 0.18); color: #fca5a5; border-color: rgba(239, 68, 68, 0.45); }
 
   .config-strip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 11px; padding: 12px 14px; margin-bottom: 12px; }
@@ -1436,12 +1473,21 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             Studio checks your local configuration and tells you the one next thing to click.
             No config files, no shell commands, and no network calls during the check.
           </p>
+          <!-- The server's next step, printed before the list so the answer is not
+               buried under six rows. Filled by renderOnboardingLead(). -->
+          <div id="onboardingLead" class="onboarding-lead" data-state="checking" role="group" aria-label="The next thing to click">
+            <div class="onboarding-lead-head"><span class="onboarding-lead-count">checking local configuration</span></div>
+          </div>
           <div id="onboardingSteps" class="onboarding-steps" role="list"></div>
           <div class="onboarding-actions">
-            <button class="btn btn-primary" id="onboardingRunBtn" type="button" onclick="startGuidedFirstTask()">Run the first task</button>
+            <button class="btn btn-primary" id="onboardingRunBtn" type="button" onclick="startGuidedFirstTask()" aria-describedby="onboardingRunHint">Run the first task</button>
             <button class="btn" type="button" onclick="refreshOnboarding()">Re-check</button>
             <button class="btn" type="button" onclick="openProvidersModal()">Providers</button>
           </div>
+          <!-- Why the Run button above is off, in visible text and as the button's
+               accessible description: a disabled control with no stated reason is
+               an authoritative refusal the reader cannot see. -->
+          <div id="onboardingRunHint" class="onboarding-note"></div>
           <div id="onboardingState"></div>
           <div id="onboardingFirstTask" class="onboarding-note" hidden></div>
           <div id="onboardingNotes" class="onboarding-note"></div>
@@ -2382,6 +2428,91 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return "\u2192";
   }
 
+  /* The preflight's answer, printed once above the list. Every word here comes from
+     the server - the count, the next step, the action label - because a pane that
+     worked out readiness for itself could disagree with the check it is reporting. */
+  function renderOnboardingLead() {
+    const host = document.getElementById("onboardingLead");
+    if (!host) return null;
+    if (!onboardingReport) {
+      host.dataset.state = "checking";
+      host.innerHTML = '<div class="onboarding-lead-head"><span class="onboarding-lead-count">checking local configuration</span></div>';
+      return host;
+    }
+    const report = onboardingReport;
+    const next = report.next_step || null;
+    host.dataset.state = report.ready ? "ready" : (report.blocked ? "blocked" : "next");
+    host.innerHTML = "";
+
+    const head = document.createElement("div");
+    head.className = "onboarding-lead-head";
+    const count = document.createElement("span");
+    count.className = "onboarding-lead-count";
+    count.textContent = `${report.completed_count} of ${report.total_count} steps ready`;
+    head.appendChild(count);
+    if (report.ready) {
+      const done = document.createElement("span");
+      done.className = "status";
+      done.dataset.tone = "ok";
+      done.textContent = "Ready";
+      head.appendChild(done);
+    }
+
+    const title = document.createElement("div");
+    title.className = "onboarding-lead-title";
+    const detail = document.createElement("div");
+    detail.className = "onboarding-lead-detail";
+    if (report.ready) {
+      title.textContent = "Every check passed";
+      detail.textContent = "Run the first task below: it sends one guided prompt to the selected model and nothing else.";
+    } else if (next) {
+      title.textContent = `Next: ${next.title}`;
+      detail.textContent = next.detail;
+    } else {
+      title.textContent = "The preflight named no next step";
+      detail.textContent = "Re-check before continuing: a report that is neither ready nor waiting on a step is not something this pane should act on.";
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "onboarding-lead-actions";
+    if (!report.ready && next && next.action && next.action_label) {
+      const run = document.createElement("button");
+      run.type = "button";
+      run.className = "btn btn-primary";
+      run.id = "onboardingLeadAction";
+      run.textContent = next.action_label;
+      run.title = `Do the next step: ${next.title}`;
+      run.addEventListener("click", () => runOnboardingAction(next.action));
+      actions.appendChild(run);
+    }
+    // Guards the case the inventory says cannot happen: if a future preflight hands
+    // the lead a step with no action, say that instead of rendering nothing.
+    if (!report.ready && next && (!next.action || !next.action_label)) {
+      const gap = document.createElement("span");
+      gap.className = "onboarding-lead-hint";
+      gap.textContent = "This step has no action of its own: it follows a step above it.";
+      actions.appendChild(gap);
+    }
+    if (!report.ready && next) {
+      const note = document.createElement("span");
+      note.className = "onboarding-lead-hint";
+      note.textContent = report.blocked
+        ? "A step marked blocked will not clear on its own."
+        : "Nothing else on this pane blocks you; the list below is the full check.";
+      actions.appendChild(note);
+    }
+
+    host.append(head, title, detail, actions);
+
+    const hint = document.getElementById("onboardingRunHint");
+    if (hint) {
+      hint.textContent = report.ready
+        ? "Run the first task is available: it sends one guided prompt to the selected model."
+        : `Run the first task stays off until every step is ready${next ? `; next: ${next.title}` : ""}.`;
+    }
+    return host;
+  }
+
   async function refreshOnboarding(probeLocal) {
     const list = document.getElementById("onboardingSteps");
     const summary = document.getElementById("onboardingSummary");
@@ -2395,23 +2526,51 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const payload = await response.json();
       onboardingReport = payload.preflight || null;
       if (!onboardingReport) throw new Error("empty preflight");
+      // The pill states the verdict, not the count: the count is printed once, in the
+      // lead. Two places repeating "3 of 6" is how a progress line and a status badge
+      // start disagreeing after one of them is edited.
       setStatus(
         summary,
         onboardingReport.ready ? "ok" : onboardingReport.blocked ? "danger" : "warn",
-        onboardingReport.ready ? "Ready" : onboardingReport.summary,
+        onboardingReport.ready ? "Ready" : onboardingReport.blocked ? "Blocked" : "Needs you",
       );
-      list.innerHTML = onboardingReport.steps.map(step => `
-        <div class="${onboardingStepClass(step.status)}" role="listitem">
+      // The list is ordered by the server (STEP_ORDER). The row it named as next is
+      // marked with aria-current="step" and a chip, so the eye and the screen reader
+      // land on the same row, and a row the server gave no action is printed as
+      // following that one instead of as a button that does nothing.
+      const next = onboardingReport.next_step || null;
+      const nextIndex = next ? onboardingReport.steps.findIndex(step => step.id === next.id) : -1;
+      list.setAttribute("aria-live", "polite");
+      list.innerHTML = onboardingReport.steps.map((step, index) => {
+        const isNext = Boolean(next && step.id === next.id);
+        const waits = !step.action && step.status !== "ready" && step.status !== "optional"
+          && nextIndex >= 0 && index > nextIndex;
+        return `
+        <div class="${onboardingStepClass(step.status)}${isNext ? " next" : ""}" role="listitem"${isNext ? ' aria-current="step"' : ""}>
           <span class="onboarding-glyph" aria-hidden="true">${onboardingStepIcon(step.status)}</span>
           <div>
-            <div class="onboarding-title">${step.title}</div>
-            <div class="onboarding-detail">${step.detail}</div>
+            <div class="onboarding-title">${escapeHtml(step.title)}${isNext ? '<span class="onboarding-step-chip">next</span>' : ""}</div>
+            <div class="onboarding-detail">${escapeHtml(step.detail)}</div>
+            ${waits ? '<div class="onboarding-step-waiting">No action of its own yet: this step follows the one marked next.</div>' : ""}
           </div>
-          ${step.action_label ? `<button class="btn btn-xs" type="button" onclick="runOnboardingAction('${step.action}')">${step.action_label}</button>` : ""}
-        </div>`).join("");
-      clearPresentation("onboardingState");
+          ${step.action && step.action_label ? `<button class="btn btn-xs" type="button" onclick="runOnboardingAction('${escapeHtml(step.action)}')">${escapeHtml(step.action_label)}</button>` : ""}
+        </div>`;
+      }).join("");
+      // Order matters: the lead is rebuilt first, because clearPresentation() may
+      // hand focus to it. Focusing a node that the next line replaces drops focus on
+      // <body> - which is exactly what the walk caught before this line moved.
+      renderOnboardingLead();
+      // The Re-check button lives inside the box this clears, so without a target a
+      // keyboard user would be left on <body> with nothing announced.
+      clearPresentation("onboardingState", { focus: "onboardingLead" });
       notes.textContent = (onboardingReport.notes || []).join(" ");
-      if (runBtn) runBtn.disabled = !onboardingReport.ready;
+      if (runBtn) {
+        runBtn.disabled = !onboardingReport.ready;
+        runBtn.setAttribute("aria-describedby", "onboardingRunHint");
+        runBtn.title = onboardingReport.ready
+          ? "Send the guided prompt to the selected model"
+          : `Stays off until every step is ready${next ? `; next: ${next.title}` : ""}`;
+      }
       const checked = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       evidenceNote(
         "onboardingEvidence",
@@ -2423,6 +2582,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       );
     } catch (error) {
       setStatus(summary, "danger", "Check failed");
+      const runHint = document.getElementById("onboardingRunHint");
+      if (runHint) runHint.textContent = "Run the first task is off while the preflight is unreadable; the last good result is still shown.";
       // The steps below are left alone on purpose: a failed re-check does not
       // invalidate the last result that did load, and replacing it with an error
       // card would throw away the only useful thing on the pane.
@@ -2652,10 +2813,28 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return box;
   }
 
-  function clearPresentation(target) {
+  /* Removing a presentation removes the button the reader just pressed, and focus
+     falls to <body> - so a keyboard user who pressed "Re-check" ends up nowhere and
+     has to tab in from the top of the page. If the removed box held focus, it is
+     given to `options.focus` when a caller names one, to the host otherwise, and the
+     host is made programmatically focusable without joining the tab order. */
+  function clearPresentation(target, options = {}) {
     const host = typeof target === "string" ? document.getElementById(target) : target;
-    if (host) host.innerHTML = "";
-    return host;
+    if (!host) return null;
+    const box = host.querySelector(".presentation");
+    if (!box) return null;
+    const hadFocus = box.contains(document.activeElement);
+    host.innerHTML = "";
+    if (hadFocus) {
+      const next = options.focus
+        ? (typeof options.focus === "string" ? document.getElementById(options.focus) : options.focus)
+        : host;
+      if (next) {
+        if (!next.hasAttribute("tabindex")) next.setAttribute("tabindex", "-1");
+        next.focus();
+      }
+    }
+    return box.dataset.kind || null;
   }
 
   window.M5Presentations = {
@@ -2699,7 +2878,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       context: "your message and the conversation so far are kept; the partial reply is still in the transcript",
       actions: [
         { label: "Retry", run: onRetry, title: "Send the same message again" },
-        { label: "Dismiss", run: () => clearPresentation("chatState"), title: "Hide this and keep the transcript" },
+        { label: "Dismiss", run: () => clearPresentation("chatState", { focus: "chatInput" }), title: "Hide this and keep the transcript, with the cursor back in the composer" },
       ],
     });
   }
