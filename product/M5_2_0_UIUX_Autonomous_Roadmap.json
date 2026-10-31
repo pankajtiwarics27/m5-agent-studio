@@ -27,8 +27,8 @@
     ],
     "rule": "This ledger is authoritative for UI/UX stories UIUX-P0-01..UIUX-P6-05 only. It never changes the status of an M5 or AS story, and no UI/UX story may change backend, security or data behavior to make a screen easier to build."
   },
-  "source_commit_sha": "866ec1c063c0c750d40e219ddfc9107363732fc6",
-  "source_commit_status": "Pinned to origin/main 866ec1c063c0 by UIUX-P0-05 on 2026-10-31, the merge commit of #111. The generated artifacts are regenerated in the same pull request that re-pins. A session that finds main ahead of this pin re-pins the ledger and regenerates the artifacts in the same commit. A branch name is not a pin.",
+  "source_commit_sha": "ecd781675e58b0735f8b590a67b39aaa2b910e49",
+  "source_commit_status": "Pinned to origin/main ecd7816 by the UIUX-P0-03 correction on 2026-10-31, the merge commit of #113. The generated artifacts are regenerated in the same pull request that re-pins. A session that finds main ahead of this pin re-pins the ledger and regenerates every artifact that embeds the pin (source manifest, control inventory, route map, authorization trace) in the same commit, because each one fails its --check otherwise. A branch name is not evidence of an ancestor commit: verify the pin against the history.",
   "evidence_basis": {
     "supplied_by": "repository owner, 2026-10-31",
     "original_provenance": {
@@ -713,7 +713,7 @@
         "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-31T11:20:31Z",
-        "updated_at": "2026-10-31T11:21:51Z",
+        "updated_at": "2026-10-31T13:05:00Z",
         "completed_at": "2026-10-31T11:21:51Z",
         "owner_session": "arena/dc8242aa-m5-agent-studio",
         "commit_sha": "866083c306051d8fbb3d0dd2fae6baa83e1ed28f",
@@ -737,7 +737,8 @@
           "Criterion 4 (failure and recovery states are honest): the artifact carries a not_verified block naming exactly what it does not prove - that nothing was executed, that a dynamic match is a candidate and not a resolution, and that a route without a browser caller is not dead code - and test_the_generated_page_carries_its_limitations fails if the page drops any of those statements.",
           "Criterion 5 (demonstrable by test): the map is derived, and every claim is re-derived independently in tests/test_uiux_route_map.py. Every fetch( in the inline script appears as a call site; every resolved URL is classified exactly once; every exact match names a route app.py mounts for the method the call uses; a runtime-chosen segment can never be reported as exact; the three known resolution paths (literal, local const, helper call sites) are pinned; the map, manifest and ledger share one pin and one frontend digest; --check is proved to fail on a temporary copy.",
           "Measured result: 53 call sites resolve to 59 URLs - 58 exact, 1 dynamic, 0 findings, 0 unresolved call sites. 54 of 115 routes have a browser caller; 61 do not, and that is published as information rather than as a defect.",
-          "Provenance: the generator and its tests are ported from arena/dc36f4b7 (PR #104), which could not merge because it conflicted with main and carried a runtime-program benchmark change. The runtime work is not in this story; the generator was re-run against the current app.py and the docs carry the measured counts (115 routes, replacing a stale 102)."
+          "Provenance: the generator and its tests are ported from arena/dc36f4b7 (PR #104), which could not merge because it conflicted with main and carried a runtime-program benchmark change. The runtime work is not in this story; the generator was re-run against the current app.py and the docs carry the measured counts (115 routes, replacing a stale 102).",
+          "Post-merge correction for issue #110 (2026-10-31, ledger pin ecd7816): the review found three false negatives in the merged map, and all three are now fixed in the generator plus regressions. (1) A helper that forwards its own URL parameter into another helper was not followed, so /api/harness/sdlc/run and /api/harness/sdlc/feedback were published with no caller while startSdlcRun and submitSdlcFeedback reach them through _streamSdlcEndpoint -> consumeSSE; the resolver now follows forwarded parameters four hops and each URL carries its own chain, published as forwarded_via and in the page's Via column. (2) A dynamic match registered its caller only on the first candidate route, so /api/models/{model_id:path}/unload looked unused although renderTelemetry's button calls modelAction(id, 'unload'); every candidate now records the caller as possible and the page has a section for routes reachable only that way. (3) Line numbers were script-relative, so refreshOnboarding was published at 275 while its fetch is at static/index.html line 1959; both frames are now published as script_line and document_line with the frame named. An unresolved hand-off now makes the caller list an explicit lower bound instead of a clean table. Measured result: 53 call sites resolve to 61 URLs - 60 exact, 1 dynamic, 1 forwarded call site, 0 findings, 0 unresolved - and 57 of 115 routes have a browser caller (55 proved by a literal argument, 2 reachable only through a runtime-chosen segment), leaving 58 with none. The authorization trace inherits the two recovered routes and now covers 37 state-changing routes."
         ],
         "test_results": [
           {
@@ -790,7 +791,8 @@
           "A route parameter absorbs any URL segment, while a URL wildcard may only stand in for a literal route segment - that asymmetry keeps {model_id:path} routes matching without mislabelling ordinary parameter routes.",
           "Helper URLs are resolved from call sites: consumeSSE(url, ...) has no URL of its own, and reading its name would have produced a wrong or empty row.",
           "Routes without a browser caller are published as information, not as defects, because the CLI, the demo tour and the tests use the same API.",
-          "The story was re-done on a clean branch rather than merged from PR #104, so the runtime-program benchmark change it carried stays out of a UI/UX pull request; the generator and tests were ported rather than re-invented."
+          "The story was re-done on a clean branch rather than merged from PR #104, so the runtime-program benchmark change it carried stays out of a UI/UX pull request; the generator and tests were ported rather than re-invented.",
+          "A dynamic match records its caller as possible on every candidate, never as certain on one: the literal argument at the call site is what proves which route runs, and a table that picks the first candidate invents that proof. The same rule makes 'no browser caller' a lower bound whenever any call site stays unresolved, which is why the map publishes caller_resolution.complete instead of leaving a reader to assume it."
         ],
         "blockers": [],
         "handoff_note": "UIUX-P0-03 closed: every browser call now has a route or a stated reason why it does not. The map is the contract the later pane stories read before changing a call, and the generator's --check keeps it honest.",
@@ -876,7 +878,7 @@
         "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-31T11:29:36Z",
-        "updated_at": "2026-10-31T11:35:25Z",
+        "updated_at": "2026-10-31T13:05:00Z",
         "completed_at": "2026-10-31T11:35:25Z",
         "owner_session": "arena/c705f453-m5-agent-studio",
         "commit_sha": "c33b98c47fb1b56524afc92bd5059496ff6fc40c",
@@ -904,7 +906,8 @@
           "Criterion 4 (failure and recovery states are honest): the artifact's not_verified block states exactly what it cannot prove - that a reference is a consultation and not a guard, that a blank cell means 'nothing at this depth' rather than 'unguarded', that a computed status code is recorded as dynamic instead of guessed, and that no request was sent so no refusal was observed. A test fails if the generated page drops any of those statements, and the page carries the rule a pane story has to follow: render the server's refusal, never enable an action, approval or recovery state on a client-side guess.",
           "Criterion 5 (demonstrable by test): twelve tests re-derive the trace's claims rather than trusting them. Coverage is derived from the P0-03 map in both directions; every traced route's handler, line and decorator are re-read from app.py; the shared boundary's refusals are re-read from the middleware's own returns and its constant-time comparison is asserted; every handler refusal is matched to a real raise in that handler, with computed codes counted separately; every first-party subsystem app.py imports must carry a classification (a new module cannot slip in unclassified); the trace, route map, manifest and ledger must share one pin; and --check is proved to fail when a refusal in app.py changes, using a temporary copy.",
           "Measured result: 35 state-changing routes traced (27 POST, 5 DELETE, 3 PATCH) out of 77 non-GET routes in app.py. 10 reference an authority subsystem (5 directly, 5 one helper call down), 28 touch durable state, 3 contain a SQL write, and 20 can reach a subprocess, an outbound HTTP client or the OS keyring. Nine distinct refusal statuses come from the handlers, plus one computed code recorded as dynamic.",
-          "The shared boundary is recorded from the middleware itself: host allowlist 400, cross-origin 403 for state-changing methods, bearer token with secrets.compare_digest (401, or 503 when authentication is unconfigured), rate limit 429 on the six expensive POST paths and body size 413, with GET /healthz and GET / the only routes outside the protected prefixes."
+          "The shared boundary is recorded from the middleware itself: host allowlist 400, cross-origin 403 for state-changing methods, bearer token with secrets.compare_digest (401, or 503 when authentication is unconfigured), rate limit 429 on the six expensive POST paths and body size 413, with GET /healthz and GET / the only routes outside the protected prefixes.",
+          "Post-merge follow-up from issue #110: the trace was regenerated after the route map learned to follow forwarded helper parameters. It now covers 37 state-changing routes instead of 35 - POST /api/harness/sdlc/run (streams, can leave the machine) and POST /api/harness/sdlc/feedback (streams, spawns a subprocess via a helper, can leave the machine) were previously invisible because the map reported no browser caller for them. Coverage is still derived from the map in both directions, so the two routes arrived with their gates, refusals and subsystems, not by hand."
         ],
         "test_results": [
           {
@@ -1052,7 +1055,7 @@
         "progress_percent": 50,
         "attempts": 1,
         "started_at": "2026-10-31T11:38:38Z",
-        "updated_at": "2026-10-31T12:20:00Z",
+        "updated_at": "2026-10-31T13:20:00Z",
         "completed_at": null,
         "owner_session": "arena/c705f453-m5-agent-studio",
         "commit_sha": null,
@@ -1070,12 +1073,18 @@
           "AGENTS.md"
         ],
         "evidence": [
-          "Half 1, the test baseline: every command in verification_commands was run on this checkout at 866ec1c and its exit code recorded - pytest 0 (1541 passed, 1 skipped in 116 s), ruff 0, mypy 0 (58 files), check_frontend_syntax 0, demo_tour --check 0, validate_docs 0 (122 files), and all four UI/UX guards 0 (manifest 13 files pinned to 866ec1c063c0, inventory 170 markup controls, route map 53 call sites, trace 35 state-changing routes). all staged in docs/uiux-2-0-baseline-evidence.md.",
+          "Half 1, the test baseline: every command in verification_commands was run on this checkout at the pinned commit and its exit code recorded - pytest 0 (1588 passed, 1 skipped in 116 s), ruff 0, mypy 0 (58 files), check_frontend_syntax 0, demo_tour --check 0, validate_docs 0 (123 files), and all four UI/UX guards 0 (manifest 13 files pinned to ecd781675e58, inventory 170 markup controls, route map 53 call sites resolving to 61 URLs, trace 37 state-changing routes). All staged in docs/uiux-2-0-baseline-evidence.md, and re-staged when the route-map correction changed the numbers.",
           "Half 2, the capture plan, measured without a browser: node scripts/capture_screenshots.mjs --dry-run exits 0 and prints the resolved plan - 6 shots in manifest id order (start, harness, hall, council -> pipeline.png, debate -> compare.png, chat), viewport 1440x900 at device scale factor 2, output docs/media/screenshots, base URL unresolved as '<start scripts/demo_tour.py --serve>'. This proves the manifest, the tab ids and the output paths agree; it draws nothing.",
           "Half 3, the honest state of the visual gate: scripts/validate_screenshots.py exits 0 with 'Screenshot manifest validated: 0 of 6 captured', and docs/uiux-2-0-baseline-evidence.md records the exact commands a machine with Chrome/Chromium plus puppeteer-core must run. 0 of 6 is recorded as the current state, not as a pass.",
-          "Criterion-to-evidence map (the one this story can close): commands actually run with exit codes and the environment they ran in - docs/uiux-2-0-baseline-evidence.md, reproduced from these recorded results, not from memory."
+          "Criterion-to-evidence map (the one this story can close): commands actually run with exit codes and the environment they ran in - docs/uiux-2-0-baseline-evidence.md, reproduced from these recorded results, not from memory.",
+          "Re-measured after the P0-03 correction (issue #110) re-pinned the ledger to ecd7816: the route map now reports 53 call sites, 60 exact and 1 dynamic match, 0 findings and 58 routes with no browser caller, and the trace reports 37 state-changing routes. The suite grew from 1541 to 1588 passing tests. The visual half is unchanged: 0 of 6 screenshots, no browser in this environment."
         ],
         "test_results": [
+          {
+            "command": ".venv/bin/python -m mypy",
+            "exit_code": 0,
+            "result": "Success: no issues found in 58 source files"
+          },
           {
             "command": ".venv/bin/python -m pytest -q",
             "exit_code": 0,
@@ -1085,11 +1094,6 @@
             "command": ".venv/bin/python -m ruff check .",
             "exit_code": 0,
             "result": "All checks passed!"
-          },
-          {
-            "command": ".venv/bin/python -m mypy",
-            "exit_code": 0,
-            "result": "Success: no issues found in 58 source files"
           },
           {
             "command": ".venv/bin/python scripts/check_frontend_syntax.py",
@@ -1102,19 +1106,9 @@
             "result": "Demo transcript is up to date: /home/user/m5-agent-studio/docs/media/demo-transcript.md"
           },
           {
-            "command": ".venv/bin/python scripts/validate_screenshots.py",
+            "command": ".venv/bin/python scripts/uiux_authorization_trace.py --check",
             "exit_code": 0,
-            "result": "Screenshot manifest validated: 0 of 6 captured. Capture needs a browser; see docs/demo.md."
-          },
-          {
-            "command": ".venv/bin/python scripts/validate_docs.py",
-            "exit_code": 0,
-            "result": "Documentation validation passed (5 required pages, 122 files scanned)."
-          },
-          {
-            "command": ".venv/bin/python scripts/uiux_source_manifest.py --check",
-            "exit_code": 0,
-            "result": "UI source manifest is up to date: 13 files, 6 tabs, 115 routes, pinned to 866ec1c063c0"
+            "result": "UI authorization trace is up to date: 37 state-changing routes, 12 with an authority subsystem, 30 with durable state, 22 that can leave the machine"
           },
           {
             "command": ".venv/bin/python scripts/uiux_control_inventory.py --check",
@@ -1124,12 +1118,22 @@
           {
             "command": ".venv/bin/python scripts/uiux_route_map.py --check",
             "exit_code": 0,
-            "result": "UI route map is up to date: 53 call sites, 58 exact and 1 dynamic matches, 0 findings, 61 routes with no browser caller"
+            "result": "UI route map is up to date: 53 call sites, 60 exact and 1 dynamic matches, 0 findings, 58 routes with no browser caller"
           },
           {
-            "command": ".venv/bin/python scripts/uiux_authorization_trace.py --check",
+            "command": ".venv/bin/python scripts/uiux_source_manifest.py --check",
             "exit_code": 0,
-            "result": "UI authorization trace is up to date: 35 state-changing routes, 10 with an authority subsystem, 28 with durable state, 20 that can leave the machine"
+            "result": "UI source manifest is up to date: 13 files, 6 tabs, 115 routes, pinned to ecd781675e58"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py",
+            "exit_code": 0,
+            "result": "Documentation validation passed (5 required pages, 123 files scanned)."
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_screenshots.py",
+            "exit_code": 0,
+            "result": "Screenshot manifest validated: 0 of 6 captured. Capture needs a browser; see docs/demo.md."
           }
         ],
         "visual_evidence": [

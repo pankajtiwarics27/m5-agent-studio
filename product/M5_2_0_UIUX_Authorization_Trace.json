@@ -7,50 +7,50 @@
   "regenerate_with": "python3 scripts/uiux_authorization_trace.py",
   "check_with": "python3 scripts/uiux_authorization_trace.py --check",
   "statement": "For every state-changing route the browser can call: the shared gates every request passes, the refusals the handler raises, the authority and durable-state subsystems it references, and whether it can leave the machine. Derived from app.py and the P0-03 route map; a reference is evidence of a consultation, not proof of enforcement.",
-  "pinned_source_commit": "866ec1c063c0c750d40e219ddfc9107363732fc6",
+  "pinned_source_commit": "ecd781675e58b0735f8b590a67b39aaa2b910e49",
   "app_sha256": "e3dd15bef236555d4cb3fca12eac003a55e099b48bbefa20e313489af652f129",
-  "route_map_sha256": "9b679b9f6cd0e6c53e31ac6d031b914a2c4da482d905d01b87787fe97d29230b",
+  "route_map_sha256": "cd464275913c8c7feefaded9c21511ae310f7c1bf76c63032faed0dd7d277fbf",
   "totals": {
     "routes_in_app": 115,
     "state_changing_routes_in_app": 77,
-    "traced_routes": 35,
+    "traced_routes": 37,
     "traced_by_method": {
       "DELETE": 5,
       "PATCH": 3,
-      "POST": 27
+      "POST": 29
     },
-    "routes_with_authority_subsystem": 10,
-    "routes_with_authority_directly": 5,
-    "routes_with_state_subsystem": 28,
-    "routes_with_state_directly": 10,
+    "routes_with_authority_subsystem": 12,
+    "routes_with_authority_directly": 7,
+    "routes_with_state_subsystem": 30,
+    "routes_with_state_directly": 12,
     "routes_with_durable_writes": 3,
-    "routes_that_can_leave_the_machine": 20,
+    "routes_that_can_leave_the_machine": 22,
     "distinct_handler_refusals": 9,
     "refusals_by_status": {
-      "400": 58,
-      "401": 35,
-      "403": 37,
+      "400": 62,
+      "401": 37,
+      "403": 42,
       "404": 9,
-      "409": 8,
-      "413": 35,
-      "429": 5,
+      "409": 10,
+      "413": 37,
+      "429": 6,
       "500": 1,
       "502": 1,
       "503": 4,
       "507": 2
     },
     "shared_refusals_by_status": {
-      "400": 35,
-      "401": 35,
-      "403": 35,
-      "413": 35,
-      "429": 5
+      "400": 37,
+      "401": 37,
+      "403": 37,
+      "413": 37,
+      "429": 6
     },
     "handler_refusals_by_status": {
-      "400": 23,
-      "403": 2,
+      "400": 25,
+      "403": 5,
       "404": 9,
-      "409": 8,
+      "409": 10,
       "500": 1,
       "502": 1,
       "503": 4,
@@ -1168,6 +1168,176 @@
         "outbound_http": true,
         "os_keyring": false,
         "via_helpers": true,
+        "streams": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sdlc/feedback",
+      "handler": "api_run_sdlc_feedback_loop",
+      "handler_line": 20420,
+      "response": "stream",
+      "ui_callers": [
+        "consumeSSE"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 400,
+          "detail": "\"Both `session_id` and `feedback` are required.\""
+        },
+        {
+          "status": 403,
+          "detail": "\"Agile SDLC feedback loop cannot write `.sdlc` artifacts in read-only 'plan' mode.\""
+        },
+        {
+          "status": 409,
+          "detail": "f\"Workspace `{sdlc_fb_wt}` is quarantined (`{active_fb_q.quarantine_id}`); SDLC writes are frozen.\","
+        }
+      ],
+      "authority": [
+        "workspace_quarantine"
+      ],
+      "state": [
+        "runtime_persistence"
+      ],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "side_effect_ledger",
+        "task_events",
+        "workspace_snapshots"
+      ],
+      "helpers_scanned": [
+        "get_harness_session_db",
+        "_effective_harness_policy",
+        "_acquire_turn_lease_or_409",
+        "_ensure_sdlc_dir",
+        "build_efficiency_mode_prompt",
+        "_update_harness_session_state",
+        "_sse",
+        "_append_harness_event",
+        "build_skills_context",
+        "_fetch_online_inspiration",
+        "_read_sdlc_confined_text",
+        "_compute_git_diff"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": true,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": true,
+        "streams": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sdlc/run",
+      "handler": "api_run_agile_sdlc_factory",
+      "handler_line": 20101,
+      "response": "stream",
+      "ui_callers": [
+        "consumeSSE"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "rate_limit",
+          "status": 429,
+          "when": "more requests than the window allows"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 400,
+          "detail": "\"Product vision / prompt is required to start Agile SDLC.\""
+        },
+        {
+          "status": 403,
+          "detail": "\"Agile SDLC factory cannot write `.sdlc` artifacts in read-only 'plan' mode.\""
+        },
+        {
+          "status": 403,
+          "detail": "\"Agile SDLC factory cannot write `.sdlc` artifacts in read-only 'plan' mode.\""
+        },
+        {
+          "status": 409,
+          "detail": "f\"Workspace `{sdlc_wt_check}` is quarantined (`{active_sdlc_q.quarantine_id}`); SDLC writes are frozen.\","
+        }
+      ],
+      "authority": [
+        "workspace_quarantine"
+      ],
+      "state": [
+        "runtime_persistence"
+      ],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "side_effect_ledger",
+        "task_events"
+      ],
+      "helpers_scanned": [
+        "create_harness_session_db",
+        "_get_default_projects_dir",
+        "get_harness_session_db",
+        "_effective_harness_policy",
+        "_set_harness_session_policy",
+        "_acquire_turn_lease_or_409",
+        "_ensure_sdlc_dir",
+        "build_efficiency_mode_prompt",
+        "_update_harness_session_state",
+        "_sse",
+        "build_skills_context",
+        "_append_harness_event"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": false,
         "streams": true
       }
     },

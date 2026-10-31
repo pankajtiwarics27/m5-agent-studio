@@ -135,17 +135,38 @@ which frontend call hits which server route. It is derived from the 53 `fetch`
 calls, not from handler names — `loadProviders` proves nothing about its URL,
 the call inside it does.
 
-* **53 call sites resolve to 59 URLs**: 58 exact matches, **1 dynamic** and **0
-  findings** — no dead call, no call whose method disagrees with its route, no
-  URL that failed to resolve. Three resolution paths do the work: 51 URLs are
-  literals, 1 comes from a local `const` (`refreshOnboarding` chooses between
-  `/api/onboarding/preflight?probe=local` and the plain path), and 1 is a helper
-  parameter resolved from its call sites (`consumeSSE` receives its URL from six
-  callers, so it maps to six routes).
+* **53 call sites resolve to 61 URLs**: 60 exact matches, **1 dynamic**, **0
+  findings** and **0 unresolved** — no dead call, no call whose method disagrees
+  with its route, no URL that failed to resolve. Three resolution paths do the
+  work: 51 call sites are literal, 1 comes from a local `const`
+  (`refreshOnboarding` chooses between `/api/onboarding/preflight?probe=local`
+  and the plain path), and 1 is a helper parameter followed through every caller
+  — `consumeSSE` takes its URL as a parameter and reaches eight routes, six of
+  them directly and two through `_streamSdlcEndpoint`, which forwards its own
+  parameter into `consumeSSE`. Each URL carries the chain that supplied it, so
+  the map names `startSdlcRun` and `submitSdlcFeedback` instead of stopping at
+  the sink.
 * **1 dynamic match**: `/api/models/${id}/${act}` picks `load` or `unload` at
-  runtime, so both routes stay listed as candidates rather than one being guessed.
-* **54 of 115 routes have a browser caller**; the other 61 do not — which is not
-  dead code, because the CLI, the demo tour and the tests use the same API.
+  runtime, so both routes stay listed as candidates and the caller is recorded
+  as *possible* on each — never as proof of one.
+* **57 of 115 routes have a browser caller** (55 proved by a literal argument, 2
+  reachable only through a runtime-chosen segment); the other 58 do not — which
+  is not dead code, because the CLI, the demo tour and the tests use the same API.
+* **Line numbers are published twice**, `script_line` inside the inline script
+  and `document_line` in `static/index.html`, because the first read as the
+  second is off by all the markup above the script.
+* **The caller list is a lower bound whenever a call site stays unresolved**, and
+  the map says so in `caller_resolution` rather than leaving a reader to assume
+  every URL was traced.
+
+The first merged version of the map got three of these wrong, and the review in
+[issue #110](https://github.com/pankajtiwarics27/m5-agent-studio/issues/110)
+caught all three: it did not follow a forwarded helper parameter (so both SDLC
+routes looked unused), it recorded a dynamic match's caller on only the first
+candidate (so `unload` looked unused), and it published script-relative line
+numbers. The generator and the page now do all three honestly, with a
+regression test per case — including one that proves an unresolvable hand-off
+turns the "no caller" list into a stated lower bound instead of a clean table.
 
 What it does not claim: that any of these calls *works* (nothing was executed;
 authorization, request bodies and response handling are out of scope), that a
@@ -156,8 +177,11 @@ fails if the page drops them.
 ## The authorization and state trace
 
 `UIUX-P0-03` said where a call goes; `UIUX-P0-04` says what can stop it and what
-it changes. The trace covers the **35 distinct state-changing routes** the
-browser can call, out of 77 non-GET routes in `app.py`.
+it changes. The trace covers the **37 distinct state-changing routes** the
+browser can call, out of 77 non-GET routes in `app.py` — two more than when the
+story closed, because the route map learned to follow a forwarded helper
+parameter and recovered `POST /api/harness/sdlc/run` and
+`POST /api/harness/sdlc/feedback` (issue #110).
 
 * **The shared boundary is read from the middleware itself**: host allowlist
   (400), cross-origin rejection for state-changing methods (403), bearer token
@@ -166,13 +190,13 @@ browser can call, out of 77 non-GET routes in `app.py`.
   body-size limit (413). `GET /healthz` and `GET /` are the only routes outside
   the protected prefixes — the shell has to load before the browser has a token.
 * **Handler refusals are read from each handler's own raises**: nine distinct
-  statuses across the 35 routes, plus one raise whose code is computed at runtime
+  statuses across the 37 routes, plus one raise whose code is computed at runtime
   and is recorded as *dynamic* rather than guessed into a bucket.
-* **Authority and state are read one call deep.** Ten routes reference an
-  authority subsystem (five directly, five through a helper) and 28 touch durable
-  state; a blank cell means "nothing at this depth", never "unguarded".
-* **Twenty routes can leave the machine** — subprocess, outbound HTTP client or
-  the OS keyring, several of them one helper call away. That is the number a
+* **Authority and state are read one call deep.** Twelve routes reference an
+  authority subsystem (seven directly, five through a helper) and 30 touch
+  durable state; a blank cell means "nothing at this depth", never "unguarded".
+* **Twenty-two routes can leave the machine** — subprocess, outbound HTTP client
+  or the OS keyring, several of them one helper call away. That is the number a
   screen has to respect before it prints the word "local".
 
 What it does not claim: that a reference is a guard, that a computed status is
