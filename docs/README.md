@@ -45,6 +45,7 @@ contain placeholder text, and every relative link must resolve.
 | [`security-review-package.md`](security-review-package.md) | The independent-review package and boundary inventory (B1–B12) |
 | [`security-review-signoff.md`](security-review-signoff.md) | Reviewer record and release gate — currently unsigned |
 | [`sandbox-boundary.md`](sandbox-boundary.md) | Sandbox and filesystem boundary hardening |
+| [`security-incident-containment.md`](security-incident-containment.md) | Security dependency graphs, configuration generations, incident suspension, fallback qualification, and post-incident requalification |
 | [`execution-profiles.md`](execution-profiles.md) | Unified capability descriptors, conservative footprints, admission barriers, and expansion reconciliation |
 | [`mcp-idempotency.md`](mcp-idempotency.md) | MCP connector idempotency semantics, queryable-outcome reconciliation, and uncertain-write safe pause |
 | [`qualification-suite.md`](qualification-suite.md) | Operator-run sandbox and hardware qualification (what is measured, how to run it, how to read the record) |

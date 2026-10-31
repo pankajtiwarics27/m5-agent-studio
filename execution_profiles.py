@@ -1225,6 +1225,30 @@ def derive_execution_profile(
     )
 
 
+def required_security_guarantees(profile: ExecutionProfile) -> tuple[str, ...]:
+    """Return the canonical security guarantees that ``profile`` depends on (M5-P3-06)."""
+    desc = profile.descriptor
+    if desc.execution_surface == "subprocess" or desc.process_capability != "none":
+        return (
+            "container_filesystem_isolation",
+            "container_network_isolation",
+            "container_privilege_containment",
+            "container_resource_limits",
+            "container_process_lifetime",
+            "workspace_confinement",
+            "secret_and_vcs_protection",
+        )
+    if desc.execution_surface == "external":
+        if desc.action_class == "read_only":
+            return ("mcp_transport_boundary",)
+        return ("mcp_transport_boundary", "secret_and_vcs_protection")
+    if desc.fs_capability in {"workspace_targeted_write", "workspace_broad_write"}:
+        return ("workspace_confinement", "secret_and_vcs_protection")
+    if desc.fs_capability == "workspace_read":
+        return ("workspace_confinement",)
+    return ()
+
+
 # ---------------------------------------------------------------------------
 # 3. Unified policy evaluation (closing shell / Python / script bypasses)
 # ---------------------------------------------------------------------------
@@ -3154,6 +3178,7 @@ class UnifiedExecutionController:
         on_reconciled: Callable[[str, ExecutionProfile, FootprintReconciliation], None] | None = None,
         containment_store: process_supervision.ContainmentStore | None = None,
         grant_store: scoped_grants.ScopedGrantStore | None = None,
+        security_incident_store: sandbox_boundary.SecurityIncidentStore | None = None,
         current_boot_id: str | None = None,
         sql_task_fencing: bool = False,
         allow_readonly_inspection: bool = False,
@@ -3168,6 +3193,7 @@ class UnifiedExecutionController:
             on_reconciled=on_reconciled,
             containment_store=containment_store,
             grant_store=grant_store,
+            security_incident_store=security_incident_store,
             current_boot_id=current_boot_id,
             sql_task_fencing=sql_task_fencing,
             allow_readonly_inspection=allow_readonly_inspection,
@@ -3189,6 +3215,7 @@ class UnifiedExecutionCoordinator:
         on_reconciled: Callable[[str, ExecutionProfile, FootprintReconciliation], None] | None = None,
         containment_store: process_supervision.ContainmentStore | None = None,
         grant_store: scoped_grants.ScopedGrantStore | None = None,
+        security_incident_store: sandbox_boundary.SecurityIncidentStore | None = None,
         current_boot_id: str | None = None,
         sql_task_fencing: bool = False,
         allow_readonly_inspection: bool = False,
@@ -3206,9 +3233,58 @@ class UnifiedExecutionCoordinator:
         self._grant_store = grant_store or (
             scoped_grants.ScopedGrantStore(store_dir) if store_dir is not None else None
         )
+        self._security_incident_store = security_incident_store or (
+            sandbox_boundary.SecurityIncidentStore(
+                store_dir, containment_store=self._containment_store
+            )
+            if store_dir is not None
+            else None
+        )
         self._current_boot_id = current_boot_id
         self._sql_task_fencing = bool(sql_task_fencing)
         self._allow_readonly_inspection = bool(allow_readonly_inspection)
+
+    def _check_security_incident_denial(
+        self,
+        request: execution_spine.ActionRequest,
+        profile: ExecutionProfile,
+        *,
+        mode: str,
+    ) -> tuple[execution_spine.ProfileAdmissionOutcome | None, bool]:
+        if self._security_incident_store is None:
+            return None, self._container_qualified
+        req_guarantees = required_security_guarantees(profile)
+        try:
+            sec_dec = self._security_incident_store.check_admission(
+                required_guarantees=req_guarantees,
+                execution_surface=profile.descriptor.execution_surface,
+                execution_mode=mode,
+                session_id=request.session_id,
+                workspace_root=self._workspace_root,
+            )
+        except sandbox_boundary.SecurityIncidentIntegrityError as exc:
+            return (
+                execution_spine.ProfileAdmissionOutcome(
+                    allowed=False,
+                    reason=f"Security incident store integrity failure (fail closed): {exc}",
+                    error_code="security_state_corrupt",
+                    footprint_scope=profile.footprint.scope,
+                    profile=profile.to_mapping(),
+                ),
+                False,
+            )
+        if not sec_dec.allowed:
+            return (
+                execution_spine.ProfileAdmissionOutcome(
+                    allowed=False,
+                    reason=sec_dec.reason,
+                    error_code=(sec_dec.error_code or "security_guarantee_suspended"),
+                    footprint_scope=profile.footprint.scope,
+                    profile=profile.to_mapping(),
+                ),
+                False,
+            )
+        return None, bool(self._container_qualified or sec_dec.container_qualified)
 
     def _derive_grant_capabilities_and_scopes(
         self,
@@ -3236,10 +3312,8 @@ class UnifiedExecutionCoordinator:
         effective_policy: str,
         action_class: execution_spine.ActionClass,
     ) -> execution_spine.ProfileAdmissionOutcome | None:
-        """Enforce active revocations & explicit grant denials BEFORE policy `requires_approval` (`AC 1` & `AC 3`)."""
+        """Enforce active security incidents, revocations & explicit grant denials BEFORE policy `requires_approval`."""
         _ = (effective_policy, action_class)
-        if self._grant_store is None:
-            return None
         mode = self._current_execution_mode()
         profile = derive_execution_profile(
             request.tool_name,
@@ -3249,6 +3323,12 @@ class UnifiedExecutionCoordinator:
             execution_mode=mode,
             container_qualified=self._container_qualified,
         )
+        sec_denial, _ = self._check_security_incident_denial(request, profile, mode=mode)
+        if sec_denial is not None:
+            return sec_denial
+
+        if self._grant_store is None:
+            return None
         caps, scopes = self._derive_grant_capabilities_and_scopes(request, profile)
         rev = self._grant_store.check_revocation_denials(
             session_id=request.session_id,
@@ -3379,6 +3459,20 @@ class UnifiedExecutionCoordinator:
             execution_mode=mode,
             container_qualified=self._container_qualified,
         )
+        sec_denial, eff_qualified = self._check_security_incident_denial(
+            request, profile, mode=mode
+        )
+        if sec_denial is not None:
+            return sec_denial
+        if eff_qualified != self._container_qualified:
+            profile = derive_execution_profile(
+                request.tool_name,
+                request.args,
+                workspace_root=self._workspace_root,
+                session_id=request.session_id,
+                execution_mode=mode,
+                container_qualified=eff_qualified,
+            )
         violation = evaluate_unified_policy(
             profile.descriptor,
             request.tool_name,
