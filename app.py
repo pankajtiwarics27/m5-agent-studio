@@ -80,8 +80,9 @@ import workflow_checkpoints
 import workflow_state
 import edit_rollback
 import edit_transactions
+import execution_profiles
 import model_admission
-import resource_admission  # noqa: F401 - inlined into studio.py; model_admission uses it
+import resource_admission  # noqa: F401 - inlined into studio.py; execution_profiles/model_admission use it
 import verification_evidence
 import workspace_snapshots
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
@@ -438,22 +439,14 @@ def _sandbox_command(root: Path, command: str, *, python_code: bool = False, con
     runtime_path = shutil.which(STUDIO_SANDBOX_RUNTIME)
     if not runtime_path:
         raise RuntimeError(f"Sandbox runtime `{STUDIO_SANDBOX_RUNTIME}` is not installed or not on PATH.")
-    name = container_name or f"m5-studio-{uuid.uuid4().hex[:20]}"
-    argv = [
-        runtime_path, "run", "--rm", "--pull=never", "--name", name,
-        "--network=none", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges",
-        "--env", "HOME=/tmp", "--env", "TMPDIR=/tmp", "--env", "PYTHONDONTWRITEBYTECODE=1",
-        "--pids-limit=128", "--memory=2g", "--cpus=2", "--ipc=private",
-        "--ulimit", "nofile=1024:1024", "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=256m",
-        "--mount", f"type=bind,source={resolved},target=/workspace",
-        "--workdir", "/workspace", "--entrypoint", "/bin/sh",
-    ]
-    if os.name == "posix" and hasattr(os, "getuid") and hasattr(os, "getgid"):
-        argv.extend(["--user", f"{os.getuid()}:{os.getgid()}"])
-    argv.append(STUDIO_SANDBOX_IMAGE)
-    shell_command = f"exec python3 -c {shlex.quote(command)}" if python_code else command
-    argv.extend(["-lc", shell_command])
-    return argv
+    return sandbox_boundary.build_container_invocation(
+        resolved,
+        command,
+        runtime_path=runtime_path,
+        image=STUDIO_SANDBOX_IMAGE,
+        python_code=python_code,
+        container_name=container_name,
+    )
 
 
 async def _cleanup_sandbox_container(name: str) -> None:
@@ -1490,6 +1483,7 @@ def simulate_process_restart() -> str:
     """Rotate process boot nonce and run startup lease/intent recovery (`init_db()`)."""
     global _PROCESS_BOOT_ID
     _PROCESS_BOOT_ID = uuid.uuid4().hex[:10]
+    _reset_execution_profile_controller(None)
     init_db()
     return _PROCESS_BOOT_ID
 
@@ -6657,11 +6651,19 @@ class ToolAuthorization:
     requires_approval: bool = False
     reason: str = ""
     action_class: execution_spine.ActionClass = "consequential"
+    error_code: str | None = None
 
 
 def _effective_harness_policy(requested: Any, session: dict[str, Any]) -> str:
     candidate = requested or session.get("policy") or "standard"
     return str(candidate) if candidate in HARNESS_POLICIES else "standard"
+
+
+def _safe_execution_mode_label() -> str:
+    try:
+        return _execution_mode()
+    except PermissionError:
+        return "disabled"
 
 
 def authorize_tool_invocation(
@@ -6670,6 +6672,7 @@ def authorize_tool_invocation(
     policy: str,
     *,
     approved: bool = False,
+    workspace_root: Path | None = None,
 ) -> ToolAuthorization:
     """Single deny-by-default policy decision for built-in, skill, and MCP tool execution."""
     effective_policy = _effective_harness_policy(policy, {})
@@ -6700,6 +6703,20 @@ def authorize_tool_invocation(
             )
         if not approved:
             return ToolAuthorization(False, True, "Skill script execution requires explicit server opt-in grant.", action_class)
+        skill_desc = execution_profiles.resolve_capability_descriptor(
+            tool_name, safe_args, execution_mode=mode
+        )
+        skill_viol = execution_profiles.evaluate_unified_policy(
+            skill_desc,
+            tool_name,
+            safe_args,
+            effective_policy=effective_policy,
+            workspace_root=workspace_root,
+        )
+        if skill_viol is not None:
+            return ToolAuthorization(
+                False, True, skill_viol.message, action_class, skill_viol.error_code
+            )
         return ToolAuthorization(True, True, action_class=action_class)
 
     if tool_name.startswith("mcp_bridge__"):
@@ -6766,6 +6783,25 @@ def authorize_tool_invocation(
 
     if requires_approval and not approved:
         return ToolAuthorization(False, True, "Tool requires explicit approval.", action_class=action_class)
+
+    descriptor = execution_profiles.resolve_capability_descriptor(
+        tool_name, safe_args, execution_mode=_safe_execution_mode_label()
+    )
+    violation = execution_profiles.evaluate_unified_policy(
+        descriptor,
+        tool_name,
+        safe_args,
+        effective_policy=effective_policy,
+        workspace_root=workspace_root,
+    )
+    if violation is not None:
+        return ToolAuthorization(
+            False,
+            requires_approval,
+            violation.message,
+            action_class=action_class,
+            error_code=violation.error_code,
+        )
     return ToolAuthorization(True, requires_approval, action_class=action_class)
 
 
@@ -9007,18 +9043,24 @@ class _AppToolPolicy:
     policy behind ``execution_spine.Policy``. Kept in app.py because it reads
     app-level state; the decision algorithm lives in ``authorize_tool_invocation``."""
 
+    def __init__(self, *, workspace_root: Path | None = None) -> None:
+        self._workspace_root = workspace_root
+
     def effective_policy(self, requested: str) -> str:
         return _effective_harness_policy(requested, {})
 
     def authorize(
         self, tool_name: str, args: dict[str, Any], policy: str, *, approved: bool
     ) -> execution_spine.AdmissionDecision:
-        decision = authorize_tool_invocation(tool_name, args, policy, approved=approved)
+        decision = authorize_tool_invocation(
+            tool_name, args, policy, approved=approved, workspace_root=self._workspace_root
+        )
         return execution_spine.AdmissionDecision(
             bool(decision.allowed),
             str(decision.reason or ""),
             bool(decision.requires_approval),
             decision.action_class,
+            decision.error_code,
         )
 
 
@@ -9621,6 +9663,57 @@ class _AppTaskContextResolver:
         )
 
 
+_EXECUTION_PROFILE_CONTROLLER: execution_profiles.UnifiedExecutionController | None = None
+_EXECUTION_PROFILE_CONTROLLER_LOCK = threading.Lock()
+
+
+def _execution_profile_controller() -> execution_profiles.UnifiedExecutionController:
+    """Process-wide unified execution-profile and resource-barrier controller (M5-P3-02)."""
+    global _EXECUTION_PROFILE_CONTROLLER
+    with _EXECUTION_PROFILE_CONTROLLER_LOCK:
+        if _EXECUTION_PROFILE_CONTROLLER is None:
+            _EXECUTION_PROFILE_CONTROLLER = execution_profiles.UnifiedExecutionController()
+        return _EXECUTION_PROFILE_CONTROLLER
+
+
+def _reset_execution_profile_controller(
+    controller: execution_profiles.UnifiedExecutionController | None = None,
+) -> None:
+    """Replace or clear the process-wide execution-profile controller (tests / simulated restart)."""
+    global _EXECUTION_PROFILE_CONTROLLER
+    with _EXECUTION_PROFILE_CONTROLLER_LOCK:
+        _EXECUTION_PROFILE_CONTROLLER = controller
+
+
+def _on_footprint_reconciled(
+    session_id: str,
+    profile: execution_profiles.ExecutionProfile,
+    reconciliation: execution_profiles.FootprintReconciliation,
+) -> None:
+    if not session_id:
+        return
+    if reconciliation.status in {"policy_violation", "scope_violation"}:
+        event_type = "execution/footprint_violation"
+    elif profile.descriptor.execution_surface != "managed":
+        event_type = "execution/footprint_reconciled"
+    else:
+        return
+    _safe_append_harness_event(
+        session_id,
+        event_type,
+        {
+            "tool": profile.descriptor.tool_name,
+            "scope": profile.footprint.scope,
+            "status": reconciliation.status,
+            "expanded": reconciliation.expanded,
+            "undeclared_paths": list(reconciliation.undeclared_paths[:20]),
+            "reconciled_paths": list(reconciliation.reconciled_paths[:20]),
+            "quarantined_paths": list(reconciliation.quarantined_paths[:20]),
+            "policy_violations": [dict(v) for v in reconciliation.policy_violations[:10]],
+        },
+    )
+
+
 async def _run_authorized_tool(
     tool_name: str,
     args: dict[str, Any],
@@ -9649,15 +9742,31 @@ async def _run_authorized_tool(
     Thin adapter over the extracted execution-spine boundary
     (``execution_spine.DurableActionBoundary``; see ADR-0002): action-class
     separation, grant provenance, task-state/epoch fencing, policy evaluation,
-    durable ``runtime_actions`` intent/result ledger + ``tool_audit_events``
-    auditing, replay safety, and scoped anti-bypass admission tokens are
-    enforced there."""
+    unified execution profiles & resource barriers (M5-P3-02), durable
+    ``runtime_actions`` intent/result ledger + ``tool_audit_events`` auditing,
+    replay safety, post-execution footprint reconciliation, and scoped
+    anti-bypass admission tokens are enforced there."""
+    db_path_obj = Path(DB_PATH)
+    profile_coord = _execution_profile_controller().bind(
+        workspace_root=workspace_root,
+        store_dir=HARNESS_STORE_DIR,
+        ignore_paths=(
+            db_path_obj,
+            Path(f"{db_path_obj}-wal"),
+            Path(f"{db_path_obj}-shm"),
+            Path(f"{db_path_obj}-journal"),
+            Path(HARNESS_STORE_DIR),
+        ),
+        execution_mode_fn=_safe_execution_mode_label,
+        on_reconciled=_on_footprint_reconciled,
+    )
     boundary = execution_spine.DurableActionBoundary(
-        _AppToolPolicy(),
+        _AppToolPolicy(workspace_root=workspace_root),
         _AppActionLedger(),
         pre_execute_guard=lambda: runtime_persistence.assert_no_active_write_transaction("tool_execution"),
         task_context_resolver=_AppTaskContextResolver(),
         intent_ledger=_AppIntentLedger(workspace_root=workspace_root),
+        profile_coordinator=profile_coord,
     )
     return await boundary.admit_and_execute(
         execution_spine.ActionRequest(
