@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import stat
 import sys
+import tempfile
 import textwrap
 from typing import Any
 
@@ -1250,3 +1251,158 @@ def test_api_reconcile_endpoint_and_worker_lease_takeover_without_duplicate_effe
         assert replay["already_committed"] is True
         assert remote_deployments == ["rel-2026-10-31"]
 
+
+
+# --- durable-record redaction (review follow-up) ------------------------------
+
+_CREDENTIAL_ARG_KEYS = [
+    "Authorization",
+    "authorization",
+    "authentication",
+    "oauth",
+    "authToken",
+    "accessToken",
+    "bearerToken",
+    "refreshToken",
+    "sessionKey",
+    "X-Api-Key",
+    "apiKey",
+    "API_KEY",
+    "clientSecret",
+    "secret",
+    "password",
+    "privateKey",
+    "cookie",
+    "set-cookie",
+    "webhook_url",
+    "X-Auth-Token",
+]
+
+_BENIGN_ARG_KEYS = [
+    "order_id",
+    "user_name",
+    "quantity",
+    "note",
+    "max_tokens_value",  # a compound that is not a credential name
+    "idempotency_key",
+]
+
+
+@pytest.mark.parametrize("key", _CREDENTIAL_ARG_KEYS)
+def test_credential_argument_names_are_redacted_whatever_their_spelling(key: str) -> None:
+    """`Authorization`, `X-Api-Key` and `accessToken` used to be stored verbatim.
+
+    The old match required the token to be delimited by `_` or `-` on both sides, so
+    `auth` lost to `orization` and camelCase compounds matched nothing at all.
+    """
+    root = Path(tempfile.mkdtemp())
+    store = mcp_client.McpExternalEffectStore(root)
+    semantics = mcp_client.classify_mcp_tool_semantics(
+        {"alias": "srv", "transport": "http"}, {"name": "create"}
+    )
+    store.stage_dispatch(
+        action_id="act-redact",
+        session_id="sess",
+        task_id=None,
+        epoch=0,
+        semantics=semantics,
+        arguments={key: "LEAKME-VALUE"},
+        bound_idempotency_key="act-redact",
+        known_secret_values=("LEAKME-VALUE",),
+    )
+    state = json.loads((root / "mcp_effects" / "state.json").read_text(encoding="utf-8"))
+    stored = state["effects"]["act-redact"]["redacted_args"]
+    assert stored[key] == "[REDACTED]", stored
+    assert "LEAKME-VALUE" not in json.dumps(state)
+
+
+@pytest.mark.parametrize("key", _BENIGN_ARG_KEYS)
+def test_ordinary_argument_names_survive_redaction(key: str) -> None:
+    store = mcp_client.McpExternalEffectStore(Path(tempfile.mkdtemp()))
+    semantics = mcp_client.classify_mcp_tool_semantics(
+        {"alias": "srv", "transport": "http"}, {"name": "create"}
+    )
+    record = store.stage_dispatch(
+        action_id="act-benign",
+        session_id="sess",
+        task_id=None,
+        epoch=0,
+        semantics=semantics,
+        arguments={key: "A-1"},
+        bound_idempotency_key="act-benign",
+    )
+    assert record.redacted_args[key] == "A-1"
+
+
+def test_remote_text_is_scrubbed_before_it_is_persisted() -> None:
+    """`last_error` and `reconciled_output` carried remote-controlled text unscrubbed."""
+    root = Path(tempfile.mkdtemp())
+    store = mcp_client.McpExternalEffectStore(root)
+    semantics = mcp_client.classify_mcp_tool_semantics(
+        {"alias": "srv", "transport": "http"}, {"name": "create"}
+    )
+    store.stage_dispatch(
+        action_id="act-text",
+        session_id="sess",
+        task_id=None,
+        epoch=0,
+        semantics=semantics,
+        arguments={"order": "A-1"},
+        bound_idempotency_key="act-text",
+    )
+    store.record_outcome(
+        "act-text",
+        status="uncertain",
+        output="ok, caller used Bearer tok-abcdef123",
+        error="upstream rejected Bearer tok-abcdef123 for key sk-live-REGISTERED",
+        known_secret_values=("sk-live-REGISTERED",),
+    )
+    raw = (root / "mcp_effects" / "state.json").read_text(encoding="utf-8")
+    assert "tok-abcdef123" not in raw
+    assert "sk-live-REGISTERED" not in raw
+    assert "[REDACTED]" in raw
+
+
+def test_reconciliation_text_is_scrubbed_before_it_is_persisted() -> None:
+    root = Path(tempfile.mkdtemp())
+    store = mcp_client.McpExternalEffectStore(root)
+    semantics = mcp_client.classify_mcp_tool_semantics(
+        {"alias": "srv", "transport": "http"}, {"name": "create"}
+    )
+    store.stage_dispatch(
+        action_id="act-rec",
+        session_id="sess",
+        task_id=None,
+        epoch=0,
+        semantics=semantics,
+        arguments={"order": "A-1"},
+        bound_idempotency_key="act-rec",
+    )
+    store.record_reconciliation(
+        "act-rec",
+        verdict="verified_committed",
+        reconciled_by="operator used Bearer tok-abcdef123",
+        reconciled_output='{"Authorization": "Bearer tok-abcdef123"}',
+        known_secret_values=(),
+    )
+    raw = (root / "mcp_effects" / "state.json").read_text(encoding="utf-8")
+    assert "tok-abcdef123" not in raw
+
+
+def test_correlation_metadata_is_only_bound_to_tools_call() -> None:
+    """A future `tools/list` call site cannot pick up an `actionId` by accident."""
+    semantics = mcp_client.classify_mcp_tool_semantics(
+        {"alias": "srv", "transport": "http"}, {"name": "send", "annotations": {"idempotentHint": True}}
+    )
+    params = {"name": "send", "arguments": {"x": 1}}
+    bound, key = mcp_client.bind_tool_call_params(
+        params, action_id="act-1", semantics=semantics, method="tools/list"
+    )
+    assert bound == params
+    assert key is None
+
+    bound_call, key_call = mcp_client.bind_tool_call_params(
+        params, action_id="act-1", semantics=semantics
+    )
+    assert bound_call["_meta"]["m5.studio/actionId"] == "act-1"
+    assert key_call == "act-1"
