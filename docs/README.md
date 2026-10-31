@@ -133,6 +133,7 @@ codes, blocked measurements) ·
 [`m5-2-0-hardware-qualification-evidence.md`](m5-2-0-hardware-qualification-evidence.md)
 (operator-run 24 GB Apple M5 hardware qualification for `M5-P4-01`, 2026-10-31) ·
 [`m5-2-0-sandbox-memory-limit-finding.md`](m5-2-0-sandbox-memory-limit-finding.md)
+[`m5-2-0-sandbox-isolation-evidence.md`](m5-2-0-sandbox-isolation-evidence.md) — the operator run that qualified container isolation on the target host (`M5-P3-01`), with the residual it measures.
 (open sandbox memory-limit finding for `M5-P3-01`: 3 GiB allocated under a 512 MiB cap) ·
 [`m5-2-0-security-release-gate.md`](m5-2-0-security-release-gate.md)
 (executed `M5-P5-03` fault-injection & adversarial release gate, metrics, residual risks, and `release-blocked` decision) ·

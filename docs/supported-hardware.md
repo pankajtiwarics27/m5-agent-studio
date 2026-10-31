@@ -24,7 +24,7 @@ Studio reports memory pressure rather than refusing to start.
 
 | Platform | Status | Evidence |
 |---|---|---|
-| macOS (Apple Silicon) | **First target** | User-reported runs on macOS / Python 3.15 at `b7d841a`: full suite 438 passed, 1 skipped; macOS Keychain round-trip at `b452441`; Docker Desktop live sandbox test at `b452441`. Operator qualification run on an Apple M5 / 24 GiB at `d0e47f0` (2026-10-31): `--hardware` `qualified`, `--sandbox` `unqualified` ([record](m5-2-0-hardware-qualification-evidence.md)) |
+| macOS (Apple Silicon) | **First target** | User-reported runs on macOS / Python 3.15 at `b7d841a`: full suite 438 passed, 1 skipped; macOS Keychain round-trip at `b452441`; Docker Desktop live sandbox test at `b452441`. Operator qualification runs on an Apple M5 / 24 GiB (2026-10-31): `--hardware` `qualified` at `d0e47f0` ([record](m5-2-0-hardware-qualification-evidence.md)); `--sandbox` `qualified` later the same day on Docker Desktop 29.5.3, 12/12 checks, after an earlier run failed the memory-limit check ([record](m5-2-0-sandbox-isolation-evidence.md)) |
 | Linux x86_64 | **Validated in CI** | Full suite green on Python 3.11/3.12/3.13 for every push (see `.github/workflows/ci.yml`) |
 | Linux arm64 | Expected, untested | Nothing is arch-specific, but no evidence exists |
 | Windows | **Untested** | Code avoids Unix-only assumptions where it can, and descriptor/no-follow workspace operations fail closed when unavailable — so workspace file tools may refuse to run |

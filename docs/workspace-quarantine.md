@@ -19,7 +19,7 @@ generated `studio.py`). Store: `$HARNESS_STORE_DIR/workspace_quarantine/`.
 | Refuse an accepted path that was never preserved | implemented, tested |
 | Refuse to reconstruct over an existing directory (user work) | implemented, tested |
 | Report `unresolvable_locally` on host compromise without qualified isolation | implemented, tested |
-| Verify reconstruction under **qualified** isolation | **not available here** — isolation is unqualified (see `docs/m5-2-0-isolation-smoke-evidence.md`) |
+| Verify reconstruction under **qualified** isolation | available only where isolation is qualified: the target Apple M5 host since 2026-10-31 ([`m5-2-0-sandbox-isolation-evidence.md`](m5-2-0-sandbox-isolation-evidence.md)); unqualified in CI, which has no container runtime (`docs/m5-2-0-isolation-smoke-evidence.md`) |
 | Stop a writer that bypasses M5 tools (for example a supervised shell command) | **not claimed** — the freeze covers M5 mutations only |
 
 ## Operator flow

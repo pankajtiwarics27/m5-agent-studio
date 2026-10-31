@@ -1,15 +1,15 @@
-# Sandbox memory-limit finding (M5-P3-01, open)
+# Sandbox memory-limit finding (M5-P3-01, resolved 2026-10-31)
 
-An **open qualification finding** about the container memory limit the product
-ships. It records what one operator run observed on real hardware, the three
-mechanisms that could explain it, what each would mean for the product, and the
-evidence that would settle it. It is deliberately not a verdict: nothing here is
-waived, `M5-P3-01` stays `blocked`, and no claim is made that the sandbox is
-either safe or unsafe overall.
+A qualification finding about the container memory limit the product ships,
+**closed by a later operator run on the same machine**. It records what one run
+observed on real hardware, the three mechanisms that could explain it, what each
+would mean for the product, and the evidence that settled it. The original
+analysis is kept unchanged below, because the run that closed the finding did
+not explain the earlier observation — it produced a passing one.
 
 | Field | Value |
 |---|---|
-| Status | **open / unqualified** — no mechanism established |
+| Status | **resolved 2026-10-31** — the check now passes on the target host (`exit 137`, counters captured); see [Resolution](#resolution-2026-10-31) |
 | Story | `M5-P3-01` (Sandbox backend qualification suite) |
 | First observed | 2026-10-31, operator run on Apple M5, macOS 26.6.1 |
 | Engine | Docker Desktop 29.5.3, engine 29.5.3 build `d1c06ef`, context `desktop-linux`, `CgroupVersion=2` / driver `cgroupfs`, overlayfs, VM memory 8,321,515,520 B |
@@ -17,6 +17,34 @@ either safe or unsafe overall.
 | Failing check | `p3.adversarial.memory_limit` — "a 3 GiB allocation is refused under `--memory 512m`" |
 | Recorded detail (then) | `exit 0` |
 | Artifact (operator's machine, `dist/` is ignored) | `qualification-20261031T074459Z.json` / `.md` |
+
+## Resolution (2026-10-31)
+
+The operator re-ran the suite on the same Apple M5 with Docker Desktop 29.5.3.
+`p3.adversarial.memory_limit` **passed**: exit **137**, with
+`memory.max=536870912`, `memory.swap.max=536870912` and host
+`SwapTotal=1048572 kB` captured by the two-phase probe. The probe container
+(`--memory 512m`, no `--memory-swap`) therefore had a bounded swap allowance of
+512 MiB, so its total ceiling was 1 GiB and the 3 GiB allocation was refused by
+the kernel. All twelve sandbox checks passed and `M5-P3-01` is `qualified`; the
+full record is
+[`docs/m5-2-0-sandbox-isolation-evidence.md`](m5-2-0-sandbox-isolation-evidence.md).
+
+What that does and does not settle:
+
+* **Settled:** on this host, engine and image the limit is enforced, and the
+  counters needed to read a future failure are now recorded.
+* **Not settled:** the cause of the 2026-10-30 `exit 0`. That record captured no
+  counters, so candidates A and B both remain compatible with it. No re-run was
+  performed until it turned green — a later run produced a different observation.
+* **Newly measured:** the engine's default swap allowance (half the memory
+  limit) applies to the shipped `--memory=2g` too, so the sandbox's ceiling is
+  RAM + swap (~4 GiB), not 2 GiB. Pinning `--memory-swap` is a follow-up
+  hardening change, not something this finding closes.
+
+`dependent_execution` is no longer blocked by this finding: the qualification
+run's `p3.product.isolation_smoke` released it under the observed container
+boundary.
 
 ## 1. What was observed
 

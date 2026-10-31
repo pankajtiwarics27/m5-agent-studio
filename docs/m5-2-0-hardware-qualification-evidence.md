@@ -151,20 +151,22 @@ What the record does **not** establish:
 - That the 80 % reservation constant matches a real model footprint: the
   measurements above describe one 4-bit model on one 24 GiB machine, not a
   per-model sizing model.
-- Any container-isolation guarantee: the sandbox suite on the same machine
-  returned `unqualified` (§8).
+- Any container-isolation guarantee: that is `M5-P3-01`'s record, not this one.
+  The sandbox suite on the same machine first returned `unqualified` and, on a
+  later run of the day, `qualified` (§8); the qualification belongs to
+  [`m5-2-0-sandbox-isolation-evidence.md`](m5-2-0-sandbox-isolation-evidence.md).
 
-## 8. Two hardware runs, and the sandbox run beside them
+## 8. Two hardware runs, and the sandbox runs beside them
 
-Three records were produced on this machine on 2026-10-31. Keeping all of them
-is the point — the first one failed, and it failed for a reason worth writing
-down.
+Four records were produced on this machine on 2026-10-31. Keeping all of them is
+the point — two failed, and they failed for reasons worth writing down.
 
 | Record | Suite | Verdict | Why |
 |---|---|---|---|
 | `qualification-20261031T074346Z` | `--hardware` | **unqualified** | `p4.model_load` 0/3: every run died in argparse with `--server-pid: invalid int value: ''` |
 | `qualification-20261031T074459Z` | `--sandbox --runtime docker` | **unqualified** | `p3.adversarial.memory_limit`: a 3 GiB allocation completed under `--memory 512m` (`detail: exit 0`) |
 | `qualification-20261031T074929Z` | `--hardware` | **qualified** | `p4.model_load` 3/3 (§4) |
+| `qualification-20261031T091931Z` | `--sandbox --runtime docker` | **qualified** | 12/12 checks, `p3.adversarial.memory_limit` now `exit 137` with `memory.swap.max=536870912` captured — [`m5-2-0-sandbox-isolation-evidence.md`](m5-2-0-sandbox-isolation-evidence.md) |
 
 The first hardware run failed on the **operator's command**, not on the product:
 the pid for `--server-pid` was produced by inlining
