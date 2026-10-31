@@ -229,6 +229,14 @@ surface, and it is what stories `M5-P0-06` and `M5-P1-*` address.
    `tests/test_live_sandbox.py` is skipped absent explicit opt-in (recorded in
    the baseline evidence). Isolation guarantees are therefore unqualified.
 
+   *Superseded 2026-10-31 (M5-P3-01):* an operator run on the target Apple M5
+   with Docker Desktop 29.5.3 passed all twelve sandbox checks, including
+   `isolation_smoke.py --live`, so isolation is qualified **on that host**; any
+   host without its own run, including CI, is still unqualified
+   ([`m5-2-0-sandbox-isolation-evidence.md`](m5-2-0-sandbox-isolation-evidence.md)).
+   The paragraph above records this audit's 2026-10-30 state and is kept as
+   written.
+
 ## 6. Verification commands for this audit
 
 ```bash

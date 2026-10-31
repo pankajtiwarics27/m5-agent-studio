@@ -92,7 +92,9 @@ pins) so an operator can see the registry without a new endpoint.
 ## Known limits
 
 - The registry records lineage; it does not decide whether content is *safe*. Nothing here
-  substitutes for the isolation boundary, which is unqualified in this environment.
+  substitutes for the isolation boundary, which is qualified on the target host only
+  ([record](m5-2-0-sandbox-isolation-evidence.md)); an environment without its own run
+  is unqualified.
 - Trust labels are recorded by the caller. A call site that mislabels its own output
   records a wrong history faithfully; the module cannot audit its own callers.
 - The generation gate covers the verification window only. A configuration change between

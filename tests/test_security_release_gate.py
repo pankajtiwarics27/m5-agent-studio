@@ -114,15 +114,18 @@ def test_full_fault_injection_and_adversarial_suite_passes_and_blocks_deferred_r
     assert report.gate_invariants_satisfied is True
 
     # All 3 M5-P5-03 acceptance criteria hold (AC3 holds via fail-closed release-blocked),
-    # and the isolation prerequisite is reported as measured-unqualified rather than
-    # silently folded into AC1.
+    # and the isolation prerequisite is reported next to them from its own measured
+    # record rather than being folded into AC1.
     assert report.acceptance_criteria == {
         "no_critical_unauthorized_execution_paths": True,
         "no_silent_user_data_loss": True,
         "security_signoff_recorded_or_release_blocked": True,
-        "container_isolation_qualified": False,
+        "container_isolation_qualified": True,
     }
-    assert report.prerequisites.isolation_status == "unqualified"
+    # The target-host operator run of 2026-10-31 qualified the sandbox backend, so the
+    # roadmap story is done and the criterion follows it; the release is still blocked,
+    # by the deferred sign-off rather than by isolation.
+    assert report.prerequisites.isolation_status == "qualified"
     # The isolation criterion is reported, not waived: it does not mask the harness verdict.
     assert report.gate_invariants_satisfied is True
 
@@ -543,39 +546,52 @@ def test_container_isolation_criterion_follows_the_roadmap_and_never_releases(tm
     assert "| `no_critical_unauthorized_execution_paths` | `yes` |" in markdown
 
 
-def test_residual_risk_02_reports_the_measured_memory_cap_finding_it_blocks_on() -> None:
-    """The isolation residual risk must state what was measured, not that nothing was.
+def test_residual_risk_02_reports_the_measured_isolation_record_and_its_residual() -> None:
+    """The isolation risk must state what was measured, in both directions.
 
-    M5-P3-01 was qualified once on the target host and failed one check, so a
-    summary saying qualification "has not been recorded" is wrong and hides the
-    specific failure an operator needs to see when reading a blocked release
-    decision. The gate must keep blocking, and its claims must be backed by the
-    committed finding rather than drifting away from it.
+    Once nothing was recorded, "has not been recorded" was the wrong sentence.
+    Now that a run qualified the backend, keeping the old failing text would be
+    the same error mirrored: it would claim an unqualified isolation boundary
+    the record contradicts, and it would hide the swap-headroom residual that
+    the passing run actually measured. The gate must report the qualification,
+    keep the earlier failure visible, and cite the committed record.
     """
     risks = {r.risk_id: r for r in srg.DEFAULT_RESIDUAL_RISKS}
     rr02 = risks["RR-02"]
-    assert rr02.blocks_release is True
-    assert rr02.severity == "high"
+    assert rr02.area == "container-execution-isolation"
+    # Qualified isolation is no longer, on its own, a release blocker; the release is
+    # still blocked by the sign-off record (RR-01) and artifact signing (RR-03).
+    assert rr02.blocks_release is False
+    assert rr02.severity == "medium"
 
     summary = rr02.summary
+    assert "QUALIFIED" in summary
     assert "has not been recorded on the target host" not in summary
-    assert "UNQUALIFIED" in summary
-    assert "p3.adversarial.memory_limit" in summary
-    assert "3 GiB" in summary
+    assert "UNQUALIFIED" not in summary, "the passing record supersedes the unqualified claim"
+    assert "12 sandbox checks" in summary
+    assert "exit 137" in summary
     assert "536870912" in summary
-    assert "memory.max" in summary
-    assert "m5-2-0-sandbox-memory-limit-finding.md" in summary
-    assert "undecided" in summary, "an untriaged finding must stay untriaged"
+    assert "memory.swap.max" in summary
+    assert "2026-10-30" in summary, "the failed run stays visible instead of disappearing"
+    assert "m5-2-0-sandbox-isolation-evidence.md" in summary
+    # The residual the passing run measured: the shipped 2g cap is RAM + swap.
+    assert "swap" in summary.lower()
+    assert "4 GiB" in summary
+    assert rr02.mitigation.strip(), "a residual risk needs a mitigation"
+
+    evidence = (ROOT / "docs" / "m5-2-0-sandbox-isolation-evidence.md").read_text(encoding="utf-8")
+    for literal in ("exit 137", "536870912", "memory.swap.max", "12 of 12 checks"):
+        assert literal in evidence, f"gate cites {literal!r} but the record does not carry it"
 
     finding = (ROOT / "docs" / "m5-2-0-sandbox-memory-limit-finding.md").read_text(encoding="utf-8")
-    for literal in ("p3.adversarial.memory_limit", "536870912", "3 GiB", "exit 0"):
-        assert literal in finding, f"gate cites {literal!r} but the finding does not record it"
+    assert "resolved 2026-10-31" in finding
+    assert "exit 0" in finding, "the superseded failure must stay in the record"
 
     gate_doc = (ROOT / "docs" / "m5-2-0-security-release-gate.md").read_text(encoding="utf-8")
     rr02_row = [line for line in gate_doc.splitlines() if line.startswith("| `RR-02`")]
     assert len(rr02_row) == 1
-    assert "m5-2-0-sandbox-memory-limit-finding.md" in rr02_row[0]
-    assert "p3.adversarial.memory_limit" in rr02_row[0]
+    assert "m5-2-0-sandbox-isolation-evidence.md" in rr02_row[0]
+    assert "exit 137" in rr02_row[0]
 
 
 def test_http_release_gate_endpoints_and_standalone_studio_parity(

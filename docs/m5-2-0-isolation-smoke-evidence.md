@@ -6,6 +6,13 @@ executed 2026-10-30 on branch session `arena/13166201-m5-agent-studio` against
 [`scripts/isolation_smoke.py`](../scripts/isolation_smoke.py); its regression
 tests are `tests/test_isolation_smoke.py` (3 tests).
 
+> **History note (2026-10-31).** This page is the `M5-P0-04` record from a
+> machine with no container runtime; it is unchanged and still describes what CI
+> sees. The live probes have since passed on the target host: the `M5-P3-01`
+> operator run of 2026-10-31 recorded `isolation_smoke.py --live` exit 0 with
+> `dependent_execution: released under the observed container boundary`
+> ([`m5-2-0-sandbox-isolation-evidence.md`](m5-2-0-sandbox-isolation-evidence.md)).
+
 ## 1. Environment fingerprint (observed)
 
 | Property | Observed value |
