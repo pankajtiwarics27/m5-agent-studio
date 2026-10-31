@@ -145,7 +145,7 @@
       "M5-P3-02 review, fourth pass: the `.git/config` fix (#63) judged configuration as a FILE, but git accepts the same directives in-band. `git -c include.path=/tmp/evil.cfg status` was allowed: the command-line guard was a regex over the raw text, so it missed `include.path` entirely, and shell quoting (`git -c core.\"fs\"monitor=...`) defeats text matching even for the keys it did list. `-c`, glued `-ckey=value`, `--config-env`, `git config key value` and `GIT_CONFIG_KEY_<n>`/`GIT_CONFIG_PARAMETERS` are now judged from parsed tokens against one shared predicate (_ep_git_config_key_is_dangerous) used by both the file parser and the command scanner, so the two cannot drift again. Same lesson as the previous pass: a security fix has to cover every way the underlying tool accepts the setting, not just the way the report named."
     ],
     "last_readme_sync": "2026-10-31T05:18:00Z",
-    "last_verified_commit": "881d8bc251725fcaa49d928492e61e96918f03f6",
+    "last_verified_commit": "e68466c4e385cd763514e368fdc382c62c119611",
     "coordination_protocol": "M5_2_0_AGENT_PROMPT.md"
   },
   "delivery_phases": [
@@ -2467,7 +2467,7 @@
         "updated_at": "2026-10-31T05:18:00Z",
         "completed_at": "2026-10-31T05:18:00Z",
         "owner_session": "arena/12c5fbaf-m5-agent-studio",
-        "commit_sha": null,
+        "commit_sha": "e68466c4e385cd763514e368fdc382c62c119611",
         "changed_files": [
           "scoped_grants.py",
           "process_supervision.py",
