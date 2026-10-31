@@ -11,7 +11,7 @@ import subprocess
 import time
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Literal, Sequence
+from typing import Any, Callable, Literal, Sequence
 
 import execution_budget
 import process_supervision
@@ -264,6 +264,22 @@ class TaskVerificationSpec:
                 if isinstance(entry, dict)
             ),
         )
+
+
+def _capture_security_generation(provider: Callable[[], int | None] | None) -> int | None:
+    """Read the current security configuration generation, or ``None`` when unknown.
+
+    ``None`` means "not checked", never "unchanged": a caller that cannot produce a
+    generation gets no staleness claim, and the report says nothing about it rather
+    than implying stability.
+    """
+    if provider is None:
+        return None
+    try:
+        value = provider()
+    except Exception:  # noqa: BLE001 - an unreadable security store must not crash verification
+        return None
+    return int(value) if isinstance(value, int) else None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1424,6 +1440,7 @@ class DurableTaskStateMachine:
         *,
         workspace_dir: Path,
         spec: TaskVerificationSpec | None = None,
+        security_generation: Callable[[], int | None] | None = None,
     ) -> TaskVerificationReport:
         """Verify completion, then record the attempt in durable failure memory.
 
@@ -1432,7 +1449,12 @@ class DurableTaskStateMachine:
         is attached and a safe pause is requested instead of letting the loop try
         the same strategy again (M5-P2-05).
         """
-        report = self._verify_task_completion_impl(task_id, workspace_dir=workspace_dir, spec=spec)
+        report = self._verify_task_completion_impl(
+            task_id,
+            workspace_dir=workspace_dir,
+            spec=spec,
+            security_generation=security_generation,
+        )
         return self._record_verification_attempt(_validate_identifier(task_id, "task_id"), report)
 
     def _record_verification_attempt(self, task_id: str, report: TaskVerificationReport) -> TaskVerificationReport:
@@ -1486,6 +1508,7 @@ class DurableTaskStateMachine:
         *,
         workspace_dir: Path,
         spec: TaskVerificationSpec | None = None,
+        security_generation: Callable[[], int | None] | None = None,
     ) -> TaskVerificationReport:
         """Authoritatively verify ledger, patch, protected-file, and test evidence outside write locks."""
         runtime_persistence.assert_no_active_write_transaction("task_verification")
@@ -1493,6 +1516,9 @@ class DurableTaskStateMachine:
         ws_root = Path(workspace_dir).resolve()
         effective_spec = spec if spec is not None else self.get_verification_spec(tid)
         spec_digest = effective_spec.sha256() if effective_spec is not None else ""
+        # Captured before any evidence is gathered: a security configuration change
+        # between here and the final verdict makes the evidence stale (M5-P5-02).
+        generation_before = _capture_security_generation(security_generation)
 
         actions = sorted(
             self.store.list_task_actions(tid),
@@ -1968,6 +1994,28 @@ class DurableTaskStateMachine:
                         f"revision={evidence_kwargs['source_revision'][:12]}"
                     )[:240],
                 )
+            )
+
+        generation_after = _capture_security_generation(security_generation)
+        if (
+            generation_before is not None
+            and generation_after is not None
+            and generation_after != generation_before
+        ):
+            # The evidence was gathered under one security configuration and is being
+            # accepted under another: the guarantee it demonstrates may no longer hold.
+            return TaskVerificationReport(
+                verified=False,
+                spec_sha256=spec_digest,
+                failure_code="security_configuration_changed_during_verification",
+                failure_detail=(
+                    "The security configuration generation changed while the verification ran "
+                    f"(generation {generation_before} -> {generation_after}); the evidence cannot be "
+                    "tied to the guarantees it claims to demonstrate."
+                ),
+                committed_edit_action_ids=tuple(a.action_id for a in committed_edits),
+                committed_test_action_ids=tuple(a.action_id for a in committed_tests),
+                source_revision=evidence_kwargs["source_revision"],
             )
 
         return TaskVerificationReport(
