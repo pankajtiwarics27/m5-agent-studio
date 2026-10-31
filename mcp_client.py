@@ -69,11 +69,36 @@ McpEffectStatus = Literal[
     "reconciled_not_applied",
 ]
 
-_MCPC_SECRET_ARG_KEY_RE = re.compile(
-    r"(?:^|_|-)(?:api_?key|secret|token|password|passwd|credential|credentials|"
-    r"private_?key|access_?key|client_?secret|auth|bearer|cookie|webhook)(?:$|_|-)",
+_MCPC_CAMEL_BOUNDARY_RE = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
+_MCPC_SECRET_SEGMENT_RE = re.compile(
+    r"(?:^|_)(?:api_?key|apikey|secret|token|password|passwd|pwd|credential|credentials|"
+    r"private_?key|access_?key|client_?secret|auth[a-z]*|bearer|cookie|webhook|"
+    r"session_?key|oauth|signature)(?:$|_)",
     re.IGNORECASE,
 )
+
+
+def _mcpc_canonical_arg_key(key: str) -> str:
+    """Fold an argument name to `snake_case` so its meaning survives the spelling.
+
+    `Authorization`, `X-Api-Key` and `accessToken` all name credentials; matching the
+    raw string missed every one of them because the token was not delimited by `_` or
+    `-` (`auth` followed by `orization`, camelCase with no separator at all).
+    """
+    text = str(key or "").strip()
+    if not text:
+        return ""
+    text = _MCPC_CAMEL_BOUNDARY_RE.sub("_", text)
+    text = re.sub(r"[^0-9A-Za-z]+", "_", text).strip("_")
+    return text.casefold()
+
+
+def _mcpc_key_looks_secret(key: str) -> bool:
+    """True for an argument/env-style name that names a credential."""
+    canonical = _mcpc_canonical_arg_key(key)
+    if not canonical:
+        return False
+    return bool(_MCPC_SECRET_SEGMENT_RE.search(canonical))
 
 
 class McpTransportError(RuntimeError):
@@ -459,6 +484,7 @@ def bind_tool_call_params(
     *,
     action_id: str,
     semantics: McpToolSemantics | None = None,
+    method: str = "tools/call",
 ) -> tuple[dict[str, Any], str | None]:
     """Bind deterministic ``action_id`` and supported idempotency keys into ``tools/call`` params.
 
@@ -468,6 +494,11 @@ def bind_tool_call_params(
     ``idempotencyKey`` claim (`AC 2`).
     """
     base: dict[str, Any] = dict(params) if isinstance(params, Mapping) else {}
+    # Only an outbound write carries correlation metadata. Enforced here rather than
+    # left to the call sites, so a future `tools/list` or `resources/read` call cannot
+    # pick up an `actionId` by passing the wrong argument.
+    if str(method or "").strip() != "tools/call":
+        return base, None
     clean_aid = str(action_id or "").strip()
     if not clean_aid:
         return base, None
@@ -699,7 +730,7 @@ def _mcpc_redact_value(
     secrets: tuple[str, ...],
     parent_key: str = "",
 ) -> tuple[Any, bool]:
-    if parent_key and _MCPC_SECRET_ARG_KEY_RE.search(parent_key):
+    if parent_key and _mcpc_key_looks_secret(parent_key):
         return ("[REDACTED]", True)
     if isinstance(value, str):
         if any(sec in value for sec in secrets):
@@ -723,6 +754,42 @@ def _mcpc_redact_value(
             changed = changed or rc
         return (out_list, changed)
     return (value, False)
+
+
+_MCPC_BEARER_TOKEN_RE = re.compile(r"\b(Bearer|Basic|Token)\s+[A-Za-z0-9._~+/=-]{6,}", re.IGNORECASE)
+
+
+def _mcpc_redact_text(text: str, *, secrets: tuple[str, ...]) -> str:
+    """Scrub credential material from free text before it is persisted.
+
+    Applied to remote-controlled strings (`last_error`, `reconciled_output`) and to
+    reconciliation payloads, which otherwise reach disk verbatim: a server that echoes
+    a token in an error message, or an auth header stored as an argument, wrote it
+    straight into `state.json`.
+
+    Two mechanisms, in order: any registered secret value, then the recognisable
+    `<scheme> <credential>` shape (`Bearer`, `Basic`, `Token`) that survives even when
+    Studio never held the secret. Text that matches neither is left alone, so this is
+    a scrubber for the shapes that can be recognised, not a guarantee for unknown
+    secrets — `known_secret_values` is what makes it complete for Studio's own keys.
+    """
+    if not text:
+        return text
+    scrubbed = text
+    for secret in secrets:
+        if secret and secret in scrubbed:
+            scrubbed = scrubbed.replace(secret, "[REDACTED]")
+    return _MCPC_BEARER_TOKEN_RE.sub(lambda m: f"{m.group(1)} [REDACTED]", scrubbed)
+
+
+def _mcpc_normalise_secret_values(values: Iterable[str] | None) -> tuple[str, ...]:
+    return tuple(
+        sorted(
+            {str(v) for v in (values or ()) if isinstance(v, str) and len(v) >= 6},
+            key=len,
+            reverse=True,
+        )
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -1041,13 +1108,7 @@ class McpExternalEffectStore:
             raise ValueError("action_id is required when staging an MCP external effect.")
         safe_args = dict(arguments) if isinstance(arguments, Mapping) else {}
         digest = _mcpc_canonical_args_sha256(safe_args)
-        secrets = tuple(
-            sorted(
-                {str(s) for s in known_secret_values if isinstance(s, str) and len(s) >= 6},
-                key=len,
-                reverse=True,
-            )
-        )
+        secrets = _mcpc_normalise_secret_values(known_secret_values)
         redacted_obj, was_redacted = _mcpc_redact_value(safe_args, secrets=secrets)
         now = self._clock()
         with self._lock:
@@ -1092,10 +1153,14 @@ class McpExternalEffectStore:
         status: McpEffectStatus,
         output: str = "",
         error: str = "",
+        known_secret_values: Iterable[str] = (),
     ) -> McpExternalEffectRecord | None:
         aid = str(action_id or "").strip()
         if not aid:
             return None
+        secrets = _mcpc_normalise_secret_values(known_secret_values)
+        output = _mcpc_redact_text(str(output or ""), secrets=secrets)
+        error = _mcpc_redact_text(str(error or ""), secrets=secrets)
         now = self._clock()
         with self._lock:
             state = self._load_locked()
@@ -1141,10 +1206,14 @@ class McpExternalEffectStore:
         verdict: McpReconciliationVerdict,
         reconciled_by: str,
         reconciled_output: str = "",
+        known_secret_values: Iterable[str] = (),
     ) -> McpExternalEffectRecord | None:
         aid = str(action_id or "").strip()
         if not aid:
             return None
+        secrets = _mcpc_normalise_secret_values(known_secret_values)
+        reconciled_by = _mcpc_redact_text(str(reconciled_by or ""), secrets=secrets)
+        reconciled_output = _mcpc_redact_text(str(reconciled_output or ""), secrets=secrets)
         now = self._clock()
         with self._lock:
             state = self._load_locked()
