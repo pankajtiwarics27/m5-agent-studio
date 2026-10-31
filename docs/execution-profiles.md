@@ -54,9 +54,35 @@ managed file tool executes:
     `secrets/*.key`),
   - Brace-expansion (`{.env,README.md}`), ANSI-C hex/octal escapes (`$'\x2e\x65\x6e\x76'`),
     and command-substitution (`$(...)`, backticks) inspection,
-  - Recursive inspection of inline `sh -c` / `bash -c` and `python -c` payloads,
+  - Recursive inspection of inline shell payloads — `sh -c`, `bash -lc`, `zsh -c`,
+    `dash -c`, `ksh -c`, `busybox sh -c`, also behind `env`/`nice`/`nohup` — up to three
+    nesting levels, so `sh -c 'cat .env'` is refused exactly like `cat .env`,
+  - Refusal of a shell that *reads its command from stdin* (`curl … | sh`,
+    `cat payload.txt | bash`, `sh <<EOF`): no command-line inspection can see it,
+  - Inspection of inline program text for interpreters there is no parser for
+    (`perl -e`, `ruby -e`, `node -e`, `php -r`, `lua -e`): every path-like substring
+    is checked against the same secret, VCS-control and confinement rules,
   - Python AST constant folding (`open`, `Path(...) / ...`, `os.path.join`, string `+`,
     `str.join`, `os.system`, and `subprocess.*`) for `ctx_execute_python`.
+
+### What command inspection cannot see
+
+Command inspection is one layer, not the boundary. These are known and are why
+the sandbox (M5-P3-01) is the real containment, and why `unqualified` isolation
+keeps host execution unavailable:
+
+- **script file contents** — `sh build.sh` is inspected as a command line, not read;
+  the run's *effects* are covered by post-execution footprint reconciliation
+  (§4), which quarantines planted secrets, hook scripts and escaping symlinks;
+- **paths assembled at runtime** — `perl -e '$p = ".e"."nv"; open(F,$p)'` builds the
+  name after the scan; encoded payloads (`… | base64 -d | sh`) are the same class;
+- **the `sh -c` nesting bound** — beyond three levels the innermost payload is not
+  re-parsed;
+- **everything outside the command line** — a compiled binary, a downloaded script,
+  or a child process started by a tool that this policy does not front.
+
+These limits are properties of inspecting text before execution. They do not
+weaken the refusals above; they bound what the refusals can promise.
 
 ---
 
