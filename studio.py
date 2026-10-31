@@ -38493,6 +38493,20 @@ def inspect_subprocess_policy(
                             return py_viol
                         break
 
+            # Git configuration set in-band (`-c`, `--config-env`, `git config`,
+            # `GIT_CONFIG_KEY_*`) never reaches `.git/config`, and shell quoting
+            # hides it from a regex over the raw text. Judge it on parsed tokens.
+            for key in _ep_git_config_cli_keys(tokens, cmd_idx, exe_base):
+                if _ep_git_config_key_is_dangerous(key):
+                    return PolicyViolation(
+                        error_code="unauthorized_path",
+                        rule="vcs_protected_path",
+                        message=(
+                            "Refused: setting executable Git hook/filter/transport "
+                            f"configuration (`{key}`) on the command line is forbidden."
+                        ),
+                    )
+
             # `sh -c "<command>"` is a second command line: inspect it as one.
             # Without this the payload is a single quoted token that the path
             # checks below cannot parse, and `sh -c 'cat .env'` would be allowed
@@ -38980,6 +38994,25 @@ _EP_DANGEROUS_GIT_CONFIG_KEYS: frozenset[str] = frozenset(
 )
 
 
+def _ep_git_config_key_is_dangerous(name: str) -> bool:
+    """True for a config key that can execute code or widen trust.
+
+    Shared by the `.git/config` file parser and the command-line scanner so the
+    two cannot drift: an `include` pulls in configuration this policy never
+    inspected, including every directive named here.
+    """
+    name = name.strip().casefold()
+    if not name:
+        return False
+    if name in _EP_DANGEROUS_GIT_CONFIG_KEYS:
+        return True
+    if name.startswith("filter.") and name.rsplit(".", 1)[-1] in {"clean", "smudge"}:
+        return True
+    return name == "include.path" or (
+        name.startswith("includeif.") and name.endswith(".path")
+    )
+
+
 def _ep_git_config_directives(text: str) -> list[str]:
     """Dotted ``section[.sub].key`` names in a Git config file, in file order.
 
@@ -39017,17 +39050,116 @@ def _ep_git_config_dangerous_directives(text: str) -> list[str]:
     """The directives that make a config file an execution or secret-exfiltration vector."""
     found: list[str] = []
     for name in _ep_git_config_directives(text):
-        if name in _EP_DANGEROUS_GIT_CONFIG_KEYS:
-            found.append(name)
-        elif name.startswith("filter.") and name.rsplit(".", 1)[-1] in {"clean", "smudge"}:
-            found.append(name)
-        elif name.startswith("include.") or (
-            name.startswith("includeif.") and name.endswith(".path")
-        ):
-            # An include pulls in configuration this policy never inspected,
-            # including any directive listed above.
+        if _ep_git_config_key_is_dangerous(name):
             found.append(name)
     return found
+
+
+_EP_GIT_CONFIG_READ_FLAGS = frozenset(
+    {
+        "--get",
+        "--get-all",
+        "--get-regexp",
+        "--get-urlmatch",
+        "--get-color",
+        "--get-colorbool",
+        "-l",
+        "--list",
+        "--show-origin",
+        "--name-only",
+    }
+)
+_EP_GIT_CONFIG_VALUE_OPTS = frozenset({"-f", "--file", "-t", "--type", "--blob"})
+_EP_GIT_CONFIG_ENV_KEY_RE = re.compile(r"^GIT_CONFIG_KEY_(\d+)$", re.IGNORECASE)
+
+
+def _ep_git_config_key_from_assignment(assignment: str) -> str | None:
+    """The key of a `key=value` config assignment, without shell quoting noise."""
+    text = assignment.strip().strip("'\"")
+    if "=" not in text:
+        return None
+    return text.split("=", 1)[0].strip().strip("'\"")
+
+
+def _ep_git_config_cli_keys(tokens: Sequence[str], cmd_idx: int, exe_base: str) -> list[str]:
+    """Config keys a command sets on the Git command line or through its env.
+
+    `git -c key=value`, `--config-env=key=ENV`, `git config key value` and the
+    `GIT_CONFIG_KEY_<n>` / `GIT_CONFIG_PARAMETERS` variables all change
+    configuration without touching `.git/config`, so a scan of that file — or a
+    regex over the raw text, which quoting defeats — cannot see them.
+    """
+    if exe_base not in {"git", "git.exe"}:
+        return []
+    keys: list[str] = []
+    key: str | None
+    # Environment form: `GIT_CONFIG_KEY_0=core.fsmonitor GIT_CONFIG_VALUE_0=...`
+    for tok in tokens[:cmd_idx]:
+        name, _, value = tok.partition("=")
+        key = None
+        if _EP_GIT_CONFIG_ENV_KEY_RE.match(name):
+            # `GIT_CONFIG_KEY_<n>` holds the key itself, not a `key=value` pair.
+            key = value.strip().strip("'\"")
+            if key:
+                keys.append(key)
+        elif name.upper() == "GIT_CONFIG_PARAMETERS":
+            for part in value.split("\x00"):
+                key = _ep_git_config_key_from_assignment(part)
+                if key:
+                    keys.append(key)
+    idx = cmd_idx + 1
+    subcommand_seen = False
+    while idx < len(tokens):
+        tok = tokens[idx]
+        if tok in {"-c", "--config"} or tok == "--config-env":
+            if idx + 1 < len(tokens):
+                key = _ep_git_config_key_from_assignment(tokens[idx + 1])
+                if key:
+                    keys.append(key)
+            idx += 2
+            continue
+        if tok.startswith("--config-env="):
+            key = _ep_git_config_key_from_assignment(tok.split("=", 1)[1])
+            if key:
+                keys.append(key)
+            idx += 1
+            continue
+        if tok.startswith("--config="):
+            key = _ep_git_config_key_from_assignment(tok.split("=", 1)[1])
+            if key:
+                keys.append(key)
+            idx += 1
+            continue
+        if not tok.startswith("--") and tok.startswith("-c") and len(tok) > 2:
+            # Glued form: `-ccore.fsmonitor=...` / `-c=core.fsmonitor=...`.
+            key = _ep_git_config_key_from_assignment(tok[2:].lstrip("="))
+            if key:
+                keys.append(key)
+            idx += 1
+            continue
+        if tok.startswith("-") and tok != "-":
+            idx += 1
+            continue
+        if subcommand_seen:
+            idx += 1
+            continue
+        subcommand_seen = True
+        if tok == "config":
+            # `git config [options] key [value]`: an unset leaves a repository
+            # less protected than a set, so both count.
+            j = idx + 1
+            reading = False
+            while j < len(tokens) and tokens[j].startswith("-"):
+                opt = tokens[j]
+                if opt in _EP_GIT_CONFIG_READ_FLAGS:
+                    reading = True
+                j += 2 if opt in _EP_GIT_CONFIG_VALUE_OPTS else 1
+            if not reading and j < len(tokens):
+                candidate = tokens[j].strip()
+                if "/" not in candidate and "." in candidate:
+                    keys.append(candidate)
+        idx += 1
+    return keys
 
 
 def _ep_git_config_has_dangerous_directives(git_config_path: Path) -> bool:

@@ -57,6 +57,17 @@ managed file tool executes:
   Git writes the *sectioned* spelling (`[credential]` + `helper = …`), so the
   check resolves directives to their dotted name instead of pattern-matching raw
   text.
+- **Git control-plane integrity (command line and environment):** the same
+  directive list is enforced when the configuration is set *without touching
+  `.git/config`* — `git -c key=value`, glued `-ckey=value`, `-c=key=value`,
+  `--config-env=key=ENV`, `git config key value`, and the `GIT_CONFIG_KEY_<n>` /
+  `GIT_CONFIG_PARAMETERS` variables. These are judged from the parsed tokens, not
+  from the raw text: `git -c core."fs"monitor=…` and `-c 'core.hooks'Path=…`
+  reach git as `core.fsmonitor` / `core.hooksPath`, and setting `include.path`
+  in-band pulls in a file this policy never inspected. Reading a key back
+  (`git config --get user.name`, `git config --list`) stays permitted; keys
+  that are not executable configuration (`core.pager`, `user.name`) stay
+  permitted as well.
 - **Subprocess Bypass Resistance (`inspect_subprocess_policy`):**
   - Quote-aware shell segment and redirection tokenization (`cat ".env"`, `head <.env`,
     `grep --file=.env`),

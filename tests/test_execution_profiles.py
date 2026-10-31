@@ -900,6 +900,101 @@ def test_git_config_directives_are_parsed_not_pattern_matched(
     assert bool(ep._ep_git_config_dangerous_directives(config_text)) is expected
 
 
+@pytest.mark.parametrize(
+    "key",
+    [
+        "core.fsmonitor",
+        "core.HooksPath",
+        "CORE.SSHCOMMAND",
+        "credential.helper",
+        "include.path",
+        "INCLUDE.PATH",
+        "includeIf.onbranch:main.path",
+        "filter.lfs.clean",
+        ' filter.lfs.smudge ',
+    ],
+)
+def test_dangerous_git_config_keys_are_recognised_in_every_spelling(key: str) -> None:
+    assert ep._ep_git_config_key_is_dangerous(key) is True
+
+
+@pytest.mark.parametrize(
+    "key",
+    ["", "core.pager", "user.name", "include.paths", "filter.lfs.process", "core.bare"],
+)
+def test_ordinary_git_config_keys_are_not_dangerous(key: str) -> None:
+    assert ep._ep_git_config_key_is_dangerous(key) is False
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # Configuration set in-band never touches `.git/config`, so the file
+        # parser cannot see it, and quoting hides the key from a text regex.
+        "git -c include.path=/tmp/evil.cfg status",
+        "git -c core.fsmonitor=/tmp/evil status",
+        'git -c core."fs"monitor=/tmp/evil status',
+        "git -c 'core.hooks'Path=/tmp/evil status",
+        "git -c 'credential'.\"helper\"='!sh /tmp/evil' status",
+        "git -cINCLUDE.PATH=/tmp/evil.cfg status",
+        "git -c=include.path=/tmp/evil.cfg status",
+        "git --config-env=include.path=EVIL status",
+        "git --config-env include.path=EVIL status",
+        "git config include.path /tmp/evil.cfg",
+        "git config --local core.hooksPath /tmp/evil",
+        # Path-free values, so the refusal can only come from the key scan.
+        "GIT_CONFIG_KEY_0=core.fsmonitor GIT_CONFIG_VALUE_0=evil git status",
+        "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=include.path GIT_CONFIG_VALUE_0=evil.cfg git status",
+        "GIT_CONFIG_PARAMETERS=\"'core.hooksPath=evil'\" git status",
+    ],
+)
+def test_git_config_set_on_the_command_line_is_refused(command: str, isolated_env: Path) -> None:
+    """A regex over the raw text is a spelling check; git parses tokens."""
+    descriptor = ep.resolve_capability_descriptor(
+        "run_bash", {"command": command}, execution_mode="host"
+    )
+    violation = ep.evaluate_unified_policy(
+        descriptor,
+        "run_bash",
+        {"command": command},
+        effective_policy="autonomous",
+        workspace_root=isolated_env,
+    )
+    assert violation is not None, command
+    assert violation.rule == "vcs_protected_path", (command, violation.rule)
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git -c core.pager=cat status",
+        "git -c 'user.name=Bot' commit -m x",
+        "git config user.name Bot",
+        "git config --list",
+        "git config --get user.name",
+        "GIT_CONFIG_KEY_0=user.name GIT_CONFIG_VALUE_0=Bot git commit -m x",
+        "git status",
+    ],
+)
+def test_ordinary_git_invocations_stay_allowed(command: str, isolated_env: Path) -> None:
+    descriptor = ep.resolve_capability_descriptor(
+        "run_bash", {"command": command}, execution_mode="host"
+    )
+    violation = ep.evaluate_unified_policy(
+        descriptor,
+        "run_bash",
+        {"command": command},
+        effective_policy="autonomous",
+        workspace_root=isolated_env,
+    )
+    assert violation is None, (command, violation)
+
+
+def test_git_config_cli_scan_ignores_non_git_commands() -> None:
+    tokens = ["echo", "-c", "include.path=/tmp/x"]
+    assert ep._ep_git_config_cli_keys(tokens, 0, "echo") == []
+
+
 def test_a_planted_credential_helper_config_is_a_violation_not_benign(
     isolated_env: Path,
 ) -> None:
