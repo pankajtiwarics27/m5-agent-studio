@@ -208,7 +208,7 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   the refusal. `GET /api/harness/sessions/{session_id}/task` exposes the read-only
   `recovery` summary. Pinned by 34 tests (`tests/test_recovery_guard.py`) and
   documented in [`docs/recovery-guard.md`](docs/recovery-guard.md) (ADR-0009).
-- **The two environment-blocked stories ship their evidence tool and stay blocked
+- **The two environment-blocked stories ship their operator-run evidence tool
   (`M5-P3-01`, `M5-P4-01`):** `scripts/qualify_environment.py` (standard library
   only, with `scripts/qualify_environment.sh` as a thin wrapper) is the operator-run
   suite that CI cannot be. `--sandbox` probes a live runtime with the **product's**
@@ -245,16 +245,21 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   revision, OS build, chip and RAM, and — for the sandbox — the runtime version,
   image content id and repo digest and the product's hardening flags, so a tag
   re-pulled to a different digest cannot inherit an old qualification. **No
-  container-isolation or 24 GB claim is made anywhere in this repository**, both
-  stories stay `blocked` in the roadmap until the owner produces a qualified record
-  on the target machine. The model-call half has a ready-made stdlib probe
+  container-isolation claim is made anywhere in this repository** — the sandbox
+  story stays `blocked`, and the first operator run on the target machine
+  (2026-10-31) failed `p3.adversarial.memory_limit`, so isolation remains
+  unavailable. The *hardware* half cleared the bar on that same machine: its
+  `--hardware` run is `qualified`, and the measured record is
+  [`docs/m5-2-0-hardware-qualification-evidence.md`](docs/m5-2-0-hardware-qualification-evidence.md)
+  — including what it does not measure. The model-call half has a ready-made
+  stdlib probe
   (`scripts/model_probe.py`, OpenAI-compatible, streams for a real
   time-to-first-token, and omits any metric the server did not report). Pinned by
   94 tests (`tests/test_qualify_environment.py`) and by 12 for the probe
   (`tests/test_model_probe.py`); documented in
   [`docs/qualification-suite.md`](docs/qualification-suite.md) (ADR-0010).
 - **A second heavy local model request is refused by policy in the serving path
-  (`M5-P4-01`, code half — the story stays blocked on measurement):**
+  (`M5-P4-01`, measured on the target machine 2026-10-31):**
   `model_admission.py` (stdlib only, inlined into `studio.py`) wraps
   `resource_admission` with local-inference semantics — capacity is the machine's
   unified memory (detected, or `STUDIO_HEAVY_MODEL_MEMORY_BYTES`), one request
@@ -269,8 +274,11 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   counters. Denials are typed and stable (`heavy_model_slot_busy`,
   `heavy_model_memory_exceeded`, `heavy_model_resident`). Cloud providers consume
   no slot. **The 80 % reservation is a policy constant, not a measurement**: the
-  24 GB pressure criterion is still unmeasured, and the policy is per-process
-  like the worker-lease model. Pinned by 34 tests (`tests/test_model_admission.py`)
+  operator run of 2026-10-31 measured the 24 GB pressure criterion and the
+  load/swap behaviour of one resident 4-bit model (record:
+  [`docs/m5-2-0-hardware-qualification-evidence.md`](docs/m5-2-0-hardware-qualification-evidence.md)),
+  but that constant was never derived from a per-model footprint, and the policy
+  is per-process like the worker-lease model. Pinned by 34 tests (`tests/test_model_admission.py`)
   and documented in [`docs/model-admission.md`](docs/model-admission.md) (ADR-0011).
 - **Portable model handoffs and conservative sequential switching (`M5-P4-02`,
   ADR-0019):** `routing_policy.py` (`PortableHandoffStore` at
@@ -662,12 +670,23 @@ Summary (2026-10-30, Linux x86_64 container, 2 vCPU, ~4 GB RAM, Python 3.11.2):
 | `pip-audit` | **exit 1** — 21 advisories in 2 packages: `pip` 23.0.1 and `setuptools` 66.1.1 (venv bootstrap tooling only). Declared runtime dependencies (`fastapi`, `uvicorn`, `httpx`, `httpcore`, `keyring`) have no reported advisories. |
 | `scripts/isolation_smoke.py` | 16/16 observable checks pass; summary `isolation_status: unqualified` (no container runtime in the evidence environment — live container probes blocked) |
 
-**Not measured (explicitly blocked, no numbers claimed):** peak unified-memory
-and swap on a 24 GB Apple Silicon Mac; a resident-oMLX coding-task run;
-SQLite latency under FTS5 load; live container-isolation behavior (no
-Docker/Podman in the review environment). No benchmark or memory figure in
-this README is a guarantee; treat all throughput statements anywhere in this
-repository as environment-specific.
+**Measured outside CI since the table above (2026-10-31, operator run on Apple
+M5, 24.0 GiB, macOS 26.6.1, Docker Desktop 29.5.3):** the `--hardware`
+qualification suite returned `qualified` — 16 GiB touched pressure with 0.00 GiB
+swap growth on a machine already 6.18 GiB into swap, and three runs of a resident
+`Gemma-4-21B-REAP-4bit` model (first token 159–185 ms warm, 16.9 s cold; 1.29 GiB
+swap growth) through the same serving path the product uses. The full record,
+including the two gaps it names, is
+[`docs/m5-2-0-hardware-qualification-evidence.md`](docs/m5-2-0-hardware-qualification-evidence.md).
+
+**Not measured (explicitly blocked, no numbers claimed):** a resident-oMLX
+coding-task run; thermal pressure under load (`pmset -g therm` returned no
+readings, so the check recorded `blocked`); per-process peak memory and a model
+digest for the qualified run; SQLite latency under FTS5 load; live
+container-isolation behavior (the same machine's sandbox suite failed
+`p3.adversarial.memory_limit`). No benchmark or memory figure in this README is a
+guarantee; treat all throughput statements anywhere in this repository as
+environment-specific.
 
 ## Security and known limitations
 
@@ -732,6 +751,15 @@ requires `STUDIO_ALLOW_SKILL_CODE=1`; private-URL access requires
    passes on a machine with a working runtime; dependent execution remains
    blocked (fail closed). Evidence:
    [`docs/m5-2-0-isolation-smoke-evidence.md`](docs/m5-2-0-isolation-smoke-evidence.md).
+   The first operator run on real hardware (2026-10-31, Apple M5, Docker Desktop
+   29.5.3) got 11 of 12 sandbox checks to pass — runtime, image, product argv
+   parity, the escape matrix, credentials, descendants, no-host-fallback — and
+   **failed `p3.adversarial.memory_limit`**: a 3 GiB allocation completed under
+   `--memory 512m` (`exit 0`) even though the container's own
+   `/sys/fs/cgroup/memory.max` read `536870912`. The limit is configured but was
+   not refused on that engine; whether swap let the allocation escape the cap or
+   the cgroup was simply not enforced is still open, so nothing is claimed and
+   nothing is waived.
 6. **`pip-audit` reports 21 advisories** in venv bootstrap packages
    (`pip` 23.0.1, `setuptools` 66.1.1); runtime dependencies are clean.
 7. **Independent security review (`AS-031`) is `completed`, not `verified`** —
@@ -819,10 +847,15 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
   shared-dependency fallback qualification, post-incident requalification before
   restoration, and crash-durable `$HARNESS_STORE_DIR/security_incidents/state.json`
   + `ContainmentStore` barriers).
-  `M5-P3-01` and `M5-P4-01` remain `blocked` pending operator
-  qualification runs (`scripts/qualify_environment.py`,
-  [`docs/qualification-suite.md`](docs/qualification-suite.md)) — a live Docker
-  run for the sandbox and a 24 GB pressure measurement for the model story.
+  `M5-P3-01` remains `blocked`: its first operator run on the target machine
+  (2026-10-31) failed `p3.adversarial.memory_limit`, so container isolation stays
+  unavailable (`scripts/qualify_environment.py --sandbox`,
+  [`docs/qualification-suite.md`](docs/qualification-suite.md)).
+  `M5-P4-01` is `done`: the same machine produced a `qualified` `--hardware`
+  record — 24 GB pressure, one-resident-heavy-model admission through the
+  serving path, and model load/swap timings — in
+  [`docs/m5-2-0-hardware-qualification-evidence.md`](docs/m5-2-0-hardware-qualification-evidence.md),
+  with its unfilled gaps (thermal, coding cases, model digest) named there.
   `P4-01`'s serving-path half is implemented and tested
   ([`docs/model-admission.md`](docs/model-admission.md)).
   Planned work is not implemented product behavior.

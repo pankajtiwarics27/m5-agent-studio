@@ -24,7 +24,7 @@ Studio reports memory pressure rather than refusing to start.
 
 | Platform | Status | Evidence |
 |---|---|---|
-| macOS (Apple Silicon) | **First target** | User-reported runs on macOS / Python 3.15 at `b7d841a`: full suite 438 passed, 1 skipped; macOS Keychain round-trip at `b452441`; Docker Desktop live sandbox test at `b452441` |
+| macOS (Apple Silicon) | **First target** | User-reported runs on macOS / Python 3.15 at `b7d841a`: full suite 438 passed, 1 skipped; macOS Keychain round-trip at `b452441`; Docker Desktop live sandbox test at `b452441`. Operator qualification run on an Apple M5 / 24 GiB at `d0e47f0` (2026-10-31): `--hardware` `qualified`, `--sandbox` `unqualified` ([record](m5-2-0-hardware-qualification-evidence.md)) |
 | Linux x86_64 | **Validated in CI** | Full suite green on Python 3.11/3.12/3.13 for every push (see `.github/workflows/ci.yml`) |
 | Linux arm64 | Expected, untested | Nothing is arch-specific, but no evidence exists |
 | Windows | **Untested** | Code avoids Unix-only assumptions where it can, and descriptor/no-follow workspace operations fail closed when unavailable — so workspace file tools may refuse to run |
@@ -82,5 +82,11 @@ caller-supplied profiles — it does not measure a machine.
 - CI matrix (`.github/workflows/ci.yml`) is the actual Linux evidence.
 
 What is **not** claimed: no benchmark numbers, no per-chip performance figures,
-no validated Windows or arm64 run, and no measured model throughput. Benchmark
-methodology and results publication are tracked separately in the roadmap.
+and no measured model throughput across models. One measured data point exists
+for arm64 — an Apple M5 / 24 GiB operator run at `d0e47f0` on 2026-10-31, where
+a single 31-token prompt against `Gemma-4-21B-REAP-4bit` took 16.9 s to first
+token cold and 159–185 ms warm, with 1.29 GiB of swap growth
+([`m5-2-0-hardware-qualification-evidence.md`](m5-2-0-hardware-qualification-evidence.md)).
+That is one model, one prompt, one machine: it validates the hardware suite on
+arm64, not a throughput claim. Benchmark methodology and results publication are
+tracked separately in the roadmap.
