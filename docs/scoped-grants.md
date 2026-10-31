@@ -106,10 +106,20 @@ temp file + parent directory):
      `*_CREDENTIAL*`, `*_AUTH*`, `OPENAI_*`, `ANTHROPIC_*`, `GEMINI_*`, `AWS_*`, `GH_*`,
      `GITHUB_*`, `HF_*`, `NPM_*`, `PYPI_*`, etc.);
   2. All loader, startup, SSH, and Git-config injection keys (`LD_PRELOAD`,
-     `LD_LIBRARY_PATH`, `DYLD_*`, `PYTHONPATH`, `PYTHONSTARTUP`, `NODE_OPTIONS`,
-     `BASH_ENV`, `ENV`, `GIT_SSH_COMMAND`, `GIT_ASKPASS`, `SSH_AUTH_SOCK`,
-     `GIT_EXEC_PATH`, `GIT_TEMPLATE_DIR`, `GIT_CONFIG_PARAMETERS`, `GIT_CONFIG_COUNT`,
-     `GIT_CONFIG_KEY_*`, `GIT_CONFIG_VALUE_*`, `STUDIO_API_TOKEN`);
+     `LD_LIBRARY_PATH`, `LD_AUDIT`, `DYLD_*`, `PYTHONPATH`, `PYTHONSTARTUP`,
+     `PYTHONHOME`, `PYTHONINSPECT`, `NODE_OPTIONS`, `NODE_PATH`, `RUBYOPT`, `RUBYLIB`,
+     `PERL5OPT`, `PERL5LIB`, `PERL5DB`, `JAVA_TOOL_OPTIONS`, `_JAVA_OPTIONS`,
+     `JDK_JAVA_OPTIONS`, `BASH_ENV`, `ENV`, `ZDOTDIR`, `SHELLOPTS`, `BASHOPTS`,
+     `CDPATH`, `IFS`, `PROMPT_COMMAND`, `GIT_SSH_COMMAND`, `GIT_ASKPASS`,
+     `SSH_ASKPASS`, `SSH_AUTH_SOCK`, `GIT_EXEC_PATH`, `GIT_TEMPLATE_DIR`,
+     `GIT_CONFIG_PARAMETERS`, `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_*`,
+     `GIT_CONFIG_VALUE_*`, `STUDIO_API_TOKEN`). This list is a closed set applied to
+     **every** caller, including the `extra` mapping of a configured stdio MCP
+     server: a server's `env_json` can carry its own credentials, never a loader
+     hook. `SG_FORBIDDEN_INJECTION_ENV_KEYS` is therefore exhaustive by
+     construction — a key family is only covered once *all* of its spellings are,
+     which is why `RUBYLIB`/`NODE_PATH`/`_JAVA_OPTIONS`/`JDK_JAVA_OPTIONS`/
+     `PERL5DB` sit beside `RUBYOPT`/`NODE_OPTIONS`/`JAVA_TOOL_OPTIONS`;
   3. Any key whose value (`len >= 6`) contains a registered secret from
      `STUDIO_API_TOKEN`, `cloud_providers.api_key`, or `mcp_servers` (`auth_token`,
      sensitive `headers_json`, sensitive `env_json`).
@@ -118,3 +128,21 @@ temp file + parent directory):
   target server's own configured `env`, so an MCP server receives its own configured
   credentials while never inheriting `STUDIO_API_TOKEN`, cloud provider keys, other MCP
   servers' secrets, or loader/Git-config injection variables.
+
+## Residual limits
+
+- **Environment scrubbing removes inheritance, not access.** A child of Studio runs
+  under the same uid, so it can still read Studio's own environment through the
+  kernel (`/proc/<studio-pid>/environ`) and reach any credential regardless of what
+  its own environment contains. Closing that requires uid separation or a PID/mount
+  namespace — i.e. the containment work of `ADR-0013`, not an environment filter.
+  Scrubbing bounds *accidental* leakage (a child that merely consults its env, a
+  crash dump, a log line); it is not a credential boundary on its own.
+- **Short secrets are not value-matched.** Value scrubbing ignores registered secrets
+  shorter than six characters (a substring that short would redact unrelated
+  variables), so a deliberately tiny token is only protected by its key name.
+- **Capability sets are required, not implied.** A managed write tool exercises both
+  `workspace_write` and `workspace_read`, so `POST /grants` with
+  `capabilities: ["workspace_write"]` produces a grant that authorizes no write. This
+  fails closed and names the missing capability, but grant issuers should copy the
+  capability set from `GET /grants` rather than assume one capability per tool.

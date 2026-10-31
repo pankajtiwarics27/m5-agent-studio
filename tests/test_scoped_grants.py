@@ -1231,3 +1231,65 @@ def test_path_canonicalization_symlink_alias_and_concurrent_single_use_grant(
     assert "GIT_CONFIG_KEY_0" not in scrubbed
     assert "GIT_CONFIG_VALUE_0" not in scrubbed
 
+
+
+@pytest.mark.parametrize("key", sorted(scoped_grants.SG_FORBIDDEN_INJECTION_ENV_KEYS))
+def test_every_forbidden_injection_key_is_stripped_from_a_configured_env(key: str) -> None:
+    """`extra` (an MCP server's `env_json`, a container env) must not reintroduce a hook.
+
+    The `extra` path deliberately allows secret-named keys so a stdio MCP server
+    receives its own credentials; loader/startup hooks are the exception and have to
+    be refused *whatever* the caller configured.
+    """
+    env = scoped_grants.sanitize_subprocess_env(
+        {"PATH": "/usr/bin", "LANG": "C.UTF-8"},
+        interpreter_dir="/usr/bin",
+        extra={key: "/tmp/evil"},
+        allow_scoped_mcp_env=True,
+    )
+    assert key not in env
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        # Siblings of keys that were already blocked. Blocking RUBYOPT but not
+        # RUBYLIB (and NODE_OPTIONS but not NODE_PATH, JAVA_TOOL_OPTIONS but not
+        # _JAVA_OPTIONS) left the same hook reachable under another name.
+        "RUBYLIB",
+        "NODE_PATH",
+        "_JAVA_OPTIONS",
+        "JDK_JAVA_OPTIONS",
+        "PERL5DB",
+    ],
+)
+def test_loader_hook_siblings_are_blocked_too(key: str) -> None:
+    assert scoped_grants.is_secret_env_key(key) is True
+    env = scoped_grants.sanitize_subprocess_env(
+        {key: "/tmp/evil", "PATH": "/usr/bin"},
+        interpreter_dir="/usr/bin",
+        extra={key: "/tmp/evil"},
+        allow_scoped_mcp_env=True,
+    )
+    assert key not in env
+
+
+def test_registered_secret_values_never_reach_a_child_environment() -> None:
+    """Allowlisted keys are still dropped when their *value* carries a known secret."""
+    secret = "tok-supersecret-value"
+    env = scoped_grants.sanitize_subprocess_env(
+        {
+            "PATH": "/usr/bin",
+            "LANG": "C.UTF-8",
+            "MY_ALLOWED_VAR": f"prefix-{secret}-suffix",
+            "OPENAI_API_KEY": "sk-live-abcdef",
+            "STUDIO_API_TOKEN": secret,
+        },
+        interpreter_dir="/usr/bin",
+        known_secret_values=[secret],
+        extra_allowed_host_keys=("MY_ALLOWED_VAR",),
+    )
+    assert "MY_ALLOWED_VAR" not in env
+    assert "OPENAI_API_KEY" not in env
+    assert "STUDIO_API_TOKEN" not in env
+    assert all(secret not in v for v in env.values())
