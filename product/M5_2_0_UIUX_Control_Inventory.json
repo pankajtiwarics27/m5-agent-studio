@@ -1,0 +1,1195 @@
+{
+  "schema_version": "1.0.0",
+  "document_type": "m5_uiux_control_inventory",
+  "program": "M5_2_0_UIUX",
+  "story": "UIUX-P0-02",
+  "generator": "scripts/uiux_control_inventory.py",
+  "regenerate_with": "python3 scripts/uiux_control_inventory.py",
+  "check_with": "python3 scripts/uiux_control_inventory.py --check",
+  "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
+  "pinned_source_commit": "28930089d0a450fe86e418bfef79d16f8a585965",
+  "frontend_sha256": "3137cb7d05bcbdd29155576bd9952f49172705b85e70a0c0a2484c81bc80a66a",
+  "panes": [
+    {
+      "dom_id": "start",
+      "section_id": "pane-start",
+      "control_count": 3,
+      "counts": {
+        "button": 3
+      },
+      "controls_without_id": 2,
+      "controls_without_label": 0,
+      "controls": [
+        {
+          "tag": "button",
+          "id": "onboardingRunBtn",
+          "type": "button",
+          "class": "btn btn-primary",
+          "onclick": "startGuidedFirstTask()",
+          "text": "Run the first task"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "btn",
+          "onclick": "refreshOnboarding()",
+          "text": "Re-check"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "btn",
+          "onclick": "openProvidersModal()",
+          "text": "Providers"
+        }
+      ]
+    },
+    {
+      "dom_id": "harness",
+      "section_id": "pane-harness",
+      "control_count": 17,
+      "counts": {
+        "button": 4,
+        "input": 2,
+        "select": 9,
+        "summary": 1,
+        "textarea": 1
+      },
+      "controls_without_id": 3,
+      "controls_without_label": 0,
+      "controls": [
+        {
+          "tag": "button",
+          "class": "btn",
+          "onclick": "startFreshHarnessDraft()",
+          "text": "+ New session"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "btn btn-xs",
+          "title": "Save as default project directory (creates folder if missing)",
+          "onclick": "saveWorkspaceDirectory()",
+          "text": "Set / Create"
+        },
+        {
+          "tag": "input",
+          "id": "harnessWorkspaceInput",
+          "type": "text",
+          "placeholder": "~/Projects/my-app",
+          "onchange": "syncProjectDirInputs(this.value)"
+        },
+        {
+          "tag": "select",
+          "id": "harnessRecentDirsSelect",
+          "aria-label": "Recent project directories",
+          "onchange": "if(this.value)saveWorkspaceDirectory(this.value)"
+        },
+        {
+          "tag": "input",
+          "id": "harnessUseWorktree",
+          "type": "checkbox"
+        },
+        {
+          "tag": "select",
+          "id": "harnessLeadModel",
+          "onchange": "handleModelSelectChange(this, patchActiveHarnessSettings)"
+        },
+        {
+          "tag": "select",
+          "id": "harnessCriticModel",
+          "onchange": "handleModelSelectChange(this, patchActiveHarnessSettings)"
+        },
+        {
+          "tag": "select",
+          "id": "harnessPolicy",
+          "onchange": "patchActiveHarnessSettings()",
+          "text": "Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only)"
+        },
+        {
+          "tag": "summary",
+          "text": "Advanced settings"
+        },
+        {
+          "tag": "select",
+          "id": "harnessEfficiencyMode",
+          "title": "Ponytail v5 Senior Dev Ladder (-53% code, 98% test rate) + Caveman ASD-STE100 Concise Mode",
+          "text": "Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose"
+        },
+        {
+          "tag": "select",
+          "id": "harnessReasoning",
+          "text": "Off (Fastest) Low Medium xHigh"
+        },
+        {
+          "tag": "select",
+          "id": "harnessMaxSteps",
+          "text": "6 steps 10 steps 16 steps 24 steps"
+        },
+        {
+          "tag": "select",
+          "id": "harnessSessionActionSelect",
+          "aria-label": "Session actions",
+          "onchange": "runHarnessSessionAction(this)",
+          "text": "Session Actions… Inspect Git Status & Diff Compact Session Context (≤2 KB) Open Agile SDLC Product Board"
+        },
+        {
+          "tag": "button",
+          "id": "harnessAbortBtn",
+          "class": "btn btn-danger",
+          "onclick": "abortHarnessRun()",
+          "text": "Abort"
+        },
+        {
+          "tag": "textarea",
+          "id": "harnessPromptInput",
+          "placeholder": "Describe an engineering task, 3-Wave Spec, or full product build for your Project Directory...",
+          "rows": "2"
+        },
+        {
+          "tag": "select",
+          "id": "harnessWorkflowMode",
+          "aria-label": "Harness workflow mode",
+          "onchange": "syncHarnessWorkflowModeUI()",
+          "text": "Autonomous Turn (Step Loop) Plan, Build, Verify (GSD 3-Wave) Agile SDLC Factory (Full Build) Agile SDLC Board & Backlog…"
+        },
+        {
+          "tag": "button",
+          "id": "harnessRunBtn",
+          "class": "btn btn-primary",
+          "onclick": "executeHarnessSelectedWorkflow()",
+          "text": "Run"
+        }
+      ]
+    },
+    {
+      "dom_id": "hall",
+      "section_id": "pane-hall",
+      "control_count": 19,
+      "counts": {
+        "button": 8,
+        "select": 8,
+        "summary": 2,
+        "textarea": 1
+      },
+      "controls_without_id": 6,
+      "controls_without_label": 0,
+      "controls": [
+        {
+          "tag": "button",
+          "class": "btn",
+          "onclick": "openSpawnModal()",
+          "text": "+ Spawn Council Session"
+        },
+        {
+          "tag": "button",
+          "id": "hallFullRoundBtn",
+          "class": "btn btn-amber",
+          "title": "Sequentially summon Seat 1 -> Seat 2 -> Seat 3 -> Seat 4 across your 4 Council LLMs",
+          "onclick": "runHallFullRound()",
+          "text": "Run full round"
+        },
+        {
+          "tag": "button",
+          "id": "hallConcludeBtn",
+          "class": "btn",
+          "title": "Convene remaining voices if needed, then pin Lead Arbiter Final Verdict",
+          "onclick": "summonConclusion()",
+          "text": "Finish and pin summary"
+        },
+        {
+          "tag": "summary",
+          "text": "Council role models"
+        },
+        {
+          "tag": "select",
+          "id": "hallSeatArch"
+        },
+        {
+          "tag": "select",
+          "id": "hallSeatCoder"
+        },
+        {
+          "tag": "select",
+          "id": "hallSeatCritic"
+        },
+        {
+          "tag": "select",
+          "id": "hallSeatJudge"
+        },
+        {
+          "tag": "select",
+          "id": "hallReasoningSelect",
+          "text": "Reasoning: Off Reasoning: Low Reasoning: Medium"
+        },
+        {
+          "tag": "button",
+          "id": "hallStopBtn",
+          "class": "btn btn-danger btn-xs",
+          "onclick": "stopActiveStream()",
+          "text": "Stop"
+        },
+        {
+          "tag": "summary",
+          "text": "Ask one model"
+        },
+        {
+          "tag": "select",
+          "id": "hallRoleSelect",
+          "text": "1. Architect / Strategist 2. Builder / Deep Analyst 3. Adversarial Critic 4. Lead Arbiter"
+        },
+        {
+          "tag": "select",
+          "id": "hallModelSelect"
+        },
+        {
+          "tag": "button",
+          "id": "hallSummonBtn",
+          "class": "btn btn-xs",
+          "title": "Summon only this single selected voice",
+          "onclick": "summonSingleAgent()",
+          "text": "Ask one model"
+        },
+        {
+          "tag": "button",
+          "class": "btn",
+          "onclick": "openSpawnModal()",
+          "text": "+ Spawn Council Session"
+        },
+        {
+          "tag": "button",
+          "class": "btn btn-cyan",
+          "onclick": "openProvidersModal()",
+          "text": "Configure Cloud Providers"
+        },
+        {
+          "tag": "textarea",
+          "id": "hallHumanInput",
+          "placeholder": "Ask a question or steer the Council as Human Operative (Enter = Send)...",
+          "rows": "2"
+        },
+        {
+          "tag": "select",
+          "id": "hallSendModeSelect",
+          "aria-label": "Council message action",
+          "text": "Send & run 4-LLM round Post note only"
+        },
+        {
+          "tag": "button",
+          "class": "btn btn-primary",
+          "onclick": "submitHallComposer()",
+          "text": "Send"
+        }
+      ]
+    },
+    {
+      "dom_id": "council",
+      "section_id": "pane-council",
+      "control_count": 16,
+      "counts": {
+        "button": 9,
+        "input": 1,
+        "select": 5,
+        "textarea": 1
+      },
+      "controls_without_id": 2,
+      "controls_without_label": 0,
+      "controls": [
+        {
+          "tag": "select",
+          "id": "c-arch"
+        },
+        {
+          "tag": "select",
+          "id": "c-coder"
+        },
+        {
+          "tag": "select",
+          "id": "c-critic"
+        },
+        {
+          "tag": "select",
+          "id": "c-judge"
+        },
+        {
+          "tag": "input",
+          "id": "c-unload",
+          "type": "checkbox"
+        },
+        {
+          "tag": "select",
+          "id": "c-reasoning",
+          "text": "Off — Direct Fast (~29 tok/s) Low — Bounded (900t cap) Medium — Deep (1800t cap)"
+        },
+        {
+          "tag": "textarea",
+          "id": "councilPrompt",
+          "aria-label": "Pipeline task",
+          "text": "Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks, with graceful cancellation and unit tests."
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "chip",
+          "onclick": "setCouncilPreset('Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks.')",
+          "text": "Token Bucket"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "chip",
+          "onclick": "setCouncilPreset('Design an event-sourced Portfolio Rebalancer Actor in Python with integer atomic units, deterministic MarketSnapshot replay, and stale-price circuit breakers.')",
+          "text": "Portfolio Actor"
+        },
+        {
+          "tag": "button",
+          "id": "councilStopBtn",
+          "class": "btn btn-danger",
+          "onclick": "stopActiveStream()",
+          "text": "Stop"
+        },
+        {
+          "tag": "button",
+          "id": "councilRunBtn",
+          "class": "btn btn-primary",
+          "onclick": "runCouncil()",
+          "text": "Run pipeline"
+        },
+        {
+          "tag": "button",
+          "id": "step-card-0",
+          "type": "button",
+          "class": "step-card selected",
+          "onclick": "selectStageFilter(0)",
+          "text": "VIEWAll Stages Ready"
+        },
+        {
+          "tag": "button",
+          "id": "step-card-1",
+          "type": "button",
+          "class": "step-card",
+          "onclick": "selectStageFilter(1)",
+          "text": "1 • ARCHITECTSpec Idle"
+        },
+        {
+          "tag": "button",
+          "id": "step-card-2",
+          "type": "button",
+          "class": "step-card",
+          "onclick": "selectStageFilter(2)",
+          "text": "2 • CODERDraft Idle"
+        },
+        {
+          "tag": "button",
+          "id": "step-card-3",
+          "type": "button",
+          "class": "step-card",
+          "onclick": "selectStageFilter(3)",
+          "text": "3 • CRITICAudit Idle"
+        },
+        {
+          "tag": "button",
+          "id": "step-card-4",
+          "type": "button",
+          "class": "step-card",
+          "onclick": "selectStageFilter(4)",
+          "text": "4 • JUDGEFinal Idle"
+        }
+      ]
+    },
+    {
+      "dom_id": "debate",
+      "section_id": "pane-debate",
+      "control_count": 5,
+      "counts": {
+        "button": 2,
+        "input": 1,
+        "select": 1,
+        "textarea": 1
+      },
+      "controls_without_id": 0,
+      "controls_without_label": 0,
+      "controls": [
+        {
+          "tag": "input",
+          "id": "d-synth",
+          "type": "checkbox",
+          "onchange": "syncDebateArbiter()"
+        },
+        {
+          "tag": "select",
+          "id": "d-judge"
+        },
+        {
+          "tag": "textarea",
+          "id": "debatePrompt",
+          "text": "Compare SQLite WAL vs DuckDB vs embedded Postgres for a local macOS telemetry & vector hybrid store handling 500 writes/sec."
+        },
+        {
+          "tag": "button",
+          "id": "debateStopBtn",
+          "class": "btn btn-danger",
+          "onclick": "stopActiveStream()",
+          "text": "Stop"
+        },
+        {
+          "tag": "button",
+          "id": "debateRunBtn",
+          "class": "btn btn-primary",
+          "onclick": "runDebate()",
+          "text": "Start Compare"
+        }
+      ]
+    },
+    {
+      "dom_id": "chat",
+      "section_id": "pane-chat",
+      "control_count": 9,
+      "counts": {
+        "button": 3,
+        "input": 2,
+        "select": 3,
+        "textarea": 1
+      },
+      "controls_without_id": 1,
+      "controls_without_label": 0,
+      "controls": [
+        {
+          "tag": "select",
+          "id": "chatModel"
+        },
+        {
+          "tag": "select",
+          "id": "chatPersona",
+          "text": "Principal Engineer & UI Architect Bug & UX Auditor Code Only (Zero Fluff)"
+        },
+        {
+          "tag": "select",
+          "id": "chatReasoning",
+          "text": "Off Low Medium"
+        },
+        {
+          "tag": "input",
+          "id": "chatToolsEnabled",
+          "type": "checkbox"
+        },
+        {
+          "tag": "input",
+          "id": "chatUnload",
+          "type": "checkbox"
+        },
+        {
+          "tag": "button",
+          "class": "btn btn-xs",
+          "onclick": "clearChat()",
+          "text": "Clear"
+        },
+        {
+          "tag": "textarea",
+          "id": "chatInput",
+          "placeholder": "Message your selected Local or Cloud model... (Enter to send)",
+          "rows": "2"
+        },
+        {
+          "tag": "button",
+          "id": "chatStopBtn",
+          "class": "btn btn-danger",
+          "onclick": "stopActiveStream()",
+          "text": "Stop"
+        },
+        {
+          "tag": "button",
+          "id": "chatSendBtn",
+          "class": "btn btn-primary",
+          "onclick": "sendChat()",
+          "text": "Send"
+        }
+      ]
+    }
+  ],
+  "chrome": {
+    "control_count": 101,
+    "counts": {
+      "button": 54,
+      "input": 29,
+      "select": 12,
+      "summary": 1,
+      "textarea": 5
+    },
+    "controls": [
+      {
+        "tag": "button",
+        "class": "mode-tab",
+        "title": "Guided first run (Alt+6)",
+        "onclick": "switchTab('start')",
+        "data": {
+          "data-tab": "start"
+        },
+        "text": "Start"
+      },
+      {
+        "tag": "button",
+        "class": "mode-tab active",
+        "title": "Agent harness (Alt+1)",
+        "onclick": "switchTab('harness')",
+        "data": {
+          "data-tab": "harness"
+        },
+        "text": "Harness"
+      },
+      {
+        "tag": "button",
+        "class": "mode-tab",
+        "title": "Council sessions (Alt+2)",
+        "onclick": "switchTab('hall')",
+        "data": {
+          "data-tab": "hall"
+        },
+        "text": "Council"
+      },
+      {
+        "tag": "button",
+        "class": "mode-tab",
+        "title": "Four-stage pipeline (Alt+3)",
+        "onclick": "switchTab('council')",
+        "data": {
+          "data-tab": "council"
+        },
+        "text": "Pipeline"
+      },
+      {
+        "tag": "button",
+        "class": "mode-tab",
+        "title": "Compare model responses (Alt+4)",
+        "onclick": "switchTab('debate')",
+        "data": {
+          "data-tab": "debate"
+        },
+        "text": "Compare"
+      },
+      {
+        "tag": "button",
+        "class": "mode-tab",
+        "title": "Model chat (Alt+5)",
+        "onclick": "switchTab('chat')",
+        "data": {
+          "data-tab": "chat"
+        },
+        "text": "Chat"
+      },
+      {
+        "tag": "button",
+        "class": "btn",
+        "aria-label": "Open Command Palette (Cmd+K)",
+        "title": "Search actions and navigate (⌘K / Ctrl+K)",
+        "onclick": "openCommandPalette()",
+        "text": "Search ⌘K"
+      },
+      {
+        "tag": "button",
+        "id": "densityToggleBtn",
+        "type": "button",
+        "class": "btn",
+        "title": "Toggle workspace density",
+        "onclick": "toggleDensity()",
+        "text": "Density: comfortable"
+      },
+      {
+        "tag": "button",
+        "id": "themeToggleBtn",
+        "type": "button",
+        "class": "btn",
+        "aria-label": "Switch to light theme",
+        "title": "Switch to light theme",
+        "onclick": "toggleTheme()",
+        "text": "Light"
+      },
+      {
+        "tag": "input",
+        "id": "cmdSearchInput",
+        "type": "text",
+        "placeholder": "Search actions, tools, and settings…",
+        "oninput": "renderCommandPaletteList(this.value)"
+      },
+      {
+        "tag": "button",
+        "id": "ctxTabBtn-oc",
+        "class": "btn btn-xs btn-cyan",
+        "onclick": "switchCtxTab('oc')",
+        "text": "Knowledge"
+      },
+      {
+        "tag": "button",
+        "id": "ctxTabBtn-cg",
+        "class": "btn btn-xs",
+        "onclick": "switchCtxTab('cg')",
+        "text": "Code graph"
+      },
+      {
+        "tag": "button",
+        "id": "ctxTabBtn-gsd",
+        "class": "btn btn-xs",
+        "onclick": "switchCtxTab('gsd')",
+        "text": "Planning"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "closeContextModal()",
+        "text": "Close"
+      },
+      {
+        "tag": "input",
+        "id": "ocDocId",
+        "type": "hidden"
+      },
+      {
+        "tag": "input",
+        "id": "ocTitle",
+        "type": "text",
+        "placeholder": "e.g. Auth Service JWT Rotation & Edge Cases"
+      },
+      {
+        "tag": "select",
+        "id": "ocFolder",
+        "text": "architecture decisions preferences postmortems"
+      },
+      {
+        "tag": "input",
+        "id": "ocPinned",
+        "type": "checkbox"
+      },
+      {
+        "tag": "textarea",
+        "id": "ocContent",
+        "placeholder": "Markdown architectural rules, decisions, commands, or lessons learned...",
+        "rows": "4"
+      },
+      {
+        "tag": "input",
+        "id": "ocSearchInput",
+        "type": "text",
+        "aria-label": "Search OpenContext documents",
+        "placeholder": "BM25 FTS5 search docs...",
+        "oninput": "searchOpenContextUI(this.value)"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs btn-amber",
+        "title": "lucasastorian/llmwiki deterministic citation & orphan hygiene check",
+        "onclick": "runOpenContextLintUI()",
+        "text": "Wiki Lint"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "resetOcForm()",
+        "text": "Clear"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-emerald btn-xs",
+        "onclick": "saveOpenContextDoc()",
+        "text": "Save to OpenContext"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-cyan btn-xs",
+        "onclick": "refreshCodeGraphOverview()",
+        "text": "Scan Workspace Graph"
+      },
+      {
+        "tag": "input",
+        "id": "cgWorkspaceInput",
+        "type": "text"
+      },
+      {
+        "tag": "select",
+        "id": "cgModeSelect",
+        "text": "codegraph_architecture (Hubs & God Nodes) codegraph_path (Graphify Shortest Path A -> B) codegraph_impact (Caller Blast-Radius) codegraph_context (Symbol Search) codegraph_quality (Complexity Hotspots) ponytail-debt (Shortcut & Rationale Ledger)"
+      },
+      {
+        "tag": "input",
+        "id": "cgQueryInput",
+        "type": "text",
+        "placeholder": "e.g. api_run_harness_turn -> stream_any_model"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-primary",
+        "onclick": "runCodeGraphPlayground()",
+        "text": "Run Query"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "loadMcpServers()",
+        "text": "Refresh"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "closeMcpModal()",
+        "text": "Close"
+      },
+      {
+        "tag": "input",
+        "id": "mcpAlias",
+        "type": "text",
+        "placeholder": "context7"
+      },
+      {
+        "tag": "input",
+        "id": "mcpName",
+        "type": "text",
+        "placeholder": "Context7 Live Docs"
+      },
+      {
+        "tag": "select",
+        "id": "mcpTransport",
+        "onchange": "toggleMcpTransportFields()",
+        "text": "Cloud / Custom HTTP (URL) Custom Stdio Command"
+      },
+      {
+        "tag": "select",
+        "id": "mcpApprovalPolicy",
+        "text": "Auto-Run (Trusted Read/Search) Inherit Harness Policy Always Ask Human Approval"
+      },
+      {
+        "tag": "input",
+        "id": "mcpUrl",
+        "type": "text",
+        "placeholder": "https://mcp.context7.com/mcp"
+      },
+      {
+        "tag": "select",
+        "id": "mcpAuthHeader",
+        "text": "Authorization: Bearer x-api-key None (Zero-Key)"
+      },
+      {
+        "tag": "input",
+        "id": "mcpToken",
+        "type": "password",
+        "placeholder": "Optional for free servers"
+      },
+      {
+        "tag": "input",
+        "id": "mcpHeadersJson",
+        "type": "text",
+        "placeholder": "{\"X-Workspace\": \"prod\"}"
+      },
+      {
+        "tag": "input",
+        "id": "mcpCommand",
+        "type": "text",
+        "placeholder": "python3, uv, npx, uvx, docker"
+      },
+      {
+        "tag": "input",
+        "id": "mcpArgs",
+        "type": "text",
+        "placeholder": "-y @playwright/mcp@latest --headless"
+      },
+      {
+        "tag": "input",
+        "id": "mcpEnvJson",
+        "type": "text",
+        "placeholder": "{\"API_KEY\": \"...\"}"
+      },
+      {
+        "tag": "button",
+        "id": "mcpSaveBtn",
+        "class": "btn btn-primary",
+        "onclick": "saveMcpServer()",
+        "text": "Save & Sync Tools"
+      },
+      {
+        "tag": "summary",
+        "text": "Paste mcpServers JSON Config (Claude Desktop / Cursor / Windsurf Format)"
+      },
+      {
+        "tag": "textarea",
+        "id": "mcpImportJsonInput",
+        "placeholder": "{\"mcpServers\": {\"exa\": {\"url\": \"https://mcp.exa.ai/mcp\"}, \"my-script\": {\"command\": \"python3\", \"args\": [\"server.py\"]}}}",
+        "rows": "4"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-purple btn-xs",
+        "onclick": "importMcpJson()",
+        "text": "Import & Sync All"
+      },
+      {
+        "tag": "select",
+        "id": "mcpPlayServer",
+        "onchange": "populateMcpPlayTools()"
+      },
+      {
+        "tag": "select",
+        "id": "mcpPlayTool"
+      },
+      {
+        "tag": "input",
+        "id": "mcpPlayArgs",
+        "type": "text",
+        "value": "{}"
+      },
+      {
+        "tag": "button",
+        "id": "mcpPlayBtn",
+        "class": "btn btn-emerald",
+        "onclick": "runMcpPlayground()",
+        "text": "Test Call"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "closeExternalHarnessModal()",
+        "text": "Close"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "copyPreText('extDshYaml', this)",
+        "text": "Copy YAML"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "copyPreText('extDshPy', this)",
+        "text": "Copy Python"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "copyPreText('extOpenHarness', this)",
+        "text": "Copy Commands"
+      },
+      {
+        "tag": "button",
+        "id": "applyWorktreeBtn",
+        "class": "btn btn-emerald btn-xs",
+        "onclick": "applyHarnessWorktree()",
+        "text": "Apply Worktree to Main Workspace"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "openHarnessDiffModal()",
+        "text": "Refresh"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "closeHarnessDiffModal()",
+        "text": "Close"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "closeProvidersModal()",
+        "text": "Close"
+      },
+      {
+        "tag": "input",
+        "id": "provAlias",
+        "type": "text",
+        "placeholder": "openrouter"
+      },
+      {
+        "tag": "input",
+        "id": "provName",
+        "type": "text",
+        "placeholder": "OpenRouter"
+      },
+      {
+        "tag": "select",
+        "id": "provWire",
+        "text": "OpenAI Compatible (/chat/completions) Anthropic Native (/v1/messages SSE)"
+      },
+      {
+        "tag": "input",
+        "id": "provUrl",
+        "type": "text",
+        "placeholder": "https://openrouter.ai/api/v1"
+      },
+      {
+        "tag": "input",
+        "id": "provKey",
+        "type": "password",
+        "placeholder": "sk-... (optional for Pollinations / OmniRoute)"
+      },
+      {
+        "tag": "button",
+        "id": "fetchModelsBtn",
+        "class": "btn btn-xs btn-cyan",
+        "onclick": "fetchRemoteModels()",
+        "text": "Fetch Live Models from Endpoint"
+      },
+      {
+        "tag": "textarea",
+        "id": "provModels",
+        "placeholder": "claude-sonnet-4-5, gemini-2.5-pro, qwen/qwen3-coder:free",
+        "rows": "2"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-primary",
+        "onclick": "saveProvider()",
+        "text": "Save & Enable Provider"
+      },
+      {
+        "tag": "input",
+        "id": "comboAlias",
+        "type": "text",
+        "value": "hybrid-architect"
+      },
+      {
+        "tag": "input",
+        "id": "comboName",
+        "type": "text",
+        "value": "Cloud -> M5 Fallback"
+      },
+      {
+        "tag": "input",
+        "id": "comboTargets",
+        "type": "text",
+        "placeholder": "openrouter::qwen/qwen3-coder:free, Qwen3.8-27B-oQ4e-mtp"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-amber",
+        "onclick": "saveCombo()",
+        "text": "Save Combo"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "loadSkills()",
+        "text": "Rescan"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "closeSkillsModal()",
+        "text": "Close"
+      },
+      {
+        "tag": "input",
+        "id": "skillInstallInput",
+        "type": "text",
+        "value": "npx skills add https://github.com/nextlevelbuilder/ui-ux-pro-max-skill --skill ui-ux-pro-max"
+      },
+      {
+        "tag": "button",
+        "id": "skillInstallBtn",
+        "class": "btn btn-primary",
+        "onclick": "installSkill()",
+        "text": "Install"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "refreshSdlcBoard()",
+        "text": "Refresh"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "closeSdlcModal()",
+        "text": "Close"
+      },
+      {
+        "tag": "input",
+        "id": "sdlcWorkspaceInput",
+        "type": "text",
+        "placeholder": "~/Projects/my-new-app",
+        "onchange": "syncProjectDirInputs(this.value)"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "saveWorkspaceDirectory(document.getElementById('sdlcWorkspaceInput').value)",
+        "text": "Set Directory"
+      },
+      {
+        "tag": "textarea",
+        "id": "sdlcVisionInput",
+        "placeholder": "e.g. Build a modern full-stack E-Commerce storefront with live search, filterable catalog, slide-over cart drawer, promo codes, SQLite order persistence, and unit/E2E tests — OR an end-to-end HTML5 Canvas survival roguelike game with wave progression, upgrades, spatial audio, and 60fps loop.",
+        "rows": "3"
+      },
+      {
+        "tag": "select",
+        "id": "sdlcMaxStories",
+        "text": "3 stories 5 stories 8 stories"
+      },
+      {
+        "tag": "select",
+        "id": "sdlcRunModeSelect",
+        "aria-label": "SDLC execution mode",
+        "text": "Full Workflow (Research → PRD → Arch → Sprints + QA) 1. Research & Plan Backlog Only (.sdlc/backlog.json) Resume Pending Sprints (passes:false stories)"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-primary btn-xs",
+        "onclick": "startSdlcSelectedMode()",
+        "text": "Launch SDLC"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "switchSdlcArtifact('RESEARCH.md')",
+        "text": "Research"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "switchSdlcArtifact('PRD.md')",
+        "text": "PRD"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "switchSdlcArtifact('ARCHITECTURE.md')",
+        "text": "Arch"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "switchSdlcArtifact('FEEDBACK_LOG.md')",
+        "text": "Feedback"
+      },
+      {
+        "tag": "input",
+        "id": "sdlcFeedbackAutoImpl",
+        "type": "checkbox"
+      },
+      {
+        "tag": "input",
+        "id": "sdlcFeedbackInput",
+        "type": "text",
+        "placeholder": "e.g. Checkout feels clunky — research 1-page Stripe/Shopify cart drawers & add instant validation"
+      },
+      {
+        "tag": "input",
+        "id": "sdlcInspirationQuery",
+        "type": "text",
+        "placeholder": "e.g. modern ecommerce slide-over cart ux"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-amber",
+        "onclick": "submitSdlcFeedback()",
+        "text": "Research & Iterate"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "closeSpawnModal()",
+        "text": "Close"
+      },
+      {
+        "tag": "textarea",
+        "id": "spawnRequestInput",
+        "rows": "4",
+        "text": "Design an event-sourced local-first task queue on macOS with crash-safe SQLite WAL persistence, zero-polling wakeups, and backpressure."
+      },
+      {
+        "tag": "button",
+        "class": "btn",
+        "onclick": "closeSpawnModal()",
+        "text": "Cancel"
+      },
+      {
+        "tag": "button",
+        "class": "btn",
+        "onclick": "confirmSpawnSession(false)",
+        "text": "Open Empty Room"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-primary",
+        "onclick": "confirmSpawnSession(true)",
+        "text": "Spawn & Convene 4-LLM Council"
+      },
+      {
+        "tag": "select",
+        "id": "integrationsQuickMenu",
+        "aria-label": "Open studio tools and integrations",
+        "onchange": "openIntegrationFromMenu(this)",
+        "text": "Tools & Integrations… Cloud & Local Providers MCP Tools Hub Agent Skills (SKILL.md) Knowledge & CodeGraph External Harness CLI Bridge"
+      },
+      {
+        "tag": "button",
+        "id": "monitorToggleBtn",
+        "class": "btn btn-xs",
+        "title": "Toggle telemetry and model monitor",
+        "onclick": "toggleMonitorRail()",
+        "text": "Telemetry"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs btn-danger",
+        "title": "Unload local models to free memory",
+        "onclick": "unloadAllModels()",
+        "text": "Unload models"
+      },
+      {
+        "tag": "select",
+        "id": "omlxLoadModelPicker",
+        "aria-label": "Select local model to load",
+        "onchange": "toggleCustomLoadInput(this.value)",
+        "text": "+ Load model on demand…"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs btn-cyan",
+        "onclick": "loadSelectedOmlxModel()",
+        "text": "Load"
+      },
+      {
+        "tag": "input",
+        "id": "omlxCustomModelInput",
+        "type": "text",
+        "placeholder": "Enter local oMLX or HF model ID…"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "clearSsdCache()",
+        "text": "Clear SSD"
+      }
+    ]
+  },
+  "totals": {
+    "panes": 6,
+    "markup_controls": 170,
+    "pane_controls": 69,
+    "chrome_controls": 101,
+    "script_rendered_controls": 30,
+    "script_rendered_by_function": {
+      "appendWorkflowApprovalCard": 3,
+      "ensureLiveStepCard": 3,
+      "ensureStageCardMounted": 1,
+      "openSpawnModal": 1,
+      "refreshOnboarding": 1,
+      "renderCommandPaletteList": 1,
+      "renderHarnessSidebar": 1,
+      "renderMarkdown": 1,
+      "renderMcpUI": 7,
+      "renderOpenContextDocs": 3,
+      "renderProvidersModal": 3,
+      "renderStoredHarnessEventHtml": 3,
+      "renderTelemetry": 1,
+      "syncUnifiedSelectors": 1
+    }
+  },
+  "not_verified": [
+    "Nothing here was rendered. A control can exist in the markup and never be shown; the inventory is a static reading, and capture needs a browser this environment does not have.",
+    "Script-rendered controls are counted from template strings and attributed to the nearest preceding function, which is a heuristic, not a call graph.",
+    "Reachability, keyboard order and focus behaviour are not measured here; UIUX-P5-04 and UIUX-P5-05 are where those get tested.",
+    "The without-id and without-label columns are a static count, not an accessibility verdict: a control can be labelled by a wrapping <label> element, which this walk does not resolve."
+  ]
+}
