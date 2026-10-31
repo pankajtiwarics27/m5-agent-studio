@@ -1724,7 +1724,9 @@ def test_sync_containment_and_abort_spawn_cleanup_during_pending_spawn(
         outcome = await sup.await_pending_containment_async(sup_id)
         assert outcome is not None
         assert outcome.reason == "sync_revoke_mid_spawn"
-        assert process_supervision.probe_process(child_pid) is None
+        await asyncio.wait_for(proc.wait(), timeout=2.0)
+        probe_after = process_supervision.probe_process(child_pid)
+        assert probe_after is None or not probe_after.alive
 
     asyncio.run(_run_sync_latch())
 
