@@ -92,6 +92,7 @@ files = [
   "session_trust.py",
   "side_effect_ledger.py",
   "task_events.py",
+  "trusted_transformations.py",
   "workflow_checkpoints.py",
   "workflow_evaluation.py",
   "workflow_orchestration.py",

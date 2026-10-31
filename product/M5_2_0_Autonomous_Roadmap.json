@@ -123,11 +123,11 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": "M5-P6-02",
-    "last_completed_story": "M5-P6-01",
-    "last_checkpoint": "2026-10-31T15:55:00Z",
+    "active_story": null,
+    "last_completed_story": "M5-P6-02",
+    "last_checkpoint": "2026-10-31T16:10:00Z",
     "last_session_id": "arena/eb4484b8-m5-agent-studio",
-    "next_recommended_story": "M5-P6-03 (Advanced calibration and multi-model experiments; owner-authorized optional Phase P6 story).",
+    "next_recommended_story": "M5-P6-03 (Advanced calibration and multi-model experiments; final owner-authorized optional Phase P6 story).",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
       "RESOLVED 2026-10-31 (M5-P3-01): container isolation is QUALIFIED on the target host. The operator run (Apple M5, Docker Desktop 29.5.3, image python:sha256:aa943ce41142...) passed all 12 sandbox checks, including p3.adversarial.memory_limit as exit 137 with memory.max=536870912 and memory.swap.max=536870912 captured before and after a 3 GiB allocation, and isolation_smoke.py --live released dependent_execution under the observed boundary (docs/m5-2-0-sandbox-isolation-evidence.md). The 2026-10-30 run that failed that check (exit 0, no counters) is kept; the passing run supersedes it without explaining it. Two limits travel with the record: the qualification binds to that machine, engine version and image digest, so every other host starts unqualified; and the engine's default swap allowance means the shipped '--memory=2g' ceilings at RAM + swap (about 4 GiB), so pinning '--memory-swap' to '--memory' remains an open hardening item that needs its own re-qualification.",
@@ -249,7 +249,7 @@
       ],
       "status": "in_progress",
       "exit_gate": "Only evidence-justified optional stories are promoted.",
-      "progress_percent": 38
+      "progress_percent": 67
     }
   ],
   "stories": [
@@ -3420,22 +3420,53 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P6-02: Typed trusted transformation registry. Objective: Introduce qualified trust relaxation only for demonstrated blocking workflows. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Collect unsupported transformation demand; Define allowlisted typed contracts and qualification evidence; Use risk-tiered promotion authority; Invalidate dependent guarantees on revocation. Acceptance: No model self-certification; No unsupported trust relaxation; Measurable benefit justifies cost. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 15,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-31T15:55:00Z",
-        "updated_at": "2026-10-31T15:55:00Z",
-        "completed_at": null,
+        "updated_at": "2026-10-31T16:10:00Z",
+        "completed_at": "2026-10-31T16:10:00Z",
         "owner_session": "arena/eb4484b8-m5-agent-studio",
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
+        "commit_sha": "HEAD",
+        "changed_files": [
+          "trusted_transformations.py",
+          "evidence_lessons.py",
+          "app.py",
+          "studio.py",
+          "pyproject.toml",
+          "scripts/build_studio.py",
+          "README.md",
+          "docs/adr/0023-typed-trusted-transformation-registry.md",
+          "docs/route-security-matrix.md",
+          "docs/subsystem-dependency-inventory.md",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "tests/test_durable_state_contract.py",
+          "tests/test_trusted_transformations.py",
+          "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "Task 1 & AC2 (Unsupported demand collection & no unsupported trust relaxation): Implemented TrustedTransformationRegistry ($HARNESS_STORE_DIR/transformations/state.json, 8-clause durable-JSON contract) where unregistered, unpromoted, out-of-scope, or A/B-gated calls raise TransformationRejectedError (preserving conservative 'untrusted' provenance in ArtifactRegistry) and persist secret/injection-redacted TransformationDemandRecord entries; promote_contract rejects missing or non-blocking demand (missing_blocking_demand / demand_not_blocking), non-allowlisted IDs, over-broad trust/operation envelopes, and confidentiality downgrades ('secret' stays 'secret') (tests/test_trusted_transformations.py).",
+          "AC1 & Task 3 (No model self-certification & risk-tiered promotion authority): PromotionAttestation unconditionally raises ModelSelfCertificationForbiddenError (HTTP 403) for model, assistant, subagent, mcp_tool, skill, automated_harness, worker/model IDs, non-operator provenance, model reviewers, or non-operator ScopedGrantStore grants; low tier requires human operator authority (capped at 'unverified'); medium tier requires operator + active ScopedGrantStore grant; high/critical tiers require operator + active workspace_write grant + independent security_reviewer dual sign-off (reviewer_id != promoted_by) (tests/test_trusted_transformations.py::test_no_model_self_certification_across_all_tiers_and_provenance_channels).",
+          "Task 2 & AC3 (Allowlisted typed contracts, qualification corpus & measurable benefit): Built 3 pure stdlib transformations (diagnostic_log_sanitizer_v1, structured_test_report_extract_v1, scoped_unified_diff_normalizer_v1) pinned by compute_transform_implementation_digest and qualified against positive + adversarial suites with unexpected_bypass_count == 0. Paired 18-run A/B suite (runs_per_variant=3, report_sha256=011b6eeadd55b3253f3fb07ec436a84986f5f38d781373e67e57d650c5b787e0) verified overall completion 0.333333 -> 1.0 (+0.666667), blocking workflows 0.0 -> 1.0, median tokens 620.0 -> 340.0 (-280.0), median transform overhead 3.6643 ms (<= 50 ms ceiling), and unauthorized_relaxations == 0; optional feature disables cleanly via STUDIO_ENABLE_TRUSTED_TRANSFORMATIONS=0 or store config.",
+          "Task 4 (Invalidate dependent guarantees on revocation): revoke_contract, revalidate_active_contracts, and verify_execution_guarantee mark TransformationExecutionRecord entries invalidated on explicit revocation, ScopedGrantStore grant revocation/expiry, or security_generation drift, invoke ArtifactRegistry.invalidate(output_sha256) cascading across derived_from artifacts and flipping EvidenceRecord entries to stale, and invoke EvidenceLessonStore.invalidate_lessons_by_lineage_digests (tests/test_trusted_transformations.py::test_revocation_grant_expiry_and_security_generation_cascade_to_lineage_evidence_and_lessons)."
+        ],
+        "test_results": [
+          ".venv/bin/ruff check . -> exit 0 (All checks passed)",
+          ".venv/bin/mypy -> exit 0 (Success: no issues found in 57 source files)",
+          ".venv/bin/pytest -q -> exit 0 (1508 passed, 1 skipped in 117.90s)",
+          ".venv/bin/python3 scripts/smoke_local.py && .venv/bin/python3 scripts/smoke_local.py --standalone -> exit 0",
+          ".venv/bin/python3 scripts/validate_docs.py && .venv/bin/python3 scripts/validate_adrs.py && .venv/bin/python3 scripts/validate_governance.py && .venv/bin/python3 scripts/validate_security_signoff.py -> exit 0",
+          ".venv/bin/python3 scripts/uiux_source_manifest.py --check && .venv/bin/python3 scripts/uiux_control_inventory.py --check -> exit 0",
+          ".venv/bin/python3 scripts/release_supply_chain.py build && verify -> exit 0 (artifact-secrets=passed, dependency-vulnerabilities=passed)"
+        ],
+        "decisions": [
+          "ADR-0023: Record transformed outputs as distinct SHA-256 canonical envelopes in ArtifactRegistry linked via derived_from=(input_sha256,) rather than mutating source ProvenanceEntry sightings, preserving conservative untrusted history on raw inputs and preserving source confidentiality ('secret' stays 'secret').",
+          "Bind medium/high/critical transformation contracts to live ScopedGrantStore operator grants and current security_generation so revoking an operator grant or advancing security configuration automatically cascades invalidation across ArtifactRegistry, EvidenceRecord, and EvidenceLessonStore."
+        ],
         "blockers": [],
-        "handoff_note": "Claimed M5-P6-02 on arena/eb4484b8-m5-agent-studio after closing superseded draft PR #101.",
-        "next_action": "Implement trusted_transformations.py, wire app.py + artifact_lineage.py + scoped_grants.py + evidence_lessons.py, author ADR-0023 and regression/A-B suite.",
-        "readme_updated": false
+        "handoff_note": "Completed M5-P6-02 with ADR-0023, 6-test suite + 8-clause durable-state contract, HTTP routes, standalone studio.py parity, and measured 18-run A/B benefit evidence.",
+        "next_action": "Merge PR #105 after CI passes, fast-forward main, and claim final story M5-P6-03.",
+        "readme_updated": true
       }
     },
     {

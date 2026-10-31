@@ -92,6 +92,7 @@ import scoped_grants
 import security_release_gate
 import child_delegation
 import evidence_lessons
+import trusted_transformations
 import verification_evidence
 import workspace_quarantine
 import workspace_snapshots
@@ -952,6 +953,49 @@ def _reset_evidence_lesson_store(store: evidence_lessons.EvidenceLessonStore | N
 def _env_evidence_lessons_enabled() -> bool:
     """Check process environment opt-out for M5-P6-01 evidence-backed lessons."""
     raw = (os.environ.get("STUDIO_ENABLE_EVIDENCE_LESSONS") or "").strip().lower()
+    if not raw:
+        return True
+    if raw in _FALSE_VALUES:
+        return False
+    return True
+
+
+_TRUSTED_TRANSFORMATION_REGISTRY: trusted_transformations.TrustedTransformationRegistry | None = None
+_TRUSTED_TRANSFORMATION_REGISTRY_DIR: Path | None = None
+_TRUSTED_TRANSFORMATION_REGISTRY_LOCK = threading.Lock()
+
+
+def get_trusted_transformation_registry() -> trusted_transformations.TrustedTransformationRegistry:
+    """Return the durable M5-P6-02 typed trusted transformation registry."""
+    global _TRUSTED_TRANSFORMATION_REGISTRY, _TRUSTED_TRANSFORMATION_REGISTRY_DIR
+    cur_dir = Path(HARNESS_STORE_DIR).resolve()
+    with _TRUSTED_TRANSFORMATION_REGISTRY_LOCK:
+        if (
+            _TRUSTED_TRANSFORMATION_REGISTRY is None
+            or _TRUSTED_TRANSFORMATION_REGISTRY_DIR != cur_dir
+        ):
+            _TRUSTED_TRANSFORMATION_REGISTRY = (
+                trusted_transformations.TrustedTransformationRegistry(cur_dir)
+            )
+            _TRUSTED_TRANSFORMATION_REGISTRY_DIR = cur_dir
+        return _TRUSTED_TRANSFORMATION_REGISTRY
+
+
+def _reset_trusted_transformation_registry(
+    reg: trusted_transformations.TrustedTransformationRegistry | None = None,
+) -> None:
+    """Replace or clear the cached trusted transformation registry (tests)."""
+    global _TRUSTED_TRANSFORMATION_REGISTRY, _TRUSTED_TRANSFORMATION_REGISTRY_DIR
+    with _TRUSTED_TRANSFORMATION_REGISTRY_LOCK:
+        _TRUSTED_TRANSFORMATION_REGISTRY = reg
+        _TRUSTED_TRANSFORMATION_REGISTRY_DIR = (
+            Path(HARNESS_STORE_DIR).resolve() if reg is not None else None
+        )
+
+
+def _env_trusted_transformations_enabled() -> bool:
+    """Check process environment opt-out for M5-P6-02 typed trusted transformations."""
+    raw = (os.environ.get("STUDIO_ENABLE_TRUSTED_TRANSFORMATIONS") or "").strip().lower()
     if not raw:
         return True
     if raw in _FALSE_VALUES:
@@ -13081,6 +13125,20 @@ def _artifact_lineage_summary_or_none() -> dict[str, Any]:
         }
 
 
+def _trusted_transformations_summary_or_none() -> dict[str, Any]:
+    """Read-only typed trusted transformation view (M5-P6-02); corruption is reported, not hidden."""
+    try:
+        return get_trusted_transformation_registry().summary(
+            env_enabled=_env_trusted_transformations_enabled()
+        )
+    except (trusted_transformations.TrustedTransformationError, OSError) as exc:
+        return {
+            "error": str(exc)[:240],
+            "corrupt": True,
+            "schema_version": trusted_transformations.TT_SCHEMA_VERSION,
+        }
+
+
 @app.get("/api/harness/sessions/{session_id}/task")
 async def api_get_harness_task_state(session_id: str) -> JSONResponse:
     """Return durable root-task state, child milestones, checkpoints, budgets, and transition log."""
@@ -13149,6 +13207,7 @@ async def api_get_harness_task_state(session_id: str) -> JSONResponse:
             "recovery": _recovery_summary_or_none(session_id),
             "containment": _containment_summary_or_none(session_id),
             "artifact_lineage": _artifact_lineage_summary_or_none(),
+            "trusted_transformations": _trusted_transformations_summary_or_none(),
             "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
             "checkpoint_integrity_error": integrity_error,
             "checkpoints": [ck.to_dict() for ck in checkpoints],
@@ -16927,6 +16986,324 @@ async def api_evaluate_harness_lessons(request: Request) -> JSONResponse:
     except evidence_lessons.LessonStoreIntegrityError as exc:
         raise HTTPException(status_code=503, detail={"code": "lesson_state_corrupt", "message": str(exc)}) from exc
     except evidence_lessons.EvidenceLessonError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(report)
+
+
+async def run_trusted_transformations_ab_evaluation_async(
+    *,
+    runs_per_variant: int = 3,
+    persist_summary: bool = True,
+) -> dict[str, Any]:
+    """Run reproducible paired A/B evaluation for M5-P6-02 typed trusted transformations."""
+    sec_gen = int(_current_security_generation() or 0)
+
+    def _run_sync() -> dict[str, Any]:
+        with tempfile.TemporaryDirectory(prefix="m5-tt-ab-") as td:
+            raw_report = trusted_transformations.run_builtin_transformation_ab_suite(
+                runs_per_variant=runs_per_variant,
+                security_generation=sec_gen,
+                tmp_root=Path(td),
+            )
+        if persist_summary:
+            stored = get_trusted_transformation_registry().record_ab_report(
+                raw_report,
+                enforce_gate=True,
+            )
+            stored["config"] = get_trusted_transformation_registry().get_config(
+                env_enabled=_env_trusted_transformations_enabled()
+            )
+            return stored
+        out = dict(raw_report)
+        out["ab_gate_passed"] = all(
+            bool(s.get("benefit_justifies_cost", False))
+            and int(s.get("unauthorized_relaxations") or 0) == 0
+            for s in raw_report["scenarios"]
+        )
+        out["config"] = get_trusted_transformation_registry().get_config(
+            env_enabled=_env_trusted_transformations_enabled()
+        )
+        return out
+
+    return await asyncio.to_thread(_run_sync)
+
+
+@app.get("/api/harness/transformations")
+async def api_list_harness_transformations(include_inactive: bool = False) -> JSONResponse:
+    """List allowlisted transformation specs, recorded blocking demands, and contracts (M5-P6-02)."""
+    try:
+        reg = get_trusted_transformation_registry()
+        art_reg = artifact_lineage.ArtifactRegistry(HARNESS_STORE_DIR)
+        auto_revoked = reg.revalidate_active_contracts(
+            current_security_generation=int(_current_security_generation() or 0),
+            grant_store=get_scoped_grant_store(),
+            artifact_registry=art_reg,
+            lesson_store=get_evidence_lesson_store(),
+        )
+        return JSONResponse(
+            {
+                "env_enabled": _env_trusted_transformations_enabled(),
+                "config": reg.get_config(env_enabled=_env_trusted_transformations_enabled()),
+                "auto_revoked_contract_ids": list(auto_revoked),
+                "allowlisted_specs": trusted_transformations.get_allowlisted_transform_specs(),
+                "demands": [d.to_mapping() for d in reg.list_demands()],
+                "contracts": [
+                    c.to_mapping() for c in reg.list_contracts(include_inactive=include_inactive)
+                ],
+                "latest_ab_report": reg.latest_ab_report(),
+            }
+        )
+    except trusted_transformations.TransformationStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "transformation_state_corrupt", "message": str(exc)},
+        ) from exc
+    except trusted_transformations.TrustedTransformationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/harness/transformations/config")
+async def api_update_harness_transformations_config(request: Request) -> JSONResponse:
+    """Enable/disable M5-P6-02 typed trusted transformations or adjust benefit gate."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    try:
+        reg = get_trusted_transformation_registry()
+        persisted = reg.update_config(
+            enabled=body["enabled"] if "enabled" in body and body["enabled"] is not None else None,
+            ab_gate_open=(
+                body["ab_gate_open"]
+                if "ab_gate_open" in body and body["ab_gate_open"] is not None
+                else None
+            ),
+        )
+        return JSONResponse(
+            {
+                "env_enabled": _env_trusted_transformations_enabled(),
+                "config": reg.get_config(env_enabled=_env_trusted_transformations_enabled()),
+                "persisted": persisted,
+            }
+        )
+    except trusted_transformations.TransformationStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "transformation_state_corrupt", "message": str(exc)},
+        ) from exc
+    except (trusted_transformations.TrustedTransformationError, ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/harness/transformations/qualify")
+async def api_qualify_harness_transformation(request: Request) -> JSONResponse:
+    """Run deterministic positive + adversarial qualification corpus for an allowlisted transform (M5-P6-02)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    try:
+        qual = trusted_transformations.qualify_allowlisted_transform(
+            str(body.get("transform_id") or ""),
+            security_generation=int(_current_security_generation() or 0),
+        )
+        return JSONResponse({"qualification": qual.to_mapping()})
+    except trusted_transformations.TrustedTransformationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/harness/transformations/promote")
+async def api_promote_harness_transformation(request: Request) -> JSONResponse:
+    """Promote an allowlisted typed transformation contract under risk-tiered human authority (M5-P6-02)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    raw_att = body.get("attestation")
+    if not isinstance(raw_att, Mapping):
+        raise HTTPException(status_code=400, detail="attestation mapping is required.")
+    raw_qual = body.get("qualification")
+    sec_gen = int(_current_security_generation() or 0)
+    try:
+        tid = str(body.get("transform_id") or "").strip()
+        att = trusted_transformations.PromotionAttestation.from_mapping(raw_att)
+        qual = (
+            trusted_transformations.TransformationQualificationEvidence.from_mapping(raw_qual)
+            if isinstance(raw_qual, Mapping)
+            else trusted_transformations.qualify_allowlisted_transform(
+                tid, security_generation=sec_gen
+            )
+        )
+        raw_ops = body.get("allowed_operations") or ()
+        raw_dids = body.get("demand_ids") or ()
+        raw_srcs = body.get("allowed_source_trusts") or ("untrusted", "unverified")
+        if not isinstance(raw_ops, Sequence) or isinstance(raw_ops, (str, bytes)):
+            raise ValueError("allowed_operations must be a list of strings.")
+        if not isinstance(raw_dids, Sequence) or isinstance(raw_dids, (str, bytes)):
+            raise ValueError("demand_ids must be a list of strings.")
+        if not isinstance(raw_srcs, Sequence) or isinstance(raw_srcs, (str, bytes)):
+            raise ValueError("allowed_source_trusts must be a list of strings.")
+        ben_raw = body.get("measured_benefit_summary")
+        if not isinstance(ben_raw, Mapping):
+            latest = get_trusted_transformation_registry().latest_ab_report() or {}
+            scen_match = next(
+                (
+                    s
+                    for s in (latest.get("scenarios") or ())
+                    if isinstance(s, Mapping) and s.get("transform_id") == tid
+                ),
+                None,
+            )
+            ben_map: Mapping[str, Any] = scen_match if scen_match is not None else {}
+        else:
+            ben_map = ben_raw
+        contract = get_trusted_transformation_registry().promote_contract(
+            transform_id=tid,
+            risk_tier=str(body.get("risk_tier") or ""),
+            relaxed_trust=str(body.get("relaxed_trust") or ""),
+            allowed_operations=tuple(str(o) for o in raw_ops),
+            demand_ids=tuple(str(d) for d in raw_dids),
+            qualification=qual,
+            attestation=att,
+            measured_benefit_summary=ben_map,
+            current_security_generation=sec_gen,
+            grant_store=get_scoped_grant_store(),
+            allowed_source_trusts=tuple(str(s) for s in raw_srcs),
+            env_enabled=_env_trusted_transformations_enabled(),
+        )
+        return JSONResponse({"status": contract.status, "contract": contract.to_mapping()})
+    except trusted_transformations.TransformationStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "transformation_state_corrupt", "message": str(exc)},
+        ) from exc
+    except trusted_transformations.ModelSelfCertificationForbiddenError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail={"code": exc.code, "message": str(exc)},
+        ) from exc
+    except trusted_transformations.TransformationPromotionRejectedError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": exc.code, "message": str(exc)},
+        ) from exc
+    except (trusted_transformations.TrustedTransformationError, ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/harness/transformations/execute")
+async def api_execute_harness_transformation(request: Request) -> JSONResponse:
+    """Execute an active promoted typed transformation over an ArtifactRegistry input (M5-P6-02)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    if "input_json" in body and body["input_json"] is not None:
+        raw_bytes = json.dumps(body["input_json"], sort_keys=True).encode("utf-8")
+    elif isinstance(body.get("input_text"), str):
+        raw_bytes = body["input_text"].encode("utf-8")
+    else:
+        raise HTTPException(status_code=400, detail="Provide input_json or input_text.")
+
+    art_reg = artifact_lineage.ArtifactRegistry(HARNESS_STORE_DIR)
+    in_sha = (
+        str(body.get("input_sha256") or artifact_lineage.content_digest(raw_bytes))
+        .strip()
+        .lower()
+    )
+    if bool(body.get("record_source_if_missing", False)) and not art_reg.has_artifact(in_sha):
+        art_reg.record_artifact(
+            in_sha,
+            source_kind=str(body.get("source_kind") or "external_untrusted"),
+            source_ref=str(body.get("source_ref") or "api_execute"),
+            trust=str(body.get("source_trust") or "untrusted"),
+            confidentiality=str(body.get("confidentiality") or "internal"),
+            task_id=str(body.get("task_id") or ""),
+            security_generation=int(_current_security_generation() or 0),
+            size=len(raw_bytes),
+        )
+    try:
+        outcome = get_trusted_transformation_registry().execute_transformation(
+            transform_id=str(body.get("transform_id") or ""),
+            input_bytes=raw_bytes,
+            input_sha256=in_sha,
+            requested_operation=str(body.get("requested_operation") or ""),
+            workflow_kind=str(body.get("workflow_kind") or "harness_workflow"),
+            artifact_registry=art_reg,
+            task_id=str(body.get("task_id") or ""),
+            current_security_generation=int(_current_security_generation() or 0),
+            grant_store=get_scoped_grant_store(),
+            lesson_store=get_evidence_lesson_store(),
+            env_enabled=_env_trusted_transformations_enabled(),
+        )
+        return JSONResponse(outcome.to_mapping())
+    except trusted_transformations.TransformationStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "transformation_state_corrupt", "message": str(exc)},
+        ) from exc
+    except trusted_transformations.TransformationRejectedError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": exc.code, "message": str(exc), "demand_id": exc.demand_id},
+        ) from exc
+    except (
+        trusted_transformations.TrustedTransformationError,
+        artifact_lineage.ArtifactLineageError,
+    ) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/harness/transformations/{transform_id}/revoke")
+async def api_revoke_harness_transformation(transform_id: str, request: Request) -> JSONResponse:
+    """Revoke a transformation contract and cascade invalidation to artifacts, evidence, and lessons (M5-P6-02)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    try:
+        result = get_trusted_transformation_registry().revoke_contract(
+            transform_id,
+            reason=str(body.get("reason") or "operator_revoked"),
+            artifact_registry=artifact_lineage.ArtifactRegistry(HARNESS_STORE_DIR),
+            lesson_store=get_evidence_lesson_store(),
+        )
+        return JSONResponse(result)
+    except trusted_transformations.TransformationStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "transformation_state_corrupt", "message": str(exc)},
+        ) from exc
+    except trusted_transformations.TrustedTransformationError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/harness/transformations/evaluate")
+async def api_evaluate_harness_transformations(request: Request) -> JSONResponse:
+    """Run reproducible A/B workflow evaluation for typed trusted transformations (M5-P6-02)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    runs_n = int(body.get("runs_per_variant") or 3)
+    persist = bool(body.get("persist_summary", True))
+    try:
+        report = await run_trusted_transformations_ab_evaluation_async(
+            runs_per_variant=runs_n,
+            persist_summary=persist,
+        )
+    except trusted_transformations.TransformationStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "transformation_state_corrupt", "message": str(exc)},
+        ) from exc
+    except trusted_transformations.TrustedTransformationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return JSONResponse(report)
 

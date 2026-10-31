@@ -969,6 +969,52 @@ class EvidenceLessonStore:
             self._write_state_unlocked(state)
             return updated
 
+    def invalidate_lessons_by_lineage_digests(
+        self,
+        digests: Collection[str],
+        *,
+        reason: str,
+    ) -> tuple[str, ...]:
+        """Invalidate any active lesson whose provenance.lineage_evidence_id matches an invalidated digest."""
+        normalized = {str(d or "").strip().lower() for d in digests if str(d or "").strip()}
+        if not normalized:
+            return ()
+        invalidated_ids: list[str] = []
+        with self._lock:
+            state = self._read_state_unlocked()
+            now_ts = _el_now()
+            mutated = False
+            for lid, raw_item in list(state["lessons"].items()):
+                rec = LessonRecord.from_mapping(raw_item)
+                if rec.status != "promoted":
+                    continue
+                if rec.provenance.lineage_evidence_id.strip().lower() in normalized:
+                    updated = LessonRecord(
+                        lesson_id=rec.lesson_id,
+                        project_scope_id=rec.project_scope_id,
+                        topic_key=rec.topic_key,
+                        title=rec.title,
+                        guidance=rec.guidance,
+                        tags=rec.tags,
+                        failure_codes=rec.failure_codes,
+                        anchored_files=rec.anchored_files,
+                        provenance=rec.provenance,
+                        status="revoked",
+                        estimated_tokens=rec.estimated_tokens,
+                        created_at=rec.created_at,
+                        updated_at=now_ts,
+                        stale_reason=str(reason or "lineage_revoked")[:200],
+                        retrieval_count=rec.retrieval_count,
+                        verified_hit_count=rec.verified_hit_count,
+                        consecutive_failures=rec.consecutive_failures,
+                    )
+                    state["lessons"][lid] = updated.to_mapping()
+                    invalidated_ids.append(lid)
+                    mutated = True
+            if mutated:
+                self._write_state_unlocked(state)
+        return tuple(invalidated_ids)
+
     def revalidate_project_lessons(
         self,
         *,
