@@ -1,0 +1,1261 @@
+{
+  "schema_version": "2.0.0",
+  "document_type": "m5_uiux_preservation_signoff",
+  "program": "M5_2_0_UIUX",
+  "story": "UIUX-P0-06",
+  "generator": "scripts/uiux_preservation_signoff.py",
+  "regenerate_with": "python3 scripts/uiux_preservation_signoff.py",
+  "check_with": "python3 scripts/uiux_preservation_signoff.py --check",
+  "statement": "A preservation and rollback review package with a baseline source pin and hashes of its current input artifacts: capabilities, controls, bounded route candidates and their gates. The source pin alone does not prove that every input was measured at that commit.",
+  "prepared_not_signed": "Prepared by an agent. An agent may prepare this package; it may not approve it. The approval lives in the ledger's coordination.preservation_signoff record, and this page reports it.",
+  "pinned_source_commit": "95cc01dfbd9cc581bf5923da4910397df96bbe50",
+  "status": "unsigned",
+  "signature": {
+    "approved": false,
+    "approved_by": null,
+    "approved_at": null,
+    "reference": null,
+    "signed": false,
+    "statement": "No signature. This is material for the owner to approve, not an approved baseline."
+  },
+  "inputs": {
+    "ledger_sha256": "f4fcb12f552ec73e18729458a21502c08c2cc2f0f1f90de88093c5b2174497f4",
+    "source_manifest_sha256": "9657a3f8c4848f552de6e838b3321b6db318b15d86685c4fae64de5b5dfd0ad3",
+    "control_inventory_sha256": "1a854af0969cee34b1cdcbd47a76c29edcfb5bc67b66d6d150960dec86e92b97",
+    "route_map_sha256": "53d72874d56033ac6771bc6def32de223b1fd9dbd6ca78f8e82969b8a19d1e35",
+    "authorization_trace_sha256": "a6452ced395649d1615f71facb776157526aaf2986d702ec0965378aa90cd344",
+    "frontend_sha256": "3137cb7d05bcbdd29155576bd9952f49172705b85e70a0c0a2484c81bc80a66a"
+  },
+  "approval_request": [
+    {
+      "id": 1,
+      "ask": "Accept the preservation matrix as the baseline P1 must preserve",
+      "evidence": "21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+    },
+    {
+      "id": 2,
+      "ask": "Accept the control inventory as the list of controls that must stay reachable",
+      "evidence": "170 markup controls (101 chrome, 69 panes) plus 30 rendered by script"
+    },
+    {
+      "id": 3,
+      "ask": "Review route candidates and preserve confirmed browser-reachable routes and their gates",
+      "evidence": "115 routes exist; 57 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 37 state-changing candidates; the lexical scan is not exhaustive"
+    },
+    {
+      "id": 4,
+      "ask": "Accept that P1 may not weaken the shared boundary",
+      "evidence": "host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself"
+    },
+    {
+      "id": 5,
+      "ask": "Review the rollback path and the state effects of each story",
+      "evidence": "this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below"
+    }
+  ],
+  "totals": {
+    "panes": 6,
+    "preserved_capabilities": 21,
+    "markup_controls": 170,
+    "chrome_controls": 101,
+    "pane_controls": 69,
+    "script_rendered_controls": 30,
+    "routes": 115,
+    "routes_with_resolved_or_possible_caller": 57,
+    "routes_no_caller_observed": 58,
+    "routes_unknown_frontend_caller": 0,
+    "route_map_unresolved_call_sites": 0,
+    "route_map_unresolved_caller_edges": 0,
+    "route_map_unresolved_method_edges": 0,
+    "state_changing_routes_traced": 37,
+    "pane_routes_reached": 26,
+    "pane_routes_excluded": 34,
+    "route_walk_depth": 2,
+    "screenshots_captured": 0,
+    "screenshots_planned": 6
+  },
+  "panes": [
+    {
+      "label": "Start",
+      "dom_id": "start",
+      "keyboard_shortcut": "Alt+6",
+      "purpose": "The preflight checklist a new user sees first: what is ready, what still needs them.",
+      "screenshot_id": "start",
+      "preserved_capabilities": [
+        {
+          "capability": "Guided first run",
+          "target": "Start primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        },
+        {
+          "capability": "readiness summary",
+          "target": "Start primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        },
+        {
+          "capability": "run-first-task",
+          "target": "Start primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        },
+        {
+          "capability": "recheck",
+          "target": "Start primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        },
+        {
+          "capability": "provider settings",
+          "target": "Start primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        }
+      ],
+      "control_count": 3,
+      "counts": {
+        "button": 3
+      },
+      "controls": [
+        {
+          "tag": "button",
+          "id": "onboardingRunBtn",
+          "text": "Run the first task",
+          "onclick": "startGuidedFirstTask()",
+          "handler": "startGuidedFirstTask"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Re-check",
+          "onclick": "refreshOnboarding()",
+          "handler": "refreshOnboarding"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Providers",
+          "onclick": "openProvidersModal()",
+          "handler": "openProvidersModal"
+        }
+      ],
+      "declared_handlers": [
+        "openProvidersModal",
+        "refreshOnboarding",
+        "startGuidedFirstTask"
+      ],
+      "routes_reached": [
+        {
+          "method": "GET",
+          "path": "/api/hall/sessions",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "refreshHallSessions",
+          "via": [
+            "startGuidedFirstTask",
+            "switchTab",
+            "refreshHallSessions"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/harness/sessions",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "loadHarnessSessions",
+          "via": [
+            "startGuidedFirstTask",
+            "switchTab",
+            "loadHarnessSessions"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/onboarding/preflight",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "refreshOnboarding",
+          "via": [
+            "refreshOnboarding"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/providers",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "loadProviders",
+          "via": [
+            "openProvidersModal",
+            "loadProviders"
+          ]
+        }
+      ],
+      "routes_excluded_by_entry_point": 0
+    },
+    {
+      "label": "Harness",
+      "dom_id": "harness",
+      "keyboard_shortcut": "Alt+1",
+      "purpose": "An agent session over a workspace, with the diff, approval, and abort controls.",
+      "screenshot_id": "harness",
+      "preserved_capabilities": [
+        {
+          "capability": "Session creation",
+          "target": "Harness primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        },
+        {
+          "capability": "workspace",
+          "target": "Harness primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        },
+        {
+          "capability": "policy",
+          "target": "Harness primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        },
+        {
+          "capability": "lead/critic",
+          "target": "Harness primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        },
+        {
+          "capability": "streamed tool events",
+          "target": "Harness primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        },
+        {
+          "capability": "approvals",
+          "target": "Harness primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        },
+        {
+          "capability": "diffs",
+          "target": "Harness primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        },
+        {
+          "capability": "worktree apply",
+          "target": "Harness primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        },
+        {
+          "capability": "abort",
+          "target": "Harness primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        },
+        {
+          "capability": "compaction",
+          "target": "Harness primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        },
+        {
+          "capability": "GSD and SDLC",
+          "target": "Harness primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        }
+      ],
+      "control_count": 17,
+      "counts": {
+        "button": 4,
+        "input": 2,
+        "select": 9,
+        "summary": 1,
+        "textarea": 1
+      },
+      "controls": [
+        {
+          "tag": "button",
+          "id": null,
+          "text": "+ New session",
+          "onclick": "startFreshHarnessDraft()",
+          "handler": "startFreshHarnessDraft"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Set / Create",
+          "onclick": "saveWorkspaceDirectory()",
+          "handler": "saveWorkspaceDirectory"
+        },
+        {
+          "tag": "input",
+          "id": "harnessWorkspaceInput",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "harnessRecentDirsSelect",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "input",
+          "id": "harnessUseWorktree",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "harnessLeadModel",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "harnessCriticModel",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "harnessPolicy",
+          "text": "Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only)",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "summary",
+          "id": null,
+          "text": "Advanced settings",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "harnessEfficiencyMode",
+          "text": "Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "harnessReasoning",
+          "text": "Off (Fastest) Low Medium xHigh",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "harnessMaxSteps",
+          "text": "6 steps 10 steps 16 steps 24 steps",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "harnessSessionActionSelect",
+          "text": "Session Actions… Inspect Git Status & Diff Compact Session Context (≤2 KB) Open Agile SDLC Product Board",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "harnessAbortBtn",
+          "text": "Abort",
+          "onclick": "abortHarnessRun()",
+          "handler": "abortHarnessRun"
+        },
+        {
+          "tag": "textarea",
+          "id": "harnessPromptInput",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "harnessWorkflowMode",
+          "text": "Autonomous Turn (Step Loop) Plan, Build, Verify (GSD 3-Wave) Agile SDLC Factory (Full Build) Agile SDLC Board & Backlog…",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "harnessRunBtn",
+          "text": "Run",
+          "onclick": "executeHarnessSelectedWorkflow()",
+          "handler": "executeHarnessSelectedWorkflow"
+        }
+      ],
+      "declared_handlers": [
+        "abortHarnessRun",
+        "executeHarnessSelectedWorkflow",
+        "saveWorkspaceDirectory",
+        "startFreshHarnessDraft"
+      ],
+      "routes_reached": [
+        {
+          "method": "DELETE",
+          "path": "/api/harness/sessions/{session_id}",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "deleteHarnessSession",
+          "via": [
+            "startFreshHarnessDraft",
+            "renderHarnessSidebar",
+            "deleteHarnessSession"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/harness/sessions",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "loadHarnessSessions",
+          "via": [
+            "executeHarnessSelectedWorkflow",
+            "runGsdWaveTurn",
+            "loadHarnessSessions"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/harness/sessions/{session_id}",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "selectHarnessSession",
+          "via": [
+            "startFreshHarnessDraft",
+            "renderHarnessSidebar",
+            "selectHarnessSession"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/harness/sessions/{session_id}/sdlc",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "refreshSdlcBoard",
+          "via": [
+            "executeHarnessSelectedWorkflow",
+            "openSdlcModal",
+            "refreshSdlcBoard"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/harness/abort/{session_id}",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "abortHarnessRun",
+          "via": [
+            "abortHarnessRun"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/harness/approve",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "resolveHarnessApproval",
+          "via": [
+            "executeHarnessSelectedWorkflow",
+            "runHarnessTurn",
+            "resolveHarnessApproval"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/harness/gsd-wave",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "rate_limit",
+            "body_size_limit"
+          ],
+          "handler": "consumeSSE",
+          "via": [
+            "executeHarnessSelectedWorkflow",
+            "runGsdWaveTurn",
+            "consumeSSE"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/harness/run",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "rate_limit",
+            "body_size_limit"
+          ],
+          "handler": "consumeSSE",
+          "via": [
+            "executeHarnessSelectedWorkflow",
+            "runHarnessTurn",
+            "consumeSSE"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/workspace/directory",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "saveWorkspaceDirectory",
+          "via": [
+            "saveWorkspaceDirectory"
+          ]
+        }
+      ],
+      "routes_excluded_by_entry_point": 6
+    },
+    {
+      "label": "Council",
+      "dom_id": "hall",
+      "keyboard_shortcut": "Alt+2",
+      "purpose": "A council session: who was asked, what each participant said, in order.",
+      "screenshot_id": "hall",
+      "preserved_capabilities": [
+        {
+          "capability": "Council Hall session spawning and chronicle browsing",
+          "target": "Council primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        }
+      ],
+      "control_count": 19,
+      "counts": {
+        "button": 8,
+        "select": 8,
+        "summary": 2,
+        "textarea": 1
+      },
+      "controls": [
+        {
+          "tag": "button",
+          "id": null,
+          "text": "+ Spawn Council Session",
+          "onclick": "openSpawnModal()",
+          "handler": "openSpawnModal"
+        },
+        {
+          "tag": "button",
+          "id": "hallFullRoundBtn",
+          "text": "Run full round",
+          "onclick": "runHallFullRound()",
+          "handler": "runHallFullRound"
+        },
+        {
+          "tag": "button",
+          "id": "hallConcludeBtn",
+          "text": "Finish and pin summary",
+          "onclick": "summonConclusion()",
+          "handler": "summonConclusion"
+        },
+        {
+          "tag": "summary",
+          "id": null,
+          "text": "Council role models",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "hallSeatArch",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "hallSeatCoder",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "hallSeatCritic",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "hallSeatJudge",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "hallReasoningSelect",
+          "text": "Reasoning: Off Reasoning: Low Reasoning: Medium",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "hallStopBtn",
+          "text": "Stop",
+          "onclick": "stopActiveStream()",
+          "handler": "stopActiveStream"
+        },
+        {
+          "tag": "summary",
+          "id": null,
+          "text": "Ask one model",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "hallRoleSelect",
+          "text": "1. Architect / Strategist 2. Builder / Deep Analyst 3. Adversarial Critic 4. Lead Arbiter",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "hallModelSelect",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "hallSummonBtn",
+          "text": "Ask one model",
+          "onclick": "summonSingleAgent()",
+          "handler": "summonSingleAgent"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "+ Spawn Council Session",
+          "onclick": "openSpawnModal()",
+          "handler": "openSpawnModal"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Configure Cloud Providers",
+          "onclick": "openProvidersModal()",
+          "handler": "openProvidersModal"
+        },
+        {
+          "tag": "textarea",
+          "id": "hallHumanInput",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "hallSendModeSelect",
+          "text": "Send & run 4-LLM round Post note only",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Send",
+          "onclick": "submitHallComposer()",
+          "handler": "submitHallComposer"
+        }
+      ],
+      "declared_handlers": [
+        "openProvidersModal",
+        "openSpawnModal",
+        "runHallFullRound",
+        "stopActiveStream",
+        "submitHallComposer",
+        "summonConclusion",
+        "summonSingleAgent"
+      ],
+      "routes_reached": [
+        {
+          "method": "GET",
+          "path": "/api/hall/sessions",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "refreshHallSessions",
+          "via": [
+            "submitHallComposer",
+            "postHumanHallMessage",
+            "refreshHallSessions"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/hall/sessions/{session_id}",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "selectHallSession",
+          "via": [
+            "runHallFullRound",
+            "summonAgentPromise",
+            "selectHallSession"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/providers",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "loadProviders",
+          "via": [
+            "openProvidersModal",
+            "loadProviders"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/workspace/files",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "openSpawnModal",
+          "via": [
+            "openSpawnModal"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/hall/sessions",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "postHumanHallMessage",
+          "via": [
+            "submitHallComposer",
+            "postHumanHallMessage"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/hall/sessions/{session_id}/message",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "postHumanHallMessage",
+          "via": [
+            "submitHallComposer",
+            "postHumanHallMessage"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/hall/sessions/{session_id}/summon",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "consumeSSE",
+          "via": [
+            "runHallFullRound",
+            "summonAgentPromise",
+            "consumeSSE"
+          ]
+        }
+      ],
+      "routes_excluded_by_entry_point": 7
+    },
+    {
+      "label": "Pipeline",
+      "dom_id": "council",
+      "keyboard_shortcut": "Alt+3",
+      "purpose": "The four-stage pipeline view for a single request.",
+      "screenshot_id": "council",
+      "preserved_capabilities": [
+        {
+          "capability": "Four-stage orchestrator with architect/coder role selection",
+          "target": "Pipeline primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        }
+      ],
+      "control_count": 16,
+      "counts": {
+        "button": 9,
+        "input": 1,
+        "select": 5,
+        "textarea": 1
+      },
+      "controls": [
+        {
+          "tag": "select",
+          "id": "c-arch",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "c-coder",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "c-critic",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "c-judge",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "input",
+          "id": "c-unload",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "c-reasoning",
+          "text": "Off — Direct Fast (~29 tok/s) Low — Bounded (900t cap) Medium — Deep (1800t cap)",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "textarea",
+          "id": "councilPrompt",
+          "text": "Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks, with graceful cancellation and unit tests.",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Token Bucket",
+          "onclick": "setCouncilPreset('Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks.')",
+          "handler": "setCouncilPreset"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Portfolio Actor",
+          "onclick": "setCouncilPreset('Design an event-sourced Portfolio Rebalancer Actor in Python with integer atomic units, deterministic MarketSnapshot replay, and stale-price circuit breakers.')",
+          "handler": "setCouncilPreset"
+        },
+        {
+          "tag": "button",
+          "id": "councilStopBtn",
+          "text": "Stop",
+          "onclick": "stopActiveStream()",
+          "handler": "stopActiveStream"
+        },
+        {
+          "tag": "button",
+          "id": "councilRunBtn",
+          "text": "Run pipeline",
+          "onclick": "runCouncil()",
+          "handler": "runCouncil"
+        },
+        {
+          "tag": "button",
+          "id": "step-card-0",
+          "text": "VIEWAll Stages Ready",
+          "onclick": "selectStageFilter(0)",
+          "handler": "selectStageFilter"
+        },
+        {
+          "tag": "button",
+          "id": "step-card-1",
+          "text": "1 • ARCHITECTSpec Idle",
+          "onclick": "selectStageFilter(1)",
+          "handler": "selectStageFilter"
+        },
+        {
+          "tag": "button",
+          "id": "step-card-2",
+          "text": "2 • CODERDraft Idle",
+          "onclick": "selectStageFilter(2)",
+          "handler": "selectStageFilter"
+        },
+        {
+          "tag": "button",
+          "id": "step-card-3",
+          "text": "3 • CRITICAudit Idle",
+          "onclick": "selectStageFilter(3)",
+          "handler": "selectStageFilter"
+        },
+        {
+          "tag": "button",
+          "id": "step-card-4",
+          "text": "4 • JUDGEFinal Idle",
+          "onclick": "selectStageFilter(4)",
+          "handler": "selectStageFilter"
+        }
+      ],
+      "declared_handlers": [
+        "runCouncil",
+        "selectStageFilter",
+        "setCouncilPreset",
+        "stopActiveStream"
+      ],
+      "routes_reached": [
+        {
+          "method": "GET",
+          "path": "/api/telemetry",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "refreshTelemetry",
+          "via": [
+            "runCouncil",
+            "consumeSSE",
+            "refreshTelemetry"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/council/stream",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "rate_limit",
+            "body_size_limit"
+          ],
+          "handler": "consumeSSE",
+          "via": [
+            "runCouncil",
+            "consumeSSE"
+          ]
+        }
+      ],
+      "routes_excluded_by_entry_point": 7
+    },
+    {
+      "label": "Compare",
+      "dom_id": "debate",
+      "keyboard_shortcut": "Alt+4",
+      "purpose": "One prompt against several models, side by side.",
+      "screenshot_id": "debate",
+      "preserved_capabilities": [
+        {
+          "capability": "Multi-model selection and compare responses",
+          "target": "Compare primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        }
+      ],
+      "control_count": 5,
+      "counts": {
+        "button": 2,
+        "input": 1,
+        "select": 1,
+        "textarea": 1
+      },
+      "controls": [
+        {
+          "tag": "input",
+          "id": "d-synth",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "d-judge",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "textarea",
+          "id": "debatePrompt",
+          "text": "Compare SQLite WAL vs DuckDB vs embedded Postgres for a local macOS telemetry & vector hybrid store handling 500 writes/sec.",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "debateStopBtn",
+          "text": "Stop",
+          "onclick": "stopActiveStream()",
+          "handler": "stopActiveStream"
+        },
+        {
+          "tag": "button",
+          "id": "debateRunBtn",
+          "text": "Start Compare",
+          "onclick": "runDebate()",
+          "handler": "runDebate"
+        }
+      ],
+      "declared_handlers": [
+        "runDebate",
+        "stopActiveStream"
+      ],
+      "routes_reached": [
+        {
+          "method": "GET",
+          "path": "/api/telemetry",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "refreshTelemetry",
+          "via": [
+            "runDebate",
+            "consumeSSE",
+            "refreshTelemetry"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/debate/stream",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "rate_limit",
+            "body_size_limit"
+          ],
+          "handler": "consumeSSE",
+          "via": [
+            "runDebate",
+            "consumeSSE"
+          ]
+        }
+      ],
+      "routes_excluded_by_entry_point": 7
+    },
+    {
+      "label": "Chat",
+      "dom_id": "chat",
+      "keyboard_shortcut": "Alt+5",
+      "purpose": "A single streaming conversation with the selected model.",
+      "screenshot_id": "chat",
+      "preserved_capabilities": [
+        {
+          "capability": "Active model and persona selection",
+          "target": "Chat primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        },
+        {
+          "capability": "conversation interface",
+          "target": "Chat primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+        }
+      ],
+      "control_count": 9,
+      "counts": {
+        "button": 3,
+        "input": 2,
+        "select": 3,
+        "textarea": 1
+      },
+      "controls": [
+        {
+          "tag": "select",
+          "id": "chatModel",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "chatPersona",
+          "text": "Principal Engineer & UI Architect Bug & UX Auditor Code Only (Zero Fluff)",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "chatReasoning",
+          "text": "Off Low Medium",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "input",
+          "id": "chatToolsEnabled",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "input",
+          "id": "chatUnload",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Clear",
+          "onclick": "clearChat()",
+          "handler": "clearChat"
+        },
+        {
+          "tag": "textarea",
+          "id": "chatInput",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "chatStopBtn",
+          "text": "Stop",
+          "onclick": "stopActiveStream()",
+          "handler": "stopActiveStream"
+        },
+        {
+          "tag": "button",
+          "id": "chatSendBtn",
+          "text": "Send",
+          "onclick": "sendChat()",
+          "handler": "sendChat"
+        }
+      ],
+      "declared_handlers": [
+        "clearChat",
+        "sendChat",
+        "stopActiveStream"
+      ],
+      "routes_reached": [
+        {
+          "method": "GET",
+          "path": "/api/telemetry",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "refreshTelemetry",
+          "via": [
+            "sendChat",
+            "consumeSSE",
+            "refreshTelemetry"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat/stream",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "rate_limit",
+            "body_size_limit"
+          ],
+          "handler": "consumeSSE",
+          "via": [
+            "sendChat",
+            "consumeSSE"
+          ]
+        }
+      ],
+      "routes_excluded_by_entry_point": 7
+    }
+  ],
+  "chrome": {
+    "control_count": 101,
+    "counts": {
+      "button": 54,
+      "input": 29,
+      "select": 12,
+      "summary": 1,
+      "textarea": 5
+    },
+    "note": "Tabs, command palette, modals and the shared toolbar. A pane story may restyle chrome, but every control here stays reachable: the inventory test fails if one disappears."
+  },
+  "rollback": {
+    "strategy": "One story, one merge commit. Revert the merge, not the individual commits, so the reverted tree is the tree that ran green before the story.",
+    "steps": [
+      "Identify the story's merge commit: `git log --merges --oneline --grep 'UIUX-<story>' origin/main`.",
+      "Revert it: `git revert -m 1 <merge-sha>` on a branch, then open a pull request that names the story.",
+      "Regenerate the derived artifacts if the revert changed any pinned file: `python3 scripts/uiux_source_manifest.py`, `scripts/uiux_control_inventory.py`, `scripts/uiux_route_map.py`, `scripts/uiux_authorization_trace.py`, `scripts/uiux_preservation_signoff.py`.",
+      "Re-run the verification commands below and record their exit codes in the ledger."
+    ],
+    "not_touched": [
+      "This package adds no database migration. A Git revert does not roll back durable database state; each future story must separately verify its migration and recovery effects.",
+      "This package adds no privilege: the bearer token, host allowlist, origin check, rate limit and body-size limit are not changed by it.",
+      "A revert changes tracked files in the target checkout, not arbitrary external workspaces. Review the target and protect uncommitted work before running it."
+    ],
+    "verify_after_revert": [
+      ".venv/bin/python -m pytest -q",
+      ".venv/bin/python -m ruff check .",
+      ".venv/bin/python -m mypy",
+      "python3 scripts/check_frontend_syntax.py",
+      "python3 scripts/demo_tour.py --check",
+      "python3 scripts/uiux_source_manifest.py --check",
+      "python3 scripts/uiux_control_inventory.py --check",
+      "python3 scripts/uiux_route_map.py --check",
+      "python3 scripts/uiux_authorization_trace.py --check",
+      "python3 scripts/uiux_preservation_signoff.py --check",
+      "python3 scripts/validate_docs.py"
+    ]
+  },
+  "not_verified": [
+    "Nothing here was rendered or clicked. A control counted in the markup is present in the file, not proven to work, and no keyboard, contrast or screen-reader check has been run.",
+    "Pane-to-route attribution follows calls inside the inline script at most 2 hops from the handler a control names, and keeps a route only when the walk passes the function that supplied its literal. A deeper chain is invisible, so a pane with no routes below is not a pane that calls nothing; the excluded count on each pane shows the filter refusing a shared helper's other callers.",
+    "The route map is a bounded lexical scan, not proof of exhaustive browser coverage or execution. Unresolved URL or method edges remain visible; no observed caller is not proof of absence.",
+    "The preservation matrix is a list of capabilities in words. This package carries it row for row and does not decide which control implements which row; that mapping is what the owner is being asked to confirm.",
+    "0 of 6 baseline screenshots are recorded. Missing or unaccepted screenshots leave the visual gate open; static artifacts cannot substitute for them.",
+    "The demo and full test suite can use source-relative harness data; until isolation is fixed, run them only from a disposable checkout with an empty harness store (issues #108 and #117).",
+    "Approval is an owner act recorded in the ledger. A green test suite proves the package matches the tree; it does not prove the tree is acceptable or that other P0 holds are cleared."
+  ]
+}

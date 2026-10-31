@@ -424,6 +424,20 @@ def _resolve_expression(
     return [], "unresolved", mutation_issues + unresolved("not a supported local assignment or named parameter")
 
 
+def inline_script(html: str) -> tuple[str, int]:
+    """The largest inline script and its offset in the document.
+
+    Public so the P0-06 sign-off package reads the same script with the same
+    rule instead of re-implementing the scan.
+    """
+    return _script_block(html)
+
+
+def callable_functions(script: str) -> dict[str, dict[str, object]]:
+    """Every named function with its parameters and body span (see `_read_functions`)."""
+    return _read_functions(script)
+
+
 def read_routes(source: str) -> list[dict[str, str]]:
     return [{"method": m.group(1).upper(), "path": m.group(2)} for m in ROUTE_RE.finditer(source)]
 

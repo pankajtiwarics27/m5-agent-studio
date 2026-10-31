@@ -11,10 +11,12 @@
 > an empty store. The dry run only
 > validates manifest shape and prints a plan; it does **not** check tab IDs against
 > the UI (`scripts/validate_screenshots.py` checks those separately). The test
-> table also mixes results from different revisions: 1,588 tests and the updated
-> route map require the #115 change, not the listed `main` commit `ecd7816`.
-> See the [review](https://github.com/pankajtiwarics27/m5-agent-studio/pull/115#issuecomment-6543099994);
-> the P0-05 owner must reconcile that evidence. The formal baseline remains 0/6.
+> table still needs provenance reconciliation: its 1,598 tests and 14-file
+> manifest include the later #116 sign-off work, not only the listed `0b4b1a4`
+> pin, while P0-05's recorded pytest result remains 1,541. The P0-05 owner must
+> reconcile those revisions and results. Earlier route-map claims also have a
+> [review hold](https://github.com/pankajtiwarics27/m5-agent-studio/pull/115#issuecomment-6543099994).
+> The formal baseline remains 0/6.
 
 This page records the baseline `UIUX-P0-05` exists to establish: what the test
 suite and the repository checks actually produce on this checkout, and what the
@@ -30,7 +32,7 @@ It is evidence, not a plan: the phases, gates and per-story change shape live in
 
 | Fact | Value |
 |---|---|
-| Source | `main` at `ecd7816` (merge of #113), pinned in the UI/UX ledger |
+| Source | Recorded as `main` at `0b4b1a4` (merge of #115); see the review hold above for later #116 work included in the results |
 | Python | 3.11.2, virtual environment at `.venv`, installed with `pip install -e '.[dev]'` |
 | Node | 22.22.3 |
 | Platform | Linux sandbox, no display |
@@ -45,16 +47,17 @@ suite states the new numbers and why.
 
 | Command | Exit | Result |
 |---|---|---|
-| `.venv/bin/python -m pytest -q` | 0 | 1,588 passed, 1 skipped (opt-in live container test), 116 s |
+| `.venv/bin/python -m pytest -q` | 0 | 1,598 passed, 1 skipped (opt-in live container test), 88 s |
 | `.venv/bin/python -m ruff check .` | 0 | all checks passed |
 | `.venv/bin/python -m mypy` | 0 | no issues in 58 source files |
-| `.venv/bin/python scripts/validate_docs.py` | 0 | 5 required pages, 121 files scanned |
+| `.venv/bin/python scripts/validate_docs.py` | 0 | 5 required pages, 124 files scanned |
 | `.venv/bin/python scripts/check_frontend_syntax.py` | 0 | one inline script block parses |
 | `.venv/bin/python scripts/demo_tour.py --check` | 0 | committed transcript is current |
-| `.venv/bin/python scripts/uiux_source_manifest.py --check` | 0 | 13 files, 6 tabs, 115 routes |
+| `.venv/bin/python scripts/uiux_source_manifest.py --check` | 0 | 14 files, 6 tabs, 115 routes |
 | `.venv/bin/python scripts/uiux_control_inventory.py --check` | 0 | 170 markup controls, 101 of them chrome; 30 script-rendered |
 | `.venv/bin/python scripts/uiux_route_map.py --check` | 0 | 53 call sites, 60 exact and 1 dynamic match, 0 findings, 0 unresolved, 58 routes with no caller |
 | `.venv/bin/python scripts/uiux_authorization_trace.py --check` | 0 | 37 state-changing routes traced |
+| `.venv/bin/python scripts/uiux_preservation_signoff.py --check` | 0 | unsigned package, 21 capabilities, 6 panes |
 | `.venv/bin/python scripts/validate_screenshots.py` | 0 | 0 of 6 captured |
 
 The suite counts include the four UI/UX inventory stories' own tests

@@ -60,7 +60,11 @@ unresolved URLs and request methods. Do not close the hold until the correction
 has independent review and green checks. This is not a new story claim, and it
 does not change another session's tracking. `UIUX-P0-05` remains in progress
 under `arena/c705f453-m5-agent-studio`; do not take its story or treat its visual
-baseline as complete.
+baseline as complete. The P0-06 preparation in merged
+[#116](https://github.com/pankajtiwarics27/m5-agent-studio/pull/116) is unsigned;
+#114 reconciles its route-map consumer without claiming or approving that story.
+The ledger's source pin is advanced to the #116 merge, with its own story tracking
+left unchanged. The phase gate remains closed.
 
 ## Baseline at this handoff
 

@@ -86,8 +86,9 @@ screens simpler.
    whenever `static/index.html` changed (the standalone bundle embeds it and CI
    fails on drift), plus `python3 scripts/uiux_source_manifest.py --check`,
    `python3 scripts/uiux_control_inventory.py --check`,
-   `python3 scripts/uiux_route_map.py --check` and
-   `python3 scripts/uiux_authorization_trace.py --check`.
+   `python3 scripts/uiux_route_map.py --check`,
+   `python3 scripts/uiux_authorization_trace.py --check` and
+   `python3 scripts/uiux_preservation_signoff.py --check`.
    **If your story touches any file pinned in
    `product/M5_2_0_UIUX_Source_Manifest.json`, regenerate it in the same commit**
    (`python3 scripts/uiux_source_manifest.py`) — the drift is part of the story,

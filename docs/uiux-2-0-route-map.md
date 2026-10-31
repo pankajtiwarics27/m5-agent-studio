@@ -5,7 +5,7 @@ It is the `UIUX-P0-03` artifact: lexically located `fetch` calls, their enclosin
 functions and structural route candidates, derived from the inline script and the
 route table, not from handler names.
 
-* Pinned source commit: `ecd781675e58b0735f8b590a67b39aaa2b910e49`.
+* Pinned source commit: `95cc01dfbd9cc581bf5923da4910397df96bbe50`.
 * Frontend digest: `3137cb7d05bcbdd2…` · `app.py` digest: `e3dd15bef236555d…`.
 * 53 call sites resolve to 61 URLs — exact: 60, dynamic URL: 1, unknown method: 0, forwarded through a helper: 1, findings: 0, unresolved sites: 0, unresolved edges: 0 (0 method).
 * 115 routes exist; 57 have a resolved or possible caller (55 unique structural matches, 2 only possible candidates); 58 have none observed and 0 are unknown due to unresolved edges.

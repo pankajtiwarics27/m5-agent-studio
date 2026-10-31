@@ -126,6 +126,7 @@ measurements without trusting them).
 · [`uiux-2-0-route-map.md`](uiux-2-0-route-map.md) (generated map of every frontend fetch call to the route it hits)
 · [`uiux-2-0-authorization-trace.md`](uiux-2-0-authorization-trace.md) (generated trace of what can refuse each state-changing call, and what state it touches)
 · [`uiux-2-0-baseline-evidence.md`](uiux-2-0-baseline-evidence.md) (measured baseline: suite results with exit codes, and the capture plan that needs a browser)
+· [`uiux-2-0-p0-signoff.md`](uiux-2-0-p0-signoff.md) (generated P0-06 package: what must be preserved, controls, routes, boundary and rollback — unsigned)
 · [`../M5_2_0_UIUX_AGENT_PROMPT.md`](../M5_2_0_UIUX_AGENT_PROMPT.md) (UI/UX claim, review and merge protocol)
 · [`uiux-2-0-coordination.md`](uiux-2-0-coordination.md) (read-only readiness check, current handoff and capture risks)
 
