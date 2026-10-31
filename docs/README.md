@@ -65,7 +65,8 @@ declared acceptance coverage),
 oscillation verdicts, retry/replan/rollback budgets, safe pause),
 [`workflow-checkpoints.md`](workflow-checkpoints.md),
 [`execution-budgets.md`](execution-budgets.md), [`side-effect-idempotency.md`](side-effect-idempotency.md),
-[`mcp-idempotency.md`](mcp-idempotency.md) (MCP idempotency binding, queryable-outcome reconciliation, uncertain-write safe pause).
+[`mcp-idempotency.md`](mcp-idempotency.md) (MCP idempotency binding, queryable-outcome reconciliation, uncertain-write safe pause),
+[`bounded-child-delegation.md`](bounded-child-delegation.md) (child authority/budget subsets, disjoint write leases, durable parent joins, single-agent vs delegation benchmarks).
 
 Model and provider: [`provider-adapters.md`](provider-adapters.md),
 [`api-provider-contracts.md`](api-provider-contracts.md),

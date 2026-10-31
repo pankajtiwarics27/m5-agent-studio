@@ -13,6 +13,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Literal, Sequence
 
+import child_delegation
 import execution_budget
 import process_supervision
 import recovery_guard
@@ -628,7 +629,151 @@ class DurableTaskStateMachine:
         )
 
     def list_milestones(self, root_task_id: str) -> list[runtime_persistence.TaskRecord]:
-        return self.store.list_child_tasks(_validate_identifier(root_task_id, "root_task_id"))
+        root_id = _validate_identifier(root_task_id, "root_task_id")
+        return [
+            t for t in self.store.list_child_tasks(root_id)
+            if not child_delegation.is_child_subtask_id(t.task_id)
+        ]
+
+    def list_child_subtasks(self, root_task_id: str) -> list[runtime_persistence.TaskRecord]:
+        """Return delegated child subagent tasks (`::sub:`) under ``root_task_id`` (M5-P4-03)."""
+        root_id = _validate_identifier(root_task_id, "root_task_id")
+        return [
+            t for t in self.store.list_child_tasks(root_id)
+            if child_delegation.is_child_subtask_id(t.task_id)
+        ]
+
+    def spawn_child_subtask(
+        self,
+        parent_task_id: str,
+        sub_key: str,
+        *,
+        title: str = "",
+        policy: str = "plan",
+        budget_spec: execution_budget.TaskBudgetSpec | None = None,
+        now: float | None = None,
+    ) -> runtime_persistence.TaskRecord:
+        """Create a bounded child ``runtime_tasks`` row under ``parent_task_id`` (M5-P4-03)."""
+        parent_id = _validate_identifier(parent_task_id, "parent_task_id")
+        child_id = child_delegation.child_subtask_id(parent_id, sub_key)
+        if policy not in child_delegation.CD_POLICY_RANK:
+            raise WorkflowStateError(f"Unknown child policy {policy!r}.")
+        ts = time.time() if now is None else float(now)
+        init_budget = execution_budget.TaskBudgetState(
+            spec=(budget_spec if budget_spec is not None else execution_budget.TaskBudgetSpec())
+        )
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.TaskRecord:
+            conn.row_factory = sqlite3.Row
+            parent_row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (parent_id,)).fetchone()
+            if parent_row is None:
+                raise WorkflowStateError(f"Parent task {parent_id!r} does not exist.")
+            parent_pol = str(parent_row["policy"])
+            if child_delegation.CD_POLICY_RANK[policy] > child_delegation.CD_POLICY_RANK.get(parent_pol, -1):
+                raise WorkflowTransitionRejected(
+                    f"Child policy {policy!r} exceeds parent task {parent_id!r} policy {parent_pol!r}."
+                )
+            p_budget = execution_budget.TaskBudgetState.from_json(str(parent_row["budget_json"]))
+            if p_budget.cancel_requested or str(parent_row["state"]) == "cancelled":
+                raise WorkflowTransitionRejected(
+                    f"Cannot spawn child subtask under cancelled parent {parent_id!r}."
+                )
+            existing = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (child_id,)).fetchone()
+            if existing is not None:
+                return runtime_persistence._row_to_task(existing)
+            conn.execute(
+                """
+                INSERT INTO runtime_tasks (
+                    task_id, parent_task_id, session_id, title, state,
+                    current_epoch, state_version, workspace_dir, policy,
+                    budget_json, checkpoint_ref, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, 'pending', 0, 0, ?, ?, ?, '', ?, ?)
+                """,
+                (
+                    child_id,
+                    parent_id,
+                    str(parent_row["session_id"]),
+                    str(title or sub_key)[:240],
+                    str(parent_row["workspace_dir"]),
+                    policy,
+                    init_budget.to_json(),
+                    ts,
+                    ts,
+                ),
+            )
+            created = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (child_id,)).fetchone()
+            assert created is not None
+            return runtime_persistence._row_to_task(created)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def mark_child_subtask_joined(
+        self,
+        child_task_id: str,
+        *,
+        delegation_id: str,
+        disposition: str,
+        now: float | None = None,
+    ) -> runtime_persistence.TaskRecord:
+        """Atomically verify terminal/zero-orphan child state and stamp ``joined:`` marker (M5-P4-03)."""
+        cid = _validate_identifier(child_task_id, "child_task_id")
+        did = _validate_identifier(delegation_id, "delegation_id")
+        ts = time.time() if now is None else float(now)
+        marker = f"joined:{did}:{disposition}"[:256]
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.TaskRecord:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (cid,)).fetchone()
+            if row is None:
+                raise WorkflowStateError(f"Child subtask {cid!r} does not exist.")
+            c_state = str(row["state"])
+            if c_state not in {"completed", "failed", "cancelled"}:
+                raise WorkflowTransitionRejected(
+                    f"Child subtask {cid!r} in non-terminal state {c_state!r} cannot be joined."
+                )
+            active_ep = conn.execute(
+                "SELECT epoch FROM runtime_task_epochs WHERE task_id = ? AND status = 'active'",
+                (cid,),
+            ).fetchone()
+            if active_ep is not None:
+                raise WorkflowTransitionRejected(
+                    f"Child subtask {cid!r} still has active epoch {active_ep['epoch']}; release or fence before joining."
+                )
+            unres = conn.execute(
+                """
+                SELECT action_id FROM runtime_actions
+                WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                """,
+                (cid,),
+            ).fetchall()
+            if unres:
+                ids = ", ".join(str(r["action_id"]) for r in unres)
+                raise WorkflowTransitionRejected(
+                    f"Child subtask {cid!r} cannot be joined with unresolved consequential action(s): {ids}."
+                )
+            conn.execute(
+                """
+                UPDATE runtime_tasks
+                SET checkpoint_ref = ?, state_version = state_version + 1, updated_at = ?
+                WHERE task_id = ?
+                """,
+                (marker, ts, cid),
+            )
+            updated = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (cid,)).fetchone()
+            assert updated is not None
+            return runtime_persistence._row_to_task(updated)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
 
     def transition_milestone(
         self,
@@ -897,6 +1042,20 @@ class DurableTaskStateMachine:
                     "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
                     (deferred_budget.to_json(), ts, tid),
                 )
+                child_run_rows = conn.execute(
+                    "SELECT task_id, budget_json FROM runtime_tasks WHERE parent_task_id = ? AND state IN ('running', 'waiting_approval')",
+                    (tid,),
+                ).fetchall()
+                for c_row in child_run_rows:
+                    try:
+                        cb = execution_budget.TaskBudgetState.from_json(str(c_row["budget_json"]))
+                        cb_def = replace(cb, pause_requested=True)
+                        conn.execute(
+                            "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                            (cb_def.to_json(), ts, str(c_row["task_id"])),
+                        )
+                    except execution_budget.BudgetError:
+                        pass
                 refreshed = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
                 assert refreshed is not None
                 return TaskControlResult(
@@ -908,10 +1067,11 @@ class DurableTaskStateMachine:
             unresolved_rows = conn.execute(
                 """
                 SELECT action_id FROM runtime_actions
-                WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                  AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
                 ORDER BY created_at ASC
                 """,
-                (tid,),
+                (tid, tid),
             ).fetchall()
             if unresolved_rows:
                 raise WorkflowTransitionRejected(
@@ -1151,33 +1311,37 @@ class DurableTaskStateMachine:
                 """
                 UPDATE runtime_task_epochs
                 SET status = 'fenced', fenced_at = ?, fence_reason = 'task_cancelled'
-                WHERE task_id = ? AND status = 'active'
+                WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                  AND status = 'active'
                 """,
-                (ts, tid),
+                (ts, tid, tid),
             )
             conn.execute(
                 """
                 UPDATE runtime_actions
                 SET status = 'uncertain', error_code = 'cancelled_in_flight', updated_at = ?
-                WHERE task_id = ? AND status = 'in_flight' AND action_class != 'read_only'
+                WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                  AND status = 'in_flight' AND action_class != 'read_only'
                 """,
-                (ts, tid),
+                (ts, tid, tid),
             )
             conn.execute(
                 """
                 UPDATE runtime_actions
                 SET status = 'failed', ok = 0, error_code = 'cancelled_in_flight', updated_at = ?
-                WHERE task_id = ? AND status = 'in_flight' AND action_class = 'read_only'
+                WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                  AND status = 'in_flight' AND action_class = 'read_only'
                 """,
-                (ts, tid),
+                (ts, tid, tid),
             )
             unresolved_rows = conn.execute(
                 """
                 SELECT action_id FROM runtime_actions
-                WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                  AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
                 ORDER BY created_at ASC
                 """,
-                (tid,),
+                (tid, tid),
             ).fetchall()
             unresolved_ids = tuple(str(r["action_id"]) for r in unresolved_rows)
 
@@ -1478,9 +1642,10 @@ class DurableTaskStateMachine:
             environment_digest=environment_digest,
         )
         outcome = "verified" if report.verified else "failed"
+        recovery_key = task_id.replace(":", "-").strip("-._")[:120] or "subtask"
         try:
             record, verdict = self.recovery.record_attempt(
-                task_id, kind="verification", outcome=outcome, evidence=evidence
+                recovery_key, kind="verification", outcome=outcome, evidence=evidence
             )
         except (recovery_guard.RecoveryGuardError, OSError) as exc:
             if report.verified:
@@ -1520,13 +1685,24 @@ class DurableTaskStateMachine:
         # between here and the final verdict makes the evidence stale (M5-P5-02).
         generation_before = _capture_security_generation(security_generation)
 
+        own_actions = list(self.store.list_task_actions(tid))
+        child_unresolved_actions: list[runtime_persistence.ActionRecord] = []
+        accepted_child_actions: list[runtime_persistence.ActionRecord] = []
+        for child_sub in self.list_child_subtasks(tid):
+            c_acts = self.store.list_task_actions(child_sub.task_id)
+            for ca in c_acts:
+                if ca.status in ("in_flight", "uncertain") and ca.action_class != "read_only":
+                    child_unresolved_actions.append(ca)
+                elif str(child_sub.checkpoint_ref).endswith(":accepted"):
+                    accepted_child_actions.append(ca)
+
         actions = sorted(
-            self.store.list_task_actions(tid),
+            [*own_actions, *accepted_child_actions],
             key=lambda a: (a.updated_at, a.created_at),
         )
         unresolved = [
             a.action_id
-            for a in actions
+            for a in [*actions, *child_unresolved_actions]
             if a.status in ("in_flight", "uncertain") and a.action_class != "read_only"
         ]
         if unresolved:
@@ -2080,13 +2256,30 @@ class DurableTaskStateMachine:
             raise WorkflowTransitionRejected(
                 f"Task {tid!r} cannot complete while milestone(s) remain incomplete: {', '.join(incomplete_ms)}."
             )
+        child_subtasks = self.list_child_subtasks(tid)
+        unjoined_subs = [
+            sub.task_id
+            for sub in child_subtasks
+            if sub.state not in {"completed", "failed", "cancelled"}
+            or not str(sub.checkpoint_ref or "").startswith("joined:")
+        ]
+        if unjoined_subs:
+            raise WorkflowTransitionRejected(
+                f"Task {tid!r} cannot complete while delegated child subtask(s) remain active or unjoined: "
+                f"{', '.join(unjoined_subs)}."
+            )
         all_actions = sorted(
             self.store.list_task_actions(tid),
             key=lambda a: (a.updated_at, a.created_at),
         )
+        child_actions = [
+            act
+            for sub in child_subtasks
+            for act in self.store.list_task_actions(sub.task_id)
+        ]
         unresolved = [
             act.action_id
-            for act in all_actions
+            for act in [*all_actions, *child_actions]
             if act.status in ("in_flight", "uncertain") and act.action_class != "read_only"
         ]
         if unresolved:
@@ -2202,20 +2395,39 @@ class DurableTaskStateMachine:
                     "UPDATE runtime_task_epochs SET status = 'released', heartbeat_at = ? WHERE task_id = ? AND epoch = ?",
                     (ts, tid, int(epoch)),
                 )
-            bad_ms = conn.execute(
-                "SELECT task_id FROM runtime_tasks WHERE parent_task_id = ? AND state != 'completed'",
+            child_rows = conn.execute(
+                "SELECT task_id, state, checkpoint_ref FROM runtime_tasks WHERE parent_task_id = ?",
                 (tid,),
             ).fetchall()
+            bad_ms = [
+                str(r["task_id"])
+                for r in child_rows
+                if not child_delegation.is_child_subtask_id(str(r["task_id"])) and str(r["state"]) != "completed"
+            ]
             if bad_ms:
                 raise WorkflowTransitionRejected(
                     f"Task {tid!r} has incomplete milestone(s) inside completion commit."
                 )
+            bad_subs = [
+                str(r["task_id"])
+                for r in child_rows
+                if child_delegation.is_child_subtask_id(str(r["task_id"]))
+                and (
+                    str(r["state"]) not in {"completed", "failed", "cancelled"}
+                    or not str(r["checkpoint_ref"] or "").startswith("joined:")
+                )
+            ]
+            if bad_subs:
+                raise WorkflowTransitionRejected(
+                    f"Task {tid!r} has active or unjoined child subtask(s) inside completion commit: {', '.join(bad_subs)}."
+                )
             bad_actions = conn.execute(
                 """
                 SELECT action_id FROM runtime_actions
-                WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                  AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
                 """,
-                (tid,),
+                (tid, tid),
             ).fetchall()
             if bad_actions:
                 raise WorkflowTransitionRejected(
@@ -2339,22 +2551,33 @@ class DurableTaskStateMachine:
                 if has_live_lease:
                     continue
 
-                # Sweep any orphaned in-flight actions on inactive epochs before deciding task state.
+                # Sweep any orphaned in-flight actions on inactive epochs (parent + children) before deciding state.
                 conn.execute(
                     """
-                    UPDATE runtime_actions
-                    SET status = 'uncertain', error_code = 'orphaned_in_flight_on_recovery', updated_at = ?
-                    WHERE task_id = ? AND status = 'in_flight' AND action_class != 'read_only'
+                    UPDATE runtime_task_epochs
+                    SET status = 'expired', fenced_at = ?, fence_reason = 'parent_recovery_sweep'
+                    WHERE task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?)
+                      AND status = 'active'
                     """,
                     (ts, tid),
                 )
                 conn.execute(
                     """
                     UPDATE runtime_actions
-                    SET status = 'failed', ok = 0, error_code = 'orphaned_in_flight_on_recovery', updated_at = ?
-                    WHERE task_id = ? AND status = 'in_flight' AND action_class = 'read_only'
+                    SET status = 'uncertain', error_code = 'orphaned_in_flight_on_recovery', updated_at = ?
+                    WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                      AND status = 'in_flight' AND action_class != 'read_only'
                     """,
-                    (ts, tid),
+                    (ts, tid, tid),
+                )
+                conn.execute(
+                    """
+                    UPDATE runtime_actions
+                    SET status = 'failed', ok = 0, error_code = 'orphaned_in_flight_on_recovery', updated_at = ?
+                    WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                      AND status = 'in_flight' AND action_class = 'read_only'
+                    """,
+                    (ts, tid, tid),
                 )
 
                 try:
@@ -2368,10 +2591,11 @@ class DurableTaskStateMachine:
                     unresolved_rows = conn.execute(
                         """
                         SELECT action_id FROM runtime_actions
-                        WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                        WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                          AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
                         ORDER BY created_at ASC
                         """,
-                        (tid,),
+                        (tid, tid),
                     ).fetchall()
                     unresolved_ids = [str(r["action_id"]) for r in unresolved_rows]
                     ckpt_ref = str(t_row["checkpoint_ref"] or "").strip()
