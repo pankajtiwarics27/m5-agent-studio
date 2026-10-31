@@ -47,6 +47,17 @@ issues are **not** automatically interpreted; inspect `gh issue list --state ope
 and the ledger's risks as well. The marker is a signal, not a replacement for
 review or a distributed lock.
 
+## Active blocker follow-up (2026-10-31)
+
+[Issue #110](https://github.com/pankajtiwarics27/m5-agent-studio/issues/110)
+is being investigated by `arena/cbed6c70-m5-agent-studio` as a corrective
+follow-up to the already-merged route map and authorization trace. This is not a
+new roadmap-story claim and does not change another session's tracking. The
+follow-up will publish a draft PR, reproduce the missing caller cases in tests,
+and coordinate regeneration of the map and trace before requesting review.
+`UIUX-P0-05` remains in progress under `arena/c705f453-m5-agent-studio`; do not
+take its story or treat its visual baseline as complete.
+
 ## Baseline at this handoff
 
 The following is a dated observation, not a live status dashboard. Re-run the
