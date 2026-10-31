@@ -6,9 +6,9 @@
   "generator": "scripts/uiux_control_inventory.py",
   "regenerate_with": "python3 scripts/uiux_control_inventory.py",
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
-  "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
+  "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates or DOM creation are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "1a8de9c17f0e39e1da267801cf302d1619f506dd997209caedaa2bfad2ba934d",
+  "frontend_sha256": "d28a2f1d9e3e3e9cdbbb58773bfb71b3c817486e470a680ffe0feded08e26630",
   "panes": [
     {
       "dom_id": "start",
@@ -17,7 +17,7 @@
       "counts": {
         "button": 3
       },
-      "controls_without_id": 2,
+      "controls_without_id": 1,
       "controls_without_label": 0,
       "controls": [
         {
@@ -26,10 +26,11 @@
           "type": "button",
           "class": "btn btn-primary",
           "onclick": "startGuidedFirstTask()",
-          "text": "Run the first task"
+          "text": "Prepare first task"
         },
         {
           "tag": "button",
+          "id": "onboardingCheckBtn",
           "type": "button",
           "class": "btn",
           "onclick": "refreshOnboarding()",
@@ -1178,27 +1179,30 @@
     "markup_controls": 168,
     "pane_controls": 67,
     "chrome_controls": 101,
-    "script_rendered_controls": 30,
+    "script_rendered_controls": 33,
     "script_rendered_by_function": {
       "appendWorkflowApprovalCard": 3,
       "ensureLiveStepCard": 3,
       "ensureStageCardMounted": 1,
+      "evidenceNote": 1,
       "openSpawnModal": 1,
-      "refreshOnboarding": 1,
+      "presentInto": 1,
       "renderCommandPaletteList": 1,
       "renderHarnessSidebar": 1,
       "renderMarkdown": 1,
       "renderMcpUI": 7,
+      "renderOnboardingSteps": 1,
       "renderOpenContextDocs": 3,
       "renderProvidersModal": 3,
       "renderStoredHarnessEventHtml": 3,
       "renderTelemetry": 1,
+      "showToast": 1,
       "syncUnifiedSelectors": 1
     }
   },
   "not_verified": [
     "Nothing here was rendered. A control can exist in the markup and never be shown; the inventory is a static reading, and capture needs a browser this environment does not have.",
-    "Script-rendered controls are counted from template strings and attributed to the nearest preceding function, which is a heuristic, not a call graph.",
+    "Script-rendered controls are counted from inline templates and createElement calls, then attributed to the nearest preceding function, which is a heuristic, not a call graph.",
     "Reachability, keyboard order and focus behaviour are not measured here; UIUX-P5-04 and UIUX-P5-05 are where those get tested.",
     "The without-id and without-label columns are a static count, not an accessibility verdict: a control can be labelled by a wrapping <label> element, which this walk does not resolve."
   ]

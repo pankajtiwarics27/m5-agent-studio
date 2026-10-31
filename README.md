@@ -550,13 +550,18 @@ are not guarantees):
 - Split-source run with `uv run app.py`, or directly:
   `STUDIO_HOST=127.0.0.1 STUDIO_PORT=3000 python3 app.py` (the code defaults
   are host `127.0.0.1`, port `3000`, `app.py` L224/L227).
-- First-run UX: open the **Start** tab (onboarding preflight reads local
-  configuration only — code path `onboarding_preflight`, integrated).
 
 ## Verified usage
 
-- **Run the test suite:** `.venv/bin/python -m pytest -q` → 881 passed,
-  1 skipped, 1 warning.
+- **First-run UX (isolated demo; synthetic token):** the **Start** tab shows
+  per-step readiness and re-check feedback. A normal preflight reads local
+  configuration without contacting a runtime; only **Check local models** probes
+  the configured local runtime. A failed re-check keeps the last successful
+  checklist and offers recovery actions. **Prepare first task** stages a prompt
+  in Chat for review; it does not send until the user presses **Send**. Code path:
+  `onboarding_preflight`.
+- **Run the test suite:** `.venv/bin/python -m pytest -q` → 1,790 passed,
+  25 skipped, 1 warning (browser tests also run separately against a disposable demo).
 - **Start a disposable authenticated instance (verified):**
   `.venv/bin/python scripts/smoke_local.py` starts `app.py` on a free loopback
   port in a temporary directory and exercises the auth/security path.

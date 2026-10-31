@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "1a8de9c17f0e39e1da267801cf302d1619f506dd997209caedaa2bfad2ba934d",
-      "bytes": 319036,
-      "lines": 5339
+      "sha256": "d28a2f1d9e3e3e9cdbbb58773bfb71b3c817486e470a680ffe0feded08e26630",
+      "bytes": 322167,
+      "lines": 5404
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "f2457cbf53d7a90dabd4a7d11c38478da10492b4b000166995f7d775d23197ef",
-      "bytes": 3056686,
-      "lines": 68368
+      "sha256": "035d34398e8628e5344ed5ab4ec084919dd00d45dd1cef2fc1cd7a3424e26a43",
+      "bytes": 3059817,
+      "lines": 68433
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -82,9 +82,9 @@
     {
       "path": "scripts/uiux_control_inventory.py",
       "role": "builds and checks the per-pane control inventory",
-      "sha256": "6c4ffb5cda6751c4646f52578488e2a5d5167dd2f6cb6275bc0369682bb6e91c",
-      "bytes": 21576,
-      "lines": 494
+      "sha256": "5259018a856d19f78cb311c41c36ba9927d7c10093efb4287266b650be89365a",
+      "bytes": 21816,
+      "lines": 498
     },
     {
       "path": "scripts/uiux_route_map.py",
@@ -110,8 +110,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "1a8de9c17f0e39e1da267801cf302d1619f506dd997209caedaa2bfad2ba934d",
-    "lines": 5339,
+    "sha256": "d28a2f1d9e3e3e9cdbbb58773bfb71b3c817486e470a680ffe0feded08e26630",
+    "lines": 5404,
     "tab_count": 6,
     "tabs": [
       {

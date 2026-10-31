@@ -6,22 +6,22 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `1a8de9c17f0e39e1da267801cf302d1619f506dd997209caedaa2bfad2ba934d`.
+* Frontend digest: `d28a2f1d9e3e3e9cdbbb58773bfb71b3c817486e470a680ffe0feded08e26630`.
 * Panes: 6 · controls in panes: 67 · controls in the
-  shared chrome: 101 · script-rendered: 30.
+  shared chrome: 101 · script-rendered: 33.
 
 ## What this page is, and is not
 
 The table below is parsed, so it cannot be missing an element that sits in the markup. It is
 **not** a rendering: a control can exist and never be shown, and nothing here was captured in
-a browser. Controls that only exist inside inline-script templates are listed separately at
-the end, attributed to the function that renders them — a heuristic, not a call graph.
+a browser. Controls that only exist in inline-script templates or DOM creation are listed
+separately at the end, attributed to the function that renders them — a heuristic, not a call graph.
 
 ## Per-pane counts
 
 | Pane | Section | Total | Without id | Without any label | Breakdown |
 |---|---|---|---|---|---|
-| start | `pane-start` | 3 | 2 | 0 | button 3 |
+| start | `pane-start` | 3 | 1 | 0 | button 3 |
 | harness | `pane-harness` | 17 | 3 | 0 | button 4, input 2, select 9, summary 1, textarea 1 |
 | hall | `pane-hall` | 17 | 4 | 0 | button 6, select 8, summary 2, textarea 1 |
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
@@ -31,9 +31,9 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 
 ## What the numbers already say
 
-* 168 controls are in the markup and 30 more are built by script — a checklist written from the markup alone would miss 15% of the interactive surface.
+* 168 controls are in the markup and 33 more are built by script — a checklist written from the markup alone would miss 16% of the interactive surface.
 * The shared chrome carries 101 controls; all six panes together carry 67. Most of the clicking happens in the shell, not inside a tab.
-* 50 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
+* 49 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
 
@@ -41,8 +41,8 @@ Section `pane-start`, 3 interactive elements.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
-| 1 | button | onboardingRunBtn | button | Run the first task | startGuidedFirstTask() |
-| 2 | button | — | button | Re-check | refreshOnboarding() |
+| 1 | button | onboardingRunBtn | button | Prepare first task | startGuidedFirstTask() |
+| 2 | button | onboardingCheckBtn | button | Re-check | refreshOnboarding() |
 | 3 | button | — | button | Providers | openProvidersModal() |
 
 ## Pane `harness`
@@ -256,8 +256,8 @@ attributed to one.
 
 ## Controls built by script
 
-30 interactive tags appear as template strings inside the
-inline script rather than in the markup. They are attributed to the nearest preceding function
+33 interactive tags appear in inline templates or createElement calls
+rather than in the markup. They are attributed to the nearest preceding function
 and are **not** in the tables above:
 
 | Function | Controls rendered |
@@ -265,21 +265,24 @@ and are **not** in the tables above:
 | `appendWorkflowApprovalCard` | 3 |
 | `ensureLiveStepCard` | 3 |
 | `ensureStageCardMounted` | 1 |
+| `evidenceNote` | 1 |
 | `openSpawnModal` | 1 |
-| `refreshOnboarding` | 1 |
+| `presentInto` | 1 |
 | `renderCommandPaletteList` | 1 |
 | `renderHarnessSidebar` | 1 |
 | `renderMarkdown` | 1 |
 | `renderMcpUI` | 7 |
+| `renderOnboardingSteps` | 1 |
 | `renderOpenContextDocs` | 3 |
 | `renderProvidersModal` | 3 |
 | `renderStoredHarnessEventHtml` | 3 |
 | `renderTelemetry` | 1 |
+| `showToast` | 1 |
 | `syncUnifiedSelectors` | 1 |
 
 ## Not verified
 
 * Nothing here was rendered. A control can exist in the markup and never be shown; the inventory is a static reading, and capture needs a browser this environment does not have.
-* Script-rendered controls are counted from template strings and attributed to the nearest preceding function, which is a heuristic, not a call graph.
+* Script-rendered controls are counted from inline templates and createElement calls, then attributed to the nearest preceding function, which is a heuristic, not a call graph.
 * Reachability, keyboard order and focus behaviour are not measured here; UIUX-P5-04 and UIUX-P5-05 are where those get tested.
 * The without-id and without-label columns are a static count, not an accessibility verdict: a control can be labelled by a wrapping <label> element, which this walk does not resolve.

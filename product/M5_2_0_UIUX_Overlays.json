@@ -17,20 +17,20 @@
       "callers": [
         {
           "kind": "markup",
-          "line": 870
+          "line": 872
         },
         {
           "kind": "script",
-          "line": 2207
+          "line": 2210
         }
       ],
       "triggers": [
         {
           "kind": "markup",
-          "line": 870
+          "line": 872
         }
       ],
-      "line": 887
+      "line": 889
     },
     {
       "id": "contextModal",
@@ -43,23 +43,23 @@
       "callers": [
         {
           "kind": "script",
-          "line": 1934
+          "line": 1937
         },
         {
           "kind": "script",
-          "line": 1935
+          "line": 1938
         },
         {
           "kind": "script",
-          "line": 1936
+          "line": 1939
         },
         {
           "kind": "script",
-          "line": 3255
+          "line": 3320
         }
       ],
       "triggers": [],
-      "line": 899
+      "line": 901
     },
     {
       "id": "mcpModal",
@@ -72,15 +72,15 @@
       "callers": [
         {
           "kind": "script",
-          "line": 1937
+          "line": 1940
         },
         {
           "kind": "script",
-          "line": 3253
+          "line": 3318
         }
       ],
       "triggers": [],
-      "line": 1003
+      "line": 1005
     },
     {
       "id": "externalHarnessModal",
@@ -93,15 +93,15 @@
       "callers": [
         {
           "kind": "script",
-          "line": 1938
+          "line": 1941
         },
         {
           "kind": "script",
-          "line": 3256
+          "line": 3321
         }
       ],
       "triggers": [],
-      "line": 1116
+      "line": 1118
     },
     {
       "id": "harnessDiffModal",
@@ -114,24 +114,24 @@
       "callers": [
         {
           "kind": "markup",
-          "line": 1164
+          "line": 1166
         },
         {
           "kind": "script",
-          "line": 1942
+          "line": 1945
         },
         {
           "kind": "script",
-          "line": 3263
+          "line": 3328
         }
       ],
       "triggers": [
         {
           "kind": "markup",
-          "line": 1164
+          "line": 1166
         }
       ],
-      "line": 1155
+      "line": 1157
     },
     {
       "id": "providersModal",
@@ -144,36 +144,36 @@
       "callers": [
         {
           "kind": "markup",
-          "line": 1443
+          "line": 1446
         },
         {
           "kind": "script",
-          "line": 1939
+          "line": 1942
         },
         {
           "kind": "script",
-          "line": 2438
+          "line": 2497
         },
         {
           "kind": "script",
-          "line": 2446
+          "line": 2511
         },
         {
           "kind": "script",
-          "line": 2679
+          "line": 2744
         },
         {
           "kind": "script",
-          "line": 3252
+          "line": 3317
         }
       ],
       "triggers": [
         {
           "kind": "markup",
-          "line": 1443
+          "line": 1446
         }
       ],
-      "line": 1176
+      "line": 1178
     },
     {
       "id": "skillsModal",
@@ -186,15 +186,15 @@
       "callers": [
         {
           "kind": "script",
-          "line": 1940
+          "line": 1943
         },
         {
           "kind": "script",
-          "line": 3254
+          "line": 3319
         }
       ],
       "triggers": [],
-      "line": 1248
+      "line": 1250
     },
     {
       "id": "sdlcModal",
@@ -207,19 +207,19 @@
       "callers": [
         {
           "kind": "script",
-          "line": 1927
+          "line": 1930
         },
         {
           "kind": "script",
-          "line": 3265
+          "line": 3330
         },
         {
           "kind": "script",
-          "line": 3284
+          "line": 3349
         }
       ],
       "triggers": [],
-      "line": 1278
+      "line": 1280
     },
     {
       "id": "spawnModal",
@@ -232,28 +232,28 @@
       "callers": [
         {
           "kind": "markup",
-          "line": 1582
+          "line": 1585
         },
         {
           "kind": "script",
-          "line": 3124
+          "line": 3189
         },
         {
           "kind": "script",
-          "line": 3128
+          "line": 3193
         },
         {
           "kind": "script",
-          "line": 3140
+          "line": 3205
         }
       ],
       "triggers": [
         {
           "kind": "markup",
-          "line": 1582
+          "line": 1585
         }
       ],
-      "line": 1373
+      "line": 1375
     }
   ],
   "shortcuts": {

@@ -14,9 +14,9 @@ wrong. So the inventory is parsed, not typed:
 * the same walk records controls outside the panes (the chrome: tab bar, top bar,
   monitor rail), because those are reachable from every tab and would otherwise
   vanish from a "per-tab" inventory;
-* controls that only exist as strings inside the inline script — the ones built by
-  `innerHTML` templates — are counted separately and attributed to the function
-  that renders them, instead of being silently omitted.
+* controls built by inline-script templates or `document.createElement()` are
+  counted separately and attributed to the function that renders them, instead of
+  being silently omitted.
 
 That last point is the honesty rule of this artifact: the markup inventory is
 exact for what is in the markup, and it says out loud that JS-rendered controls
@@ -64,6 +64,9 @@ SECTION_ID_RE = re.compile(r"^pane-(?P<dom_id>[a-z]+)$")
 SCRIPT_TAG_RE = re.compile(r"<script\b(?P<attrs>[^>]*)>(?P<body>.*?)</script>", re.DOTALL)
 JS_FUNCTION_RE = re.compile(r"(?:async\s+)?function\s+(?P<name>[A-Za-z_$][\w$]*)\s*\(")
 JS_INTERACTIVE_RE = re.compile(r"<(button|input|select|textarea|a)\b")
+JS_CREATE_ELEMENT_RE = re.compile(
+    r"document\.createElement\(\s*['\"](button|input|select|textarea|a|summary)['\"]\s*\)"
+)
 
 
 class InventoryError(RuntimeError):
@@ -190,11 +193,12 @@ def parse_markup(html: str) -> tuple[dict[str, list[dict[str, object]]], list[di
 
 
 def parse_script_controls(html: str) -> list[dict[str, object]]:
-    """Count controls that only exist as template strings inside inline scripts."""
+    """Count controls built by inline-script templates or DOM creation."""
     rendered: list[dict[str, object]] = []
     for script in SCRIPT_TAG_RE.finditer(html):
         body = script.group("body")
-        for match in JS_INTERACTIVE_RE.finditer(body):
+        matches = [*JS_INTERACTIVE_RE.finditer(body), *JS_CREATE_ELEMENT_RE.finditer(body)]
+        for match in sorted(matches, key=lambda item: item.start()):
             preceding = [m for m in JS_FUNCTION_RE.finditer(body, 0, match.start())]
             function = preceding[-1].group("name") if preceding else None
             rendered.append({"tag": match.group(1), "rendered_in_function": function})
@@ -253,7 +257,7 @@ def build_inventory() -> dict[str, object]:
         "statement": (
             "Every interactive element in static/index.html, attributed to the pane section that "
             "contains it, parsed from the markup. Controls rendered only by inline-script templates "
-            "are counted separately and attributed to the function that renders them; neither list "
+            "or DOM creation are counted separately and attributed to the function that renders them; neither list "
             "claims to be the whole UI on its own."
         ),
         "pinned_source_commit": _ledger_pin(),
@@ -275,8 +279,8 @@ def build_inventory() -> dict[str, object]:
         "not_verified": [
             "Nothing here was rendered. A control can exist in the markup and never be shown; the "
             "inventory is a static reading, and capture needs a browser this environment does not have.",
-            "Script-rendered controls are counted from template strings and attributed to the nearest "
-            "preceding function, which is a heuristic, not a call graph.",
+            "Script-rendered controls are counted from inline templates and createElement calls, then "
+            "attributed to the nearest preceding function, which is a heuristic, not a call graph.",
             "Reachability, keyboard order and focus behaviour are not measured here; UIUX-P5-04 and "
             "UIUX-P5-05 are where those get tested.",
             "The without-id and without-label columns are a static count, not an accessibility verdict: "
@@ -309,8 +313,8 @@ def render_doc(inventory: dict[str, object]) -> str:
         "",
         "The table below is parsed, so it cannot be missing an element that sits in the markup. It is",
         "**not** a rendering: a control can exist and never be shown, and nothing here was captured in",
-        "a browser. Controls that only exist inside inline-script templates are listed separately at",
-        "the end, attributed to the function that renders them — a heuristic, not a call graph.",
+        "a browser. Controls that only exist in inline-script templates or DOM creation are listed",
+        "separately at the end, attributed to the function that renders them — a heuristic, not a call graph.",
         "",
         "## Per-pane counts",
         "",
@@ -403,8 +407,8 @@ def render_doc(inventory: dict[str, object]) -> str:
         "",
         "## Controls built by script",
         "",
-        f"{totals['script_rendered_controls']} interactive tags appear as template strings inside the",
-        "inline script rather than in the markup. They are attributed to the nearest preceding function",
+        f"{totals['script_rendered_controls']} interactive tags appear in inline templates or createElement calls",
+        "rather than in the markup. They are attributed to the nearest preceding function",
         "and are **not** in the tables above:",
         "",
         "| Function | Controls rendered |",

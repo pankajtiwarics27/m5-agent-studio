@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CAPTURE = ROOT / "scripts" / "capture_screenshots.mjs"
 WALK = ROOT / "scripts" / "keyboard_walk.mjs"
 ACCESSIBILITY_WALK = ROOT / "tests" / "browser" / "accessibility_walk.mjs"
+ONBOARDING_WALK = ROOT / "tests" / "browser" / "onboarding_walk.mjs"
 OVERLAY_WALK = ROOT / "scripts" / "overlay_walk.mjs"
 TOKEN = "synthetic-screenshot-token-0123456789"
 TABS = ("start", "harness", "hall", "council", "debate", "chat")
@@ -150,6 +151,13 @@ def _accessibility_walk(base: str, env: dict[str, str], token: str = TOKEN):
     return subprocess.run(
         ["node", str(ACCESSIBILITY_WALK), "--base-url", base, "--token", token],
         cwd=ROOT, env=env, capture_output=True, text=True, timeout=60, check=False,
+    )
+
+
+def _onboarding_walk(base: str, env: dict[str, str], token: str = TOKEN):
+    return subprocess.run(
+        ["node", str(ONBOARDING_WALK), "--base-url", base, "--token", token],
+        cwd=ROOT, env=env, capture_output=True, text=True, timeout=90, check=False,
     )
 
 
@@ -427,6 +435,12 @@ def test_real_isolated_demo_captures_all_six_panes(
         assert accessibility_result["failed"] == 0
         assert accessibility_result["passed"] == 13
         assert banner["token"] not in accessibility.stdout + accessibility.stderr
+        onboarding = _onboarding_walk(banner["url"], browser_env, token=banner["token"])
+        assert onboarding.returncode == 0, onboarding.stderr
+        onboarding_result = json.loads(onboarding.stdout)
+        assert onboarding_result["failed"] == 0
+        assert onboarding_result["passed"] == 8
+        assert banner["token"] not in onboarding.stdout + onboarding.stderr
         overlays = _overlay_walk(banner["url"], browser_env, token=banner["token"])
         assert overlays.returncode == 0, overlays.stderr
         overlay_result = json.loads(overlays.stdout)

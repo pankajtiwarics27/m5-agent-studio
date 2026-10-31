@@ -45,18 +45,18 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| `#sdlcProgressBadge` | `neutral` | no | 1286 |
-| `#onboardingSummary` | `neutral` | yes | 1433 |
-| `#harnessActiveStatusBadge` | `info` | yes | 1552 |
-| `#hallStatusBadge` | `warn` | yes | 1595 |
-| (unnamed) | `ok` | no | 1792 |
-| `#dockerStateBadge` | `neutral` | no | 1839 |
+| `#sdlcProgressBadge` | `neutral` | no | 1288 |
+| `#onboardingSummary` | `neutral` | yes | 1435 |
+| `#harnessActiveStatusBadge` | `info` | yes | 1555 |
+| `#hallStatusBadge` | `warn` | yes | 1598 |
+| (unnamed) | `ok` | no | 1795 |
+| `#dockerStateBadge` | `neutral` | no | 1842 |
 
 ## Writers
 
 | Measure | Count |
 |---|---|
-| `setStatus()` call sites | 15 |
+| `setStatus()` call sites | 16 |
 | `evidenceNote()` call sites | 1 |
 | Evidence blocks in markup | 1 |
 | Legacy `className = "badge …"` writers | 0 |

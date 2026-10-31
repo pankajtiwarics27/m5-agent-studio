@@ -127,6 +127,14 @@ def test_script_rendered_controls_are_counted_separately() -> None:
     assert any("rendered" in note for note in inventory["not_verified"])
 
 
+def test_dom_created_controls_are_counted_with_inline_templates() -> None:
+    module = _load_generator()
+    controls = module.parse_script_controls(
+        '<script>function render(){ const row = document.createElement("button"); }</script>'
+    )
+    assert controls == [{"tag": "button", "rendered_in_function": "render"}]
+
+
 def test_the_generated_page_covers_every_pane_and_is_marked_generated() -> None:
     doc = DOC.read_text(encoding="utf-8")
     inventory = _inventory()

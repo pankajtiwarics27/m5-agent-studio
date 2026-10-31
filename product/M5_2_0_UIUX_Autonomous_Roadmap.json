@@ -106,7 +106,7 @@
     ],
     "last_completed_story": "UIUX-P1-05",
     "next_recommended_story": "UIUX-P2-01",
-    "last_checkpoint": "2026-10-31T23:02:53Z",
+    "last_checkpoint": "2026-10-31T23:29:14Z",
     "last_session_id": "arena/b084f6af-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
@@ -2289,26 +2289,105 @@
       "agent_prompt": "Implement UIUX-P2-01 (Start readiness and actionable onboarding). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
         "status": "in_progress",
-        "progress_percent": 1,
+        "progress_percent": 95,
         "attempts": 1,
         "started_at": "2026-10-31T23:02:53Z",
-        "updated_at": "2026-10-31T23:02:53Z",
+        "updated_at": "2026-10-31T23:29:14Z",
         "completed_at": null,
         "owner_session": "arena/b084f6af-m5-agent-studio",
         "commit_sha": null,
-        "changed_files": [],
+        "changed_files": [
+          "README.md",
+          "docs/media/screenshots/index.json",
+          "docs/media/screenshots/start.png",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-tokens.md",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "scripts/uiux_control_inventory.py",
+          "static/index.html",
+          "studio.py",
+          "tests/browser/onboarding_walk.mjs",
+          "tests/test_screenshot_capture_browser.py",
+          "tests/test_uiux_control_inventory.py",
+          "tests/test_uiux_onboarding.py",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+        ],
         "evidence": [
           "Claim checkpoint only (no implementation yet): HEAD is pinned at 089237f2f1270e2782542e2909c1b5f093f51a0b on arena/b084f6af-m5-agent-studio; after git fetch --unshallow origin, the ledger source pin 73bc5e417c1508b41127f3d7162c4afdcbcdbfc4 is confirmed as an ancestor.",
-          "Prerequisite UIUX-P1-05 is done. Read-only coordination against GitHub found no open PRs or blocking issues at claim time; UIUX-P2-01 was the sole locally eligible story."
+          "Prerequisite UIUX-P1-05 is done. Read-only coordination against GitHub found no open PRs or blocking issues at claim time; UIUX-P2-01 was the sole locally eligible story.",
+          "Inspected the actual DOM and handlers in static/index.html: onboardingRunBtn, onboardingSteps, onboardingSummary, refreshOnboarding(), runOnboardingAction(), startGuidedFirstTask() and switchTab(). The existing default fetch is /api/onboarding/preflight; the explicit local-runtime probe is /api/onboarding/preflight?probe=local. Backend contract and authorization remain unchanged.",
+          "Acceptance evidence — existing controls/routes preserved: the readiness card keeps Prepare first task, Re-check, Providers, and the per-step existing actions; app.py/API/auth/durable-state code was not modified. Full cross-pane browser regressions passed 29/29.",
+          "Acceptance evidence — no browser page errors: onboarding browser walk asserts zero page errors; the existing capture, accessibility, keyboard, and overlay walks remain green.",
+          "Acceptance evidence — keyboard/focus: the browser walk activates Re-check with Enter, checks aria-busy and disabled state, and verifies focus transfers to the live status during the busy interval.",
+          "Acceptance evidence — failure/recovery: an intercepted synthetic preflight rejection asserts a timestamped cause, preservation of the last successful checklist, retry availability, and a subsequent successful re-check that clears the error.",
+          "Acceptance evidence — demonstrable UI: the Start screenshot was refreshed from an isolated authenticated demo and visually compared against the detached baseline; screenshot validator reports 6/6. Browser walk verifies the first-task action stages a prompt for review and does not issue /api/chat/stream.",
+          "The source-generated UIUX control inventory was extended to count document.createElement() controls as well as inline-template tags, so the safely DOM-created per-step buttons are not omitted; regenerated count is 33 script-rendered controls.",
+          "README.md first-run guidance and standard test-result count were updated from verified behavior and the final full-suite run. No backend route, auth contract, durable schema or workspace state was changed."
         ],
-        "test_results": [],
-        "visual_evidence": [],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q --tb=short",
+            "exit_code": 0,
+            "result": "1,790 passed, 25 skipped, 1 StarletteDeprecationWarning in 157.04s; browser tests skipped here and run separately with configured Chromium."
+          },
+          {
+            "command": "TMPDIR=/tmp/m5-p2-tmp LD_LIBRARY_PATH=/tmp/m5-p2-chromium-libs/lib STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js M5_REQUIRE_BROWSER_TESTS=1 .venv/bin/python -m pytest -q tests/test_screenshot_capture_browser.py --tb=short",
+            "exit_code": 0,
+            "result": "29 passed in 93.39s; includes onboarding browser walk against isolated synthetic demo with disposable token, no real workspace state."
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q tests/test_uiux_onboarding.py tests/test_uiux_control_inventory.py tests/test_presentations.py tests/test_onboarding_preflight.py --tb=short",
+            "exit_code": 0,
+            "result": "66 passed, 1 StarletteDeprecationWarning."
+          },
+          {
+            "command": ".venv/bin/python -m ruff check . && .venv/bin/python -m mypy",
+            "exit_code": 0,
+            "result": "Ruff: all checks passed; mypy: no issues found in 58 source files."
+          },
+          {
+            "command": "Frontend, demo, screenshot, docs, bundle and UIUX generated-artifact checks (see verification_commands)",
+            "exit_code": 0,
+            "result": "JavaScript syntax OK; demo transcript current; screenshots 6/6 validated; docs validation passed (5 required pages, 140 files scanned); studio.py and all UIUX inventories/manifests/sign-offs checked with no drift; git diff --check clean."
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q tests/test_uiux_roadmap.py tests/test_uiux_coordination.py tests/test_uiux_preservation_signoff.py --tb=short",
+            "exit_code": 0,
+            "result": "95 passed after the in-progress tracking/evidence update."
+          }
+        ],
+        "visual_evidence": [
+          "Before: disposable baseline captured from detached worktree at 089237f2f1270e2782542e2909c1b5f093f51a0b; /tmp/m5-p2-01-before-capture/start.png (isolated demo state, no real workspace data, not checked in).",
+          "After: docs/media/screenshots/start.png, captured with scripts/capture_screenshots.mjs through the isolated demo browser harness at 1440x900 CSS pixels, device scale factor 2; canonical index refreshed from the capture record. The screenshot contains only synthetic demo state and no credentials.",
+          "Reviewed before/after Start captures: per-step states and actions are visible; the screenshot does not claim to depict a failure state. The browser walk independently exercised failed re-check and recovery. scripts/validate_screenshots.py reports 6 of 6 captured and consistent."
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "The default preflight continues to use the existing /api/onboarding/preflight contract and reads local configuration only; probing the configured local runtime remains an explicit Check local models action.",
+          "Readiness rows use text nodes and one optional direct-action button per step; status labels are explicit and do not infer readiness from a configured route.",
+          "A failed re-check displays its time and cause while retaining the last successful checklist. Request-version checks prevent a stale response from replacing newer state.",
+          "When a keyboard-focused re-check or step action is disabled during refresh, focus moves to the tabindex=-1 live status so progress and result remain perceivable.",
+          "Prepare first task stages the guided prompt in Chat for review and does not send it; the existing Send action remains the user's explicit model-call control.",
+          "The implementation PR remains awaiting independent review; no owner approval or story completion is claimed in this ledger."
+        ],
         "blockers": [],
-        "handoff_note": "Claimed; code inspection and current-behavior verification are next. Use only disposable demo state and synthetic tokens; retain screenshot provenance caveats.",
-        "next_action": "Trace the Start pane, onboarding preflight handlers and API contract, then capture a disposable baseline and targeted regression fixtures before changing code.",
-        "readme_updated": false
+        "handoff_note": "Implementation and verification are recorded in the open draft PR #137. All changed behavior is exercised in tests; retain the disposable-demo and synthetic-token caveat. Await independent owner/reviewer approval before closing the story; no completion claim is made.",
+        "next_action": "Commit the verified implementation and tracking update to arena/b084f6af-m5-agent-studio, push it, update PR #137 with the evidence map, and request independent review. Keep the story in_progress until approval; do not merge or mark done without it.",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",

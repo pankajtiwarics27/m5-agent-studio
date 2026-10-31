@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "captured_at": "2026-10-31T17:54:48.907Z",
+  "captured_at": "2026-10-31T23:19:35.679Z",
   "viewport": {
     "width": 1440,
     "height": 900,
@@ -11,8 +11,8 @@
       "id": "start",
       "tab": "start",
       "file": "start.png",
-      "bytes": 348544,
-      "sha256": "70ab13111454e1aab68fe4c6c96e19bb010112aa7cb08112b9144a6c5568fcbf"
+      "bytes": 501330,
+      "sha256": "f7fc2603b2d9bae552bb04cbb4eb622b96f7f373a716d5aff2077aa5add4d5e6"
     },
     {
       "id": "harness",
