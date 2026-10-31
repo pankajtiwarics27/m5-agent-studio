@@ -113,6 +113,18 @@ Per [`security-review-signoff.md`](security-review-signoff.md) §1 and §6:
 
 ## 5. Residual risk register and formal release decision
 
+### Acceptance criteria as reported
+
+`acceptance_criteria` carries four booleans: the three `M5-P5-03` criteria plus
+`container_isolation_qualified`. The fourth is derived from the roadmap — `qualified`
+only when `M5-P3-01` is `done`, `unqualified` while it is `blocked` or in progress, and
+`unknown` when the roadmap does not say — so a passing local fault suite cannot be
+read as evidence that the container sandbox holds. It is reported, not waived:
+`gate_invariants_satisfied` keeps its meaning (the harness itself blocks correctly)
+and the release decision stays `release-blocked` while any mandatory prerequisite is
+unfinished. After the 2026-10-31 operator run it reports `no`; that is the state
+`RR-02` below describes.
+
 ### Residual risks
 
 | ID | Severity | Area | Blocks v1.0 release | Summary and mitigation |
