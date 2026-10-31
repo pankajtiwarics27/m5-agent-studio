@@ -6,8 +6,8 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `32bb00dea76a694e9895c806ade33038b038d122ad0e33a7a22019f941deac4d`.
-* Panes: 6 · controls in panes: 69 · controls in the
+* Frontend digest: `1a8de9c17f0e39e1da267801cf302d1619f506dd997209caedaa2bfad2ba934d`.
+* Panes: 6 · controls in panes: 67 · controls in the
   shared chrome: 101 · script-rendered: 30.
 
 ## What this page is, and is not
@@ -23,7 +23,7 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 |---|---|---|---|---|---|
 | start | `pane-start` | 3 | 2 | 0 | button 3 |
 | harness | `pane-harness` | 17 | 3 | 0 | button 4, input 2, select 9, summary 1, textarea 1 |
-| hall | `pane-hall` | 19 | 6 | 0 | button 8, select 8, summary 2, textarea 1 |
+| hall | `pane-hall` | 17 | 4 | 0 | button 6, select 8, summary 2, textarea 1 |
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
 | debate | `pane-debate` | 5 | 0 | 0 | button 2, input 1, select 1, textarea 1 |
 | chat | `pane-chat` | 9 | 1 | 0 | button 3, input 2, select 3, textarea 1 |
@@ -31,9 +31,9 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 
 ## What the numbers already say
 
-* 170 controls are in the markup and 30 more are built by script — a checklist written from the markup alone would miss 15% of the interactive surface.
-* The shared chrome carries 101 controls; all six panes together carry 69. Most of the clicking happens in the shell, not inside a tab.
-* 52 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
+* 168 controls are in the markup and 30 more are built by script — a checklist written from the markup alone would miss 15% of the interactive surface.
+* The shared chrome carries 101 controls; all six panes together carry 67. Most of the clicking happens in the shell, not inside a tab.
+* 50 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
 
@@ -71,7 +71,7 @@ Section `pane-harness`, 17 interactive elements.
 
 ## Pane `hall`
 
-Section `pane-hall`, 19 interactive elements.
+Section `pane-hall`, 17 interactive elements.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
@@ -89,11 +89,9 @@ Section `pane-hall`, 19 interactive elements.
 | 12 | select | hallRoleSelect | — | 1. Architect / Strategist 2. Builder / Deep Analyst 3. Adversarial Critic 4. Lead Arbiter | — |
 | 13 | select | hallModelSelect | — | — | — |
 | 14 | button | hallSummonBtn | — | Ask one model | summonSingleAgent() |
-| 15 | button | — | — | + Spawn Council Session | openSpawnModal() |
-| 16 | button | — | — | Configure Cloud Providers | openProvidersModal() |
-| 17 | textarea | hallHumanInput | — | Ask a question or steer the Council as Human Operative (Enter = Send)... | — |
-| 18 | select | hallSendModeSelect | — | Council message action | — |
-| 19 | button | — | — | Send | submitHallComposer() |
+| 15 | textarea | hallHumanInput | — | Ask a question or steer the Council as Human Operative (Enter = Send)... | — |
+| 16 | select | hallSendModeSelect | — | Council message action | — |
+| 17 | button | — | — | Send | submitHallComposer() |
 
 ## Pane `council`
 
