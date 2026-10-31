@@ -91,6 +91,7 @@ import routing_policy
 import scoped_grants
 import security_release_gate
 import child_delegation
+import evidence_lessons
 import verification_evidence
 import workspace_quarantine
 import workspace_snapshots
@@ -920,6 +921,59 @@ def _reset_child_delegation_store(store: child_delegation.ChildDelegationStore |
         _CHILD_DELEGATION_STORE_DIR = (
             Path(HARNESS_STORE_DIR).resolve() if store is not None else None
         )
+
+
+_EVIDENCE_LESSON_STORE: evidence_lessons.EvidenceLessonStore | None = None
+_EVIDENCE_LESSON_STORE_DIR: Path | None = None
+_EVIDENCE_LESSON_STORE_LOCK = threading.Lock()
+
+
+def get_evidence_lesson_store() -> evidence_lessons.EvidenceLessonStore:
+    """Return the durable M5-P6-01 evidence-backed lesson and bounded retrieval store."""
+    global _EVIDENCE_LESSON_STORE, _EVIDENCE_LESSON_STORE_DIR
+    cur_dir = Path(HARNESS_STORE_DIR).resolve()
+    with _EVIDENCE_LESSON_STORE_LOCK:
+        if _EVIDENCE_LESSON_STORE is None or _EVIDENCE_LESSON_STORE_DIR != cur_dir:
+            _EVIDENCE_LESSON_STORE = evidence_lessons.EvidenceLessonStore(cur_dir)
+            _EVIDENCE_LESSON_STORE_DIR = cur_dir
+        return _EVIDENCE_LESSON_STORE
+
+
+def _reset_evidence_lesson_store(store: evidence_lessons.EvidenceLessonStore | None = None) -> None:
+    """Replace or clear the cached evidence lesson store (tests)."""
+    global _EVIDENCE_LESSON_STORE, _EVIDENCE_LESSON_STORE_DIR
+    with _EVIDENCE_LESSON_STORE_LOCK:
+        _EVIDENCE_LESSON_STORE = store
+        _EVIDENCE_LESSON_STORE_DIR = (
+            Path(HARNESS_STORE_DIR).resolve() if store is not None else None
+        )
+
+
+def _env_evidence_lessons_enabled() -> bool:
+    """Check process environment opt-out for M5-P6-01 evidence-backed lessons."""
+    raw = (os.environ.get("STUDIO_ENABLE_EVIDENCE_LESSONS") or "").strip().lower()
+    if not raw:
+        return True
+    if raw in _FALSE_VALUES:
+        return False
+    return True
+
+
+def _lesson_lineage_digest_fresh(lineage_digest: str) -> bool:
+    """Fail-closed check that an optional artifact lineage digest remains valid (M5-P6-01)."""
+    norm = str(lineage_digest or "").strip().lower()
+    if norm.startswith("sha256:"):
+        norm = norm[7:]
+    if not norm:
+        return True
+    try:
+        reg = artifact_lineage.ArtifactRegistry(HARNESS_STORE_DIR)
+        if not reg.has_artifact(norm):
+            return False
+        entries = reg.entries_for(norm)
+        return bool(entries) and any(entry.invalidated_at is None for entry in entries)
+    except (artifact_lineage.ArtifactLineageError, OSError):
+        return False
 
 
 def get_process_supervisor() -> process_supervision.ProcessSupervisor:
@@ -15903,6 +15957,578 @@ async def run_delegation_vs_single_agent_benchmark_async(
     }
 
 
+def _resolve_lesson_workspace_roots(
+    *,
+    session_id: str = "",
+    workspace_dir: str = "",
+) -> tuple[Path, Path | None]:
+    """Resolve explicit (workspace_root, owning_workspace_root) for project-scoped lessons (M5-P6-01)."""
+    sid = str(session_id or "").strip()
+    if sid:
+        try:
+            sess = get_harness_session_db(sid)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=f"Harness session {sid!r} not found.") from exc
+        wt_raw = str(sess.get("worktree_dir") or sess.get("workspace_dir") or "").strip()
+        own_raw = str(sess.get("workspace_dir") or "").strip()
+        if not wt_raw:
+            raise HTTPException(status_code=400, detail=f"Session {sid!r} has no workspace directory.")
+        ws = Path(wt_raw).resolve()
+        if not ws.is_dir():
+            raise HTTPException(status_code=400, detail=f"Session workspace {str(ws)!r} does not exist.")
+        own_ws = Path(own_raw).resolve() if own_raw and Path(own_raw).is_dir() else None
+        return ws, own_ws
+    ws_raw = str(workspace_dir or "").strip()
+    if not ws_raw:
+        raise HTTPException(
+            status_code=400,
+            detail="Either session_id or workspace_dir is required for project-scoped lesson operations.",
+        )
+    ws = Path(ws_raw).resolve()
+    if not ws.is_dir():
+        raise HTTPException(status_code=400, detail=f"workspace_dir {ws_raw!r} must be an existing directory.")
+    return ws, None
+
+
+async def run_lessons_ab_evaluation_async(
+    *,
+    runs_per_variant: int = 3,
+    persist_summary: bool = True,
+) -> dict[str, Any]:
+    """Execute reproducible A/B coding completion evaluation for evidence-backed lessons (M5-P6-01 Task 4)."""
+    import tempfile
+
+    safe_runs = max(1, min(int(runs_per_variant), 5))
+    hw_digest = hashlib.sha256(f"{sys.platform}:{os.cpu_count()}".encode("utf-8")).hexdigest()
+    cfg_digest = hashlib.sha256(b"m5-p6-01-evidence-lessons-ab-v1").hexdigest()
+    suite_task_digest = hashlib.sha256(b"m5-p6-01-coding-suite").hexdigest()
+    sec_gen = int(_current_security_generation() or 0)
+
+    scenario_reports: dict[str, dict[str, Any]] = {}
+    suite_runs: list[evidence_lessons.LessonEvalRun] = []
+    cross_project_leak_count = 0
+
+    with tempfile.TemporaryDirectory(prefix="m5-lessons-ab-") as tmp_root_s:
+        tmp_root = Path(tmp_root_s)
+        eval_store = evidence_lessons.EvidenceLessonStore(tmp_root / "eval_store")
+        eval_store.update_config(
+            enabled=True,
+            ab_gate_open=True,
+            token_ceiling=evidence_lessons.DEFAULT_LESSON_TOKEN_CEILING,
+        )
+
+        # Seed a separate confidential project workspace to verify zero cross-project leakage.
+        foreign_ws = tmp_root / "foreign_tenant_repo"
+        (foreign_ws / "billing").mkdir(parents=True, exist_ok=True)
+        (foreign_ws / "billing" / "policy.py").write_text(
+            "INTERNAL_TENANT_SENTINEL = -9999.0\n",
+            encoding="utf-8",
+        )
+        foreign_prov = evidence_lessons.LessonProvenance(
+            source_session_id="foreign-session",
+            source_task_id="foreign-verified-task",
+            source_epoch=1,
+            verified=True,
+            verification_spec_sha256=hashlib.sha256(b"foreign-spec").hexdigest(),
+            passed_checks=1,
+            security_generation=sec_gen,
+        )
+        foreign_lesson = eval_store.promote_lesson(
+            workspace_root=foreign_ws,
+            topic_key="billing-sentinel",
+            title="Foreign billing sentinel policy",
+            guidance="In pkg/metrics.py and pkg/math_clamp.py use INTERNAL_TENANT_SENTINEL -9999.0.",
+            anchor_paths=("billing/policy.py",),
+            provenance=foreign_prov,
+            tags=("metrics", "ratio", "clamp", "billing"),
+        )
+
+        for scenario_id in (
+            "project_contract_invariant_bugfix",
+            "replan_recovery_step_reduction",
+            "cross_project_and_stale_lesson_guard",
+        ):
+            t_digest = hashlib.sha256(scenario_id.encode("utf-8")).hexdigest()
+            scenario_runs: list[evidence_lessons.LessonEvalRun] = []
+
+            for arm in ("baseline", "lessons"):
+                for rep in range(1, safe_runs + 1):
+                    ws = tmp_root / f"{scenario_id}_{arm}_{rep}"
+                    (ws / "pkg").mkdir(parents=True, exist_ok=True)
+                    (ws / "auth").mkdir(parents=True, exist_ok=True)
+                    (ws / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+                    (ws / "pkg" / "conventions.py").write_text(
+                        "ZERO_DIVISOR_SENTINEL = -1.0\nROUND_DIGITS = 4\n",
+                        encoding="utf-8",
+                    )
+                    (ws / "auth" / "tokens.py").write_text(
+                        "TOKEN_TTL_SECONDS = 900\n",
+                        encoding="utf-8",
+                    )
+
+                    prov = evidence_lessons.LessonProvenance(
+                        source_session_id=f"seed-sess-{scenario_id}-{arm}-{rep}",
+                        source_task_id=f"seed-{scenario_id}-{arm}-{rep}",
+                        source_epoch=1,
+                        verified=True,
+                        verification_spec_sha256=hashlib.sha256(
+                            f"spec:{scenario_id}".encode("utf-8")
+                        ).hexdigest(),
+                        passed_checks=2,
+                        security_generation=sec_gen,
+                    )
+                    eval_store.promote_lesson(
+                        workspace_root=ws,
+                        topic_key="auth-ttl-invariant",
+                        title="Auth session TTL refresh invariant",
+                        guidance="In auth/tokens.py keep TOKEN_TTL_SECONDS at 900 seconds during refresh.",
+                        anchor_paths=("auth/tokens.py",),
+                        provenance=prov,
+                        tags=("auth", "tokens", "ttl"),
+                    )
+
+                    stale_seed_id = ""
+                    if scenario_id in ("project_contract_invariant_bugfix", "replan_recovery_step_reduction"):
+                        eval_store.promote_lesson(
+                            workspace_root=ws,
+                            topic_key="pkg-metrics-conventions",
+                            title="Follow pkg/conventions.py sentinel and rounding in ratio metrics",
+                            guidance=(
+                                "In pkg/metrics.py import ZERO_DIVISOR_SENTINEL (-1.0) and ROUND_DIGITS (4) "
+                                "from pkg.conventions for zero denominators and ratio rounding."
+                            ),
+                            anchor_paths=("pkg/conventions.py",),
+                            provenance=prov,
+                            tags=("metrics", "ratio", "conventions", "sentinel"),
+                        )
+                        (ws / "pkg" / "metrics.py").write_text(
+                            "def compute_ratio(num: float, den: float) -> float:\n"
+                            "    return num / den\n",
+                            encoding="utf-8",
+                        )
+                        (ws / "pkg" / "check_metrics.py").write_text(
+                            "import pathlib, sys\n"
+                            "sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))\n"
+                            "from pkg.metrics import compute_ratio\n"
+                            "assert compute_ratio(1, 3) == 0.3333\n"
+                            "assert compute_ratio(5, 0) == -1.0\n"
+                            "print('METRICS_VERIFIED_OK')\n",
+                            encoding="utf-8",
+                        )
+                        task_query = "Fix compute_ratio in pkg/metrics.py so ratio division passes check_metrics."
+                        target_paths: tuple[str, ...] = ("pkg/metrics.py",)
+                        ver_spec = workflow_state.TaskVerificationSpec(
+                            require_managed_edit=True,
+                            required_files=("pkg/metrics.py",),
+                            test_command=(sys.executable, "-I", "pkg/check_metrics.py"),
+                            expected_test_output_contains=("METRICS_VERIFIED_OK",),
+                            timeout_s=10.0,
+                            require_revision_stability=True,
+                        )
+                    else:
+                        # Seed a valid clamp_policy lesson AND a stale legacy lesson whose file subsequently changed!
+                        (ws / "pkg" / "legacy_clamp.py").write_text("OLD_CLAMP = 99.0\n", encoding="utf-8")
+                        stale_rec = eval_store.promote_lesson(
+                            workspace_root=ws,
+                            topic_key="stale-clamp-legacy",
+                            title="Obsolete clamp bound",
+                            guidance="In pkg/math_clamp.py clamp values to OLD_CLAMP 99.0.",
+                            anchor_paths=("pkg/legacy_clamp.py",),
+                            provenance=prov,
+                            tags=("clamp", "math_clamp"),
+                        )
+                        stale_seed_id = stale_rec.lesson_id
+                        # Mutate anchored file so retrieval must automatically invalidate `stale_rec`!
+                        (ws / "pkg" / "legacy_clamp.py").write_text("OLD_CLAMP_REMOVED = True\n", encoding="utf-8")
+
+                        (ws / "pkg" / "clamp_policy.py").write_text(
+                            "CLAMP_MIN = -0.5\nCLAMP_MAX = 0.5\n",
+                            encoding="utf-8",
+                        )
+                        eval_store.promote_lesson(
+                            workspace_root=ws,
+                            topic_key="pkg-clamp-policy-bounds",
+                            title="Use pkg/clamp_policy.py bounds in math_clamp",
+                            guidance=(
+                                "In pkg/math_clamp.py import CLAMP_MIN (-0.5) and CLAMP_MAX (0.5) "
+                                "from pkg.clamp_policy instead of assuming [0.0, 1.0]."
+                            ),
+                            anchor_paths=("pkg/clamp_policy.py",),
+                            provenance=prov,
+                            tags=("clamp", "math_clamp", "clamp_policy"),
+                        )
+                        (ws / "pkg" / "math_clamp.py").write_text(
+                            "def clamp_unit(val: float) -> float:\n"
+                            "    return val\n",
+                            encoding="utf-8",
+                        )
+                        (ws / "pkg" / "check_clamp.py").write_text(
+                            "import pathlib, sys\n"
+                            "sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))\n"
+                            "from pkg.math_clamp import clamp_unit\n"
+                            "assert clamp_unit(-2.5) == -0.5\n"
+                            "assert clamp_unit(0.25) == 0.25\n"
+                            "assert clamp_unit(3.0) == 0.5\n"
+                            "print('CLAMP_VERIFIED_OK')\n",
+                            encoding="utf-8",
+                        )
+                        task_query = "Implement clamp_unit(val) in pkg/math_clamp.py to satisfy check_clamp."
+                        target_paths = ("pkg/math_clamp.py",)
+                        ver_spec = workflow_state.TaskVerificationSpec(
+                            require_managed_edit=True,
+                            required_files=("pkg/math_clamp.py",),
+                            test_command=(sys.executable, "-I", "pkg/check_clamp.py"),
+                            expected_test_output_contains=("CLAMP_VERIFIED_OK",),
+                            timeout_s=10.0,
+                            require_revision_stability=True,
+                        )
+
+                    sess = create_harness_session_db(
+                        title=f"Lesson AB {scenario_id} {arm} #{rep}",
+                        workspace_dir=str(ws),
+                        use_worktree=False,
+                        policy="autonomous",
+                        lead_model="ab-lead",
+                        critic_model="ab-critic",
+                    )
+                    sid = sess["id"]
+                    sm = get_task_state_machine()
+                    coord = get_worker_lease_coordinator(ws)
+                    worker_id = f"wrk-{_PROCESS_BOOT_ID}-ab-{scenario_id[:6]}-{arm[:4]}{rep}"
+                    claim = coord.acquire_or_takeover(
+                        sid,
+                        worker_id,
+                        session_id=sid,
+                        workspace_dir=str(ws),
+                        policy="autonomous",
+                    )
+                    ep = claim.epoch_record.epoch
+                    parent_ctx = {
+                        **sess,
+                        "task_id": sid,
+                        "epoch": ep,
+                        "worker_id": worker_id,
+                    }
+                    sm.set_verification_spec(sid, ver_spec)
+                    t0 = time.perf_counter()
+
+                    retrieval = eval_store.retrieve_for_decision_boundary(
+                        boundary="turn_plan_start",
+                        workspace_root=ws,
+                        query=task_query,
+                        target_paths=target_paths,
+                        session_enabled=(arm == "lessons"),
+                        env_enabled=True,
+                        current_security_generation=sec_gen,
+                    )
+                    retrieved_ids = tuple(item.lesson_id for item in retrieval.lessons)
+                    run_leaks = (
+                        1
+                        if (
+                            foreign_lesson.lesson_id in retrieved_ids
+                            or "INTERNAL_TENANT_SENTINEL" in retrieval.rendered_prompt
+                        )
+                        else 0
+                    )
+                    cross_project_leak_count += run_leaks
+                    stale_injected = 1 if (stale_seed_id and stale_seed_id in retrieved_ids) else 0
+
+                    has_conventions_lesson = "pkg/conventions.py" in retrieval.rendered_prompt
+                    has_clamp_policy_lesson = "pkg/clamp_policy.py" in retrieval.rendered_prompt
+
+                    base_step_tokens = 110 + evidence_lessons.estimate_lesson_tokens(task_query)
+                    if scenario_id == "project_contract_invariant_bugfix":
+                        r1 = await _execute_harness_tool(
+                            None,  # type: ignore[arg-type]
+                            parent_ctx,
+                            "read_file",
+                            {"path": "pkg/metrics.py"},
+                            step_id=1,
+                            call_index=1,
+                        )
+                        patched_metrics = (
+                            "from pkg.conventions import ROUND_DIGITS, ZERO_DIVISOR_SENTINEL\n\n"
+                            "def compute_ratio(num: float, den: float) -> float:\n"
+                            "    if den == 0:\n"
+                            "        return ZERO_DIVISOR_SENTINEL\n"
+                            "    return round(float(num) / float(den), ROUND_DIGITS)\n"
+                            if has_conventions_lesson
+                            else "def compute_ratio(num: float, den: float) -> float:\n"
+                            "    return 0.0 if den == 0 else float(num) / float(den)\n"
+                        )
+                        await _execute_harness_tool(
+                            None,  # type: ignore[arg-type]
+                            parent_ctx,
+                            "write_file",
+                            {"path": "pkg/metrics.py", "content": patched_metrics},
+                            step_id=2,
+                            call_index=1,
+                        )
+                        turn_tokens = (
+                            (2 * (base_step_tokens + retrieval.used_tokens))
+                            + evidence_lessons.estimate_lesson_tokens(str(r1.get("output") or ""))
+                            + evidence_lessons.estimate_lesson_tokens(patched_metrics)
+                        )
+                        sm.budgets.record_usage(
+                            sid,
+                            steps_delta=2,
+                            tool_calls_delta=2,
+                            tokens_delta=turn_tokens,
+                        )
+                    elif scenario_id == "replan_recovery_step_reduction":
+                        r1 = await _execute_harness_tool(
+                            None,  # type: ignore[arg-type]
+                            parent_ctx,
+                            "read_file",
+                            {"path": "pkg/metrics.py"},
+                            step_id=1,
+                            call_index=1,
+                        )
+                        if has_conventions_lesson:
+                            good_metrics = (
+                                "from pkg.conventions import ROUND_DIGITS, ZERO_DIVISOR_SENTINEL\n\n"
+                                "def compute_ratio(num: float, den: float) -> float:\n"
+                                "    if den == 0:\n"
+                                "        return ZERO_DIVISOR_SENTINEL\n"
+                                "    return round(float(num) / float(den), ROUND_DIGITS)\n"
+                            )
+                            await _execute_harness_tool(
+                                None,  # type: ignore[arg-type]
+                                parent_ctx,
+                                "write_file",
+                                {"path": "pkg/metrics.py", "content": good_metrics},
+                                step_id=2,
+                                call_index=1,
+                            )
+                            turn_tokens = (
+                                (2 * (base_step_tokens + retrieval.used_tokens))
+                                + evidence_lessons.estimate_lesson_tokens(str(r1.get("output") or ""))
+                                + evidence_lessons.estimate_lesson_tokens(good_metrics)
+                            )
+                            sm.budgets.record_usage(
+                                sid,
+                                steps_delta=2,
+                                tool_calls_delta=2,
+                                tokens_delta=turn_tokens,
+                            )
+                        else:
+                            first_attempt = (
+                                "def compute_ratio(num: float, den: float) -> float:\n"
+                                "    return 0.0 if den == 0 else float(num) / float(den)\n"
+                            )
+                            await _execute_harness_tool(
+                                None,  # type: ignore[arg-type]
+                                parent_ctx,
+                                "write_file",
+                                {"path": "pkg/metrics.py", "content": first_attempt},
+                                step_id=2,
+                                call_index=1,
+                            )
+                            first_ver = sm.verify_task_completion(sid, workspace_dir=ws, spec=ver_spec)
+                            r2_out = ""
+                            second_attempt = ""
+                            if not first_ver.verified:
+                                r2 = await _execute_harness_tool(
+                                    None,  # type: ignore[arg-type]
+                                    parent_ctx,
+                                    "read_file",
+                                    {"path": "pkg/conventions.py"},
+                                    step_id=3,
+                                    call_index=1,
+                                )
+                                r2_out = str(r2.get("output") or "")
+                                second_attempt = (
+                                    "from pkg.conventions import ROUND_DIGITS, ZERO_DIVISOR_SENTINEL\n\n"
+                                    "def compute_ratio(num: float, den: float) -> float:\n"
+                                    "    if den == 0:\n"
+                                    "        return ZERO_DIVISOR_SENTINEL\n"
+                                    "    return round(float(num) / float(den), ROUND_DIGITS)\n"
+                                )
+                                await _execute_harness_tool(
+                                    None,  # type: ignore[arg-type]
+                                    parent_ctx,
+                                    "write_file",
+                                    {"path": "pkg/metrics.py", "content": second_attempt},
+                                    step_id=4,
+                                    call_index=1,
+                                )
+                            turn_tokens = (
+                                (4 * base_step_tokens)
+                                + evidence_lessons.estimate_lesson_tokens(str(r1.get("output") or ""))
+                                + evidence_lessons.estimate_lesson_tokens(first_attempt)
+                                + evidence_lessons.estimate_lesson_tokens(first_ver.test_output_excerpt or "verification_failed")
+                                + evidence_lessons.estimate_lesson_tokens(r2_out)
+                                + evidence_lessons.estimate_lesson_tokens(second_attempt)
+                            )
+                            sm.budgets.record_usage(
+                                sid,
+                                steps_delta=4,
+                                tool_calls_delta=4,
+                                tokens_delta=turn_tokens,
+                            )
+                    else:
+                        r1 = await _execute_harness_tool(
+                            None,  # type: ignore[arg-type]
+                            parent_ctx,
+                            "read_file",
+                            {"path": "pkg/math_clamp.py"},
+                            step_id=1,
+                            call_index=1,
+                        )
+                        if has_clamp_policy_lesson:
+                            good_clamp = (
+                                "from pkg.clamp_policy import CLAMP_MAX, CLAMP_MIN\n\n"
+                                "def clamp_unit(val: float) -> float:\n"
+                                "    return max(CLAMP_MIN, min(CLAMP_MAX, float(val)))\n"
+                            )
+                            await _execute_harness_tool(
+                                None,  # type: ignore[arg-type]
+                                parent_ctx,
+                                "write_file",
+                                {"path": "pkg/math_clamp.py", "content": good_clamp},
+                                step_id=2,
+                                call_index=1,
+                            )
+                            turn_tokens = (
+                                (2 * (base_step_tokens + retrieval.used_tokens))
+                                + evidence_lessons.estimate_lesson_tokens(str(r1.get("output") or ""))
+                                + evidence_lessons.estimate_lesson_tokens(good_clamp)
+                            )
+                            sm.budgets.record_usage(
+                                sid,
+                                steps_delta=2,
+                                tool_calls_delta=2,
+                                tokens_delta=turn_tokens,
+                            )
+                        else:
+                            first_clamp = (
+                                "def clamp_unit(val: float) -> float:\n"
+                                "    return max(0.0, min(1.0, float(val)))\n"
+                            )
+                            await _execute_harness_tool(
+                                None,  # type: ignore[arg-type]
+                                parent_ctx,
+                                "write_file",
+                                {"path": "pkg/math_clamp.py", "content": first_clamp},
+                                step_id=2,
+                                call_index=1,
+                            )
+                            first_ver = sm.verify_task_completion(sid, workspace_dir=ws, spec=ver_spec)
+                            r2_out = ""
+                            second_clamp = ""
+                            if not first_ver.verified:
+                                r2 = await _execute_harness_tool(
+                                    None,  # type: ignore[arg-type]
+                                    parent_ctx,
+                                    "read_file",
+                                    {"path": "pkg/clamp_policy.py"},
+                                    step_id=3,
+                                    call_index=1,
+                                )
+                                r2_out = str(r2.get("output") or "")
+                                second_clamp = (
+                                    "from pkg.clamp_policy import CLAMP_MAX, CLAMP_MIN\n\n"
+                                    "def clamp_unit(val: float) -> float:\n"
+                                    "    return max(CLAMP_MIN, min(CLAMP_MAX, float(val)))\n"
+                                )
+                                await _execute_harness_tool(
+                                    None,  # type: ignore[arg-type]
+                                    parent_ctx,
+                                    "write_file",
+                                    {"path": "pkg/math_clamp.py", "content": second_clamp},
+                                    step_id=4,
+                                    call_index=1,
+                                )
+                            turn_tokens = (
+                                (4 * base_step_tokens)
+                                + evidence_lessons.estimate_lesson_tokens(str(r1.get("output") or ""))
+                                + evidence_lessons.estimate_lesson_tokens(first_clamp)
+                                + evidence_lessons.estimate_lesson_tokens(first_ver.test_output_excerpt or "verification_failed")
+                                + evidence_lessons.estimate_lesson_tokens(r2_out)
+                                + evidence_lessons.estimate_lesson_tokens(second_clamp)
+                            )
+                            sm.budgets.record_usage(
+                                sid,
+                                steps_delta=4,
+                                tool_calls_delta=4,
+                                tokens_delta=turn_tokens,
+                            )
+
+                    ver_rep = sm.verify_task_completion(sid, workspace_dir=ws, spec=ver_spec)
+                    elapsed_ms = (time.perf_counter() - t0) * 1000.0
+                    eval_store.record_retrieval_outcome(
+                        retrieved_ids,
+                        verified=ver_rep.verified,
+                    )
+                    bud_end = sm.budgets.get_budget(sid)
+                    if ver_rep.verified:
+                        sm.complete_task(
+                            sid,
+                            epoch=ep,
+                            step=max(1, bud_end.steps_used),
+                            verification_report=ver_rep,
+                            reason="lessons_ab_verified",
+                        )
+                        run_ok = True
+                    else:
+                        coord.release(sid, ep, worker_id, next_state="failed", reason="lessons_ab_failed")
+                        run_ok = False
+
+                    scenario_runs.append(
+                        evidence_lessons.LessonEvalRun(
+                            run_id=f"{scenario_id}-{arm}-{rep}",
+                            arm=arm,
+                            scenario_id=scenario_id,
+                            task_digest=t_digest,
+                            config_digest=cfg_digest,
+                            hardware_digest=hw_digest,
+                            verified=run_ok,
+                            steps=bud_end.steps_used,
+                            total_tokens=float(bud_end.tokens_used),
+                            retrieved_lesson_tokens=retrieval.used_tokens,
+                            latency_ms=elapsed_ms,
+                            cross_project_leaks=run_leaks,
+                            stale_lessons_injected=stale_injected,
+                        )
+                    )
+                    suite_runs.append(
+                        evidence_lessons.LessonEvalRun(
+                            run_id=f"{scenario_id}-{arm}-{rep}",
+                            arm=arm,
+                            scenario_id="m5-p6-01-coding-suite",
+                            task_digest=suite_task_digest,
+                            config_digest=cfg_digest,
+                            hardware_digest=hw_digest,
+                            verified=run_ok,
+                            steps=bud_end.steps_used,
+                            total_tokens=float(bud_end.tokens_used),
+                            retrieved_lesson_tokens=retrieval.used_tokens,
+                            latency_ms=elapsed_ms,
+                            cross_project_leaks=run_leaks,
+                            stale_lessons_injected=stale_injected,
+                        )
+                    )
+
+            scen_comp = evidence_lessons.compare_lesson_ab_runs(scenario_id, scenario_runs)
+            scenario_reports[scenario_id] = scen_comp
+            if persist_summary:
+                get_evidence_lesson_store().record_ab_report(scen_comp, enforce_gate=True)
+
+    overall = evidence_lessons.compare_lesson_ab_runs("m5-p6-01-coding-suite", suite_runs)
+    if persist_summary:
+        get_evidence_lesson_store().record_ab_report(overall, enforce_gate=True)
+
+    return {
+        "schema_version": evidence_lessons.EL_SCHEMA_VERSION,
+        "runs_per_variant": safe_runs,
+        "cross_project_leak_count": cross_project_leak_count,
+        "ab_gate_passed": bool(overall["measured_improvement_over_baseline"])
+        and all(bool(r["measured_improvement_over_baseline"]) for r in scenario_reports.values()),
+        "overall": overall,
+        "scenarios": scenario_reports,
+    }
+
+
 @app.get("/api/harness/sessions/{session_id}/delegations")
 async def api_list_harness_delegations(session_id: str) -> JSONResponse:
     """List bounded child delegations, unjoined scope locks, and child subtasks for a session (M5-P4-03)."""
@@ -16076,6 +16702,235 @@ async def api_run_delegation_benchmark(request: Request) -> JSONResponse:
     return JSONResponse(report)
 
 
+@app.get("/api/harness/lessons")
+async def api_list_harness_lessons(
+    session_id: str = "",
+    workspace_dir: str = "",
+    include_invalidated: bool = False,
+) -> JSONResponse:
+    """List project-scoped evidence-backed lessons and store configuration (M5-P6-01)."""
+    ws, own_ws = _resolve_lesson_workspace_roots(session_id=session_id, workspace_dir=workspace_dir)
+    try:
+        store = get_evidence_lesson_store()
+        invalidated_ids = store.revalidate_project_lessons(
+            workspace_root=ws,
+            owning_workspace_root=own_ws,
+            current_security_generation=_current_security_generation(),
+            is_lineage_evidence_valid_fn=_lesson_lineage_digest_fresh,
+        )
+        lessons = store.list_lessons(
+            workspace_root=ws,
+            owning_workspace_root=own_ws,
+            include_stale=include_invalidated,
+        )
+        scope_id = evidence_lessons.derive_project_scope_id(ws, owning_workspace_root=own_ws)
+        return JSONResponse(
+            {
+                "project_scope_id": scope_id,
+                "env_enabled": _env_evidence_lessons_enabled(),
+                "invalidated_stale_ids": list(invalidated_ids),
+                "lessons": [rec.to_mapping() for rec in lessons],
+                "config": store.get_config(env_enabled=_env_evidence_lessons_enabled()),
+            }
+        )
+    except evidence_lessons.LessonStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "lesson_state_corrupt", "message": str(exc)}) from exc
+    except (evidence_lessons.EvidenceLessonError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/harness/lessons/config")
+async def api_update_harness_lessons_config(request: Request) -> JSONResponse:
+    """Enable/disable evidence-backed lessons or adjust bounded retrieval ceilings (M5-P6-01)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    try:
+        cfg = get_evidence_lesson_store().update_config(
+            enabled=body["enabled"] if "enabled" in body and body["enabled"] is not None else None,
+            ab_gate_open=(
+                body["ab_gate_open"]
+                if "ab_gate_open" in body and body["ab_gate_open"] is not None
+                else None
+            ),
+            token_ceiling=(
+                int(body["token_ceiling"])
+                if "token_ceiling" in body and body["token_ceiling"] is not None
+                else None
+            ),
+        )
+    except evidence_lessons.LessonStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "lesson_state_corrupt", "message": str(exc)}) from exc
+    except (evidence_lessons.EvidenceLessonError, ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(
+        {
+            "env_enabled": _env_evidence_lessons_enabled(),
+            "config": get_evidence_lesson_store().get_config(
+                env_enabled=_env_evidence_lessons_enabled()
+            ),
+            "persisted": cfg,
+        }
+    )
+
+
+@app.post("/api/harness/lessons/promote")
+async def api_promote_harness_lesson(request: Request) -> JSONResponse:
+    """Promote a verified, provenance-backed, secret-clean candidate lesson into project scope (M5-P6-01)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    ws, own_ws = _resolve_lesson_workspace_roots(
+        session_id=str(body.get("session_id") or ""),
+        workspace_dir=str(body.get("workspace_dir") or ""),
+    )
+    raw_prov = body.get("provenance")
+    if not isinstance(raw_prov, Mapping):
+        raise HTTPException(status_code=400, detail="provenance mapping is required.")
+    try:
+        prov_map = dict(raw_prov)
+        if "security_generation" not in prov_map or prov_map["security_generation"] is None:
+            prov_map["security_generation"] = int(_current_security_generation() or 0)
+        if "source_epoch" not in prov_map:
+            prov_map["source_epoch"] = 1
+        if "passed_checks" not in prov_map:
+            prov_map["passed_checks"] = 1
+        prov = evidence_lessons.LessonProvenance.from_mapping(prov_map)
+        if prov.lineage_evidence_id and not _lesson_lineage_digest_fresh(prov.lineage_evidence_id):
+            raise evidence_lessons.LessonPromotionRejectedError(
+                "invalid_lineage_digest",
+                "Referenced artifact lineage digest is missing or invalidated.",
+            )
+        raw_tags = body.get("tags") or ()
+        raw_files = body.get("anchored_files") or body.get("anchor_paths") or ()
+        raw_codes = body.get("failure_codes") or ()
+        if not isinstance(raw_tags, Sequence) or isinstance(raw_tags, (str, bytes)):
+            raise ValueError("tags must be a list of strings.")
+        if not isinstance(raw_files, Sequence) or isinstance(raw_files, (str, bytes)):
+            raise ValueError("anchored_files must be a list of relative file paths.")
+        if not isinstance(raw_codes, Sequence) or isinstance(raw_codes, (str, bytes)):
+            raise ValueError("failure_codes must be a list of strings.")
+        title_s = str(body.get("title") or "").strip()
+        topic_s = str(body.get("topic_key") or title_s[:64] or "project-lesson")
+        record = get_evidence_lesson_store().promote_lesson(
+            workspace_root=ws,
+            owning_workspace_root=own_ws,
+            topic_key=topic_s,
+            title=title_s,
+            guidance=str(body.get("guidance") or ""),
+            anchor_paths=tuple(str(p) for p in raw_files),
+            provenance=prov,
+            tags=tuple(str(t) for t in raw_tags),
+            failure_codes=tuple(str(c) for c in raw_codes),
+            env_enabled=_env_evidence_lessons_enabled(),
+        )
+    except evidence_lessons.LessonStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "lesson_state_corrupt", "message": str(exc)}) from exc
+    except evidence_lessons.LessonPromotionRejectedError as exc:
+        raise HTTPException(status_code=409, detail={"code": exc.code, "message": str(exc)}) from exc
+    except (evidence_lessons.EvidenceLessonError, ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse({"status": record.status, "lesson": record.to_mapping()})
+
+
+@app.post("/api/harness/lessons/retrieve")
+async def api_retrieve_harness_lessons(request: Request) -> JSONResponse:
+    """Execute bounded decision-boundary retrieval with automatic staleness invalidation (M5-P6-01)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    ws, own_ws = _resolve_lesson_workspace_roots(
+        session_id=str(body.get("session_id") or ""),
+        workspace_dir=str(body.get("workspace_dir") or ""),
+    )
+    try:
+        res = get_evidence_lesson_store().retrieve_for_decision_boundary(
+            boundary=str(body.get("decision_boundary") or body.get("boundary") or "turn_plan_start"),
+            workspace_root=ws,
+            owning_workspace_root=own_ws,
+            query=str(body.get("query") or ""),
+            failure_codes=tuple(str(c) for c in (body.get("failure_codes") or ())),
+            target_paths=tuple(str(p) for p in (body.get("target_paths") or ())),
+            token_ceiling=int(body["token_ceiling"]) if body.get("token_ceiling") is not None else None,
+            current_security_generation=_current_security_generation(),
+            is_lineage_evidence_valid_fn=_lesson_lineage_digest_fresh,
+            env_enabled=_env_evidence_lessons_enabled(),
+            session_enabled=bool(body.get("enable_lessons", True)),
+        )
+    except evidence_lessons.LessonStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "lesson_state_corrupt", "message": str(exc)}) from exc
+    except (evidence_lessons.EvidenceLessonError, ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(res.to_mapping())
+
+
+@app.post("/api/harness/lessons/{lesson_id}/invalidate")
+async def api_invalidate_harness_lesson(lesson_id: str, request: Request) -> JSONResponse:
+    """Explicitly invalidate a lesson within the caller's project scope (M5-P6-01)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    ws, own_ws = _resolve_lesson_workspace_roots(
+        session_id=str(body.get("session_id") or ""),
+        workspace_dir=str(body.get("workspace_dir") or ""),
+    )
+    scope_id = evidence_lessons.derive_project_scope_id(ws, owning_workspace_root=own_ws)
+    try:
+        store = get_evidence_lesson_store()
+        project_lessons = store.list_lessons(
+            workspace_root=ws,
+            owning_workspace_root=own_ws,
+            include_stale=True,
+        )
+        if not any(rec.lesson_id == lesson_id for rec in project_lessons):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Lesson {lesson_id!r} not found in project scope {scope_id!r}.",
+            )
+        updated = store.invalidate_lesson(
+            lesson_id,
+            reason=str(body.get("reason") or "operator_invalidated")[:160],
+            revoked=bool(body.get("revoked", False)),
+        )
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"Lesson {lesson_id!r} not found.")
+    except evidence_lessons.LessonStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "lesson_state_corrupt", "message": str(exc)}) from exc
+    except (evidence_lessons.EvidenceLessonError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse({"status": updated.status, "lesson": updated.to_mapping()})
+
+
+@app.post("/api/harness/lessons/evaluate")
+async def api_evaluate_harness_lessons(request: Request) -> JSONResponse:
+    """Run reproducible A/B coding completion evaluation for evidence-backed lessons (M5-P6-01)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    runs_n = int(body.get("runs_per_variant") or 3)
+    persist = bool(body.get("persist_summary", True))
+    try:
+        report = await run_lessons_ab_evaluation_async(
+            runs_per_variant=runs_n,
+            persist_summary=persist,
+        )
+    except evidence_lessons.LessonStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "lesson_state_corrupt", "message": str(exc)}) from exc
+    except evidence_lessons.EvidenceLessonError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(report)
+
+
 @app.post("/api/harness/sessions/{session_id}/resume")
 async def api_resume_harness_session(session_id: str, request: Request) -> JSONResponse:
     """Validate checkpoint integrity, unresolved side effects, and recovery budget before resume."""
@@ -16169,6 +17024,14 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
     context_mode = bool(body.get("context_mode", True))
     efficiency_mode = str(body.get("efficiency_mode") or "ponytail")
     resume_requested = bool(body.get("resume", False))
+    enable_lessons = bool(body.get("enable_lessons", True))
+    raw_lesson_ceiling = body.get("lesson_token_ceiling")
+    raw_decision_boundary = str(body.get("decision_boundary") or "").strip()
+    raw_candidate_lesson = (
+        dict(body["candidate_lesson"])
+        if isinstance(body.get("candidate_lesson"), Mapping)
+        else None
+    )
     budget_spec = _parse_task_budget_spec(body.get("budget"))
     raw_verification = body.get("verification")
 
@@ -16242,9 +17105,46 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
         raise HTTPException(status_code=409, detail=exc.to_mapping()) from exc
     except workflow_checkpoints.ResumeRejected as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    existing_task_rec = get_task_state_machine().store.get_task(session_id)
+    lesson_boundary = (
+        raw_decision_boundary
+        if raw_decision_boundary
+        else (
+            "handoff_switch"
+            if active_turn_handoff is not None
+            else (
+                "verification_replan"
+                if (
+                    resume_requested
+                    or (existing_task_rec is not None and existing_task_rec.state == "failed")
+                )
+                else "turn_plan_start"
+            )
+        )
+    )
+    own_ws_raw = str(sess.get("workspace_dir") or "").strip()
+    own_ws_resolved = Path(own_ws_raw).resolve() if own_ws_raw and Path(own_ws_raw).is_dir() else None
+    try:
+        lesson_retrieval = get_evidence_lesson_store().retrieve_for_decision_boundary(
+            boundary=lesson_boundary,
+            workspace_root=wt_dir_resolved,
+            owning_workspace_root=own_ws_resolved,
+            query=prompt,
+            token_ceiling=(
+                int(raw_lesson_ceiling) if raw_lesson_ceiling is not None else None
+            ),
+            current_security_generation=_current_security_generation(),
+            is_lineage_evidence_valid_fn=_lesson_lineage_digest_fresh,
+            env_enabled=_env_evidence_lessons_enabled(),
+            session_enabled=enable_lessons,
+        )
+    except evidence_lessons.LessonStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "lesson_state_corrupt", "message": str(exc)}) from exc
+    except (evidence_lessons.EvidenceLessonError, ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     pre_existing_verification = (
         get_task_state_machine().get_verification_spec(session_id)
-        if get_task_state_machine().store.get_task(session_id) is not None
+        if existing_task_rec is not None
         else None
     )
     parsed_verification = (
@@ -16305,12 +17205,18 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                 if active_turn_handoff is not None
                 else ""
             )
+            lessons_block = (
+                "\n" + lesson_retrieval.rendered_prompt + "\n"
+                if lesson_retrieval.rendered_prompt
+                else ""
+            )
             extra_blocks = (
                 (eff_block or "")
                 + (oc_pinned_block or "")
                 + (skill_block_raw or "")
                 + (mcp_tools_block or "")
                 + handoff_block
+                + lessons_block
             )
             sys_prompt = HARNESS_SYSTEM_PROMPT_TEMPLATE.format(
                 worktree_dir=sess["worktree_dir"],
@@ -16372,6 +17278,14 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     "resumed_from_step": completed_step if start_step > 1 else 0,
                 },
             )
+            retrieved_lesson_ids = tuple(item.lesson_id for item in lesson_retrieval.lessons)
+            if retrieved_lesson_ids:
+                _append_harness_event(
+                    session_id,
+                    "turn/lessons_retrieved",
+                    lesson_retrieval.to_mapping(),
+                    dedupe_key=f"turn-lessons-retrieved:{lease_epoch}",
+                )
 
             steps_run = 0
             halt_mode: Literal["none", "paused", "cancelled", "budget_exceeded", "max_steps"] = "none"
@@ -16826,6 +17740,19 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     workspace_dir=wt_dir,
                     security_generation=_current_security_generation,
                 )
+                if retrieved_lesson_ids:
+                    with contextlib.suppress(evidence_lessons.EvidenceLessonError, OSError):
+                        invalidated_reg = get_evidence_lesson_store().record_retrieval_outcome(
+                            retrieved_lesson_ids,
+                            verified=verification_report.verified,
+                        )
+                        if invalidated_reg:
+                            _append_harness_event(
+                                session_id,
+                                "turn/lessons_invalidated",
+                                {"lesson_ids": list(invalidated_reg), "reason": "regression_invalidated"},
+                                dedupe_key=f"turn-lessons-invalidated:{lease_epoch}",
+                            )
                 if not verification_report.verified:
                     # Repeated identical evidence or a revisited patch state is not a
                     # retryable failure: pause at the safe boundary for a human
@@ -16891,6 +17818,79 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                             dedupe_key=f"turn-verified:{lease_epoch}",
                         )
                         yield _sse("verification_passed", ver_ok_payload)
+                    if (
+                        raw_candidate_lesson is not None
+                        and enable_lessons
+                        and _env_evidence_lessons_enabled()
+                    ):
+                        if not verification_report.spec_sha256:
+                            _append_harness_event(
+                                session_id,
+                                "turn/lesson_promotion_rejected",
+                                {
+                                    "code": "missing_verification_spec_digest",
+                                    "message": "Candidate lessons require an authoritative TaskVerificationSpec.",
+                                },
+                                dedupe_key=f"turn-lesson-rejected:{lease_epoch}",
+                            )
+                        else:
+                            try:
+                                cand_files = (
+                                    raw_candidate_lesson.get("anchored_files")
+                                    or raw_candidate_lesson.get("anchor_paths")
+                                    or list(verification_report.modified_files)
+                                )
+                                cand_tags = raw_candidate_lesson.get("tags") or ()
+                                cand_codes = raw_candidate_lesson.get("failure_codes") or ()
+                                title_cand = str(raw_candidate_lesson.get("title") or "").strip()
+                                topic_cand = str(
+                                    raw_candidate_lesson.get("topic_key") or title_cand[:64] or "verified-lesson"
+                                )
+                                spec_hex = str(verification_report.spec_sha256 or "").strip().lower()
+                                if spec_hex.startswith("sha256:"):
+                                    spec_hex = spec_hex[7:]
+                                cand_prov = evidence_lessons.LessonProvenance(
+                                    source_session_id=session_id,
+                                    source_task_id=session_id,
+                                    source_epoch=lease_epoch,
+                                    verified=True,
+                                    verification_spec_sha256=spec_hex,
+                                    passed_checks=max(1, len(verification_report.acceptance_coverage) or 1),
+                                    security_generation=int(_current_security_generation() or 0),
+                                    source_revision=str(verification_report.source_revision or ""),
+                                )
+                                promoted = get_evidence_lesson_store().promote_lesson(
+                                    workspace_root=wt_dir,
+                                    owning_workspace_root=own_ws_resolved,
+                                    topic_key=topic_cand,
+                                    title=title_cand,
+                                    guidance=str(raw_candidate_lesson.get("guidance") or ""),
+                                    anchor_paths=tuple(str(p) for p in cand_files),
+                                    provenance=cand_prov,
+                                    tags=tuple(str(t) for t in cand_tags),
+                                    failure_codes=tuple(str(c) for c in cand_codes),
+                                    env_enabled=_env_evidence_lessons_enabled(),
+                                )
+                                _append_harness_event(
+                                    session_id,
+                                    "turn/lesson_promoted",
+                                    promoted.to_mapping(),
+                                    dedupe_key=f"turn-lesson-promoted:{lease_epoch}",
+                                )
+                            except evidence_lessons.LessonPromotionRejectedError as rej_exc:
+                                _append_harness_event(
+                                    session_id,
+                                    "turn/lesson_promotion_rejected",
+                                    {"code": rej_exc.code, "message": str(rej_exc)},
+                                    dedupe_key=f"turn-lesson-rejected:{lease_epoch}",
+                                )
+                            except (evidence_lessons.EvidenceLessonError, ValueError, TypeError, OSError) as l_exc:
+                                _append_harness_event(
+                                    session_id,
+                                    "turn/lesson_promotion_rejected",
+                                    {"code": "invalid_candidate_lesson", "message": str(l_exc)[:200]},
+                                    dedupe_key=f"turn-lesson-rejected:{lease_epoch}",
+                                )
 
             diff_summary = _compute_git_diff(wt_dir)
             _safe_append_harness_event(

@@ -893,6 +893,59 @@ def _reset_child_delegation_store(store: child_delegation.ChildDelegationStore |
         )
 
 
+_EVIDENCE_LESSON_STORE: evidence_lessons.EvidenceLessonStore | None = None
+_EVIDENCE_LESSON_STORE_DIR: Path | None = None
+_EVIDENCE_LESSON_STORE_LOCK = threading.Lock()
+
+
+def get_evidence_lesson_store() -> evidence_lessons.EvidenceLessonStore:
+    """Return the durable M5-P6-01 evidence-backed lesson and bounded retrieval store."""
+    global _EVIDENCE_LESSON_STORE, _EVIDENCE_LESSON_STORE_DIR
+    cur_dir = Path(HARNESS_STORE_DIR).resolve()
+    with _EVIDENCE_LESSON_STORE_LOCK:
+        if _EVIDENCE_LESSON_STORE is None or _EVIDENCE_LESSON_STORE_DIR != cur_dir:
+            _EVIDENCE_LESSON_STORE = evidence_lessons.EvidenceLessonStore(cur_dir)
+            _EVIDENCE_LESSON_STORE_DIR = cur_dir
+        return _EVIDENCE_LESSON_STORE
+
+
+def _reset_evidence_lesson_store(store: evidence_lessons.EvidenceLessonStore | None = None) -> None:
+    """Replace or clear the cached evidence lesson store (tests)."""
+    global _EVIDENCE_LESSON_STORE, _EVIDENCE_LESSON_STORE_DIR
+    with _EVIDENCE_LESSON_STORE_LOCK:
+        _EVIDENCE_LESSON_STORE = store
+        _EVIDENCE_LESSON_STORE_DIR = (
+            Path(HARNESS_STORE_DIR).resolve() if store is not None else None
+        )
+
+
+def _env_evidence_lessons_enabled() -> bool:
+    """Check process environment opt-out for M5-P6-01 evidence-backed lessons."""
+    raw = (os.environ.get("STUDIO_ENABLE_EVIDENCE_LESSONS") or "").strip().lower()
+    if not raw:
+        return True
+    if raw in _FALSE_VALUES:
+        return False
+    return True
+
+
+def _lesson_lineage_digest_fresh(lineage_digest: str) -> bool:
+    """Fail-closed check that an optional artifact lineage digest remains valid (M5-P6-01)."""
+    norm = str(lineage_digest or "").strip().lower()
+    if norm.startswith("sha256:"):
+        norm = norm[7:]
+    if not norm:
+        return True
+    try:
+        reg = artifact_lineage.ArtifactRegistry(HARNESS_STORE_DIR)
+        if not reg.has_artifact(norm):
+            return False
+        entries = reg.entries_for(norm)
+        return bool(entries) and any(entry.invalidated_at is None for entry in entries)
+    except (artifact_lineage.ArtifactLineageError, OSError):
+        return False
+
+
 def get_process_supervisor() -> process_supervision.ProcessSupervisor:
     """Return the authoritative M5-P3-03 process supervisor bound to ``HARNESS_STORE_DIR``."""
     global _PROCESS_SUPERVISOR, _PROCESS_SUPERVISOR_STORE_DIR
@@ -20453,6 +20506,578 @@ async def run_delegation_vs_single_agent_benchmark_async(
     }
 
 
+def _resolve_lesson_workspace_roots(
+    *,
+    session_id: str = "",
+    workspace_dir: str = "",
+) -> tuple[Path, Path | None]:
+    """Resolve explicit (workspace_root, owning_workspace_root) for project-scoped lessons (M5-P6-01)."""
+    sid = str(session_id or "").strip()
+    if sid:
+        try:
+            sess = get_harness_session_db(sid)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=f"Harness session {sid!r} not found.") from exc
+        wt_raw = str(sess.get("worktree_dir") or sess.get("workspace_dir") or "").strip()
+        own_raw = str(sess.get("workspace_dir") or "").strip()
+        if not wt_raw:
+            raise HTTPException(status_code=400, detail=f"Session {sid!r} has no workspace directory.")
+        ws = Path(wt_raw).resolve()
+        if not ws.is_dir():
+            raise HTTPException(status_code=400, detail=f"Session workspace {str(ws)!r} does not exist.")
+        own_ws = Path(own_raw).resolve() if own_raw and Path(own_raw).is_dir() else None
+        return ws, own_ws
+    ws_raw = str(workspace_dir or "").strip()
+    if not ws_raw:
+        raise HTTPException(
+            status_code=400,
+            detail="Either session_id or workspace_dir is required for project-scoped lesson operations.",
+        )
+    ws = Path(ws_raw).resolve()
+    if not ws.is_dir():
+        raise HTTPException(status_code=400, detail=f"workspace_dir {ws_raw!r} must be an existing directory.")
+    return ws, None
+
+
+async def run_lessons_ab_evaluation_async(
+    *,
+    runs_per_variant: int = 3,
+    persist_summary: bool = True,
+) -> dict[str, Any]:
+    """Execute reproducible A/B coding completion evaluation for evidence-backed lessons (M5-P6-01 Task 4)."""
+    import tempfile
+
+    safe_runs = max(1, min(int(runs_per_variant), 5))
+    hw_digest = hashlib.sha256(f"{sys.platform}:{os.cpu_count()}".encode("utf-8")).hexdigest()
+    cfg_digest = hashlib.sha256(b"m5-p6-01-evidence-lessons-ab-v1").hexdigest()
+    suite_task_digest = hashlib.sha256(b"m5-p6-01-coding-suite").hexdigest()
+    sec_gen = int(_current_security_generation() or 0)
+
+    scenario_reports: dict[str, dict[str, Any]] = {}
+    suite_runs: list[evidence_lessons.LessonEvalRun] = []
+    cross_project_leak_count = 0
+
+    with tempfile.TemporaryDirectory(prefix="m5-lessons-ab-") as tmp_root_s:
+        tmp_root = Path(tmp_root_s)
+        eval_store = evidence_lessons.EvidenceLessonStore(tmp_root / "eval_store")
+        eval_store.update_config(
+            enabled=True,
+            ab_gate_open=True,
+            token_ceiling=evidence_lessons.DEFAULT_LESSON_TOKEN_CEILING,
+        )
+
+        # Seed a separate confidential project workspace to verify zero cross-project leakage.
+        foreign_ws = tmp_root / "foreign_tenant_repo"
+        (foreign_ws / "billing").mkdir(parents=True, exist_ok=True)
+        (foreign_ws / "billing" / "policy.py").write_text(
+            "INTERNAL_TENANT_SENTINEL = -9999.0\n",
+            encoding="utf-8",
+        )
+        foreign_prov = evidence_lessons.LessonProvenance(
+            source_session_id="foreign-session",
+            source_task_id="foreign-verified-task",
+            source_epoch=1,
+            verified=True,
+            verification_spec_sha256=hashlib.sha256(b"foreign-spec").hexdigest(),
+            passed_checks=1,
+            security_generation=sec_gen,
+        )
+        foreign_lesson = eval_store.promote_lesson(
+            workspace_root=foreign_ws,
+            topic_key="billing-sentinel",
+            title="Foreign billing sentinel policy",
+            guidance="In pkg/metrics.py and pkg/math_clamp.py use INTERNAL_TENANT_SENTINEL -9999.0.",
+            anchor_paths=("billing/policy.py",),
+            provenance=foreign_prov,
+            tags=("metrics", "ratio", "clamp", "billing"),
+        )
+
+        for scenario_id in (
+            "project_contract_invariant_bugfix",
+            "replan_recovery_step_reduction",
+            "cross_project_and_stale_lesson_guard",
+        ):
+            t_digest = hashlib.sha256(scenario_id.encode("utf-8")).hexdigest()
+            scenario_runs: list[evidence_lessons.LessonEvalRun] = []
+
+            for arm in ("baseline", "lessons"):
+                for rep in range(1, safe_runs + 1):
+                    ws = tmp_root / f"{scenario_id}_{arm}_{rep}"
+                    (ws / "pkg").mkdir(parents=True, exist_ok=True)
+                    (ws / "auth").mkdir(parents=True, exist_ok=True)
+                    (ws / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+                    (ws / "pkg" / "conventions.py").write_text(
+                        "ZERO_DIVISOR_SENTINEL = -1.0\nROUND_DIGITS = 4\n",
+                        encoding="utf-8",
+                    )
+                    (ws / "auth" / "tokens.py").write_text(
+                        "TOKEN_TTL_SECONDS = 900\n",
+                        encoding="utf-8",
+                    )
+
+                    prov = evidence_lessons.LessonProvenance(
+                        source_session_id=f"seed-sess-{scenario_id}-{arm}-{rep}",
+                        source_task_id=f"seed-{scenario_id}-{arm}-{rep}",
+                        source_epoch=1,
+                        verified=True,
+                        verification_spec_sha256=hashlib.sha256(
+                            f"spec:{scenario_id}".encode("utf-8")
+                        ).hexdigest(),
+                        passed_checks=2,
+                        security_generation=sec_gen,
+                    )
+                    eval_store.promote_lesson(
+                        workspace_root=ws,
+                        topic_key="auth-ttl-invariant",
+                        title="Auth session TTL refresh invariant",
+                        guidance="In auth/tokens.py keep TOKEN_TTL_SECONDS at 900 seconds during refresh.",
+                        anchor_paths=("auth/tokens.py",),
+                        provenance=prov,
+                        tags=("auth", "tokens", "ttl"),
+                    )
+
+                    stale_seed_id = ""
+                    if scenario_id in ("project_contract_invariant_bugfix", "replan_recovery_step_reduction"):
+                        eval_store.promote_lesson(
+                            workspace_root=ws,
+                            topic_key="pkg-metrics-conventions",
+                            title="Follow pkg/conventions.py sentinel and rounding in ratio metrics",
+                            guidance=(
+                                "In pkg/metrics.py import ZERO_DIVISOR_SENTINEL (-1.0) and ROUND_DIGITS (4) "
+                                "from pkg.conventions for zero denominators and ratio rounding."
+                            ),
+                            anchor_paths=("pkg/conventions.py",),
+                            provenance=prov,
+                            tags=("metrics", "ratio", "conventions", "sentinel"),
+                        )
+                        (ws / "pkg" / "metrics.py").write_text(
+                            "def compute_ratio(num: float, den: float) -> float:\n"
+                            "    return num / den\n",
+                            encoding="utf-8",
+                        )
+                        (ws / "pkg" / "check_metrics.py").write_text(
+                            "import pathlib, sys\n"
+                            "sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))\n"
+                            "from pkg.metrics import compute_ratio\n"
+                            "assert compute_ratio(1, 3) == 0.3333\n"
+                            "assert compute_ratio(5, 0) == -1.0\n"
+                            "print('METRICS_VERIFIED_OK')\n",
+                            encoding="utf-8",
+                        )
+                        task_query = "Fix compute_ratio in pkg/metrics.py so ratio division passes check_metrics."
+                        target_paths: tuple[str, ...] = ("pkg/metrics.py",)
+                        ver_spec = workflow_state.TaskVerificationSpec(
+                            require_managed_edit=True,
+                            required_files=("pkg/metrics.py",),
+                            test_command=(sys.executable, "-I", "pkg/check_metrics.py"),
+                            expected_test_output_contains=("METRICS_VERIFIED_OK",),
+                            timeout_s=10.0,
+                            require_revision_stability=True,
+                        )
+                    else:
+                        # Seed a valid clamp_policy lesson AND a stale legacy lesson whose file subsequently changed!
+                        (ws / "pkg" / "legacy_clamp.py").write_text("OLD_CLAMP = 99.0\n", encoding="utf-8")
+                        stale_rec = eval_store.promote_lesson(
+                            workspace_root=ws,
+                            topic_key="stale-clamp-legacy",
+                            title="Obsolete clamp bound",
+                            guidance="In pkg/math_clamp.py clamp values to OLD_CLAMP 99.0.",
+                            anchor_paths=("pkg/legacy_clamp.py",),
+                            provenance=prov,
+                            tags=("clamp", "math_clamp"),
+                        )
+                        stale_seed_id = stale_rec.lesson_id
+                        # Mutate anchored file so retrieval must automatically invalidate `stale_rec`!
+                        (ws / "pkg" / "legacy_clamp.py").write_text("OLD_CLAMP_REMOVED = True\n", encoding="utf-8")
+
+                        (ws / "pkg" / "clamp_policy.py").write_text(
+                            "CLAMP_MIN = -0.5\nCLAMP_MAX = 0.5\n",
+                            encoding="utf-8",
+                        )
+                        eval_store.promote_lesson(
+                            workspace_root=ws,
+                            topic_key="pkg-clamp-policy-bounds",
+                            title="Use pkg/clamp_policy.py bounds in math_clamp",
+                            guidance=(
+                                "In pkg/math_clamp.py import CLAMP_MIN (-0.5) and CLAMP_MAX (0.5) "
+                                "from pkg.clamp_policy instead of assuming [0.0, 1.0]."
+                            ),
+                            anchor_paths=("pkg/clamp_policy.py",),
+                            provenance=prov,
+                            tags=("clamp", "math_clamp", "clamp_policy"),
+                        )
+                        (ws / "pkg" / "math_clamp.py").write_text(
+                            "def clamp_unit(val: float) -> float:\n"
+                            "    return val\n",
+                            encoding="utf-8",
+                        )
+                        (ws / "pkg" / "check_clamp.py").write_text(
+                            "import pathlib, sys\n"
+                            "sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))\n"
+                            "from pkg.math_clamp import clamp_unit\n"
+                            "assert clamp_unit(-2.5) == -0.5\n"
+                            "assert clamp_unit(0.25) == 0.25\n"
+                            "assert clamp_unit(3.0) == 0.5\n"
+                            "print('CLAMP_VERIFIED_OK')\n",
+                            encoding="utf-8",
+                        )
+                        task_query = "Implement clamp_unit(val) in pkg/math_clamp.py to satisfy check_clamp."
+                        target_paths = ("pkg/math_clamp.py",)
+                        ver_spec = workflow_state.TaskVerificationSpec(
+                            require_managed_edit=True,
+                            required_files=("pkg/math_clamp.py",),
+                            test_command=(sys.executable, "-I", "pkg/check_clamp.py"),
+                            expected_test_output_contains=("CLAMP_VERIFIED_OK",),
+                            timeout_s=10.0,
+                            require_revision_stability=True,
+                        )
+
+                    sess = create_harness_session_db(
+                        title=f"Lesson AB {scenario_id} {arm} #{rep}",
+                        workspace_dir=str(ws),
+                        use_worktree=False,
+                        policy="autonomous",
+                        lead_model="ab-lead",
+                        critic_model="ab-critic",
+                    )
+                    sid = sess["id"]
+                    sm = get_task_state_machine()
+                    coord = get_worker_lease_coordinator(ws)
+                    worker_id = f"wrk-{_PROCESS_BOOT_ID}-ab-{scenario_id[:6]}-{arm[:4]}{rep}"
+                    claim = coord.acquire_or_takeover(
+                        sid,
+                        worker_id,
+                        session_id=sid,
+                        workspace_dir=str(ws),
+                        policy="autonomous",
+                    )
+                    ep = claim.epoch_record.epoch
+                    parent_ctx = {
+                        **sess,
+                        "task_id": sid,
+                        "epoch": ep,
+                        "worker_id": worker_id,
+                    }
+                    sm.set_verification_spec(sid, ver_spec)
+                    t0 = time.perf_counter()
+
+                    retrieval = eval_store.retrieve_for_decision_boundary(
+                        boundary="turn_plan_start",
+                        workspace_root=ws,
+                        query=task_query,
+                        target_paths=target_paths,
+                        session_enabled=(arm == "lessons"),
+                        env_enabled=True,
+                        current_security_generation=sec_gen,
+                    )
+                    retrieved_ids = tuple(item.lesson_id for item in retrieval.lessons)
+                    run_leaks = (
+                        1
+                        if (
+                            foreign_lesson.lesson_id in retrieved_ids
+                            or "INTERNAL_TENANT_SENTINEL" in retrieval.rendered_prompt
+                        )
+                        else 0
+                    )
+                    cross_project_leak_count += run_leaks
+                    stale_injected = 1 if (stale_seed_id and stale_seed_id in retrieved_ids) else 0
+
+                    has_conventions_lesson = "pkg/conventions.py" in retrieval.rendered_prompt
+                    has_clamp_policy_lesson = "pkg/clamp_policy.py" in retrieval.rendered_prompt
+
+                    base_step_tokens = 110 + evidence_lessons.estimate_lesson_tokens(task_query)
+                    if scenario_id == "project_contract_invariant_bugfix":
+                        r1 = await _execute_harness_tool(
+                            None,  # type: ignore[arg-type]
+                            parent_ctx,
+                            "read_file",
+                            {"path": "pkg/metrics.py"},
+                            step_id=1,
+                            call_index=1,
+                        )
+                        patched_metrics = (
+                            "from pkg.conventions import ROUND_DIGITS, ZERO_DIVISOR_SENTINEL\n\n"
+                            "def compute_ratio(num: float, den: float) -> float:\n"
+                            "    if den == 0:\n"
+                            "        return ZERO_DIVISOR_SENTINEL\n"
+                            "    return round(float(num) / float(den), ROUND_DIGITS)\n"
+                            if has_conventions_lesson
+                            else "def compute_ratio(num: float, den: float) -> float:\n"
+                            "    return 0.0 if den == 0 else float(num) / float(den)\n"
+                        )
+                        await _execute_harness_tool(
+                            None,  # type: ignore[arg-type]
+                            parent_ctx,
+                            "write_file",
+                            {"path": "pkg/metrics.py", "content": patched_metrics},
+                            step_id=2,
+                            call_index=1,
+                        )
+                        turn_tokens = (
+                            (2 * (base_step_tokens + retrieval.used_tokens))
+                            + evidence_lessons.estimate_lesson_tokens(str(r1.get("output") or ""))
+                            + evidence_lessons.estimate_lesson_tokens(patched_metrics)
+                        )
+                        sm.budgets.record_usage(
+                            sid,
+                            steps_delta=2,
+                            tool_calls_delta=2,
+                            tokens_delta=turn_tokens,
+                        )
+                    elif scenario_id == "replan_recovery_step_reduction":
+                        r1 = await _execute_harness_tool(
+                            None,  # type: ignore[arg-type]
+                            parent_ctx,
+                            "read_file",
+                            {"path": "pkg/metrics.py"},
+                            step_id=1,
+                            call_index=1,
+                        )
+                        if has_conventions_lesson:
+                            good_metrics = (
+                                "from pkg.conventions import ROUND_DIGITS, ZERO_DIVISOR_SENTINEL\n\n"
+                                "def compute_ratio(num: float, den: float) -> float:\n"
+                                "    if den == 0:\n"
+                                "        return ZERO_DIVISOR_SENTINEL\n"
+                                "    return round(float(num) / float(den), ROUND_DIGITS)\n"
+                            )
+                            await _execute_harness_tool(
+                                None,  # type: ignore[arg-type]
+                                parent_ctx,
+                                "write_file",
+                                {"path": "pkg/metrics.py", "content": good_metrics},
+                                step_id=2,
+                                call_index=1,
+                            )
+                            turn_tokens = (
+                                (2 * (base_step_tokens + retrieval.used_tokens))
+                                + evidence_lessons.estimate_lesson_tokens(str(r1.get("output") or ""))
+                                + evidence_lessons.estimate_lesson_tokens(good_metrics)
+                            )
+                            sm.budgets.record_usage(
+                                sid,
+                                steps_delta=2,
+                                tool_calls_delta=2,
+                                tokens_delta=turn_tokens,
+                            )
+                        else:
+                            first_attempt = (
+                                "def compute_ratio(num: float, den: float) -> float:\n"
+                                "    return 0.0 if den == 0 else float(num) / float(den)\n"
+                            )
+                            await _execute_harness_tool(
+                                None,  # type: ignore[arg-type]
+                                parent_ctx,
+                                "write_file",
+                                {"path": "pkg/metrics.py", "content": first_attempt},
+                                step_id=2,
+                                call_index=1,
+                            )
+                            first_ver = sm.verify_task_completion(sid, workspace_dir=ws, spec=ver_spec)
+                            r2_out = ""
+                            second_attempt = ""
+                            if not first_ver.verified:
+                                r2 = await _execute_harness_tool(
+                                    None,  # type: ignore[arg-type]
+                                    parent_ctx,
+                                    "read_file",
+                                    {"path": "pkg/conventions.py"},
+                                    step_id=3,
+                                    call_index=1,
+                                )
+                                r2_out = str(r2.get("output") or "")
+                                second_attempt = (
+                                    "from pkg.conventions import ROUND_DIGITS, ZERO_DIVISOR_SENTINEL\n\n"
+                                    "def compute_ratio(num: float, den: float) -> float:\n"
+                                    "    if den == 0:\n"
+                                    "        return ZERO_DIVISOR_SENTINEL\n"
+                                    "    return round(float(num) / float(den), ROUND_DIGITS)\n"
+                                )
+                                await _execute_harness_tool(
+                                    None,  # type: ignore[arg-type]
+                                    parent_ctx,
+                                    "write_file",
+                                    {"path": "pkg/metrics.py", "content": second_attempt},
+                                    step_id=4,
+                                    call_index=1,
+                                )
+                            turn_tokens = (
+                                (4 * base_step_tokens)
+                                + evidence_lessons.estimate_lesson_tokens(str(r1.get("output") or ""))
+                                + evidence_lessons.estimate_lesson_tokens(first_attempt)
+                                + evidence_lessons.estimate_lesson_tokens(first_ver.test_output_excerpt or "verification_failed")
+                                + evidence_lessons.estimate_lesson_tokens(r2_out)
+                                + evidence_lessons.estimate_lesson_tokens(second_attempt)
+                            )
+                            sm.budgets.record_usage(
+                                sid,
+                                steps_delta=4,
+                                tool_calls_delta=4,
+                                tokens_delta=turn_tokens,
+                            )
+                    else:
+                        r1 = await _execute_harness_tool(
+                            None,  # type: ignore[arg-type]
+                            parent_ctx,
+                            "read_file",
+                            {"path": "pkg/math_clamp.py"},
+                            step_id=1,
+                            call_index=1,
+                        )
+                        if has_clamp_policy_lesson:
+                            good_clamp = (
+                                "from pkg.clamp_policy import CLAMP_MAX, CLAMP_MIN\n\n"
+                                "def clamp_unit(val: float) -> float:\n"
+                                "    return max(CLAMP_MIN, min(CLAMP_MAX, float(val)))\n"
+                            )
+                            await _execute_harness_tool(
+                                None,  # type: ignore[arg-type]
+                                parent_ctx,
+                                "write_file",
+                                {"path": "pkg/math_clamp.py", "content": good_clamp},
+                                step_id=2,
+                                call_index=1,
+                            )
+                            turn_tokens = (
+                                (2 * (base_step_tokens + retrieval.used_tokens))
+                                + evidence_lessons.estimate_lesson_tokens(str(r1.get("output") or ""))
+                                + evidence_lessons.estimate_lesson_tokens(good_clamp)
+                            )
+                            sm.budgets.record_usage(
+                                sid,
+                                steps_delta=2,
+                                tool_calls_delta=2,
+                                tokens_delta=turn_tokens,
+                            )
+                        else:
+                            first_clamp = (
+                                "def clamp_unit(val: float) -> float:\n"
+                                "    return max(0.0, min(1.0, float(val)))\n"
+                            )
+                            await _execute_harness_tool(
+                                None,  # type: ignore[arg-type]
+                                parent_ctx,
+                                "write_file",
+                                {"path": "pkg/math_clamp.py", "content": first_clamp},
+                                step_id=2,
+                                call_index=1,
+                            )
+                            first_ver = sm.verify_task_completion(sid, workspace_dir=ws, spec=ver_spec)
+                            r2_out = ""
+                            second_clamp = ""
+                            if not first_ver.verified:
+                                r2 = await _execute_harness_tool(
+                                    None,  # type: ignore[arg-type]
+                                    parent_ctx,
+                                    "read_file",
+                                    {"path": "pkg/clamp_policy.py"},
+                                    step_id=3,
+                                    call_index=1,
+                                )
+                                r2_out = str(r2.get("output") or "")
+                                second_clamp = (
+                                    "from pkg.clamp_policy import CLAMP_MAX, CLAMP_MIN\n\n"
+                                    "def clamp_unit(val: float) -> float:\n"
+                                    "    return max(CLAMP_MIN, min(CLAMP_MAX, float(val)))\n"
+                                )
+                                await _execute_harness_tool(
+                                    None,  # type: ignore[arg-type]
+                                    parent_ctx,
+                                    "write_file",
+                                    {"path": "pkg/math_clamp.py", "content": second_clamp},
+                                    step_id=4,
+                                    call_index=1,
+                                )
+                            turn_tokens = (
+                                (4 * base_step_tokens)
+                                + evidence_lessons.estimate_lesson_tokens(str(r1.get("output") or ""))
+                                + evidence_lessons.estimate_lesson_tokens(first_clamp)
+                                + evidence_lessons.estimate_lesson_tokens(first_ver.test_output_excerpt or "verification_failed")
+                                + evidence_lessons.estimate_lesson_tokens(r2_out)
+                                + evidence_lessons.estimate_lesson_tokens(second_clamp)
+                            )
+                            sm.budgets.record_usage(
+                                sid,
+                                steps_delta=4,
+                                tool_calls_delta=4,
+                                tokens_delta=turn_tokens,
+                            )
+
+                    ver_rep = sm.verify_task_completion(sid, workspace_dir=ws, spec=ver_spec)
+                    elapsed_ms = (time.perf_counter() - t0) * 1000.0
+                    eval_store.record_retrieval_outcome(
+                        retrieved_ids,
+                        verified=ver_rep.verified,
+                    )
+                    bud_end = sm.budgets.get_budget(sid)
+                    if ver_rep.verified:
+                        sm.complete_task(
+                            sid,
+                            epoch=ep,
+                            step=max(1, bud_end.steps_used),
+                            verification_report=ver_rep,
+                            reason="lessons_ab_verified",
+                        )
+                        run_ok = True
+                    else:
+                        coord.release(sid, ep, worker_id, next_state="failed", reason="lessons_ab_failed")
+                        run_ok = False
+
+                    scenario_runs.append(
+                        evidence_lessons.LessonEvalRun(
+                            run_id=f"{scenario_id}-{arm}-{rep}",
+                            arm=arm,
+                            scenario_id=scenario_id,
+                            task_digest=t_digest,
+                            config_digest=cfg_digest,
+                            hardware_digest=hw_digest,
+                            verified=run_ok,
+                            steps=bud_end.steps_used,
+                            total_tokens=float(bud_end.tokens_used),
+                            retrieved_lesson_tokens=retrieval.used_tokens,
+                            latency_ms=elapsed_ms,
+                            cross_project_leaks=run_leaks,
+                            stale_lessons_injected=stale_injected,
+                        )
+                    )
+                    suite_runs.append(
+                        evidence_lessons.LessonEvalRun(
+                            run_id=f"{scenario_id}-{arm}-{rep}",
+                            arm=arm,
+                            scenario_id="m5-p6-01-coding-suite",
+                            task_digest=suite_task_digest,
+                            config_digest=cfg_digest,
+                            hardware_digest=hw_digest,
+                            verified=run_ok,
+                            steps=bud_end.steps_used,
+                            total_tokens=float(bud_end.tokens_used),
+                            retrieved_lesson_tokens=retrieval.used_tokens,
+                            latency_ms=elapsed_ms,
+                            cross_project_leaks=run_leaks,
+                            stale_lessons_injected=stale_injected,
+                        )
+                    )
+
+            scen_comp = evidence_lessons.compare_lesson_ab_runs(scenario_id, scenario_runs)
+            scenario_reports[scenario_id] = scen_comp
+            if persist_summary:
+                get_evidence_lesson_store().record_ab_report(scen_comp, enforce_gate=True)
+
+    overall = evidence_lessons.compare_lesson_ab_runs("m5-p6-01-coding-suite", suite_runs)
+    if persist_summary:
+        get_evidence_lesson_store().record_ab_report(overall, enforce_gate=True)
+
+    return {
+        "schema_version": evidence_lessons.EL_SCHEMA_VERSION,
+        "runs_per_variant": safe_runs,
+        "cross_project_leak_count": cross_project_leak_count,
+        "ab_gate_passed": bool(overall["measured_improvement_over_baseline"])
+        and all(bool(r["measured_improvement_over_baseline"]) for r in scenario_reports.values()),
+        "overall": overall,
+        "scenarios": scenario_reports,
+    }
+
+
 @app.get("/api/harness/sessions/{session_id}/delegations")
 async def api_list_harness_delegations(session_id: str) -> JSONResponse:
     """List bounded child delegations, unjoined scope locks, and child subtasks for a session (M5-P4-03)."""
@@ -20626,6 +21251,235 @@ async def api_run_delegation_benchmark(request: Request) -> JSONResponse:
     return JSONResponse(report)
 
 
+@app.get("/api/harness/lessons")
+async def api_list_harness_lessons(
+    session_id: str = "",
+    workspace_dir: str = "",
+    include_invalidated: bool = False,
+) -> JSONResponse:
+    """List project-scoped evidence-backed lessons and store configuration (M5-P6-01)."""
+    ws, own_ws = _resolve_lesson_workspace_roots(session_id=session_id, workspace_dir=workspace_dir)
+    try:
+        store = get_evidence_lesson_store()
+        invalidated_ids = store.revalidate_project_lessons(
+            workspace_root=ws,
+            owning_workspace_root=own_ws,
+            current_security_generation=_current_security_generation(),
+            is_lineage_evidence_valid_fn=_lesson_lineage_digest_fresh,
+        )
+        lessons = store.list_lessons(
+            workspace_root=ws,
+            owning_workspace_root=own_ws,
+            include_stale=include_invalidated,
+        )
+        scope_id = evidence_lessons.derive_project_scope_id(ws, owning_workspace_root=own_ws)
+        return JSONResponse(
+            {
+                "project_scope_id": scope_id,
+                "env_enabled": _env_evidence_lessons_enabled(),
+                "invalidated_stale_ids": list(invalidated_ids),
+                "lessons": [rec.to_mapping() for rec in lessons],
+                "config": store.get_config(env_enabled=_env_evidence_lessons_enabled()),
+            }
+        )
+    except evidence_lessons.LessonStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "lesson_state_corrupt", "message": str(exc)}) from exc
+    except (evidence_lessons.EvidenceLessonError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/harness/lessons/config")
+async def api_update_harness_lessons_config(request: Request) -> JSONResponse:
+    """Enable/disable evidence-backed lessons or adjust bounded retrieval ceilings (M5-P6-01)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    try:
+        cfg = get_evidence_lesson_store().update_config(
+            enabled=body["enabled"] if "enabled" in body and body["enabled"] is not None else None,
+            ab_gate_open=(
+                body["ab_gate_open"]
+                if "ab_gate_open" in body and body["ab_gate_open"] is not None
+                else None
+            ),
+            token_ceiling=(
+                int(body["token_ceiling"])
+                if "token_ceiling" in body and body["token_ceiling"] is not None
+                else None
+            ),
+        )
+    except evidence_lessons.LessonStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "lesson_state_corrupt", "message": str(exc)}) from exc
+    except (evidence_lessons.EvidenceLessonError, ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(
+        {
+            "env_enabled": _env_evidence_lessons_enabled(),
+            "config": get_evidence_lesson_store().get_config(
+                env_enabled=_env_evidence_lessons_enabled()
+            ),
+            "persisted": cfg,
+        }
+    )
+
+
+@app.post("/api/harness/lessons/promote")
+async def api_promote_harness_lesson(request: Request) -> JSONResponse:
+    """Promote a verified, provenance-backed, secret-clean candidate lesson into project scope (M5-P6-01)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    ws, own_ws = _resolve_lesson_workspace_roots(
+        session_id=str(body.get("session_id") or ""),
+        workspace_dir=str(body.get("workspace_dir") or ""),
+    )
+    raw_prov = body.get("provenance")
+    if not isinstance(raw_prov, Mapping):
+        raise HTTPException(status_code=400, detail="provenance mapping is required.")
+    try:
+        prov_map = dict(raw_prov)
+        if "security_generation" not in prov_map or prov_map["security_generation"] is None:
+            prov_map["security_generation"] = int(_current_security_generation() or 0)
+        if "source_epoch" not in prov_map:
+            prov_map["source_epoch"] = 1
+        if "passed_checks" not in prov_map:
+            prov_map["passed_checks"] = 1
+        prov = evidence_lessons.LessonProvenance.from_mapping(prov_map)
+        if prov.lineage_evidence_id and not _lesson_lineage_digest_fresh(prov.lineage_evidence_id):
+            raise evidence_lessons.LessonPromotionRejectedError(
+                "invalid_lineage_digest",
+                "Referenced artifact lineage digest is missing or invalidated.",
+            )
+        raw_tags = body.get("tags") or ()
+        raw_files = body.get("anchored_files") or body.get("anchor_paths") or ()
+        raw_codes = body.get("failure_codes") or ()
+        if not isinstance(raw_tags, Sequence) or isinstance(raw_tags, (str, bytes)):
+            raise ValueError("tags must be a list of strings.")
+        if not isinstance(raw_files, Sequence) or isinstance(raw_files, (str, bytes)):
+            raise ValueError("anchored_files must be a list of relative file paths.")
+        if not isinstance(raw_codes, Sequence) or isinstance(raw_codes, (str, bytes)):
+            raise ValueError("failure_codes must be a list of strings.")
+        title_s = str(body.get("title") or "").strip()
+        topic_s = str(body.get("topic_key") or title_s[:64] or "project-lesson")
+        record = get_evidence_lesson_store().promote_lesson(
+            workspace_root=ws,
+            owning_workspace_root=own_ws,
+            topic_key=topic_s,
+            title=title_s,
+            guidance=str(body.get("guidance") or ""),
+            anchor_paths=tuple(str(p) for p in raw_files),
+            provenance=prov,
+            tags=tuple(str(t) for t in raw_tags),
+            failure_codes=tuple(str(c) for c in raw_codes),
+            env_enabled=_env_evidence_lessons_enabled(),
+        )
+    except evidence_lessons.LessonStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "lesson_state_corrupt", "message": str(exc)}) from exc
+    except evidence_lessons.LessonPromotionRejectedError as exc:
+        raise HTTPException(status_code=409, detail={"code": exc.code, "message": str(exc)}) from exc
+    except (evidence_lessons.EvidenceLessonError, ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse({"status": record.status, "lesson": record.to_mapping()})
+
+
+@app.post("/api/harness/lessons/retrieve")
+async def api_retrieve_harness_lessons(request: Request) -> JSONResponse:
+    """Execute bounded decision-boundary retrieval with automatic staleness invalidation (M5-P6-01)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    ws, own_ws = _resolve_lesson_workspace_roots(
+        session_id=str(body.get("session_id") or ""),
+        workspace_dir=str(body.get("workspace_dir") or ""),
+    )
+    try:
+        res = get_evidence_lesson_store().retrieve_for_decision_boundary(
+            boundary=str(body.get("decision_boundary") or body.get("boundary") or "turn_plan_start"),
+            workspace_root=ws,
+            owning_workspace_root=own_ws,
+            query=str(body.get("query") or ""),
+            failure_codes=tuple(str(c) for c in (body.get("failure_codes") or ())),
+            target_paths=tuple(str(p) for p in (body.get("target_paths") or ())),
+            token_ceiling=int(body["token_ceiling"]) if body.get("token_ceiling") is not None else None,
+            current_security_generation=_current_security_generation(),
+            is_lineage_evidence_valid_fn=_lesson_lineage_digest_fresh,
+            env_enabled=_env_evidence_lessons_enabled(),
+            session_enabled=bool(body.get("enable_lessons", True)),
+        )
+    except evidence_lessons.LessonStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "lesson_state_corrupt", "message": str(exc)}) from exc
+    except (evidence_lessons.EvidenceLessonError, ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(res.to_mapping())
+
+
+@app.post("/api/harness/lessons/{lesson_id}/invalidate")
+async def api_invalidate_harness_lesson(lesson_id: str, request: Request) -> JSONResponse:
+    """Explicitly invalidate a lesson within the caller's project scope (M5-P6-01)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    ws, own_ws = _resolve_lesson_workspace_roots(
+        session_id=str(body.get("session_id") or ""),
+        workspace_dir=str(body.get("workspace_dir") or ""),
+    )
+    scope_id = evidence_lessons.derive_project_scope_id(ws, owning_workspace_root=own_ws)
+    try:
+        store = get_evidence_lesson_store()
+        project_lessons = store.list_lessons(
+            workspace_root=ws,
+            owning_workspace_root=own_ws,
+            include_stale=True,
+        )
+        if not any(rec.lesson_id == lesson_id for rec in project_lessons):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Lesson {lesson_id!r} not found in project scope {scope_id!r}.",
+            )
+        updated = store.invalidate_lesson(
+            lesson_id,
+            reason=str(body.get("reason") or "operator_invalidated")[:160],
+            revoked=bool(body.get("revoked", False)),
+        )
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"Lesson {lesson_id!r} not found.")
+    except evidence_lessons.LessonStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "lesson_state_corrupt", "message": str(exc)}) from exc
+    except (evidence_lessons.EvidenceLessonError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse({"status": updated.status, "lesson": updated.to_mapping()})
+
+
+@app.post("/api/harness/lessons/evaluate")
+async def api_evaluate_harness_lessons(request: Request) -> JSONResponse:
+    """Run reproducible A/B coding completion evaluation for evidence-backed lessons (M5-P6-01)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    runs_n = int(body.get("runs_per_variant") or 3)
+    persist = bool(body.get("persist_summary", True))
+    try:
+        report = await run_lessons_ab_evaluation_async(
+            runs_per_variant=runs_n,
+            persist_summary=persist,
+        )
+    except evidence_lessons.LessonStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "lesson_state_corrupt", "message": str(exc)}) from exc
+    except evidence_lessons.EvidenceLessonError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(report)
+
+
 @app.post("/api/harness/sessions/{session_id}/resume")
 async def api_resume_harness_session(session_id: str, request: Request) -> JSONResponse:
     """Validate checkpoint integrity, unresolved side effects, and recovery budget before resume."""
@@ -20719,6 +21573,14 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
     context_mode = bool(body.get("context_mode", True))
     efficiency_mode = str(body.get("efficiency_mode") or "ponytail")
     resume_requested = bool(body.get("resume", False))
+    enable_lessons = bool(body.get("enable_lessons", True))
+    raw_lesson_ceiling = body.get("lesson_token_ceiling")
+    raw_decision_boundary = str(body.get("decision_boundary") or "").strip()
+    raw_candidate_lesson = (
+        dict(body["candidate_lesson"])
+        if isinstance(body.get("candidate_lesson"), Mapping)
+        else None
+    )
     budget_spec = _parse_task_budget_spec(body.get("budget"))
     raw_verification = body.get("verification")
 
@@ -20792,9 +21654,46 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
         raise HTTPException(status_code=409, detail=exc.to_mapping()) from exc
     except workflow_checkpoints.ResumeRejected as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    existing_task_rec = get_task_state_machine().store.get_task(session_id)
+    lesson_boundary = (
+        raw_decision_boundary
+        if raw_decision_boundary
+        else (
+            "handoff_switch"
+            if active_turn_handoff is not None
+            else (
+                "verification_replan"
+                if (
+                    resume_requested
+                    or (existing_task_rec is not None and existing_task_rec.state == "failed")
+                )
+                else "turn_plan_start"
+            )
+        )
+    )
+    own_ws_raw = str(sess.get("workspace_dir") or "").strip()
+    own_ws_resolved = Path(own_ws_raw).resolve() if own_ws_raw and Path(own_ws_raw).is_dir() else None
+    try:
+        lesson_retrieval = get_evidence_lesson_store().retrieve_for_decision_boundary(
+            boundary=lesson_boundary,
+            workspace_root=wt_dir_resolved,
+            owning_workspace_root=own_ws_resolved,
+            query=prompt,
+            token_ceiling=(
+                int(raw_lesson_ceiling) if raw_lesson_ceiling is not None else None
+            ),
+            current_security_generation=_current_security_generation(),
+            is_lineage_evidence_valid_fn=_lesson_lineage_digest_fresh,
+            env_enabled=_env_evidence_lessons_enabled(),
+            session_enabled=enable_lessons,
+        )
+    except evidence_lessons.LessonStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "lesson_state_corrupt", "message": str(exc)}) from exc
+    except (evidence_lessons.EvidenceLessonError, ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     pre_existing_verification = (
         get_task_state_machine().get_verification_spec(session_id)
-        if get_task_state_machine().store.get_task(session_id) is not None
+        if existing_task_rec is not None
         else None
     )
     parsed_verification = (
@@ -20855,12 +21754,18 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                 if active_turn_handoff is not None
                 else ""
             )
+            lessons_block = (
+                "\n" + lesson_retrieval.rendered_prompt + "\n"
+                if lesson_retrieval.rendered_prompt
+                else ""
+            )
             extra_blocks = (
                 (eff_block or "")
                 + (oc_pinned_block or "")
                 + (skill_block_raw or "")
                 + (mcp_tools_block or "")
                 + handoff_block
+                + lessons_block
             )
             sys_prompt = HARNESS_SYSTEM_PROMPT_TEMPLATE.format(
                 worktree_dir=sess["worktree_dir"],
@@ -20922,6 +21827,14 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     "resumed_from_step": completed_step if start_step > 1 else 0,
                 },
             )
+            retrieved_lesson_ids = tuple(item.lesson_id for item in lesson_retrieval.lessons)
+            if retrieved_lesson_ids:
+                _append_harness_event(
+                    session_id,
+                    "turn/lessons_retrieved",
+                    lesson_retrieval.to_mapping(),
+                    dedupe_key=f"turn-lessons-retrieved:{lease_epoch}",
+                )
 
             steps_run = 0
             halt_mode: Literal["none", "paused", "cancelled", "budget_exceeded", "max_steps"] = "none"
@@ -21376,6 +22289,19 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     workspace_dir=wt_dir,
                     security_generation=_current_security_generation,
                 )
+                if retrieved_lesson_ids:
+                    with contextlib.suppress(evidence_lessons.EvidenceLessonError, OSError):
+                        invalidated_reg = get_evidence_lesson_store().record_retrieval_outcome(
+                            retrieved_lesson_ids,
+                            verified=verification_report.verified,
+                        )
+                        if invalidated_reg:
+                            _append_harness_event(
+                                session_id,
+                                "turn/lessons_invalidated",
+                                {"lesson_ids": list(invalidated_reg), "reason": "regression_invalidated"},
+                                dedupe_key=f"turn-lessons-invalidated:{lease_epoch}",
+                            )
                 if not verification_report.verified:
                     # Repeated identical evidence or a revisited patch state is not a
                     # retryable failure: pause at the safe boundary for a human
@@ -21441,6 +22367,79 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                             dedupe_key=f"turn-verified:{lease_epoch}",
                         )
                         yield _sse("verification_passed", ver_ok_payload)
+                    if (
+                        raw_candidate_lesson is not None
+                        and enable_lessons
+                        and _env_evidence_lessons_enabled()
+                    ):
+                        if not verification_report.spec_sha256:
+                            _append_harness_event(
+                                session_id,
+                                "turn/lesson_promotion_rejected",
+                                {
+                                    "code": "missing_verification_spec_digest",
+                                    "message": "Candidate lessons require an authoritative TaskVerificationSpec.",
+                                },
+                                dedupe_key=f"turn-lesson-rejected:{lease_epoch}",
+                            )
+                        else:
+                            try:
+                                cand_files = (
+                                    raw_candidate_lesson.get("anchored_files")
+                                    or raw_candidate_lesson.get("anchor_paths")
+                                    or list(verification_report.modified_files)
+                                )
+                                cand_tags = raw_candidate_lesson.get("tags") or ()
+                                cand_codes = raw_candidate_lesson.get("failure_codes") or ()
+                                title_cand = str(raw_candidate_lesson.get("title") or "").strip()
+                                topic_cand = str(
+                                    raw_candidate_lesson.get("topic_key") or title_cand[:64] or "verified-lesson"
+                                )
+                                spec_hex = str(verification_report.spec_sha256 or "").strip().lower()
+                                if spec_hex.startswith("sha256:"):
+                                    spec_hex = spec_hex[7:]
+                                cand_prov = evidence_lessons.LessonProvenance(
+                                    source_session_id=session_id,
+                                    source_task_id=session_id,
+                                    source_epoch=lease_epoch,
+                                    verified=True,
+                                    verification_spec_sha256=spec_hex,
+                                    passed_checks=max(1, len(verification_report.acceptance_coverage) or 1),
+                                    security_generation=int(_current_security_generation() or 0),
+                                    source_revision=str(verification_report.source_revision or ""),
+                                )
+                                promoted = get_evidence_lesson_store().promote_lesson(
+                                    workspace_root=wt_dir,
+                                    owning_workspace_root=own_ws_resolved,
+                                    topic_key=topic_cand,
+                                    title=title_cand,
+                                    guidance=str(raw_candidate_lesson.get("guidance") or ""),
+                                    anchor_paths=tuple(str(p) for p in cand_files),
+                                    provenance=cand_prov,
+                                    tags=tuple(str(t) for t in cand_tags),
+                                    failure_codes=tuple(str(c) for c in cand_codes),
+                                    env_enabled=_env_evidence_lessons_enabled(),
+                                )
+                                _append_harness_event(
+                                    session_id,
+                                    "turn/lesson_promoted",
+                                    promoted.to_mapping(),
+                                    dedupe_key=f"turn-lesson-promoted:{lease_epoch}",
+                                )
+                            except evidence_lessons.LessonPromotionRejectedError as rej_exc:
+                                _append_harness_event(
+                                    session_id,
+                                    "turn/lesson_promotion_rejected",
+                                    {"code": rej_exc.code, "message": str(rej_exc)},
+                                    dedupe_key=f"turn-lesson-rejected:{lease_epoch}",
+                                )
+                            except (evidence_lessons.EvidenceLessonError, ValueError, TypeError, OSError) as l_exc:
+                                _append_harness_event(
+                                    session_id,
+                                    "turn/lesson_promotion_rejected",
+                                    {"code": "invalid_candidate_lesson", "message": str(l_exc)[:200]},
+                                    dedupe_key=f"turn-lesson-rejected:{lease_epoch}",
+                                )
 
             diff_summary = _compute_git_diff(wt_dir)
             _safe_append_harness_event(
@@ -58851,6 +59850,1372 @@ __all__ = [
 ]
 
 security_release_gate = sys.modules[__name__]
+
+"""Evidence-backed cross-task lessons and bounded decision-boundary retrieval (M5-P6-01).
+
+Curated cross-task lessons are promoted and retrieved ONLY when verifiable
+completion evidence justifies them, under strict project-scope isolation and
+hard token ceilings:
+
+1. **Provenance and promotion gates:** Candidate lessons never promote from raw
+   model text alone. Promotion requires ``verified=True``, a concrete
+   ``verification_spec_sha256`` with ``passed_checks >= 1``, trusted/verified
+   provenance (never ``untrusted`` or ``secret``), secret/credential hygiene,
+   and at least one confined ``O_NOFOLLOW`` workspace file SHA-256 anchor.
+2. **Decision-boundary retrieval and hard token ceilings:** Retrieval executes
+   only at explicit decision boundaries (``turn_plan_start``,
+   ``verification_replan``, ``handoff_switch``) — never on mid-turn tool loops —
+   and enforces a strict cumulative token ceiling (including banner framing)
+   without mid-truncating lesson text.
+3. **Staleness invalidation:** Before serving any lesson, anchored workspace
+   files, security configuration generation, lineage evidence freshness, and
+   verification-regression counters are checked; drifted lessons flip to
+   ``stale`` and are excluded.
+4. **Optional toggle & measured A/B gate:** Disabled cleanly via environment or
+   runtime/per-turn configuration with zero prompt or persistence overhead, and
+   gated fail-closed if A/B coding evaluation does not show positive verified
+   completion benefit with zero cross-project leakage.
+
+Stdlib-only module designed for both modular ``app.py`` import and single-file
+inlining into ``studio.py`` (private ``_el_`` / ``_EL_`` namespace).
+"""
+
+
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
+from dataclasses import dataclass
+import errno
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import re
+import stat
+import threading
+import time
+from typing import Any, Literal
+import uuid
+
+EL_SCHEMA_VERSION = 1
+EL_DIRNAME = "lessons"
+EL_STATE_NAME = "state.json"
+EL_TEMP_PREFIX = ".el-state-"
+
+DecisionBoundary = Literal["turn_plan_start", "verification_replan", "handoff_switch"]
+DECISION_BOUNDARIES: tuple[str, ...] = (
+    "turn_plan_start",
+    "verification_replan",
+    "handoff_switch",
+)
+
+LessonStatus = Literal["candidate", "promoted", "stale", "revoked"]
+LESSON_STATUSES: tuple[str, ...] = ("candidate", "promoted", "stale", "revoked")
+
+ALLOWED_LESSON_TRUST_LEVELS: frozenset[str] = frozenset({"trusted", "verified_task"})
+ALLOWED_LESSON_CONFIDENTIALITY: frozenset[str] = frozenset({"public", "internal"})
+
+DEFAULT_LESSON_TOKEN_CEILING = 160
+ABSOLUTE_MAX_LESSON_TOKEN_CEILING = 256
+MAX_SINGLE_LESSON_TOKENS = 110
+MAX_RETRIEVED_LESSONS = 3
+MAX_CONSECUTIVE_VERIFICATION_FAILURES = 2
+
+_EL_WORD_RE = re.compile(r"[a-z0-9_./:-]{2,}", re.IGNORECASE)
+_EL_HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
+_EL_SECRET_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\bsk-[A-Za-z0-9_-]{12,}"),
+    re.compile(r"\bgh[pousr]_[A-Za-z0-9]{16,}"),
+    re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{12,}", re.IGNORECASE),
+    re.compile(
+        r"\b(?:API_KEY|SECRET_KEY|ACCESS_TOKEN|PRIVATE_KEY|PASSWORD|STUDIO_API_TOKEN)\s*[:=]\s*\S+",
+        re.IGNORECASE,
+    ),
+    re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----"),
+)
+_EL_UNIX_ABS_PATH_RE = re.compile(r"(?:^|\s)(/(?:Users|home|var|tmp|etc|opt|private)/[^\s`'\"<>]+)")
+_EL_STOPWORDS: frozenset[str] = frozenset(
+    {
+        "the",
+        "and",
+        "for",
+        "with",
+        "that",
+        "this",
+        "from",
+        "into",
+        "when",
+        "only",
+        "must",
+        "task",
+        "file",
+        "files",
+        "code",
+        "make",
+        "update",
+        "fix",
+        "use",
+        "keep",
+        "during",
+        "instead",
+        "follow",
+        "import",
+        "implement",
+        "satisfy",
+        "pass",
+        "passes",
+        "pkg",
+        "src",
+        "lib",
+        "app",
+        "test",
+        "tests",
+        "check",
+    }
+)
+
+
+class EvidenceLessonError(RuntimeError):
+    """Base error for evidence-backed lesson failures."""
+
+
+class LessonStoreIntegrityError(EvidenceLessonError):
+    """Raised when ``$HARNESS_STORE_DIR/lessons/state.json`` is unreadable, symlinked, or corrupt."""
+
+
+class LessonPromotionRejectedError(EvidenceLessonError):
+    """Raised when a candidate lesson fails provenance, privacy, or size promotion gates."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+def _el_now() -> float:
+    return time.time()
+
+
+def _el_new_id(prefix: str) -> str:
+    return f"{prefix}-{uuid.uuid4().hex[:16]}"
+
+
+def _el_canonical_sha256(payload: Mapping[str, Any]) -> str:
+    body = {k: v for k, v in payload.items() if k != "report_sha256"}
+    encoded = json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _el_reject_if_symlink(path: Path, label: str) -> None:
+    try:
+        st = os.lstat(path)
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        raise LessonStoreIntegrityError(f"Cannot stat {label} `{path}`: {exc}") from exc
+    if stat.S_ISLNK(st.st_mode):
+        raise LessonStoreIntegrityError(f"Refusing symlinked {label}: `{path}`.")
+
+
+def estimate_lesson_tokens(text: str) -> int:
+    """Conservative deterministic token ceiling estimate (max of word count and ceil(chars/3.5))."""
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        return 0
+    by_words = len(cleaned.split())
+    by_chars = math.ceil(len(cleaned) / 3.5)
+    return max(1, by_words, by_chars)
+
+
+def resolve_canonical_project_root(
+    workspace_path: Path | str,
+    *,
+    owning_workspace_root: Path | str | None = None,
+) -> Path:
+    """Resolve a workspace or ``.harnesses/worktrees/<sid>`` path to its canonical project root."""
+    if owning_workspace_root is not None and str(owning_workspace_root).strip():
+        return Path(owning_workspace_root).resolve()
+    resolved = Path(workspace_path).resolve()
+    parts = resolved.parts
+    for idx in range(len(parts) - 2):
+        if parts[idx] == ".harnesses" and parts[idx + 1] == "worktrees":
+            prefix = parts[:idx]
+            if prefix:
+                return Path(*prefix).resolve()
+    return resolved
+
+
+def derive_project_scope_id(
+    workspace_path: Path | str,
+    *,
+    owning_workspace_root: Path | str | None = None,
+) -> str:
+    """Derive an opaque, collision-resistant project scope identifier for strict isolation."""
+    canon = resolve_canonical_project_root(
+        workspace_path, owning_workspace_root=owning_workspace_root
+    )
+    digest = hashlib.sha256(f"m5-project-scope:v1:{canon}".encode("utf-8")).hexdigest()
+    return f"proj-{digest[:32]}"
+
+
+def _el_normalize_rel_path(workspace_root: Path, raw_path: str) -> str:
+    if not isinstance(raw_path, str) or not raw_path.strip() or "\x00" in raw_path:
+        raise LessonPromotionRejectedError(
+            "invalid_anchor_path",
+            f"Lesson anchor path must be a non-empty relative path: {raw_path!r}",
+        )
+    cleaned = raw_path.strip().replace("\\", "/")
+    if cleaned.startswith("/"):
+        raise LessonPromotionRejectedError(
+            "anchor_path_escapes_workspace",
+            f"Absolute lesson anchor path is forbidden: {raw_path!r}",
+        )
+    parts = [pt for pt in cleaned.split("/") if pt not in ("", ".")]
+    if not parts or any(pt == ".." for pt in parts):
+        raise LessonPromotionRejectedError(
+            "anchor_path_escapes_workspace",
+            f"Lesson anchor path {raw_path!r} must stay strictly within workspace_root.",
+        )
+    lower_leaf = parts[-1].lower()
+    if (
+        ".git" in parts
+        or lower_leaf == ".env"
+        or lower_leaf.startswith(".env.")
+        or lower_leaf.endswith((".pem", ".key", ".p12", ".pfx"))
+    ):
+        raise LessonPromotionRejectedError(
+            "anchor_path_forbidden_secret_or_vcs",
+            f"Lesson anchor path {raw_path!r} cannot reference VCS metadata or secret files.",
+        )
+    ws_res = workspace_root.resolve()
+    cursor = ws_res
+    for part in parts:
+        cursor = cursor / part
+        try:
+            st = os.lstat(cursor)
+        except FileNotFoundError:
+            break
+        if stat.S_ISLNK(st.st_mode):
+            raise LessonPromotionRejectedError(
+                "anchor_symlink_forbidden",
+                f"Symlink component `{cursor.name}` in lesson anchor `{cleaned}` is forbidden.",
+            )
+    resolved = (ws_res / "/".join(parts)).resolve()
+    if resolved != ws_res and ws_res not in resolved.parents:
+        raise LessonPromotionRejectedError(
+            "anchor_path_escapes_workspace",
+            f"Lesson anchor path `{cleaned}` resolves outside workspace_root.",
+        )
+    return "/".join(parts)
+
+
+def compute_confined_file_sha256(workspace_root: Path, rel_path: str) -> str | None:
+    """Compute SHA-256 of ``workspace_root / rel_path`` refusing symlinks along every segment."""
+    try:
+        norm = _el_normalize_rel_path(workspace_root, rel_path)
+    except LessonPromotionRejectedError:
+        return None
+    target = workspace_root.resolve() / norm
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        fd = os.open(target, flags)
+    except OSError:
+        return None
+    hasher = hashlib.sha256()
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode):
+            return None
+        while True:
+            chunk = os.read(fd, 65536)
+            if not chunk:
+                break
+            hasher.update(chunk)
+    finally:
+        os.close(fd)
+    return hasher.hexdigest()
+
+
+def _el_check_privacy_hygiene(
+    text: str,
+    *,
+    canonical_project_root: Path,
+    known_secret_values: Iterable[str] = (),
+) -> None:
+    for pat in _EL_SECRET_PATTERNS:
+        if pat.search(text):
+            raise LessonPromotionRejectedError(
+                "lesson_contains_secret_pattern",
+                "Candidate lesson contains a credential or secret pattern; promotion refused.",
+            )
+    for sec in known_secret_values:
+        s_val = str(sec or "").strip()
+        if len(s_val) >= 8 and s_val in text:
+            raise LessonPromotionRejectedError(
+                "lesson_contains_registered_secret",
+                "Candidate lesson contains a registered secret value; promotion refused.",
+            )
+    canon_str = str(canonical_project_root.resolve())
+    for match in _EL_UNIX_ABS_PATH_RE.finditer(text):
+        found_path = match.group(1)
+        if not found_path.startswith(canon_str):
+            raise LessonPromotionRejectedError(
+                "lesson_contains_external_path",
+                f"Candidate lesson embeds host/cross-project path `{found_path}`; use repo-relative paths only.",
+            )
+
+
+def _el_tokenize_keywords(text: str) -> set[str]:
+    out: set[str] = set()
+    for tok in _EL_WORD_RE.findall(str(text or "").lower()):
+        cleaned = tok.strip("./:-_")
+        if len(cleaned) >= 3 and cleaned not in _EL_STOPWORDS:
+            out.add(cleaned)
+        if "/" in cleaned:
+            leaf = cleaned.rsplit("/", 1)[-1]
+            if len(leaf) >= 3 and leaf not in _EL_STOPWORDS:
+                out.add(leaf)
+            stem = leaf.split(".", 1)[0]
+            if len(stem) >= 3 and stem not in _EL_STOPWORDS:
+                out.add(stem)
+    return out
+
+
+@dataclass(frozen=True, slots=True)
+class LessonProvenance:
+    """Cryptographic and verification provenance justifying a promoted lesson."""
+
+    source_session_id: str
+    source_task_id: str
+    source_epoch: int
+    verified: bool
+    verification_spec_sha256: str
+    passed_checks: int
+    source_trust: str = "verified_task"
+    confidentiality: str = "internal"
+    security_generation: int = 0
+    source_revision: str = ""
+    lineage_evidence_id: str = ""
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "source_session_id": self.source_session_id,
+            "source_task_id": self.source_task_id,
+            "source_epoch": self.source_epoch,
+            "verified": self.verified,
+            "verification_spec_sha256": self.verification_spec_sha256,
+            "passed_checks": self.passed_checks,
+            "source_trust": self.source_trust,
+            "confidentiality": self.confidentiality,
+            "security_generation": self.security_generation,
+            "source_revision": self.source_revision,
+            "lineage_evidence_id": self.lineage_evidence_id,
+        }
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any]) -> LessonProvenance:
+        return cls(
+            source_session_id=str(data.get("source_session_id", "")),
+            source_task_id=str(data.get("source_task_id", "")),
+            source_epoch=int(data.get("source_epoch", 0)),
+            verified=bool(data.get("verified", False)),
+            verification_spec_sha256=str(data.get("verification_spec_sha256", "")),
+            passed_checks=int(data.get("passed_checks", 0)),
+            source_trust=str(data.get("source_trust", "verified_task")),
+            confidentiality=str(data.get("confidentiality", "internal")),
+            security_generation=int(data.get("security_generation", 0)),
+            source_revision=str(data.get("source_revision", "")),
+            lineage_evidence_id=str(data.get("lineage_evidence_id", "")),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class LessonRecord:
+    """Durable, project-scoped, evidence-backed lesson record."""
+
+    lesson_id: str
+    project_scope_id: str
+    topic_key: str
+    title: str
+    guidance: str
+    tags: tuple[str, ...]
+    failure_codes: tuple[str, ...]
+    anchored_files: dict[str, str]
+    provenance: LessonProvenance
+    status: LessonStatus
+    estimated_tokens: int
+    created_at: float
+    updated_at: float
+    stale_reason: str = ""
+    retrieval_count: int = 0
+    verified_hit_count: int = 0
+    consecutive_failures: int = 0
+
+    def render_bullet(self) -> str:
+        anchors = ", ".join(sorted(self.anchored_files.keys())[:3])
+        return f"- [{self.topic_key}] {self.title}: {self.guidance} (anchors: {anchors})"
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "lesson_id": self.lesson_id,
+            "project_scope_id": self.project_scope_id,
+            "topic_key": self.topic_key,
+            "title": self.title,
+            "guidance": self.guidance,
+            "tags": list(self.tags),
+            "failure_codes": list(self.failure_codes),
+            "anchored_files": dict(self.anchored_files),
+            "provenance": self.provenance.to_mapping(),
+            "status": self.status,
+            "estimated_tokens": self.estimated_tokens,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "stale_reason": self.stale_reason,
+            "retrieval_count": self.retrieval_count,
+            "verified_hit_count": self.verified_hit_count,
+            "consecutive_failures": self.consecutive_failures,
+        }
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any]) -> LessonRecord:
+        status_raw = str(data.get("status", "candidate"))
+        if status_raw not in LESSON_STATUSES:
+            raise LessonStoreIntegrityError(f"Invalid lesson status: {status_raw!r}")
+        anchors_raw = data.get("anchored_files")
+        if not isinstance(anchors_raw, Mapping):
+            raise LessonStoreIntegrityError("Lesson anchored_files must be a mapping.")
+        return cls(
+            lesson_id=str(data["lesson_id"]),
+            project_scope_id=str(data["project_scope_id"]),
+            topic_key=str(data["topic_key"]),
+            title=str(data["title"]),
+            guidance=str(data["guidance"]),
+            tags=tuple(str(x) for x in data.get("tags", ())),
+            failure_codes=tuple(str(x) for x in data.get("failure_codes", ())),
+            anchored_files={str(k): str(v) for k, v in anchors_raw.items()},
+            provenance=LessonProvenance.from_mapping(data["provenance"]),
+            status=status_raw,  # type: ignore[arg-type]
+            estimated_tokens=int(data.get("estimated_tokens", 0)),
+            created_at=float(data.get("created_at", 0.0)),
+            updated_at=float(data.get("updated_at", 0.0)),
+            stale_reason=str(data.get("stale_reason", "")),
+            retrieval_count=int(data.get("retrieval_count", 0)),
+            verified_hit_count=int(data.get("verified_hit_count", 0)),
+            consecutive_failures=int(data.get("consecutive_failures", 0)),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class LessonRetrievalResult:
+    """Bounded decision-boundary retrieval output with full budget/staleness audit."""
+
+    enabled: bool
+    boundary: str
+    project_scope_id: str
+    lessons: tuple[LessonRecord, ...]
+    rendered_prompt: str
+    used_tokens: int
+    ceiling_tokens: int
+    dropped_for_budget_ids: tuple[str, ...] = ()
+    invalidated_stale_ids: tuple[str, ...] = ()
+    skipped_reason: str = ""
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "enabled": self.enabled,
+            "boundary": self.boundary,
+            "project_scope_id": self.project_scope_id,
+            "lesson_ids": [item.lesson_id for item in self.lessons],
+            "lessons": [item.to_mapping() for item in self.lessons],
+            "rendered_prompt": self.rendered_prompt,
+            "used_tokens": self.used_tokens,
+            "ceiling_tokens": self.ceiling_tokens,
+            "dropped_for_budget_ids": list(self.dropped_for_budget_ids),
+            "invalidated_stale_ids": list(self.invalidated_stale_ids),
+            "skipped_reason": self.skipped_reason,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class LessonEvalRun:
+    """Single coding run observation for baseline vs evidence-backed lessons A/B testing."""
+
+    run_id: str
+    arm: Literal["baseline", "lessons"]
+    scenario_id: str
+    task_digest: str
+    config_digest: str
+    hardware_digest: str
+    verified: bool
+    steps: int
+    total_tokens: float
+    retrieved_lesson_tokens: int
+    latency_ms: float
+    cross_project_leaks: int = 0
+    stale_lessons_injected: int = 0
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "run_id": self.run_id,
+            "arm": self.arm,
+            "scenario_id": self.scenario_id,
+            "task_digest": self.task_digest,
+            "config_digest": self.config_digest,
+            "hardware_digest": self.hardware_digest,
+            "verified": self.verified,
+            "steps": self.steps,
+            "total_tokens": self.total_tokens,
+            "retrieved_lesson_tokens": self.retrieved_lesson_tokens,
+            "latency_ms": self.latency_ms,
+            "cross_project_leaks": self.cross_project_leaks,
+            "stale_lessons_injected": self.stale_lessons_injected,
+        }
+
+
+def _el_median(values: Sequence[float]) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(float(v) for v in values)
+    mid = len(ordered) // 2
+    if len(ordered) % 2 == 1:
+        return round(ordered[mid], 6)
+    return round((ordered[mid - 1] + ordered[mid]) / 2.0, 6)
+
+
+def compare_lesson_ab_runs(
+    scenario_id: str,
+    runs: Sequence[LessonEvalRun],
+    *,
+    ceiling_tokens: int = DEFAULT_LESSON_TOKEN_CEILING,
+) -> dict[str, Any]:
+    """Compare baseline vs lessons arms on matched task/config/hardware digests."""
+    if not runs:
+        raise ValueError("compare_lesson_ab_runs requires at least one run per arm.")
+    baseline_runs = [r for r in runs if r.arm == "baseline"]
+    lesson_runs = [r for r in runs if r.arm == "lessons"]
+    if not baseline_runs or not lesson_runs:
+        raise ValueError("Both 'baseline' and 'lessons' arms are required.")
+    task_digests = {r.task_digest for r in runs}
+    cfg_digests = {r.config_digest for r in runs}
+    hw_digests = {r.hardware_digest for r in runs}
+    if len(task_digests) != 1 or len(cfg_digests) != 1 or len(hw_digests) != 1:
+        raise ValueError("A/B runs must share identical task, config, and hardware digests.")
+
+    def _summarize(arm_runs: Sequence[LessonEvalRun]) -> dict[str, Any]:
+        sr = round(sum(1 for r in arm_runs if r.verified) / len(arm_runs), 6)
+        return {
+            "count": len(arm_runs),
+            "success_rate": sr,
+            "steps_median": _el_median([float(r.steps) for r in arm_runs]),
+            "total_tokens_median": _el_median([r.total_tokens for r in arm_runs]),
+            "latency_ms_median": _el_median([r.latency_ms for r in arm_runs]),
+            "max_retrieved_lesson_tokens": max(r.retrieved_lesson_tokens for r in arm_runs),
+            "cross_project_leaks": sum(r.cross_project_leaks for r in arm_runs),
+            "stale_lessons_injected": sum(r.stale_lessons_injected for r in arm_runs),
+        }
+
+    b_sum = _summarize(baseline_runs)
+    l_sum = _summarize(lesson_runs)
+    sr_delta = round(float(l_sum["success_rate"]) - float(b_sum["success_rate"]), 6)
+    tok_delta = round(float(l_sum["total_tokens_median"]) - float(b_sum["total_tokens_median"]), 6)
+    step_delta = round(float(l_sum["steps_median"]) - float(b_sum["steps_median"]), 6)
+    lat_delta = round(float(l_sum["latency_ms_median"]) - float(b_sum["latency_ms_median"]), 6)
+    leaks = int(b_sum["cross_project_leaks"]) + int(l_sum["cross_project_leaks"])
+    stale_inj = int(l_sum["stale_lessons_injected"])
+    within_ceiling = int(l_sum["max_retrieved_lesson_tokens"]) <= int(ceiling_tokens)
+
+    benefit_justified = bool(
+        leaks == 0
+        and stale_inj == 0
+        and within_ceiling
+        and (
+            sr_delta > 0.0
+            or (sr_delta == 0.0 and tok_delta < 0.0 and step_delta <= 0.0)
+        )
+    )
+    payload: dict[str, Any] = {
+        "schema_version": EL_SCHEMA_VERSION,
+        "scenario_id": scenario_id,
+        "task_digest": next(iter(task_digests)),
+        "config_digest": next(iter(cfg_digests)),
+        "hardware_digest": next(iter(hw_digests)),
+        "ceiling_tokens": int(ceiling_tokens),
+        "baseline": b_sum,
+        "lessons": l_sum,
+        "lessons_minus_baseline": {
+            "success_rate": sr_delta,
+            "total_tokens_median": tok_delta,
+            "steps_median": step_delta,
+            "latency_ms_median": lat_delta,
+        },
+        "no_cross_project_leakage": (leaks == 0),
+        "no_stale_lessons_injected": (stale_inj == 0),
+        "within_hard_token_ceiling": within_ceiling,
+        "measured_improvement_over_baseline": benefit_justified,
+        "runs": [r.to_mapping() for r in runs],
+    }
+    payload["report_sha256"] = _el_canonical_sha256(payload)
+    return payload
+
+
+class EvidenceLessonStore:
+    """Crash-safe durable store at ``$HARNESS_STORE_DIR/lessons/state.json``."""
+
+    def __init__(self, store_dir: Path | str) -> None:
+        self._root = Path(store_dir)
+        self._dir = self._root / EL_DIRNAME
+        self._state_path = self._dir / EL_STATE_NAME
+        self._lock = threading.RLock()
+
+    @property
+    def state_path(self) -> Path:
+        return self._state_path
+
+    def _ensure_dir_unlocked(self) -> None:
+        _el_reject_if_symlink(self._root, "store root")
+        if not self._root.exists():
+            self._root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        _el_reject_if_symlink(self._dir, "lessons state directory")
+        if not self._dir.exists():
+            self._dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if not self._dir.is_dir():
+            raise LessonStoreIntegrityError(f"Lessons directory `{self._dir}` is not a directory.")
+        os.chmod(self._dir, 0o700)
+
+    @staticmethod
+    def _empty_state() -> dict[str, Any]:
+        return {
+            "schema_version": EL_SCHEMA_VERSION,
+            "config": {
+                "enabled": True,
+                "token_ceiling": DEFAULT_LESSON_TOKEN_CEILING,
+                "ab_gate_open": False,
+            },
+            "lessons": {},
+            "ab_reports": {},
+        }
+
+    def _read_state_unlocked(self) -> dict[str, Any]:
+        _el_reject_if_symlink(self._root, "store root")
+        _el_reject_if_symlink(self._dir, "lessons state directory")
+        _el_reject_if_symlink(self._state_path, "lessons state file")
+        if not self._state_path.exists():
+            return self._empty_state()
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            fd = os.open(self._state_path, flags)
+        except OSError as exc:
+            if exc.errno == errno.ELOOP:
+                raise LessonStoreIntegrityError(f"Refusing symlinked `{self._state_path}`.") from exc
+            raise LessonStoreIntegrityError(f"Cannot open `{self._state_path}`: {exc}") from exc
+        try:
+            st = os.fstat(fd)
+            if not stat.S_ISREG(st.st_mode):
+                raise LessonStoreIntegrityError(f"`{self._state_path}` is not a regular file.")
+            raw = os.read(fd, st.st_size + 1)
+        finally:
+            os.close(fd)
+        try:
+            parsed = json.loads(raw.decode("utf-8"))
+        except Exception as exc:
+            raise LessonStoreIntegrityError(f"Corrupt JSON in `{self._state_path}`: {exc}") from exc
+        if not isinstance(parsed, dict):
+            raise LessonStoreIntegrityError(f"`{self._state_path}` root must be a JSON object.")
+        ver = parsed.get("schema_version")
+        if not isinstance(ver, int) or isinstance(ver, bool) or ver != EL_SCHEMA_VERSION:
+            raise LessonStoreIntegrityError(
+                f"Unsupported lessons schema_version {ver!r} (expected {EL_SCHEMA_VERSION})."
+            )
+        cfg = parsed.get("config")
+        lessons = parsed.get("lessons")
+        ab_reports = parsed.get("ab_reports")
+        if not isinstance(cfg, dict) or not isinstance(lessons, dict) or not isinstance(ab_reports, dict):
+            raise LessonStoreIntegrityError(f"Malformed collections in `{self._state_path}`.")
+        return {
+            "schema_version": EL_SCHEMA_VERSION,
+            "config": {
+                "enabled": bool(cfg.get("enabled", True)),
+                "token_ceiling": min(
+                    ABSOLUTE_MAX_LESSON_TOKEN_CEILING,
+                    max(24, int(cfg.get("token_ceiling", DEFAULT_LESSON_TOKEN_CEILING))),
+                ),
+                "ab_gate_open": bool(cfg.get("ab_gate_open", True)),
+            },
+            "lessons": dict(lessons),
+            "ab_reports": dict(ab_reports),
+        }
+
+    def _write_state_unlocked(self, state: Mapping[str, Any]) -> None:
+        self._ensure_dir_unlocked()
+        _el_reject_if_symlink(self._state_path, "lessons state file")
+        encoded = (json.dumps(state, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        nonce = f"{os.getpid()}.{threading.get_ident()}.{time.time_ns()}"
+        tmp_path = self._dir / f"{EL_TEMP_PREFIX}{nonce}.tmp"
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(tmp_path, flags, 0o600)
+        try:
+            os.fchmod(fd, 0o600)
+            view = memoryview(encoded)
+            written = 0
+            while written < len(view):
+                written += os.write(fd, view[written:])
+            os.fsync(fd)
+        except BaseException:
+            os.close(fd)
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+            raise
+        os.close(fd)
+        try:
+            os.replace(tmp_path, self._state_path)
+            os.chmod(self._state_path, 0o600)
+            dir_fd = os.open(self._dir, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+        except BaseException:
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+            raise
+
+    def get_config(self, *, env_enabled: bool = True) -> dict[str, Any]:
+        with self._lock:
+            state = self._read_state_unlocked()
+            cfg = dict(state["config"])
+            cfg["env_enabled"] = bool(env_enabled)
+            cfg["effective_enabled"] = bool(env_enabled and cfg["enabled"] and cfg["ab_gate_open"])
+            return cfg
+
+    def update_config(
+        self,
+        *,
+        enabled: bool | None = None,
+        token_ceiling: int | None = None,
+        ab_gate_open: bool | None = None,
+    ) -> dict[str, Any]:
+        with self._lock:
+            state = self._read_state_unlocked()
+            cfg = dict(state["config"])
+            if enabled is not None:
+                cfg["enabled"] = bool(enabled)
+            if token_ceiling is not None:
+                val = int(token_ceiling)
+                if val < 24 or val > ABSOLUTE_MAX_LESSON_TOKEN_CEILING:
+                    raise ValueError(
+                        f"token_ceiling must be in [24, {ABSOLUTE_MAX_LESSON_TOKEN_CEILING}]; got {val}"
+                    )
+                cfg["token_ceiling"] = val
+            if ab_gate_open is not None:
+                cfg["ab_gate_open"] = bool(ab_gate_open)
+            state["config"] = cfg
+            self._write_state_unlocked(state)
+            return dict(cfg)
+
+    def promote_lesson(
+        self,
+        *,
+        workspace_root: Path,
+        owning_workspace_root: Path | None = None,
+        topic_key: str,
+        title: str,
+        guidance: str,
+        anchor_paths: Sequence[str],
+        provenance: LessonProvenance,
+        tags: Sequence[str] = (),
+        failure_codes: Sequence[str] = (),
+        known_secret_values: Iterable[str] = (),
+        env_enabled: bool = True,
+    ) -> LessonRecord:
+        """Validate all provenance, privacy, anchor, and token-budget gates, then promote."""
+        if not env_enabled:
+            raise LessonPromotionRejectedError(
+                "lessons_feature_disabled",
+                "Evidence-backed lessons are disabled by STUDIO_ENABLE_EVIDENCE_LESSONS=0.",
+            )
+        with self._lock:
+            state = self._read_state_unlocked()
+            if not state["config"]["enabled"]:
+                raise LessonPromotionRejectedError(
+                    "lessons_feature_disabled",
+                    "Evidence-backed lessons are disabled in runtime configuration.",
+                )
+
+            if not provenance.verified:
+                raise LessonPromotionRejectedError(
+                    "unverified_task_cannot_promote",
+                    "Candidate lesson rejected: originating task completion was not verified.",
+                )
+            if (
+                not provenance.verification_spec_sha256
+                or not _EL_HEX64_RE.match(provenance.verification_spec_sha256)
+                or provenance.passed_checks < 1
+            ):
+                raise LessonPromotionRejectedError(
+                    "missing_verification_evidence",
+                    "Candidate lesson rejected: valid 64-hex verification_spec_sha256 and passed_checks >= 1 required.",
+                )
+            if provenance.source_trust not in ALLOWED_LESSON_TRUST_LEVELS:
+                raise LessonPromotionRejectedError(
+                    "untrusted_provenance",
+                    f"Candidate lesson trust {provenance.source_trust!r} is not eligible for promotion.",
+                )
+            if provenance.confidentiality not in ALLOWED_LESSON_CONFIDENTIALITY:
+                raise LessonPromotionRejectedError(
+                    "secret_confidentiality_forbidden",
+                    f"Candidate lesson confidentiality {provenance.confidentiality!r} cannot be promoted.",
+                )
+
+            clean_topic = re.sub(r"[^a-z0-9_.:-]+", "-", str(topic_key or "").strip().lower()).strip("-")
+            clean_title = " ".join(str(title or "").split()).strip()
+            clean_guidance = " ".join(str(guidance or "").split()).strip()
+            if not clean_topic or not clean_title or not clean_guidance:
+                raise LessonPromotionRejectedError(
+                    "empty_lesson_fields",
+                    "topic_key, title, and guidance must all be non-empty.",
+                )
+
+            canon_root = resolve_canonical_project_root(
+                workspace_root, owning_workspace_root=owning_workspace_root
+            )
+            _el_check_privacy_hygiene(
+                f"{clean_title}\n{clean_guidance}",
+                canonical_project_root=canon_root,
+                known_secret_values=known_secret_values,
+            )
+
+            if not anchor_paths:
+                raise LessonPromotionRejectedError(
+                    "missing_file_anchors",
+                    "At least one confined workspace file anchor is required so stale lessons can be invalidated.",
+                )
+            anchored_digests: dict[str, str] = {}
+            ws_resolved = workspace_root.resolve()
+            for raw_rel in anchor_paths:
+                norm_rel = _el_normalize_rel_path(ws_resolved, raw_rel)
+                digest = compute_confined_file_sha256(ws_resolved, norm_rel)
+                if digest is None:
+                    raise LessonPromotionRejectedError(
+                        "anchor_file_unreadable",
+                        f"Anchor file `{norm_rel}` does not exist as a regular non-symlink file in workspace.",
+                    )
+                anchored_digests[norm_rel] = digest
+
+            project_scope_id = derive_project_scope_id(
+                ws_resolved, owning_workspace_root=canon_root
+            )
+            now_ts = _el_now()
+            probe_rec = LessonRecord(
+                lesson_id="les-probe",
+                project_scope_id=project_scope_id,
+                topic_key=clean_topic[:64],
+                title=clean_title[:120],
+                guidance=clean_guidance,
+                tags=tuple(dict.fromkeys(str(t).strip().lower() for t in tags if str(t).strip()))[:12],
+                failure_codes=tuple(
+                    dict.fromkeys(str(c).strip().lower() for c in failure_codes if str(c).strip())
+                )[:8],
+                anchored_files=anchored_digests,
+                provenance=provenance,
+                status="promoted",
+                estimated_tokens=0,
+                created_at=now_ts,
+                updated_at=now_ts,
+            )
+            est_tokens = estimate_lesson_tokens(probe_rec.render_bullet())
+            if est_tokens > MAX_SINGLE_LESSON_TOKENS:
+                raise LessonPromotionRejectedError(
+                    "lesson_exceeds_token_limit",
+                    f"Rendered lesson is {est_tokens} tokens (max {MAX_SINGLE_LESSON_TOKENS}).",
+                )
+
+            # Supersede any prior lesson for the same (project_scope_id, topic_key).
+            existing_id: str | None = None
+            created_ts = now_ts
+            for lid, raw_item in state["lessons"].items():
+                prev = LessonRecord.from_mapping(raw_item)
+                if prev.project_scope_id == project_scope_id and prev.topic_key == probe_rec.topic_key:
+                    existing_id = lid
+                    created_ts = prev.created_at
+                    break
+
+            final_id = existing_id or _el_new_id("les")
+            record = LessonRecord(
+                lesson_id=final_id,
+                project_scope_id=project_scope_id,
+                topic_key=probe_rec.topic_key,
+                title=probe_rec.title,
+                guidance=probe_rec.guidance,
+                tags=probe_rec.tags,
+                failure_codes=probe_rec.failure_codes,
+                anchored_files=probe_rec.anchored_files,
+                provenance=provenance,
+                status="promoted",
+                estimated_tokens=est_tokens,
+                created_at=created_ts,
+                updated_at=now_ts,
+            )
+            state["lessons"][final_id] = record.to_mapping()
+            self._write_state_unlocked(state)
+            return record
+
+    def list_lessons(
+        self,
+        *,
+        workspace_root: Path,
+        owning_workspace_root: Path | None = None,
+        include_stale: bool = False,
+    ) -> list[LessonRecord]:
+        """List lessons strictly within ``workspace_root``'s canonical project scope."""
+        scope_id = derive_project_scope_id(
+            workspace_root, owning_workspace_root=owning_workspace_root
+        )
+        with self._lock:
+            state = self._read_state_unlocked()
+            out: list[LessonRecord] = []
+            for raw_item in state["lessons"].values():
+                rec = LessonRecord.from_mapping(raw_item)
+                if rec.project_scope_id != scope_id:
+                    continue
+                if not include_stale and rec.status != "promoted":
+                    continue
+                out.append(rec)
+            out.sort(key=lambda r: (r.updated_at, r.lesson_id), reverse=True)
+            return out
+
+    def invalidate_lesson(
+        self,
+        lesson_id: str,
+        *,
+        reason: str,
+        revoked: bool = False,
+    ) -> LessonRecord | None:
+        with self._lock:
+            state = self._read_state_unlocked()
+            raw = state["lessons"].get(lesson_id)
+            if raw is None:
+                return None
+            prev = LessonRecord.from_mapping(raw)
+            updated = LessonRecord(
+                lesson_id=prev.lesson_id,
+                project_scope_id=prev.project_scope_id,
+                topic_key=prev.topic_key,
+                title=prev.title,
+                guidance=prev.guidance,
+                tags=prev.tags,
+                failure_codes=prev.failure_codes,
+                anchored_files=prev.anchored_files,
+                provenance=prev.provenance,
+                status="revoked" if revoked else "stale",
+                estimated_tokens=prev.estimated_tokens,
+                created_at=prev.created_at,
+                updated_at=_el_now(),
+                stale_reason=str(reason or "manual_invalidation")[:200],
+                retrieval_count=prev.retrieval_count,
+                verified_hit_count=prev.verified_hit_count,
+                consecutive_failures=prev.consecutive_failures,
+            )
+            state["lessons"][lesson_id] = updated.to_mapping()
+            self._write_state_unlocked(state)
+            return updated
+
+    def revalidate_project_lessons(
+        self,
+        *,
+        workspace_root: Path,
+        owning_workspace_root: Path | None = None,
+        current_security_generation: int | None = None,
+        is_lineage_evidence_valid_fn: Callable[[str], bool] | None = None,
+    ) -> tuple[str, ...]:
+        """Invalidate any promoted project lesson whose anchored files, generation, or lineage drifted."""
+        ws_resolved = workspace_root.resolve()
+        scope_id = derive_project_scope_id(
+            ws_resolved, owning_workspace_root=owning_workspace_root
+        )
+        invalidated: list[str] = []
+        with self._lock:
+            state = self._read_state_unlocked()
+            mutated = False
+            now_ts = _el_now()
+            for lid, raw_item in list(state["lessons"].items()):
+                rec = LessonRecord.from_mapping(raw_item)
+                if rec.project_scope_id != scope_id or rec.status != "promoted":
+                    continue
+                stale_reason = ""
+                if (
+                    current_security_generation is not None
+                    and rec.provenance.security_generation != int(current_security_generation)
+                ):
+                    stale_reason = (
+                        f"security_generation_changed:{rec.provenance.security_generation}"
+                        f"->{int(current_security_generation)}"
+                    )
+                elif (
+                    rec.provenance.lineage_evidence_id
+                    and is_lineage_evidence_valid_fn is not None
+                    and not is_lineage_evidence_valid_fn(rec.provenance.lineage_evidence_id)
+                ):
+                    stale_reason = f"lineage_evidence_stale:{rec.provenance.lineage_evidence_id}"
+                else:
+                    for rel_path, expected_sha in rec.anchored_files.items():
+                        actual_sha = compute_confined_file_sha256(ws_resolved, rel_path)
+                        if actual_sha != expected_sha:
+                            stale_reason = f"anchored_file_changed:{rel_path}"
+                            break
+                if stale_reason:
+                    updated = LessonRecord(
+                        lesson_id=rec.lesson_id,
+                        project_scope_id=rec.project_scope_id,
+                        topic_key=rec.topic_key,
+                        title=rec.title,
+                        guidance=rec.guidance,
+                        tags=rec.tags,
+                        failure_codes=rec.failure_codes,
+                        anchored_files=rec.anchored_files,
+                        provenance=rec.provenance,
+                        status="stale",
+                        estimated_tokens=rec.estimated_tokens,
+                        created_at=rec.created_at,
+                        updated_at=now_ts,
+                        stale_reason=stale_reason,
+                        retrieval_count=rec.retrieval_count,
+                        verified_hit_count=rec.verified_hit_count,
+                        consecutive_failures=rec.consecutive_failures,
+                    )
+                    state["lessons"][lid] = updated.to_mapping()
+                    invalidated.append(lid)
+                    mutated = True
+            if mutated:
+                self._write_state_unlocked(state)
+        return tuple(invalidated)
+
+    def record_retrieval_outcome(
+        self,
+        lesson_ids: Sequence[str],
+        *,
+        verified: bool,
+    ) -> tuple[str, ...]:
+        """Record downstream task verification outcomes and demote lessons that regress repeatedly."""
+        if not lesson_ids:
+            return ()
+        demoted: list[str] = []
+        with self._lock:
+            state = self._read_state_unlocked()
+            mutated = False
+            now_ts = _el_now()
+            for lid in dict.fromkeys(lesson_ids):
+                raw = state["lessons"].get(lid)
+                if raw is None:
+                    continue
+                rec = LessonRecord.from_mapping(raw)
+                if rec.status != "promoted":
+                    continue
+                if verified:
+                    new_hits = rec.verified_hit_count + 1
+                    new_fails = 0
+                    new_status: LessonStatus = "promoted"
+                    new_reason = ""
+                else:
+                    new_hits = rec.verified_hit_count
+                    new_fails = rec.consecutive_failures + 1
+                    if new_fails >= MAX_CONSECUTIVE_VERIFICATION_FAILURES:
+                        new_status = "stale"
+                        new_reason = f"verification_regression:{new_fails}_consecutive_failures"
+                        demoted.append(lid)
+                    else:
+                        new_status = "promoted"
+                        new_reason = rec.stale_reason
+                updated = LessonRecord(
+                    lesson_id=rec.lesson_id,
+                    project_scope_id=rec.project_scope_id,
+                    topic_key=rec.topic_key,
+                    title=rec.title,
+                    guidance=rec.guidance,
+                    tags=rec.tags,
+                    failure_codes=rec.failure_codes,
+                    anchored_files=rec.anchored_files,
+                    provenance=rec.provenance,
+                    status=new_status,
+                    estimated_tokens=rec.estimated_tokens,
+                    created_at=rec.created_at,
+                    updated_at=now_ts,
+                    stale_reason=new_reason,
+                    retrieval_count=rec.retrieval_count,
+                    verified_hit_count=new_hits,
+                    consecutive_failures=new_fails,
+                )
+                state["lessons"][lid] = updated.to_mapping()
+                mutated = True
+            if mutated:
+                self._write_state_unlocked(state)
+        return tuple(demoted)
+
+    def retrieve_for_decision_boundary(
+        self,
+        *,
+        boundary: str,
+        workspace_root: Path,
+        owning_workspace_root: Path | None = None,
+        query: str,
+        failure_codes: Collection[str] = (),
+        target_paths: Collection[str] = (),
+        token_ceiling: int | None = None,
+        max_lessons: int = MAX_RETRIEVED_LESSONS,
+        current_security_generation: int | None = None,
+        is_lineage_evidence_valid_fn: Callable[[str], bool] | None = None,
+        env_enabled: bool = True,
+        session_enabled: bool = True,
+    ) -> LessonRetrievalResult:
+        """Retrieve project-scoped, non-stale lessons strictly at decision boundaries within hard token ceiling."""
+        ws_resolved = workspace_root.resolve()
+        scope_id = derive_project_scope_id(
+            ws_resolved, owning_workspace_root=owning_workspace_root
+        )
+        if not env_enabled or not session_enabled:
+            return LessonRetrievalResult(
+                enabled=False,
+                boundary=boundary,
+                project_scope_id=scope_id,
+                lessons=(),
+                rendered_prompt="",
+                used_tokens=0,
+                ceiling_tokens=0,
+                skipped_reason="feature_disabled",
+            )
+
+        with self._lock:
+            state = self._read_state_unlocked()
+            cfg = state["config"]
+            eff_ceiling = min(
+                ABSOLUTE_MAX_LESSON_TOKEN_CEILING,
+                max(
+                    24,
+                    int(token_ceiling)
+                    if token_ceiling is not None
+                    else int(cfg.get("token_ceiling", DEFAULT_LESSON_TOKEN_CEILING)),
+                ),
+            )
+            if not cfg.get("enabled", True):
+                return LessonRetrievalResult(
+                    enabled=False,
+                    boundary=boundary,
+                    project_scope_id=scope_id,
+                    lessons=(),
+                    rendered_prompt="",
+                    used_tokens=0,
+                    ceiling_tokens=eff_ceiling,
+                    skipped_reason="store_config_disabled",
+                )
+            if not cfg.get("ab_gate_open", True):
+                return LessonRetrievalResult(
+                    enabled=False,
+                    boundary=boundary,
+                    project_scope_id=scope_id,
+                    lessons=(),
+                    rendered_prompt="",
+                    used_tokens=0,
+                    ceiling_tokens=eff_ceiling,
+                    skipped_reason="ab_benefit_gate_closed",
+                )
+
+        if boundary not in DECISION_BOUNDARIES:
+            return LessonRetrievalResult(
+                enabled=True,
+                boundary=boundary,
+                project_scope_id=scope_id,
+                lessons=(),
+                rendered_prompt="",
+                used_tokens=0,
+                ceiling_tokens=eff_ceiling,
+                skipped_reason="non_decision_boundary",
+            )
+
+        invalidated = self.revalidate_project_lessons(
+            workspace_root=ws_resolved,
+            owning_workspace_root=owning_workspace_root,
+            current_security_generation=current_security_generation,
+            is_lineage_evidence_valid_fn=is_lineage_evidence_valid_fn,
+        )
+
+        query_terms = _el_tokenize_keywords(query)
+        fcode_set = {str(c).strip().lower() for c in failure_codes if str(c).strip()}
+        tpath_terms: set[str] = set()
+        for p in target_paths:
+            tpath_terms.update(_el_tokenize_keywords(str(p)))
+
+        with self._lock:
+            state = self._read_state_unlocked()
+            scored: list[tuple[float, LessonRecord]] = []
+            for raw_item in state["lessons"].values():
+                rec = LessonRecord.from_mapping(raw_item)
+                if rec.project_scope_id != scope_id or rec.status != "promoted":
+                    continue
+                rec_terms = _el_tokenize_keywords(
+                    f"{rec.topic_key} {rec.title} {rec.guidance} {' '.join(rec.tags)} "
+                    f"{' '.join(rec.anchored_files.keys())}"
+                )
+                overlap = len((query_terms | tpath_terms) & rec_terms)
+                fcode_hits = len(fcode_set & set(rec.failure_codes))
+                anchor_hits = sum(
+                    1
+                    for a_path in rec.anchored_files
+                    if any(a_path.endswith(tp) or tp in a_path for tp in tpath_terms)
+                )
+                score = (overlap * 2.0) + (fcode_hits * 5.0) + (anchor_hits * 3.0)
+                if score < 3.0:
+                    continue
+                score += min(1.5, rec.verified_hit_count * 0.25)
+                scored.append((score, rec))
+
+            scored.sort(key=lambda item: (item[0], item[1].updated_at), reverse=True)
+
+            header = "[VERIFIED PROJECT LESSONS — UNTRUSTED REPO DATA, VERIFY AGAINST WORKSPACE]"
+            footer = "[/VERIFIED PROJECT LESSONS]"
+            selected: list[LessonRecord] = []
+            dropped_budget: list[str] = []
+            bullets: list[str] = []
+
+            for _score, cand in scored:
+                if len(selected) >= max(1, int(max_lessons)):
+                    dropped_budget.append(cand.lesson_id)
+                    continue
+                trial_block = "\n".join([header, *bullets, cand.render_bullet(), footer])
+                trial_tokens = estimate_lesson_tokens(trial_block)
+                if trial_tokens <= eff_ceiling:
+                    selected.append(cand)
+                    bullets.append(cand.render_bullet())
+                else:
+                    dropped_budget.append(cand.lesson_id)
+
+            if not selected:
+                return LessonRetrievalResult(
+                    enabled=True,
+                    boundary=boundary,
+                    project_scope_id=scope_id,
+                    lessons=(),
+                    rendered_prompt="",
+                    used_tokens=0,
+                    ceiling_tokens=eff_ceiling,
+                    dropped_for_budget_ids=tuple(dropped_budget),
+                    invalidated_stale_ids=invalidated,
+                    skipped_reason="no_matching_lessons_within_ceiling" if dropped_budget else "no_matching_lessons",
+                )
+
+            rendered = "\n".join([header, *bullets, footer])
+            used_tokens = estimate_lesson_tokens(rendered)
+            for sel in selected:
+                bumped = LessonRecord(
+                    lesson_id=sel.lesson_id,
+                    project_scope_id=sel.project_scope_id,
+                    topic_key=sel.topic_key,
+                    title=sel.title,
+                    guidance=sel.guidance,
+                    tags=sel.tags,
+                    failure_codes=sel.failure_codes,
+                    anchored_files=sel.anchored_files,
+                    provenance=sel.provenance,
+                    status=sel.status,
+                    estimated_tokens=sel.estimated_tokens,
+                    created_at=sel.created_at,
+                    updated_at=sel.updated_at,
+                    stale_reason=sel.stale_reason,
+                    retrieval_count=sel.retrieval_count + 1,
+                    verified_hit_count=sel.verified_hit_count,
+                    consecutive_failures=sel.consecutive_failures,
+                )
+                state["lessons"][sel.lesson_id] = bumped.to_mapping()
+            self._write_state_unlocked(state)
+
+            return LessonRetrievalResult(
+                enabled=True,
+                boundary=boundary,
+                project_scope_id=scope_id,
+                lessons=tuple(selected),
+                rendered_prompt=rendered,
+                used_tokens=used_tokens,
+                ceiling_tokens=eff_ceiling,
+                dropped_for_budget_ids=tuple(dropped_budget),
+                invalidated_stale_ids=invalidated,
+            )
+
+    def record_ab_report(
+        self,
+        report: Mapping[str, Any],
+        *,
+        enforce_gate: bool = True,
+    ) -> dict[str, Any]:
+        """Persist an A/B coding evaluation report and gate automatic injection on measured benefit."""
+        scen = str(report.get("scenario_id") or "").strip()
+        if not scen:
+            raise ValueError("A/B report requires scenario_id.")
+        with self._lock:
+            state = self._read_state_unlocked()
+            state["ab_reports"][scen] = dict(report)
+            if enforce_gate:
+                all_justified = all(
+                    bool(r.get("measured_improvement_over_baseline"))
+                    for r in state["ab_reports"].values()
+                )
+                state["config"]["ab_gate_open"] = all_justified
+            self._write_state_unlocked(state)
+            return dict(state["config"])
+
+    def purge_project_lessons(
+        self,
+        *,
+        workspace_root: Path,
+        owning_workspace_root: Path | None = None,
+    ) -> int:
+        """Delete all lessons belonging to a single canonical project scope."""
+        scope_id = derive_project_scope_id(
+            workspace_root, owning_workspace_root=owning_workspace_root
+        )
+        with self._lock:
+            state = self._read_state_unlocked()
+            to_delete = [
+                lid
+                for lid, raw_item in state["lessons"].items()
+                if LessonRecord.from_mapping(raw_item).project_scope_id == scope_id
+            ]
+            for lid in to_delete:
+                state["lessons"].pop(lid, None)
+            if to_delete:
+                self._write_state_unlocked(state)
+            return len(to_delete)
+
+
+__all__ = [
+    "ABSOLUTE_MAX_LESSON_TOKEN_CEILING",
+    "ALLOWED_LESSON_CONFIDENTIALITY",
+    "ALLOWED_LESSON_TRUST_LEVELS",
+    "DECISION_BOUNDARIES",
+    "DEFAULT_LESSON_TOKEN_CEILING",
+    "EL_DIRNAME",
+    "EL_SCHEMA_VERSION",
+    "EL_STATE_NAME",
+    "EvidenceLessonError",
+    "EvidenceLessonStore",
+    "LESSON_STATUSES",
+    "LessonEvalRun",
+    "LessonPromotionRejectedError",
+    "LessonProvenance",
+    "LessonRecord",
+    "LessonRetrievalResult",
+    "LessonStatus",
+    "LessonStoreIntegrityError",
+    "MAX_CONSECUTIVE_VERIFICATION_FAILURES",
+    "MAX_RETRIEVED_LESSONS",
+    "MAX_SINGLE_LESSON_TOKENS",
+    "compare_lesson_ab_runs",
+    "compute_confined_file_sha256",
+    "derive_project_scope_id",
+    "estimate_lesson_tokens",
+    "resolve_canonical_project_root",
+]
+
+evidence_lessons = sys.modules[__name__]
 
 """Provider-neutral orchestration primitives for streamed Studio workflows.
 
