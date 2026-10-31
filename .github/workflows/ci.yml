@@ -53,7 +53,20 @@ jobs:
       - name: Check frontend JavaScript syntax
         run: python scripts/check_frontend_syntax.py
       - name: Run tests
-        run: pytest
+        # Failing tests are echoed as check annotations (readable through the
+        # checks API) as well as logged, so a red run names the test even when
+        # the job log is not reachable from wherever it is being triaged.
+        run: |
+          set +e
+          python -m pytest -q --tb=short -rf > "${RUNNER_TEMP:-/tmp}/pytest.log" 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            grep -E '^(FAILED|ERROR)' "${RUNNER_TEMP:-/tmp}/pytest.log" | head -25 | while IFS= read -r line; do
+              echo "::error title=Pytest failure::${line}"
+            done
+          fi
+          tail -n 40 "${RUNNER_TEMP:-/tmp}/pytest.log"
+          exit "$status"
       - name: Check the demo transcript and screenshot manifest
         run: |
           python scripts/demo_tour.py --check
