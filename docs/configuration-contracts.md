@@ -22,6 +22,31 @@ There is no implicit `.env`, YAML, or JSON configuration file. For process setti
 
 Other optional safety flags use the same strict boolean parsing. Path and collection values remain environment-driven; the loader does not infer a model, provider, chip, memory size, or platform.
 
+## Execution-mode gate
+
+`STUDIO_EXECUTION_MODE` decides whether untrusted code runs at all, and the gate is
+closed at every step rather than at one:
+
+| Mode | Behaviour |
+|---|---|
+| `disabled` (default when no opt-in is set) | `_start_code_process` raises `PermissionError` before any process is created. |
+| `sandbox` | The command is wrapped by `sandbox_boundary.build_container_invocation` (`--network=none`, `--read-only`, `--cap-drop=ALL`, `--security-opt=no-new-privileges`, pid/memory/cpu limits, `noexec` tmpfs, only the workspace bind-mounted). |
+| `host` | Requires `STUDIO_ALLOW_HOST_EXECUTION=1`; the setting alone is an error, and `_execution_mode()` still reports `disabled` if the opt-in is missing at runtime. |
+
+**There is no fallback from `sandbox` to `host`.** If the configured runtime is absent,
+`build_container_invocation` raises `RuntimeError` and no process is created — the
+tempting moment for a fallback is exactly when the command is already admitted and
+spawning it on the host would appear to work. `--pull=never` applies the same rule to
+images: a missing image fails rather than being fetched from the network. This is the
+code behind the release constraint that unverified isolation stays unavailable.
+
+Pinned by `tests/test_sandbox_boundary.py`: disabled mode touches nothing, sandbox mode
+with an absent runtime refuses and leaves the workspace untouched, sandbox mode never
+takes the host-shell path even when handed a runnable argv, and `host` without the opt-in
+degrades to `disabled` at both the settings and runtime layers. No test in that group
+needs a container runtime, so the invariant is checked on every CI run rather than only
+on a machine with Docker.
+
 ## Precedence contracts
 
 1. **Process settings:** an explicit environment value wins over its code default. For example, `STUDIO_DB_PATH` overrides the source-adjacent default database path, while `STUDIO_WORKSPACE` overrides the current working directory.
