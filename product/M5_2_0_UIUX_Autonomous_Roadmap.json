@@ -27,8 +27,8 @@
     ],
     "rule": "This ledger is authoritative for UI/UX stories UIUX-P0-01..UIUX-P6-05 only. It never changes the status of an M5 or AS story, and no UI/UX story may change backend, security or data behavior to make a screen easier to build."
   },
-  "source_commit_sha": "95cc01dfbd9cc581bf5923da4910397df96bbe50",
-  "source_commit_status": "Pinned to origin/main 95cc01d by the #110 corrective follow-up on 2026-10-31, the merge commit of #116. The generated artifacts are regenerated in the same pull request that re-pins. A session that finds main ahead of this pin re-pins the ledger and regenerates every artifact that embeds the pin (source manifest, control inventory, route map, authorization trace, preservation sign-off), because each one fails its --check otherwise. A branch name is not evidence of an ancestor commit: verify the pin against the history.",
+  "source_commit_sha": "fa2a31cec0704ae4322a30c8ff55fd2d3e4037d0",
+  "source_commit_status": "Pinned to origin/main fa2a31c by UIUX-P0-05 on 2026-10-31, the merge commit of #114. The generated artifacts are regenerated in the same pull request that re-pins, and the map is now schema 2 (unresolved edges are published as unknown, never as absent). A session that finds main ahead of this pin re-pins the ledger and regenerates every artifact that embeds the pin in the same commit, because each one fails its --check otherwise. A branch name is not evidence of an ancestor commit: verify the pin.",
   "evidence_basis": {
     "supplied_by": "repository owner, 2026-10-31",
     "original_provenance": {
@@ -100,17 +100,15 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": "UIUX-P0-05",
-    "active_stories": [
-      "UIUX-P0-05"
-    ],
-    "last_completed_story": "UIUX-P0-04",
-    "next_recommended_story": "UIUX-P0-05",
-    "last_checkpoint": "2026-10-31T12:20:00Z",
+    "active_story": null,
+    "active_stories": [],
+    "last_completed_story": "UIUX-P0-05",
+    "next_recommended_story": "UIUX-P0-06",
+    "last_checkpoint": "2026-10-31T19:05:00Z",
     "last_session_id": "arena/c705f453-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "866ec1c",
+    "last_verified_commit": "f432fe6",
     "last_updated": "2026-10-31",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -214,8 +212,8 @@
         "UIUX-P0-06"
       ],
       "total": 6,
-      "done": 4,
-      "in_progress": 1,
+      "done": 5,
+      "in_progress": 0,
       "blocked": 0,
       "not_started": 1,
       "percent_complete": 67
@@ -341,11 +339,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 4,
-    "in_progress": 1,
+    "done": 5,
+    "in_progress": 0,
     "blocked": 0,
     "not_started": 35,
-    "percent_complete": 10
+    "percent_complete": 12
   },
   "stories": [
     {
@@ -1051,26 +1049,29 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P0-05 (Capture baseline screenshots and test results). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 50,
-        "attempts": 1,
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 3,
         "started_at": "2026-10-31T11:38:38Z",
-        "updated_at": "2026-10-31T14:10:00Z",
-        "completed_at": null,
+        "updated_at": "2026-10-31T19:05:00Z",
+        "completed_at": "2026-10-31T19:05:00Z",
         "owner_session": "arena/c705f453-m5-agent-studio",
-        "commit_sha": null,
+        "commit_sha": "30d5e38fab6751b495bf5cbe299b564540f9fb2f",
         "changed_files": [
+          "docs/media/screenshots/start.png",
+          "docs/media/screenshots/harness.png",
+          "docs/media/screenshots/hall.png",
+          "docs/media/screenshots/pipeline.png",
+          "docs/media/screenshots/compare.png",
+          "docs/media/screenshots/chat.png",
+          "docs/media/screenshots/index.json",
+          "scripts/capture_screenshots.mjs",
+          "tests/test_screenshots.py",
+          "docs/demo.md",
           "docs/uiux-2-0-baseline-evidence.md",
-          "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
-          "product/M5_2_0_UIUX_Source_Manifest.json",
-          "product/M5_2_0_UIUX_Control_Inventory.json",
-          "product/M5_2_0_UIUX_Route_Map.json",
-          "docs/uiux-2-0-control-inventory.md",
-          "docs/uiux-2-0-route-map.md",
           "docs/uiux-2-0-program.md",
           "docs/uiux-2-0-transformation-plan.md",
-          "docs/README.md",
-          "AGENTS.md"
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
         ],
         "evidence": [
           "Half 1, the test baseline: every command in verification_commands was run on this checkout at the pinned commit and its exit code recorded - pytest 0 (1598 passed, 1 skipped in 88 s), ruff 0, mypy 0 (58 files), check_frontend_syntax 0, demo_tour --check 0, validate_docs 0 (124 files), and all five UI/UX guards 0 (manifest 14 files pinned to 0b4b1a4a19c6, inventory 170 markup controls, route map 53 call sites resolving to 61 URLs, trace 37 state-changing routes, sign-off package unsigned). All staged in docs/uiux-2-0-baseline-evidence.md, and re-staged whenever a story changes the numbers.",
@@ -1078,7 +1079,12 @@
           "Half 3, the honest state of the visual gate: scripts/validate_screenshots.py exits 0 with 'Screenshot manifest validated: 0 of 6 captured', and docs/uiux-2-0-baseline-evidence.md records the exact commands a machine with Chrome/Chromium plus puppeteer-core must run. 0 of 6 is recorded as the current state, not as a pass.",
           "Criterion-to-evidence map (the one this story can close): commands actually run with exit codes and the environment they ran in - docs/uiux-2-0-baseline-evidence.md, reproduced from these recorded results, not from memory.",
           "Re-measured after the P0-03 correction (issue #110) re-pinned the ledger to ecd7816: the route map now reports 53 call sites, 60 exact and 1 dynamic match, 0 findings and 58 routes with no browser caller, and the trace reports 37 state-changing routes. The suite grew from 1541 to 1588 passing tests. The visual half is unchanged: 0 of 6 screenshots, no browser in this environment.",
-          "Re-measured after the P0-06 preparation re-pinned the ledger to 0b4b1a4: pytest 1598 passed, validate_docs 124 files, manifest 14 pinned files, and a fifth guard (uiux_preservation_signoff.py --check) joins the set. The visual half is still 0 of 6 screenshots: no browser in this environment."
+          "Re-measured after the P0-06 preparation re-pinned the ledger to 0b4b1a4: pytest 1598 passed, validate_docs 124 files, manifest 14 pinned files, and a fifth guard (uiux_preservation_signoff.py --check) joins the set. The visual half is still 0 of 6 screenshots: no browser in this environment.",
+          "Visual half, second attempt, captured under the review hold's conditions. The first attempt captured from the working checkout and was discarded rather than published: a full-suite run had created a .harnesses store in that tree minutes earlier (issue #117), so the demo could have read it and the provenance could not be cleaned. The published set comes from a disposable `git archive` copy of fa2a31c with no .harnesses store, a throwaway HOME and its own generated token - the isolation condition in issue #108 - and the images show the disposable path. The hold also asked for the capture authentication-prompt timeout to be resolved first; it was, and the cause was a real defect: the shell fetches while it loads and an unauthenticated shell retries without backoff, which starved the renderer, so 'load, store the token, reload' hung. The token is now seeded with evaluateOnNewDocument before the first document exists, and navigation waits for domcontentloaded plus the settle window instead of networkidle2, which the shell's streaming connections never reach.",
+          "Acceptance is deliberately not claimed. The review hold on the baseline page asked for isolation (#108), a fix for the authentication-prompt timeout, a clean-copy test run (#117) and provenance reconciliation of the test table; three of those four are done here and #117 is a repository-wide defect this story cannot close by itself. The story therefore stays in_progress at 90 percent until the reviewer accepts the set or names what else is missing.",
+          "Issue #117 reproduced without being caused by this story's branch: the clean clone had no .harnesses store and had one after a passing suite run, because tests/test_audit_log.py isolates the database path but not HARNESS_STORE_DIR. Recorded so the next session does not have to take it on trust, and so the clean-copy instruction in the baseline page has a measured reason.",
+          "Merged into main as f432fe6: the capture commit 30d5e38fab6751b495bf5cbe299b564540f9fb2f landed with CI green on Python 3.11, 3.12 and 3.13 (run 41228050900), and the artifact drift that the first CI attempt caught - the sign-off package pins a ledger digest - was fixed by regenerating the package rather than by loosening the check. The capture hold is answered and merged; no reviewer objection remains on the pull request.",
+          "Reconciled after merge: PR #119 (merge 1300b6e) landed the demo harness isolation fix, so demo_tour.py now configures a throwaway harness store and rejects roots overlapping the checkout. The baseline page notes it. That removes the reason the page told a reader not to capture from a checkout; it does not retract the images, which were taken under the stricter condition anyway."
         ],
         "test_results": [
           {
@@ -1132,30 +1138,44 @@
             "result": "Documentation validation passed (5 required pages, 124 files scanned)"
           },
           {
-            "command": ".venv/bin/python scripts/validate_screenshots.py",
-            "exit_code": 0,
-            "result": "Screenshot manifest validated: 0 of 6 captured. Capture needs a browser; see docs/demo.md."
-          },
-          {
             "command": ".venv/bin/python scripts/uiux_preservation_signoff.py --check",
             "exit_code": 0,
             "result": "UI preservation sign-off is up to date: unsigned, 21 capabilities across 6 panes, 170 markup controls, 37 state-changing routes traced"
+          },
+          {
+            "command": "node scripts/capture_screenshots.mjs --base-url http://127.0.0.1:46153 --token <throwaway> (demo_tour.py --serve in a disposable copy)",
+            "exit_code": 0,
+            "result": "captured start.png, harness.png, hall.png, pipeline.png, compare.png, chat.png into docs/media/screenshots"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_screenshots.py",
+            "exit_code": 0,
+            "result": "Screenshots validated: 6 of 6 captured and consistent with the manifest."
+          },
+          {
+            "command": "git clone --branch arena/7120d9bd-m5-agent-studio <repo> /tmp/clean && .venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "1640 passed, 1 skipped, 134 s in a clone with no .harnesses store at clone time"
+          },
+          {
+            "command": "ruff, mypy, validate_docs, check_frontend_syntax, demo_tour --check, the five uiux --check scripts and validate_screenshots, all in the /tmp/clean clone",
+            "exit_code": 0,
+            "result": "11 of 11 exit 0; validate_screenshots reports 6 of 6 captured and consistent with the manifest"
           }
         ],
         "visual_evidence": [
-          "None captured: 0 of 6. The pipeline resolves the six planned shots and their paths (dry run, exit 0) but draws nothing, so no pane is claimed to have been seen rendered."
+          "Six screenshots captured through scripts/capture_screenshots.mjs at 2026-10-31T17:54:48Z, 1440x900 at device scale factor 2, from a disposable `git archive` copy of fa2a31c at /tmp/iso that contains no .harnesses store (the #108 isolation condition). start.png 348544 bytes / sha256 df1f..., harness.png 359794 / 8bd2..., hall.png 285246 / 4896..., pipeline.png 263852 / e807..., compare.png 251863 / 2386..., chat.png 248564 / 6648.... scripts/validate_screenshots.py reports '6 of 6 captured and consistent with the manifest'. The Start pane records the disposable workspace path (/tmp/iso), which is deliberate: the images carry no path or session from a real checkout.",
+          "The images show the demo's deliberate first-run state (no provider, no key, no model call): Start at '3 of 6 steps ready', Harness with no session, and the memory and container readouts in the inspector."
         ],
         "known_regressions": [],
         "decisions": [
-          "The story is split rather than closed: the test half is measurable here and is now measured; the visual half needs a browser this environment does not have. Closing on the capture script's dry run would be a claim about pixels that were never drawn.",
-          "The baseline counts are recorded in a hand-written page rather than a generated artifact. They describe one checkout at one commit; regenerating them would imply they track HEAD, which would make a stale baseline look current. A later story states its own numbers beside these.",
-          "Re-pinning the ledger to 866ec1c forced regeneration of all four pin-embedding artifacts in the same change (manifest, control inventory, route map, trace), because each embeds the pinned SHA."
+          "Captured from a disposable source copy, not from the working checkout: the demo can read the source-relative .harnesses store (#108), and a checkout that has just run the suite will have one (#117). Isolation here is about provenance, not secrecy - the images must be reproducible from a state that contains only the commit.",
+          "The pipeline defects are part of this story rather than a follow-up: the story's criterion is six screenshots through the real pipeline, and on any machine whose shell starts unauthenticated that pipeline produced none.",
+          "The story closes on the merge, not on a fresh capture: the six images were already validated, the hold's four asks are answered on the baseline page, and re-shooting after the demo-isolation fix (#119) would change the images' provenance line without changing what they show. The page records that the demo now isolates its store, so the next capture starts from a fixed product."
         ],
-        "blockers": [
-          "The six baseline screenshots cannot be captured in this environment: no Chrome/Chromium binary is on PATH and puppeteer-core is not installed. A machine with a browser must run scripts/capture_screenshots.mjs against scripts/demo_tour.py --serve and then scripts/validate_screenshots.py; only then can this story close."
-        ],
-        "handoff_note": "Test half measured and published in docs/uiux-2-0-baseline-evidence.md (all commands exit 0; pytest 1541 passed, 1 skipped). Visual half blocked: no browser here. Do not close this story on a dry run, and do not edit the recorded counts without re-running the commands.",
-        "next_action": "On a machine with Chrome/Chromium and puppeteer-core: serve scripts/demo_tour.py, capture the six shots with scripts/capture_screenshots.mjs, validate with scripts/validate_screenshots.py, then record the index.json digests here and move the story to done. Until then the story stays in_progress at 50 percent.",
+        "blockers": [],
+        "handoff_note": "Merged as f432fe6 (PRs #118 and #119). Do not re-capture: the six images and the runbook are in docs/media/screenshots and docs/uiux-2-0-baseline-evidence.md, and the demo now isolates its harness store, so a capture from a checkout no longer reads repository state. #117 (tests writing a source-relative harness store) is still open in the product; keep running the suite in a disposable clone.",
+        "next_action": "None for this story. The next decision in the phase belongs to the owner: UIUX-P0-06 is prepared and unsigned, and the P0 gate needs that signature before P1 work starts.",
         "readme_updated": false
       },
       "required_evidence": [

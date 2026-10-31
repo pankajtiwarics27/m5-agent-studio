@@ -87,11 +87,15 @@ The screenshot set is defined by
 pane, with the UI tab id, a title, the file name, and what the shot is meant to
 show, plus the viewport (1440×900 at 2× device scale).
 
-**Status in this repository: the manifest is committed, the images are not.**
-Capturing needs a browser binary, and the environment where this story was
-implemented has neither a browser nor the system libraries or root access to
-install one. Rather than check in placeholder images or hand-drawn mock-ups, the
-manifest ships alone and the images are captured by a maintainer who has a browser:
+**Status in this repository: the manifest and all six images are committed.**
+The set was captured at `2026-10-31T17:54:48Z` from a disposable `git archive`
+copy of the pinned commit. `--serve` now keeps its harness and workspace state in a
+throwaway root of its own ([`demo-isolation-safety.md`](demo-isolation-safety.md)),
+so a capture no longer reads a checkout's state; the copy was the stricter
+condition available at the time.
+`python3 scripts/validate_screenshots.py` reports `6 of 6 captured and consistent
+with the manifest`. `index.json` records each image's sha256, size and viewport, so
+a later drift is a failing check rather than a silent substitution.
 
 ```bash
 # terminal 1
@@ -104,6 +108,30 @@ STUDIO_SCREENSHOT_CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google 
 
 python3 scripts/validate_screenshots.py
 ```
+
+### Capturing where no browser is installed
+
+A container with no Chrome and no root access can still capture honestly, from
+npm alone. `@sparticuz/chromium` ships a Chromium build (and, in its `al2023`
+layer, the NSS libraries that build links against); `puppeteer-core` drives it.
+Extract the binary and its libraries, then point the script at them:
+
+```bash
+npm i puppeteer-core @sparticuz/chromium          # in a scratch directory
+node -e 'require("@sparticuz/chromium").executablePath().then(console.log)'   # extracts the binary
+tar xf <extracted al2023.tar> -C /path/to/chromium-libs                        # libnss3, libnspr4, ...
+
+LD_LIBRARY_PATH=/path/to/chromium-libs/lib \
+STUDIO_SCREENSHOT_CHROME=/path/to/chromium \
+STUDIO_PUPPETEER_CORE=/scratch/node_modules/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js \
+STUDIO_SCREENSHOT_CHROME_ARGS="--no-zygote --single-process --disable-gpu" \
+  node scripts/capture_screenshots.mjs --base-url http://127.0.0.1:PORT --token TOKEN
+```
+
+Those three extra flags are what this Chromium build needs to run without a
+network namespace; the script reads them from the environment so no per-machine
+launch recipe is hard-coded into the repository. The committed images were
+produced exactly this way, with no hand-editing afterwards.
 
 `capture_screenshots.mjs` sets the token in `sessionStorage`, switches to each
 pane through the UI's own tab control, and writes the PNGs plus
@@ -124,9 +152,9 @@ python3 scripts/validate_screenshots.py        # CI runs this
 - It fails if `index.json` and the files disagree: missing image, wrong sha256,
   wrong size, wrong dimensions for the declared viewport, a captured image the
   manifest does not plan, or a planned image with no capture.
-- It does **not** fail when nothing has been captured yet. It reports
-  `0 of 6 captured` and exits 0, because "not captured here" is a fact about the
-  environment, not a defect in the repository.
+- It reports how much of the set exists rather than assuming: `0 of 6 captured` in
+  a tree without images (exit 0, because "not captured here" is a fact about the
+  environment, not a defect), and `6 of 6 captured` once the set is committed.
 
 ## 4. Privacy and independence
 
@@ -142,8 +170,10 @@ python3 scripts/validate_screenshots.py        # CI runs this
 
 ## 5. Limits
 
-- Screenshots are not captured in this repository yet. The pipeline is real and
-  testable, but the images require a browser this environment does not have.
+- The six screenshots are real captures of a seeded demo instance, not mock-ups:
+  each was written by `scripts/capture_screenshots.mjs` and checked by
+  `scripts/validate_screenshots.py`. They show the demo's empty-ish state (no
+  provider, no session), which is the point of the tour and not a defect.
 - The tour covers the first-run and workspace path. Streamed model output needs a
   provider, so it is shown in the quickstart instead of the demo.
 - `--serve` prints a bearer token so a local capture tool can attach; do not run it

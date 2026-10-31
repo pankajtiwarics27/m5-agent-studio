@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_preservation_signoff.py --check",
   "statement": "A preservation and rollback review package with a baseline source pin and hashes of its current input artifacts: capabilities, controls, bounded route candidates and their gates. The source pin alone does not prove that every input was measured at that commit.",
   "prepared_not_signed": "Prepared by an agent. An agent may prepare this package; it may not approve it. The approval lives in the ledger's coordination.preservation_signoff record, and this page reports it.",
-  "pinned_source_commit": "95cc01dfbd9cc581bf5923da4910397df96bbe50",
+  "pinned_source_commit": "fa2a31cec0704ae4322a30c8ff55fd2d3e4037d0",
   "status": "unsigned",
   "signature": {
     "approved": false,
@@ -19,11 +19,11 @@
     "statement": "No signature. This is material for the owner to approve, not an approved baseline."
   },
   "inputs": {
-    "ledger_sha256": "f4fcb12f552ec73e18729458a21502c08c2cc2f0f1f90de88093c5b2174497f4",
-    "source_manifest_sha256": "9657a3f8c4848f552de6e838b3321b6db318b15d86685c4fae64de5b5dfd0ad3",
-    "control_inventory_sha256": "1a854af0969cee34b1cdcbd47a76c29edcfb5bc67b66d6d150960dec86e92b97",
-    "route_map_sha256": "53d72874d56033ac6771bc6def32de223b1fd9dbd6ca78f8e82969b8a19d1e35",
-    "authorization_trace_sha256": "a6452ced395649d1615f71facb776157526aaf2986d702ec0965378aa90cd344",
+    "ledger_sha256": "c0ab5724ba561059cdb79b1f9b0595fa9f799fce16d999939ec4686cecc674d1",
+    "source_manifest_sha256": "1d7d5172a7eef857c11d2144ee98df7e05d564ef83b6175561be9ab81efa5a6a",
+    "control_inventory_sha256": "0a91ba129b34374e66a4efcdc352d3b26953aa969061e3a95ebfab9ebb28e8b3",
+    "route_map_sha256": "2d2aeb1f021ddfdd3b87555b48dc288fac2096b6b2580f1b0f86553b09a43f01",
+    "authorization_trace_sha256": "d00449e62788e9f96d523dc49b817ba2df10e5de38071c31e2b0d00fd009de20",
     "frontend_sha256": "3137cb7d05bcbdd29155576bd9952f49172705b85e70a0c0a2484c81bc80a66a"
   },
   "approval_request": [
@@ -71,7 +71,7 @@
     "pane_routes_reached": 26,
     "pane_routes_excluded": 34,
     "route_walk_depth": 2,
-    "screenshots_captured": 0,
+    "screenshots_captured": 6,
     "screenshots_planned": 6
   },
   "panes": [
@@ -1254,7 +1254,7 @@
     "Pane-to-route attribution follows calls inside the inline script at most 2 hops from the handler a control names, and keeps a route only when the walk passes the function that supplied its literal. A deeper chain is invisible, so a pane with no routes below is not a pane that calls nothing; the excluded count on each pane shows the filter refusing a shared helper's other callers.",
     "The route map is a bounded lexical scan, not proof of exhaustive browser coverage or execution. Unresolved URL or method edges remain visible; no observed caller is not proof of absence.",
     "The preservation matrix is a list of capabilities in words. This package carries it row for row and does not decide which control implements which row; that mapping is what the owner is being asked to confirm.",
-    "0 of 6 baseline screenshots are recorded. Missing or unaccepted screenshots leave the visual gate open; static artifacts cannot substitute for them.",
+    "6 of 6 baseline screenshots are recorded. Missing or unaccepted screenshots leave the visual gate open; static artifacts cannot substitute for them.",
     "The demo and full test suite can use source-relative harness data; until isolation is fixed, run them only from a disposable checkout with an empty harness store (issues #108 and #117).",
     "Approval is an owner act recorded in the ledger. A green test suite proves the package matches the tree; it does not prove the tree is acceptable or that other P0 holds are cleared."
   ]
