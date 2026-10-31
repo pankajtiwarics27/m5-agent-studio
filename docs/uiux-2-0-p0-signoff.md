@@ -6,11 +6,11 @@ implement them, the routes those controls reach, the boundary that can refuse th
 and what a revert does and does not touch.
 
 * Status: **unsigned** — No signature. This is material for the owner to approve, not an approved baseline.
-* Pinned baseline source commit: `95cc01dfbd9cc581bf5923da4910397df96bbe50` (input artifacts are hashed separately).
+* Pinned baseline source commit: `fa2a31cec0704ae4322a30c8ff55fd2d3e4037d0` (input artifacts are hashed separately).
 * 6 panes · 21 preserved capabilities · 170 markup controls (101 chrome, 69 panes) · 30 rendered by script.
 * 115 routes exist, 57 with a resolved or possible caller, 58 with none observed and 0 unknown due to unresolved edges; 37 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
-* Baseline screenshots: 0 of 6.
+* Baseline screenshots: 6 of 6.
 
 ## What this page is, and is not
 
@@ -324,6 +324,6 @@ publishing a half-signature as an approval.
 * Pane-to-route attribution follows calls inside the inline script at most 2 hops from the handler a control names, and keeps a route only when the walk passes the function that supplied its literal. A deeper chain is invisible, so a pane with no routes below is not a pane that calls nothing; the excluded count on each pane shows the filter refusing a shared helper's other callers.
 * The route map is a bounded lexical scan, not proof of exhaustive browser coverage or execution. Unresolved URL or method edges remain visible; no observed caller is not proof of absence.
 * The preservation matrix is a list of capabilities in words. This package carries it row for row and does not decide which control implements which row; that mapping is what the owner is being asked to confirm.
-* 0 of 6 baseline screenshots are recorded. Missing or unaccepted screenshots leave the visual gate open; static artifacts cannot substitute for them.
+* 6 of 6 baseline screenshots are recorded. Missing or unaccepted screenshots leave the visual gate open; static artifacts cannot substitute for them.
 * The demo and full test suite can use source-relative harness data; until isolation is fixed, run them only from a disposable checkout with an empty harness store (issues #108 and #117).
 * Approval is an owner act recorded in the ledger. A green test suite proves the package matches the tree; it does not prove the tree is acceptable or that other P0 holds are cleared.

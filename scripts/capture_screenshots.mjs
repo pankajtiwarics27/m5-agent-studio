@@ -6,6 +6,12 @@
  *   - a Chrome/Chromium binary (set STUDIO_SCREENSHOT_CHROME, or have one on PATH)
  *   - puppeteer-core (npm i puppeteer-core, or point STUDIO_PUPPETEER_CORE at
  *     node_modules/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js)
+ *   - optionally STUDIO_SCREENSHOT_CHROME_ARGS for extra Chrome flags, which is
+ *     how a constrained container gets a working headless browser: the npm
+ *     package @sparticuz/chromium ships a Chromium build whose network service
+ *     needs "--no-zygote --single-process --disable-gpu" here. See
+ *     docs/uiux-2-0-baseline-evidence.md for the exact invocation that produced
+ *     the committed images.
  *
  * Usage:
  *   python3 scripts/demo_tour.py --serve            # in one terminal
@@ -164,10 +170,19 @@ async function capture(args, manifest) {
   if (!args.token) throw new Error("--token is required (printed by scripts/demo_tour.py --serve)");
   const puppeteer = await loadPuppeteer();
   const executablePath = resolveChrome();
+  const extraArgs = (process.env.STUDIO_SCREENSHOT_CHROME_ARGS || "")
+    .split(/\s+/)
+    .filter(Boolean);
   const browser = await puppeteer.launch({
     executablePath,
     headless: true,
-    args: ["--no-sandbox", "--disable-dev-shm-usage", "--hide-scrollbars", "--force-color-profile=srgb"],
+    args: [
+      "--no-sandbox",
+      "--disable-dev-shm-usage",
+      "--hide-scrollbars",
+      "--force-color-profile=srgb",
+      ...extraArgs,
+    ],
   });
   const captured = [];
   try {
@@ -179,9 +194,26 @@ async function capture(args, manifest) {
     });
     const errors = [];
     page.on("pageerror", (error) => errors.push(String(error)));
+    // Seed the token before the first document exists. The shell starts fetching
+    // as it loads; unauthenticated it answers 401 and retries without backoff,
+    // which can starve the renderer, so "load, then store the token, then reload"
+    // can hang instead of producing an image.
+    await page.evaluateOnNewDocument(
+      (key, token) => {
+        try {
+          window.sessionStorage.setItem(key, token);
+        } catch (_error) {
+          // A document with no storage is a capture problem, not a silent pass:
+          // the first authenticated request below will fail loudly instead.
+        }
+      },
+      args.tokenKey,
+      args.token,
+    );
     await page.goto(args.baseUrl, { waitUntil: "domcontentloaded", timeout: args.timeoutMs });
-    await page.evaluate((key, token) => window.sessionStorage.setItem(key, token), args.tokenKey, args.token);
-    await page.reload({ waitUntil: "networkidle2", timeout: args.timeoutMs });
+    // The shell holds streaming connections open for its whole lifetime, so
+    // networkidle never arrives. Settle for the same window used between panes.
+    await new Promise((done) => setTimeout(done, args.settleMs));
     for (const shot of manifest.shots) {
       await page.evaluate((tab) => {
         if (typeof window.switchTab === "function") window.switchTab(tab);

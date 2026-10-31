@@ -7,7 +7,7 @@
   "regenerate_with": "python3 scripts/uiux_source_manifest.py",
   "check_with": "python3 scripts/uiux_source_manifest.py --check",
   "statement": "Hashed inventory of the UI surface this program may change, plus the tab and route tables every later story depends on. Values are parsed from the files, not from the roadmap's web extracts. A story that changes the surface regenerates this manifest; the check fails when the two disagree.",
-  "pinned_source_commit": "95cc01dfbd9cc581bf5923da4910397df96bbe50",
+  "pinned_source_commit": "fa2a31cec0704ae4322a30c8ff55fd2d3e4037d0",
   "files": [
     {
       "path": "static/index.html",
@@ -54,9 +54,9 @@
     {
       "path": "scripts/capture_screenshots.mjs",
       "role": "the only accepted way to capture visual evidence",
-      "sha256": "83c11d292b494410ef9dd1588dcc330279f1b663eec67884a387a30d00598fb0",
-      "bytes": 8789,
-      "lines": 231
+      "sha256": "8311e2c2f4dc425b4729720dfab119e0e98aa47a2eec5ee0cf2fe1c6e881d8b4",
+      "bytes": 10070,
+      "lines": 263
     },
     {
       "path": "scripts/validate_screenshots.py",
@@ -698,42 +698,42 @@
         "tab": "start",
         "title": "Start",
         "file": "start.png",
-        "captured": false
+        "captured": true
       },
       {
         "id": "harness",
         "tab": "harness",
         "title": "Harness",
         "file": "harness.png",
-        "captured": false
+        "captured": true
       },
       {
         "id": "hall",
         "tab": "hall",
         "title": "Council",
         "file": "hall.png",
-        "captured": false
+        "captured": true
       },
       {
         "id": "council",
         "tab": "council",
         "title": "Pipeline",
         "file": "pipeline.png",
-        "captured": false
+        "captured": true
       },
       {
         "id": "debate",
         "tab": "debate",
         "title": "Compare",
         "file": "compare.png",
-        "captured": false
+        "captured": true
       },
       {
         "id": "chat",
         "tab": "chat",
         "title": "Chat",
         "file": "chat.png",
-        "captured": false
+        "captured": true
       }
     ],
     "tab_ids": [
@@ -744,7 +744,7 @@
       "debate",
       "chat"
     ],
-    "captured": 0,
+    "captured": 6,
     "total": 6,
     "tab_ids_match_frontend": true
   },

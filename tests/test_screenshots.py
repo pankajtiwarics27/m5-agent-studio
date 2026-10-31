@@ -258,11 +258,26 @@ def _cli(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def test_cli_reports_an_uncaptured_set_as_valid() -> None:
+def test_cli_reports_the_capture_state_rather_than_assuming_it() -> None:
+    """An uncaptured set is valid; a captured one must be valid too.
+
+    The old version of this test pinned "0 of 6" against the committed tree, which
+    made a legitimately captured set a test failure. What the CLI owes a reader is
+    the count it actually found, so the assertion is that the count matches the
+    files on disk.
+    """
     result = _cli()
 
     assert result.returncode == 0, result.stderr
-    assert "0 of 6 captured" in result.stdout
+    report = json.loads(_cli("--json").stdout)
+    assert f"{report['captured']} of {report['planned']} captured" in result.stdout
+
+    captured_files = [
+        entry for entry in json.loads((ROOT / "docs" / "media" / "screenshots" / "manifest.json").read_text(encoding="utf-8"))["shots"]
+        if (ROOT / "docs" / "media" / "screenshots" / entry["file"]).is_file()
+    ]
+    assert report["captured"] == len(captured_files)
+    assert report["status"] == ("complete" if captured_files else "not-captured")
 
 
 def test_cli_json_status_for_the_committed_tree() -> None:
@@ -273,6 +288,7 @@ def test_cli_json_status_for_the_committed_tree() -> None:
     assert report["planned"] == 6
     assert report["problems"] == []
     assert report["status"] in {"not-captured", "complete"}
+    assert report["captured"] == (6 if report["status"] == "complete" else 0)
 
 
 def test_cli_fails_on_an_inconsistent_manifest(tmp_path: Path) -> None:
