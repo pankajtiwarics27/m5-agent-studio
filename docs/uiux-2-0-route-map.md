@@ -6,7 +6,7 @@ it lives in, and the route it can hit — derived from the calls and the route t
 not from handler names.
 
 * Pinned source commit: `0956e44f51c2989c93ad22ae1b2606da78e7e1c9`.
-* Frontend digest: `3137cb7d05bcbdd2…` · `app.py` digest: `dba9c61be9a6525e…`.
+* Frontend digest: `3137cb7d05bcbdd2…` · `app.py` digest: `359c080bf2188661…`.
 * 53 call sites resolve to 59 URLs — exact: 58, dynamic: 1, findings: 0, unresolved call sites: 0.
 * 102 routes exist; 54 have a browser caller and 48 do not.
 

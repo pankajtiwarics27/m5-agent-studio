@@ -9,7 +9,7 @@
   "statement": "Every fetch call in the inline script mapped to the route it can hit, derived from the call sites and the route table. Unmatched calls, method mismatches, dynamic matches and routes with no browser caller are published rather than smoothed over.",
   "pinned_source_commit": "0956e44f51c2989c93ad22ae1b2606da78e7e1c9",
   "frontend_sha256": "3137cb7d05bcbdd29155576bd9952f49172705b85e70a0c0a2484c81bc80a66a",
-  "app_sha256": "dba9c61be9a6525e329efec573df94ed768bf38d8fe2ffad533b4e397c6bbaab",
+  "app_sha256": "359c080bf218866185fb5ce39135f67963ddf74e477cbfb231342f1f2c33609f",
   "totals": {
     "fetch_call_sites": 53,
     "resolved_urls": 59,
