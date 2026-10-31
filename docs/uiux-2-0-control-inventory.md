@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `ad6057a361133a14010a7c7b5bf291c5043dfa65defcb91065a478ddd2e2c50b`.
+* Frontend digest: `e7013225886ec86db5d807e7e2444160e5064b770e74f0dea9c385b591d034ae`.
 * Panes: 6 · controls in panes: 69 · controls in the
   shared chrome: 101 · script-rendered: 30.
 
@@ -27,13 +27,13 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
 | debate | `pane-debate` | 5 | 0 | 0 | button 2, input 1, select 1, textarea 1 |
 | chat | `pane-chat` | 9 | 1 | 0 | button 3, input 2, select 3, textarea 1 |
-| (chrome) | outside the panes | 101 | 44 | 0 | button 54, input 29, select 12, summary 1, textarea 5 |
+| (chrome) | outside the panes | 101 | 38 | 0 | button 54, input 29, select 12, summary 1, textarea 5 |
 
 ## What the numbers already say
 
 * 170 controls are in the markup and 30 more are built by script — a checklist written from the markup alone would miss 15% of the interactive surface.
 * The shared chrome carries 101 controls; all six panes together carry 69. Most of the clicking happens in the shell, not inside a tab.
-* 58 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
+* 52 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
 
@@ -154,12 +154,12 @@ attributed to one.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
-| 1 | button | — | — | Start | switchTab('start') |
-| 2 | button | — | — | Harness | switchTab('harness') |
-| 3 | button | — | — | Council | switchTab('hall') |
-| 4 | button | — | — | Pipeline | switchTab('council') |
-| 5 | button | — | — | Compare | switchTab('debate') |
-| 6 | button | — | — | Chat | switchTab('chat') |
+| 1 | button | tab-start | tab | Start | switchTab('start') |
+| 2 | button | tab-harness | tab | Harness | switchTab('harness') |
+| 3 | button | tab-hall | tab | Council | switchTab('hall') |
+| 4 | button | tab-council | tab | Pipeline | switchTab('council') |
+| 5 | button | tab-debate | tab | Compare | switchTab('debate') |
+| 6 | button | tab-chat | tab | Chat | switchTab('chat') |
 | 7 | button | — | — | Open Command Palette (Cmd+K) | openCommandPalette() |
 | 8 | button | densityToggleBtn | button | Density: comfortable | toggleDensity() |
 | 9 | button | themeToggleBtn | button | Switch to light theme | toggleTheme() |
