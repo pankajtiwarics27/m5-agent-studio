@@ -2416,7 +2416,7 @@
           "ADR-0013 (docs/adr/0013-process-supervision-and-in-flight-containment.md): stdlib-only process_supervision.py with (pid, start_fingerprint) recycling protection, M5_SUPERVISION_ID detached-tree discovery, 3-stage cooperative SIGTERM -> bounded SIGKILL -> lingering-PID fail-closed containment, and atomic $HARNESS_STORE_DIR/containment/state.json persistence."
         ],
         "blockers": [],
-        "handoff_note": "M5-P3-03 complete with 13 dedicated process-supervision tests and full suite green. Next mandatory story in P3 is M5-P3-04 (Secret lifecycle and redaction guarantees).",
+        "handoff_note": "M5-P3-03 complete with 13 dedicated process-supervision tests and the full suite green (1127 passed, 1 skipped on merged main 05095f5). Next mandatory story in P3 is M5-P3-04, \"Scoped grants, expiry and revocation\" (it is not a secret-lifecycle story). Independently reviewed by arena/ff251d72-m5-agent-studio at 64b1b5a: verification sequence reproduced, AC1/AC2/AC3 probed directly (fence survives a new store instance and a boot-id change; holds block the owning task and other tasks on the same workspace but not other workspaces; corrupt or symlinked containment state fails closed); no blocking findings; ADR-0013 marked reviewed.",
         "next_action": "Claim and implement M5-P3-04 on a fresh session branch after PR #60 merges.",
         "readme_updated": true
       }
