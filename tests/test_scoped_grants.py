@@ -10,6 +10,7 @@ import subprocess
 import sys
 import textwrap
 import time
+from typing import Any
 
 from fastapi.testclient import TestClient
 import httpx
@@ -747,22 +748,57 @@ def test_capability_specific_in_flight_containment_preserves_unrelated_capabilit
                 )
             )
 
-            # Wait until both child trees have recorded their PIDs.
+            def _read_pid(path: Path) -> int:
+                """Read a pid the child may still be writing."""
+                for _ in range(250):
+                    try:
+                        text = path.read_text(encoding="utf-8").strip()
+                        if text:
+                            return int(text)
+                    except (OSError, ValueError):
+                        pass
+                    time.sleep(0.02)
+                raise AssertionError(f"{path.name} never held a pid")
+
+            def _registered_mcp_records() -> list[Any]:
+                """In-flight supervisor records owned by the stdio MCP session."""
+                return [
+                    rec
+                    for rec in supervisor.store.list_in_flight_processes()
+                    if rec.status == "running"
+                    and rec.session_id == sid
+                    and "external_mcp" in rec.capabilities
+                ]
+
+            # Wait until both child trees have recorded their PIDs *and* the
+            # supervisor has registered the stdio MCP record. The pid file is
+            # written by the child at startup, which can happen before the
+            # parent reaches `_register_active_subprocess` (that runs only once
+            # `create_subprocess_exec` returns). Containing in that window
+            # matches zero records and fails with `assert 0 == 1` for a reason
+            # that has nothing to do with capability scoping, so wait for the
+            # registry - the same source `contain_by_capability_async` reads.
             deadline = time.monotonic() + 5.0
+            mcp_records: list[Any] = []
             while time.monotonic() < deadline:
+                mcp_records = _registered_mcp_records()
                 if (
-                    slow_mcp_pid_file.exists()
+                    mcp_records
+                    and slow_mcp_pid_file.exists()
                     and leader_pid_file.exists()
                     and detached_pid_file.exists()
                 ):
                     break
-                await asyncio.sleep(0.05)
+                await asyncio.sleep(0.02)
 
             assert slow_mcp_pid_file.exists(), "slow_mcp did not start"
             assert detached_pid_file.exists(), "detached bash worker did not start"
-            mcp_pid = int(slow_mcp_pid_file.read_text().strip())
-            leader_pid = int(leader_pid_file.read_text().strip())
-            det_pid = int(detached_pid_file.read_text().strip())
+            mcp_pid = _read_pid(slow_mcp_pid_file)
+            leader_pid = _read_pid(leader_pid_file)
+            det_pid = _read_pid(detached_pid_file)
+            assert [rec.pid for rec in mcp_records] == [mcp_pid], (
+                "slow_mcp must be registered for containment under its own pid"
+            )
 
             # Step A: Revoke ONLY `mcp_grant` (`external_mcp` on `mcp:slowmcp:hang`) and run capability containment!
             rev_mcp, _ = store.revoke_grant(mcp_grant.grant_id, session_id=sid, block_scope=True)
