@@ -812,6 +812,16 @@ and the AS roadmap is retained unmodified (no history deleted). Multiple
 implementation agents may work in parallel under the claim/review/merge
 protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
 
+A second program was authorized on 2026-10-31:
+[`product/M5_2_0_UIUX_Autonomous_Roadmap.json`](product/M5_2_0_UIUX_Autonomous_Roadmap.json)
+— 40 UI/UX stories across 7 phases, **0 done**. It is a plan, not a shipped
+feature set: nothing in it is described in this README as available, its `P0`
+phase exists to replace the plan's web-derived assumptions with a pinned,
+locally verified baseline, and its claim/review/merge rules live in
+[`M5_2_0_UIUX_AGENT_PROMPT.md`](M5_2_0_UIUX_AGENT_PROMPT.md) with the phase
+gates and evidence bar in
+[`docs/uiux-2-0-program.md`](docs/uiux-2-0-program.md).
+
 - **M5 2.0 autonomous-runtime program** —
   [`product/M5_2_0_Autonomous_Roadmap.json`](product/M5_2_0_Autonomous_Roadmap.json):
   34 stories across 7 phases. **Done with evidence: `M5-P0-01`…`M5-P0-07`

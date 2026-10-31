@@ -41,6 +41,7 @@ Violating any of these is a rejected change, regardless of tests passing:
 | Artifact | Role |
 |---|---|
 | [`product/M5_2_0_Autonomous_Roadmap.json`](product/M5_2_0_Autonomous_Roadmap.json) | **Authoritative execution ledger (owner-confirmed 2026-10-30)** for the M5 2.0 autonomous-runtime program (stories `M5-P0-01`…`M5-P6-03`, with per-story tracking). Mapping to the AS program: [`docs/m5-2-0-roadmap-reconciliation.md`](docs/m5-2-0-roadmap-reconciliation.md). Multi-agent rules: [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md). |
+| [`product/M5_2_0_UIUX_Autonomous_Roadmap.json`](product/M5_2_0_UIUX_Autonomous_Roadmap.json) | **Authoritative execution ledger for the M5 2.0 UI/UX program** (owner-authorized 2026-10-31): 40 stories `UIUX-P0-01`…`UIUX-P6-05` across 7 phases, with per-story tracking, a verified tab registry and a feature-preservation matrix. Phases, gates and the evidence bar: [`docs/uiux-2-0-program.md`](docs/uiux-2-0-program.md). Multi-agent rules: [`M5_2_0_UIUX_AGENT_PROMPT.md`](M5_2_0_UIUX_AGENT_PROMPT.md). Separate scope from the runtime ledger; neither program edits the other's story tracking. |
 | [`product/Adaptive_Runtime_Product_Roadmap_v2.json`](product/Adaptive_Runtime_Product_Roadmap_v2.json) | **Historical source and status ledger for the AS product plan** — 63 stories (`AS-001`…`AS-063`) across 7 milestones, each with priority, dependencies, acceptance criteria, an implementation prompt, and a `status` field (`planned` / `in_progress` / `completed` / `verified`) with `status_evidence`. Retained unmodified; no history deleted. |
 | [`docs/product-roadmap-status.md`](docs/product-roadmap-status.md) | Human-readable dashboard generated from the JSON. **Generated file — never hand-edit.** |
 | [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) | Security-remediation depth beyond story status (what is validated, what remains). |
@@ -49,9 +50,21 @@ Violating any of these is a rejected change, regardless of tests passing:
 | [`BASELINE.md`](BASELINE.md) + `BASELINE_COMMIT` | The pinned source baseline and the reproducibility contract. |
 | [`README.md`](README.md) | Product overview, quick start, full configuration/API reference, and critical invariants. |
 
-**How to pick work:** choose the highest-priority (`P0` before `P1` before `P2`)
-`planned` story whose dependencies are all `completed` or `verified`, respecting
-milestone order. One story per branch, one branch per pull request.
+**How to pick work:** two autonomous programs run here, each with its own ledger,
+claim state and protocol.
+
+- **Runtime program** ([`product/M5_2_0_Autonomous_Roadmap.json`](product/M5_2_0_Autonomous_Roadmap.json)):
+  all mandatory stories are `done`; only the optional `M5-P6-01`…`P6-03` remain,
+  and optional stories are never started without explicit owner authorization.
+- **UI/UX program** ([`product/M5_2_0_UIUX_Autonomous_Roadmap.json`](product/M5_2_0_UIUX_Autonomous_Roadmap.json)):
+  the active workstream. Phases run `P0` → `P6` in order, `P0` is a hard gate,
+  and the ready story is whichever one's dependencies are all `done`.
+
+Within the program you are working on, choose the highest-priority ready story,
+respect phase order, and take one story per branch and pull request. A UI/UX
+session never edits runtime story tracking and a runtime session never edits
+UI/UX story tracking; backend behaviour a screen needs is a runtime story or an
+open risk, never an API widening inside a UI pull request.
 
 **Never self-certify a review gate.** Human verification of this repository is
 performed **once, at the end, as final end-to-end testing** after all stories are

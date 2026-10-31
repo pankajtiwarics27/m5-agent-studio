@@ -118,7 +118,10 @@ measurements without trusting them).
 · [`../AGENTS.md`](../AGENTS.md) (working rules for humans and agents)
 · [`../CONTRIBUTING.md`](../CONTRIBUTING.md) · [`../CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md)
 · [`../product/Adaptive_Runtime_Product_Roadmap_v2.json`](../product/Adaptive_Runtime_Product_Roadmap_v2.json) (AS program story ledger)
-· [`../product/M5_2_0_Autonomous_Roadmap.json`](../product/M5_2_0_Autonomous_Roadmap.json) (M5 2.0 autonomous-program ledger)
+· [`../product/M5_2_0_Autonomous_Roadmap.json`](../product/M5_2_0_Autonomous_Roadmap.json) (M5 2.0 autonomous-runtime program ledger)
+· [`../product/M5_2_0_UIUX_Autonomous_Roadmap.json`](../product/M5_2_0_UIUX_Autonomous_Roadmap.json) (M5 2.0 UI/UX program ledger, 40 stories)
+· [`uiux-2-0-program.md`](uiux-2-0-program.md) (UI/UX phases, gates and evidence bar)
+· [`../M5_2_0_UIUX_AGENT_PROMPT.md`](../M5_2_0_UIUX_AGENT_PROMPT.md) (UI/UX claim, review and merge protocol)
 
 ## M5 2.0 ground-truth evidence (2026-10-30)
 
@@ -132,9 +135,11 @@ known-bypass inventory for the extracted execution boundary, ADR-0002) ·
 codes, blocked measurements) ·
 [`m5-2-0-hardware-qualification-evidence.md`](m5-2-0-hardware-qualification-evidence.md)
 (operator-run 24 GB Apple M5 hardware qualification for `M5-P4-01`, 2026-10-31) ·
+[`m5-2-0-sandbox-isolation-evidence.md`](m5-2-0-sandbox-isolation-evidence.md)
+(the operator run that qualified container isolation on the target host,
+`M5-P3-01`, with the residual it measures) ·
 [`m5-2-0-sandbox-memory-limit-finding.md`](m5-2-0-sandbox-memory-limit-finding.md)
-[`m5-2-0-sandbox-isolation-evidence.md`](m5-2-0-sandbox-isolation-evidence.md) — the operator run that qualified container isolation on the target host (`M5-P3-01`), with the residual it measures.
-(open sandbox memory-limit finding for `M5-P3-01`: 3 GiB allocated under a 512 MiB cap) ·
+(the earlier memory-limit failure that run supersedes, kept as recorded) ·
 [`m5-2-0-security-release-gate.md`](m5-2-0-security-release-gate.md)
 (executed `M5-P5-03` fault-injection & adversarial release gate, metrics, residual risks, and `release-blocked` decision) ·
 [`../M5_2_0_AGENT_PROMPT.md`](../M5_2_0_AGENT_PROMPT.md) (parallel-agent
