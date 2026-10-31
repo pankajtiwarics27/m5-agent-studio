@@ -33,6 +33,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DIST = PROJECT_ROOT / "dist" / "releases"
 STANDALONE = PROJECT_ROOT / rm.ARTIFACT_NAME
 BUILDER = PROJECT_ROOT / "scripts" / "build_studio.py"
+SECURITY_GATE = PROJECT_ROOT / "scripts" / "security_release_gate.py"
 
 
 def _git_commit() -> str:
@@ -59,6 +60,18 @@ def _artifact_for(dist: Path, version: str) -> Path:
 
 def cmd_package(args: argparse.Namespace) -> int:
     version = rm.validate_version(args.version)
+    if getattr(args, "require_release_gate", False):
+        gate_proc = subprocess.run(
+            [sys.executable, str(SECURITY_GATE), "--enforce", "--json"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if gate_proc.returncode != 0:
+            raise rm.ReleaseError(
+                "Security release gate blocked packaging; resolve blocking reasons before release."
+            )
     source = Path(args.artifact).expanduser() if args.artifact else STANDALONE
     if not args.artifact:
         completed = subprocess.run(
@@ -143,7 +156,26 @@ def main(argv: list[str] | None = None) -> int:
     package.add_argument("--version", required=True, help="MAJOR.MINOR.PATCH")
     package.add_argument("--artifact", help="Use an existing studio.py instead of rebuilding")
     package.add_argument("--output", default=str(DEFAULT_DIST), help="Release staging directory")
+    package.add_argument(
+        "--require-release-gate",
+        action="store_true",
+        help="Fail closed unless M5-P5-03 security_release_gate reports release-ready",
+    )
     package.set_defaults(func=cmd_package)
+
+    def cmd_gate(gate_args: argparse.Namespace) -> int:
+        argv_gate = [sys.executable, str(SECURITY_GATE), "--enforce", "--json"]
+        if gate_args.signoff:
+            argv_gate.extend(["--signoff", gate_args.signoff])
+        if gate_args.supply_chain_dir:
+            argv_gate.extend(["--supply-chain-dir", gate_args.supply_chain_dir])
+        completed = subprocess.run(argv_gate, cwd=PROJECT_ROOT, text=True, check=False)
+        return int(completed.returncode)
+
+    gate = sub.add_parser("gate", help="Enforce M5-P5-03 fault-injection and AS-031 security release gate")
+    gate.add_argument("--signoff", help="Override path to docs/security-review-signoff.md")
+    gate.add_argument("--supply-chain-dir", help="Optional supply-chain evidence directory (dist/evidence)")
+    gate.set_defaults(func=cmd_gate)
 
     for name, handler, help_text in (
         ("install", cmd_install, "Install and activate one packaged release"),

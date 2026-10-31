@@ -44,6 +44,7 @@ contain placeholder text, and every relative link must resolve.
 | [`threat-model.md`](threat-model.md) | Actors, trust boundaries, abuse cases, mitigations |
 | [`security-review-package.md`](security-review-package.md) | The independent-review package and boundary inventory (B1–B12) |
 | [`security-review-signoff.md`](security-review-signoff.md) | Reviewer record and release gate — currently unsigned |
+| [`m5-2-0-security-release-gate.md`](m5-2-0-security-release-gate.md) | Executed M5-P5-03 crash/race/MCP/adversarial gate, measured metrics, residual risks, and `release-blocked` decision |
 | [`sandbox-boundary.md`](sandbox-boundary.md) | Sandbox and filesystem boundary hardening |
 | [`security-incident-containment.md`](security-incident-containment.md) | Security dependency graphs, configuration generations, incident suspension, fallback qualification, and post-incident requalification |
 | [`execution-profiles.md`](execution-profiles.md) | Unified capability descriptors, conservative footprints, admission barriers, and expansion reconciliation |
@@ -133,6 +134,8 @@ codes, blocked measurements) ·
 (operator-run 24 GB Apple M5 hardware qualification for `M5-P4-01`, 2026-10-31) ·
 [`m5-2-0-sandbox-memory-limit-finding.md`](m5-2-0-sandbox-memory-limit-finding.md)
 (open sandbox memory-limit finding for `M5-P3-01`: 3 GiB allocated under a 512 MiB cap) ·
+[`m5-2-0-security-release-gate.md`](m5-2-0-security-release-gate.md)
+(executed `M5-P5-03` fault-injection & adversarial release gate, metrics, residual risks, and `release-blocked` decision) ·
 [`../M5_2_0_AGENT_PROMPT.md`](../M5_2_0_AGENT_PROMPT.md) (parallel-agent
 prompt and the multi-agent claim/review/merge protocol).
 
