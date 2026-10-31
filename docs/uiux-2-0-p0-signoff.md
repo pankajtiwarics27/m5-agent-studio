@@ -5,22 +5,23 @@ It is the `UIUX-P0-06` package: the capabilities the program must keep, the cont
 implement them, the routes those controls reach, the boundary that can refuse those routes,
 and what a revert does and does not touch.
 
-* Status: **approved** — Signed in the ledger; this page only reports the record.
+* Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
+* Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
 * 6 panes · 21 preserved capabilities · 170 markup controls (101 chrome, 69 panes) · 30 rendered by script.
 * 115 routes exist, 57 with a resolved or possible caller, 58 with none observed and 0 unknown due to unresolved edges; 37 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
-* Baseline screenshots: 6 of 6.
+* Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
 
 ## What this page is, and is not
 
 Prepared by an agent. An agent may prepare this package; it may not approve it. The approval lives in the ledger's coordination.preservation_signoff record, and this page reports it.
 
-If an input artifact changes, `--check` fails and the package has to be regenerated — which is
-the point at which the owner sees what changed. This bounded scan is not proof of exhaustive browser
-coverage or execution. An unsigned package and passing checks do not clear other P0 holds.
-Schema 2 replaces `routes_used_by_frontend` with `routes_with_resolved_or_possible_caller`,
-`routes_no_caller_observed` and `routes_unknown_frontend_caller`; unresolved totals include methods.
+`--check` checks generated-file freshness, not approval or owner review. Regeneration does not
+notify the owner or approve changed inputs. This bounded scan is not proof of exhaustive browser
+coverage or execution. Passing checks do not clear other P0 holds. Schema 2 replaced
+`routes_used_by_frontend` with resolved/possible, no-observed and unknown caller totals; schema 3
+separates the historical signature from any explicit binding to current input digests.
 
 ## What the owner is being asked to approve
 
@@ -308,7 +309,7 @@ One story, one merge commit. Revert the merge, not the individual commits, so th
 
 | Field | Value |
 |---|---|
-| Status | **approved** |
+| Status | **historical-approval-unbound** |
 | Approved by | pankajtiwarics27 |
 | Approved at | 2026-10-31T20:10:00Z |
 | Reference | Arena agent-mode session, 2026-10-31: owner message "Approve UIUX-P0-06: approved_by = pankajtiwarics27", recorded in the pull request that carries this signature. |
@@ -316,7 +317,33 @@ One story, one merge commit. Revert the merge, not the individual commits, so th
 An approval is recorded in `product/M5_2_0_UIUX_Autonomous_Roadmap.json` under
 `coordination.preservation_signoff` as `approved_by`, `approved_at` and `reference`, and this page
 regenerates to report it. A record missing any of the three fails the generator rather than
-publishing a half-signature as an approval.
+publishing a half-signature as an approval. A historical signature by itself is not an
+approval of later changes. The binding below is separately reported, not inferred.
+
+## Approval input binding
+
+The historical record has no approved input snapshot and does not establish approval of current inputs.
+
+Binding schema: `m5-uiux-inputs-v1`. Owner decision reference: —.
+The ledger digest covers canonical JSON with only
+`coordination.preservation_signoff` removed to avoid a signature/hash cycle. All other
+ledger content is included. The screenshot index digest does not verify image bytes or
+provenance; a matching snapshot cannot clear separate review holds.
+
+| Input | Current digest | Owner-recorded digest |
+|---|---|---|
+| `ledger_content_sha256` | `ebdd2301850da59c74c875590326c46f2c7c53f157dfaf8e3b99f7d3d05ad105` | `not recorded` |
+| `source_manifest_sha256` | `d71ec9cb823e7594cf860fe17a2559cbbb59202df7785946e59e88c1b9be8fe5` | `not recorded` |
+| `control_inventory_sha256` | `bf3d69219d667e0bd53e4124cdd8df52af85c61225df91c96d92cefbae718ae6` | `not recorded` |
+| `route_map_sha256` | `384fdb251a4a845dcd9bf365e0a75a387b29384dc7f0f23e425c40fc9f0c275b` | `not recorded` |
+| `authorization_trace_sha256` | `7d849b1152ed143b9e23292f6c8ee6f5a114ef2117fd0a683753948d375bb260` | `not recorded` |
+| `frontend_sha256` | `e7013225886ec86db5d807e7e2444160e5064b770e74f0dea9c385b591d034ae` | `not recorded` |
+| `screenshot_manifest_sha256` | `69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92` | `not recorded` |
+| `screenshot_index_sha256` | `de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0` | `not recorded` |
+| `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |
+| `route_map_generator_sha256` | `b60f8e88e6dba6f31dea75b6c79ce18b45c5bb221f84227d915be9f6b97d5c23` | `not recorded` |
+
+Changed inputs: unknown (no bound snapshot).
 
 ## Not verified
 
@@ -326,4 +353,4 @@ publishing a half-signature as an approval.
 * The preservation matrix is a list of capabilities in words. This package carries it row for row and does not decide which control implements which row; that mapping is what the owner is being asked to confirm.
 * 6 of 6 baseline screenshots are recorded. Missing or unaccepted screenshots leave the visual gate open; static artifacts cannot substitute for them.
 * The demo and full test suite can use source-relative harness data; until isolation is fixed, run them only from a disposable checkout with an empty harness store (issues #108 and #117).
-* Approval is an owner act recorded in the ledger. A green test suite proves the package matches the tree; it does not prove the tree is acceptable or that other P0 holds are cleared.
+* Approval is an owner act recorded in the ledger. The generator cannot authenticate the signer or prove that the recorded reference authorizes its digests. A green test suite proves neither acceptability nor that other P0 holds are cleared.

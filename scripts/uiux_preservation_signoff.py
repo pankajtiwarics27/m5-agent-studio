@@ -27,6 +27,7 @@ an owner approval record. A generated page cannot approve itself.
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import importlib.util
 import json
@@ -40,11 +41,13 @@ MANIFEST = PROJECT_ROOT / "product" / "M5_2_0_UIUX_Source_Manifest.json"
 INVENTORY = PROJECT_ROOT / "product" / "M5_2_0_UIUX_Control_Inventory.json"
 ROUTE_MAP = PROJECT_ROOT / "product" / "M5_2_0_UIUX_Route_Map.json"
 TRACE = PROJECT_ROOT / "product" / "M5_2_0_UIUX_Authorization_Trace.json"
+SCREENSHOT_MANIFEST = PROJECT_ROOT / "docs" / "media" / "screenshots" / "manifest.json"
 SCREENSHOT_INDEX = PROJECT_ROOT / "docs" / "media" / "screenshots" / "index.json"
 SIGNOFF_PATH = PROJECT_ROOT / "product" / "M5_2_0_UIUX_Preservation_Signoff.json"
 DOC_PATH = PROJECT_ROOT / "docs" / "uiux-2-0-p0-signoff.md"
 
-SCHEMA_VERSION = "2.0.0"
+SCHEMA_VERSION = "3.0.0"
+BINDING_SCHEMA = "m5-uiux-inputs-v1"
 STORY = "UIUX-P0-06"
 STATE_CHANGING = {"POST", "PUT", "PATCH", "DELETE"}
 FRONTEND = PROJECT_ROOT / "static" / "index.html"
@@ -90,8 +93,11 @@ def _approval(ledger: dict[str, object]) -> dict[str, object]:
     record = coordination.get("preservation_signoff") if isinstance(coordination, dict) else None
     if not isinstance(record, dict):
         return {"approved": False, "approved_by": None, "approved_at": None, "reference": None}
-    approved = bool(record.get("approved"))
-    if approved and not (record.get("approved_by") and record.get("approved_at") and record.get("reference")):
+    approved = record.get("approved", False)
+    if not isinstance(approved, bool):
+        raise SignoffError("the ledger's preservation approval must be a boolean")
+    if approved and not all(isinstance(record.get(field), str) and record[field].strip()
+                            for field in ("approved_by", "approved_at", "reference")):
         # Fail closed: an approval without a signer, a date and a place to read it
         # is not an approval, and publishing it as one would forge the owner's name.
         raise SignoffError(
@@ -106,10 +112,83 @@ def _approval(ledger: dict[str, object]) -> dict[str, object]:
     }
 
 
+def _current_binding_inputs(ledger: dict[str, object]) -> dict[str, str | None]:
+    """Digest direct inputs to this package, without recursively hashing its signature.
+
+    The ledger projection removes only the entire approval record; all other
+    ledger content remains covered. JSON is serialized with sorted keys, compact
+    separators and UTF-8, so whitespace changes alone do not alter this digest.
+    Screenshot files are not inspected: the index digest is not provenance.
+    """
+    content = copy.deepcopy(ledger)
+    coordination = content.get("coordination")
+    if isinstance(coordination, dict):
+        coordination.pop("preservation_signoff", None)
+    canonical = json.dumps(content, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+    return {
+        "ledger_content_sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+        "source_manifest_sha256": _sha256(MANIFEST),
+        "control_inventory_sha256": _sha256(INVENTORY),
+        "route_map_sha256": _sha256(ROUTE_MAP),
+        "authorization_trace_sha256": _sha256(TRACE),
+        "frontend_sha256": _sha256(FRONTEND),
+        "screenshot_manifest_sha256": _sha256(SCREENSHOT_MANIFEST),
+        "screenshot_index_sha256": _sha256(SCREENSHOT_INDEX) if SCREENSHOT_INDEX.is_file() else None,
+        "generator_sha256": _sha256(Path(__file__).resolve()),
+        "route_map_generator_sha256": _sha256(ROUTE_MAP_SCRIPT),
+    }
+
+
+def _approval_binding(ledger: dict[str, object], current: dict[str, str | None]) -> dict[str, object]:
+    """Compare only an explicit owner-recorded snapshot, never invent a legacy binding."""
+    approval = _approval(ledger)
+    coordination = ledger.get("coordination")
+    record = coordination.get("preservation_signoff") if isinstance(coordination, dict) else None
+    record = record if isinstance(record, dict) else {}
+    binding_fields = ("binding_schema", "approved_inputs", "binding_reference")
+    has_binding = [field in record for field in binding_fields]
+    if any(has_binding) and not all(has_binding):
+        raise SignoffError("approval binding requires binding_schema, approved_inputs and binding_reference")
+    has_schema = all(has_binding)
+    approved_inputs = None
+    changed = None
+    match = None
+    if has_schema:
+        if not approval["approved"]:
+            raise SignoffError("an unsigned record cannot contain an approval binding")
+        if record["binding_schema"] != BINDING_SCHEMA:
+            raise SignoffError("unknown preservation approval binding schema")
+        reference = record["binding_reference"]
+        if not isinstance(reference, str) or not reference.strip():
+            raise SignoffError("approval binding requires a non-empty owner decision reference")
+        candidate = record["approved_inputs"]
+        if not isinstance(candidate, dict) or set(candidate) != set(current):
+            raise SignoffError("approved_inputs must contain exactly the complete binding input set")
+        for key, value in candidate.items():
+            if key == "screenshot_index_sha256" and value is None:
+                continue
+            if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
+                raise SignoffError(f"approved_inputs has an invalid digest for {key}")
+        approved_inputs = candidate
+        changed = sorted(key for key in current if candidate[key] != current[key])
+        match = not changed
+        status = "matched" if match else "drifted"
+    else:
+        status = "unbound" if approval["approved"] else "unsigned"
+    return {
+        "schema": BINDING_SCHEMA,
+        "status": status,
+        "binding_reference": record["binding_reference"] if has_schema else None,
+        "current_inputs_match_approval": match,
+        "approved_inputs": approved_inputs,
+        "current_inputs": current,
+        "changed_inputs": changed,
+    }
+
+
 def _screenshot_count() -> tuple[int, int]:
     """How many baseline screenshots exist, out of how many the manifest plans."""
-    manifest = PROJECT_ROOT / "docs" / "media" / "screenshots" / "manifest.json"
-    plan = _load(manifest, "the screenshot manifest")
+    plan = _load(SCREENSHOT_MANIFEST, "the screenshot manifest")
     shots = plan.get("shots") if isinstance(plan.get("shots"), list) else []
     if not SCREENSHOT_INDEX.is_file():
         return 0, len(shots)
@@ -338,6 +417,13 @@ def build_signoff() -> dict[str, object]:
     totals = inventory.get("totals") if isinstance(inventory.get("totals"), dict) else {}
     captured, planned = _screenshot_count()
     approval = _approval(ledger)
+    binding = _approval_binding(ledger, _current_binding_inputs(ledger))
+    status = {
+        "unsigned": "unsigned",
+        "unbound": "historical-approval-unbound",
+        "matched": "approval-inputs-match",
+        "drifted": "historical-approval-input-drift",
+    }[str(binding["status"])]
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -357,15 +443,16 @@ def build_signoff() -> dict[str, object]:
             "lives in the ledger's coordination.preservation_signoff record, and this page reports it."
         ),
         "pinned_source_commit": pin,
-        "status": "approved" if approval["approved"] else "unsigned",
+        "status": status,
         "signature": approval | {
             "signed": approval["approved"],
             "statement": (
-                "Signed in the ledger; this page only reports the record."
+                "Signed in the ledger; this page reports the historical owner record, not a new approval."
                 if approval["approved"]
                 else "No signature. This is material for the owner to approve, not an approved baseline."
             ),
         },
+        "approval_binding": binding,
         "inputs": {
             "ledger_sha256": _sha256(LEDGER),
             "source_manifest_sha256": _sha256(MANIFEST),
@@ -487,8 +574,9 @@ def build_signoff() -> dict[str, object]:
             "leave the visual gate open; static artifacts cannot substitute for them.",
             "The demo and full test suite can use source-relative harness data; until isolation is fixed, "
             "run them only from a disposable checkout with an empty harness store (issues #108 and #117).",
-            "Approval is an owner act recorded in the ledger. A green test suite proves the package matches "
-            "the tree; it does not prove the tree is acceptable or that other P0 holds are cleared.",
+            "Approval is an owner act recorded in the ledger. The generator cannot authenticate the signer "
+            "or prove that the recorded reference authorizes its digests. A green test suite proves neither "
+            "acceptability nor that other P0 holds are cleared.",
         ],
     }
 
@@ -501,6 +589,13 @@ def _cell(value: object) -> str:
 def render_doc(package: dict[str, object]) -> str:
     totals = package["totals"]
     signature = package["signature"]
+    binding = package["approval_binding"]
+    binding_message = {
+        "unsigned": "No owner approval is recorded; current inputs are not approved.",
+        "unbound": "The historical record has no approved input snapshot and does not establish approval of current inputs.",
+        "matched": "The current input digests match the snapshot in the owner record; matching is not independent verification.",
+        "drifted": "The historical record remains, but current inputs differ from its approved snapshot and require review.",
+    }[binding["status"]]
     approval = package["approval_request"]
     rollback = package["rollback"]
 
@@ -513,6 +608,7 @@ def render_doc(package: dict[str, object]) -> str:
         "and what a revert does and does not touch.",
         "",
         f"* Status: **{package['status']}** — {signature['statement']}",
+        f"* Approval binding: **{binding['status']}** — {binding_message}",
         f"* Pinned baseline source commit: `{package['pinned_source_commit']}` (input artifacts are hashed separately).",
         f"* {totals['panes']} panes · {totals['preserved_capabilities']} preserved capabilities · "
         f"{totals['markup_controls']} markup controls ({totals['chrome_controls']} chrome, "
@@ -524,17 +620,17 @@ def render_doc(package: dict[str, object]) -> str:
         f"* {totals['route_map_unresolved_call_sites']} fetch site(s) have "
         f"{totals['route_map_unresolved_caller_edges']} unresolved URL or method edge(s) "
         f"({totals['route_map_unresolved_method_edges']} method).",
-        f"* Baseline screenshots: {totals['screenshots_captured']} of {totals['screenshots_planned']}.",
+        f"* Baseline screenshots recorded in the index: {totals['screenshots_captured']} of {totals['screenshots_planned']} (not provenance-verified).",
         "",
         "## What this page is, and is not",
         "",
         str(package["prepared_not_signed"]),
         "",
-        "If an input artifact changes, `--check` fails and the package has to be regenerated — which is",
-        "the point at which the owner sees what changed. This bounded scan is not proof of exhaustive browser",
-        "coverage or execution. An unsigned package and passing checks do not clear other P0 holds.",
-        "Schema 2 replaces `routes_used_by_frontend` with `routes_with_resolved_or_possible_caller`,",
-        "`routes_no_caller_observed` and `routes_unknown_frontend_caller`; unresolved totals include methods.",
+        "`--check` checks generated-file freshness, not approval or owner review. Regeneration does not",
+        "notify the owner or approve changed inputs. This bounded scan is not proof of exhaustive browser",
+        "coverage or execution. Passing checks do not clear other P0 holds. Schema 2 replaced",
+        "`routes_used_by_frontend` with resolved/possible, no-observed and unknown caller totals; schema 3",
+        "separates the historical signature from any explicit binding to current input digests.",
         "",
         "## What the owner is being asked to approve",
         "",
@@ -643,7 +739,31 @@ def render_doc(package: dict[str, object]) -> str:
         "An approval is recorded in `product/M5_2_0_UIUX_Autonomous_Roadmap.json` under",
         "`coordination.preservation_signoff` as `approved_by`, `approved_at` and `reference`, and this page",
         "regenerates to report it. A record missing any of the three fails the generator rather than",
-        "publishing a half-signature as an approval.",
+        "publishing a half-signature as an approval. A historical signature by itself is not an",
+        "approval of later changes. The binding below is separately reported, not inferred.",
+        "",
+        "## Approval input binding",
+        "",
+        binding_message,
+        "",
+        f"Binding schema: `{binding['schema']}`. Owner decision reference: {_cell(binding['binding_reference'])}.",
+        "The ledger digest covers canonical JSON with only",
+        "`coordination.preservation_signoff` removed to avoid a signature/hash cycle. All other",
+        "ledger content is included. The screenshot index digest does not verify image bytes or",
+        "provenance; a matching snapshot cannot clear separate review holds.",
+        "",
+        "| Input | Current digest | Owner-recorded digest |",
+        "|---|---|---|",
+    ]
+    for key, value in binding["current_inputs"].items():
+        approved = binding["approved_inputs"]
+        recorded = "not recorded" if approved is None else (approved[key] or "absent")
+        lines.append(f"| `{key}` | `{value or 'absent'}` | `{recorded}` |")
+    changed = binding["changed_inputs"]
+    lines += [
+        "",
+        "Changed inputs: " + ("unknown (no bound snapshot)" if changed is None else
+                              (", ".join(f"`{key}`" for key in changed) if changed else "none")) + ".",
         "",
         "## Not verified",
         "",

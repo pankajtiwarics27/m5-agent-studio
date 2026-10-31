@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.0.0",
+  "schema_version": "3.0.0",
   "document_type": "m5_uiux_preservation_signoff",
   "program": "M5_2_0_UIUX",
   "story": "UIUX-P0-06",
@@ -9,18 +9,38 @@
   "statement": "A preservation and rollback review package with a baseline source pin and hashes of its current input artifacts: capabilities, controls, bounded route candidates and their gates. The source pin alone does not prove that every input was measured at that commit.",
   "prepared_not_signed": "Prepared by an agent. An agent may prepare this package; it may not approve it. The approval lives in the ledger's coordination.preservation_signoff record, and this page reports it.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "status": "approved",
+  "status": "historical-approval-unbound",
   "signature": {
     "approved": true,
     "approved_by": "pankajtiwarics27",
     "approved_at": "2026-10-31T20:10:00Z",
     "reference": "Arena agent-mode session, 2026-10-31: owner message \"Approve UIUX-P0-06: approved_by = pankajtiwarics27\", recorded in the pull request that carries this signature.",
     "signed": true,
-    "statement": "Signed in the ledger; this page only reports the record."
+    "statement": "Signed in the ledger; this page reports the historical owner record, not a new approval."
+  },
+  "approval_binding": {
+    "schema": "m5-uiux-inputs-v1",
+    "status": "unbound",
+    "binding_reference": null,
+    "current_inputs_match_approval": null,
+    "approved_inputs": null,
+    "current_inputs": {
+      "ledger_content_sha256": "ebdd2301850da59c74c875590326c46f2c7c53f157dfaf8e3b99f7d3d05ad105",
+      "source_manifest_sha256": "d71ec9cb823e7594cf860fe17a2559cbbb59202df7785946e59e88c1b9be8fe5",
+      "control_inventory_sha256": "bf3d69219d667e0bd53e4124cdd8df52af85c61225df91c96d92cefbae718ae6",
+      "route_map_sha256": "384fdb251a4a845dcd9bf365e0a75a387b29384dc7f0f23e425c40fc9f0c275b",
+      "authorization_trace_sha256": "7d849b1152ed143b9e23292f6c8ee6f5a114ef2117fd0a683753948d375bb260",
+      "frontend_sha256": "e7013225886ec86db5d807e7e2444160e5064b770e74f0dea9c385b591d034ae",
+      "screenshot_manifest_sha256": "69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92",
+      "screenshot_index_sha256": "de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0",
+      "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
+      "route_map_generator_sha256": "b60f8e88e6dba6f31dea75b6c79ce18b45c5bb221f84227d915be9f6b97d5c23"
+    },
+    "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "deb2d5388a70b5601b6a611028bc03c133d3f254e35e9b431365c89ac8e4c330",
-    "source_manifest_sha256": "3d846158f1992853cb4cf4e29a7fcdea9f5dd911ce8faeb2a5e28db49d234ed2",
+    "ledger_sha256": "1dd567b05327cfd4410926562e2c36e710208e42c8557666c231387037d9aad7",
+    "source_manifest_sha256": "d71ec9cb823e7594cf860fe17a2559cbbb59202df7785946e59e88c1b9be8fe5",
     "control_inventory_sha256": "bf3d69219d667e0bd53e4124cdd8df52af85c61225df91c96d92cefbae718ae6",
     "route_map_sha256": "384fdb251a4a845dcd9bf365e0a75a387b29384dc7f0f23e425c40fc9f0c275b",
     "authorization_trace_sha256": "7d849b1152ed143b9e23292f6c8ee6f5a114ef2117fd0a683753948d375bb260",
@@ -1256,6 +1276,6 @@
     "The preservation matrix is a list of capabilities in words. This package carries it row for row and does not decide which control implements which row; that mapping is what the owner is being asked to confirm.",
     "6 of 6 baseline screenshots are recorded. Missing or unaccepted screenshots leave the visual gate open; static artifacts cannot substitute for them.",
     "The demo and full test suite can use source-relative harness data; until isolation is fixed, run them only from a disposable checkout with an empty harness store (issues #108 and #117).",
-    "Approval is an owner act recorded in the ledger. A green test suite proves the package matches the tree; it does not prove the tree is acceptable or that other P0 holds are cleared."
+    "Approval is an owner act recorded in the ledger. The generator cannot authenticate the signer or prove that the recorded reference authorizes its digests. A green test suite proves neither acceptability nor that other P0 holds are cleared."
   ]
 }
