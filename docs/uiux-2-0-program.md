@@ -12,6 +12,9 @@ claims anything; the binding contract is
 | [`product/M5_2_0_UIUX_Autonomous_Roadmap.json`](../product/M5_2_0_UIUX_Autonomous_Roadmap.json) | Authoritative ledger: 40 stories `UIUX-P0-01`…`UIUX-P6-05` across 7 phases, each with per-story tracking, plus the session state and the verified tab registry. |
 | [`M5_2_0_UIUX_AGENT_PROMPT.md`](../M5_2_0_UIUX_AGENT_PROMPT.md) | The claim/implement/verify/review/merge protocol every agent follows. |
 | [`tests/test_uiux_roadmap.py`](../tests/test_uiux_roadmap.py) | Executable invariants: the registry matches the shipped frontend, `done` requires evidence, dependencies are acyclic, `P0` gates the rest. |
+| [`product/M5_2_0_UIUX_Source_Manifest.json`](../product/M5_2_0_UIUX_Source_Manifest.json) | The pinned source surface (`UIUX-P0-01`): SHA-256 of every file the program may touch, the six tabs as the markup declares them, and the 102 routes `app.py` mounts. Regenerate it when the surface moves; `--check` fails CI on drift. |
+| [`scripts/uiux_source_manifest.py`](../scripts/uiux_source_manifest.py) | Writes and checks that manifest. Deterministic, parses the files, stamps no clock. |
+| [`tests/test_uiux_source_manifest.py`](../tests/test_uiux_source_manifest.py) | Re-derives every manifest claim from disk and proves the drift check actually fails. |
 | [`product/M5_2_0_Autonomous_Roadmap.json`](../product/M5_2_0_Autonomous_Roadmap.json) | The runtime program's ledger. Separate scope, separate ownership; a UI/UX session never edits its story tracking. |
 
 ## What the program is for
@@ -63,6 +66,40 @@ Capture needs a Chrome/Chromium binary and `puppeteer-core`, which are
 deliberately not vendored. A machine without them records the visual check as
 `blocked`; it does not claim it passed.
 
+## The pinned source manifest
+
+The roadmap was written from GitHub web extracts, so its statements about the
+current UI start as hypotheses. `UIUX-P0-01` closed that gap with a manifest
+built from the checkout rather than from prose:
+
+* **10 pinned files** — `static/index.html`, `app.py`, the generated `studio.py`,
+  the design-system contract, the screenshot manifest, the UI audit and the four
+  scripts that build or verify the surface — each with its SHA-256, size and line
+  count;
+* **the six tabs** in document order, with `dom_id`, visible label, `title`
+  attribute, shortcut and `switchTab` target, parsed from the markup;
+* **the route table** — 102 routes (`36` `GET`, `58` `POST`, `5` `DELETE`, `3`
+  `PATCH`) in source order, plus the 48 distinct `/api/` literals the browser
+  script names, with template placeholders normalised (`${id}` → `{param}`);
+* **the screenshot state** — 0 of 6 captured in this environment, recorded as
+  such instead of implied.
+
+What it deliberately does **not** claim: which handler calls which route (that
+mapping is `UIUX-P0-03`), that any pane was seen rendered (capture needs a
+browser), or that any of it matches an upstream version.
+
+The rule that makes it a pin: a story that changes a pinned file regenerates the
+manifest in the same commit, and CI runs
+
+```bash
+python3 scripts/uiux_source_manifest.py --check
+```
+
+which fails, naming the files that moved, when the two disagree. The manifest and
+the ledger share one pin: `pinned_source_commit` must equal the ledger's
+`source_commit_sha`, and the tests assert that commit is an ancestor of `HEAD`, so
+a fabricated pin cannot pass.
+
 ## The tab registry
 
 The ledger carries a `tab_registry` derived from `static/index.html` and
@@ -96,6 +133,8 @@ claimed elsewhere. The two programs share a repository, not a ledger:
 
 ## Status
 
-Nothing in this program is shipped: 40 stories, 0 done, `next_recommended_story`
-= `UIUX-P0-01`. Planned work is never described as available in `README.md`
-before the owning story closes with evidence.
+Nothing in this program is shipped: 40 stories, 1 done (`UIUX-P0-01`, the pinned
+source manifest), `next_recommended_story` = `UIUX-P0-02` (inventory every tab
+and control). Planned work is never described as available in `README.md` before
+the owning story closes with evidence, and no screenshot has been captured yet,
+so no pane is claimed to have been seen rendered.
