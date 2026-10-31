@@ -34,30 +34,39 @@ argv:
 1.  runtime CLI present and its daemon reachable;
 2.  the configured image is already local (no implicit pull);
 3.  positive compatibility: the sandbox runs code and its workspace writes land;
-4.  path traversal and absolute outside-workspace paths are not readable;
+4.  path traversal and absolute outside-workspace paths are not readable (the
+    errno class of each refusal is recorded, so absence and denial differ);
 5.  a workspace symlink pointing outside does not disclose the target;
-6.  direct network egress is refused;
-7.  host environment credentials are not visible inside the sandbox;
+6.  direct and host-loopback network egress are refused;
+7.  host credential stores are absent and ``HOME`` is the throwaway ``/tmp``;
 8.  a spawned descendant does not survive the sandbox lifetime;
 9.  resource limits hold (memory cap and pids cap);
 10. dropped capabilities hold (raw sockets refused);
-11. no silent host fallback: without a working runtime the product path denies;
-12. ``scripts/isolation_smoke.py --live`` exits 0 with its own checks.
+11. the suite's own container flags equal the product's, checked at run time;
+12. no silent host fallback: without a working runtime the product path denies;
+13. ``scripts/isolation_smoke.py --live`` exits 0 with its own checks;
+14. the record is bound to what it measured: runtime version, image content id and
+    repo digest, the product's hardening flags, and the git revision.
 
 Hardware suite (M5-P4-01):
 
 1.  machine fingerprint (chip, RAM, cores, swap) bound into the record;
 2.  ``p4.single_heavy_model``: the admission primitive admits one heavy request and
     rejects the second under the detected capacity;
-3.  ``p4.admission_wired``: whether the serving path actually consults admission
-    (reported, not assumed);
+3.  ``p4.admission_wired``: the serving path refuses a second heavy local stream;
 4.  ``p4.priors_not_verified``: routing confidence with no measured profile is
     ``unknown``, never ``high``;
 5.  ``p4.pressure``: measured memory pressure and swap growth (needs
     ``--pressure-gb`` and a 24 GB machine for the story AC);
 6.  ``p4.model_load``: measured load/first-token/throughput/peak memory for a
     caller-supplied probe command, optionally persisted as a
-    ``model_calibration`` profile.
+    ``model_calibration`` profile;
+7.  ``p4.coding_cases``: representative per-category cases run through that probe,
+    with per-case completion and an explicit uncertainty summary
+    (``--coding-cases``);
+8.  ``p4.thermal``: thermal pressure/throttling sampled during every load phase
+    (``pmset -g therm`` on macOS, ``/sys/class/thermal`` on Linux), reported as
+    "cannot read" where the platform offers nothing.
 
 Nothing here needs a network, a model, or a provider. The two optional
 measurement flags are the only things that touch your hardware.
@@ -70,8 +79,10 @@ import json
 import os
 import platform
 import re
+import shlex
 import shutil
 import socket
+import statistics
 import subprocess
 import sys
 import tempfile
@@ -362,6 +373,78 @@ def environment_fingerprint() -> dict[str, Any]:
     }
 
 
+def _first_non_empty_line(text: str) -> str:
+    return next((line.strip() for line in text.splitlines() if line.strip()), "")
+
+
+def runtime_version(runtime: str, *, timeout: float = 30.0) -> str:
+    """The runtime's own version line, e.g. ``Docker version 27.3.1, build ...``.
+
+    Recorded because a guarantee qualified on one runtime build is not a claim
+    about the next one: after an upgrade the same record no longer describes the
+    machine. An unreadable version yields ``""`` rather than an invented one.
+    """
+    if not runtime:
+        return ""
+    proc = run_command([runtime, "--version"], timeout=timeout)
+    # stdout only: an error message on stderr is not a version, and recording one
+    # as the version would mis-bind the evidence.
+    return _first_non_empty_line(proc.stdout or "")
+
+
+def parse_image_identity(stdout: str) -> dict[str, Any]:
+    """Extract the image content id and digest from ``image inspect`` output.
+
+    ``python:3.12-slim`` can be re-pulled to a different digest, so a record that
+    names only the tag cannot say what the probes ran in. Unreadable or
+    non-JSON output yields ``{}``: an absent id is visible, a fabricated one is
+    not.
+    """
+    try:
+        payload = json.loads(stdout or "[]")
+    except json.JSONDecodeError:
+        return {}
+    entry = payload[0] if isinstance(payload, list) and payload else payload
+    if not isinstance(entry, dict):
+        return {}
+    digests = [str(item) for item in entry.get("RepoDigests") or [] if str(item)]
+    tags = [str(item) for item in entry.get("RepoTags") or [] if str(item)]
+    return {
+        "image_id": str(entry.get("Id") or ""),
+        "image_digest": digests[0] if digests else "",
+        "image_tags": tags,
+    }
+
+
+def sandbox_config_fingerprint(studio: Any) -> dict[str, Any]:
+    """The hardening configuration the *product* builds, as a comparable set.
+
+    Read from ``app._sandbox_command`` itself, so the fingerprint cannot drift
+    from the argv the product actually runs. Values of the limit flags are kept
+    because ``--memory=2g`` and ``--memory=8g`` are different configurations.
+    """
+    if studio is None or not hasattr(studio, "_sandbox_command"):
+        return {}
+    import unittest.mock  # noqa: PLC0415 - only needed for this fingerprint
+
+    with tempfile.TemporaryDirectory(prefix="m5-qualify-config-") as td:
+        with unittest.mock.patch.object(studio, "STUDIO_SANDBOX_RUNTIME", "/bin/sh"):
+            argv = studio._sandbox_command(Path(td), "print(1)", container_name="m5-qualify-config")
+    flags = sorted({part.split("=", 1)[0] for part in argv if part.startswith("--")})
+    limits = {
+        part.split("=", 1)[0]: part.split("=", 1)[1]
+        for part in argv
+        if part.startswith("--") and "=" in part
+        and part.split("=", 1)[0] in {"--memory", "--cpus", "--pids-limit", "--network", "--ipc", "--pull"}
+    }
+    return {
+        "hardening_flags": flags,
+        "limits": limits,
+        "bind_mounts": len([part for part in argv if part.startswith("type=bind")]),
+        "privileged": any("--privileged" in part for part in argv),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Process helpers
 # ---------------------------------------------------------------------------
@@ -418,16 +501,18 @@ def container_argv(
     code: str,
     *,
     name: str = "",
-    memory: str = "1g",
+    memory: str = "2g",
     pids_limit: int = 128,
-    cpus: str = "1",
-    code_args: Sequence[str] = (),
+    cpus: str = "2",
 ) -> list[str]:
-    """Build a hardened, ``--rm`` sandbox invocation mirroring the product flags.
+    """Build the sandbox invocation the *product* would build, for probing.
 
-    Every flag here is asserted against ``app._sandbox_command`` by
-    ``tests/test_qualify_environment.py``; a check that drifts from the product
-    would qualify something the product does not actually do.
+    This mirrors ``app._sandbox_command`` flag for flag (verified at run time by
+    ``p3.product.argv_parity`` and in CI by
+    ``tests/test_qualify_environment.py::test_container_argv_matches_the_product``):
+    if the two ever drift, the suite would qualify a sandbox the product does not
+    actually use. ``memory``/``cpus`` are overridable only so the resource-limit
+    probe can run *stricter* than the product.
     """
     argv = [
         runtime,
@@ -438,19 +523,58 @@ def container_argv(
         "--read-only",
         "--cap-drop=ALL",
         "--security-opt=no-new-privileges",
-        "--pids-limit", str(pids_limit),
-        "--memory", memory,
-        "--cpus", cpus,
-        "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=64m",
+        "--env", "HOME=/tmp",
+        "--env", "TMPDIR=/tmp",
+        "--env", "PYTHONDONTWRITEBYTECODE=1",
+        f"--pids-limit={pids_limit}",
+        f"--memory={memory}",
+        f"--cpus={cpus}",
+        "--ipc=private",
+        "--ulimit", "nofile=1024:1024",
+        "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=256m",
         "--mount", f"type=bind,source={workspace.resolve()},target=/workspace",
         "--workdir", "/workspace",
+        "--entrypoint", "/bin/sh",
     ]
     if os.name == "posix" and hasattr(os, "getuid") and hasattr(os, "getgid"):
         argv.extend(["--user", f"{os.getuid()}:{os.getgid()}"])
     if name:
         argv.extend(["--name", name])
-    argv.extend([image, "python3", "-c", code, *code_args])
+    argv.append(image)
+    argv.extend(["-lc", f"exec python3 -c {shlex.quote(code)}"])
     return argv
+
+
+def argv_flag_names(argv: Sequence[str]) -> list[str]:
+    """Long option names in ``argv``, without values or duplicates."""
+    seen: list[str] = []
+    for part in argv:
+        if part.startswith("--"):
+            flag = part.split("=", 1)[0]
+            if flag not in seen:
+                seen.append(flag)
+    return seen
+
+
+def compare_argv(product_argv: Sequence[str], suite_argv: Sequence[str]) -> tuple[bool, str]:
+    """Do the suite's probes use exactly the flags the product builds?
+
+    ``--name`` is bookkeeping rather than a guarantee, so either side may name the
+    container freely. Everything else must match, including exactly one bind mount.
+    """
+    ignore = {"--name"}
+    product_flags = [flag for flag in argv_flag_names(product_argv) if flag not in ignore]
+    suite_flags = [flag for flag in argv_flag_names(suite_argv) if flag not in ignore]
+    missing = [flag for flag in product_flags if flag not in suite_flags]
+    extra = [flag for flag in suite_flags if flag not in product_flags]
+    product_binds = [part for part in product_argv if part.startswith("type=bind")]
+    suite_binds = [part for part in suite_argv if part.startswith("type=bind")]
+    if missing or extra or len(product_binds) != 1 or len(suite_binds) != 1:
+        return False, (
+            f"suite is missing {missing or 'nothing'}, adds {extra or 'nothing'}, "
+            f"bind mounts product={len(product_binds)} suite={len(suite_binds)}"
+        )
+    return True, f"flags match ({len(product_flags)}); bind mounts={len(suite_binds)}"
 
 
 def _looks_denied(text: str) -> bool:
@@ -464,54 +588,117 @@ def _looks_denied(text: str) -> bool:
 
 _POSITIVE_CODE = r"""
 import os, pathlib, sys
-pathlib.Path('/workspace/qualification-positive.txt').write_text('ok', encoding='utf-8')
-assert os.getcwd() == '/workspace', os.getcwd()
+
+# Report what the container can actually see before attempting the write: an empty
+# or missing /workspace means the bind mount is not visible to the runtime, which
+# is an environment problem and must not be reported as an isolation failure.
+if os.path.isdir('/workspace'):
+    listing = sorted(os.listdir('/workspace'))
+else:
+    listing = ['<missing-workspace>']
+print('listing:' + ','.join(listing))
+
+try:
+    pathlib.Path('/workspace/qualification-positive.txt').write_text('ok', encoding='utf-8')
+except OSError as exc:
+    print('write-error:%s:%s' % (exc.errno, type(exc).__name__))
+    raise SystemExit(4)
+
+print('cwd:' + os.getcwd())
 print('positive-ok')
 """
 
-_ESCAPE_CODE = r"""
-import os, pathlib, socket, sys
-outside_raw = sys.argv[1] if len(sys.argv) > 1 else ''
-link_raw = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else '/workspace/qualify-link'
-ro_csv = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3] else '/outside-root-write-probe,/etc/hostname'
-host_port = int(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4].isdigit() else 0
-primary_net = sys.argv[5] if len(sys.argv) > 5 and sys.argv[5] else '1.1.1.1:443'
-failures = []
-if not outside_raw:
-    failures.append('missing-outside-arg')
-else:
-    suffix = outside_raw if outside_raw.startswith('/') else ('/' + outside_raw)
-    probes = (
-        ('outside-direct', outside_raw),
-        ('outside-traversal', '/workspace/..' + suffix),
-        ('outside-proc-root', '/proc/1/root' + suffix),
-    )
-    for label, candidate in probes:
-        try:
-            pathlib.Path(candidate).read_text(encoding='utf-8')
-        except (OSError, PermissionError):
+_CREDENTIAL_CODE = r"""
+import os, pathlib
+home = os.environ.get('HOME', '')
+relative = (
+    '.aws/credentials', '.ssh/id_rsa', '.ssh/id_ed25519', '.netrc',
+    '.docker/config.json', '.kube/config',
+    '.config/gcloud/application_default_credentials.json',
+)
+visible = []
+for rel in relative:
+    for base in (home, '/root', '/home/user'):
+        if not base:
             continue
-        failures.append(label)
-for ro_target in [item for item in ro_csv.split(',') if item]:
+        candidate = pathlib.Path(base) / rel
+        try:
+            if candidate.is_file():
+                visible.append(str(candidate))
+        except OSError:
+            pass
+print('home:' + (home or '<unset>'))
+print('credentials:' + (','.join(visible) if visible else 'none'))
+if visible:
+    raise SystemExit(3)
+"""
+
+
+def _escape_probe_code(
+    outside: Path,
+    link: str,
+    read_only_targets: Sequence[str],
+    host_port: int,
+    network_target: str,
+) -> str:
+    """Adversarial probe with its inputs baked in as literals.
+
+    Literals rather than ``sys.argv`` because the product runs code as
+    ``/bin/sh -lc 'exec python3 -c …'`` and extra argv would land in the shell, not
+    the interpreter.
+    """
+    return f"""
+import errno, os, pathlib, socket
+
+failures = []
+reads = []
+outside = {str(outside)!r}
+suffix = outside if outside.startswith('/') else '/' + outside
+for label, candidate in (
+    ('outside-direct', outside),
+    ('outside-traversal', '/workspace/..' + suffix),
+    ('outside-proc-root', '/proc/1/root' + suffix),
+):
+    try:
+        pathlib.Path(candidate).read_text(encoding='utf-8')
+    except (OSError, PermissionError) as exc:
+        reads.append('%s=%s' % (label, errno.errorcode.get(exc.errno, type(exc).__name__)))
+        continue
+    reads.append('%s=VISIBLE' % label)
+    failures.append(label)
+
+for ro_target in [item for item in {list(read_only_targets)!r} if item]:
     try:
         with open(ro_target, 'a', encoding='utf-8'):
             pass
-    except (OSError, PermissionError):
+    except (OSError, PermissionError) as exc:
+        reads.append('readonly-root=%s' % errno.errorcode.get(exc.errno, type(exc).__name__))
         continue
     failures.append('readonly-root')
     break
-link = pathlib.Path(link_raw)
+
+link = pathlib.Path({link!r})
 if not link.is_symlink():
     failures.append('symlink-missing')
 else:
+    target = pathlib.Path(os.readlink(link))
+    if target.exists():
+        reads.append('symlink-target=VISIBLE')
+        failures.append('symlink-target-visible')
+    else:
+        reads.append('symlink-target=ABSENT')
     try:
         link.read_text(encoding='utf-8')
-    except (OSError, PermissionError):
-        pass
+    except (OSError, PermissionError) as exc:
+        reads.append('symlink-read=%s' % errno.errorcode.get(exc.errno, type(exc).__name__))
     else:
         failures.append('symlink')
-net_host, _, net_port_s = primary_net.rpartition(':')
-targets = [(net_host or '1.1.1.1', int(net_port_s) if net_port_s.isdigit() else 443)]
+
+print('reads:' + ','.join(reads))
+
+host, _, port = {network_target!r}.rpartition(':')
+targets = [(host or '1.1.1.1', int(port) if port.isdigit() else 443)]
+host_port = {int(host_port)}
 if host_port > 0:
     targets.extend([('127.0.0.1', host_port), ('host.docker.internal', host_port)])
 for host, port in targets:
@@ -526,6 +713,7 @@ for host, port in targets:
         break
     finally:
         sock.close()
+
 if os.environ.get('STUDIO_QUALIFICATION_SENTINEL'):
     failures.append('env')
 try:
@@ -538,6 +726,7 @@ print('denials:' + (','.join(failures) if failures else 'none'))
 if failures:
     raise SystemExit(3)
 """
+
 
 _MEMORY_CODE = "import sys\nbuf = bytearray(3 * 1024 ** 3)\nprint('allocated', len(buf))"
 
@@ -571,11 +760,16 @@ def sandbox_suite(
     runtime_name: str,
     image: str,
     timeout: float,
-) -> None:
-    """Record the M5-P3-01 checks for one detected runtime."""
+) -> dict[str, Any]:
+    """Record the M5-P3-01 checks for one detected runtime.
+
+    Returns the identity of what was measured (runtime version, image id and
+    digest, product config) so the evidence record can be bound to it.
+    """
     studio = _product_sandbox_module()
     usable = bool(runtime) and bool(runtime_name)
     runtime_ok = False
+    identity: dict[str, Any] = {"runtime": runtime_name, "runtime_path": runtime, "image": image}
 
     if not usable:
         recorder.record(
@@ -591,6 +785,7 @@ def sandbox_suite(
             info = run_command([runtime, "info"], timeout=min(timeout, 60.0))
             detail = (version.stdout or version.stderr or "").strip().splitlines()[:1]
             label = detail[0] if detail else runtime_name
+            identity["runtime_version"] = _first_non_empty_line(version.stdout or "")
             return info.returncode == 0, f"{label} (info exit {info.returncode})"
 
         result = recorder.check(
@@ -601,19 +796,86 @@ def sandbox_suite(
         )
         runtime_ok = result.status == STATUS_PASS
 
+
     image_reason = "" if runtime_ok else "no reachable container runtime"
 
-    def _image_probe() -> tuple[bool, str]:
+    def _image_probe() -> None:
+        """A missing image is a setup gap: nothing about isolation was observed."""
         inspected = run_command([runtime, "image", "inspect", image], timeout=min(timeout, 60.0))
         if inspected.returncode != 0:
-            return False, f"image {image!r} is not local (pull it first; this suite never pulls)"
-        return True, f"image {image!r} present"
+            recorder.record(
+                "p3.image.local",
+                STORY_P3,
+                "configured sandbox image is already present",
+                STATUS_BLOCKED,
+                detail=(
+                    f"image {image!r} is not local, so no container probe could run "
+                    f"(pull it with `{runtime_name} pull {image}` and re-run; this suite never pulls)"
+                ),
+            )
+            return
+        identity.update(parse_image_identity(inspected.stdout or ""))
+        recorder.record(
+            "p3.image.local",
+            STORY_P3,
+            "configured sandbox image is already present",
+            STATUS_PASS,
+            detail=(
+                f"image {image!r} present"
+                + (f" (id {str(identity.get('image_id'))[:19]})" if identity.get("image_id") else "")
+            ),
+            evidence={"image_id": identity.get("image_id", ""), "image_digest": identity.get("image_digest", "")},
+        )
 
-    recorder.check(
-        "p3.image.local", STORY_P3, "configured sandbox image is already present", _image_probe,
-        skip_reason=image_reason,
-    )
+    if image_reason:
+        recorder.record(
+            "p3.image.local",
+            STORY_P3,
+            "configured sandbox image is already present",
+            STATUS_SKIP,
+            detail=image_reason,
+        )
+    else:
+        _image_probe()
     image_ok = recorder.results[-1].status == STATUS_PASS
+
+    # Binding: the record must say *what* it measured. An identity that cannot be
+    # read is a readability gap (blocked), never an accusation that a guarantee
+    # failed — but without it the evidence cannot be attributed to this machine.
+    if not runtime_ok:
+        recorder.record(
+            "p3.environment.bind",
+            STORY_P3,
+            "evidence is bound to this runtime, image and product configuration",
+            STATUS_SKIP,
+            detail="no reachable container runtime",
+        )
+    else:
+        config = sandbox_config_fingerprint(studio)
+        identity["config"] = config
+        problems: list[str] = []
+        if not identity.get("runtime_version"):
+            problems.append(f"`{runtime_name} --version` reported nothing")
+        if not identity.get("image_id"):
+            problems.append(f"`{runtime_name} image inspect {image}` yielded no image id")
+        if not config:
+            problems.append("the product's sandbox argv could not be read (is `app` importable?)")
+        detail = (
+            f"runtime={identity.get('runtime_version') or 'unknown'}; "
+            f"image_id={str(identity.get('image_id') or 'unknown')[:19]}; "
+            f"digest={identity.get('image_digest') or 'none recorded'}; "
+            f"config: {len(config.get('hardening_flags') or [])} flags "
+            f"{config.get('limits') or {}}, bind mounts={config.get('bind_mounts')}, "
+            f"privileged={config.get('privileged')}"
+        )
+        recorder.record(
+            "p3.environment.bind",
+            STORY_P3,
+            "evidence is bound to this runtime, image and product configuration",
+            STATUS_PASS if not problems else STATUS_BLOCKED,
+            detail=detail if not problems else f"{detail}; " + "; ".join(problems),
+            evidence=dict(identity),
+        )
 
     with tempfile.TemporaryDirectory(prefix="m5-qualify-ws-") as workspace_dir:
         workspace = Path(workspace_dir)
@@ -625,18 +887,75 @@ def sandbox_suite(
 
         skip = "" if image_ok else "container image unavailable"
 
-        def _positive() -> tuple[bool, str]:
-            proc = run_command(
-                container_argv(runtime, image, workspace, _POSITIVE_CODE), timeout=timeout, env=probe_env
+        def _positive() -> None:
+            """Positive compatibility, distinguishing a setup gap from a failure."""
+            if skip:
+                recorder.record(
+                    "p3.positive.execute", STORY_P3,
+                    "sandbox runs code and its workspace write lands on the host",
+                    STATUS_SKIP, detail=skip,
+                )
+                return
+            started = _now()
+            try:
+                proc = run_command(
+                    container_argv(runtime, image, workspace, _POSITIVE_CODE),
+                    timeout=timeout,
+                    env=probe_env,
+                )
+            except Exception as exc:  # noqa: BLE001 - a probe that cannot run has failed
+                recorder.record(
+                    "p3.positive.execute", STORY_P3,
+                    "sandbox runs code and its workspace write lands on the host",
+                    STATUS_FAIL,
+                    detail=f"probe raised {type(exc).__name__}: {exc}",
+                    duration_s=_now() - started,
+                )
+                return
+            landed = (workspace / "qualification-positive.txt").is_file()
+            listing = next(
+                (line.partition(":")[2] for line in proc.stdout.splitlines() if line.startswith("listing:")),
+                "",
             )
-            landed = (workspace / "qualification-positive.txt")
-            ok = proc.returncode == 0 and "positive-ok" in proc.stdout and landed.is_file()
-            return ok, f"exit {proc.returncode}; workspace write landed={landed.is_file()}"
+            write_error = next(
+                (line.partition(":")[2] for line in proc.stdout.splitlines() if line.startswith("write-error:")),
+                "",
+            )
+            detail = (
+                f"exit {proc.returncode}; /workspace lists [{listing}]; write landed={landed}"
+                + (f"; write error {write_error}" if write_error else "")
+            )
+            if proc.returncode == 0 and "positive-ok" in proc.stdout and landed:
+                recorder.record(
+                    "p3.positive.execute", STORY_P3,
+                    "sandbox runs code and its workspace write lands on the host",
+                    STATUS_PASS, detail=detail, duration_s=_now() - started,
+                )
+                return
+            # A container that cannot see the host workspace (or cannot write to it)
+            # says nothing about isolation; it says the runtime is not sharing it.
+            if listing.startswith("<missing-workspace>") or listing == "" or write_error:
+                recorder.record(
+                    "p3.positive.execute", STORY_P3,
+                    "sandbox runs code and its workspace write lands on the host",
+                    STATUS_BLOCKED,
+                    detail=(
+                        f"{detail}. The bind mount is not usable from inside the container, so "
+                        "no isolation probe can be trusted. Check the runtime's file-sharing "
+                        "settings (macOS: Docker Desktop → Resources → File sharing; Linux: "
+                        "SELinux labels on the shared path) and re-run."
+                    ),
+                    duration_s=_now() - started,
+                )
+                return
+            recorder.record(
+                "p3.positive.execute", STORY_P3,
+                "sandbox runs code and its workspace write lands on the host",
+                STATUS_FAIL, detail=detail, duration_s=_now() - started,
+            )
 
-        recorder.check(
-            "p3.positive.execute", STORY_P3,
-            "sandbox runs code and its workspace write lands on the host", _positive, skip_reason=skip,
-        )
+        _positive()
+        mount_ok = recorder.results[-1].status == STATUS_PASS
 
         def _denials() -> tuple[bool, str]:
             listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -648,35 +967,53 @@ def sandbox_suite(
             except OSError:
                 listener.close()
                 listener = None  # type: ignore[assignment]
+            code = _escape_probe_code(
+                outside=outside,
+                link="/workspace/qualify-link",
+                read_only_targets=("/outside-root-write-probe", "/etc/hostname"),
+                host_port=host_port,
+                network_target="1.1.1.1:443",
+            )
             try:
                 proc = run_command(
-                    container_argv(
-                        runtime,
-                        image,
-                        workspace,
-                        _ESCAPE_CODE,
-                        code_args=(
-                            str(outside),
-                            "/workspace/qualify-link",
-                            "/outside-root-write-probe,/etc/hostname",
-                            str(host_port),
-                        ),
-                    ),
-                    timeout=timeout,
-                    env=probe_env,
+                    container_argv(runtime, image, workspace, code), timeout=timeout, env=probe_env
                 )
             finally:
                 if listener is not None:
                     listener.close()
             marker = next((line for line in proc.stdout.splitlines() if line.startswith("denials:")), "")
             leaked = marker.partition(":")[2] if marker else "unknown"
+            reads = next((line.partition(":")[2] for line in proc.stdout.splitlines() if line.startswith("reads:")), "")
             ok = proc.returncode == 0 and leaked == "none"
-            return ok, f"exit {proc.returncode}; leaked={leaked}"
+            # The errno classes are part of the evidence: a denial by absence
+            # (ENOENT) and a denial by permission (EACCES) are different facts.
+            return ok, f"exit {proc.returncode}; leaked={leaked}; reads={reads or 'n/a'}"
 
         recorder.check(
             "p3.adversarial.escape_matrix", STORY_P3,
             "outside paths, symlink, network, host env and raw sockets are all refused",
-            _denials, skip_reason=skip,
+            _denials, skip_reason=skip or ("" if mount_ok else "workspace bind mount unusable"),
+        )
+
+        def _credentials() -> tuple[bool, str]:
+            """Credentials: the sandbox must not inherit the host's secret stores."""
+            proc = run_command(
+                container_argv(runtime, image, workspace, _CREDENTIAL_CODE), timeout=timeout, env=probe_env
+            )
+            home = next((line.partition(":")[2] for line in proc.stdout.splitlines() if line.startswith("home:")), "")
+            creds = next(
+                (line.partition(":")[2] for line in proc.stdout.splitlines() if line.startswith("credentials:")),
+                "unknown",
+            )
+            # The product pins HOME=/tmp inside the sandbox; anything else means the
+            # suite is not measuring the configuration the product ships.
+            ok = proc.returncode == 0 and creds == "none" and home == "/tmp"
+            return ok, f"exit {proc.returncode}; HOME={home or 'unset'}; host credentials visible={creds}"
+
+        recorder.check(
+            "p3.adversarial.credentials", STORY_P3,
+            "host credential stores are absent and HOME is the throwaway /tmp",
+            _credentials, skip_reason=skip or ("" if mount_ok else "workspace bind mount unusable"),
         )
 
         def _memory_limit() -> tuple[bool, str]:
@@ -691,7 +1028,8 @@ def sandbox_suite(
 
         recorder.check(
             "p3.adversarial.memory_limit", STORY_P3,
-            "a 3 GiB allocation is refused under --memory 512m", _memory_limit, skip_reason=skip,
+            "a 3 GiB allocation is refused under --memory 512m",
+            _memory_limit, skip_reason=skip or ("" if mount_ok else "workspace bind mount unusable"),
         )
 
         def _descendants() -> tuple[bool, str]:
@@ -710,7 +1048,7 @@ def sandbox_suite(
         recorder.check(
             "p3.adversarial.descendants", STORY_P3,
             "a background descendant does not survive the sandbox lifetime",
-            _descendants, skip_reason=skip,
+            _descendants, skip_reason=skip or ("" if mount_ok else "workspace bind mount unusable"),
         )
 
     outside.unlink(missing_ok=True)
@@ -758,6 +1096,28 @@ def sandbox_suite(
         recorder.check(
             "p3.product.argv", STORY_P3,
             "constructed sandbox argv carries every hardening flag", _argv,
+        )
+
+        def _argv_parity() -> tuple[bool, str]:
+            """The suite must probe the argv the product actually builds.
+
+            Verified here, on the machine that runs the qualification, so a future
+            change to ``app._sandbox_command`` fails this run instead of silently
+            qualifying flags the product no longer uses.
+            """
+            import unittest.mock  # noqa: PLC0415 - only needed for this probe
+
+            with tempfile.TemporaryDirectory(prefix="m5-qualify-parity-") as td:
+                root = Path(td)
+                with unittest.mock.patch.object(studio, "STUDIO_SANDBOX_RUNTIME", "/bin/sh"):
+                    product = studio._sandbox_command(root, "print(1)", python_code=True, container_name="m5-parity")
+                suite = container_argv(runtime or "docker", image, root, "print(1)", name="m5-parity")
+            return compare_argv(product, suite)
+
+        recorder.check(
+            "p3.product.argv_parity", STORY_P3,
+            "the suite probes exactly the argv the product builds", _argv_parity,
+            skip_reason="" if (runtime and runtime_name) else "no container runtime to compare against",
         )
 
         def _no_host_fallback() -> tuple[bool, str]:
@@ -819,6 +1179,8 @@ def sandbox_suite(
         "scripts/isolation_smoke.py --live passes", _smoke,
         skip_reason="" if runtime_ok else "no reachable container runtime",
     )
+
+    return identity
 
 
 # ---------------------------------------------------------------------------
@@ -945,8 +1307,246 @@ def _priors_not_verified() -> tuple[bool, str]:
     return ok, f"level={unmeasured.level}; note={unmeasured.note!r}"
 
 
-def _pressure_probe(gigabytes: float, timeout: float) -> tuple[bool, str, dict[str, Any]]:
-    """Touch ``gigabytes`` of anonymous memory while sampling swap growth."""
+# -- thermal sampling -------------------------------------------------------
+
+
+def thermal_snapshot() -> dict[str, Any]:
+    """One thermal reading from the platform, or an explicit "cannot read".
+
+    macOS exposes thermal pressure through ``pmset -g therm`` without privileges
+    (``CPU_Speed_Limit`` below 100 means the system is throttling); ``powermetrics``
+    would give die temperatures but needs root, so it is never invoked here. Linux
+    exposes millidegree readings through ``/sys/class/thermal``. Anything else
+    reports ``available: False`` rather than inventing a number.
+    """
+    system = platform.system()
+    if system == "Darwin":
+        out = _capture(["pmset", "-g", "therm"], timeout=10.0)
+        readings: dict[str, Any] = {}
+        for line in out.splitlines():
+            key, sep, value = line.partition("=")
+            if not sep:
+                continue
+            clean = key.strip().lower().replace(" ", "_")
+            value = value.strip()
+            if clean in {"cpu_speed_limit", "gpu_speed_limit", "cpu_scheduler_limit"} and value.isdigit():
+                readings[clean] = int(value)
+        if not readings:
+            return {"available": False, "source": "pmset -g therm", "note": "no thermal pressure readings returned"}
+        return {"available": True, "source": "pmset -g therm", "readings": readings}
+    if system == "Linux":
+        zones = linux_thermal_readings(Path("/sys/class/thermal"))
+        if not zones:
+            return {
+                "available": False,
+                "source": "/sys/class/thermal",
+                "note": "no readable thermal_zone*/temp (common inside containers)",
+            }
+        return {
+            "available": True,
+            "source": "/sys/class/thermal",
+            "readings": {"zone_celsius_max": max(zones), "zones": zones},
+        }
+    return {"available": False, "source": None, "note": f"no thermal source for platform {system!r}"}
+
+
+def linux_thermal_readings(base: Path) -> list[float]:
+    """Degrees Celsius from ``<base>/thermal_zone*/temp`` (millidegrees on Linux)."""
+    zones: list[float] = []
+    for zone in sorted(Path(base).glob("thermal_zone*")):
+        try:
+            raw = (zone / "temp").read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+        if raw.lstrip("-").isdigit():
+            zones.append(round(int(raw) / 1000.0, 2))
+    return zones
+
+
+def thermal_stress(snapshot: dict[str, Any]) -> float | None:
+    """A single comparable stress number: throttling (0-100) or max zone Celsius."""
+    readings = snapshot.get("readings") or {}
+    if "cpu_speed_limit" in readings:
+        return float(100 - int(readings["cpu_speed_limit"]))
+    if "zone_celsius_max" in readings:
+        return float(readings["zone_celsius_max"])
+    return None
+
+
+class ThermalSampler:
+    """Thermal readings collected across a load phase."""
+
+    def __init__(self) -> None:
+        self.samples: list[dict[str, Any]] = []
+
+    def sample(self) -> None:
+        self.samples.append(thermal_snapshot())
+
+    @property
+    def available(self) -> bool:
+        return any(bool(sample.get("available")) for sample in self.samples)
+
+    def summary(self) -> dict[str, Any]:
+        usable = [sample for sample in self.samples if sample.get("available")]
+        stresses = [value for value in (thermal_stress(sample) for sample in usable) if value is not None]
+        first = usable[0] if usable else (self.samples[0] if self.samples else {"available": False, "source": None, "note": "not sampled"})
+        throttled = [
+            (sample.get("readings") or {}).get("cpu_speed_limit")
+            for sample in usable
+            if (sample.get("readings") or {}).get("cpu_speed_limit") is not None
+        ]
+        return {
+            "source": first.get("source"),
+            "note": first.get("note"),
+            "samples": len(self.samples),
+            "available_samples": len(usable),
+            "first": first,
+            "last": usable[-1] if usable else None,
+            "stress_min": min(stresses) if stresses else None,
+            "stress_max": max(stresses) if stresses else None,
+            "cpu_speed_limit_min": min(throttled) if throttled else None,
+            "throttled": any(limit < 100 for limit in throttled),
+        }
+
+
+# -- per-category coding cases ----------------------------------------------
+
+CODING_CASE_SCHEMA_VERSION = 1
+
+
+class CodingCaseError(ValueError):
+    """Raised when a coding-case file is structurally invalid."""
+
+
+def load_coding_cases(path: Path) -> list[dict[str, str]]:
+    """Read and validate the representative per-category coding cases.
+
+    Accepts a bare list of cases or ``{"categories": [...], "cases": [...]}``. A case
+    is ``{"id", "category", "prompt"}``; ``prompt`` is optional, but a case without
+    one cannot be replayed later, so its absence is visible in the record.
+    """
+    try:
+        raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise CodingCaseError(f"cannot read coding cases: {exc}") from exc
+    except ValueError as exc:
+        raise CodingCaseError(f"coding cases are not valid JSON: {exc}") from exc
+    entries = raw.get("cases") if isinstance(raw, dict) else raw
+    if not isinstance(entries, list) or not entries:
+        raise CodingCaseError("coding cases must be a non-empty list, or an object with a 'cases' list.")
+    cases: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for index, entry in enumerate(entries, start=1):
+        if not isinstance(entry, dict):
+            raise CodingCaseError(f"case {index} must be an object.")
+        case_id = str(entry.get("id") or "").strip()
+        category = str(entry.get("category") or "").strip()
+        if not case_id:
+            raise CodingCaseError(f"case {index} is missing a non-empty 'id'.")
+        if case_id in seen:
+            raise CodingCaseError(f"duplicate case id {case_id!r}.")
+        if not category:
+            raise CodingCaseError(f"case {case_id!r} is missing a non-empty 'category'.")
+        seen.add(case_id)
+        cases.append({"id": case_id, "category": category, "prompt": str(entry.get("prompt") or "")})
+    if isinstance(raw, dict) and isinstance(raw.get("categories"), list):
+        declared = {str(item).strip() for item in raw["categories"]}
+        undeclared = sorted({case["category"] for case in cases} - declared)
+        if undeclared:
+            raise CodingCaseError(f"cases use categories that are not declared: {undeclared}")
+    return cases
+
+
+def _case_env(case: dict[str, str]) -> dict[str, str]:
+    env = dict(os.environ)
+    env["STUDIO_QUALIFY_CASE_ID"] = case["id"]
+    env["STUDIO_QUALIFY_CASE_CATEGORY"] = case["category"]
+    env["STUDIO_QUALIFY_CASE_PROMPT"] = case["prompt"]
+    return env
+
+
+def _coding_case_probe(
+    cases: Sequence[dict[str, str]],
+    command: str,
+    runs_per_case: int,
+    timeout: float,
+    sampler: ThermalSampler,
+) -> tuple[bool, str, dict[str, Any]]:
+    """Run every case through the caller's probe; record evidence and uncertainty."""
+    per_case: list[dict[str, Any]] = []
+    for case in cases:
+        results: list[dict[str, Any]] = []
+        for index in range(max(1, runs_per_case)):
+            started = _now()
+            proc = run_command(["sh", "-c", command], timeout=timeout, env=_case_env(case))
+            elapsed = _now() - started
+            sampler.sample()
+            payload: dict[str, Any] = {}
+            for line in (proc.stdout or "").splitlines():
+                if line.strip().startswith("{"):
+                    try:
+                        payload = json.loads(line)
+                    except ValueError:
+                        payload = {}
+            results.append(
+                {
+                    "run": index + 1,
+                    "exit_code": proc.returncode,
+                    "wall_s": round(elapsed, 3),
+                    "reported": payload,
+                    "stderr_tail": (proc.stderr or "")[-300:],
+                }
+            )
+        walls = sorted(item["wall_s"] for item in results)
+        median = statistics.median(walls) if walls else None
+        spread = (walls[-1] - walls[0]) if walls else 0.0
+        successful = sum(1 for item in results if item["exit_code"] == 0)
+        per_case.append(
+            {
+                "id": case["id"],
+                "category": case["category"],
+                "runs": results,
+                "successful_runs": successful,
+                "success_rate": round(successful / len(results), 3) if results else 0.0,
+                "wall_s_median": median,
+                "wall_s_spread_ratio": round(spread / median, 3) if median else None,
+                "completed": successful > 0,
+            }
+        )
+    categories: dict[str, dict[str, int]] = {}
+    for item in per_case:
+        bucket = categories.setdefault(item["category"], {"cases": 0, "completed": 0})
+        bucket["cases"] += 1
+        bucket["completed"] += 1 if item["completed"] else 0
+    incomplete = [item["id"] for item in per_case if not item["completed"]]
+    evidence = {
+        "schema_version": CODING_CASE_SCHEMA_VERSION,
+        "runner": command,
+        "runs_per_case": max(1, runs_per_case),
+        "cases": per_case,
+        "categories": categories,
+        "incomplete_cases": incomplete,
+        "uncertainty": {
+            "cases": len(per_case),
+            "categories": len(categories),
+            "single_run_cases": sum(1 for item in per_case if item["successful_runs"] == 1),
+            "note": "a single run per case cannot separate model variance from case difficulty",
+        },
+    }
+    detail = (
+        f"{len(per_case) - len(incomplete)}/{len(per_case)} cases completed across "
+        f"{len(categories)} categories"
+        + (f"; incomplete: {', '.join(incomplete)}" if incomplete else "")
+    )
+    return not incomplete, detail, evidence
+
+
+def _pressure_probe(
+    gigabytes: float, timeout: float, sampler: ThermalSampler | None = None
+) -> tuple[bool, str, dict[str, Any]]:
+    """Touch ``gigabytes`` of anonymous memory while sampling swap growth and heat."""
+    if sampler is not None:
+        sampler.sample()
     before = _meminfo_snapshot()
     peak_swap = before.get("swap_used_bytes", 0)
     started = _now()
@@ -957,6 +1557,8 @@ def _pressure_probe(gigabytes: float, timeout: float) -> tuple[bool, str, dict[s
         while len(held) * len(block) < int(gigabytes * GIB) and _now() < deadline:
             held.append(block)
             peak_swap = max(peak_swap, _meminfo_snapshot().get("swap_used_bytes", 0))
+            if sampler is not None:
+                sampler.sample()
     finally:
         held.clear()
     after = _meminfo_snapshot()
@@ -973,9 +1575,15 @@ def _pressure_probe(gigabytes: float, timeout: float) -> tuple[bool, str, dict[s
 
 
 def _model_probe(
-    command: str, runs: int, timeout: float, profile_out: Path | None
+    command: str,
+    runs: int,
+    timeout: float,
+    profile_out: Path | None,
+    sampler: ThermalSampler | None = None,
 ) -> tuple[bool, str, dict[str, Any]]:
     """Run a caller-supplied probe command and record its own reported timings."""
+    if sampler is not None:
+        sampler.sample()
     timings: list[dict[str, Any]] = []
     before = _meminfo_snapshot()
     peak_swap = before.get("swap_used_bytes", 0)
@@ -984,6 +1592,8 @@ def _model_probe(
         proc = run_command(["sh", "-c", command], timeout=timeout)
         elapsed = _now() - started
         peak_swap = max(peak_swap, _meminfo_snapshot().get("swap_used_bytes", 0))
+        if sampler is not None:
+            sampler.sample()
         payload: dict[str, Any] = {}
         for line in (proc.stdout or "").splitlines():
             line = line.strip()
@@ -1080,6 +1690,8 @@ def hardware_suite(
     model_runs: int,
     profile_out: Path | None,
     timeout: float,
+    coding_cases: Sequence[dict[str, str]] | None = None,
+    case_runs: int = 1,
 ) -> None:
     """Record the M5-P4-01 checks for the current machine."""
     memory = fingerprint.get("total_memory_bytes") or 0
@@ -1114,6 +1726,11 @@ def hardware_suite(
         _priors_not_verified,
     )
 
+    # Every load phase contributes thermal readings; the story's task list asks for
+    # thermal behavior, and a reading that cannot be taken is recorded as such.
+    sampler = ThermalSampler()
+    sampler.sample()
+
     pressure_evidence: dict[str, Any] = {}
     if pressure_gb <= 0:
         recorder.record(
@@ -1124,7 +1741,7 @@ def hardware_suite(
         )
     else:
         def _pressure() -> tuple[bool, str]:
-            ok, detail, evidence = _pressure_probe(pressure_gb, timeout)
+            ok, detail, evidence = _pressure_probe(pressure_gb, timeout, sampler)
             pressure_evidence.update(evidence)
             return ok, detail
 
@@ -1142,21 +1759,91 @@ def hardware_suite(
             STATUS_SKIP,
             detail="pass --model-command '...' to measure your runtime (see docs/qualification-suite.md)",
         )
-        return
+    else:
+        model_evidence: dict[str, Any] = {}
 
-    model_evidence: dict[str, Any] = {}
+        def _model() -> tuple[bool, str]:
+            ok, detail, evidence = _model_probe(model_command, model_runs, timeout, profile_out, sampler)
+            model_evidence.update(evidence)
+            return ok, detail
 
-    def _model() -> tuple[bool, str]:
-        ok, detail, evidence = _model_probe(model_command, model_runs, timeout, profile_out)
-        model_evidence.update(evidence)
-        return ok, detail
+        recorder.check(
+            "p4.model_load", STORY_P4,
+            "load / first-token / peak memory measured for a real model run",
+            _model,
+            evidence=lambda: dict(model_evidence),
+        )
 
-    recorder.check(
-        "p4.model_load", STORY_P4,
-        "load / first-token / peak memory measured for a real model run",
-        _model,
-        evidence=lambda: dict(model_evidence),
-    )
+    # Per-category coding cases (task 1/2): evidence and uncertainty per case.
+    case_evidence: dict[str, Any] = {}
+    if not coding_cases:
+        recorder.record(
+            "p4.coding_cases", STORY_P4,
+            "representative per-category coding cases completed with recorded uncertainty",
+            STATUS_SKIP,
+            required=False,
+            detail="pass --coding-cases FILE to run them (see docs/qualification-suite.md)",
+        )
+    elif not model_command:
+        recorder.record(
+            "p4.coding_cases", STORY_P4,
+            "representative per-category coding cases completed with recorded uncertainty",
+            STATUS_SKIP,
+            required=False,
+            detail="--coding-cases needs --model-command: the cases are run through your probe",
+        )
+    else:
+        def _cases() -> tuple[bool, str]:
+            ok, detail, evidence = _coding_case_probe(coding_cases, model_command, case_runs, timeout, sampler)
+            case_evidence.update(evidence)
+            return ok, detail
+
+        recorder.check(
+            "p4.coding_cases", STORY_P4,
+            "representative per-category coding cases completed with recorded uncertainty",
+            _cases,
+            required=False,
+            evidence=lambda: dict(case_evidence),
+        )
+
+    summary = sampler.summary()
+    load_phase = pressure_gb > 0 or bool(model_command) or bool(coding_cases)
+    if not load_phase:
+        recorder.record(
+            "p4.thermal", STORY_P4,
+            "thermal behavior measured under load",
+            STATUS_SKIP,
+            required=False,
+            detail="no load phase requested: pass --pressure-gb or --model-command",
+        )
+    elif not sampler.available:
+        recorder.record(
+            "p4.thermal", STORY_P4,
+            "thermal behavior measured under load",
+            STATUS_BLOCKED,
+            required=False,
+            detail=(
+                f"{len(sampler.samples)} samples taken but none were readable "
+                f"({summary.get('note') or summary.get('source') or 'unknown source'}); "
+                "macOS exposes CPU_Speed_Limit via `pmset -g therm` without root, Linux via "
+                "/sys/class/thermal (often absent in containers), and `powermetrics` needs root"
+            ),
+            evidence={"thermal": summary},
+        )
+    else:
+        detail = (
+            f"{summary['available_samples']}/{summary['samples']} readings from {summary['source']}; "
+            f"stress {summary['stress_min']}-{summary['stress_max']}; "
+            + ("throttling observed" if summary["throttled"] else "no throttling observed")
+        )
+        recorder.record(
+            "p4.thermal", STORY_P4,
+            "thermal behavior measured under load",
+            STATUS_PASS,
+            required=False,
+            detail=detail,
+            evidence={"thermal": summary},
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1173,6 +1860,7 @@ def build_record(
     runtime_path: str,
     image: str,
     invocation: Sequence[str],
+    sandbox_identity: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble the JSON evidence record."""
     verdicts: dict[str, Any] = {}
@@ -1194,10 +1882,18 @@ def build_record(
         "invocation": list(invocation),
         "suites": list(suites),
         "fingerprint": fingerprint,
+        # The machine block binds the record to this OS/CPU/RAM/revision; the
+        # sandbox block binds it to the runtime build, the image content and the
+        # hardening configuration that was actually probed.
         "sandbox": {
             "runtime": runtime_name,
             "runtime_path": runtime_path,
             "image": image,
+            **{
+                key: value
+                for key, value in (sandbox_identity or {}).items()
+                if key not in {"runtime", "runtime_path", "image"}
+            },
         },
         "checks": [result.to_dict() for result in recorder.results],
         "verdicts": verdicts,
@@ -1233,6 +1929,31 @@ def render_markdown(record: dict[str, Any]) -> str:
             f"- runtime: `{record['sandbox']['runtime'] or 'none detected'}`"
             f" ({record['sandbox']['runtime_path'] or 'not on PATH'})",
             f"- image: `{record['sandbox']['image']}`",
+            *(
+                [f"- image id: `{record['sandbox']['image_id']}`"]
+                if record["sandbox"].get("image_id")
+                else ["- image id: not recorded"]
+            ),
+            *(
+                [f"- image digest: `{record['sandbox']['image_digest']}`"]
+                if record["sandbox"].get("image_digest")
+                else []
+            ),
+            *(
+                [f"- runtime version: {record['sandbox']['runtime_version']}"]
+                if record["sandbox"].get("runtime_version")
+                else []
+            ),
+            *(
+                [
+                    f"- product config: {len(record['sandbox']['config'].get('hardening_flags') or [])} "
+                    f"hardening flags {record['sandbox']['config'].get('limits') or {}}, "
+                    f"{record['sandbox']['config'].get('bind_mounts')} bind mount(s), "
+                    f"privileged={record['sandbox']['config'].get('privileged')}"
+                ]
+                if record["sandbox"].get("config")
+                else []
+            ),
             "",
             "## Checks",
             "",
@@ -1295,8 +2016,103 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--model-command", default="", help="shell command that runs one measured model call")
     parser.add_argument("--model-runs", type=int, default=3, help="how many times to run --model-command")
     parser.add_argument("--profile-out", type=Path, default=None, help="persist a model_calibration profile here")
+    parser.add_argument(
+        "--coding-cases",
+        type=Path,
+        default=None,
+        help="JSON file of per-category coding cases to run through --model-command",
+    )
+    parser.add_argument(
+        "--case-runs",
+        type=int,
+        default=1,
+        help="runs per coding case (more runs make the recorded uncertainty meaningful)",
+    )
     parser.add_argument("--quiet", action="store_true", help="do not print per-check lines")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the commands the suite would run, then exit without touching anything",
+    )
     return parser.parse_args(list(argv) if argv is not None else None)
+
+
+def _render_probe_argv(runtime: str, image: str, label: str) -> str:
+    """The probe argv for display, with the probe code elided so flags stay readable."""
+    argv = container_argv(runtime, image, Path("<workspace>"), "<probe>")[:-2]
+    return " ".join(shlex.quote(part) for part in argv) + f" -lc 'exec python3 -c {label}'"
+
+
+def render_plan(*, suites: Sequence[str], runtime_name: str, image: str, args: argparse.Namespace) -> str:
+    """The exact commands the suite would run, without running any of them.
+
+    Used by ``--dry-run`` so an operator can review the sandbox flags and the
+    measurement commands before anything touches their machine.
+    """
+    lines: list[str] = ["", "== Planned qualification =="]
+    if STORY_P3 in suites:
+        runtime = runtime_name or "docker"  # a plan is informative even with nothing installed
+        lines.extend(
+            [
+                "",
+                f"M5-P3-01 sandbox backend (runtime: {runtime})",
+                f"  1. {runtime} --version",
+                f"  2. {runtime} info",
+                f"  3. {runtime} image inspect {image}   (nothing is ever pulled)",
+                "  4. positive compatibility, inside a temporary workspace:",
+                f"     {_render_probe_argv(runtime, image, '<positive compatibility probe>')}",
+                "  5. adversarial matrix (identical flags):",
+                f"     {_render_probe_argv(runtime, image, '<escape probe: outside paths, symlink, network, credentials>')}",
+                "  6. memory limit: same argv with --memory 512m and a 3 GiB allocation probe",
+                "  7. descendants: same argv with a named container that spawns `sleep 300`,",
+                f"     then `{runtime} ps --quiet --filter name=^<name>$`",
+                "  8. product argv and fail-closed probes through app._sandbox_command / _execute_limited",
+                f"  9. {sys.executable} scripts/isolation_smoke.py --live",
+                " 10. bind the record to what ran: the runtime version, the image content id and",
+                "     digest from `image inspect`, and the product's hardening flags from app",
+                "",
+                "  Every probe runs in a throwaway directory under the system temp dir with",
+                "  --network=none --read-only --cap-drop=ALL --pull=never; nothing outside it is",
+                "  written, and no image is downloaded.",
+            ]
+        )
+    if STORY_P4 in suites:
+        lines.extend(["", "M5-P4-01 hardware and model qualification"])
+        lines.extend(
+            [
+                "  1. machine fingerprint (chip, OS, cores, RAM, swap, git revision) — read-only",
+                "  2. one-heavy-model admission through resource_admission — in-process",
+                "  3. serving-path admission through app.stream_any_model — in-process, temp DB",
+                "  4. routing confidence with no measured profile — in-process",
+            ]
+        )
+        if args.pressure_gb > 0:
+            lines.append(f"  5. touch {args.pressure_gb} GiB of anonymous memory and sample swap")
+        else:
+            lines.append("  5. pressure measurement SKIPPED (no --pressure-gb)")
+        if args.model_command:
+            lines.append(
+                f"  6. run `{args.model_command}` x{max(1, args.model_runs)} and record its metrics"
+                + (f", writing a profile to {args.profile_out}" if args.profile_out else "")
+            )
+        else:
+            lines.append("  6. model load measurement SKIPPED (no --model-command)")
+        if args.coding_cases is not None:
+            lines.append(
+                f"  7. coding cases: run every case in {args.coding_cases} through that command "
+                f"x{max(1, args.case_runs)}, with STUDIO_QUALIFY_CASE_ID/CATEGORY/PROMPT in the environment"
+            )
+        else:
+            lines.append("  7. coding cases SKIPPED (no --coding-cases)")
+        lines.append("  thermal readings are sampled during each load phase (pmset -g therm, /sys/class/thermal)")
+    lines.extend(
+        [
+            "",
+            "Nothing above has been executed: this is a dry run (--dry-run).",
+            "",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def _selected_suites(args: argparse.Namespace) -> list[str]:
@@ -1320,12 +2136,29 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"{fingerprint.get('total_memory_gib')} GiB RAM, {fingerprint.get('cpu_count')} CPUs"
     )
 
+    if args.dry_run:
+        candidate_path, candidate_name = detect_runtime(args.runtime) if STORY_P3 in suites else ("", "")
+        if candidate_name:
+            print(f"  runtime: {candidate_name} ({candidate_path})")
+        else:
+            requested = "auto" if args.runtime in ("", "auto") else args.runtime
+            shown = "docker (assumed, none installed)" if requested == "auto" else requested
+            print(f"  runtime: none detected (requested {requested!r}); the plan uses `{shown}`")
+        print(render_plan(
+            suites=suites,
+            runtime_name=candidate_name,  # empty when nothing is installed; the plan still renders
+            image=args.image,
+            args=args,
+        ))
+        return 0
+
     runtime_path, runtime_name = ("", "")
+    sandbox_identity: dict[str, Any] = {}
     if STORY_P3 in suites:
         print("\n== M5-P3-01 sandbox backend qualification ==")
         runtime_path, runtime_name = detect_runtime(args.runtime)
         print(f"  runtime: {runtime_name or 'none'} ({runtime_path or 'not on PATH'})")
-        sandbox_suite(
+        sandbox_identity = sandbox_suite(
             recorder,
             runtime=runtime_path,
             runtime_name=runtime_name,
@@ -1335,6 +2168,16 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if STORY_P4 in suites:
         print("\n== M5-P4-01 hardware and model qualification ==")
+        cases: list[dict[str, str]] | None = None
+        if args.coding_cases is not None:
+            try:
+                cases = load_coding_cases(args.coding_cases)
+            except CodingCaseError as exc:
+                # A malformed case file is the operator's input error, not a verdict:
+                # fail loudly and run nothing rather than claiming a partial suite.
+                print(f"\n  error: {exc}", file=sys.stderr)
+                return 2
+            print(f"  coding cases: {len(cases)} from {args.coding_cases}")
         hardware_suite(
             recorder,
             fingerprint=fingerprint,
@@ -1343,6 +2186,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             model_runs=max(1, args.model_runs),
             profile_out=args.profile_out,
             timeout=max(5.0, args.timeout),
+            coding_cases=cases,
+            case_runs=max(1, args.case_runs),
         )
 
     record = build_record(
@@ -1353,6 +2198,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runtime_path=runtime_path,
         image=args.image,
         invocation=["qualify_environment.py", *(sys.argv[1:] if argv is None else argv)],
+        sandbox_identity=sandbox_identity,
     )
 
     print("\n== Verdicts ==")

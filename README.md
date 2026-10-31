@@ -213,25 +213,41 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   only, with `scripts/qualify_environment.sh` as a thin wrapper) is the operator-run
   suite that CI cannot be. `--sandbox` probes a live runtime with the **product's**
   own path (`app._execute_limited` under `STUDIO_EXECUTION_MODE=sandbox`) and an
-  adversarial matrix run with container flags that a test asserts match
-  `app._sandbox_command`: outside-workspace and traversal paths, a workspace symlink
-  pointing outside, direct TCP egress, an inherited host-environment sentinel, raw
-  sockets, a 3 GiB allocation under `--memory 512m`, a surviving descendant, and
-  `scripts/isolation_smoke.py --live`. `--hardware` records the machine fingerprint,
+  adversarial matrix carried in the product's full hardening set (`--network=none`,
+  `--read-only`, `--cap-drop=ALL`, `--security-opt=no-new-privileges`,
+  `--pull=never`, `HOME`/`TMPDIR` pinned to `/tmp`, `--ipc=private`,
+  `--ulimit nofile`, a `noexec` tmpfs and the same `sh -lc exec` form): outside
+  paths and traversal (with the errno class recorded, so absence and denial stay
+  different facts), a workspace symlink pointing outside, direct and host-loopback
+  egress, raw sockets, host credential stores and `HOME`, a 3 GiB allocation under
+  `--memory 512m`, a surviving descendant, and `scripts/isolation_smoke.py --live`.
+  `p3.product.argv_parity` compares the suite's argv against `app._sandbox_command`
+  **on the machine running it**, so product drift fails the owner's run instead of
+  silently qualifying stale flags. `--hardware` records the machine fingerprint,
   checks that `resource_admission` admits exactly one heavy request at 80 % of
   detected memory and refuses the second, checks that routing confidence without a
   measured profile is `unknown`, drives the real `app.stream_any_model` funnel to
   prove that a second heavy local stream is refused while one is resident, and —
-  only when asked with `--pressure-gb` / `--model-command` — measures swap growth
-  under a touched allocation and the timings of a caller-supplied model probe,
-  optionally persisted as a `model_calibration` profile. Every check records `pass` / `fail` / `skip` /
+  only when asked — measures swap growth under a touched allocation
+  (`--pressure-gb`), the timings of a caller-supplied model probe
+  (`--model-command`, optionally persisted as a `model_calibration` profile), the
+  completion and wall-time spread of representative per-category coding cases run
+  through that probe (`--coding-cases`), and thermal pressure/throttling sampled
+  during every load phase (`pmset -g therm` on macOS, `/sys/class/thermal` on
+  Linux — reported as `blocked` where the platform offers no readable source,
+  never guessed). Every check records `pass` / `fail` / `skip` /
   `blocked` with a reason: a required check that could not run makes its suite
   `blocked`, a failed one makes it `unqualified`, and only an all-passing run is
-  `qualified`; exit codes follow (`0` / `1` / `2`). The record binds the repository
-  revision, OS build, chip, RAM and detected runtime into JSON and Markdown. **No
+  `qualified`; exit codes follow (`0` / `1` / `2`). `unqualified` is reserved for
+  *observed* violations: a missing image or a container that cannot see the shared
+  workspace is `blocked` (a setup gap must never read as a security failure), and
+  `--dry-run` prints every command without executing any of them. The record binds the repository
+  revision, OS build, chip and RAM, and — for the sandbox — the runtime version,
+  image content id and repo digest and the product's hardening flags, so a tag
+  re-pulled to a different digest cannot inherit an old qualification. **No
   container-isolation or 24 GB claim is made anywhere in this repository**, both
   stories stay `blocked` in the roadmap until the owner produces a qualified record
-  on the target machine. Pinned by 47 tests (`tests/test_qualify_environment.py`)
+  on the target machine. Pinned by 94 tests (`tests/test_qualify_environment.py`)
   and documented in [`docs/qualification-suite.md`](docs/qualification-suite.md)
   (ADR-0010).
 - **A second heavy local model request is refused by policy in the serving path

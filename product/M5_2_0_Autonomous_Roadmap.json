@@ -125,7 +125,7 @@
   "session_state": {
     "active_story": "M5-P3-02",
     "last_completed_story": "M5-P2-05",
-    "last_checkpoint": "2026-10-30T19:58:00Z",
+    "last_checkpoint": "2026-10-31T03:22:00Z",
     "last_session_id": "arena/46877a13-m5-agent-studio",
     "next_recommended_story": "M5-P4-02",
     "open_risks": [
@@ -2149,19 +2149,19 @@
         "progress_percent": 25,
         "attempts": 1,
         "started_at": "2026-10-30T19:31:57Z",
-        "updated_at": "2026-10-30T19:37:54Z",
+        "updated_at": "2026-10-31T03:16:40Z",
         "completed_at": null,
-        "owner_session": "arena/bf5fe1a6-m5-agent-studio",
-        "commit_sha": "44c16b4",
+        "owner_session": "arena/ca2d533a-m5-agent-studio",
+        "commit_sha": "dff964a",
         "changed_files": [
+          "README.md",
+          "docs/README.md",
+          "docs/adr/0010-operator-run-environment-qualification.md",
+          "docs/qualification-suite.md",
+          "product/M5_2_0_Autonomous_Roadmap.json",
           "scripts/qualify_environment.py",
           "scripts/qualify_environment.sh",
-          "tests/test_qualify_environment.py",
-          "docs/qualification-suite.md",
-          "docs/adr/0010-operator-run-environment-qualification.md",
-          "docs/README.md",
-          "README.md",
-          "product/M5_2_0_Autonomous_Roadmap.json"
+          "tests/test_qualify_environment.py"
         ],
         "evidence": [
           "Deliverable (tooling, not a result): scripts/qualify_environment.py --sandbox executes the sandbox suite through app._execute_limited with STUDIO_EXECUTION_MODE=sandbox and a hardened `--network=none --read-only --cap-drop=ALL --security-opt=no-new-privileges --pull=never` container built by container_argv; tests/test_qualify_environment.py::test_container_argv_matches_the_product_hardening_flags asserts the suite's flags stay equal to app._sandbox_command's (single bind mount, no --privileged).",
@@ -2170,18 +2170,23 @@
           "No silent host fallback: p3.product.no_host_fallback points STUDIO_SANDBOX_RUNTIME at a nonexistent binary (must deny) and then runs the real configuration (no host marker file may appear); a simulated host execution is reported as a failure (test_sandbox_suite_reports_host_execution_as_a_failure). scripts/isolation_smoke.py --live is executed as one aggregated check.",
           "Blocker unchanged: no container runtime exists in this evidence environment (docker/podman not on PATH). The live run therefore reports M5-P3-01 as blocked, with every container probe recorded skip and the reason; no isolation guarantee is claimed. Evidence: scripts/qualify_environment.py --all locally exits 2 with `M5-P3-01: blocked`.",
           "Next action: the owner runs `python3 scripts/qualify_environment.py --sandbox --json <path> --markdown <path>` (or ./scripts/qualify_environment.sh) on the Docker host; only a `qualified` record may move this story off blocked (docs/qualification-suite.md).",
-          "Runtime selection fails closed: an explicitly requested `--runtime` that is not installed blocks the run instead of falling back to another backend (tests: test_an_explicit_missing_runtime_is_never_replaced_by_another_backend), and a host that has Docker but not the configured image reports unqualified/exit 1 rather than a pass (test_a_runtime_without_the_image_is_unqualified_never_qualified)."
+          "Runtime selection fails closed: an explicitly requested `--runtime` that is not installed blocks the run instead of falling back to another backend (tests: test_an_explicit_missing_runtime_is_never_replaced_by_another_backend), and a host that has Docker but not the configured image reports unqualified/exit 1 rather than a pass (test_a_runtime_without_the_image_is_unqualified_never_qualified).",
+          "First-run hardening of the qualification tooling (so the owner's run cannot report a false verdict): --dry-run prints every command without executing any of them (tests: test_dry_run_prints_the_plan_and_touches_nothing, test_dry_run_is_explicit_about_skipped_measurements); a missing image is now blocked/exit 2 instead of unqualified, because nothing about isolation was observed (test_a_missing_image_blocks_the_suite_instead_of_accusing_isolation, test_a_runtime_without_the_image_never_produces_a_pass); the positive probe reports what the container sees in /workspace, so a mount the runtime does not share (macOS file sharing, SELinux labels) is blocked rather than reported as a leak, and dependent probes are skipped (test_an_unusable_workspace_mount_is_blocked_not_unqualified, test_an_unwritable_empty_mount_is_blocked); unqualified is now reserved for observed violations, documented in docs/qualification-suite.md.",
+          "The suite had been qualifying a *different* container than the product builds: container_argv was missing --env HOME=/tmp, TMPDIR=/tmp, PYTHONDONTWRITEBYTECODE=1, --ipc=private, --ulimit nofile, --entrypoint /bin/sh and the `exec python3 -c` shell form, and used a 64m tmpfs where the product uses 256m. It now reproduces app._sandbox_command flag for flag, and p3.product.argv_parity re-checks that on the machine running the qualification (compare_argv; tests: test_suite_argv_matches_the_product_argv, test_argv_parity_detects_a_missing_product_flag), so future product drift fails the owner's run instead of silently qualifying stale flags.",
+          "P3-01 task 'credentials' now has a probe of its own rather than riding on an environment-variable sentinel: p3.adversarial.credentials runs inside the sandbox and fails if ~/.aws/credentials, ~/.ssh/id_rsa, ~/.ssh/id_ed25519, ~/.netrc, ~/.docker/config.json, ~/.kube/config or the gcloud ADC file is visible, or if HOME is not the product's throwaway /tmp. The escape matrix also reports the errno class of every refusal (reads:outside-direct=ENOENT,...) so a pass is explainable instead of a bare 'denied', and the symlink case now records symlink-target=VISIBLE/ABSENT explicitly.",
+          "P3-01 task 'Bind evidence to OS/runtime/config fingerprint' now has a check of its own: p3.environment.bind records the runtime version line, the image content id and repo digest (from image inspect: a tag can be re-pulled to a different digest, so a tag alone cannot inherit an old qualification) and the product's hardening flags with their limit values, read from app._sandbox_command. Unreadable identity is blocked (a readability gap, not a failed guarantee) so a qualified record cannot be produced without it; the values travel in record.sandbox and in the check's evidence block, and the Markdown record prints them under 'Sandbox backend'.",
+          "With this, all four P3-01 implementation tasks map to a check in docs/qualification-suite.md (a task -> check table added for M5-P3-01 alongside the M5-P4-01 one), so the owner's single run produces evidence for every task rather than for two of four. Story stays blocked: still no container runtime in this evidence environment, and the check itself reports skip with 'no reachable container runtime'."
         ],
         "test_results": [
           {
             "command": ".venv/bin/python -m pytest -q",
             "exit_code": 0,
-            "result": "989 passed, 1 skipped (opt-in live container test), 1 warning in 53.09s"
+            "result": "1075 passed, 1 skipped (opt-in live container test), 1 warning in 49.93s"
           },
           {
             "command": ".venv/bin/python -m pytest tests/test_qualify_environment.py -q",
             "exit_code": 0,
-            "result": "43 passed (also re-run with a Docker-on-PATH simulation: same result)"
+            "result": "94 passed (16 new: runtime version, image id/digest, config fingerprint, blocked-vs-skip binding semantics, record+Markdown binding, dry-run step)"
           },
           {
             "command": ".venv/bin/ruff check .",
@@ -2189,39 +2194,24 @@
             "result": "All checks passed"
           },
           {
-            "command": ".venv/bin/mypy",
+            "command": ".venv/bin/python -m mypy",
             "exit_code": 0,
-            "result": "Success: no issues found in 47 source files"
+            "result": "Success: no issues found in 48 source files"
           },
           {
-            "command": ".venv/bin/python scripts/validate_docs.py",
+            "command": ".venv/bin/python scripts/validate_docs.py && scripts/validate_adrs.py && scripts/validate_governance.py",
             "exit_code": 0,
-            "result": "passed (5 required pages, 88 files scanned)"
+            "result": "all passed"
           },
           {
-            "command": ".venv/bin/python scripts/validate_adrs.py",
-            "exit_code": 0,
-            "result": "passed (process, template, numbered records)"
-          },
-          {
-            "command": ".venv/bin/python scripts/validate_governance.py",
-            "exit_code": 0,
-            "result": "passed (7 required files)"
-          },
-          {
-            "command": ".venv/bin/python scripts/smoke_local.py && .venv/bin/python scripts/smoke_local.py --standalone",
-            "exit_code": 0,
-            "result": "both passed"
-          },
-          {
-            "command": ".venv/bin/python scripts/qualify_environment.py --all --json /tmp/q.json --markdown /tmp/q.md",
+            "command": ".venv/bin/python scripts/qualify_environment.py --sandbox --json /tmp/rec2.json --markdown /tmp/rec2.md",
             "exit_code": 2,
-            "result": "M5-P3-01: blocked (no container runtime), M5-P4-01: blocked (not 24 GB Apple Silicon); nothing claimed"
+            "result": "P3 blocked (12 checks, 10 not executed): p3.runtime.available blocked 'no docker/podman on PATH'; p3.environment.bind skip 'no reachable container runtime'; record.sandbox carries no invented version or image id"
           },
           {
-            "command": "PATH=<fake docker> .venv/bin/python -m pytest -q",
+            "command": ".venv/bin/python scripts/qualify_environment.py --sandbox --dry-run",
             "exit_code": 0,
-            "result": "989 passed - a host with Docker but without the image yields unqualified (exit 1), never qualified"
+            "result": "plan step 10 'bind the record to what ran: the runtime version, the image content id and digest ..., and the product's hardening flags from app'; nothing executed"
           }
         ],
         "decisions": [
@@ -2556,28 +2546,28 @@
         "progress_percent": 60,
         "attempts": 1,
         "started_at": "2026-10-30T19:31:57Z",
-        "updated_at": "2026-10-30T19:50:24Z",
+        "updated_at": "2026-10-31T03:10:15Z",
         "completed_at": null,
         "owner_session": "arena/7cdf26c8-m5-agent-studio",
         "commit_sha": "ed1d15b",
         "changed_files": [
-          "model_admission.py",
+          "README.md",
           "app.py",
-          "scripts/build_studio.py",
-          "scripts/qualify_environment.py",
-          "pyproject.toml",
-          "studio.py",
-          "tests/test_model_admission.py",
-          "tests/test_qualify_environment.py",
-          "docs/model-admission.md",
-          "docs/adr/0011-heavy-local-model-admission.md",
-          "docs/adr/0010-operator-run-environment-qualification.md",
-          "docs/qualification-suite.md",
           "docs/README.md",
+          "docs/adr/0010-operator-run-environment-qualification.md",
+          "docs/adr/0011-heavy-local-model-admission.md",
+          "docs/model-admission.md",
+          "docs/qualification-suite.md",
           "docs/route-security-matrix.md",
           "docs/subsystem-dependency-inventory.md",
-          "README.md",
-          "product/M5_2_0_Autonomous_Roadmap.json"
+          "model_admission.py",
+          "product/M5_2_0_Autonomous_Roadmap.json",
+          "pyproject.toml",
+          "scripts/build_studio.py",
+          "scripts/qualify_environment.py",
+          "studio.py",
+          "tests/test_model_admission.py",
+          "tests/test_qualify_environment.py"
         ],
         "evidence": [
           "AC 'second simultaneous heavy load rejected under policy' now holds in the serving path (code + tests, not yet measured): model_admission.HeavyModelAdmission wraps resource_admission.ResourceAdmissionScheduler with local-inference policy (capacity = detected unified memory or STUDIO_HEAVY_MODEL_MEMORY_BYTES; one request = 80% of capacity; one slot; one distinct resident model) and typed denials heavy_model_slot_busy / heavy_model_memory_exceeded / heavy_model_resident carrying the policy snapshot. Evidence: tests/test_model_admission.py::test_first_request_is_admitted_and_the_second_is_refused, ::test_memory_capacity_is_enforced_independently_of_slots, ::test_a_different_model_is_refused_while_one_is_resident, ::test_concurrent_threads_admit_exactly_one_request.",
@@ -2586,23 +2576,20 @@
           "AC 'routing does not treat public priors as verified' unchanged and re-verified: model_recommendation._confidence(None) is 'unknown' with no comparable benchmark profile (qualification check p4.priors_not_verified).",
           "Qualification tooling now proves the wiring behaviourally instead of scanning source: p4.admission_wired drives the real app.stream_any_model funnel (fake backend) and expects admitted -> refused while resident -> admitted after release; it is now a required check (tests: ::test_admission_wired_check_observes_the_real_serving_path, ::test_admission_probe_reports_a_serving_path_that_bypasses_admission).",
           "AC '24 GB pressure measured' remains UNMEASURED: p4.pressure and p4.model_load need the owner's 24 GB Apple Silicon run (--pressure-gb N --model-command CMD). The 80% reservation is documented as policy, not a measurement (docs/model-admission.md 'What this does not claim'), and the story therefore stays blocked.",
-          "Standalone bundle stays self-contained: resource_admission and model_admission are inlined into studio.py (builder now tolerates a trailing comment on the import line), verified by tests/test_release_manager.py::test_generated_standalone_has_no_local_module_imports and ::test_the_standalone_bundle_carries_the_same_policy."
+          "Standalone bundle stays self-contained: resource_admission and model_admission are inlined into studio.py (builder now tolerates a trailing comment on the import line), verified by tests/test_release_manager.py::test_generated_standalone_has_no_local_module_imports and ::test_the_standalone_bundle_carries_the_same_policy.",
+          "Task 1/2 (representative per-category coding cases + recorded uncertainty): --coding-cases takes a case set (id/category/prompt, optional declared categories) and runs every case through --model-command with STUDIO_QUALIFY_CASE_ID/CATEGORY/PROMPT in the environment, --case-runs times each. p4.coding_cases records per-case exit codes, success rate, wall_s_median, wall_s_spread_ratio, per-category completion and an explicit uncertainty block (incl. single_run_cases) instead of a bare pass. A malformed case set (duplicate/missing id, missing category, undeclared category, invalid JSON) aborts with exit 2 and writes no record. Tests: test_load_coding_cases_* , test_coding_case_probe_passes_case_identity_through_the_environment, test_coding_case_probe_records_failures_and_uncertainty, test_coding_case_probe_measures_wall_time_spread, test_malformed_coding_cases_abort_the_run_without_a_verdict.",
+          "Task 3 (thermal): p4.thermal samples thermal pressure during every load phase — macOS via `pmset -g therm` CPU_Speed_Limit (no root; powermetrics is never invoked because it needs root), Linux via /sys/class/thermal/thermal_zone*/temp — and records stress min/max plus whether throttling was observed. Where the platform exposes no readable source the check is `blocked` with the reason (this container: 35 samples, none readable) rather than a fabricated temperature. Tests: test_thermal_snapshot_parses_pmset_thermal_pressure, test_linux_thermal_readings_convert_millidegrees, test_thermal_sampler_summarises_throttling, test_thermal_check_blocks_when_the_platform_cannot_report, test_thermal_check_passes_with_readings_under_load."
         ],
         "test_results": [
           {
             "command": ".venv/bin/python -m pytest -q",
             "exit_code": 0,
-            "result": "1025 passed, 1 skipped (opt-in live container test), 1 warning in 52.78s"
-          },
-          {
-            "command": ".venv/bin/python -m pytest tests/test_model_admission.py -q",
-            "exit_code": 0,
-            "result": "35 passed"
+            "result": "1059 passed, 1 skipped (opt-in live container test), 1 warning in 49.61s"
           },
           {
             "command": ".venv/bin/python -m pytest tests/test_qualify_environment.py -q",
             "exit_code": 0,
-            "result": "47 passed"
+            "result": "78 passed (24 new for thermal + coding cases)"
           },
           {
             "command": ".venv/bin/ruff check .",
@@ -2620,14 +2607,14 @@
             "result": "all passed"
           },
           {
-            "command": ".venv/bin/python scripts/smoke_local.py && .venv/bin/python scripts/smoke_local.py --standalone",
-            "exit_code": 0,
-            "result": "both passed"
+            "command": ".venv/bin/python scripts/qualify_environment.py --hardware --coding-cases cases.json --model-command CMD --pressure-gb 0.2 --json rec.json",
+            "exit_code": 2,
+            "result": "p4.coding_cases pass (3/3 cases, 3 categories), p4.thermal blocked (no readable thermal source in this container), p4.machine.fingerprint blocked (not 24 GB Apple Silicon) -> suite blocked"
           },
           {
-            "command": ".venv/bin/python scripts/qualify_environment.py --hardware --quiet",
-            "exit_code": 2,
-            "result": "p4.single_heavy_model pass, p4.admission_wired pass, p4.machine.fingerprint blocked (not 24 GB Apple Silicon) -> suite blocked, nothing claimed"
+            "command": ".venv/bin/python scripts/qualify_environment.py --hardware --dry-run --coding-cases cases.json",
+            "exit_code": 0,
+            "result": "plan lists the case runner and thermal sources; nothing executed"
           }
         ],
         "decisions": [

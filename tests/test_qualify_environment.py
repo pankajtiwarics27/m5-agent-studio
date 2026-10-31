@@ -29,6 +29,17 @@ ROOT = Path(__file__).resolve().parents[1]
 # ---------------------------------------------------------------------------
 
 
+_FAKE_IMAGE_INSPECT = json.dumps(
+    [
+        {
+            "Id": "sha256:9f1c2b7d5e0a4c3f8b6d1e2a7c0b5f9d4e8a3c6b1f0d7e2a5c8b4f3e0d9a2c7b",
+            "RepoTags": ["python:3.12-slim"],
+            "RepoDigests": ["python@sha256:1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b"],
+        }
+    ]
+)
+
+
 class _FakeCompleted:
     def __init__(self, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
         self.returncode = returncode
@@ -46,14 +57,22 @@ def _make_fake_run(behaviour: dict[str, Any] | None = None) -> Any:
         if "isolation_smoke.py" in joined:
             return _FakeCompleted(behaviour.get("smoke_exit", 0), "isolation_status: qualified\n")
         if "positive-ok" in code:
-            if behaviour.get("positive_fails"):
-                return _FakeCompleted(1, "")
             target = Path(argv[argv.index("--mount") + 1].split("source=")[1].split(",")[0])
+            if behaviour.get("mount_missing"):
+                return _FakeCompleted(4, "listing:<missing-workspace>\nwrite-error:2:FileNotFoundError\n")
+            if behaviour.get("mount_empty"):
+                return _FakeCompleted(4, "listing:\nwrite-error:30:OSError\n")
+            if behaviour.get("positive_fails"):
+                return _FakeCompleted(1, "listing:qualify-link\n")
             (target / "qualification-positive.txt").write_text("ok", encoding="utf-8")
-            return _FakeCompleted(0, "positive-ok\n")
+            return _FakeCompleted(0, "listing:qualify-link\ncwd:/workspace\npositive-ok\n")
         if "denials:" in code:
             leaked = behaviour.get("leaked", "none")
-            return _FakeCompleted(0 if leaked == "none" else 3, f"denials:{leaked}\n")
+            return _FakeCompleted(0 if leaked == "none" else 3, f"reads:outside-direct=ENOENT\ndenials:{leaked}\n")
+        if "credentials:" in code:
+            leaked = behaviour.get("credentials_visible", "none")
+            home = behaviour.get("home", "/tmp")
+            return _FakeCompleted(0 if leaked == "none" else 3, f"home:{home}\ncredentials:{leaked}\n")
         if "bytearray" in code:
             return _FakeCompleted(137, "", "Killed")
         if "spawned" in code:
@@ -61,7 +80,10 @@ def _make_fake_run(behaviour: dict[str, Any] | None = None) -> Any:
         if "ps" in argv:
             return _FakeCompleted(0, behaviour.get("ps_output", ""))
         if "image" in argv and "inspect" in argv:
-            return _FakeCompleted(behaviour.get("image_exit", 0), "")
+            return _FakeCompleted(
+                behaviour.get("image_exit", 0),
+                behaviour.get("image_inspect_stdout", _FAKE_IMAGE_INSPECT),
+            )
         if "--version" in argv:
             return _FakeCompleted(0, "Docker version 27.0.0\n")
         if "info" in argv:
@@ -84,7 +106,9 @@ class _FakeStudio:
                          container_name: str | None = None) -> list[str]:
         if self.STUDIO_SANDBOX_RUNTIME.startswith("m5-nonexistent"):
             raise RuntimeError(f"Sandbox runtime `{self.STUDIO_SANDBOX_RUNTIME}` is not installed.")
-        return qe.container_argv(self.STUDIO_SANDBOX_RUNTIME, self.STUDIO_SANDBOX_IMAGE, root, command)
+        return qe.container_argv(
+            self.STUDIO_SANDBOX_RUNTIME, self.STUDIO_SANDBOX_IMAGE, root, command, name=container_name or ""
+        )
 
     async def _execute_limited(self, root: Path, command: str, *, timeout: float,
                                max_output_bytes: int, python_code: bool = False):
@@ -276,6 +300,27 @@ def _run_sandbox_suite(monkeypatch: pytest.MonkeyPatch, *, behaviour: dict[str, 
     return recorder
 
 
+def test_suite_argv_matches_the_product_argv(tmp_path: Path) -> None:
+    """The suite must probe the sandbox the product actually builds."""
+    import unittest.mock
+
+    studio = pytest.importorskip("app")
+    with unittest.mock.patch.object(studio, "STUDIO_SANDBOX_RUNTIME", "/bin/sh"):
+        product = studio._sandbox_command(tmp_path, "print(1)", python_code=True, container_name="m5-test")
+    suite = qe.container_argv("docker", studio.STUDIO_SANDBOX_IMAGE, tmp_path, "print(1)", name="m5-test")
+    ok, detail = qe.compare_argv(product, suite)
+    assert ok, detail
+    assert "bind mounts=1" in detail
+
+
+def test_argv_parity_detects_a_missing_product_flag(tmp_path: Path) -> None:
+    suite = qe.container_argv("docker", "python:3.12-slim", tmp_path, "print(1)")
+    without_env = [part for part in suite if not part.startswith("--ipc")]
+    ok, detail = qe.compare_argv(suite, without_env)
+    assert not ok
+    assert "--ipc" in detail
+
+
 def test_sandbox_suite_qualifies_when_every_probe_passes(monkeypatch: pytest.MonkeyPatch) -> None:
     recorder = _run_sandbox_suite(monkeypatch)
     assert recorder.verdict(qe.STORY_P3) == "qualified", [
@@ -289,6 +334,7 @@ def test_sandbox_suite_qualifies_when_every_probe_passes(monkeypatch: pytest.Mon
         "p3.adversarial.escape_matrix",
         "p3.adversarial.memory_limit",
         "p3.adversarial.descendants",
+        "p3.environment.bind",
         "p3.product.argv",
         "p3.product.no_host_fallback",
         "p3.product.isolation_smoke",
@@ -319,11 +365,39 @@ def test_sandbox_suite_fails_when_the_positive_path_breaks(monkeypatch: pytest.M
     assert "p3.positive.execute" in {result.check_id for result in recorder.failures(qe.STORY_P3)}
 
 
-def test_sandbox_suite_blocks_image_pull_expectations(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_missing_image_blocks_the_suite_instead_of_accusing_isolation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Nothing about isolation was observed, so the verdict must not be `unqualified`."""
     recorder = _run_sandbox_suite(monkeypatch, behaviour={"image_exit": 1})
     statuses = {result.check_id: result.status for result in recorder.results}
-    assert statuses["p3.image.local"] == qe.STATUS_FAIL
+    assert statuses["p3.image.local"] == qe.STATUS_BLOCKED
     assert statuses["p3.positive.execute"] == qe.STATUS_SKIP
+    assert recorder.verdict(qe.STORY_P3) == "blocked"
+    detail = next(r.detail for r in recorder.results if r.check_id == "p3.image.local")
+    assert "pull" in detail
+
+
+def test_an_unusable_workspace_mount_is_blocked_not_unqualified(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A runtime that cannot see the shared workspace is a setup gap, not a leak."""
+    recorder = _run_sandbox_suite(monkeypatch, behaviour={"mount_missing": True})
+    statuses = {result.check_id: result.status for result in recorder.results}
+    assert statuses["p3.positive.execute"] == qe.STATUS_BLOCKED
+    assert recorder.verdict(qe.STORY_P3) == "blocked"
+    detail = next(r.detail for r in recorder.results if r.check_id == "p3.positive.execute")
+    assert "File sharing" in detail
+    # Nothing that needs a trustworthy mount may be reported as an isolation failure.
+    for check_id in ("p3.adversarial.escape_matrix", "p3.adversarial.memory_limit"):
+        assert statuses[check_id] == qe.STATUS_SKIP
+
+
+def test_an_unwritable_empty_mount_is_blocked(monkeypatch: pytest.MonkeyPatch) -> None:
+    recorder = _run_sandbox_suite(monkeypatch, behaviour={"mount_empty": True})
+    assert recorder.verdict(qe.STORY_P3) == "blocked"
+    statuses = {result.check_id: result.status for result in recorder.results}
+    assert statuses["p3.positive.execute"] == qe.STATUS_BLOCKED
 
 
 def test_sandbox_suite_reports_host_execution_as_a_failure(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -435,11 +509,11 @@ def test_hardware_suite_blocks_off_target_hardware(monkeypatch: pytest.MonkeyPat
 def test_hardware_suite_qualifies_on_target_hardware(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         qe, "_pressure_probe",
-        lambda gigabytes, timeout: (True, "measured", {"requested_gib": gigabytes}),
+        lambda *args, **kwargs: (True, "measured", {"requested_gib": args[0] if args else 0}),
     )
     monkeypatch.setattr(
         qe, "_model_probe",
-        lambda command, runs, timeout, out: (True, "1/1 runs exited 0", {"runs": []}),
+        lambda command, runs, timeout, out, sampler=None: (True, "1/1 runs exited 0", {"runs": []}),
     )
     monkeypatch.setattr(qe, "_admission_wired", lambda: (True, "confirmed by the stub"))
     recorder = qe.Recorder()
@@ -544,8 +618,8 @@ def test_main_exits_zero_only_for_a_fully_qualified_run(
     monkeypatch.setattr(qe, "_product_sandbox_module", lambda: _FakeStudio())
     monkeypatch.setattr(qe, "detect_runtime", lambda preferred=None: ("/usr/bin/docker", "docker"))
     monkeypatch.setattr(qe, "environment_fingerprint", lambda: _fingerprint(24 * qe.GIB))
-    monkeypatch.setattr(qe, "_pressure_probe", lambda gb, timeout: (True, "measured", {}))
-    monkeypatch.setattr(qe, "_model_probe", lambda command, runs, timeout, out: (True, "ok", {}))
+    monkeypatch.setattr(qe, "_pressure_probe", lambda *args, **kwargs: (True, "measured", {}))
+    monkeypatch.setattr(qe, "_model_probe", lambda command, runs, timeout, out, sampler=None: (True, "ok", {}))
     exit_code = qe.main(
         [
             "--all", "--quiet",
@@ -593,18 +667,53 @@ def test_script_is_runnable_end_to_end_in_this_environment() -> None:
     assert "M5-P4-01: blocked" in result.stdout
 
 
-def test_a_runtime_without_the_image_is_unqualified_never_qualified(
+def test_a_runtime_without_the_image_never_produces_a_pass(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A host that has Docker but not the image must not produce a pass."""
+    """A host with Docker but no image yields `blocked` (exit 2), never `qualified`."""
     monkeypatch.setattr(qe, "run_command", _make_fake_run({"image_exit": 1}))
     monkeypatch.setattr(qe, "_product_sandbox_module", lambda: _FakeStudio())
     monkeypatch.setattr(qe, "detect_runtime", lambda preferred=None: ("/usr/bin/docker", "docker"))
     exit_code = qe.main(["--sandbox", "--quiet", "--json", str(tmp_path / "r.json")])
-    assert exit_code == 1
+    assert exit_code == 2
     record = json.loads((tmp_path / "r.json").read_text(encoding="utf-8"))
-    assert record["verdicts"][qe.STORY_P3]["verdict"] == "unqualified"
-    assert record["claims"]["container_isolation"] == "unqualified"
+    assert record["verdicts"][qe.STORY_P3]["verdict"] == "blocked"
+    assert record["claims"]["container_isolation"] == "blocked"
+
+
+def test_dry_run_prints_the_plan_and_touches_nothing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    calls: list[list[str]] = []
+
+    def _never(argv, **_kwargs):  # noqa: ANN001 - signature mirrors run_command
+        calls.append(list(argv))
+        raise AssertionError("--dry-run must not execute anything")
+
+    monkeypatch.setattr(qe, "run_command", _never)
+    monkeypatch.setattr(qe, "detect_runtime", lambda preferred=None: ("/usr/bin/docker", "docker"))
+    exit_code = qe.main(
+        ["--all", "--dry-run", "--pressure-gb", "16", "--model-command", "probe-me",
+         "--json", str(tmp_path / "r.json")]
+    )
+    assert exit_code == 0
+    assert calls == []
+    assert not (tmp_path / "r.json").exists()
+    out = capsys.readouterr().out
+    assert "Planned qualification" in out
+    assert "--network=none" in out and "--read-only" in out and "--pull=never" in out
+    assert "touch 16.0 GiB" in out and "probe-me" in out
+    assert "Nothing above has been executed" in out
+
+
+def test_dry_run_is_explicit_about_skipped_measurements(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(qe, "detect_runtime", lambda preferred=None: ("", ""))
+    assert qe.main(["--hardware", "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert "pressure measurement SKIPPED" in out
+    assert "model load measurement SKIPPED" in out
 
 
 def test_asyncio_coroutine_path_is_used_for_product_probes(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -614,21 +723,34 @@ def test_asyncio_coroutine_path_is_used_for_product_probes(monkeypatch: pytest.M
         asyncio.run(studio._execute_limited(Path("/tmp"), "print(1)", timeout=1, max_output_bytes=16))
 
 
-def test_container_argv_preserves_posix_uid_gid_and_code_args(tmp_path: Path) -> None:
-    """Parity with app._sandbox_command: drop container root via --user uid:gid on POSIX."""
+def test_container_argv_preserves_posix_uid_gid_and_the_shell_exec_form(tmp_path: Path) -> None:
+    """Parity with app._sandbox_command: drop container root and run via `sh -lc exec`."""
     import os
 
-    argv = qe.container_argv(
-        "docker",
-        "python:3.12-slim",
-        tmp_path,
-        "print(1)",
-        code_args=("/tmp/outside-canary.txt", "/workspace/qualify-link"),
-    )
+    argv = qe.container_argv("docker", "python:3.12-slim", tmp_path, "print(1)")
     if os.name == "posix" and hasattr(os, "getuid") and hasattr(os, "getgid"):
         idx = argv.index("--user")
         assert argv[idx + 1] == f"{os.getuid()}:{os.getgid()}"
-    assert argv[-2:] == ["/tmp/outside-canary.txt", "/workspace/qualify-link"]
+    assert argv[-2] == "-lc"
+    assert argv[-1].startswith("exec python3 -c ")
+
+
+def test_container_argv_bakes_probe_inputs_into_the_code(tmp_path: Path) -> None:
+    """Extra argv would land in the shell, not the interpreter, under `-lc exec`."""
+    code = qe._escape_probe_code(
+        outside=tmp_path / "canary.txt",
+        link="/workspace/qualify-link",
+        read_only_targets=("/etc/hostname",),
+        host_port=0,
+        network_target="127.0.0.1:9",
+    )
+    assert str(tmp_path / "canary.txt") in code
+    assert "/workspace/qualify-link" in code
+    assert "127.0.0.1:9" in code
+    argv = qe.container_argv("docker", "python:3.12-slim", tmp_path, code)
+    assert argv[-2] == "-lc"
+    assert argv[-1].startswith("exec python3 -c ")
+    assert "qualify-link" in argv[-1]
 
 
 def test_escape_probe_code_passes_with_isolated_canary_and_readonly_targets(tmp_path: Path) -> None:
@@ -652,19 +774,17 @@ def test_escape_probe_code_passes_with_isolated_canary_and_readonly_targets(tmp_
     closed_port = int(closed_sock.getsockname()[1])
     closed_sock.close()
 
+    code = qe._escape_probe_code(
+        outside=missing_host_canary,
+        link=str(link),
+        read_only_targets=(str(ro_probe),),
+        host_port=0,
+        network_target=f"127.0.0.1:{closed_port}",
+    )
     env = {"PATH": os.environ.get("PATH", os.defpath)}
     try:
         proc = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                qe._ESCAPE_CODE,
-                str(missing_host_canary),
-                str(link),
-                str(ro_probe),
-                "0",
-                f"127.0.0.1:{closed_port}",
-            ],
+            [sys.executable, "-c", code],
             env=env,
             capture_output=True,
             text=True,
@@ -702,17 +822,15 @@ def test_escape_probe_code_detects_outside_canary_symlink_writable_root_network_
             "PATH": os.environ.get("PATH", os.defpath),
             "STUDIO_QUALIFICATION_SENTINEL": "leaked-from-host",
         }
+        code = qe._escape_probe_code(
+            outside=leaked_canary,
+            link=str(leaked_link),
+            read_only_targets=(str(writable_ro_target),),
+            host_port=port,
+            network_target=f"127.0.0.1:{port}",
+        )
         proc = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                qe._ESCAPE_CODE,
-                str(leaked_canary),
-                str(leaked_link),
-                str(writable_ro_target),
-                str(port),
-                f"127.0.0.1:{port}",
-            ],
+            [sys.executable, "-c", code],
             env=env,
             capture_output=True,
             text=True,
@@ -727,3 +845,413 @@ def test_escape_probe_code_detects_outside_canary_symlink_writable_root_network_
     leaked_items = set(marker.partition(":")[2].split(","))
     assert {"outside-direct", "readonly-root", "symlink", "network", "env"} <= leaked_items
 
+
+
+# ---------------------------------------------------------------------------
+# Thermal behavior (M5-P4-01 task 3)
+# ---------------------------------------------------------------------------
+
+
+def test_thermal_snapshot_parses_pmset_thermal_pressure(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(qe.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(
+        qe, "_capture",
+        lambda argv, timeout=10.0: "Note: No thermal warning level has been recorded\n"
+        "CPU_Speed_Limit              = 85\nGPU_Speed_Limit              = 100\n",
+    )
+    snapshot = qe.thermal_snapshot()
+    assert snapshot["available"] is True
+    assert snapshot["source"] == "pmset -g therm"
+    assert snapshot["readings"]["cpu_speed_limit"] == 85
+    assert qe.thermal_stress(snapshot) == 15.0  # 100 - 85: throttling pressure
+
+
+def test_thermal_snapshot_reports_when_pmset_says_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(qe.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(qe, "_capture", lambda argv, timeout=10.0: "")
+    snapshot = qe.thermal_snapshot()
+    assert snapshot["available"] is False
+    assert "pmset" in str(snapshot["source"])
+
+
+def test_linux_thermal_readings_convert_millidegrees(tmp_path: Path) -> None:
+    for index, value in enumerate(("48500", "52000", "garbage")):
+        zone = tmp_path / f"thermal_zone{index}"
+        zone.mkdir()
+        (zone / "temp").write_text(value, encoding="utf-8")
+    assert qe.linux_thermal_readings(tmp_path) == [48.5, 52.0]
+
+
+def test_thermal_snapshot_without_a_readable_source_is_explicit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(qe.platform, "system", lambda: "Plan9")
+    snapshot = qe.thermal_snapshot()
+    assert snapshot["available"] is False
+    assert "Plan9" in snapshot["note"]
+
+
+def test_thermal_sampler_summarises_throttling(monkeypatch: pytest.MonkeyPatch) -> None:
+    readings = iter(
+        [
+            {"available": True, "source": "pmset -g therm", "readings": {"cpu_speed_limit": 100}},
+            {"available": True, "source": "pmset -g therm", "readings": {"cpu_speed_limit": 70}},
+        ]
+    )
+    monkeypatch.setattr(qe, "thermal_snapshot", lambda: next(readings))
+    sampler = qe.ThermalSampler()
+    sampler.sample()
+    sampler.sample()
+    summary = sampler.summary()
+    assert sampler.available is True
+    assert summary["throttled"] is True
+    assert summary["cpu_speed_limit_min"] == 70
+    assert (summary["stress_min"], summary["stress_max"]) == (0.0, 30.0)
+
+
+def test_thermal_sampler_without_readings_reports_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(qe, "thermal_snapshot", lambda: {"available": False, "source": None, "note": "nope"})
+    sampler = qe.ThermalSampler()
+    sampler.sample()
+    summary = sampler.summary()
+    assert sampler.available is False
+    assert summary["available_samples"] == 0
+    assert summary["stress_max"] is None
+
+
+# ---------------------------------------------------------------------------
+# Per-category coding cases (M5-P4-01 tasks 1-2)
+# ---------------------------------------------------------------------------
+
+
+def _cases_file(tmp_path: Path, payload: object) -> Path:
+    path = tmp_path / "cases.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    return path
+
+
+def test_load_coding_cases_accepts_the_object_form(tmp_path: Path) -> None:
+    cases = qe.load_coding_cases(
+        _cases_file(
+            tmp_path,
+            {
+                "categories": ["bugfix", "tests"],
+                "cases": [
+                    {"id": "b1", "category": "bugfix", "prompt": "fix it"},
+                    {"id": "t1", "category": "tests"},
+                ],
+            },
+        )
+    )
+    assert [case["id"] for case in cases] == ["b1", "t1"]
+    assert cases[1]["prompt"] == ""
+
+
+def test_load_coding_cases_accepts_a_bare_list(tmp_path: Path) -> None:
+    cases = qe.load_coding_cases(_cases_file(tmp_path, [{"id": "a", "category": "c"}]))
+    assert cases == [{"id": "a", "category": "c", "prompt": ""}]
+
+
+@pytest.mark.parametrize(
+    "payload, message",
+    [
+        ({"cases": []}, "non-empty"),
+        ({"cases": [{"category": "c"}]}, "id"),
+        ({"cases": [{"id": "a"}]}, "category"),
+        ({"cases": [{"id": "a", "category": "c"}, {"id": "a", "category": "c"}]}, "duplicate"),
+        ({"cases": ["nope"]}, "object"),
+        ({"categories": ["x"], "cases": [{"id": "a", "category": "c"}]}, "not declared"),
+    ],
+)
+def test_load_coding_cases_rejects_malformed_files(tmp_path: Path, payload: object, message: str) -> None:
+    with pytest.raises(qe.CodingCaseError) as excinfo:
+        qe.load_coding_cases(_cases_file(tmp_path, payload))
+    assert message in str(excinfo.value)
+
+
+def test_load_coding_cases_rejects_invalid_json(tmp_path: Path) -> None:
+    path = tmp_path / "broken.json"
+    path.write_text("{not json", encoding="utf-8")
+    with pytest.raises(qe.CodingCaseError):
+        qe.load_coding_cases(path)
+
+
+def test_coding_case_probe_passes_case_identity_through_the_environment() -> None:
+    sampler = qe.ThermalSampler()
+    ok, detail, evidence = qe._coding_case_probe(
+        [{"id": "case-7", "category": "refactor", "prompt": "do the thing"}],
+        'printf \'{"seen":"%s/%s"}\\n\' "$STUDIO_QUALIFY_CASE_ID" "$STUDIO_QUALIFY_CASE_CATEGORY"',
+        1,
+        30.0,
+        sampler,
+    )
+    assert ok, detail
+    assert evidence["cases"][0]["runs"][0]["reported"]["seen"] == "case-7/refactor"
+
+
+def test_coding_case_probe_records_failures_and_uncertainty() -> None:
+    sampler = qe.ThermalSampler()
+    ok, detail, evidence = qe._coding_case_probe(
+        [
+            {"id": "good", "category": "bugfix", "prompt": ""},
+            {"id": "bad", "category": "bugfix", "prompt": ""},
+        ],
+        'if [ "$STUDIO_QUALIFY_CASE_ID" = bad ]; then exit 3; fi; echo ok',
+        2,
+        30.0,
+        sampler,
+    )
+    assert ok is False
+    assert "incomplete: bad" in detail
+    assert evidence["incomplete_cases"] == ["bad"]
+    assert evidence["categories"] == {"bugfix": {"cases": 2, "completed": 1}}
+    assert evidence["uncertainty"]["cases"] == 2
+    # "good" succeeded twice and "bad" never did, so neither is a single-run case.
+    assert evidence["uncertainty"]["single_run_cases"] == 0
+
+
+def test_coding_case_probe_measures_wall_time_spread() -> None:
+    sampler = qe.ThermalSampler()
+    ok, _detail, evidence = qe._coding_case_probe(
+        [{"id": "slow", "category": "c", "prompt": ""}], "sleep 0.05", 2, 30.0, sampler
+    )
+    assert ok
+    case = evidence["cases"][0]
+    assert case["wall_s_median"] is not None
+    assert case["wall_s_spread_ratio"] is not None
+
+
+# ---------------------------------------------------------------------------
+# Hardware-suite integration for thermal + cases
+# ---------------------------------------------------------------------------
+
+
+def test_thermal_check_is_skipped_without_a_load_phase(monkeypatch: pytest.MonkeyPatch) -> None:
+    recorder = qe.Recorder()
+    qe.hardware_suite(
+        recorder, fingerprint=_fingerprint(24 * qe.GIB), pressure_gb=0.0, model_command="",
+        model_runs=1, profile_out=None, timeout=5.0,
+    )
+    result = next(item for item in recorder.results if item.check_id == "p4.thermal")
+    assert result.status == qe.STATUS_SKIP
+    assert result.required is False
+
+
+def test_thermal_check_blocks_when_the_platform_cannot_report(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(qe, "thermal_snapshot", lambda: {"available": False, "source": "x", "note": "unreadable"})
+    monkeypatch.setattr(qe, "_model_probe", lambda command, runs, timeout, out, sampler=None: (True, "ok", {}))
+    recorder = qe.Recorder()
+    qe.hardware_suite(
+        recorder, fingerprint=_fingerprint(24 * qe.GIB), pressure_gb=0.0, model_command="probe",
+        model_runs=1, profile_out=None, timeout=5.0,
+    )
+    result = next(item for item in recorder.results if item.check_id == "p4.thermal")
+    assert result.status == qe.STATUS_BLOCKED
+    assert "powermetrics" in result.detail
+
+
+def test_thermal_check_passes_with_readings_under_load(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        qe, "thermal_snapshot",
+        lambda: {"available": True, "source": "pmset -g therm", "readings": {"cpu_speed_limit": 90}},
+    )
+    monkeypatch.setattr(qe, "_model_probe", lambda command, runs, timeout, out, sampler=None: (True, "ok", {}))
+    recorder = qe.Recorder()
+    qe.hardware_suite(
+        recorder, fingerprint=_fingerprint(24 * qe.GIB), pressure_gb=0.0, model_command="probe",
+        model_runs=1, profile_out=None, timeout=5.0,
+    )
+    result = next(item for item in recorder.results if item.check_id == "p4.thermal")
+    assert result.status == qe.STATUS_PASS
+    assert "throttling observed" in result.detail
+
+
+def test_coding_cases_check_skips_without_a_file_or_runner(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(qe, "thermal_snapshot", lambda: {"available": True, "source": "s", "readings": {}})
+    cases = [{"id": "a", "category": "c", "prompt": ""}]
+    recorder = qe.Recorder()
+    qe.hardware_suite(
+        recorder, fingerprint=_fingerprint(24 * qe.GIB), pressure_gb=0.0, model_command="",
+        model_runs=1, profile_out=None, timeout=5.0, coding_cases=cases,
+    )
+    result = next(item for item in recorder.results if item.check_id == "p4.coding_cases")
+    assert result.status == qe.STATUS_SKIP
+    assert "--model-command" in result.detail
+
+    recorder = qe.Recorder()
+    qe.hardware_suite(
+        recorder, fingerprint=_fingerprint(24 * qe.GIB), pressure_gb=0.0, model_command="probe",
+        model_runs=1, profile_out=None, timeout=5.0,
+    )
+    result = next(item for item in recorder.results if item.check_id == "p4.coding_cases")
+    assert result.status == qe.STATUS_SKIP
+    assert "--coding-cases" in result.detail
+
+
+def test_malformed_coding_cases_abort_the_run_without_a_verdict(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    bad = tmp_path / "bad.json"
+    bad.write_text('{"cases": [{"id": "a", "category": "c"}, {"id": "a", "category": "c"}]}', encoding="utf-8")
+    exit_code = qe.main(["--hardware", "--coding-cases", str(bad), "--model-command", "true"])
+    assert exit_code == 2
+    assert "duplicate case id" in capsys.readouterr().err
+
+
+def test_dry_run_mentions_coding_cases_and_thermal(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    cases = tmp_path / "cases.json"
+    cases.write_text(json.dumps([{"id": "a", "category": "c"}]), encoding="utf-8")
+    monkeypatch.setattr(qe, "detect_runtime", lambda preferred=None: ("", ""))
+    assert qe.main(["--hardware", "--dry-run", "--coding-cases", str(cases), "--case-runs", "2"]) == 0
+    out = capsys.readouterr().out
+    assert "coding cases" in out
+    assert "STUDIO_QUALIFY_CASE_ID" in out
+    assert "thermal readings" in out
+
+
+# ---------------------------------------------------------------------------
+# Binding the evidence to what was measured (M5-P3-01 task 4)
+# ---------------------------------------------------------------------------
+
+
+def test_runtime_version_reads_the_runtime_version_line(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        qe,
+        "run_command",
+        lambda argv, **kwargs: _FakeCompleted(0, "\nDocker version 27.3.1, build abcdef0\n"),
+    )
+    assert qe.runtime_version("/usr/bin/docker") == "Docker version 27.3.1, build abcdef0"
+
+
+def test_runtime_version_is_empty_rather_than_invented(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert qe.runtime_version("") == ""
+    monkeypatch.setattr(qe, "run_command", lambda argv, **kwargs: _FakeCompleted(1, "", "boom"))
+    assert qe.runtime_version("/usr/bin/docker") == ""
+
+
+def test_parse_image_identity_extracts_the_content_id_and_digest() -> None:
+    identity = qe.parse_image_identity(_FAKE_IMAGE_INSPECT)
+    assert identity["image_id"] == "sha256:9f1c2b7d5e0a4c3f8b6d1e2a7c0b5f9d4e8a3c6b1f0d7e2a5c8b4f3e0d9a2c7b"
+    assert identity["image_digest"].startswith("python@sha256:")
+    assert identity["image_tags"] == ["python:3.12-slim"]
+
+
+@pytest.mark.parametrize("stdout", ["", "not json", "[]", '"a string"', "{}"])
+def test_parse_image_identity_yields_nothing_rather_than_a_guess(stdout: str) -> None:
+    """A tag alone is not an identity: absent is reported, never fabricated."""
+    identity = qe.parse_image_identity(stdout)
+    assert identity.get("image_id", "") == ""
+
+
+def test_sandbox_config_fingerprint_reads_the_product_argv() -> None:
+    config = qe.sandbox_config_fingerprint(_FakeStudio())
+    assert config["bind_mounts"] == 1
+    assert config["privileged"] is False
+    assert "--network" in config["hardening_flags"]
+    assert "--read-only" in config["hardening_flags"]
+    assert "--privileged" not in config["hardening_flags"]
+    # The limits keep their values: --memory=2g and --memory=8g differ.
+    assert config["limits"]["--memory"] == "2g"
+    assert config["limits"]["--cpus"] == "2"
+
+
+def test_sandbox_config_fingerprint_is_empty_without_the_product(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert qe.sandbox_config_fingerprint(None) == {}
+    assert qe.sandbox_config_fingerprint(object()) == {}
+
+
+def test_sandbox_suite_binds_evidence_to_the_runtime_and_image(monkeypatch: pytest.MonkeyPatch) -> None:
+    recorder = qe.Recorder()
+    monkeypatch.setattr(qe, "run_command", _make_fake_run({}))
+    monkeypatch.setattr(qe, "_product_sandbox_module", lambda: _FakeStudio())
+    identity = qe.sandbox_suite(
+        recorder, runtime="/usr/bin/docker", runtime_name="docker", image="python:3.12-slim", timeout=5.0
+    )
+    bind = next(result for result in recorder.results if result.check_id == "p3.environment.bind")
+    assert bind.status == qe.STATUS_PASS, bind.detail
+    assert identity["runtime_version"] == "Docker version 27.0.0"
+    assert identity["image_id"].startswith("sha256:")
+    assert identity["config"]["bind_mounts"] == 1
+    # The binding is real evidence, not a sentence: the values travel with it.
+    assert bind.evidence["image_digest"].startswith("python@sha256:")
+    assert bind.evidence["runtime_version"] == "Docker version 27.0.0"
+
+
+def test_sandbox_suite_blocks_when_the_image_identity_cannot_be_read(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unreadable identity is a readability gap (blocked), never a failed guarantee."""
+    recorder = _run_sandbox_suite(monkeypatch, behaviour={"image_inspect_stdout": ""})
+    statuses = {result.check_id: result.status for result in recorder.results}
+    assert statuses["p3.image.local"] == qe.STATUS_PASS
+    assert statuses["p3.environment.bind"] == qe.STATUS_BLOCKED
+    assert recorder.verdict(qe.STORY_P3) == "blocked"
+    assert "image id" in next(
+        result.detail for result in recorder.results if result.check_id == "p3.environment.bind"
+    )
+
+
+def test_sandbox_suite_bind_is_skipped_without_a_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
+    recorder = _run_sandbox_suite(monkeypatch, runtime_available=False)
+    bind = next(result for result in recorder.results if result.check_id == "p3.environment.bind")
+    assert bind.status == qe.STATUS_SKIP
+    assert "no reachable container runtime" in bind.detail
+
+
+def test_build_record_carries_the_sandbox_identity_into_json_and_markdown() -> None:
+    recorder = qe.Recorder()
+    recorder.record("p3.runtime.available", qe.STORY_P3, "t", qe.STATUS_PASS)
+    identity = {
+        "runtime": "docker",
+        "runtime_path": "/usr/bin/docker",
+        "image": "python:3.12-slim",
+        "runtime_version": "Docker version 27.3.1, build abcdef0",
+        "image_id": "sha256:9f1c",
+        "image_digest": "python@sha256:1a2b",
+        "config": {"hardening_flags": ["--read-only"], "limits": {"--memory": "2g"},
+                   "bind_mounts": 1, "privileged": False},
+    }
+    record = qe.build_record(
+        recorder,
+        fingerprint=_fingerprint(16 * qe.GIB),
+        suites=[qe.STORY_P3],
+        runtime_name="docker",
+        runtime_path="/usr/bin/docker",
+        image="python:3.12-slim",
+        invocation=["qualify_environment.py", "--sandbox"],
+        sandbox_identity=identity,
+    )
+    assert record["sandbox"]["runtime_version"] == "Docker version 27.3.1, build abcdef0"
+    assert record["sandbox"]["image_digest"] == "python@sha256:1a2b"
+    assert record["sandbox"]["runtime"] == "docker"
+    markdown = qe.render_markdown(record)
+    assert "sha256:9f1c" in markdown
+    assert "python@sha256:1a2b" in markdown
+    assert "Docker version 27.3.1" in markdown
+    assert "1 bind mount(s)" in markdown
+
+
+def test_build_record_without_an_identity_says_so() -> None:
+    recorder = qe.Recorder()
+    record = qe.build_record(
+        recorder,
+        fingerprint=_fingerprint(16 * qe.GIB),
+        suites=[qe.STORY_P3],
+        runtime_name="",
+        runtime_path="",
+        image="python:3.12-slim",
+        invocation=["qualify_environment.py", "--sandbox"],
+        sandbox_identity={},
+    )
+    # Nothing is invented when the suite never reached a runtime.
+    assert "runtime_version" not in record["sandbox"]
+    assert "image id: not recorded" in qe.render_markdown(record)
+
+
+def test_dry_run_announces_the_binding_step(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(qe, "detect_runtime", lambda preferred=None: ("", ""))
+    assert qe.main(["--sandbox", "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert "bind the record to what ran" in out
