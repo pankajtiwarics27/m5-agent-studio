@@ -1,9 +1,10 @@
 """One durable-state contract, checked against every store that implements it.
 
-Three subsystems keep their own JSON state file under `$HARNESS_STORE_DIR`:
-containment (`process_supervision`), scoped grants (`scoped_grants`) and MCP
-external effects (`mcp_client`). Each has a hand-written secure-write path, so
-each can drift.
+Every subsystem that keeps its own JSON state file under `$HARNESS_STORE_DIR` is
+listed here: containment (`process_supervision`), scoped grants (`scoped_grants`),
+MCP external effects (`mcp_client`), security incidents (`sandbox_boundary`) and
+artifact lineage (`artifact_lineage`). Each has a hand-written secure-write path,
+so each can drift.
 
 That is not hypothetical. The containment store fsynced its temp file but not the
 containing directory, so the rename publishing the manifest was not durable — a
@@ -25,6 +26,7 @@ from typing import Callable
 
 import pytest
 
+import artifact_lineage
 import child_delegation
 import mcp_client
 import process_supervision
@@ -78,6 +80,15 @@ def _write_security_incidents(root: Path) -> None:
     )
 
 
+def _write_artifacts(root: Path) -> None:
+    registry = artifact_lineage.ArtifactRegistry(root)
+    registry.record_artifact(
+        "f" * 64,
+        source_kind="baseline",
+        source_ref="contract",
+        trust="trusted",
+        size=12,
+    )
 def _write_handoffs(root: Path) -> None:
     store = routing_policy.PortableHandoffStore(root)
     store.reserve_switch_attempt("sess-contract")
@@ -118,6 +129,12 @@ STORE_CASES: list[tuple[str, WriteFn, Path, ErrorCls]] = [
         sandbox_boundary.SecurityIncidentIntegrityError,
     ),
     (
+        "artifacts",
+        _write_artifacts,
+        Path("artifacts") / "state.json",
+        artifact_lineage.ArtifactLineageIntegrityError,
+    ),
+    (
         "handoffs",
         _write_handoffs,
         Path("handoffs") / "state.json",
@@ -152,6 +169,7 @@ def test_every_module_with_a_durable_state_file_is_covered() -> None:
         "grants": "scoped_grants",
         "mcp_effects": "mcp_client",
         "security_incidents": "sandbox_boundary",
+        "artifacts": "artifact_lineage",
         "handoffs": "routing_policy",
         "delegations": "child_delegation",
     }

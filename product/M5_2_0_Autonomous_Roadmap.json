@@ -2873,10 +2873,10 @@
           ".venv/bin/python scripts/validate_docs.py && .venv/bin/python scripts/validate_adrs.py -> exit 0"
         ],
         "decisions": [
-          "ADR-0018: Extend stdlib-only routing_policy.py (inlined into studio.py) with PortableHandoffStore and route all session model switches (POST /switch-model, PATCH /sessions/{id}, inline POST /api/harness/run, and combo failover) through execute_conservative_model_switch_async."
+          "ADR-0019: Extend stdlib-only routing_policy.py (inlined into studio.py) with PortableHandoffStore and route all session model switches (POST /switch-model, PATCH /sessions/{id}, inline POST /api/harness/run, and combo failover) through execute_conservative_model_switch_async."
         ],
         "blockers": [],
-        "handoff_note": "M5-P4-02 complete with ADR-0018, docs/portable-handoff-switching.md, 5-store durable state contract coverage, and 1369 passing tests.",
+        "handoff_note": "M5-P4-02 complete with ADR-0019, docs/portable-handoff-switching.md, 5-store durable state contract coverage, and 1369 passing tests.",
         "next_action": "Proceed to M5-P4-03 (Bounded worker delegation and verification) on a fresh session branch.",
         "readme_updated": true
       }
@@ -3063,22 +3063,71 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P5-02: Artifact lifecycle, provenance and selective invalidation. Objective: Track relevant lineage and trust without a general proof engine. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Separate content hash from provenance and confidentiality; Record derived artifact refs and operation restrictions; Invalidate affected evidence after source/security changes; Implement retention with active-task protection. Acceptance: Deduplicated content does not merge trust histories; Stale evidence not accepted; Active recovery artifacts protected from GC. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-10-31T09:05:00Z",
+        "updated_at": "2026-10-31T10:20:00Z",
+        "completed_at": "2026-10-31",
+        "owner_session": "arena/6da06a20-m5-agent-studio",
         "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
-        "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
-        "readme_updated": false
+        "changed_files": [
+          "artifact_lineage.py",
+          "workspace_quarantine.py",
+          "workflow_state.py",
+          "app.py",
+          "scripts/build_studio.py",
+          "studio.py",
+          "pyproject.toml",
+          "README.md",
+          "tests/test_artifact_lineage.py",
+          "tests/test_durable_state_contract.py",
+          "docs/artifact-lineage.md",
+          "docs/adr/0019-artifact-lineage-provenance-and-selective-invalidation.md",
+          "docs/storage-migrations.md",
+          "docs/subsystem-dependency-inventory.md",
+          "docs/route-security-matrix.md",
+          "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "artifact_lineage.py: content identity (SHA-256) is deduplicated while each sighting appends its own ProvenanceEntry (source_kind, source_ref, trust, confidentiality, operation lists, task, security generation); nothing overwrites an entry, so a later trusted sighting cannot launder an earlier untrusted one (AC1)",
+          "artifact_lineage.py: effective_trust is the weakest entry, effective_confidentiality the strictest, and check_operation is deny-wins across every entry; unknown content reports untrusted/secret and refuses every operation; a derivation parent that was never seen is a stub, not a trusted origin (AC1)",
+          "artifact_lineage.py: invalidate() records a reason, cascades to derived artifacts (bounded depth) and moves evidence over the artifact to stale without deleting bytes or history; record_evidence stores source-file digests plus the security generation, and accept_evidence refuses on source_changed / source_missing / subject_invalidated / security_generation_changed and writes the refusal into the record so it cannot be flipped back to valid (AC2)",
+          "workflow_state.py + app.py: _verify_task_completion_impl captures the security configuration generation before gathering evidence and again before returning a verdict, returning failure_code=security_configuration_changed_during_verification when it moved; app.py supplies the provider from SecurityIncidentStore.summary()['current_generation_seq'], and no provider means 'not checked' rather than 'unchanged' (AC2 at the live completion gate)",
+          "artifact_lineage.py + workspace_quarantine.py: freeze_workspace records the frozen tree digest as an untrusted, confidential artifact denying export/prompt and pins it under quarantine:QUARANTINE_ID; recovery_protection() re-derives the same protection set from unreleased quarantines; plan_retention keeps active-task artifacts, caller protections, pins, valid evidence, secrets and the grace window, returns a reason per survivor, and apply_retention deletes only plan.evictable; release_quarantine lifts the pin without deleting bytes (AC3)",
+          "docs/adr/0019-artifact-lineage-provenance-and-selective-invalidation.md and docs/artifact-lineage.md: decision record (including the rejected lazy import that broke the standalone artifact) plus a capability/limits table; docs/storage-migrations.md now lists the fifth durable JSON store and the conformance suite covers it"
+        ],
+        "test_results": [
+          "pytest tests/test_artifact_lineage.py -q: 28 passed",
+          "pytest tests/test_durable_state_contract.py -q: 43 passed (six stores, including artifacts and the concurrently merged handoffs store)",
+          "pytest tests/ -q (full suite, merged with main): 1404 passed, 1 skipped",
+          "ruff check .: clean; mypy: no issues in 53 source files",
+          "build_studio / route matrix / subsystem inventory / roadmap status --check: clean and idempotent",
+          "validate_docs (106 files), validate_adrs, governance, threat model, security sign-off, frontend syntax, demo tour --check, screenshots: pass",
+          "smoke_local.py and smoke_local.py --standalone: pass (the standalone bundle inlines artifact_lineage)"
+        ],
+        "decisions": [
+          "ADR-0019: dedup the content, never the history (one provenance entry per sighting; weakest-trust / strictest-confidentiality / deny-wins answers); invalidation is recorded and cascading rather than destructive; evidence records the digests and security generation it was computed against and cannot be re-validated after going stale; retention protects active tasks, pins, valid evidence, secrets and the recovery path's own bytes, with a reason recorded per survivor.",
+          "The registry is not a proof engine and does not decide safety; the live staleness gate is in workflow_state's completion path, and the registry records the lineage.",
+          "The quarantine module imports artifact_lineage (freeze records and pins); artifact_lineage does not import workspace_quarantine \u2014 the dependency is inverted through recovery_protection() because a lazy import broke the generated standalone artifact (caught by tests/test_release_manager.py)."
+        ],
+        "blockers": [
+          "Retention is a plan/apply API with no scheduler; nothing runs collection automatically in this build.",
+          "The security-generation gate covers the verification window only; a change after completion is not detected by this path."
+        ],
+        "handoff_note": "M5-P5-02 is implemented and verified locally (1389 passed, 1 skipped). Content dedup no longer merges trust histories (weakest trust / strictest confidentiality / deny-wins per entry), stale evidence is refused both at the registry API and at the live completion gate (security generation captured before and after the verification run), and quarantine bytes are protected from retention by a recorded pin plus a re-derived protection set. PROGRAM STATE at merge time: M5-P4-02 landed concurrently (#78), so M5-P4-03 is the only mandatory story with all dependencies done, and M5-P5-03 becomes claimable after it. M5-P4-01 remains 'blocked' on its unmeasured 24 GB hardware criterion (operator-run qualify_environment.py --hardware); the ledger records that P4-02 completed while that dependency was blocked, which still needs an explicit decision rather than an implicit exception.",
+        "next_action": "Claim M5-P4-03 ('Bounded child delegation and parent joins') after this PR merges; it is the only mandatory story with all dependencies done.",
+        "readme_updated": true,
+        "test_evidence": [
+          "tests/test_artifact_lineage.py",
+          "tests/test_durable_state_contract.py",
+          "docs/artifact-lineage.md",
+          "docs/adr/0019-artifact-lineage-provenance-and-selective-invalidation.md"
+        ],
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/81",
+        "commit_shas": [
+          "19207b4"
+        ]
       }
     },
     {
