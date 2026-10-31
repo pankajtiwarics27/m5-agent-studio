@@ -61,6 +61,7 @@ TRACKED_FILES: tuple[tuple[str, str], ...] = (
     ("scripts/uiux_control_inventory.py", "builds and checks the per-pane control inventory"),
     ("scripts/uiux_route_map.py", "maps every fetch call to the route it can hit"),
     ("scripts/uiux_authorization_trace.py", "traces the authorization and state behind each state-changing call"),
+    ("scripts/uiux_preservation_signoff.py", "freezes the preservation surface and rollback path for the owner sign-off"),
 )
 
 BUTTON_RE = re.compile(

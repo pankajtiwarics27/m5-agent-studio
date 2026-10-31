@@ -27,8 +27,8 @@
     ],
     "rule": "This ledger is authoritative for UI/UX stories UIUX-P0-01..UIUX-P6-05 only. It never changes the status of an M5 or AS story, and no UI/UX story may change backend, security or data behavior to make a screen easier to build."
   },
-  "source_commit_sha": "ecd781675e58b0735f8b590a67b39aaa2b910e49",
-  "source_commit_status": "Pinned to origin/main ecd7816 by the UIUX-P0-03 correction on 2026-10-31, the merge commit of #113. The generated artifacts are regenerated in the same pull request that re-pins. A session that finds main ahead of this pin re-pins the ledger and regenerates every artifact that embeds the pin (source manifest, control inventory, route map, authorization trace) in the same commit, because each one fails its --check otherwise. A branch name is not evidence of an ancestor commit: verify the pin against the history.",
+  "source_commit_sha": "0b4b1a4a19c65db2782bdf660b38563df071ead3",
+  "source_commit_status": "Pinned to origin/main 0b4b1a4 by the UIUX-P0-06 preparation on 2026-10-31, the merge commit of #115. The generated artifacts are regenerated in the same pull request that re-pins. A session that finds main ahead of this pin re-pins the ledger and regenerates every artifact that embeds the pin (source manifest, control inventory, route map, authorization trace, preservation sign-off), because each one fails its --check otherwise. A branch name is not evidence of an ancestor commit: verify the pin against the history.",
   "evidence_basis": {
     "supplied_by": "repository owner, 2026-10-31",
     "original_provenance": {
@@ -1055,7 +1055,7 @@
         "progress_percent": 50,
         "attempts": 1,
         "started_at": "2026-10-31T11:38:38Z",
-        "updated_at": "2026-10-31T13:20:00Z",
+        "updated_at": "2026-10-31T14:10:00Z",
         "completed_at": null,
         "owner_session": "arena/c705f453-m5-agent-studio",
         "commit_sha": null,
@@ -1073,11 +1073,12 @@
           "AGENTS.md"
         ],
         "evidence": [
-          "Half 1, the test baseline: every command in verification_commands was run on this checkout at the pinned commit and its exit code recorded - pytest 0 (1588 passed, 1 skipped in 116 s), ruff 0, mypy 0 (58 files), check_frontend_syntax 0, demo_tour --check 0, validate_docs 0 (123 files), and all four UI/UX guards 0 (manifest 13 files pinned to ecd781675e58, inventory 170 markup controls, route map 53 call sites resolving to 61 URLs, trace 37 state-changing routes). All staged in docs/uiux-2-0-baseline-evidence.md, and re-staged when the route-map correction changed the numbers.",
+          "Half 1, the test baseline: every command in verification_commands was run on this checkout at the pinned commit and its exit code recorded - pytest 0 (1598 passed, 1 skipped in 88 s), ruff 0, mypy 0 (58 files), check_frontend_syntax 0, demo_tour --check 0, validate_docs 0 (124 files), and all five UI/UX guards 0 (manifest 14 files pinned to 0b4b1a4a19c6, inventory 170 markup controls, route map 53 call sites resolving to 61 URLs, trace 37 state-changing routes, sign-off package unsigned). All staged in docs/uiux-2-0-baseline-evidence.md, and re-staged whenever a story changes the numbers.",
           "Half 2, the capture plan, measured without a browser: node scripts/capture_screenshots.mjs --dry-run exits 0 and prints the resolved plan - 6 shots in manifest id order (start, harness, hall, council -> pipeline.png, debate -> compare.png, chat), viewport 1440x900 at device scale factor 2, output docs/media/screenshots, base URL unresolved as '<start scripts/demo_tour.py --serve>'. This proves the manifest, the tab ids and the output paths agree; it draws nothing.",
           "Half 3, the honest state of the visual gate: scripts/validate_screenshots.py exits 0 with 'Screenshot manifest validated: 0 of 6 captured', and docs/uiux-2-0-baseline-evidence.md records the exact commands a machine with Chrome/Chromium plus puppeteer-core must run. 0 of 6 is recorded as the current state, not as a pass.",
           "Criterion-to-evidence map (the one this story can close): commands actually run with exit codes and the environment they ran in - docs/uiux-2-0-baseline-evidence.md, reproduced from these recorded results, not from memory.",
-          "Re-measured after the P0-03 correction (issue #110) re-pinned the ledger to ecd7816: the route map now reports 53 call sites, 60 exact and 1 dynamic match, 0 findings and 58 routes with no browser caller, and the trace reports 37 state-changing routes. The suite grew from 1541 to 1588 passing tests. The visual half is unchanged: 0 of 6 screenshots, no browser in this environment."
+          "Re-measured after the P0-03 correction (issue #110) re-pinned the ledger to ecd7816: the route map now reports 53 call sites, 60 exact and 1 dynamic match, 0 findings and 58 routes with no browser caller, and the trace reports 37 state-changing routes. The suite grew from 1541 to 1588 passing tests. The visual half is unchanged: 0 of 6 screenshots, no browser in this environment.",
+          "Re-measured after the P0-06 preparation re-pinned the ledger to 0b4b1a4: pytest 1598 passed, validate_docs 124 files, manifest 14 pinned files, and a fifth guard (uiux_preservation_signoff.py --check) joins the set. The visual half is still 0 of 6 screenshots: no browser in this environment."
         ],
         "test_results": [
           {
@@ -1123,17 +1124,22 @@
           {
             "command": ".venv/bin/python scripts/uiux_source_manifest.py --check",
             "exit_code": 0,
-            "result": "UI source manifest is up to date: 13 files, 6 tabs, 115 routes, pinned to ecd781675e58"
+            "result": "UI source manifest is up to date: 14 files, 6 tabs, 115 routes, pinned to 0b4b1a4a19c6"
           },
           {
             "command": ".venv/bin/python scripts/validate_docs.py",
             "exit_code": 0,
-            "result": "Documentation validation passed (5 required pages, 123 files scanned)."
+            "result": "Documentation validation passed (5 required pages, 124 files scanned)"
           },
           {
             "command": ".venv/bin/python scripts/validate_screenshots.py",
             "exit_code": 0,
             "result": "Screenshot manifest validated: 0 of 6 captured. Capture needs a browser; see docs/demo.md."
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_preservation_signoff.py --check",
+            "exit_code": 0,
+            "result": "UI preservation sign-off is up to date: unsigned, 21 capabilities across 6 panes, 170 markup controls, 37 state-changing routes traced"
           }
         ],
         "visual_evidence": [
@@ -4507,7 +4513,17 @@
     "protocol_doc": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "repository_rules": "AGENTS.md",
     "program_doc": "docs/uiux-2-0-program.md",
-    "ledger_tests": "tests/test_uiux_roadmap.py"
+    "ledger_tests": "tests/test_uiux_roadmap.py",
+    "preservation_signoff": {
+      "approved": false,
+      "approved_by": null,
+      "approved_at": null,
+      "reference": null,
+      "package": "product/M5_2_0_UIUX_Preservation_Signoff.json",
+      "page": "docs/uiux-2-0-p0-signoff.md",
+      "regenerate_with": "python3 scripts/uiux_preservation_signoff.py",
+      "note": "Prepared package for UIUX-P0-06, unsigned. An agent may prepare this decision and may not make it: to approve, set approved true and fill approved_by, approved_at and reference - the generator refuses a partial signature - then regenerate the package in the same commit. UIUX-P0-06 itself stays not_started until the owner signs, because its acceptance criterion is the approval, not the package."
+    }
   },
   "global_agent_instructions": {
     "system_prompt": "You are a safety-conscious senior frontend engineer. Before any implementation pin current HEAD and ensure clean worktree; read this roadmap and the authoritative existing runtime roadmap. Preserve every existing capability, permission boundary and recovery invariant. Never infer success from code existence. Implement only one dependency-ready story per session and gather acceptance evidence.",

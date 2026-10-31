@@ -7,9 +7,9 @@
   "regenerate_with": "python3 scripts/uiux_authorization_trace.py",
   "check_with": "python3 scripts/uiux_authorization_trace.py --check",
   "statement": "For every state-changing route the browser can call: the shared gates every request passes, the refusals the handler raises, the authority and durable-state subsystems it references, and whether it can leave the machine. Derived from app.py and the P0-03 route map; a reference is evidence of a consultation, not proof of enforcement.",
-  "pinned_source_commit": "ecd781675e58b0735f8b590a67b39aaa2b910e49",
+  "pinned_source_commit": "0b4b1a4a19c65db2782bdf660b38563df071ead3",
   "app_sha256": "e3dd15bef236555d4cb3fca12eac003a55e099b48bbefa20e313489af652f129",
-  "route_map_sha256": "cd464275913c8c7feefaded9c21511ae310f7c1bf76c63032faed0dd7d277fbf",
+  "route_map_sha256": "ace5222d7b530d2e92633881d1875980353cece5df1f34c1b7247964c49d03da",
   "totals": {
     "routes_in_app": 115,
     "state_changing_routes_in_app": 77,
