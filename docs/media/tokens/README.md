@@ -4,7 +4,10 @@ Two captures of the same demo instance, taken through
 `scripts/capture_screenshots.mjs` from the tree that defines the token layer. They
 exist because "themes and density are defined" is a claim a reader cannot check
 from a stylesheet, and the baseline set in [`../screenshots`](../screenshots) only
-covers the default theme at the desktop viewport.
+covers the default theme at the desktop viewport. These historical captures predate
+the safety checks in [#122](https://github.com/pankajtiwarics27/m5-agent-studio/issues/122):
+their checksums prove file consistency, not which panes or variants were rendered.
+They require separate provenance review before acceptance.
 
 | Directory | Variant | Viewport | Panes |
 |---|---|---|---|

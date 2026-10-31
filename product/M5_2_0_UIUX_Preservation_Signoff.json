@@ -20,7 +20,7 @@
   },
   "inputs": {
     "ledger_sha256": "2f901face220a64d3dc782091655dc63eadbdfb25d534827ec33981141481406",
-    "source_manifest_sha256": "c4b6d8c9901e96163b8243be03824e2bf8d32a63df6614df46395c8ed1b4bf0b",
+    "source_manifest_sha256": "2d89de906d15198529a32f75b0f95659a001b1e18588ae07b6b5eb42a2dd8662",
     "control_inventory_sha256": "d39b771ea629a818854c83fc4be58a837caaad706a5598f08fb341f7668867bb",
     "route_map_sha256": "fb22b4c96280f55d20e6ab341d4325403fbf45a68b5d8a86da675d1d2eed103d",
     "authorization_trace_sha256": "f1083cab6ac4e9130dde35ce5fdeacd85a54ced35e80231093095c53164a3b6a",

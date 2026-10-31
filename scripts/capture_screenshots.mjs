@@ -50,6 +50,8 @@ const DEFAULTS = {
   settleMs: 1200,
 };
 
+const TABS = new Set(["start", "harness", "hall", "council", "debate", "chat"]);
+
 function parseArgs(argv) {
   const args = { ...DEFAULTS, dryRun: false, baseUrl: "", token: "", timeoutMs: 15000 };
   for (let i = 0; i < argv.length; i += 1) {
@@ -66,7 +68,10 @@ function parseArgs(argv) {
       case "--base-url": args.baseUrl = next(); break;
       case "--token": args.token = next(); break;
       case "--timeout-ms": args.timeoutMs = Number(next()); break;
-      case "--panes": args.panes = next().split(",").map((name) => name.trim()).filter(Boolean); break;
+      case "--panes":
+        args.panes = next().split(",").map((name) => name.trim()).filter(Boolean);
+        if (args.panes.length === 0) throw new Error("--panes must name at least one planned shot");
+        break;
       case "--emulate-theme": args.emulateTheme = next(); break;
       case "--emulate-density": args.emulateDensity = next(); break;
       case "--viewport": args.viewport = next(); break;
@@ -116,25 +121,34 @@ function validateManifest(manifest) {
   if (!Array.isArray(manifest.shots) || manifest.shots.length === 0) {
     throw new Error("manifest.shots must be a non-empty array");
   }
+  if (manifest.schema !== 1) throw new Error("manifest.schema must be 1");
   const seen = new Set();
+  const files = new Set();
   for (const shot of manifest.shots) {
     for (const field of ["id", "tab", "title", "file"]) {
       if (typeof shot[field] !== "string" || shot[field].trim() === "") {
         throw new Error(`every shot needs a non-empty ${field}`);
       }
     }
+    if (!TABS.has(shot.tab)) throw new Error(`unknown Studio tab: ${shot.tab}`);
     if (!shot.file.endsWith(".png")) throw new Error(`${shot.file} must be a .png`);
-    if (shot.file.includes("/") || shot.file.includes("\\")) {
+    if (shot.file.startsWith(".") || shot.file.includes("/") || shot.file.includes("\\")) {
       throw new Error(`${shot.file} must be a plain file name`);
     }
     if (seen.has(shot.id)) throw new Error(`duplicate shot id: ${shot.id}`);
+    if (files.has(shot.file)) throw new Error(`duplicate shot file: ${shot.file}`);
     seen.add(shot.id);
+    files.add(shot.file);
   }
   const viewport = manifest.viewport || {};
   for (const field of ["width", "height"]) {
     if (!Number.isInteger(viewport[field]) || viewport[field] <= 0) {
       throw new Error(`manifest.viewport.${field} must be a positive integer`);
     }
+  }
+  const scale = viewport.device_scale_factor ?? 1;
+  if (typeof scale !== "number" || !Number.isFinite(scale) || scale <= 0) {
+    throw new Error("manifest.viewport.device_scale_factor must be positive and finite");
   }
   return manifest;
 }
@@ -162,7 +176,7 @@ function plan(args, manifest) {
   const shots = selectedShots(args, manifest);
   const override = args.viewport ? viewportOverride(args.viewport) : null;
   return {
-    baseUrl: args.baseUrl || "<start scripts/demo_tour.py --serve>",
+    baseUrl: args.baseUrl ? demoUrl(args.baseUrl).href : "<start scripts/demo_tour.py --serve>",
     out: resolve(args.out),
     viewport: override
       ? { ...manifest.viewport, width: override.width, height: override.height }
@@ -222,11 +236,50 @@ function resolveChrome() {
   );
 }
 
+function demoUrl(value) {
+  let url;
+  try { url = new URL(value); } catch { throw new Error("--base-url must be a loopback demo URL"); }
+  if (!['http:', 'https:'].includes(url.protocol) ||
+      !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) ||
+      url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
+    throw new Error("--base-url must be an HTTP(S) loopback origin without a path, credentials, query, or fragment");
+  }
+  return url;
+}
+
+async function verifyAuth(url, token, timeoutMs) {
+  const endpoint = new URL('/api/workspace/directory', url);
+  const options = { redirect: 'manual', signal: AbortSignal.timeout(timeoutMs) };
+  // A disabled auth boundary and a redirect are not acceptable evidence.
+  const without = await fetch(endpoint, options);
+  if (without.status !== 401) throw new Error("demo API did not require authentication");
+  const withToken = await fetch(endpoint, {
+    redirect: 'manual', signal: AbortSignal.timeout(timeoutMs),
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (withToken.status !== 200 || !(withToken.headers.get('content-type') || '').includes('application/json')) {
+    throw new Error("demo API did not accept the supplied token");
+  }
+  let data;
+  try { data = await withToken.json(); } catch { throw new Error("demo API returned invalid JSON"); }
+  if (!data || typeof data.workspace_dir !== 'string' || !Array.isArray(data.recent_dirs)) {
+    throw new Error("demo API returned an unexpected workspace response");
+  }
+}
+
 async function capture(args, manifest) {
   if (!args.baseUrl) throw new Error("--base-url is required (start scripts/demo_tour.py --serve)");
   if (!args.token) throw new Error("--token is required (printed by scripts/demo_tour.py --serve)");
+  if (!/^[A-Za-z0-9._~-]{32,}$/.test(args.token)) throw new Error("--token must be a valid throwaway demo token");
+  if (!Number.isFinite(args.timeoutMs) || args.timeoutMs <= 0) throw new Error("--timeout-ms must be positive");
+  const url = demoUrl(args.baseUrl);
   const shots = selectedShots(args, manifest);
   const planViewport = plan(args, manifest).viewport;
+  if ((args.panes || args.emulateTheme || args.emulateDensity || args.viewport) &&
+      resolve(args.out) === resolve(DEFAULTS.out)) {
+    throw new Error("variant captures require a separate --out directory");
+  }
+  await verifyAuth(url, args.token, args.timeoutMs);
   const puppeteer = await loadPuppeteer();
   const executablePath = resolveChrome();
   const extraArgs = (process.env.STUDIO_SCREENSHOT_CHROME_ARGS || "")
@@ -252,63 +305,93 @@ async function capture(args, manifest) {
       deviceScaleFactor: planViewport.device_scale_factor || 1,
     });
     if (args.emulateTheme) {
-      // The shell picks its theme at boot from localStorage, falling back to the OS
-      // preference. Seeding the preference before the first document is the only way
-      // to photograph a theme the machine does not use.
-      await page.emulateMediaFeatures([
-        { name: "prefers-color-scheme", value: args.emulateTheme },
-      ]);
+      await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: args.emulateTheme }]);
     }
-    const errors = [];
-    page.on("pageerror", (error) => errors.push(String(error)));
-    // Seed the token before the first document exists. The shell starts fetching
-    // as it loads; unauthenticated it answers 401 and retries without backoff,
-    // which can starve the renderer, so "load, then store the token, then reload"
-    // can hang instead of producing an image.
+    let pageErrors = 0;
+    let unexpectedNavigation = false;
+    page.on("pageerror", () => { pageErrors += 1; });
+    page.on("dialog", (dialog) => { pageErrors += 1; void dialog.dismiss(); });
+    await page.setRequestInterception(true);
+    page.on("request", (request) => {
+      if (request.isNavigationRequest() && request.frame() === page.mainFrame() &&
+          (request.url() !== url.href || request.redirectChain().length > 0)) {
+        unexpectedNavigation = true;
+        void request.abort();
+      } else {
+        void request.continue();
+      }
+    });
+    // The shell fetches on load, so seed early, but never seed a child frame or
+    // any other origin. A redirect is also blocked before it is requested.
     await page.evaluateOnNewDocument(
-      (key, token) => {
-        try {
+      (key, token, origin) => {
+        if (window.top === window && location.origin === origin) {
           window.sessionStorage.setItem(key, token);
-        } catch (_error) {
-          // A document with no storage is a capture problem, not a silent pass:
-          // the first authenticated request below will fail loudly instead.
         }
       },
       args.tokenKey,
       args.token,
+      url.origin,
     );
     if (args.emulateTheme || args.emulateDensity) {
-      // Seed the shell's own persisted preferences rather than poking the DOM after
-      // load: the app restores theme and density from localStorage on boot, so this
-      // is the same path a returning user takes, and a re-render cannot undo it.
-      await page.evaluateOnNewDocument(
-        (theme, density) => {
-          try {
-            if (theme) window.localStorage.setItem("m5_theme", theme);
-            if (density) window.localStorage.setItem("m5_ui_density", density);
-          } catch (_error) {
-            // Same reasoning as the token: a document without storage fails loudly later.
-          }
-        },
-        args.emulateTheme,
-        args.emulateDensity,
-      );
+      await page.evaluateOnNewDocument((theme, density, origin) => {
+        if (window.top !== window || location.origin !== origin) return;
+        if (theme) window.localStorage.setItem("m5_theme", theme);
+        if (density) window.localStorage.setItem("m5_ui_density", density);
+      }, args.emulateTheme, args.emulateDensity, url.origin);
     }
-    await page.goto(args.baseUrl, { waitUntil: "domcontentloaded", timeout: args.timeoutMs });
-    // The shell holds streaming connections open for its whole lifetime, so
-    // networkidle never arrives. Settle for the same window used between panes.
+    const response = await page.goto(url.href, { waitUntil: "domcontentloaded", timeout: args.timeoutMs });
+    if (!response || response.status() !== 200 || response.request().redirectChain().length ||
+        !(response.headers()['content-type'] || '').includes('text/html')) {
+      throw new Error("demo document was not a direct successful HTML response");
+    }
+    const browserAuth = await page.evaluate(async () => {
+      const response = await fetch('/api/workspace/directory', { redirect: 'error', cache: 'no-store' });
+      if (response.status !== 200) return false;
+      const data = await response.json();
+      return typeof data.workspace_dir === 'string' && Array.isArray(data.recent_dirs);
+    });
+    if (!browserAuth) throw new Error("browser could not authenticate to the demo API");
+    // The shell holds streaming connections open, so networkidle never arrives.
     await new Promise((done) => setTimeout(done, args.settleMs));
     for (const shot of shots) {
-      await page.evaluate((tab) => {
-        if (typeof window.switchTab === "function") window.switchTab(tab);
-        else document.querySelector(`.mode-tab[data-tab="${tab}"]`)?.click();
+      const found = await page.evaluate((tab) => {
+        const buttons = [...document.querySelectorAll('.mode-tab')].filter((b) => b.dataset.tab === tab);
+        if (buttons.length !== 1) return false;
+        buttons[0].click();
+        return true;
       }, shot.tab);
+      if (!found) throw new Error(`missing or ambiguous tab for ${shot.id}`);
       await new Promise((done) => setTimeout(done, args.settleMs));
+      const valid = await page.evaluate((tab) => {
+        const buttons = [...document.querySelectorAll('.mode-tab.active')];
+        const panes = [...document.querySelectorAll('.pane.active')];
+        const pane = document.getElementById(`pane-${tab}`);
+        if (buttons.length !== 1 || buttons[0].dataset.tab !== tab ||
+            buttons[0].getAttribute('aria-current') !== 'page' || panes.length !== 1 || panes[0] !== pane) return false;
+        for (let node = pane; node; node = node.parentElement) {
+          const style = getComputedStyle(node);
+          if (style.display === 'none' || style.visibility !== 'visible' || Number(style.opacity) <= 0) return false;
+        }
+        const rect = pane.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && rect.right > 0 && rect.bottom > 0 &&
+          rect.left < innerWidth && rect.top < innerHeight;
+      }, shot.tab);
+      if (!valid) throw new Error(`tab did not display the expected pane for ${shot.id}`);
+      const variantApplied = await page.evaluate((theme, density) =>
+        (!theme || document.body.dataset.theme === theme) &&
+        (!density || document.body.dataset.density === density), args.emulateTheme, args.emulateDensity);
+      if (!variantApplied) throw new Error(`requested theme or density was not applied for ${shot.id}`);
+      if (unexpectedNavigation || page.url() !== url.href || pageErrors) {
+        throw new Error("unexpected navigation, dialog, or page error during capture");
+      }
       const png = await page.screenshot({ type: "png" });
       if (!png || png.length === 0) throw new Error(`empty screenshot for ${shot.id}`);
       captured.push({ shot, png });
     }
-    if (errors.length > 0) throw new Error(`the page reported errors: ${errors.join("; ")}`);
+    if (unexpectedNavigation || page.url() !== url.href || pageErrors) {
+      throw new Error("unexpected navigation, dialog, or page error during capture");
+    }
   } finally {
     await browser.close();
   }
