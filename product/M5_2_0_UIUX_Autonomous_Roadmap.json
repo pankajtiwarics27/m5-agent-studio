@@ -100,11 +100,13 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": null,
-    "active_stories": [],
+    "active_story": "UIUX-P0-02",
+    "active_stories": [
+      "UIUX-P0-02"
+    ],
     "last_completed_story": "UIUX-P0-01",
     "next_recommended_story": "UIUX-P0-02",
-    "last_checkpoint": "2026-10-31T14:05:00Z",
+    "last_checkpoint": "2026-10-31T14:20:00Z",
     "last_session_id": "arena/be7957d5-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
@@ -211,9 +213,9 @@
       ],
       "total": 6,
       "done": 1,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 5,
+      "not_started": 4,
       "percent_complete": 17
     },
     {
@@ -338,9 +340,9 @@
   "overall_progress": {
     "total_stories": 40,
     "done": 1,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 39,
+    "not_started": 38,
     "percent_complete": 2
   },
   "stories": [
@@ -551,13 +553,13 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P0-02 (Inventory all six tabs and controls). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-10-31T14:20:00Z",
+        "updated_at": "2026-10-31T14:20:00Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/be7957d5-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -566,8 +568,8 @@
         "known_regressions": [],
         "decisions": [],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "Claimed right after UIUX-P0-01 merged. The inventory starts from the pinned manifest's tab table, so the six panes are addressed by DOM id (start, harness, hall, council, debate, chat) rather than by the plan's labels.",
+        "next_action": "Enumerate every interactive control inside each of the six pane sections with its element type, id, label, handler and the route it calls, and prove the count is complete by parsing the markup rather than reading it.",
         "readme_updated": false
       },
       "required_evidence": [
