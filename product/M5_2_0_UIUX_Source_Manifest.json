@@ -1,0 +1,676 @@
+{
+  "schema_version": "1.0.0",
+  "document_type": "m5_uiux_source_manifest",
+  "program": "M5_2_0_UIUX",
+  "pinned_by_story": "UIUX-P0-01",
+  "generator": "scripts/uiux_source_manifest.py",
+  "regenerate_with": "python3 scripts/uiux_source_manifest.py",
+  "check_with": "python3 scripts/uiux_source_manifest.py --check",
+  "statement": "Hashed inventory of the UI surface this program may change, plus the tab and route tables every later story depends on. Values are parsed from the files, not from the roadmap's web extracts. A story that changes the surface regenerates this manifest; the check fails when the two disagree.",
+  "pinned_source_commit": "28930089d0a450fe86e418bfef79d16f8a585965",
+  "files": [
+    {
+      "path": "static/index.html",
+      "role": "the entire browser UI: markup, styles and script in one file",
+      "sha256": "3137cb7d05bcbdd29155576bd9952f49172705b85e70a0c0a2484c81bc80a66a",
+      "bytes": 280681,
+      "lines": 4576
+    },
+    {
+      "path": "app.py",
+      "role": "the FastAPI server the UI talks to; source of the route table",
+      "sha256": "dba9c61be9a6525e329efec573df94ed768bf38d8fe2ffad533b4e397c6bbaab",
+      "bytes": 969069,
+      "lines": 20908
+    },
+    {
+      "path": "studio.py",
+      "role": "generated standalone bundle; must be rebuilt, never hand-edited",
+      "sha256": "21f2946ee80ff53c6ed703b7b4c34c0e6d79ea13e5ddd5a2e1d67db68ddbb3a3",
+      "bytes": 2747305,
+      "lines": 61464
+    },
+    {
+      "path": "design-system/m5-agentic-studio/MASTER.md",
+      "role": "the design tokens and component contract",
+      "sha256": "b85a4c6b71b74cc4f9f0564c581f9a6226024d8d7959efb93a69e493c0db150d",
+      "bytes": 8048,
+      "lines": 105
+    },
+    {
+      "path": "docs/media/screenshots/manifest.json",
+      "role": "the screenshot set every visual claim is checked against",
+      "sha256": "69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92",
+      "bytes": 1404,
+      "lines": 54
+    },
+    {
+      "path": "docs/ui-audit.md",
+      "role": "the current-state UI audit the P1 stories rewrite",
+      "sha256": "81ae1ab82bf098be6919fc47fa3ace4ed10d4e53d470f04965f7c159be2fd3e4",
+      "bytes": 7167,
+      "lines": 57
+    },
+    {
+      "path": "scripts/capture_screenshots.mjs",
+      "role": "the only accepted way to capture visual evidence",
+      "sha256": "83c11d292b494410ef9dd1588dcc330279f1b663eec67884a387a30d00598fb0",
+      "bytes": 8789,
+      "lines": 231
+    },
+    {
+      "path": "scripts/validate_screenshots.py",
+      "role": "validates capture output against the manifest",
+      "sha256": "ba3cc617230be777d364ba3d5cc7e6b5a039888c7303fbed29a276725db28fe7",
+      "bytes": 9275,
+      "lines": 221
+    },
+    {
+      "path": "scripts/build_studio.py",
+      "role": "regenerates studio.py from app.py and the inlined modules",
+      "sha256": "c00bbe70c4c5e3456045c0570569beef0a4a26f789ae4ad9633772dc5d5518ae",
+      "bytes": 6931,
+      "lines": 128
+    },
+    {
+      "path": "scripts/check_frontend_syntax.py",
+      "role": "parses the inline script block for syntax errors",
+      "sha256": "d370439e0be951ae5b6450c5a5c9a9d2e3d7067190f6eae7a6afecdab5ca0639",
+      "bytes": 1310,
+      "lines": 34
+    }
+  ],
+  "frontend": {
+    "path": "static/index.html",
+    "sha256": "3137cb7d05bcbdd29155576bd9952f49172705b85e70a0c0a2484c81bc80a66a",
+    "lines": 4576,
+    "tab_count": 6,
+    "tabs": [
+      {
+        "dom_id": "start",
+        "label": "Start",
+        "button_title": "Guided first run (Alt+6)",
+        "shortcut": "Alt+6",
+        "onclick_target": "start"
+      },
+      {
+        "dom_id": "harness",
+        "label": "Harness",
+        "button_title": "Agent harness (Alt+1)",
+        "shortcut": "Alt+1",
+        "onclick_target": "harness"
+      },
+      {
+        "dom_id": "hall",
+        "label": "Council",
+        "button_title": "Council sessions (Alt+2)",
+        "shortcut": "Alt+2",
+        "onclick_target": "hall"
+      },
+      {
+        "dom_id": "council",
+        "label": "Pipeline",
+        "button_title": "Four-stage pipeline (Alt+3)",
+        "shortcut": "Alt+3",
+        "onclick_target": "council"
+      },
+      {
+        "dom_id": "debate",
+        "label": "Compare",
+        "button_title": "Compare model responses (Alt+4)",
+        "shortcut": "Alt+4",
+        "onclick_target": "debate"
+      },
+      {
+        "dom_id": "chat",
+        "label": "Chat",
+        "button_title": "Model chat (Alt+5)",
+        "shortcut": "Alt+5",
+        "onclick_target": "chat"
+      }
+    ],
+    "fetch_call_count": 53,
+    "api_literal_count": 48,
+    "api_literals": [
+      "/api/cache/clear-ssd",
+      "/api/chat/stream",
+      "/api/codegraph/analyze?workspace_dir={param}",
+      "/api/codegraph/query",
+      "/api/combos",
+      "/api/combos/{param}",
+      "/api/council/stream",
+      "/api/debate/stream",
+      "/api/hall/sessions",
+      "/api/hall/sessions/{param}",
+      "/api/hall/sessions/{param}/message",
+      "/api/hall/sessions/{param}/summon",
+      "/api/harness/abort/{param}",
+      "/api/harness/approve",
+      "/api/harness/external-configs",
+      "/api/harness/gsd-wave",
+      "/api/harness/run",
+      "/api/harness/sdlc/feedback",
+      "/api/harness/sdlc/run",
+      "/api/harness/sessions",
+      "/api/harness/sessions/{param}",
+      "/api/harness/sessions/{param}/apply",
+      "/api/harness/sessions/{param}/compact",
+      "/api/harness/sessions/{param}/diff",
+      "/api/harness/sessions/{param}/events/stream?cursor={param}",
+      "/api/harness/sessions/{param}/sdlc",
+      "/api/harness/sessions/{param}/state",
+      "/api/mcp/import-json",
+      "/api/mcp/servers",
+      "/api/mcp/servers/{param}",
+      "/api/mcp/servers/{param}/call",
+      "/api/mcp/servers/{param}/sync",
+      "/api/models/unload-all",
+      "/api/models/{param}/{param}",
+      "/api/onboarding/preflight",
+      "/api/onboarding/preflight?probe=local",
+      "/api/opencontext/docs",
+      "/api/opencontext/docs/{param}",
+      "/api/opencontext/lint",
+      "/api/opencontext/search?q={param}",
+      "/api/providers",
+      "/api/providers/fetch-models",
+      "/api/providers/{param}",
+      "/api/skills",
+      "/api/skills/install",
+      "/api/telemetry",
+      "/api/workspace/directory",
+      "/api/workspace/files"
+    ]
+  },
+  "api": {
+    "path": "app.py",
+    "sha256": "dba9c61be9a6525e329efec573df94ed768bf38d8fe2ffad533b4e397c6bbaab",
+    "route_count": 102,
+    "by_method": {
+      "DELETE": 5,
+      "GET": 36,
+      "PATCH": 3,
+      "POST": 58
+    },
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/healthz"
+      },
+      {
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "method": "GET",
+        "path": "/api/onboarding/preflight"
+      },
+      {
+        "method": "GET",
+        "path": "/api/providers"
+      },
+      {
+        "method": "POST",
+        "path": "/api/providers"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/providers/{alias}"
+      },
+      {
+        "method": "POST",
+        "path": "/api/providers/fetch-models"
+      },
+      {
+        "method": "POST",
+        "path": "/api/combos"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/combos/{alias}"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/models"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/chat/completions"
+      },
+      {
+        "method": "GET",
+        "path": "/api/skills"
+      },
+      {
+        "method": "POST",
+        "path": "/api/skills/install"
+      },
+      {
+        "method": "GET",
+        "path": "/api/workspace/files"
+      },
+      {
+        "method": "GET",
+        "path": "/api/workspace/directory"
+      },
+      {
+        "method": "POST",
+        "path": "/api/workspace/directory"
+      },
+      {
+        "method": "GET",
+        "path": "/api/hall/sessions"
+      },
+      {
+        "method": "POST",
+        "path": "/api/hall/sessions"
+      },
+      {
+        "method": "GET",
+        "path": "/api/hall/sessions/{session_id}"
+      },
+      {
+        "method": "POST",
+        "path": "/api/hall/sessions/{session_id}/message"
+      },
+      {
+        "method": "POST",
+        "path": "/api/hall/sessions/{session_id}/close"
+      },
+      {
+        "method": "POST",
+        "path": "/api/hall/sessions/{session_id}/summon"
+      },
+      {
+        "method": "GET",
+        "path": "/api/telemetry"
+      },
+      {
+        "method": "GET",
+        "path": "/api/models/admission"
+      },
+      {
+        "method": "POST",
+        "path": "/api/models/unload-all"
+      },
+      {
+        "method": "POST",
+        "path": "/api/models/{model_id:path}/load"
+      },
+      {
+        "method": "POST",
+        "path": "/api/models/{model_id:path}/unload"
+      },
+      {
+        "method": "POST",
+        "path": "/api/cache/clear-ssd"
+      },
+      {
+        "method": "GET",
+        "path": "/api/history/export"
+      },
+      {
+        "method": "POST",
+        "path": "/api/history/retention/run"
+      },
+      {
+        "method": "POST",
+        "path": "/api/chat/stream"
+      },
+      {
+        "method": "POST",
+        "path": "/api/council/stream"
+      },
+      {
+        "method": "POST",
+        "path": "/api/debate/stream"
+      },
+      {
+        "method": "GET",
+        "path": "/api/mcp/servers"
+      },
+      {
+        "method": "POST",
+        "path": "/api/mcp/servers"
+      },
+      {
+        "method": "POST",
+        "path": "/api/mcp/import-json"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/mcp/servers/{alias}"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/mcp/servers/{alias}"
+      },
+      {
+        "method": "POST",
+        "path": "/api/mcp/servers/{alias}/sync"
+      },
+      {
+        "method": "POST",
+        "path": "/api/mcp/servers/{alias}/call"
+      },
+      {
+        "method": "GET",
+        "path": "/api/opencontext/docs"
+      },
+      {
+        "method": "GET",
+        "path": "/api/opencontext/search"
+      },
+      {
+        "method": "POST",
+        "path": "/api/opencontext/docs"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/opencontext/docs/{doc_id}"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/opencontext/docs/{doc_id}"
+      },
+      {
+        "method": "GET",
+        "path": "/api/opencontext/lint"
+      },
+      {
+        "method": "GET",
+        "path": "/api/codegraph/analyze"
+      },
+      {
+        "method": "POST",
+        "path": "/api/codegraph/query"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/external-configs"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/audit"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/sessions"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/sessions/{session_id}"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/harness/sessions/{session_id}"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/harness/sessions/{session_id}"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/sessions/{session_id}/diff"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/apply"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/compact"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/approve"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/abort/{session_id}"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/sessions/{session_id}/state"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/sessions/{session_id}/snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/snapshots/{snapshot_id}/restore"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/sessions/{session_id}/events"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/sessions/{session_id}/events/stream"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/sessions/{session_id}/task"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/pause"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/cancel"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/contain"
+      },
+      {
+        "method": "GET",
+        "path": "/api/security/incidents"
+      },
+      {
+        "method": "POST",
+        "path": "/api/security/incidents"
+      },
+      {
+        "method": "POST",
+        "path": "/api/security/incidents/{incident_id}/fallback"
+      },
+      {
+        "method": "POST",
+        "path": "/api/security/incidents/{incident_id}/restore"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/sessions/{session_id}/grants"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/grants"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/grants/revoke"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/sessions/{session_id}/mcp-effects"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/mcp-effects/reconcile"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/mcp-effects/{action_id}/resolve"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/sessions/{session_id}/handoffs"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/switch-model"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/handoffs/reset-budget"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/sessions/{session_id}/delegations"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/delegations"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/delegations/{delegation_id}/join"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/delegations/{delegation_id}/cancel"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/delegations/benchmark"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/lessons"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/lessons/config"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/lessons/promote"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/lessons/retrieve"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/lessons/{lesson_id}/invalidate"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/lessons/evaluate"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/resume"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/run"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/gsd-wave"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/sessions/{session_id}/sdlc"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sdlc/run"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sdlc/feedback"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/release-gate"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/release-gate/evaluate"
+      }
+    ]
+  },
+  "screenshot_manifest": {
+    "path": "docs/media/screenshots/manifest.json",
+    "sha256": "69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92",
+    "viewport": {
+      "width": 1440,
+      "height": 900,
+      "device_scale_factor": 2
+    },
+    "captured_with": "scripts/capture_screenshots.mjs",
+    "shots": [
+      {
+        "id": "start",
+        "tab": "start",
+        "title": "Start",
+        "file": "start.png",
+        "captured": false
+      },
+      {
+        "id": "harness",
+        "tab": "harness",
+        "title": "Harness",
+        "file": "harness.png",
+        "captured": false
+      },
+      {
+        "id": "hall",
+        "tab": "hall",
+        "title": "Council",
+        "file": "hall.png",
+        "captured": false
+      },
+      {
+        "id": "council",
+        "tab": "council",
+        "title": "Pipeline",
+        "file": "pipeline.png",
+        "captured": false
+      },
+      {
+        "id": "debate",
+        "tab": "debate",
+        "title": "Compare",
+        "file": "compare.png",
+        "captured": false
+      },
+      {
+        "id": "chat",
+        "tab": "chat",
+        "title": "Chat",
+        "file": "chat.png",
+        "captured": false
+      }
+    ],
+    "tab_ids": [
+      "start",
+      "harness",
+      "hall",
+      "council",
+      "debate",
+      "chat"
+    ],
+    "captured": 0,
+    "total": 6,
+    "tab_ids_match_frontend": true
+  },
+  "not_verified": [
+    "No screenshot has been captured in this environment (capture needs a browser), so no visual claim is made anywhere in this program yet.",
+    "The manifest records that handlers and routes exist and where they are; it does not claim which handler calls which route. That mapping is UIUX-P0-03.",
+    "Line counts and digests describe this tree only; nothing here was checked against an upstream version or the roadmap's web extracts."
+  ]
+}
