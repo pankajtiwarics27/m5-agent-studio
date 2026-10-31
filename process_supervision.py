@@ -26,7 +26,7 @@ Guarantees:
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Collection, Mapping, Sequence
 import contextlib
 import contextvars
 from dataclasses import dataclass
@@ -119,6 +119,9 @@ class SupervisedProcessRecord:
     started_at: float
     status: str = "running"
     containment_reason: str = ""
+    grant_id: str | None = None
+    capabilities: tuple[str, ...] = ()
+    resource_scopes: tuple[str, ...] = ()
 
     def to_mapping(self) -> dict[str, Any]:
         return {
@@ -140,6 +143,9 @@ class SupervisedProcessRecord:
             "started_at": self.started_at,
             "status": self.status,
             "containment_reason": self.containment_reason,
+            "grant_id": self.grant_id,
+            "capabilities": list(self.capabilities),
+            "resource_scopes": list(self.resource_scopes),
         }
 
     @classmethod
@@ -153,6 +159,8 @@ class SupervisedProcessRecord:
                 raise ContainmentIntegrityError("Malformed barrier pair in SupervisedProcessRecord.")
             parsed_barriers.append((str(item[0]), str(item[1])))
         epoch_raw = raw.get("epoch")
+        raw_caps = raw.get("capabilities") or ()
+        raw_scopes = raw.get("resource_scopes") or ()
         return cls(
             supervision_id=str(raw["supervision_id"]),
             pid=int(raw["pid"]),
@@ -172,6 +180,9 @@ class SupervisedProcessRecord:
             started_at=float(raw.get("started_at") or 0.0),
             status=str(raw.get("status") or "running"),
             containment_reason=str(raw.get("containment_reason") or ""),
+            grant_id=(str(raw["grant_id"]) if raw.get("grant_id") else None),
+            capabilities=tuple(str(c) for c in raw_caps if str(c).strip()),
+            resource_scopes=tuple(str(s) for s in raw_scopes if str(s).strip()),
         )
 
 
@@ -1307,6 +1318,9 @@ class ProcessSupervisor:
         boot_id: str = "",
         action_id: str = "",
         barriers: Sequence[tuple[str, str]] = (),
+        grant_id: str | None = None,
+        capabilities: Sequence[str] = (),
+        resource_scopes: Sequence[str] = (),
     ) -> SupervisedProcessRecord:
         pid = int(proc.pid or 0)
         if pid <= 1:
@@ -1325,8 +1339,11 @@ class ProcessSupervisor:
             with contextlib.suppress(OSError):
                 ws_str = str(workspace_root.resolve())
         eff_barriers = tuple(barriers)
-        if not eff_barriers and ws_str:
+        if not eff_barriers and ws_str and not tool_name.startswith("mcp__"):
             eff_barriers = ((f"workspace:{ws_str}", "exclusive"),)
+        eff_scopes = tuple(str(s) for s in resource_scopes if str(s).strip())
+        if not eff_scopes:
+            eff_scopes = tuple(t for t, _ in eff_barriers)
 
         record = SupervisedProcessRecord(
             supervision_id=supervision_id,
@@ -1346,6 +1363,9 @@ class ProcessSupervisor:
             barriers=eff_barriers,
             started_at=time.time(),
             status="running",
+            grant_id=(str(grant_id) if grant_id else None),
+            capabilities=tuple(str(c) for c in capabilities if str(c).strip()),
+            resource_scopes=eff_scopes,
         )
         self._store.record_process_started(record)
         with self._lock:
@@ -1800,6 +1820,171 @@ class ProcessSupervisor:
                     persist_hold=persist_hold,
                     fence_origin=True,
                     quarantine_session=quarantine_session,
+                )
+            )
+        return outcomes
+
+    @staticmethod
+    def _ps_scope_overlaps(scope_a: str, scope_b: str) -> bool:
+        if scope_a in {"*", "global:*"} or scope_b in {"*", "global:*"} or scope_a == scope_b:
+            return True
+        for wider, narrower in ((scope_a, scope_b), (scope_b, scope_a)):
+            if wider.startswith("workspace:"):
+                ws = wider.removeprefix("workspace:")
+                if narrower.startswith(f"path:{ws}:") or narrower.startswith(f"dir:{ws}:"):
+                    return True
+            elif wider.startswith("dir:") and ":" in wider.removeprefix("dir:"):
+                ws, rel = wider.removeprefix("dir:").rsplit(":", 1)
+                rel = rel.strip("/")
+                if narrower.startswith(f"path:{ws}:") or narrower.startswith(f"dir:{ws}:"):
+                    n_rel = narrower.split(":", 2)[2].strip("/")
+                    if n_rel == rel or n_rel.startswith(rel + "/"):
+                        return True
+            elif wider.startswith("mcp:") and narrower.startswith("mcp:"):
+                w_parts = wider.split(":")
+                n_parts = narrower.split(":")
+                if len(w_parts) == 2 and (w_parts[1] == "*" or w_parts[1] == n_parts[1]):
+                    return True
+        return False
+
+    def _select_capability_records(
+        self,
+        *,
+        session_id: str | None = None,
+        task_id: str | None = None,
+        grant_ids: Collection[str] = (),
+        capabilities: Collection[str] = (),
+        resource_scopes: Collection[str] = (),
+        tool_names: Collection[str] = (),
+    ) -> list[SupervisedProcessRecord]:
+        gid_set = {str(g) for g in grant_ids if str(g).strip()}
+        cap_set = {str(c) for c in capabilities if str(c).strip()}
+        scope_list = [str(s) for s in resource_scopes if str(s).strip()]
+        tool_set = {str(t) for t in tool_names if str(t).strip()}
+        if not gid_set and not cap_set and not scope_list and not tool_set:
+            return []
+
+        candidates: dict[str, SupervisedProcessRecord] = {}
+        with self._lock:
+            for sup_id, entry in self._live.items():
+                candidates[sup_id] = entry.record
+        for persisted in self._store.list_in_flight_processes():
+            candidates.setdefault(persisted.supervision_id, persisted)
+
+        matched: list[SupervisedProcessRecord] = []
+        for rec in candidates.values():
+            if (
+                session_id is not None
+                and session_id != "*"
+                and rec.session_id != session_id
+                and rec.task_id != session_id
+            ):
+                continue
+            if task_id is not None and rec.task_id != task_id and rec.session_id != task_id:
+                continue
+            if gid_set and rec.grant_id and rec.grant_id in gid_set:
+                matched.append(rec)
+                continue
+            if not cap_set and not scope_list and not tool_set:
+                continue
+            cap_ok = (not cap_set) or bool(set(rec.capabilities) & cap_set)
+            tool_ok = bool(tool_set) and (rec.tool_name in tool_set)
+            if cap_set and not cap_ok and not tool_ok:
+                continue
+            if tool_set and not cap_set and not tool_ok:
+                continue
+            rec_scopes = list(rec.resource_scopes) or [t for t, _ in rec.barriers]
+            scope_ok = (not scope_list) or any(
+                self._ps_scope_overlaps(r_sc, p_sc)
+                for r_sc in scope_list
+                for p_sc in (rec_scopes or ["global:*"])
+            )
+            if scope_ok:
+                matched.append(rec)
+        return matched
+
+    def contain_by_capability_sync(
+        self,
+        *,
+        reason: str,
+        session_id: str | None = None,
+        task_id: str | None = None,
+        grant_ids: Collection[str] = (),
+        capabilities: Collection[str] = (),
+        resource_scopes: Collection[str] = (),
+        tool_names: Collection[str] = (),
+        persist_hold: bool = True,
+    ) -> list[TerminationOutcome]:
+        """Contain ONLY in-flight subprocesses matching the revoked grant/capability/resource scope.
+
+        Fences only each terminated subprocess's ``supervision_id`` (not the
+        entire worker/epoch/session), preserving unrelated live capabilities.
+        """
+        records = self._select_capability_records(
+            session_id=session_id,
+            task_id=task_id,
+            grant_ids=grant_ids,
+            capabilities=capabilities,
+            resource_scopes=resource_scopes,
+            tool_names=tool_names,
+        )
+        outcomes: list[TerminationOutcome] = []
+        for rec in records:
+            self._store.fence_origin(
+                reason=reason,
+                session_id=rec.session_id,
+                task_id=rec.task_id,
+                supervision_id=rec.supervision_id,
+                quarantine_session=False,
+            )
+            outcomes.append(
+                self.terminate_record_sync(
+                    rec,
+                    reason=reason,
+                    persist_hold=persist_hold,
+                    fence_origin=False,
+                    quarantine_session=False,
+                )
+            )
+        return outcomes
+
+    async def contain_by_capability_async(
+        self,
+        *,
+        reason: str,
+        session_id: str | None = None,
+        task_id: str | None = None,
+        grant_ids: Collection[str] = (),
+        capabilities: Collection[str] = (),
+        resource_scopes: Collection[str] = (),
+        tool_names: Collection[str] = (),
+        persist_hold: bool = True,
+    ) -> list[TerminationOutcome]:
+        """Asynchronously contain ONLY in-flight subprocesses matching a revoked grant/capability/scope."""
+        records = self._select_capability_records(
+            session_id=session_id,
+            task_id=task_id,
+            grant_ids=grant_ids,
+            capabilities=capabilities,
+            resource_scopes=resource_scopes,
+            tool_names=tool_names,
+        )
+        outcomes: list[TerminationOutcome] = []
+        for rec in records:
+            self._store.fence_origin(
+                reason=reason,
+                session_id=rec.session_id,
+                task_id=rec.task_id,
+                supervision_id=rec.supervision_id,
+                quarantine_session=False,
+            )
+            outcomes.append(
+                await self.terminate_record_async(
+                    rec,
+                    reason=reason,
+                    persist_hold=persist_hold,
+                    fence_origin=False,
+                    quarantine_session=False,
                 )
             )
         return outcomes

@@ -84,6 +84,7 @@ import execution_profiles
 import model_admission
 import process_supervision
 import resource_admission  # noqa: F401 - inlined into studio.py; execution_profiles/model_admission use it
+import scoped_grants
 import verification_evidence
 import workspace_snapshots
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
@@ -366,14 +367,129 @@ class SQLiteStorage:
 STORAGE: Storage = SQLiteStorage()
 
 
+def _collect_registered_secret_values(*, exclude_mcp_alias: str | None = None) -> tuple[str, ...]:
+    """Gather configured Studio, cloud provider, and MCP secret values for child-env scrubbing."""
+    secrets_found: list[str] = []
+    if STUDIO_API_TOKEN and len(STUDIO_API_TOKEN) >= 6:
+        secrets_found.append(STUDIO_API_TOKEN)
+    db_file = Path(DB_PATH)
+    if not db_file.exists():
+        return tuple(secrets_found)
+    excl = str(exclude_mcp_alias or "").strip().lower()
+    try:
+        def _read_secrets(conn: sqlite3.Connection) -> tuple[list[Any], list[Any]]:
+            prov_rows: list[Any] = []
+            mcp_rows: list[Any] = []
+            try:
+                prov_rows = conn.execute(
+                    "SELECT api_key FROM cloud_providers WHERE api_key != ''"
+                ).fetchall()
+            except sqlite3.OperationalError:
+                pass
+            try:
+                mcp_rows = conn.execute(
+                    "SELECT alias, auth_token, headers_json, env_json FROM mcp_servers"
+                ).fetchall()
+            except sqlite3.OperationalError:
+                pass
+            return prov_rows, mcp_rows
+
+        prov_rows, mcp_rows = runtime_persistence.run_read(STORAGE, DB_PATH, _read_secrets)
+        for (raw_key,) in prov_rows:
+            resolved = _keyring_read(str(raw_key or ""))
+            if resolved and len(resolved) >= 6:
+                secrets_found.append(resolved)
+        for alias_val, raw_tok, hdrs_json, env_json in mcp_rows:
+            row_alias = str(alias_val or "").strip().lower()
+            tok_val = _keyring_read(str(raw_tok or ""))
+            if tok_val and len(tok_val) >= 6:
+                secrets_found.append(tok_val)
+            try:
+                hdr_map = json.loads(hdrs_json) if hdrs_json else {}
+                if isinstance(hdr_map, dict):
+                    for hk, hv in hdr_map.items():
+                        if _is_sensitive_name(str(hk)):
+                            hv_res = _keyring_read(str(hv or ""))
+                            if hv_res and len(hv_res) >= 6:
+                                secrets_found.append(hv_res)
+            except Exception:
+                pass
+            if excl and row_alias == excl:
+                continue
+            try:
+                env_map = json.loads(env_json) if env_json else {}
+                if isinstance(env_map, dict):
+                    for ek, ev in env_map.items():
+                        if _is_sensitive_name(str(ek)) or scoped_grants.is_secret_env_key(str(ek)):
+                            ev_res = _keyring_read(str(ev or ""))
+                            if ev_res and len(ev_res) >= 6:
+                                secrets_found.append(ev_res)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return tuple(secrets_found)
+
+
 def _minimal_execution_env(extra: dict[str, Any] | None = None) -> dict[str, str]:
-    """Build a deliberately small child-process environment; never inherit API-key env by default."""
-    keep = {"SYSTEMROOT", "WINDIR", "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL", "TERM"}
-    env = {k: v for k, v in os.environ.items() if k.upper() in keep}
+    """Build a secret-scrubbed child-process environment; never inherit API-key or injection env."""
     interpreter_dir = str(Path(sys.executable).resolve().parent)
-    env["PATH"] = os.pathsep.join(dict.fromkeys((interpreter_dir, os.defpath)))
-    if extra:
-        env.update({str(k): str(v) for k, v in extra.items()})
+    return scoped_grants.sanitize_subprocess_env(
+        os.environ,
+        interpreter_dir=interpreter_dir,
+        extra=extra,
+        allow_scoped_mcp_env=True,
+        known_secret_values=_collect_registered_secret_values(),
+    )
+
+
+def _arbitrary_subprocess_env(extra: dict[str, Any] | None = None) -> dict[str, str]:
+    """Strict environment for arbitrary shell, Python, skill, and telemetry child processes."""
+    interpreter_dir = str(Path(sys.executable).resolve().parent)
+    return scoped_grants.sanitize_subprocess_env(
+        os.environ,
+        interpreter_dir=interpreter_dir,
+        extra=extra,
+        allow_scoped_mcp_env=False,
+        known_secret_values=_collect_registered_secret_values(),
+    )
+
+
+def _mcp_stdio_env(alias: str, srv_env: Mapping[str, Any] | None = None) -> dict[str, str]:
+    """Build a scoped child environment for one enabled stdio MCP server (excluding all other secrets)."""
+    interpreter_dir = str(Path(sys.executable).resolve().parent)
+    return scoped_grants.sanitize_subprocess_env(
+        os.environ,
+        interpreter_dir=interpreter_dir,
+        extra=srv_env,
+        allow_scoped_mcp_env=True,
+        known_secret_values=_collect_registered_secret_values(exclude_mcp_alias=alias),
+    )
+
+
+def _git_subprocess_env() -> dict[str, str]:
+    """Build a non-interactive, secret-scrubbed environment for internal Git worktree commands."""
+    interpreter_dir = str(Path(sys.executable).resolve().parent)
+    env = scoped_grants.sanitize_subprocess_env(
+        os.environ,
+        interpreter_dir=interpreter_dir,
+        allow_scoped_mcp_env=False,
+        known_secret_values=_collect_registered_secret_values(),
+        extra_allowed_host_keys=(
+            "HOME",
+            "GIT_AUTHOR_NAME",
+            "GIT_AUTHOR_EMAIL",
+            "GIT_COMMITTER_NAME",
+            "GIT_COMMITTER_EMAIL",
+            "GIT_CONFIG_NOSYSTEM",
+            "GIT_CONFIG_GLOBAL",
+        ),
+        include_git_non_interactive=True,
+    )
+    git_bin = shutil.which("git")
+    if git_bin:
+        git_dir = str(Path(git_bin).resolve().parent)
+        env["PATH"] = os.pathsep.join(dict.fromkeys((git_dir, env.get("PATH", os.defpath))))
     return env
 
 
@@ -387,13 +503,32 @@ def _execution_mode() -> str:
 
 
 def _sandbox_cli_env(runtime_path: str) -> dict[str, str]:
-    env = _minimal_execution_env()
+    interpreter_dir = str(Path(sys.executable).resolve().parent)
+    env = scoped_grants.sanitize_subprocess_env(
+        os.environ,
+        interpreter_dir=interpreter_dir,
+        allow_scoped_mcp_env=False,
+        known_secret_values=_collect_registered_secret_values(),
+        extra_allowed_host_keys=(
+            "HOME",
+            "DOCKER_HOST",
+            "DOCKER_CONTEXT",
+            "DOCKER_CONFIG",
+            "DOCKER_TLS_VERIFY",
+            "DOCKER_CERT_PATH",
+            "CONTAINER_HOST",
+        ),
+    )
     cli_dir = str(Path(runtime_path).resolve().parent)
     env["PATH"] = os.pathsep.join(dict.fromkeys((cli_dir, env.get("PATH", os.defpath))))
-    for key in ("HOME", "DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CONFIG", "DOCKER_TLS_VERIFY", "DOCKER_CERT_PATH", "CONTAINER_HOST"):
-        if key in os.environ:
-            env[key] = os.environ[key]
     return env
+
+
+def _docker_telemetry_env() -> dict[str, str]:
+    docker_bin = shutil.which("docker")
+    if docker_bin:
+        return _sandbox_cli_env(docker_bin)
+    return _arbitrary_subprocess_env()
 
 
 def _sandbox_workspace_preflight(root: Path) -> None:
@@ -512,6 +647,32 @@ def get_containment_store() -> process_supervision.ContainmentStore:
     return process_supervision.ContainmentStore(HARNESS_STORE_DIR)
 
 
+_SCOPED_GRANT_STORE: scoped_grants.ScopedGrantStore | None = None
+_SCOPED_GRANT_STORE_DIR: Path | None = None
+_SCOPED_GRANT_STORE_LOCK = threading.Lock()
+
+
+def get_scoped_grant_store() -> scoped_grants.ScopedGrantStore:
+    """Return the durable M5-P3-04 scoped grant, policy-revision, and revocation store."""
+    global _SCOPED_GRANT_STORE, _SCOPED_GRANT_STORE_DIR
+    cur_dir = Path(HARNESS_STORE_DIR).resolve()
+    with _SCOPED_GRANT_STORE_LOCK:
+        if _SCOPED_GRANT_STORE is None or _SCOPED_GRANT_STORE_DIR != cur_dir:
+            _SCOPED_GRANT_STORE = scoped_grants.ScopedGrantStore(cur_dir)
+            _SCOPED_GRANT_STORE_DIR = cur_dir
+        return _SCOPED_GRANT_STORE
+
+
+def _reset_scoped_grant_store(store: scoped_grants.ScopedGrantStore | None = None) -> None:
+    """Replace or clear the cached scoped grant store (tests / clock injection)."""
+    global _SCOPED_GRANT_STORE, _SCOPED_GRANT_STORE_DIR
+    with _SCOPED_GRANT_STORE_LOCK:
+        _SCOPED_GRANT_STORE = store
+        _SCOPED_GRANT_STORE_DIR = (
+            Path(HARNESS_STORE_DIR).resolve() if store is not None else None
+        )
+
+
 def get_process_supervisor() -> process_supervision.ProcessSupervisor:
     """Return the authoritative M5-P3-03 process supervisor bound to ``HARNESS_STORE_DIR``."""
     global _PROCESS_SUPERVISOR, _PROCESS_SUPERVISOR_STORE_DIR
@@ -535,20 +696,36 @@ def _register_active_subprocess(
     root: Path,
     default_tool: str,
     container_name: str | None = None,
+    explicit_resource_scopes: Sequence[str] = (),
 ) -> process_supervision.SupervisedProcessRecord | None:
     if not proc.pid or proc.pid <= 1:
         return None
     scope = execution_spine.current_admission_scope()
+    eff_tool = scope.tool_name if scope is not None else default_tool
     ws_str = str(root.resolve()) if root is not None else ""
     barriers = (
         scope.barriers
         if (scope is not None and scope.barriers)
-        else ((f"workspace:{ws_str}", "exclusive"),) if ws_str else ()
+        else (() if eff_tool.startswith("mcp__") else (((f"workspace:{ws_str}", "exclusive"),) if ws_str else ()))
+    )
+    caps = (
+        scope.capabilities
+        if (scope is not None and scope.capabilities)
+        else scoped_grants.resolve_tool_capabilities(eff_tool)
+    )
+    res_scopes = (
+        tuple(explicit_resource_scopes)
+        if explicit_resource_scopes
+        else (
+            scope.resource_scopes
+            if (scope is not None and scope.resource_scopes)
+            else tuple(t for t, _ in barriers)
+        )
     )
     return supervisor.register_process(
         proc,
         supervision_id=supervision_id,
-        tool_name=(scope.tool_name if scope is not None else default_tool),
+        tool_name=eff_tool,
         workspace_root=root,
         container_name=container_name,
         session_id=(scope.session_id if scope is not None else "standalone"),
@@ -558,6 +735,9 @@ def _register_active_subprocess(
         boot_id=_PROCESS_BOOT_ID,
         action_id=(scope.action_id if scope is not None else ""),
         barriers=barriers,
+        grant_id=(scope.grant_id if scope is not None else None),
+        capabilities=caps,
+        resource_scopes=res_scopes,
     )
 
 
@@ -589,13 +769,13 @@ async def _start_code_process(root: Path, command: str, *, python_code: bool = F
         proc = await asyncio.create_subprocess_exec(
             *argv, cwd=str(root), stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-            start_new_session=True, env=_minimal_execution_env(extra_env),
+            start_new_session=True, env=_arbitrary_subprocess_env(extra_env),
         )
     else:
         proc = await asyncio.create_subprocess_shell(
             command, cwd=str(root), stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-            start_new_session=True, env=_minimal_execution_env(extra_env),
+            start_new_session=True, env=_arbitrary_subprocess_env(extra_env),
         )
     return proc, None
 
@@ -775,7 +955,7 @@ async def _execute_skill_script_inner(
             sys.executable, str(script), *args,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
             cwd=str(cwd), start_new_session=True,
-            env=_minimal_execution_env({process_supervision.SUPERVISION_ENV_KEY: sup_id}),
+            env=_arbitrary_subprocess_env({process_supervision.SUPERVISION_ENV_KEY: sup_id}),
         )
         if proc.pid:
             sup_rec = _register_active_subprocess(
@@ -1613,6 +1793,7 @@ def init_db() -> None:
     _sup_reports = get_process_supervisor().recover_on_startup(
         current_boot_id=_PROCESS_BOOT_ID
     )
+    get_scoped_grant_store().sweep_expired_grants()
     _rp_store = runtime_persistence.RuntimePersistenceStore(STORAGE, DB_PATH)
     _rp_store.expire_stale_leases()
     _fenced_boot = _rp_store.fence_foreign_boot_leases(
@@ -2469,7 +2650,7 @@ async def install_skills_native_git(spec: dict[str, Any]) -> tuple[list[str], st
     with tempfile.TemporaryDirectory(prefix="m5_skill_") as tmpdir:
         proc = await asyncio.create_subprocess_exec(
             "git", "clone", "--depth", "1", spec["git_url"], tmpdir,
-            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, env=_minimal_execution_env(),
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, env=_git_subprocess_env(),
         )
         out, _ = await asyncio.wait_for(proc.communicate(), timeout=60.0)
         if proc.returncode != 0:
@@ -2556,7 +2737,8 @@ async def get_docker_telemetry() -> dict[str, Any]:
     containers: list[dict[str, Any]] = []
     docker_reachable = False
     try:
-        proc = await asyncio.create_subprocess_exec("docker", "ps", "--format", "{{json .}}", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        docker_env = _docker_telemetry_env()
+        proc = await asyncio.create_subprocess_exec("docker", "ps", "--format", "{{json .}}", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=docker_env)
         stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=2.0)
         if proc.returncode == 0:
             docker_reachable = True
@@ -2568,7 +2750,7 @@ async def get_docker_telemetry() -> dict[str, Any]:
                 cid = row.get("Names") or row.get("ID", "")
                 ps_map[cid] = {"name": row.get("Names", ""), "id": row.get("ID", ""), "image": row.get("Image", ""), "status": row.get("Status", ""), "cpu_pct": 0.0, "mem_bytes": 0, "mem_formatted": "0 MB"}
             if ps_map:
-                sproc = await asyncio.create_subprocess_exec("docker", "stats", "--no-stream", "--format", "{{json .}}", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+                sproc = await asyncio.create_subprocess_exec("docker", "stats", "--no-stream", "--format", "{{json .}}", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=docker_env)
                 s_out, _ = await asyncio.wait_for(sproc.communicate(), timeout=2.5)
                 if sproc.returncode == 0:
                     for line in s_out.decode(errors="ignore").splitlines():
@@ -5183,6 +5365,34 @@ def upsert_mcp_server(payload: dict[str, Any]) -> dict[str, Any]:
             ),
         ),
     )
+    if prev is not None:
+        prev_enabled = bool(prev.get("enabled"))
+        prev_tools = set(prev.get("enabled_tools") or [])
+        removed_tools = prev_tools - set(enabled_tools)
+        policy_tightened = (
+            prev.get("approval_policy") == "auto" and approval_policy != "auto"
+        )
+        if (prev_enabled and not enabled) or removed_tools or policy_tightened:
+            try:
+                get_scoped_grant_store().bump_global_policy_revision(
+                    reason=f"mcp_server_reconfigured:{alias}",
+                    mcp_alias=alias,
+                    mcp_server_disabled_or_deleted=(not enabled or policy_tightened),
+                    removed_mcp_tools=removed_tools,
+                )
+            except Exception:
+                pass
+            if not enabled:
+                try:
+                    get_process_supervisor().contain_by_capability_sync(
+                        reason=f"mcp_server_disabled:{alias}",
+                        session_id="*",
+                        capabilities=("external_mcp",),
+                        resource_scopes=(f"mcp:{alias}",),
+                        persist_hold=False,
+                    )
+                except Exception:
+                    pass
     return get_mcp_server(alias, include_secret=False)
 
 
@@ -5273,9 +5483,10 @@ async def _mcp_stdio_rpc(
     args = [str(a) for a in (srv.get("args") or [])]
     supervisor = get_process_supervisor()
     sup_id = supervisor.new_supervision_id()
+    srv_alias = str(srv.get("alias") or "stdio").strip().lower()
     raw_srv_env = dict(srv.get("env") or {})
     raw_srv_env[process_supervision.SUPERVISION_ENV_KEY] = sup_id
-    merged_env = _minimal_execution_env(raw_srv_env)
+    merged_env = _mcp_stdio_env(srv_alias, raw_srv_env)
     resolved_cwd = (cwd or WORKSPACE_ROOT).resolve()
     work_cwd = str(resolved_cwd)
     sup_rec: process_supervision.SupervisedProcessRecord | None = None
@@ -5299,7 +5510,8 @@ async def _mcp_stdio_rpc(
                 proc,
                 supervision_id=sup_id,
                 root=resolved_cwd,
-                default_tool=f"mcp__{srv.get('alias') or 'stdio'}__{method}",
+                default_tool=f"mcp__{srv_alias}__{method}",
+                explicit_resource_scopes=(f"mcp:{srv_alias}",),
             )
         assert proc.stdin is not None and proc.stdout is not None
 
@@ -5678,6 +5890,24 @@ async def api_delete_mcp_server(alias: str) -> JSONResponse:
         DB_PATH,
         lambda conn: conn.execute("DELETE FROM mcp_servers WHERE alias = ?", (clean,)),
     )
+    try:
+        get_scoped_grant_store().bump_global_policy_revision(
+            reason=f"mcp_server_deleted:{clean}",
+            mcp_alias=clean,
+            mcp_server_disabled_or_deleted=True,
+        )
+    except Exception:
+        pass
+    try:
+        await get_process_supervisor().contain_by_capability_async(
+            reason=f"mcp_server_deleted:{clean}",
+            session_id="*",
+            capabilities=("external_mcp",),
+            resource_scopes=(f"mcp:{clean}",),
+            persist_hold=False,
+        )
+    except Exception:
+        pass
     return JSONResponse({"status": "deleted", "servers": list_mcp_servers(include_secret=False)})
 
 
@@ -6733,11 +6963,81 @@ _HARNESS_ABORT_FLAGS: set[str] = set()
 def _create_pending_tool_approval(session_id: str, step: int, tool: str, args: dict[str, Any]) -> dict[str, Any]:
     approval_id = f"apr-{uuid.uuid4().hex[:10]}"
     event = asyncio.Event()
-    slot = {"event": event, "session_id": session_id, "decision": "pending", "note": ""}
+    safe_args = dict(args) if isinstance(args, Mapping) else {}
+    slot = {
+        "event": event,
+        "session_id": session_id,
+        "tool": tool,
+        "args": safe_args,
+        "decision": "pending",
+        "note": "",
+        "ttl_seconds": scoped_grants.SG_DEFAULT_GRANT_TTL_SECONDS,
+    }
     _PENDING_APPROVALS[approval_id] = slot
     _update_harness_session_state(session_id, status="waiting_approval")
-    _append_harness_event(session_id, "approval/request", {"step": step, "approval_id": approval_id, "tool": tool, "args": args})
-    return {"approval_id": approval_id, "event": event, "tool": tool, "args": args, "step": step, "session_id": session_id}
+    _append_harness_event(session_id, "approval/request", {"step": step, "approval_id": approval_id, "tool": tool, "args": safe_args})
+    return {"approval_id": approval_id, "event": event, "tool": tool, "args": safe_args, "step": step, "session_id": session_id}
+
+
+def _persist_approval_grant_outcome(
+    approval_id: str,
+    decision: str,
+    *,
+    session_id: str,
+    tool_name: str,
+    args: Mapping[str, Any] | None,
+    note: str = "",
+    ttl_seconds: float | None = None,
+) -> None:
+    if not approval_id or not session_id:
+        return
+    eff_ttl = float(
+        ttl_seconds if ttl_seconds is not None else scoped_grants.SG_DEFAULT_GRANT_TTL_SECONDS
+    )
+    try:
+        store = get_scoped_grant_store()
+        if store.has_grant_or_tombstone(approval_id):
+            return
+        if decision != "approve":
+            store.record_rejected_approval(
+                approval_id,
+                session_id=session_id,
+                reason=note or "rejected",
+            )
+            return
+        if not tool_name:
+            return
+        sess_pol = "standard"
+        ws_root: Path | None = WORKSPACE_ROOT
+        try:
+            sess_row = get_harness_session_db(session_id)
+            sess_pol = str(sess_row.get("policy") or "standard")
+            if sess_row.get("worktree_dir"):
+                ws_root = Path(sess_row["worktree_dir"]).resolve()
+        except Exception:
+            pass
+        caps = scoped_grants.resolve_tool_capabilities(tool_name, args)
+        scopes = scoped_grants.resolve_tool_resource_scopes(
+            tool_name,
+            args,
+            workspace_root=ws_root,
+        )
+        store.issue_grant(
+            grant_id=approval_id,
+            session_id=session_id,
+            capabilities=caps,
+            resource_scopes=scopes,
+            tool_names=(tool_name,),
+            exact_args=args if isinstance(args, Mapping) else {},
+            ttl_seconds=eff_ttl,
+            max_uses=1,
+            current_policy=sess_pol,
+            issued_by="operator_approval",
+            note=note,
+            workspace_root=ws_root,
+        )
+    except Exception:
+        pass
 
 
 def _resolve_pending_tool_approval(
@@ -6747,6 +7047,7 @@ def _resolve_pending_tool_approval(
     note: str = "",
     session_id: str | None = None,
     remember: bool = True,
+    ttl_seconds: float | None = None,
 ) -> None:
     """Finalize a pending approval exactly once and retain a bounded replay tombstone.
 
@@ -6772,6 +7073,19 @@ def _resolve_pending_tool_approval(
     _PENDING_APPROVALS.pop(approval_id, None)
     slot["decision"] = decision
     slot["note"] = slot.get("note") or note
+    if ttl_seconds is not None:
+        slot["ttl_seconds"] = float(ttl_seconds)
+    scoping_session = session_id or slot.get("session_id")
+    if remember and isinstance(scoping_session, str) and scoping_session:
+        _persist_approval_grant_outcome(
+            approval_id,
+            decision,
+            session_id=scoping_session,
+            tool_name=str(slot.get("tool") or ""),
+            args=(slot.get("args") if isinstance(slot.get("args"), Mapping) else {}),
+            note=str(slot.get("note") or ""),
+            ttl_seconds=float(slot.get("ttl_seconds") or scoped_grants.SG_DEFAULT_GRANT_TTL_SECONDS),
+        )
     slot["event"].set()
     if remember:
         _record_replay_tombstone(approval_id, decision)
@@ -6849,6 +7163,15 @@ async def _await_tool_approval(pending: dict[str, Any], timeout: float = 600.0) 
         remember=True,
     )
     approved = slot.get("decision") == "approve"
+    _persist_approval_grant_outcome(
+        approval_id,
+        "approve" if approved else "reject",
+        session_id=session_id,
+        tool_name=str(pending.get("tool") or slot.get("tool") or ""),
+        args=(pending.get("args") if isinstance(pending.get("args"), Mapping) else {}),
+        note=str(slot.get("note") or ""),
+        ttl_seconds=float(slot.get("ttl_seconds") or scoped_grants.SG_DEFAULT_GRANT_TTL_SECONDS),
+    )
     decision = {"approved": approved, "note": slot.get("note") or "", "approval_id": approval_id, "decision": "approve" if approved else "reject"}
     _append_harness_event(
         session_id,
@@ -7180,19 +7503,20 @@ def _inspect_git_repo(folder: Path) -> dict[str, Any]:
     if not folder.is_dir():
         return {"is_git": False, "has_head": False, "root": str(folder), "branch": ""}
     try:
+        git_env = _git_subprocess_env()
         top = subprocess.check_output(
             ["git", "rev-parse", "--show-toplevel"],
-            cwd=str(folder), stderr=subprocess.DEVNULL, text=True, timeout=3.0,
+            cwd=str(folder), stderr=subprocess.DEVNULL, text=True, timeout=3.0, env=git_env,
         ).strip()
         has_head = subprocess.run(
             ["git", "rev-parse", "--verify", "HEAD"],
-            cwd=str(folder), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3.0,
+            cwd=str(folder), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3.0, env=git_env,
         ).returncode == 0
         branch = ""
         if has_head:
             branch = subprocess.check_output(
                 ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                cwd=str(folder), stderr=subprocess.DEVNULL, text=True, timeout=3.0,
+                cwd=str(folder), stderr=subprocess.DEVNULL, text=True, timeout=3.0, env=git_env,
             ).strip()
         return {"is_git": True, "has_head": has_head, "root": top, "branch": branch}
     except Exception:
@@ -7227,7 +7551,7 @@ def _create_harness_worktree(session_id: str, workspace_dir: Path) -> tuple[Path
     wt_root.parent.mkdir(parents=True, exist_ok=True)
     proc = subprocess.run(
         ["git", "worktree", "add", "-b", branch_name, str(wt_root), "HEAD"],
-        cwd=str(repo_root), capture_output=True, text=True, timeout=10.0,
+        cwd=str(repo_root), capture_output=True, text=True, timeout=10.0, env=_git_subprocess_env(),
     )
     if proc.returncode != 0:
         raise RuntimeError(f"Unable to create isolated worktree; refusing direct-folder fallback: {proc.stderr.strip()[:240]}")
@@ -7245,7 +7569,7 @@ def _registered_worktree_branch(repo_root: Path, target: Path) -> str | None:
     try:
         listing = subprocess.check_output(
             ["git", "worktree", "list", "--porcelain"],
-            cwd=str(repo_root), stderr=subprocess.DEVNULL, text=True, timeout=5.0,
+            cwd=str(repo_root), stderr=subprocess.DEVNULL, text=True, timeout=5.0, env=_git_subprocess_env(),
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -7292,10 +7616,11 @@ def _remove_harness_worktree(workspace_dir: Path, worktree_dir: Path, branch_nam
     registered_branch = _registered_worktree_branch(repo_root, wt_target)
     if registered_branch != f"refs/heads/{branch_name}":
         return
+    git_env = _git_subprocess_env()
     try:
         removed = subprocess.run(
             ["git", "worktree", "remove", "--force", str(wt_target)],
-            cwd=str(repo_root), capture_output=True, text=True, timeout=8.0,
+            cwd=str(repo_root), capture_output=True, text=True, timeout=8.0, env=git_env,
         )
     except (OSError, subprocess.SubprocessError):
         # On timeout/error preserve the worktree and its uncommitted data.
@@ -7305,7 +7630,7 @@ def _remove_harness_worktree(workspace_dir: Path, worktree_dir: Path, branch_nam
     try:
         subprocess.run(
             ["git", "branch", "-D", "--", branch_name],
-            cwd=str(repo_root), capture_output=True, text=True, timeout=5.0, check=True,
+            cwd=str(repo_root), capture_output=True, text=True, timeout=5.0, check=True, env=git_env,
         )
     except (OSError, subprocess.SubprocessError):
         # The worktree is already removed; a leftover branch is safer than
@@ -8543,7 +8868,13 @@ async def _execute_harness_tool_inner(
         mutating_or_executing = tool_name in ("run_bash", "ctx_execute_python") or (
             tool_name == "ctx_run_block" and norm_block in execution_spine.CONSEQUENTIAL_BLOCKS
         )
-        if policy == "standard" and mutating_or_executing and not approved:
+        active_scope = execution_spine.current_admission_scope()
+        eff_inner_approved = approved or (
+            active_scope is not None
+            and active_scope.grant_source in execution_spine.EXPLICIT_APPROVAL_GRANT_SOURCES
+            and active_scope.grant_id is not None
+        )
+        if policy == "standard" and mutating_or_executing and not eff_inner_approved:
             return {"ok": False, "output": f"Denied: `{tool_name}` requires an explicit approval in standard policy.", "diff": "", "elapsed_ms": 1}
         if tool_name == "list_files":
             try:
@@ -9454,6 +9785,16 @@ def _on_worker_epochs_fenced(
     reason: str,
 ) -> None:
     supervisor = get_process_supervisor()
+    epoch_nums = [ep.epoch for ep in epochs]
+    if epoch_nums:
+        try:
+            get_scoped_grant_store().revoke_by_lifecycle_event(
+                task_id=task_id,
+                epochs=epoch_nums,
+                reason=f"epoch_fenced:{reason}",
+            )
+        except Exception:
+            pass
     for ep in epochs:
         supervisor.store.fence_origin(
             reason=reason,
@@ -10093,6 +10434,7 @@ async def _run_authorized_tool(
     action_class: execution_spine.ActionClass | None = None,
     grant_source: str = "unspecified",
     approval_id: str | None = None,
+    grant_id: str | None = None,
     task_id: str | None = None,
     task_state: str | None = None,
     epoch: int | None = None,
@@ -10108,11 +10450,38 @@ async def _run_authorized_tool(
     Thin adapter over the extracted execution-spine boundary
     (``execution_spine.DurableActionBoundary``; see ADR-0002): action-class
     separation, grant provenance, task-state/epoch fencing, policy evaluation,
-    unified execution profiles & resource barriers (M5-P3-02), durable
-    ``runtime_actions`` intent/result ledger + ``tool_audit_events`` auditing,
-    replay safety, post-execution footprint reconciliation, and scoped
-    anti-bypass admission tokens are enforced there."""
+    unified execution profiles & resource barriers (M5-P3-02), scoped grants &
+    revocation (M5-P3-04), durable ``runtime_actions`` intent/result ledger +
+    ``tool_audit_events`` auditing, replay safety, post-execution footprint
+    reconciliation, and scoped anti-bypass admission tokens are enforced there."""
     db_path_obj = Path(DB_PATH)
+    grant_store = get_scoped_grant_store()
+    eff_approved = approved
+    eff_grant_source = grant_source
+    eff_grant_id = grant_id
+    if (
+        not eff_approved
+        and eff_grant_id is None
+        and approval_id is None
+        and eff_grant_source in {"policy", "unspecified"}
+        and tool_requires_approval(tool_name, args, policy)
+    ):
+        try:
+            matched_grant = grant_store.find_matching_grant(
+                session_id=session_id,
+                task_id=task_id,
+                epoch=epoch,
+                tool_name=tool_name,
+                args=args,
+                workspace_root=workspace_root,
+            )
+        except scoped_grants.GrantStoreIntegrityError:
+            matched_grant = None
+        if matched_grant is not None:
+            eff_approved = True
+            eff_grant_source = "scoped_grant"
+            eff_grant_id = matched_grant.grant_id
+
     profile_coord = _execution_profile_controller().bind(
         workspace_root=workspace_root,
         store_dir=HARNESS_STORE_DIR,
@@ -10126,6 +10495,7 @@ async def _run_authorized_tool(
         execution_mode_fn=_safe_execution_mode_label,
         on_reconciled=_on_footprint_reconciled,
         containment_store=get_containment_store(),
+        grant_store=grant_store,
         current_boot_id=_PROCESS_BOOT_ID,
         sql_task_fencing=True,
     )
@@ -10142,13 +10512,14 @@ async def _run_authorized_tool(
             tool_name=tool_name,
             args=args,
             policy=policy,
-            approved=approved,
+            approved=eff_approved,
             session_id=session_id,
             additional_denial=additional_denial,
             denial_as_exception=denial_as_exception,
             action_class=action_class,
-            grant_source=grant_source,
+            grant_source=eff_grant_source,
             approval_id=approval_id,
+            grant_id=eff_grant_id,
             task_id=task_id,
             task_state=task_state,
             epoch=epoch,
@@ -10174,6 +10545,7 @@ async def execute_mcp_tool_call(
     session_id: str = "mcp-direct",
     grant_source: str = "unspecified",
     approval_id: str | None = None,
+    grant_id: str | None = None,
     task_id: str | None = None,
     task_state: str | None = None,
     epoch: int | None = None,
@@ -10187,7 +10559,7 @@ async def execute_mcp_tool_call(
     effective_grant = (
         grant_source
         if grant_source != "unspecified"
-        else ("operator_one_call" if approved else "policy")
+        else ("scoped_grant" if (grant_id and approved) else ("operator_one_call" if approved else "policy"))
     )
     return await _run_authorized_tool(
         tool_name,
@@ -10199,6 +10571,7 @@ async def execute_mcp_tool_call(
         denial_as_exception=True,
         grant_source=effective_grant,
         approval_id=approval_id,
+        grant_id=grant_id,
         task_id=task_id,
         task_state=task_state,
         epoch=epoch,
@@ -10220,6 +10593,7 @@ async def _execute_harness_tool(
     policy_denial: str | None = None,
     grant_source: str = "unspecified",
     approval_id: str | None = None,
+    grant_id: str | None = None,
     task_id: str | None = None,
     task_state: str | None = None,
     epoch: int | None = None,
@@ -10243,7 +10617,7 @@ async def _execute_harness_tool(
     effective_grant = (
         grant_source
         if grant_source != "unspecified"
-        else ("operator_approval" if approved else "policy")
+        else ("scoped_grant" if (grant_id and approved) else ("operator_approval" if approved else "policy"))
     )
     session_scope = str(sess.get("id") or "unknown")
     resolved_action_id = action_id
@@ -10278,6 +10652,7 @@ async def _execute_harness_tool(
         additional_denial=policy_denial,
         grant_source=effective_grant,
         approval_id=approval_id,
+        grant_id=grant_id,
         task_id=resolved_task_id,
         task_state=resolved_task_state,
         epoch=resolved_epoch,
@@ -10570,7 +10945,8 @@ async def api_patch_harness_session(session_id: str, request: Request) -> JSONRe
         sess = get_harness_session_db(session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    pol = body.get("policy") if body.get("policy") in HARNESS_POLICIES else sess["policy"]
+    prev_pol = sess["policy"]
+    pol = body.get("policy") if body.get("policy") in HARNESS_POLICIES else prev_pol
     lead = body.get("lead_model") or sess["lead_model"]
     critic = body.get("critic_model") or sess["critic_model"]
     now = time.time()
@@ -10582,6 +10958,43 @@ async def api_patch_harness_session(session_id: str, request: Request) -> JSONRe
             (pol, lead, critic, now, session_id),
         ),
     )
+    if pol != prev_pol:
+        new_rev, revoked_grants = get_scoped_grant_store().bump_session_policy_revision(
+            session_id,
+            new_policy=pol,
+            reason=f"policy_changed:{prev_pol}->{pol}",
+        )
+        if pol == "plan":
+            for aid, slot in list(_PENDING_APPROVALS.items()):
+                if slot.get("session_id") == session_id and not slot["event"].is_set():
+                    _resolve_pending_tool_approval(
+                        aid,
+                        "reject",
+                        note=f"Session policy tightened to `{pol}`.",
+                        session_id=session_id,
+                        remember=True,
+                    )
+            await get_process_supervisor().contain_by_capability_async(
+                reason=f"policy_tightened_to_{pol}",
+                session_id=session_id,
+                capabilities=("code_execution", "workspace_write", "external_mcp"),
+            )
+        elif revoked_grants:
+            await get_process_supervisor().contain_by_capability_async(
+                reason=f"policy_revision_{new_rev}",
+                session_id=session_id,
+                grant_ids=[g.grant_id for g in revoked_grants],
+            )
+        _safe_append_harness_event(
+            session_id,
+            "security/policy_revision",
+            {
+                "previous_policy": prev_pol,
+                "new_policy": pol,
+                "policy_revision": new_rev,
+                "revoked_grant_ids": [g.grant_id for g in revoked_grants],
+            },
+        )
     return JSONResponse(get_harness_session_db(session_id, include_events=True))
 
 
@@ -10615,6 +11028,7 @@ async def api_delete_harness_session(session_id: str) -> JSONResponse:
             p.unlink(missing_ok=True)
     _workspace_snapshot_store().delete_session_snapshots(session_id)
     execution_profiles.FootprintReconciliationLedger(HARNESS_STORE_DIR).purge_session(session_id)
+    get_scoped_grant_store().purge_session(session_id)
     if (
         not del_reports
         or (
@@ -10720,8 +11134,29 @@ async def api_approve_harness_tool(request: Request) -> JSONResponse:
             detail="Approval is scoped to its originating session; session_id must match.",
         )
 
+    raw_ttl = body.get("ttl_seconds")
+    ttl_seconds: float | None = None
+    if raw_ttl is not None:
+        try:
+            ttl_val = float(raw_ttl)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail="`ttl_seconds` must be a positive finite number.") from exc
+        if ttl_val <= 0.0 or ttl_val > scoped_grants.SG_MAX_GRANT_TTL_SECONDS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"`ttl_seconds` must be within (0, {scoped_grants.SG_MAX_GRANT_TTL_SECONDS}].",
+            )
+        ttl_seconds = ttl_val
+
     final_decision = "approve" if decision == "approve" else "reject"
-    _resolve_pending_tool_approval(aid, final_decision, note=note, session_id=request_session, remember=True)
+    _resolve_pending_tool_approval(
+        aid,
+        final_decision,
+        note=note,
+        session_id=request_session,
+        remember=True,
+        ttl_seconds=ttl_seconds,
+    )
     return JSONResponse({"status": "ok", "approval_id": aid, "decision": final_decision, "session_id": request_session})
 
 
@@ -10731,6 +11166,11 @@ async def api_abort_harness(session_id: str) -> JSONResponse:
     for aid, slot in list(_PENDING_APPROVALS.items()):
         if slot.get("session_id") == session_id and not slot["event"].is_set():
             _resolve_pending_tool_approval(aid, "reject", note="Run aborted by user.", session_id=session_id, remember=True)
+    get_scoped_grant_store().revoke_by_lifecycle_event(
+        session_id=session_id,
+        task_id=session_id,
+        reason="aborted_by_operator",
+    )
     abort_reports = await get_process_supervisor().contain_by_scope_async(
         session_id=session_id,
         task_id=session_id,
@@ -11301,6 +11741,11 @@ async def api_cancel_harness_session(session_id: str, request: Request) -> JSONR
     for aid, slot in list(_PENDING_APPROVALS.items()):
         if slot.get("session_id") == session_id and not slot["event"].is_set():
             _resolve_pending_tool_approval(aid, "reject", note="Run cancelled by operator.", session_id=session_id, remember=True)
+    get_scoped_grant_store().revoke_by_lifecycle_event(
+        session_id=session_id,
+        task_id=session_id,
+        reason=reason,
+    )
     supervisor = get_process_supervisor()
     cancel_reports = await supervisor.contain_by_scope_async(
         session_id=session_id,
@@ -11400,6 +11845,11 @@ async def api_contain_harness_session(session_id: str, request: Request) -> JSON
             _resolve_pending_tool_approval(
                 aid, "reject", note="Contained due to security incident.", session_id=session_id, remember=True
             )
+    get_scoped_grant_store().revoke_by_lifecycle_event(
+        session_id=session_id,
+        task_id=session_id,
+        reason=f"security_incident:{reason}",
+    )
     wt_path = Path(sess["worktree_dir"]).resolve() if sess.get("worktree_dir") else None
     supervisor = get_process_supervisor()
     reports = await supervisor.contain_by_scope_async(
@@ -11469,6 +11919,193 @@ async def api_contain_harness_session(session_id: str, request: Request) -> JSON
             "contained_processes": len(reports),
             "unresolved_action_ids": unresolved,
             "containment": _containment_summary_or_none(session_id),
+        }
+    )
+
+
+@app.get("/api/harness/sessions/{session_id}/grants")
+async def api_list_harness_session_grants(session_id: str) -> JSONResponse:
+    """Inspect active and historical scoped grants, policy revisions, and revocations (M5-P3-04)."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    try:
+        summary = get_scoped_grant_store().summary(
+            session_id=session_id,
+            current_policy=str(sess.get("policy") or "standard"),
+        )
+    except scoped_grants.GrantStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return JSONResponse(summary)
+
+
+@app.post("/api/harness/sessions/{session_id}/grants")
+async def api_issue_harness_session_grant(session_id: str, request: Request) -> JSONResponse:
+    """Issue an auditable, finite-expiry, non-renewable scoped grant bound to current policy revision."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Request body must be a JSON object.")
+    wt_root = Path(sess["worktree_dir"]).resolve() if sess.get("worktree_dir") else WORKSPACE_ROOT
+    raw_caps = body.get("capabilities") or []
+    raw_scopes = body.get("resource_scopes") or ["workspace:."]
+    raw_tools = body.get("tool_names") or []
+    if not isinstance(raw_caps, list) or not isinstance(raw_scopes, list) or not isinstance(raw_tools, list):
+        raise HTTPException(status_code=400, detail="`capabilities`, `resource_scopes`, and `tool_names` must be lists.")
+    ttl_seconds = body.get("ttl_seconds", scoped_grants.SG_DEFAULT_GRANT_TTL_SECONDS)
+    max_uses = body.get("max_uses")
+    exact_args = body.get("exact_args")
+    if exact_args is not None and not isinstance(exact_args, dict):
+        raise HTTPException(status_code=400, detail="`exact_args` must be a JSON object when provided.")
+    try:
+        grant = get_scoped_grant_store().issue_grant(
+            session_id=session_id,
+            task_id=(str(body["task_id"]).strip() if body.get("task_id") else None),
+            epoch=(int(body["epoch"]) if body.get("epoch") is not None else None),
+            capabilities=[str(c) for c in raw_caps],
+            resource_scopes=[str(s) for s in raw_scopes],
+            tool_names=[str(t) for t in raw_tools],
+            exact_args=exact_args,
+            ttl_seconds=ttl_seconds,
+            max_uses=max_uses,
+            current_policy=str(sess.get("policy") or "standard"),
+            issued_by="operator_api",
+            note=str(body.get("note") or "")[:240],
+            workspace_root=wt_root,
+        )
+    except scoped_grants.InvalidGrantSpecError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except scoped_grants.GrantStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    _safe_append_harness_event(
+        session_id,
+        "security/grant_issued",
+        {
+            "grant_id": grant.grant_id,
+            "capabilities": list(grant.capabilities),
+            "resource_scopes": list(grant.resource_scopes),
+            "tool_names": list(grant.tool_names),
+            "expires_at": grant.expires_at,
+            "max_uses": grant.max_uses,
+            "session_policy_revision": grant.session_policy_revision,
+        },
+    )
+    return JSONResponse(
+        {
+            "status": "issued",
+            "grant": grant.to_mapping(),
+            "summary": get_scoped_grant_store().summary(
+                session_id=session_id,
+                current_policy=str(sess.get("policy") or "standard"),
+            ),
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/grants/revoke")
+async def api_revoke_harness_session_grant(session_id: str, request: Request) -> JSONResponse:
+    """Revoke a grant or capability/resource scope and contain matching in-flight subprocesses (`AC 1` & `AC 3`)."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Request body must be a JSON object.")
+    wt_root = Path(sess["worktree_dir"]).resolve() if sess.get("worktree_dir") else WORKSPACE_ROOT
+    reason = str(body.get("reason") or "operator_revoked")[:160]
+    grant_id_in = str(body.get("grant_id") or "").strip()
+    block_scope = bool(body.get("block_scope", True))
+    store = get_scoped_grant_store()
+    supervisor = get_process_supervisor()
+
+    revoked_list: list[dict[str, Any]] = []
+    rule_map: dict[str, Any] | None = None
+    contained_outcomes: list[process_supervision.TerminationOutcome] = []
+
+    try:
+        if grant_id_in:
+            rev_rec, rule = store.revoke_grant(
+                grant_id_in,
+                session_id=session_id,
+                reason=reason,
+                block_scope=block_scope,
+            )
+            if rev_rec is None:
+                raise HTTPException(status_code=404, detail=f"Grant {grant_id_in!r} not found.")
+            revoked_list.append(rev_rec.to_mapping())
+            if rule is not None:
+                rule_map = rule.to_mapping()
+            persist_ws_hold = any(c in {"code_execution", "workspace_write"} for c in rev_rec.capabilities)
+            contained_outcomes = await supervisor.contain_by_capability_async(
+                reason=f"grant_revoked:{grant_id_in}",
+                session_id=session_id,
+                grant_ids=(grant_id_in,),
+                capabilities=(rev_rec.capabilities if block_scope else ()),
+                resource_scopes=(rev_rec.resource_scopes if block_scope else ()),
+                persist_hold=persist_ws_hold,
+            )
+        else:
+            raw_caps = body.get("capabilities") or []
+            raw_scopes = body.get("resource_scopes") or []
+            raw_tools = body.get("tool_names") or []
+            if not isinstance(raw_caps, list) or not isinstance(raw_scopes, list) or not isinstance(raw_tools, list):
+                raise HTTPException(
+                    status_code=400,
+                    detail="`capabilities`, `resource_scopes`, and `tool_names` must be lists.",
+                )
+            rule, rev_grants = store.revoke_scope(
+                session_id=session_id,
+                task_id=(str(body["task_id"]).strip() if body.get("task_id") else None),
+                capabilities=[str(c) for c in raw_caps],
+                resource_scopes=[str(s) for s in raw_scopes],
+                tool_names=[str(t) for t in raw_tools],
+                reason=reason,
+                workspace_root=wt_root,
+            )
+            rule_map = rule.to_mapping()
+            revoked_list = [g.to_mapping() for g in rev_grants]
+            persist_ws_hold = any(c in {"code_execution", "workspace_write"} for c in rule.capabilities)
+            contained_outcomes = await supervisor.contain_by_capability_async(
+                reason=f"capability_revoked:{rule.revocation_id}",
+                session_id=session_id,
+                grant_ids=[g.grant_id for g in rev_grants],
+                capabilities=rule.capabilities,
+                resource_scopes=rule.resource_scopes,
+                tool_names=rule.tool_names,
+                persist_hold=persist_ws_hold,
+            )
+    except scoped_grants.InvalidGrantSpecError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except scoped_grants.GrantStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    _safe_append_harness_event(
+        session_id,
+        "security/grant_revoked",
+        {
+            "reason": reason,
+            "revoked_grant_ids": [g["grant_id"] for g in revoked_list],
+            "revocation_rule": rule_map,
+            "contained_processes": len(contained_outcomes),
+        },
+    )
+    return JSONResponse(
+        {
+            "status": "revoked",
+            "session_id": session_id,
+            "revoked_grants": revoked_list,
+            "revocation_rule": rule_map,
+            "contained_processes": len(contained_outcomes),
+            "summary": store.summary(
+                session_id=session_id,
+                current_policy=str(sess.get("policy") or "standard"),
+            ),
         }
     )
 
@@ -11873,7 +12510,45 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                     approved = False
                     grant_source = "policy"
                     approval_id: str | None = None
+                    resolved_grant_id: str | None = None
                     reject_note = ""
+
+                    if needs_approval:
+                        live_wt = Path(sess_live["worktree_dir"]).resolve() if sess_live.get("worktree_dir") else WORKSPACE_ROOT
+                        g_store = get_scoped_grant_store()
+                        t_caps = scoped_grants.resolve_tool_capabilities(t_name, t_args)
+                        t_scopes = scoped_grants.resolve_tool_resource_scopes(
+                            t_name, t_args, workspace_root=live_wt
+                        )
+                        try:
+                            rev_check = g_store.check_revocation_denials(
+                                session_id=session_id,
+                                task_id=session_id,
+                                tool_name=t_name,
+                                action_capabilities=t_caps,
+                                action_scopes=t_scopes,
+                            )
+                        except scoped_grants.GrantStoreIntegrityError:
+                            rev_check = None
+                        if rev_check is not None:
+                            needs_approval = False
+                        else:
+                            try:
+                                pre_grant = g_store.find_matching_grant(
+                                    session_id=session_id,
+                                    task_id=session_id,
+                                    epoch=lease_epoch,
+                                    tool_name=t_name,
+                                    args=t_args,
+                                    workspace_root=live_wt,
+                                )
+                            except scoped_grants.GrantStoreIntegrityError:
+                                pre_grant = None
+                            if pre_grant is not None:
+                                needs_approval = False
+                                approved = True
+                                grant_source = "scoped_grant"
+                                resolved_grant_id = pre_grant.grant_id
 
                     if needs_approval:
                         pending = _create_pending_tool_approval(session_id, step_idx, t_name, t_args)
@@ -11914,6 +12589,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         approved=approved,
                         grant_source=grant_source,
                         approval_id=approval_id,
+                        grant_id=resolved_grant_id,
                         step_id=step_idx,
                         call_index=tc_idx,
                     )

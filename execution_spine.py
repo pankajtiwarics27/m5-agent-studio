@@ -92,6 +92,7 @@ GRANT_SOURCES: frozenset[str] = frozenset(
         "policy",
         "operator_approval",
         "operator_one_call",
+        "scoped_grant",
         "skill_opt_in",
         "model_output",
     }
@@ -102,7 +103,7 @@ GRANT_SOURCES: frozenset[str] = frozenset(
 # `ActionRequest(..., approved=True)` directly; `"model_output"`, `"none"`, and `"policy"`
 # can never confer an explicit approval grant.
 EXPLICIT_APPROVAL_GRANT_SOURCES: frozenset[str] = frozenset(
-    {"unspecified", "operator_approval", "operator_one_call", "skill_opt_in"}
+    {"unspecified", "operator_approval", "operator_one_call", "scoped_grant", "skill_opt_in"}
 )
 
 # Keys inside model-emitted tool arguments that are untrusted data and are never
@@ -113,6 +114,7 @@ MODEL_UNTRUSTED_AUTHORITY_KEYS: frozenset[str] = frozenset(
         "user_approved",
         "auto_approve",
         "grant",
+        "grant_id",
         "grant_source",
         "approval_id",
         "policy",
@@ -218,6 +220,7 @@ class ActionRequest:
     action_class: ActionClass | None = None
     grant_source: str = "unspecified"
     approval_id: str | None = None
+    grant_id: str | None = None
     task_id: str | None = None
     task_state: str | None = None
     epoch: int | None = None
@@ -248,6 +251,9 @@ class ActiveAdmissionScope:
     lease_id: str | None = None
     footprint_scope: str = ""
     barriers: tuple[tuple[str, str], ...] = ()
+    grant_id: str | None = None
+    capabilities: tuple[str, ...] = ()
+    resource_scopes: tuple[str, ...] = ()
 
 
 _ACTIVE_ADMISSION_SCOPE: contextvars.ContextVar[ActiveAdmissionScope | None] = contextvars.ContextVar(
@@ -388,6 +394,9 @@ class ProfileAdmissionOutcome:
     conflicting_barriers: tuple[str, ...] = ()
     exhausted_resources: tuple[str, ...] = ()
     barriers: tuple[tuple[str, str], ...] = ()
+    grant_id: str | None = None
+    capabilities: tuple[str, ...] = ()
+    resource_scopes: tuple[str, ...] = ()
     profile: dict[str, Any] | None = None
     handle: Any = None
 
@@ -647,10 +656,39 @@ class DurableActionBoundary:
             if task_denial is None:
                 task_denial = _validate_task_state_and_epoch(request, action_class, snapshot)
 
+        profile_outcome: ProfileAdmissionOutcome | None = None
+        profile_handle: Any = None
+        profile_released = False
+        pre_policy_denial: ProfileAdmissionOutcome | None = None
+        if pre_denial is None and task_denial is None and self._profile_coordinator is not None:
+            pre_fn = getattr(self._profile_coordinator, "check_pre_policy_denial", None)
+            if callable(pre_fn):
+                try:
+                    pre_policy_denial = pre_fn(
+                        request,
+                        effective_policy=effective,
+                        action_class=action_class,
+                    )
+                except Exception:
+                    pre_policy_denial = ProfileAdmissionOutcome(
+                        allowed=False,
+                        reason="Grant/revocation pre-admission verification failed; invocation denied.",
+                        error_code="grant_store_corrupted",
+                    )
+
         if pre_denial is not None:
             decision = AdmissionDecision(False, pre_denial, False, action_class)
         elif task_denial is not None:
             decision = AdmissionDecision(False, task_denial, False, action_class)
+        elif pre_policy_denial is not None and not pre_policy_denial.allowed:
+            profile_outcome = pre_policy_denial
+            decision = AdmissionDecision(
+                False,
+                pre_policy_denial.reason or "Capability or grant revoked; invocation denied.",
+                False,
+                action_class,
+                pre_policy_denial.error_code,
+            )
         else:
             try:
                 raw_decision = self._policy.authorize(
@@ -680,9 +718,6 @@ class DurableActionBoundary:
                 action_class,
             )
 
-        profile_outcome: ProfileAdmissionOutcome | None = None
-        profile_handle: Any = None
-        profile_released = False
         if decision.allowed and self._profile_coordinator is not None:
             try:
                 profile_outcome = self._profile_coordinator.admit_profile(
@@ -697,10 +732,13 @@ class DurableActionBoundary:
                     error_code="admission_failed",
                 )
             if not profile_outcome.allowed:
+                is_grant_denial = str(profile_outcome.error_code or "").startswith(
+                    ("grant_", "capability_revoked")
+                )
                 decision = AdmissionDecision(
                     False,
                     profile_outcome.reason or "Execution profile denied invocation.",
-                    decision.requires_approval,
+                    False if is_grant_denial else decision.requires_approval,
                     action_class,
                     profile_outcome.error_code,
                 )
@@ -887,6 +925,13 @@ class DurableActionBoundary:
                 lease_id=(profile_outcome.lease_id if profile_outcome is not None else None),
                 footprint_scope=(profile_outcome.footprint_scope if profile_outcome is not None else ""),
                 barriers=(profile_outcome.barriers if profile_outcome is not None else ()),
+                grant_id=(
+                    profile_outcome.grant_id
+                    if profile_outcome is not None and profile_outcome.grant_id
+                    else (request.grant_id or request.approval_id)
+                ),
+                capabilities=(profile_outcome.capabilities if profile_outcome is not None else ()),
+                resource_scopes=(profile_outcome.resource_scopes if profile_outcome is not None else ()),
             )
             try:
                 scope_token = _ACTIVE_ADMISSION_SCOPE.set(scope)
