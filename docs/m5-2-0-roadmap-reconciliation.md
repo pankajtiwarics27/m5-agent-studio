@@ -62,7 +62,7 @@ M5 2.0 story needed), **unresolved** (no M5 2.0 counterpart; see §4).
 | AS-013 API and provider contract tests | verified | M5-P0-05 | partial | Re-executed as M5 2.0 baseline evidence. |
 | AS-014 Deterministic standalone build | verified | M5-P5-02 | partial | Artifact provenance and invalidation. |
 | AS-015 Hardware capability schema | verified | M5-P4-01 | covers | RAM admission and measured qualification build on it. |
-| AS-016 macOS hardware and memory profiler | completed | M5-P0-05, M5-P4-01 | covers | 24 GB telemetry explicitly blocked until measured on target hardware. |
+| AS-016 macOS hardware and memory profiler | completed | M5-P0-05, M5-P4-01 | covers | 24 GB telemetry was measured on an Apple M5 on 2026-10-31 ([record](m5-2-0-hardware-qualification-evidence.md)); the profiler itself is covered by M5-P0-05. |
 | AS-017 Model manifest and registry | verified | M5-P4-01, M5-P4-02 | partial | Model qualification/switching consume the registry. |
 | AS-018 Resource admission scheduler | verified | M5-P3-02, M5-P4-01 | covers | Unified execution profiles and footprints. |
 | AS-019 MLX/oMLX lifecycle adapter | completed | M5-P4-01 | partial | One-resident-model invariant measured. |
