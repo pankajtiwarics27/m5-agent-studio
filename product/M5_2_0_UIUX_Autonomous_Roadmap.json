@@ -100,13 +100,11 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": "UIUX-P0-06",
-    "active_stories": [
-      "UIUX-P0-06"
-    ],
-    "last_completed_story": "UIUX-P0-05",
-    "next_recommended_story": "UIUX-P0-06",
-    "last_checkpoint": "2026-10-31T20:10:00Z",
+    "active_story": null,
+    "active_stories": [],
+    "last_completed_story": "UIUX-P0-06",
+    "next_recommended_story": "UIUX-P1-01",
+    "last_checkpoint": "2026-10-31T20:35:00Z",
     "last_session_id": "arena/9110aa1b-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
@@ -214,8 +212,8 @@
         "UIUX-P0-06"
       ],
       "total": 6,
-      "done": 5,
-      "in_progress": 1,
+      "done": 6,
+      "in_progress": 0,
       "blocked": 0,
       "not_started": 0,
       "percent_complete": 67
@@ -341,11 +339,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 5,
-    "in_progress": 1,
+    "done": 6,
+    "in_progress": 0,
     "blocked": 0,
     "not_started": 34,
-    "percent_complete": 12
+    "percent_complete": 15
   },
   "stories": [
     {
@@ -1255,14 +1253,14 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P0-06 (Approve feature-preservation and rollback baseline). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 90,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-31T20:10:00Z",
-        "updated_at": "2026-10-31T20:10:00Z",
-        "completed_at": null,
+        "updated_at": "2026-10-31T20:35:00Z",
+        "completed_at": "2026-10-31T20:35:00Z",
         "owner_session": "arena/9110aa1b-m5-agent-studio",
-        "commit_sha": null,
+        "commit_sha": "11f190bd08359b0ed2b28174ba519f4745299caf",
         "changed_files": [
           "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
           "product/M5_2_0_UIUX_Preservation_Signoff.json",
@@ -1274,7 +1272,8 @@
         "evidence": [
           "The owner approved the package on 2026-10-31 in an Arena session, with approved_by = pankajtiwarics27. The record is coordination.preservation_signoff, which is where the generator reads the approval from; the generated page only reports it.",
           "All five asks in the package are now accepted against the pinned tree 73bc5e4: the preservation matrix (21 capabilities across 6 panes), the control inventory (170 markup controls, 30 rendered by script), the route candidates (115 routes, 57 with a resolved or possible caller, 0 unknown due to unresolved edges), the shared boundary (host allowlist 400, cross-origin 403, bearer 401/503, rate limit 429, body size 413) and the rollback path.",
-          "The signature does not claim coverage: the page keeps its own limits (a bounded lexical scan is not proof of exhaustive browser coverage, and the screenshots are the demo's first-run state), so P1 starts from a baseline that states what it does not know."
+          "The signature does not claim coverage: the page keeps its own limits (a bounded lexical scan is not proof of exhaustive browser coverage, and the screenshots are the demo's first-run state), so P1 starts from a baseline that states what it does not know.",
+          "Closed at 11f190bd08359b0ed2b28174ba519f4745299caf, the commit that carries the signature and the regenerated package, so the evidence sha is the tree the owner approved rather than a later reserialisation of it."
         ],
         "test_results": [
           {
@@ -1294,8 +1293,8 @@
           "The check that used to assert \"the package is unsigned\" now asserts \"the package reports the ledger\", because a test that pins today's state turns the owner's signature into a test failure. The invariant is the one worth keeping: package status, page wording and signature fields must all agree with coordination.preservation_signoff."
         ],
         "blockers": [],
-        "handoff_note": "Signed and closed in this pull request; the P0 gate is the next thing to re-read.",
-        "next_action": "Record the signature, regenerate the package and close the story in the same commit.",
+        "handoff_note": "P0 is closed and signed. Start P1-01 from this baseline: the preservation matrix, the control inventory and the shared boundary are now a checked contract, and the package's input hashes make any drift visible. Do not re-edit the signature record; if an input artifact changes, regenerate the package and show the owner what changed.",
+        "next_action": "None. The P0 gate is open; UIUX-P1-01 is the next story.",
         "readme_updated": false
       },
       "required_evidence": [
