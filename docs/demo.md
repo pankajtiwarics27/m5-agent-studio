@@ -88,10 +88,11 @@ pane, with the UI tab id, a title, the file name, and what the shot is meant to
 show, plus the viewport (1440×900 at 2× device scale).
 
 **Status in this repository: the manifest and all six images are committed.**
-The set was captured at `2026-10-31T17:54:48Z` from a seeded demo instance running
-out of a disposable `git archive` copy of the pinned commit — see
-[`uiux-2-0-baseline-evidence.md`](uiux-2-0-baseline-evidence.md) for why the copy
-matters ([#108](https://github.com/pankajtiwarics27/m5-agent-studio/issues/108)).
+The set was captured at `2026-10-31T17:54:48Z` from a disposable `git archive`
+copy of the pinned commit. `--serve` now keeps its harness and workspace state in a
+throwaway root of its own ([`demo-isolation-safety.md`](demo-isolation-safety.md)),
+so a capture no longer reads a checkout's state; the copy was the stricter
+condition available at the time.
 `python3 scripts/validate_screenshots.py` reports `6 of 6 captured and consistent
 with the manifest`. `index.json` records each image's sha256, size and viewport, so
 a later drift is a failing check rather than a silent substitution.

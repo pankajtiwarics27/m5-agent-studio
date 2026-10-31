@@ -22,8 +22,11 @@
 > | Reconcile the test table's provenance | **done** — every command in the table is re-measured at `fa2a31c` with its own pin, and the story revision each set belongs to is named |
 > | The dry run is not a tab-ID check | **kept** — the dry run proves manifest shape; tab IDs are a separate check in `validate_screenshots.py` |
 >
-> Acceptance of the six images is the reviewer's and the owner's call, not the
-> capturing session's. The story records that explicitly instead of closing itself.
+> The set was merged in #118 (`30d5e38`, merge `f432fe6`) with CI green on 3.11,
+> 3.12 and 3.13. #108 is fixed in the product by #119, which gives the demo a
+> throwaway harness store; #117 stays open, so the suite still belongs in a
+> disposable clone. A capture no longer has to be taken from an archive copy —
+> these were, which is the stricter condition.
 
 This page records the baseline `UIUX-P0-05` exists to establish: what the test
 suite and the repository checks actually produce, and the six screenshots of the
@@ -165,6 +168,6 @@ capture whose digest, size or dimensions disagree with the manifest.
   not prove it is usable.
 * The captures came from one viewport (1440×900 @2). Narrow viewports and the
   density and theme variants are later stories.
-* The demo's source-relative `.harnesses` store is still not isolated (#108), and
-  a test can still write one (#117). This page's advice — disposable copy for both
-  — mitigates the baseline work; it does not fix the product.
+* The demo's harness store is isolated as of #119, but a *test* can still write a
+  source-relative `.harnesses` store (#117). Run the suite in a disposable clone,
+  as this page did; that is a mitigation, not a fix.
