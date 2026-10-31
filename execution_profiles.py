@@ -65,6 +65,7 @@ import execution_spine
 import process_supervision
 import resource_admission
 import sandbox_boundary
+import scoped_grants
 import side_effect_ledger
 import workspace_snapshots
 
@@ -3151,6 +3152,7 @@ class UnifiedExecutionController:
         container_qualified: bool = False,
         on_reconciled: Callable[[str, ExecutionProfile, FootprintReconciliation], None] | None = None,
         containment_store: process_supervision.ContainmentStore | None = None,
+        grant_store: scoped_grants.ScopedGrantStore | None = None,
         current_boot_id: str | None = None,
         sql_task_fencing: bool = False,
     ) -> UnifiedExecutionCoordinator:
@@ -3163,6 +3165,7 @@ class UnifiedExecutionController:
             container_qualified=container_qualified,
             on_reconciled=on_reconciled,
             containment_store=containment_store,
+            grant_store=grant_store,
             current_boot_id=current_boot_id,
             sql_task_fencing=sql_task_fencing,
         )
@@ -3182,6 +3185,7 @@ class UnifiedExecutionCoordinator:
         container_qualified: bool = False,
         on_reconciled: Callable[[str, ExecutionProfile, FootprintReconciliation], None] | None = None,
         containment_store: process_supervision.ContainmentStore | None = None,
+        grant_store: scoped_grants.ScopedGrantStore | None = None,
         current_boot_id: str | None = None,
         sql_task_fencing: bool = False,
     ) -> None:
@@ -3195,8 +3199,106 @@ class UnifiedExecutionCoordinator:
         self._containment_store = containment_store or (
             process_supervision.ContainmentStore(store_dir) if store_dir is not None else None
         )
+        self._grant_store = grant_store or (
+            scoped_grants.ScopedGrantStore(store_dir) if store_dir is not None else None
+        )
         self._current_boot_id = current_boot_id
         self._sql_task_fencing = bool(sql_task_fencing)
+
+    def _derive_grant_capabilities_and_scopes(
+        self,
+        request: execution_spine.ActionRequest,
+        profile: ExecutionProfile,
+    ) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        caps = scoped_grants.resolve_tool_capabilities(request.tool_name, request.args)
+        barrier_tuples = tuple((b.target, b.mode) for b in profile.footprint.barriers)
+        scopes = scoped_grants.resolve_tool_resource_scopes(
+            request.tool_name,
+            request.args,
+            workspace_root=self._workspace_root,
+            candidate_rel_paths=(
+                *profile.footprint.declared_write_paths,
+                *profile.footprint.declared_read_paths,
+            ),
+            barriers=barrier_tuples,
+        )
+        return (caps, scopes)
+
+    def check_pre_policy_denial(
+        self,
+        request: execution_spine.ActionRequest,
+        *,
+        effective_policy: str,
+        action_class: execution_spine.ActionClass,
+    ) -> execution_spine.ProfileAdmissionOutcome | None:
+        """Enforce active revocations & explicit grant denials BEFORE policy `requires_approval` (`AC 1` & `AC 3`)."""
+        _ = (effective_policy, action_class)
+        if self._grant_store is None:
+            return None
+        mode = self._current_execution_mode()
+        profile = derive_execution_profile(
+            request.tool_name,
+            request.args,
+            workspace_root=self._workspace_root,
+            session_id=request.session_id,
+            execution_mode=mode,
+            container_qualified=self._container_qualified,
+        )
+        caps, scopes = self._derive_grant_capabilities_and_scopes(request, profile)
+        rev = self._grant_store.check_revocation_denials(
+            session_id=request.session_id,
+            task_id=request.task_id,
+            tool_name=request.tool_name,
+            action_capabilities=caps,
+            action_scopes=scopes,
+        )
+        if rev is not None:
+            return execution_spine.ProfileAdmissionOutcome(
+                allowed=False,
+                reason=rev.reason,
+                error_code=rev.error_code or "capability_revoked",
+                grant_id=rev.grant_id,
+                capabilities=caps,
+                resource_scopes=scopes,
+                footprint_scope=profile.footprint.scope,
+                profile=profile.to_mapping(),
+            )
+
+        # If caller supplied an explicit grant_id / registered approval_id while `approved=False`,
+        # validate immediately so expired/revoked grants deny hard rather than prompting.
+        eff_gid = str(request.grant_id or request.approval_id or "").strip()
+        if not request.approved and (
+            request.grant_source == "scoped_grant"
+            or (
+                eff_gid
+                and (
+                    eff_gid.startswith("grant-")
+                    or self._grant_store.has_grant_or_tombstone(eff_gid)
+                )
+            )
+        ):
+            val = self._grant_store.validate_and_consume(
+                grant_id=eff_gid,
+                session_id=request.session_id,
+                task_id=request.task_id,
+                epoch=request.epoch,
+                tool_name=request.tool_name,
+                args=request.args,
+                action_capabilities=caps,
+                action_scopes=scopes,
+            )
+            if not val.allowed:
+                return execution_spine.ProfileAdmissionOutcome(
+                    allowed=False,
+                    reason=val.reason,
+                    error_code=val.error_code or "grant_denied",
+                    grant_id=val.grant_id or (eff_gid or None),
+                    capabilities=caps,
+                    resource_scopes=scopes,
+                    footprint_scope=profile.footprint.scope,
+                    profile=profile.to_mapping(),
+                )
+        return None
 
     def _current_execution_mode(self) -> str:
         if self._execution_mode_fn is None:
@@ -3400,6 +3502,71 @@ class UnifiedExecutionCoordinator:
                 profile=profile.to_mapping(),
             )
 
+        caps, scopes = self._derive_grant_capabilities_and_scopes(request, profile)
+        eff_gid = str(request.grant_id or request.approval_id or "").strip()
+        validated_gid: str | None = eff_gid or None
+
+        if self._grant_store is not None:
+            try:
+                rev_outcome = self._grant_store.check_revocation_denials(
+                    session_id=request.session_id,
+                    task_id=request.task_id,
+                    tool_name=request.tool_name,
+                    action_capabilities=caps,
+                    action_scopes=scopes,
+                )
+            except Exception:
+                self._controller.release(decision.lease_id)
+                raise
+            if rev_outcome is not None:
+                self._controller.release(decision.lease_id)
+                return execution_spine.ProfileAdmissionOutcome(
+                    allowed=False,
+                    reason=rev_outcome.reason,
+                    error_code=rev_outcome.error_code or "capability_revoked",
+                    grant_id=rev_outcome.grant_id,
+                    capabilities=caps,
+                    resource_scopes=scopes,
+                    footprint_scope=profile.footprint.scope,
+                    profile=profile.to_mapping(),
+                )
+
+            must_validate = (request.grant_source == "scoped_grant") or bool(
+                eff_gid
+                and (
+                    eff_gid.startswith("grant-")
+                    or self._grant_store.has_grant_or_tombstone(eff_gid)
+                )
+            )
+            if must_validate:
+                try:
+                    val_outcome = self._grant_store.validate_and_consume(
+                        grant_id=eff_gid,
+                        session_id=request.session_id,
+                        task_id=request.task_id,
+                        epoch=request.epoch,
+                        tool_name=request.tool_name,
+                        args=request.args,
+                        action_capabilities=caps,
+                        action_scopes=scopes,
+                    )
+                except Exception:
+                    self._controller.release(decision.lease_id)
+                    raise
+                if not val_outcome.allowed:
+                    self._controller.release(decision.lease_id)
+                    return execution_spine.ProfileAdmissionOutcome(
+                        allowed=False,
+                        reason=val_outcome.reason,
+                        error_code=val_outcome.error_code or "grant_denied",
+                        grant_id=val_outcome.grant_id or (eff_gid or None),
+                        capabilities=caps,
+                        resource_scopes=scopes,
+                        footprint_scope=profile.footprint.scope,
+                        profile=profile.to_mapping(),
+                    )
+                validated_gid = val_outcome.grant_id
+
         # Capture pre-execution workspace state under the acquired barrier so no
         # concurrent writer can race with our baseline snapshot.
         should_observe = self._workspace_root is not None and (
@@ -3434,6 +3601,9 @@ class UnifiedExecutionCoordinator:
             lease_id=decision.lease_id,
             footprint_scope=profile.footprint.scope,
             barriers=barrier_tuples,
+            grant_id=validated_gid,
+            capabilities=caps,
+            resource_scopes=scopes,
             profile=profile.to_mapping(),
             handle=handle,
         )
@@ -3523,6 +3693,34 @@ class UnifiedExecutionCoordinator:
                         f"Denied post-execution: `{handle.tool_name}` mutated undeclared workspace path(s) ({bad_paths})."
                         + (f"\n{prior_out}" if prior_out else "")
                     )
+                elif (
+                    self._grant_store is not None
+                    and handle.workspace_root is not None
+                    and reconciliation.touched_paths
+                ):
+                    try:
+                        ws_resolved = str(handle.workspace_root.expanduser().resolve())
+                    except OSError:
+                        ws_resolved = str(handle.workspace_root)
+                    touched_scopes = [
+                        f"path:{ws_resolved}:{rel_p}" for rel_p in reconciliation.touched_paths
+                    ]
+                    dyn_rev = self._grant_store.check_revocation_denials(
+                        session_id=handle.session_id,
+                        task_id=handle.task_id,
+                        tool_name=handle.tool_name,
+                        action_capabilities=("workspace_write",),
+                        action_scopes=touched_scopes,
+                    )
+                    if dyn_rev is not None:
+                        prior_out = str(updated.get("output") or "")
+                        updated["ok"] = False
+                        updated["error_code"] = dyn_rev.error_code or "capability_revoked"
+                        updated["uncertain"] = True
+                        updated["output"] = (
+                            f"Denied post-execution: `{handle.tool_name}` mutated a revoked resource ({dyn_rev.reason})."
+                            + (f"\n{prior_out}" if prior_out else "")
+                        )
 
             exc_uncertain = exc is not None and side_effect_ledger.is_ambiguous_exception(exc)
             res_uncertain = updated is not None and bool(updated.get("uncertain"))

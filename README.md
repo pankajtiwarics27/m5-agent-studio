@@ -320,6 +320,31 @@ plus the M5 2.0 change-sets through `M5-P1-07`, Linux x86_64, Python 3.11.2):
   documented in [`docs/process-supervision.md`](docs/process-supervision.md)
   (ADR-0013).
 
+- **Operation-, resource-, and task-scoped grants, non-renewable expiry,
+  event-driven revocation, capability-specific containment, and subprocess
+  secret hygiene (`M5-P3-04`, ADR-0014):** `scoped_grants.py` persists
+  integrity-checked (`0700` dir / `0600` file, `O_NOFOLLOW`) grants, policy
+  revisions, revocations, and audit events in
+  `$HARNESS_STORE_DIR/grants/state.json`. Every grant has a finite `expires_at`
+  and optional `max_uses` with no automatic renewal; interactive approvals
+  record one-shot exact-argument `300s` grants, and model-supplied `grant_id`
+  keys are stripped as untrusted. Admission checks active revocations and
+  explicit grant validity before policy evaluation (`capability_revoked`,
+  `grant_expired`, `grant_revoked`, `grant_consumed`,
+  `grant_policy_superseded`, `grant_scope_mismatch`) and consumes `max_uses`
+  atomically after barrier acquisition, while canonical path/symlink resolution
+  and footprint overlap prevent revocation bypass across `write_file`,
+  `edit_file`, `rollback_edits`, `run_bash`, `ctx_execute_python`,
+  `ctx_run_block`, and `skill_execute_script`. Session policy patches, lease
+  epoch fencing, task cancellation, and MCP disable/delete immediately revoke
+  affected grants and trigger capability-specific `ProcessSupervisor`
+  containment without disrupting unrelated running capabilities, and
+  `sanitize_subprocess_env` strips secret-named keys, registered keyring
+  values, and loader/Git-config injection variables from arbitrary child
+  environments. Pinned by 9 scoped-grant tests (`tests/test_scoped_grants.py`)
+  and documented in [`docs/scoped-grants.md`](docs/scoped-grants.md)
+  (ADR-0014).
+
 - **The execution boundary is extracted and its coverage is inventoried
   (ADR-0002, since `M5-P0-06`; expanded in `M5-P1-02`–`M5-P1-04`):**
   `execution_spine.py` and `side_effect_ledger.py` form a stdlib-only seam
@@ -464,17 +489,17 @@ are not guarantees):
 Observed structure (see [`docs/architecture.md`](docs/architecture.md) and the
 generated [`docs/subsystem-dependency-inventory.md`](docs/subsystem-dependency-inventory.md)):
 
-- **Backend:** one FastAPI process — `app.py` plus 50 small contract modules
+- **Backend:** one FastAPI process — `app.py` plus 51 small contract modules
   listed in `pyproject.toml`. `studio.py` is a **generated** standalone
-  artifact (`scripts/build_studio.py` inlines 23 sibling modules — including
+  artifact (`scripts/build_studio.py` inlines 24 sibling modules — including
   `runtime_persistence`, `side_effect_ledger`, `execution_budget`,
   `workflow_checkpoints`, `workflow_state`, `mcp_client`, `context_store`,
   `onboarding_preflight`, `failure_injection`, `execution_spine`, `task_events`,
   `sandbox_boundary`, `workspace_snapshots`, `edit_transactions`,
   `edit_rollback`, `verification_evidence`, `recovery_guard`,
   `resource_admission`, `model_admission`, `process_supervision`,
-  `execution_profiles`, `history_privacy`, and `workflow_orchestration`, and embeds
-  `static/index.html`); never hand-edit it.
+  `scoped_grants`, `execution_profiles`, `history_privacy`, and
+  `workflow_orchestration`, and embeds `static/index.html`); never hand-edit it.
 - **Frontend:** `static/index.html`, vanilla HTML/CSS/JS, no build step.
 - **Storage:** SQLite (`studio_history.db`, `SCHEMA_VERSION = 3`) in WAL mode
   with FTS5 tables (`opencontext_fts`, `ctx_vault_fts`) for BM25 context search
@@ -483,7 +508,7 @@ generated [`docs/subsystem-dependency-inventory.md`](docs/subsystem-dependency-i
   per-session `.harnesses/{id}.jsonl` task-event journals and `.harnesses/snapshots/`
   (`0600` SHA-256 content-addressed blobs and integrity-checked baseline manifests).
 - **Request path:** `security_boundary` middleware (rate limit, origin checks,
-  body limits; `app.py` L2348) → 74 registered routes → either model streaming
+  body limits; `app.py` L2348) → 77 registered routes → either model streaming
   (`stream_any_model`), the harness tool loop
   (`_execute_harness_tool` L7679 → `_run_authorized_tool` L7592 →
   `_execute_harness_tool_inner` L7182), or MCP calls (`_mcp_http_rpc` L4623 →
@@ -699,11 +724,15 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
   survive a crash, and recovery that requires changed evidence or conditions;
   phase P2 100%), **`M5-P3-02`** (unified execution profiles, quote/inline-shell
   and Python AST policy parity, conservative footprints, admission barriers, and
-  post-execution reconciliation), **and `M5-P3-03`** (process supervision across
+  post-execution reconciliation), **`M5-P3-03`** (process supervision across
   process groups and `os.setsid()` detached trees, cooperative `SIGTERM` →
   bounded `SIGKILL` escalation, durable `$HARNESS_STORE_DIR/containment/state.json`
   origin fencing and conflicting barrier holds across restarts, and incident
-  containment). `M5-P3-01` and `M5-P4-01` remain `blocked` pending operator
+  containment), **and `M5-P3-04`** (operation/resource/task-scoped grants in
+  `$HARNESS_STORE_DIR/grants/state.json`, non-renewable finite expiry,
+  event-driven revocation with cross-tool anti-bypass, capability-specific
+  in-flight containment, and subprocess secret/injection environment scrubbing).
+  `M5-P3-01` and `M5-P4-01` remain `blocked` pending operator
   qualification runs (`scripts/qualify_environment.py`,
   [`docs/qualification-suite.md`](docs/qualification-suite.md)) — a live Docker
   run for the sandbox and a 24 GB pressure measurement for the model story.
