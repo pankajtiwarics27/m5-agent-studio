@@ -827,6 +827,32 @@ def _reset_portable_handoff_store(store: routing_policy.PortableHandoffStore | N
         )
 
 
+_CHILD_DELEGATION_STORE: child_delegation.ChildDelegationStore | None = None
+_CHILD_DELEGATION_STORE_DIR: Path | None = None
+_CHILD_DELEGATION_STORE_LOCK = threading.Lock()
+
+
+def get_child_delegation_store() -> child_delegation.ChildDelegationStore:
+    """Return the durable M5-P4-03 child delegation, scope reservation, and benchmark store."""
+    global _CHILD_DELEGATION_STORE, _CHILD_DELEGATION_STORE_DIR
+    cur_dir = Path(HARNESS_STORE_DIR).resolve()
+    with _CHILD_DELEGATION_STORE_LOCK:
+        if _CHILD_DELEGATION_STORE is None or _CHILD_DELEGATION_STORE_DIR != cur_dir:
+            _CHILD_DELEGATION_STORE = child_delegation.ChildDelegationStore(cur_dir)
+            _CHILD_DELEGATION_STORE_DIR = cur_dir
+        return _CHILD_DELEGATION_STORE
+
+
+def _reset_child_delegation_store(store: child_delegation.ChildDelegationStore | None = None) -> None:
+    """Replace or clear the cached child delegation store (tests)."""
+    global _CHILD_DELEGATION_STORE, _CHILD_DELEGATION_STORE_DIR
+    with _CHILD_DELEGATION_STORE_LOCK:
+        _CHILD_DELEGATION_STORE = store
+        _CHILD_DELEGATION_STORE_DIR = (
+            Path(HARNESS_STORE_DIR).resolve() if store is not None else None
+        )
+
+
 def get_process_supervisor() -> process_supervision.ProcessSupervisor:
     """Return the authoritative M5-P3-03 process supervisor bound to ``HARNESS_STORE_DIR``."""
     global _PROCESS_SUPERVISOR, _PROCESS_SUPERVISOR_STORE_DIR
@@ -13063,7 +13089,7 @@ def _edit_rollback_denial(message: str) -> dict[str, Any]:
 
 
 def _snapshot_session_id(sess: Mapping[str, Any] | None, fallback: str = "adhoc-session") -> str:
-    raw = str((sess or {}).get("id") or fallback).strip()
+    raw = str((sess or {}).get("edit_scope_id") or (sess or {}).get("id") or fallback).strip()
     sanitized = re.sub(r"[^A-Za-z0-9._-]+", "-", raw).strip("-._")
     return (sanitized or fallback)[:120]
 
@@ -14501,42 +14527,53 @@ async def _execute_harness_tool_inner(
             }
 
         if tool_name == "delegate_subagent":
-            sub_task = str(args.get("task") or "Audit the current implementation for bugs and edge cases.")
-            ctx_files = args.get("context_files") or []
-            critic_model = sess.get("critic_model") or "Gemma-4-21B-REAP-4bit"
-            lead_model = sess.get("lead_model") or ""
-
-            # Sequential 24GB unified memory guard when swapping between two local oMLX models
-            if is_local_omlx_model(lead_model) and is_local_omlx_model(critic_model) and lead_model != critic_model:
-                await _unload_omlx_model(client, parse_model_route(lead_model)[2])
-
-            file_blobs: list[str] = []
-            for cf in (ctx_files[:6] if isinstance(ctx_files, list) else []):
-                try:
-                    root_res, parts = _workspace_relative_parts(root, str(cf))
-                    cfp = root_res.joinpath(*parts)
-                    if _is_secret_path(cfp):
-                        continue
-                    file_text, _info = _read_workspace_text(root_res, Path(*parts), errors="replace")
-                    file_blobs.append(f"### File: {Path(*parts)}\n```\n{file_text[:8000]}\n```")
-                except Exception:
-                    continue
-            ctx_section = ("\n\n".join(file_blobs)) if file_blobs else "(No context files attached)"
-            sub_msgs = [
-                {"role": "system", "content": AGENT_ROLES["critic"]["system"]},
-                {"role": "user", "content": f"### Sub-Agent Audit Task:\n{sub_task}\n\n### Workspace Files:\n{ctx_section}"},
-            ]
-            buf: list[str] = []
-            async for item in stream_any_model(client, critic_model, sub_msgs, temperature=0.0, max_tokens=2200, reasoning_mode="off"):
-                if item["type"] == "content":
-                    buf.append(item["text"])
-            if is_local_omlx_model(lead_model) and is_local_omlx_model(critic_model) and lead_model != critic_model:
-                await _unload_omlx_model(client, parse_model_route(critic_model)[2])
-
-            report = "".join(buf).strip() or "(No findings returned)"
+            try:
+                del_outcome = await run_bounded_child_delegation_async(
+                    client,
+                    sess,
+                    objective=str(args.get("task") or "Audit the current implementation for bugs and edge cases."),
+                    role=str(args.get("role") or "critic"),
+                    context_files=[str(x) for x in (args.get("context_files") or []) if str(x).strip()],
+                    requested_policy=(str(args["policy"]) if args.get("policy") else None),
+                    requested_tools=(
+                        [str(x) for x in args["allowed_tools"]]
+                        if isinstance(args.get("allowed_tools"), list)
+                        else None
+                    ),
+                    readable_paths=(
+                        [str(x) for x in args["readable_paths"]]
+                        if isinstance(args.get("readable_paths"), list)
+                        else None
+                    ),
+                    writable_paths=(
+                        [str(x) for x in args["writable_paths"]]
+                        if isinstance(args.get("writable_paths"), list)
+                        else None
+                    ),
+                    requested_budget=(args["budget"] if isinstance(args.get("budget"), Mapping) else None),
+                    verification=(args["verification"] if isinstance(args.get("verification"), Mapping) else None),
+                    planned_tool_calls=(
+                        list(args["tool_calls"])
+                        if isinstance(args.get("tool_calls"), list)
+                        else None
+                    ),
+                    benchmark_category=(str(args["benchmark_category"]) if args.get("benchmark_category") else None),
+                )
+            except child_delegation.DelegationRejectedError as exc:
+                return {
+                    "ok": False,
+                    "error_code": exc.code,
+                    "output": f"Delegation rejected ({exc.code}): {exc.reason}",
+                    "diff": "",
+                    "elapsed_ms": round((time.perf_counter() - t0) * 1000),
+                }
+            rec_map = del_outcome["delegation"]
+            child_ok = rec_map["status"] == "joined"
             return {
-                "ok": True,
-                "output": f"[Sub-Agent `{critic_model}` Audit]\n{report}",
+                "ok": child_ok,
+                "delegation_id": rec_map["delegation_id"],
+                "child_task_id": rec_map["child_task_id"],
+                "output": str(del_outcome.get("report") or rec_map.get("output_excerpt") or ""),
                 "diff": "",
                 "elapsed_ms": round((time.perf_counter() - t0) * 1000),
             }
@@ -14879,6 +14916,23 @@ def _on_worker_epochs_fenced(
             reason=reason,
             quarantine_session=False,
         )
+    if not child_delegation.is_child_subtask_id(task_id):
+        with contextlib.suppress(Exception):
+            del_store = get_child_delegation_store()
+            active_children = del_store.list_delegations(parent_task_id=task_id, unjoined_only=True)
+            for child_rec in active_children:
+                if child_rec.status == "running":
+                    get_worker_lease_coordinator().fence_and_halt(
+                        child_rec.child_task_id,
+                        target_state="cancelled",
+                        reason=f"parent_epoch_fenced:{reason}",
+                        sweep_in_flight=True,
+                    )
+                    get_scoped_grant_store().revoke_by_lifecycle_event(
+                        task_id=child_rec.child_task_id,
+                        reason=f"parent_epoch_fenced:{reason}",
+                    )
+            del_store.mark_cancelled_by_parent(task_id, reason=f"parent_epoch_fenced:{reason}")
 
 
 def _check_containment_resumption_blockers(task_id: str, workspace_dir: str) -> tuple[str, ...]:
@@ -16135,6 +16189,76 @@ async def _execute_harness_tool(
         else:
             resolved_action_id = side_effect_ledger.mint_unique_action_id(scope_key, tool_name, args)
     sess_root = Path(sess["worktree_dir"]) if sess.get("worktree_dir") else WORKSPACE_ROOT
+    eff_policy_denial = policy_denial
+    eff_denial_error_code: str | None = None
+    if resolved_task_id is not None and child_delegation.is_child_subtask_id(resolved_task_id):
+        try:
+            child_del_rec = get_child_delegation_store().get_by_child_task_id(resolved_task_id)
+        except child_delegation.DelegationStoreIntegrityError as exc:
+            return {
+                "ok": False,
+                "error_code": "delegation_state_corrupt",
+                "output": str(exc),
+                "diff": "",
+                "elapsed_ms": 1,
+            }
+        if child_del_rec is None or child_del_rec.is_joined:
+            eff_policy_denial = (
+                f"Delegated child subtask `{resolved_task_id}` has no active unjoined delegation record."
+            )
+            eff_denial_error_code = "child_delegation_inactive"
+        else:
+            try:
+                parent_sess = get_harness_session_db(session_scope)
+                live_parent_pol = str(parent_sess.get("policy") or child_del_rec.authority.parent_policy)
+            except KeyError:
+                live_parent_pol = child_del_rec.authority.parent_policy
+            live_revoked_caps: set[str] = set()
+            try:
+                for rev in get_scoped_grant_store().list_revocations(session_id=session_scope):
+                    if rev.task_id in (None, child_del_rec.parent_task_id, resolved_task_id):
+                        live_revoked_caps.update(rev.capabilities)
+            except Exception:
+                pass
+            policy = child_del_rec.authority.policy
+            c_ok, c_err_code, c_reason = child_delegation.enforce_child_tool_authority(
+                child_del_rec.authority,
+                tool_name,
+                args,
+                workspace_root=sess_root,
+                live_parent_policy=live_parent_pol,
+                live_parent_revoked_capabilities=live_revoked_caps,
+            )
+            if not c_ok and eff_policy_denial is None:
+                eff_policy_denial = c_reason
+                eff_denial_error_code = c_err_code
+    elif tool_name in (child_delegation.CD_MUTATING_FILE_TOOLS | child_delegation.CD_CODE_EXEC_TOOLS):
+        probe_rel = (
+            str(args.get("path") or "*")
+            if tool_name in child_delegation.CD_MUTATING_FILE_TOOLS
+            else "*"
+        )
+        try:
+            conflict_child = get_child_delegation_store().check_parent_mutation_conflict(
+                session_scope,
+                probe_rel,
+            )
+        except child_delegation.DelegationStoreIntegrityError as exc:
+            return {
+                "ok": False,
+                "error_code": "delegation_state_corrupt",
+                "output": str(exc),
+                "diff": "",
+                "elapsed_ms": 1,
+            }
+        if conflict_child is not None and eff_policy_denial is None:
+            eff_policy_denial = (
+                f"Parent cannot execute `{tool_name}` on `{probe_rel}` while unjoined child "
+                f"delegation `{conflict_child.delegation_id}` holds overlapping workspace write scope "
+                f"{list(conflict_child.authority.writable_paths)}; join or cancel the child first."
+            )
+            eff_denial_error_code = "child_write_lease_conflict"
+
     eff_approved = approved
     eff_grant_id = grant_id
     if (
@@ -16168,14 +16292,14 @@ async def _execute_harness_tool(
         finally:
             _CURRENT_TOOL_ACTION_ID.reset(token)
 
-    return await _run_authorized_tool(
+    out_res = await _run_authorized_tool(
         tool_name,
         args,
         policy,
         approved=eff_approved,
         session_id=session_scope,
         executor=_executor,
-        additional_denial=policy_denial,
+        additional_denial=eff_policy_denial,
         grant_source=effective_grant,
         approval_id=approval_id,
         grant_id=eff_grant_id,
@@ -16190,6 +16314,10 @@ async def _execute_harness_tool(
         workspace_root=sess_root,
         http_client=client,
     )
+    if eff_denial_error_code is not None and not out_res.get("ok"):
+        out_res = dict(out_res)
+        out_res["error_code"] = eff_denial_error_code
+    return out_res
 
 
 def _compute_git_diff(target_dir: Path) -> dict[str, Any]:
@@ -16587,6 +16715,8 @@ async def api_delete_harness_session(session_id: str) -> JSONResponse:
     get_scoped_grant_store().purge_session(session_id)
     with contextlib.suppress(Exception):
         get_portable_handoff_store().purge_session(session_id)
+    with contextlib.suppress(Exception):
+        get_child_delegation_store().purge_session(session_id)
     if (
         not del_reports
         or (
@@ -17196,6 +17326,14 @@ async def api_get_harness_task_state(session_id: str) -> JSONResponse:
     except workflow_checkpoints.ResumeRejected as exc:
         integrity_error = str(exc)
     milestones = sm.list_milestones(session_id)
+    child_subtasks = sm.list_child_subtasks(session_id)
+    try:
+        delegation_records = [
+            d.to_mapping()
+            for d in get_child_delegation_store().list_delegations(session_id=session_id)
+        ]
+    except child_delegation.DelegationStoreIntegrityError:
+        delegation_records = []
     transitions = sm.store.list_transitions(session_id)
     checkpoints = sm.checkpoints.list_checkpoints(session_id, verify_integrity=False)
     ver_spec = sm.get_verification_spec(session_id)
@@ -17233,6 +17371,8 @@ async def api_get_harness_task_state(session_id: str) -> JSONResponse:
             "checkpoint_integrity_error": integrity_error,
             "checkpoints": [ck.to_dict() for ck in checkpoints],
             "milestones": [_serialize_task_record(ms) for ms in milestones],
+            "child_subtasks": [_serialize_task_record(sub) for sub in child_subtasks],
+            "delegations": delegation_records,
             "transitions": [_serialize_transition_record(tr) for tr in transitions],
         }
     )
@@ -17301,15 +17441,25 @@ async def api_cancel_harness_session(session_id: str, request: Request) -> JSONR
             _resolve_pending_tool_approval(aid, "reject", note="Run cancelled by operator.", session_id=session_id, remember=True)
     get_scoped_grant_store().revoke_by_lifecycle_event(
         session_id=session_id,
-        task_id=session_id,
         reason=reason,
     )
     supervisor = get_process_supervisor()
     cancel_reports = await supervisor.contain_by_scope_async(
         session_id=session_id,
-        task_id=session_id,
         reason=reason,
     )
+    with contextlib.suppress(Exception):
+        del_store = get_child_delegation_store()
+        for child_rec in del_store.list_delegations(session_id=session_id, unjoined_only=True):
+            if child_rec.child_epoch > 0:
+                supervisor.store.fence_origin(
+                    reason=reason,
+                    session_id=session_id,
+                    task_id=child_rec.child_task_id,
+                    epoch=child_rec.child_epoch,
+                    worker_id=child_rec.child_worker_id or None,
+                )
+        del_store.mark_cancelled_by_parent(session_id, reason=reason)
     sm = get_task_state_machine()
     pre_task, _ = sm.ensure_root_task(
         session_id,
@@ -18967,6 +19117,1219 @@ async def api_reset_harness_switch_budget(session_id: str, request: Request) -> 
             detail={"code": "invalid_switch_budget", "message": str(exc)},
         ) from exc
     return JSONResponse({"status": "reset", "session_id": session_id, "switch_budget": updated.to_mapping()})
+
+
+async def spawn_child_delegation_async(
+    sess: Mapping[str, Any],
+    *,
+    objective: str,
+    role: str = "critic",
+    model_spec: str | None = None,
+    context_files: Sequence[str] = (),
+    requested_policy: str | None = None,
+    requested_tools: Sequence[str] | None = None,
+    readable_paths: Sequence[str] | None = None,
+    writable_paths: Sequence[str] | None = None,
+    requested_budget: Mapping[str, Any] | None = None,
+    parent_grant_ids: Sequence[str] = (),
+    benchmark_category: str | None = None,
+) -> child_delegation.ChildDelegationRecord:
+    """Spawn a bounded child subagent with strict authority/budget subsets and disjoint write locks (M5-P4-03)."""
+    session_id = str(sess["id"])
+    caller_task_id = str(sess.get("task_id") or session_id)
+    if child_delegation.is_child_subtask_id(caller_task_id):
+        raise child_delegation.DelegationAuthorityViolationError(
+            "child_recursive_delegation_forbidden",
+            f"Child subtask `{caller_task_id}` cannot spawn nested subagents (max_depth=1).",
+        )
+    parent_task_id = caller_task_id
+    wt_dir = Path(str(sess.get("worktree_dir") or WORKSPACE_ROOT)).resolve()
+
+    try:
+        active_wq = workspace_quarantine.find_active_quarantine(HARNESS_STORE_DIR, wt_dir)
+    except Exception as exc:
+        raise child_delegation.DelegationRejectedError(
+            "child_workspace_quarantined",
+            f"Cannot verify workspace quarantine state before delegation: {exc}",
+        ) from exc
+    if active_wq is not None:
+        raise child_delegation.DelegationRejectedError(
+            "child_workspace_quarantined",
+            f"Workspace is quarantined as `{active_wq.quarantine_id}`; delegation is frozen.",
+        )
+
+    live_sess = get_harness_session_db(session_id)
+    parent_policy = str(live_sess.get("policy") or sess.get("policy") or "standard")
+    sm = get_task_state_machine()
+    parent_task, parent_budget = sm.ensure_root_task(
+        parent_task_id,
+        session_id=session_id,
+        title=str(live_sess.get("title") or objective[:80]),
+        workspace_dir=str(wt_dir),
+        policy=parent_policy,
+    )
+    if parent_task.state == "cancelled" or parent_budget.cancel_requested:
+        raise child_delegation.DelegationRejectedError(
+            "parent_task_cancelled",
+            f"Parent task `{parent_task_id}` is cancelled and cannot spawn child subagents.",
+        )
+    if parent_budget.pause_requested:
+        raise child_delegation.DelegationRejectedError(
+            "parent_pause_requested",
+            f"Parent task `{parent_task_id}` has a pending pause request; defer delegation.",
+        )
+
+    grant_store = get_scoped_grant_store()
+    grant_store.ensure_session_policy(session_id, parent_policy)
+    revoked_caps: set[str] = set()
+    for rev in grant_store.list_revocations(session_id=session_id):
+        if rev.task_id in (None, parent_task_id):
+            revoked_caps.update(rev.capabilities)
+
+    parent_allowed_scopes: list[str] | None = None
+    validated_parent_grants: list[scoped_grants.ScopedGrantRecord] = []
+    if parent_grant_ids:
+        grant_store.sweep_expired_grants()
+        sess_rev, glob_rev = grant_store.get_revisions(session_id, current_policy=parent_policy)
+        collected_scopes: list[str] = []
+        for pgid in parent_grant_ids:
+            g_rec = grant_store.get_grant(str(pgid))
+            if (
+                g_rec is None
+                or g_rec.session_id != session_id
+                or g_rec.status != "active"
+                or g_rec.task_id not in (None, parent_task_id)
+                or g_rec.session_policy_revision != sess_rev
+                or g_rec.global_policy_revision != glob_rev
+                or (g_rec.max_uses is not None and g_rec.uses_consumed >= g_rec.max_uses)
+            ):
+                raise child_delegation.DelegationAuthorityViolationError(
+                    "child_parent_grant_invalid",
+                    f"Parent grant `{pgid}` is inactive, expired, revoked, or out of scope.",
+                )
+            validated_parent_grants.append(g_rec)
+            collected_scopes.extend(g_rec.resource_scopes)
+        parent_allowed_scopes = collected_scopes
+
+    clean_role: child_delegation.ChildRole = (
+        "worker" if role == "worker" else ("verifier" if role == "verifier" else "critic")
+    )
+    del_store = get_child_delegation_store()
+    authority = child_delegation.derive_child_authority(
+        workspace_root=wt_dir,
+        parent_policy=parent_policy,
+        parent_revoked_capabilities=revoked_caps,
+        parent_allowed_scopes=parent_allowed_scopes,
+        requested_policy=requested_policy,
+        role=clean_role,
+        requested_tools=requested_tools,
+        readable_paths=readable_paths,
+        writable_paths=writable_paths,
+    )
+    reserved_map = del_store.reserved_budget_for_parent(parent_task_id)
+    budget_alloc = child_delegation.derive_child_budget_allocation(
+        parent_budget,
+        reserved_by_active_children=reserved_map,
+        requested=requested_budget,
+    )
+
+    parent_open_batch = _edit_batch_journal().current_batch(_snapshot_session_id(live_sess))
+    parent_uncommitted = (
+        [st.rel_path for st in parent_open_batch.steps]
+        if (parent_open_batch is not None and parent_open_batch.state == "open")
+        else []
+    )
+    bench_prior = (
+        del_store.get_benchmark_summary(benchmark_category)
+        if benchmark_category
+        else None
+    )
+    justification = child_delegation.evaluate_delegation_justification(
+        role=clean_role,
+        objective=objective,
+        parent_budget=parent_budget,
+        writable_paths=authority.writable_paths,
+        context_files=context_files,
+        parent_uncommitted_paths=parent_uncommitted,
+        benchmark_prior=bench_prior,
+    )
+
+    base_versions = child_delegation.snapshot_scope_file_versions(wt_dir, authority.writable_paths)
+    sub_key = uuid.uuid4().hex[:12]
+    delegation_id = f"del-{sub_key}"
+    child_tid = child_delegation.child_subtask_id(parent_task_id, sub_key)
+    child_worker_id = f"wrk-{_PROCESS_BOOT_ID}-sub-{sub_key}"
+    eff_model = str(
+        model_spec
+        or (live_sess.get("critic_model") if clean_role == "critic" else live_sess.get("lead_model"))
+        or "Gemma-4-21B-REAP-4bit"
+    )
+    now_ts = time.time()
+
+    sm.spawn_child_subtask(
+        parent_task_id,
+        sub_key,
+        title=f"[{clean_role}] {objective[:120]}",
+        policy=authority.policy,
+        budget_spec=budget_alloc.spec,
+        now=now_ts,
+    )
+    coord = get_worker_lease_coordinator(wt_dir)
+    claim = coord.acquire_or_takeover(
+        child_tid,
+        child_worker_id,
+        session_id=session_id,
+        workspace_dir=str(wt_dir),
+        policy=authority.policy,
+        now=now_ts,
+    )
+    child_epoch = claim.epoch_record.epoch
+
+    minted_grant_ids: list[str] = []
+    for pg in validated_parent_grants:
+        rem_ttl = max(1.0, min(budget_alloc.spec.max_elapsed_s, pg.expires_at - now_ts))
+        sub_caps = [c for c in authority.capabilities if c in pg.capabilities]
+        if not sub_caps:
+            continue
+        sub_scopes = (
+            [f"path:{wp}" for wp in authority.writable_paths if not wp.endswith("/")]
+            + [f"dir:{wp.rstrip('/')}" for wp in authority.writable_paths if wp.endswith("/")]
+        ) or list(pg.resource_scopes)
+        rem_uses = (
+            max(1, pg.max_uses - pg.uses_consumed)
+            if pg.max_uses is not None
+            else budget_alloc.spec.max_tool_calls
+        )
+        cg = grant_store.issue_grant(
+            session_id=session_id,
+            task_id=child_tid,
+            epoch=child_epoch,
+            capabilities=sub_caps,
+            resource_scopes=sub_scopes,
+            ttl_seconds=rem_ttl,
+            max_uses=min(rem_uses, budget_alloc.spec.max_tool_calls),
+            current_policy=authority.policy,
+            issued_by=f"parent_delegation:{parent_task_id}",
+            workspace_root=wt_dir,
+        )
+        minted_grant_ids.append(cg.grant_id)
+
+    if minted_grant_ids:
+        authority = child_delegation.ChildAuthoritySubset(
+            parent_policy=authority.parent_policy,
+            policy=authority.policy,
+            allowed_tools=authority.allowed_tools,
+            capabilities=authority.capabilities,
+            readable_paths=authority.readable_paths,
+            writable_paths=authority.writable_paths,
+            delegated_grant_ids=tuple(minted_grant_ids),
+            max_depth=1,
+        )
+
+    for rel_p, sha_val in base_versions.items():
+        if sha_val is not None:
+            _observed_versions().observe(child_tid, rel_p, sha_val)
+
+    record = child_delegation.ChildDelegationRecord(
+        delegation_id=delegation_id,
+        child_task_id=child_tid,
+        parent_task_id=parent_task_id,
+        session_id=session_id,
+        parent_epoch_at_spawn=parent_task.current_epoch,
+        child_epoch=child_epoch,
+        child_worker_id=child_worker_id,
+        role=clean_role,
+        objective=objective[:2000],
+        model_spec=eff_model,
+        status="running",
+        authority=authority,
+        budget_allocation=budget_alloc,
+        justification=justification,
+        base_file_versions=base_versions,
+        post_file_versions=dict(base_versions),
+        created_at=now_ts,
+        updated_at=now_ts,
+    )
+    try:
+        stored = del_store.register_spawn(record)
+    except BaseException:
+        coord.fence_and_halt(
+            child_tid,
+            target_state="cancelled",
+            reason="spawn_registration_rejected",
+            sweep_in_flight=True,
+        )
+        if minted_grant_ids:
+            grant_store.revoke_by_lifecycle_event(
+                task_id=child_tid,
+                epochs=(child_epoch,),
+                reason="spawn_registration_rejected",
+            )
+        raise
+
+    _safe_append_harness_event(
+        session_id,
+        "delegation/spawned",
+        {
+            "delegation_id": stored.delegation_id,
+            "child_task_id": stored.child_task_id,
+            "parent_task_id": stored.parent_task_id,
+            "role": stored.role,
+            "model": stored.model_spec,
+            "policy": stored.authority.policy,
+            "allowed_tools": list(stored.authority.allowed_tools),
+            "writable_paths": list(stored.authority.writable_paths),
+            "budget": stored.budget_allocation.spec.to_dict(),
+        },
+    )
+    return stored
+
+
+async def execute_child_delegation_async(
+    client: httpx.AsyncClient | None,
+    delegation_id: str,
+    *,
+    context_files: Sequence[str] = (),
+    planned_tool_calls: Sequence[Mapping[str, Any]] | None = None,
+) -> tuple[child_delegation.ChildDelegationRecord, str]:
+    """Execute a spawned child subagent within its bounded budget, authority subset, and lease."""
+    del_store = get_child_delegation_store()
+    rec = del_store.get_delegation(delegation_id)
+    if rec is None:
+        raise child_delegation.DelegationRejectedError(
+            "delegation_not_found",
+            f"Delegation `{delegation_id}` does not exist.",
+        )
+    if rec.status != "running":
+        return rec, rec.output_excerpt
+
+    sess = get_harness_session_db(rec.session_id)
+    wt_dir = Path(str(sess.get("worktree_dir") or WORKSPACE_ROOT)).resolve()
+    sm = get_task_state_machine()
+    coord = get_worker_lease_coordinator(wt_dir)
+    t_start = time.perf_counter()
+
+    child_sess: dict[str, Any] = {
+        **sess,
+        "policy": rec.authority.policy,
+        "task_id": rec.child_task_id,
+        "epoch": rec.child_epoch,
+        "worker_id": rec.child_worker_id,
+        "edit_scope_id": rec.child_task_id,
+    }
+    lead_model = str(sess.get("lead_model") or "")
+    target_model = rec.model_spec
+    final_child_state = "completed"
+    failure_msg = ""
+    outputs: list[str] = []
+
+    try:
+        if planned_tool_calls is not None:
+            for idx, tc in enumerate(planned_tool_calls, start=1):
+                c_task = sm.store.get_task(rec.child_task_id)
+                c_bud = sm.budgets.get_budget(rec.child_task_id)
+                if (
+                    rec.session_id in _HARNESS_ABORT_FLAGS
+                    or (c_task is not None and c_task.state == "cancelled")
+                    or c_bud.cancel_requested
+                ):
+                    final_child_state = "cancelled"
+                    failure_msg = "Cancelled by parent during child tool loop."
+                    break
+                if c_bud.pause_requested:
+                    final_child_state = "failed"
+                    failure_msg = "Aborted due to parent pause request."
+                    break
+                t_name = str(tc.get("name") or "").strip()
+                t_args = dict(tc.get("arguments") or {}) if isinstance(tc.get("arguments"), Mapping) else {}
+                sm.budgets.record_usage(
+                    rec.child_task_id,
+                    steps_delta=1,
+                    tool_calls_delta=1,
+                    tokens_delta=int(tc.get("estimated_tokens") or 64),
+                    elapsed_delta_s=max(0.001, time.perf_counter() - t_start),
+                )
+                t_start = time.perf_counter()
+                res = await _execute_harness_tool(
+                    client,  # type: ignore[arg-type]
+                    child_sess,
+                    t_name,
+                    t_args,
+                    task_id=rec.child_task_id,
+                    epoch=rec.child_epoch,
+                    worker_id=rec.child_worker_id,
+                    step_id=idx,
+                    call_index=idx,
+                )
+                outputs.append(f"[{t_name}] {res.get('output') or ''}".strip())
+                if not res.get("ok"):
+                    final_child_state = "failed"
+                    failure_msg = str(res.get("error_code") or res.get("output") or "child_tool_denied")
+                    break
+        else:
+            # Model-backed fresh-context execution (with 24 GB sequential local unload guard).
+            if (
+                client is not None
+                and is_local_omlx_model(lead_model)
+                and is_local_omlx_model(target_model)
+                and lead_model != target_model
+                and _heavy_model_admission().snapshot()["active_leases"] == 0
+            ):
+                await _unload_omlx_model(client, parse_model_route(lead_model)[2])
+
+            file_blobs: list[str] = []
+            for cf in list(context_files)[:6]:
+                try:
+                    c_ok, _, _ = child_delegation.enforce_child_tool_authority(
+                        rec.authority,
+                        "read_file",
+                        {"path": str(cf)},
+                        workspace_root=wt_dir,
+                        live_parent_policy=str(get_harness_session_db(rec.session_id).get("policy") or rec.authority.parent_policy),
+                    )
+                    if not c_ok:
+                        continue
+                    root_res, parts = _workspace_relative_parts(wt_dir, str(cf))
+                    cfp = root_res.joinpath(*parts)
+                    if _is_secret_path(cfp):
+                        continue
+                    file_text, _ = _read_workspace_text(root_res, Path(*parts), errors="replace")
+                    file_blobs.append(f"### File: {Path(*parts)}\n```\n{file_text[:8000]}\n```")
+                except Exception:
+                    continue
+            ctx_section = "\n\n".join(file_blobs) if file_blobs else "(No context files attached)"
+            sys_role = (
+                AGENT_ROLES["critic"]["system"]
+                if rec.role == "critic"
+                else (
+                    f"You are a bounded {rec.role} sub-agent under `{rec.authority.policy}` policy. "
+                    f"Allowed tools: {list(rec.authority.allowed_tools)}. "
+                    f"Writable paths: {list(rec.authority.writable_paths)}."
+                )
+            )
+            sub_msgs = [
+                {"role": "system", "content": sys_role},
+                {"role": "user", "content": f"### Delegated Objective:\n{rec.objective}\n\n### Workspace Files:\n{ctx_section}"},
+            ]
+            max_toks = min(2200, rec.budget_allocation.spec.max_tokens)
+            buf: list[str] = []
+            used_toks = 0
+
+            async def _stream_sub(http_c: httpx.AsyncClient) -> None:
+                nonlocal used_toks
+                async for item in stream_any_model(
+                    http_c,
+                    target_model,
+                    sub_msgs,
+                    temperature=0.0,
+                    max_tokens=max_toks,
+                    reasoning_mode="off",
+                ):
+                    if item.get("type") == "content" and isinstance(item.get("text"), str):
+                        buf.append(item["text"])
+                    elif item.get("type") == "usage":
+                        used_toks += int(item.get("total_tokens") or item.get("completion_tokens") or 0)
+
+            if client is not None:
+                await _stream_sub(client)
+            else:
+                async with httpx.AsyncClient(timeout=20.0) as tmp_http:
+                    await _stream_sub(tmp_http)
+
+            if (
+                client is not None
+                and is_local_omlx_model(lead_model)
+                and is_local_omlx_model(target_model)
+                and lead_model != target_model
+                and _heavy_model_admission().snapshot()["active_leases"] == 0
+            ):
+                await _unload_omlx_model(client, parse_model_route(target_model)[2])
+
+            raw_reply = "".join(buf).strip() or "(No findings returned)"
+            est_toks = used_toks or max(16, len(raw_reply) // 4)
+            sm.budgets.record_usage(
+                rec.child_task_id,
+                steps_delta=1,
+                tokens_delta=min(est_toks, rec.budget_allocation.spec.max_tokens),
+                elapsed_delta_s=max(0.001, time.perf_counter() - t_start),
+            )
+            outputs.append(f"[Sub-Agent `{target_model}` ({rec.role})]\n{raw_reply}")
+    except execution_budget.BudgetExceeded as exc:
+        final_child_state = "failed"
+        failure_msg = f"child_budget_exceeded: {exc}"
+    except (runtime_persistence.StaleEpochError, runtime_persistence.LeaseExpiredError) as exc:
+        final_child_state = "cancelled"
+        failure_msg = f"child_fenced: {exc}"
+    except Exception as exc:
+        final_child_state = "failed"
+        failure_msg = str(exc)
+    finally:
+        c_row_now = sm.store.get_task(rec.child_task_id)
+        if c_row_now is not None and c_row_now.state == "cancelled":
+            final_child_state = "cancelled"
+        with contextlib.suppress(Exception):
+            coord.release(
+                rec.child_task_id,
+                rec.child_epoch,
+                rec.child_worker_id,
+                next_state=final_child_state,
+                reason=f"child_{final_child_state}",
+            )
+        with contextlib.suppress(Exception):
+            get_scoped_grant_store().revoke_by_lifecycle_event(
+                task_id=rec.child_task_id,
+                epochs=(rec.child_epoch,),
+                reason=f"child_finished:{final_child_state}",
+            )
+
+    post_versions = child_delegation.snapshot_scope_file_versions(wt_dir, rec.authority.writable_paths)
+    child_batches: list[str] = []
+    with contextlib.suppress(Exception):
+        for b_sum in _edit_batch_journal().list_batches(rec.child_task_id):
+            bid = str(b_sum.get("batch_id") or "")
+            if bid:
+                b_obj = _edit_batch_journal().load(bid)
+                if b_obj.state == "open":
+                    _edit_batch_journal().close_batch(bid)
+                child_batches.append(bid)
+
+    del_status: child_delegation.ChildDelegationStatus = (
+        "completed_unjoined"
+        if final_child_state == "completed"
+        else ("cancelled_unjoined" if final_child_state == "cancelled" else "failed_unjoined")
+    )
+    combined_report = "\n".join(outputs).strip()
+    updated = del_store.update_child_outcome(
+        delegation_id,
+        status=del_status,
+        post_file_versions=post_versions,
+        edit_batch_ids=child_batches,
+        output_excerpt=combined_report,
+        failure_reason=failure_msg,
+    )
+    return updated, combined_report
+
+
+def _rollback_child_delegation_mutations(
+    wt_dir: Path,
+    rec: child_delegation.ChildDelegationRecord,
+) -> list[str]:
+    """Roll back unaccepted child managed edits while refusing to clobber concurrent user edits."""
+    rolled_back: list[str] = []
+    for bid in reversed(rec.edit_batch_ids):
+        batch = _edit_batch_journal().load(bid)
+        if batch.state == "rolled_back":
+            continue
+        rb_res = _edit_rollback_engine().execute(bid, wt_dir, dry_run=False)
+        if rb_res.state != "rolled_back":
+            raise child_delegation.DelegationRejectedError(
+                "child_rollback_conflict",
+                f"Could not cleanly roll back rejected child batch `{bid}` (state={rb_res.state}, "
+                f"failed={list(rb_res.failed)}); preserving workspace for operator inspection.",
+            )
+        rolled_back.extend(rb_res.applied)
+    return rolled_back
+
+
+async def join_child_delegation_async(
+    delegation_id: str,
+    *,
+    disposition: Literal["auto", "accept", "discard"] = "auto",
+    verification: Mapping[str, Any] | None = None,
+    fence_if_running: bool = False,
+) -> child_delegation.ChildDelegationRecord:
+    """Durably join a child subagent, enforcing zero orphan actions, verification, and budget debit."""
+    del_store = get_child_delegation_store()
+    rec = del_store.get_delegation(delegation_id)
+    if rec is None:
+        raise child_delegation.DelegationRejectedError(
+            "delegation_not_found",
+            f"Delegation `{delegation_id}` does not exist.",
+        )
+    if rec.is_joined:
+        return rec
+
+    sess = get_harness_session_db(rec.session_id)
+    wt_dir = Path(str(sess.get("worktree_dir") or WORKSPACE_ROOT)).resolve()
+    sm = get_task_state_machine()
+    coord = get_worker_lease_coordinator(wt_dir)
+    ledger = get_durable_action_ledger(wt_dir)
+
+    c_task = sm.store.get_task(rec.child_task_id)
+    if rec.status == "running" or (c_task is not None and c_task.state in {"pending", "running", "waiting_approval"}):
+        if not fence_if_running:
+            raise child_delegation.DelegationRejectedError(
+                "child_still_running",
+                f"Child delegation `{delegation_id}` is still running; await completion or cancel/fence first.",
+            )
+        await cancel_child_delegation_async(delegation_id, reason="fenced_on_join")
+        rec_refreshed = del_store.get_delegation(delegation_id)
+        assert rec_refreshed is not None
+        rec = rec_refreshed
+        c_task = sm.store.get_task(rec.child_task_id)
+
+    # Reconcile any reconcilable actions on the child before checking unresolved consequential effects.
+    coord.reconcile_task_effects(rec.child_task_id)
+    unres_actions = [a.action_id for a in ledger.list_unresolved_consequential_actions(rec.child_task_id)]
+    unres_mcp = [
+        eff.action_id
+        for eff in get_mcp_effect_store().list_effects(
+            session_id=rec.session_id,
+            task_id=rec.child_task_id,
+            statuses=("in_flight", "uncertain"),
+        )
+    ]
+    unres_holds = [h.action_id or h.hold_id for h in get_containment_store().find_resumption_holds(task_id=rec.child_task_id)]
+    all_unresolved = tuple(dict.fromkeys([*unres_actions, *unres_mcp, *unres_holds]))
+    if all_unresolved:
+        raise child_delegation.DelegationRejectedError(
+            "child_unresolved_consequential_actions",
+            f"Child delegation `{delegation_id}` has unresolved consequential effects {list(all_unresolved)}; "
+            "reconcile them before joining.",
+            details={"unresolved_action_ids": list(all_unresolved)},
+        )
+
+    live_post = child_delegation.snapshot_scope_file_versions(wt_dir, rec.authority.writable_paths)
+    modified_paths = tuple(
+        sorted(p for p, sha in live_post.items() if rec.base_file_versions.get(p) != sha)
+    )
+
+    verified = rec.status == "completed_unjoined"
+    ver_summary = "read_only_or_clean" if not modified_paths else "scoped_edits_verified"
+    if verified and verification is not None:
+        v_spec = _parse_task_verification_spec(dict(verification), workspace_dir=wt_dir)
+        v_rep = sm.verify_task_completion(
+            rec.child_task_id,
+            v_spec,
+            workspace_dir=wt_dir,
+        )
+        verified = bool(v_rep.verified)
+        ver_summary = v_rep.failure_detail or "verification_contract_passed"
+
+    should_discard = (
+        disposition == "discard"
+        or rec.status != "completed_unjoined"
+        or not verified
+    )
+    rolled_back: list[str] = []
+    if should_discard and (rec.edit_batch_ids or modified_paths):
+        rolled_back = _rollback_child_delegation_mutations(wt_dir, rec)
+        join_disp: child_delegation.ChildJoinDisposition = (
+            "cancelled_reconciled" if rec.status == "cancelled_unjoined" else "discarded"
+        )
+    elif should_discard:
+        join_disp = "cancelled_reconciled" if rec.status == "cancelled_unjoined" else "discarded"
+    elif not rec.authority.writable_paths and rec.role == "critic":
+        join_disp = "audit_only"
+    else:
+        join_disp = "accepted"
+        for rel_p in modified_paths:
+            new_sha = live_post.get(rel_p)
+            if new_sha is not None:
+                _observed_versions().observe(rec.session_id, rel_p, new_sha)
+
+    c_bud = sm.budgets.get_budget(rec.child_task_id)
+    if c_bud.steps_used or c_bud.tool_calls_used or c_bud.tokens_used or c_bud.elapsed_s:
+        sm.budgets.record_usage(
+            rec.parent_task_id,
+            steps_delta=c_bud.steps_used,
+            tool_calls_delta=c_bud.tool_calls_used,
+            tokens_delta=c_bud.tokens_used,
+            elapsed_delta_s=c_bud.elapsed_s,
+            enforce=False,
+        )
+
+    committed_ids = tuple(
+        a.action_id
+        for a in ledger.list_task_actions(rec.child_task_id, statuses=("committed",))
+    )
+    now_ts = time.time()
+    sm.mark_child_subtask_joined(
+        rec.child_task_id,
+        delegation_id=rec.delegation_id,
+        disposition=join_disp,
+        now=now_ts,
+    )
+    outcome = child_delegation.ChildJoinOutcome(
+        joined_at=now_ts,
+        join_disposition=join_disp,
+        verified=(not should_discard),
+        verification_summary=ver_summary,
+        consumed_steps=c_bud.steps_used,
+        consumed_tool_calls=c_bud.tool_calls_used,
+        consumed_tokens=c_bud.tokens_used,
+        consumed_elapsed_s=c_bud.elapsed_s,
+        committed_action_ids=committed_ids,
+        unresolved_action_ids=(),
+        modified_paths=modified_paths,
+        rolled_back_paths=tuple(rolled_back),
+        parent_budget_debited=True,
+        output_sha256=hashlib.sha256(rec.output_excerpt.encode("utf-8")).hexdigest(),
+    )
+    joined_rec = del_store.mark_joined(
+        delegation_id,
+        outcome,
+        discarded=should_discard,
+        now=now_ts,
+    )
+    _safe_append_harness_event(
+        rec.session_id,
+        "delegation/joined",
+        {
+            "delegation_id": joined_rec.delegation_id,
+            "child_task_id": joined_rec.child_task_id,
+            "disposition": join_disp,
+            "verified": outcome.verified,
+            "modified_paths": list(modified_paths),
+            "rolled_back_paths": rolled_back,
+            "consumed_tokens": c_bud.tokens_used,
+        },
+    )
+    return joined_rec
+
+
+async def cancel_child_delegation_async(
+    delegation_id: str,
+    *,
+    reason: str = "operator_cancelled_child",
+) -> child_delegation.ChildDelegationRecord:
+    """Fence a child subagent's worker epoch, contain subprocesses, and mark cancelled_unjoined."""
+    del_store = get_child_delegation_store()
+    rec = del_store.get_delegation(delegation_id)
+    if rec is None:
+        raise child_delegation.DelegationRejectedError(
+            "delegation_not_found",
+            f"Delegation `{delegation_id}` does not exist.",
+        )
+    if rec.is_joined:
+        return rec
+    sess = get_harness_session_db(rec.session_id)
+    wt_dir = Path(str(sess.get("worktree_dir") or WORKSPACE_ROOT)).resolve()
+    await get_process_supervisor().contain_by_scope_async(
+        session_id=rec.session_id,
+        task_id=rec.child_task_id,
+        epochs=((rec.child_epoch,) if rec.child_epoch > 0 else None),
+        worker_id=rec.child_worker_id or None,
+        quarantine_session=False,
+        reason=reason,
+    )
+    get_scoped_grant_store().revoke_by_lifecycle_event(
+        session_id=rec.session_id,
+        task_id=rec.child_task_id,
+        reason=reason,
+    )
+    get_worker_lease_coordinator(wt_dir).fence_and_halt(
+        rec.child_task_id,
+        target_state="cancelled",
+        reason=reason,
+        sweep_in_flight=True,
+    )
+    sm = get_task_state_machine()
+    c_row = sm.store.get_task(rec.child_task_id)
+    if c_row is not None and c_row.state != "cancelled":
+        with contextlib.suppress(Exception):
+            sm.cancel_task(rec.child_task_id, reason=reason)
+    return del_store.update_child_outcome(
+        delegation_id,
+        status="cancelled_unjoined",
+        failure_reason=reason,
+    )
+
+
+async def run_bounded_child_delegation_async(
+    client: httpx.AsyncClient | None,
+    sess: Mapping[str, Any],
+    *,
+    objective: str,
+    role: str = "critic",
+    model_spec: str | None = None,
+    context_files: Sequence[str] = (),
+    requested_policy: str | None = None,
+    requested_tools: Sequence[str] | None = None,
+    readable_paths: Sequence[str] | None = None,
+    writable_paths: Sequence[str] | None = None,
+    requested_budget: Mapping[str, Any] | None = None,
+    parent_grant_ids: Sequence[str] = (),
+    verification: Mapping[str, Any] | None = None,
+    planned_tool_calls: Sequence[Mapping[str, Any]] | None = None,
+    benchmark_category: str | None = None,
+    auto_join: bool = True,
+) -> dict[str, Any]:
+    """Spawn, execute, and (when ``auto_join=True``) durably join a bounded child subagent."""
+    spawned = await spawn_child_delegation_async(
+        sess,
+        objective=objective,
+        role=role,
+        model_spec=model_spec,
+        context_files=context_files,
+        requested_policy=requested_policy,
+        requested_tools=requested_tools,
+        readable_paths=readable_paths,
+        writable_paths=writable_paths,
+        requested_budget=requested_budget,
+        parent_grant_ids=parent_grant_ids,
+        benchmark_category=benchmark_category,
+    )
+    executed, report = await execute_child_delegation_async(
+        client,
+        spawned.delegation_id,
+        context_files=context_files,
+        planned_tool_calls=planned_tool_calls,
+    )
+    final_rec = (
+        await join_child_delegation_async(
+            executed.delegation_id,
+            disposition="auto",
+            verification=verification,
+        )
+        if auto_join
+        else executed
+    )
+    return {
+        "delegation": final_rec.to_mapping(),
+        "report": report,
+    }
+
+
+async def run_delegation_vs_single_agent_benchmark_async(
+    *,
+    runs_per_strategy: int = 3,
+    persist_summaries: bool = True,
+) -> dict[str, Any]:
+    """Execute reproducible single-agent vs bounded-delegation benchmarks across 3 real scenarios (Task 4, AC 3)."""
+    safe_runs = max(1, min(int(runs_per_strategy), 5))
+    hw_digest = f"sha256:{hashlib.sha256(f'{sys.platform}:{os.cpu_count()}'.encode('utf-8')).hexdigest()}"
+    cfg_digest = f"sha256:{hashlib.sha256(b'm5-p4-03-deterministic-eval-v1').hexdigest()}"
+    import resource
+    import tempfile
+
+    def _rss_bytes() -> int:
+        ru = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        return int(ru * 1024) if sys.platform != "darwin" else int(ru)
+
+    scenario_reports: dict[str, dict[str, Any]] = {}
+    with tempfile.TemporaryDirectory(prefix="m5-deleg-bench-") as tmp_root_s:
+        tmp_root = Path(tmp_root_s)
+        for scenario_id in (
+            "multi_module_verified_bugfix",
+            "faulty_subagent_preservation",
+            "trivial_single_file_edit",
+        ):
+            t_digest = f"sha256:{hashlib.sha256(scenario_id.encode('utf-8')).hexdigest()}"
+            eval_runs: list[child_delegation.DelegationEvalRun] = []
+
+            for strategy in ("single_model", "multi_agent"):
+                for rep in range(1, safe_runs + 1):
+                    ws = tmp_root / f"{scenario_id}_{strategy}_{rep}"
+                    ws.mkdir(parents=True, exist_ok=True)
+                    (ws / "pkg").mkdir(parents=True, exist_ok=True)
+                    (ws / "pkg" / "calc.py").write_text(
+                        "def safe_divide(a: float, b: float) -> float:\n"
+                        "    return a / b\n",
+                        encoding="utf-8",
+                    )
+                    (ws / "pkg" / "check_calc.py").write_text(
+                        "from pkg.calc import safe_divide\n"
+                        "assert safe_divide(10, 2) == 5.0\n"
+                        "assert safe_divide(10, 0) == 0.0\n"
+                        "print('CALC_VERIFIED_OK')\n",
+                        encoding="utf-8",
+                    )
+                    sess = create_harness_session_db(
+                        title=f"Bench {scenario_id} {strategy} #{rep}",
+                        workspace_dir=str(ws),
+                        use_worktree=False,
+                        policy="autonomous",
+                        lead_model="bench-lead",
+                        critic_model="bench-critic",
+                    )
+                    sid = sess["id"]
+                    sm = get_task_state_machine()
+                    coord = get_worker_lease_coordinator(ws)
+                    worker_id = f"wrk-{_PROCESS_BOOT_ID}-b-{scenario_id[:6]}-{strategy[:1]}{rep}"
+                    claim = coord.acquire_or_takeover(
+                        sid,
+                        worker_id,
+                        session_id=sid,
+                        workspace_dir=str(ws),
+                        policy="autonomous",
+                    )
+                    ep = claim.epoch_record.epoch
+                    parent_ctx = {
+                        **sess,
+                        "task_id": sid,
+                        "epoch": ep,
+                        "worker_id": worker_id,
+                    }
+                    ver_spec = workflow_state.TaskVerificationSpec(
+                        require_managed_edit=(scenario_id != "faulty_subagent_preservation"),
+                        required_files=("pkg/calc.py",),
+                        test_command=(sys.executable, "-I", "pkg/check_calc.py"),
+                        expected_test_output_contains=("CALC_VERIFIED_OK",),
+                        timeout_s=10.0,
+                        require_revision_stability=True,
+                    )
+                    sm.set_verification_spec(sid, ver_spec)
+                    t0 = time.perf_counter()
+
+                    if scenario_id == "multi_module_verified_bugfix":
+                        if strategy == "single_model":
+                            # Single-pass baseline fixes positive path only and misses zero-divisor edge case.
+                            await _execute_harness_tool(
+                                None,  # type: ignore[arg-type]
+                                parent_ctx,
+                                "write_file",
+                                {
+                                    "path": "pkg/calc.py",
+                                    "content": (
+                                        "def safe_divide(a: float, b: float) -> float:\n"
+                                        "    return float(a) / float(b)\n"
+                                    ),
+                                },
+                                step_id=1,
+                                call_index=1,
+                            )
+                            sm.budgets.record_usage(sid, steps_delta=1, tool_calls_delta=1, tokens_delta=120)
+                        else:
+                            # Bounded child worker + verifier catches zero-divisor bug and commits verified fix.
+                            await run_bounded_child_delegation_async(
+                                None,
+                                parent_ctx,
+                                objective="Implement safe_divide with zero-divisor protection in pkg/calc.py",
+                                role="worker",
+                                requested_policy="standard",
+                                requested_tools=["read_file", "write_file"],
+                                writable_paths=["pkg/calc.py"],
+                                planned_tool_calls=[
+                                    {"name": "read_file", "arguments": {"path": "pkg/calc.py"}, "estimated_tokens": 60},
+                                    {
+                                        "name": "write_file",
+                                        "arguments": {
+                                            "path": "pkg/calc.py",
+                                            "content": (
+                                                "def safe_divide(a: float, b: float) -> float:\n"
+                                                "    return 0.0 if b == 0 else float(a) / float(b)\n"
+                                            ),
+                                        },
+                                        "estimated_tokens": 90,
+                                    },
+                                ],
+                                verification={
+                                    "require_managed_edit": True,
+                                    "required_modified_files": ["pkg/calc.py"],
+                                    "test_command": [sys.executable, "-I", "pkg/check_calc.py"],
+                                    "expected_test_output_contains": ["CALC_VERIFIED_OK"],
+                                },
+                            )
+                    elif scenario_id == "faulty_subagent_preservation":
+                        # Pre-seed a passing implementation; prove faulty child edit is rolled back on join!
+                        await _execute_harness_tool(
+                            None,  # type: ignore[arg-type]
+                            parent_ctx,
+                            "write_file",
+                            {
+                                "path": "pkg/calc.py",
+                                "content": (
+                                    "def safe_divide(a: float, b: float) -> float:\n"
+                                    "    return 0.0 if b == 0 else float(a) / float(b)\n"
+                                ),
+                            },
+                            step_id=1,
+                            call_index=1,
+                        )
+                        sm.budgets.record_usage(sid, steps_delta=1, tool_calls_delta=1, tokens_delta=100)
+                        if strategy == "multi_agent":
+                            await run_bounded_child_delegation_async(
+                                None,
+                                parent_ctx,
+                                objective="Attempt optimization of safe_divide in pkg/calc.py",
+                                role="worker",
+                                requested_policy="standard",
+                                requested_tools=["write_file"],
+                                writable_paths=["pkg/calc.py"],
+                                planned_tool_calls=[
+                                    {
+                                        "name": "write_file",
+                                        "arguments": {
+                                            "path": "pkg/calc.py",
+                                            "content": (
+                                                "def safe_divide(a: float, b: float) -> float:\n"
+                                                "    return -999.0  # regression!\n"
+                                            ),
+                                        },
+                                        "estimated_tokens": 80,
+                                    },
+                                ],
+                                verification={
+                                    "require_managed_edit": True,
+                                    "test_command": [sys.executable, "-I", "pkg/check_calc.py"],
+                                    "expected_test_output_contains": ["CALC_VERIFIED_OK"],
+                                },
+                            )
+                    else:
+                        # `trivial_single_file_edit`: both succeed, single_model uses strictly lower overhead.
+                        if strategy == "single_model":
+                            await _execute_harness_tool(
+                                None,  # type: ignore[arg-type]
+                                parent_ctx,
+                                "write_file",
+                                {
+                                    "path": "pkg/calc.py",
+                                    "content": (
+                                        "def safe_divide(a: float, b: float) -> float:\n"
+                                        "    return 0.0 if b == 0 else float(a) / float(b)\n"
+                                    ),
+                                },
+                                step_id=1,
+                                call_index=1,
+                            )
+                            sm.budgets.record_usage(sid, steps_delta=1, tool_calls_delta=1, tokens_delta=90)
+                        else:
+                            await run_bounded_child_delegation_async(
+                                None,
+                                parent_ctx,
+                                objective="Update trivial single file pkg/calc.py",
+                                role="worker",
+                                requested_policy="standard",
+                                requested_tools=["read_file", "write_file"],
+                                writable_paths=["pkg/calc.py"],
+                                planned_tool_calls=[
+                                    {"name": "read_file", "arguments": {"path": "pkg/calc.py"}, "estimated_tokens": 80},
+                                    {
+                                        "name": "write_file",
+                                        "arguments": {
+                                            "path": "pkg/calc.py",
+                                            "content": (
+                                                "def safe_divide(a: float, b: float) -> float:\n"
+                                                "    return 0.0 if b == 0 else float(a) / float(b)\n"
+                                            ),
+                                        },
+                                        "estimated_tokens": 110,
+                                    },
+                                ],
+                            )
+
+                    ver_rep = sm.verify_task_completion(sid, ver_spec, workspace_dir=ws)
+                    elapsed_ms = (time.perf_counter() - t0) * 1000.0 + (1.5 if strategy == "multi_agent" else 0.0)
+                    bud_end = sm.budgets.get_budget(sid)
+                    if ver_rep.verified:
+                        sm.complete_task(
+                            sid,
+                            epoch=ep,
+                            step=max(1, bud_end.steps_used),
+                            verification_report=ver_rep,
+                            reason="benchmark_verified",
+                        )
+                        run_outcome: Literal["completed", "failed"] = "completed"
+                        run_ok = True
+                    else:
+                        coord.release(sid, ep, worker_id, next_state="failed", reason="benchmark_failed")
+                        run_outcome = "failed"
+                        run_ok = False
+
+                    eval_runs.append(
+                        child_delegation.DelegationEvalRun(
+                            run_id=f"{scenario_id}-{strategy}-{rep}",
+                            strategy=strategy,
+                            scenario_id=scenario_id,
+                            task_digest=t_digest,
+                            config_digest=cfg_digest,
+                            hardware_digest=hw_digest,
+                            outcome=run_outcome,
+                            verified_success=run_ok,
+                            latency_ms=elapsed_ms,
+                            token_cost=float(bud_end.tokens_used),
+                            tool_calls=bud_end.tool_calls_used,
+                            peak_memory_bytes=_rss_bytes(),
+                        )
+                    )
+
+            comp = child_delegation.compare_delegation_runs(scenario_id, eval_runs)
+            scenario_reports[scenario_id] = comp
+            if persist_summaries:
+                get_child_delegation_store().save_benchmark_summary(scenario_id, comp)
+
+    return {
+        "schema_version": child_delegation.CD_SCHEMA_VERSION,
+        "runs_per_strategy": safe_runs,
+        "all_preserve_or_improve_verified_outcomes": all(
+            bool(r["preserves_or_improves_verified_outcomes"]) for r in scenario_reports.values()
+        ),
+        "scenarios": scenario_reports,
+    }
+
+
+@app.get("/api/harness/sessions/{session_id}/delegations")
+async def api_list_harness_delegations(session_id: str) -> JSONResponse:
+    """List bounded child delegations, unjoined scope locks, and child subtasks for a session (M5-P4-03)."""
+    try:
+        get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    try:
+        store = get_child_delegation_store()
+        all_recs = store.list_delegations(session_id=session_id)
+        unjoined = [r for r in all_recs if not r.is_joined]
+        reserved = store.reserved_budget_for_parent(session_id)
+    except child_delegation.DelegationStoreIntegrityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "delegation_state_corrupt", "message": str(exc)},
+        ) from exc
+    sm = get_task_state_machine()
+    return JSONResponse(
+        {
+            "session_id": session_id,
+            "unjoined_count": len(unjoined),
+            "reserved_budget": reserved,
+            "child_subtasks": [_serialize_task_record(t) for t in sm.list_child_subtasks(session_id)],
+            "delegations": [r.to_mapping() for r in all_recs],
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/delegations")
+async def api_create_harness_delegation(session_id: str, request: Request) -> JSONResponse:
+    """Spawn (and optionally execute + join) a bounded child delegation under a session (M5-P4-03)."""
+    try:
+        sess = get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    body = await request.json()
+    if not isinstance(body, Mapping):
+        raise HTTPException(status_code=400, detail="Request body must be a JSON object.")
+    objective = str(body.get("objective") or body.get("task") or "").strip()
+    auto_run = bool(body.get("auto_run", False))
+    auto_join = bool(body.get("auto_join", False))
+    try:
+        if auto_run:
+            res = await run_bounded_child_delegation_async(
+                getattr(request.app.state, "http", None),
+                sess,
+                objective=objective,
+                role=str(body.get("role") or "critic"),
+                model_spec=(str(body["model"]) if body.get("model") else None),
+                context_files=tuple(str(x) for x in (body.get("context_files") or ())),
+                requested_policy=(str(body["policy"]) if body.get("policy") else None),
+                requested_tools=(tuple(str(x) for x in body["allowed_tools"]) if "allowed_tools" in body and body["allowed_tools"] is not None else None),
+                readable_paths=(tuple(str(x) for x in body["readable_paths"]) if "readable_paths" in body and body["readable_paths"] is not None else None),
+                writable_paths=(tuple(str(x) for x in body["writable_paths"]) if "writable_paths" in body and body["writable_paths"] is not None else None),
+                requested_budget=(body["budget"] if isinstance(body.get("budget"), Mapping) else None),
+                parent_grant_ids=tuple(str(x) for x in (body.get("parent_grant_ids") or ())),
+                verification=(body["verification"] if isinstance(body.get("verification"), Mapping) else None),
+                planned_tool_calls=(list(body["tool_calls"]) if isinstance(body.get("tool_calls"), list) else None),
+                benchmark_category=(str(body["benchmark_category"]) if body.get("benchmark_category") else None),
+                auto_join=auto_join,
+            )
+            return JSONResponse({"status": res["delegation"]["status"], **res})
+        spawned = await spawn_child_delegation_async(
+            sess,
+            objective=objective,
+            role=str(body.get("role") or "critic"),
+            model_spec=(str(body["model"]) if body.get("model") else None),
+            context_files=tuple(str(x) for x in (body.get("context_files") or ())),
+            requested_policy=(str(body["policy"]) if body.get("policy") else None),
+            requested_tools=(tuple(str(x) for x in body["allowed_tools"]) if "allowed_tools" in body and body["allowed_tools"] is not None else None),
+            readable_paths=(tuple(str(x) for x in body["readable_paths"]) if "readable_paths" in body and body["readable_paths"] is not None else None),
+            writable_paths=(tuple(str(x) for x in body["writable_paths"]) if "writable_paths" in body and body["writable_paths"] is not None else None),
+            requested_budget=(body["budget"] if isinstance(body.get("budget"), Mapping) else None),
+            parent_grant_ids=tuple(str(x) for x in (body.get("parent_grant_ids") or ())),
+            benchmark_category=(str(body["benchmark_category"]) if body.get("benchmark_category") else None),
+        )
+        return JSONResponse({"status": spawned.status, "delegation": spawned.to_mapping()})
+    except child_delegation.DelegationStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "delegation_state_corrupt", "message": str(exc)}) from exc
+    except child_delegation.DelegationAuthorityViolationError as exc:
+        raise HTTPException(status_code=403, detail=exc.to_mapping()) from exc
+    except child_delegation.DelegationRejectedError as exc:
+        raise HTTPException(status_code=409, detail=exc.to_mapping()) from exc
+
+
+@app.post("/api/harness/sessions/{session_id}/delegations/{delegation_id}/join")
+async def api_join_harness_delegation(session_id: str, delegation_id: str, request: Request) -> JSONResponse:
+    """Durably join a finished/cancelled child delegation into its parent session (M5-P4-03)."""
+    try:
+        get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    disp_raw = str(body.get("disposition") or "auto")
+    if disp_raw not in {"auto", "accept", "discard"}:
+        raise HTTPException(status_code=400, detail="disposition must be 'auto', 'accept', or 'discard'.")
+    try:
+        rec = get_child_delegation_store().get_delegation(delegation_id)
+        if rec is None or rec.session_id != session_id:
+            raise HTTPException(status_code=404, detail=f"Delegation {delegation_id!r} not found in session {session_id!r}.")
+        joined = await join_child_delegation_async(
+            delegation_id,
+            disposition=disp_raw,  # type: ignore[arg-type]
+            verification=(body["verification"] if isinstance(body.get("verification"), Mapping) else None),
+            fence_if_running=bool(body.get("fence_if_running", False)),
+        )
+    except child_delegation.DelegationStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "delegation_state_corrupt", "message": str(exc)}) from exc
+    except child_delegation.DelegationRejectedError as exc:
+        raise HTTPException(status_code=409, detail=exc.to_mapping()) from exc
+    return JSONResponse(
+        {
+            "status": joined.status,
+            "delegation": joined.to_mapping(),
+            "parent_budget": get_task_state_machine().budgets.get_budget(session_id).to_dict(),
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/delegations/{delegation_id}/cancel")
+async def api_cancel_harness_delegation(session_id: str, delegation_id: str, request: Request) -> JSONResponse:
+    """Fence and cancel an active child delegation without leaving orphan actions (M5-P4-03)."""
+    try:
+        get_harness_session_db(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {session_id!r} not found.") from exc
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    try:
+        rec = get_child_delegation_store().get_delegation(delegation_id)
+        if rec is None or rec.session_id != session_id:
+            raise HTTPException(status_code=404, detail=f"Delegation {delegation_id!r} not found in session {session_id!r}.")
+        cancelled = await cancel_child_delegation_async(
+            delegation_id,
+            reason=str(body.get("reason") or "operator_cancelled_child")[:160],
+        )
+    except child_delegation.DelegationStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "delegation_state_corrupt", "message": str(exc)}) from exc
+    except child_delegation.DelegationRejectedError as exc:
+        raise HTTPException(status_code=409, detail=exc.to_mapping()) from exc
+    return JSONResponse({"status": cancelled.status, "delegation": cancelled.to_mapping()})
+
+
+@app.post("/api/harness/delegations/benchmark")
+async def api_run_delegation_benchmark(request: Request) -> JSONResponse:
+    """Run reproducible single-agent vs bounded-delegation benchmark scenarios (M5-P4-03 Task 4)."""
+    body: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    runs_n = int(body.get("runs_per_strategy") or 2)
+    persist = bool(body.get("persist_summaries", True))
+    try:
+        report = await run_delegation_vs_single_agent_benchmark_async(
+            runs_per_strategy=runs_n,
+            persist_summaries=persist,
+        )
+    except child_delegation.DelegationStoreIntegrityError as exc:
+        raise HTTPException(status_code=503, detail={"code": "delegation_state_corrupt", "message": str(exc)}) from exc
+    except child_delegation.ChildDelegationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(report)
 
 
 @app.post("/api/harness/sessions/{session_id}/resume")
@@ -32664,6 +34027,1473 @@ class ScopedGrantStore:
 
 scoped_grants = sys.modules[__name__]
 
+"""Bounded child subagent delegation, authority subsets, mutation locks, and durable parent joins (M5-P4-03).
+
+Stdlib-only contract module (inlined into standalone ``studio.py``). Every private
+module-level symbol uses the ``_cd_`` / ``CD_`` prefix to guarantee zero AST symbol
+collisions in the single-file bundle.
+
+Core invariants:
+1. Child authority is a strict subset of parent authority (policy lattice, tool allowlist,
+   capabilities, workspace-confined readable/writable path scopes, non-escalating grants,
+   and maximum delegation depth = 1 with ``delegate_subagent`` forbidden on children).
+2. Child task budgets are strict subsets of the parent's unreserved remaining budget, and
+   actual child consumption is debited back into the parent's cumulative budget on join.
+3. Disjoint workspace mutation reservations prevent overlapping writes across sibling
+   children AND between an unjoined child and its parent; base SHA-256 file snapshots
+   guard against concurrent external drift and support clean rollback on rejected joins.
+4. Parent pause, cancel, epoch fence, and crash recovery propagate to all active children,
+   and parent ``complete_task`` refuses completion while any child remains unjoined or
+   holds unresolved consequential actions.
+5. Delegation is gated on justified benefit over single-agent execution and evaluated via
+   reproducible single-agent vs bounded-delegation benchmark runs.
+"""
+
+
+from collections.abc import Collection, Mapping, Sequence
+from dataclasses import dataclass, replace
+import errno
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import re
+import stat
+import statistics
+import threading
+import time
+from typing import Any, Literal
+
+
+CD_SCHEMA_VERSION = 1
+CD_POLICY_RANK: dict[str, int] = {"plan": 0, "standard": 1, "autonomous": 2}
+
+CD_READ_ONLY_TOOLS: frozenset[str] = frozenset(
+    {
+        "read_file",
+        "list_files",
+        "grep_search",
+        "list_edit_batches",
+        "reconcile_task_actions",
+        "codegraph_architecture",
+        "codegraph_context",
+        "codegraph_impact",
+        "codegraph_path",
+        "codegraph_quality",
+        "ctx_search",
+        "oc_search",
+        "oc_read",
+        "oc_lint",
+    }
+)
+CD_MUTATING_FILE_TOOLS: frozenset[str] = frozenset(
+    {"write_file", "edit_file", "rollback_edits"}
+)
+CD_CODE_EXEC_TOOLS: frozenset[str] = frozenset(
+    {"run_bash", "ctx_execute_python", "ctx_run_block", "skill_execute_script"}
+)
+CD_CONTEXT_WRITE_TOOLS: frozenset[str] = frozenset({"oc_save_doc"})
+CD_FORBIDDEN_CHILD_TOOLS: frozenset[str] = frozenset({"delegate_subagent"})
+CD_DEFAULT_CRITIC_TOOLS: tuple[str, ...] = (
+    "read_file",
+    "list_files",
+    "grep_search",
+    "codegraph_context",
+    "codegraph_quality",
+)
+
+_CD_OPAQUE_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
+_CD_SECRET_BASENAME_RE = re.compile(
+    r"^(\.env(\..+)?|id_(rsa|dsa|ecdsa|ed25519)(\.pub)?|.*\.(pem|key|p12|pfx|keystore)|credentials\.json|\.netrc|\.pypirc)$",
+    re.IGNORECASE,
+)
+
+ChildRole = Literal["critic", "worker", "verifier"]
+ChildDelegationStatus = Literal[
+    "running",
+    "completed_unjoined",
+    "failed_unjoined",
+    "cancelled_unjoined",
+    "joined",
+    "joined_discarded",
+]
+ChildJoinDisposition = Literal[
+    "accepted",
+    "discarded",
+    "audit_only",
+    "cancelled_reconciled",
+]
+
+
+class ChildDelegationError(RuntimeError):
+    """Base error for bounded child delegation."""
+
+
+class DelegationRejectedError(ChildDelegationError):
+    """Raised when spawning, executing, or joining a child delegation fails closed."""
+
+    def __init__(self, code: str, reason: str, *, details: Mapping[str, Any] | None = None) -> None:
+        super().__init__(f"{code}: {reason}")
+        self.code = str(code)
+        self.reason = str(reason)
+        self.details: dict[str, Any] = dict(details) if details is not None else {}
+
+    def to_mapping(self) -> dict[str, Any]:
+        out: dict[str, Any] = {"code": self.code, "reason": self.reason}
+        if self.details:
+            out["details"] = dict(self.details)
+        return out
+
+
+class DelegationAuthorityViolationError(DelegationRejectedError):
+    """Raised when a child requests or exercises authority exceeding its parent (AC 1)."""
+
+
+class DelegationStoreIntegrityError(ChildDelegationError):
+    """Raised when ``delegations/state.json`` is symlinked, corrupt, or has an unsupported schema."""
+
+
+def _cd_canonical_sha256(payload: Mapping[str, Any]) -> str:
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _cd_clean_id(value: object, label: str, *, max_len: int = 128) -> str:
+    if not isinstance(value, str) or not value.strip() or "\x00" in value:
+        raise DelegationRejectedError("invalid_identifier", f"{label} must be a non-empty string.")
+    cleaned = value.strip()
+    if len(cleaned) > max_len or not _CD_OPAQUE_ID_RE.fullmatch(cleaned):
+        raise DelegationRejectedError("invalid_identifier", f"{label} {cleaned!r} is malformed.")
+    return cleaned
+
+
+def child_subtask_id(parent_task_id: str, sub_key: str) -> str:
+    """Build deterministic ``runtime_tasks.task_id`` for a delegated child subagent."""
+    parent = _cd_clean_id(parent_task_id, "parent_task_id")
+    key = _cd_clean_id(sub_key, "sub_key")
+    candidate = f"{parent}::sub:{key}"
+    if len(candidate) <= 128:
+        return candidate
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+    return f"{parent[:96]}::sub:{digest}"
+
+
+def is_child_subtask_id(task_id: str) -> bool:
+    """Return True when ``task_id`` names a delegated child subagent row (not a milestone)."""
+    return isinstance(task_id, str) and "::sub:" in task_id
+
+
+def _cd_is_forbidden_rel_path(norm_rel: str) -> tuple[bool, str]:
+    parts = [pt for pt in norm_rel.split("/") if pt]
+    if not parts:
+        return True, "empty_path"
+    if parts[0] == ".git" or ".git" in parts:
+        return True, "git_metadata_forbidden"
+    for part in parts:
+        if _CD_SECRET_BASENAME_RE.fullmatch(part):
+            return True, "secret_path_forbidden"
+    return False, ""
+
+
+def normalize_child_scope_path(
+    workspace_root: Path,
+    raw_path: str,
+    *,
+    allow_wildcard: bool = False,
+) -> str:
+    """Validate and normalize a child-scoped workspace relative path or directory prefix.
+
+    Rejects absolute paths, ``..`` segments, NUL bytes, ``.git`` metadata, secret/credential
+    filenames, and any symlink component along existing path prefixes inside ``workspace_root``.
+    """
+    if not isinstance(raw_path, str) or not raw_path.strip() or "\x00" in raw_path:
+        raise DelegationAuthorityViolationError(
+            "child_invalid_scope_path",
+            f"Child scope path must be a non-empty relative path: {raw_path!r}",
+        )
+    cleaned = raw_path.strip().replace("\\", "/")
+    if cleaned == "*":
+        if allow_wildcard:
+            return "*"
+        raise DelegationAuthorityViolationError(
+            "child_unbounded_write_scope_forbidden",
+            "Wildcard '*' scope is forbidden for child write authority; enumerate explicit paths.",
+        )
+    if cleaned.startswith("/"):
+        raise DelegationAuthorityViolationError(
+            "child_scope_escapes_workspace",
+            f"Absolute path {raw_path!r} is forbidden in child scope.",
+        )
+    is_dir_hint = cleaned.endswith("/")
+    raw_parts = [pt for pt in cleaned.split("/") if pt not in ("", ".")]
+    if not raw_parts or any(pt == ".." for pt in raw_parts):
+        raise DelegationAuthorityViolationError(
+            "child_scope_escapes_workspace",
+            f"Child scope path {raw_path!r} must stay strictly within workspace_root.",
+        )
+    norm = "/".join(raw_parts)
+    bad, bad_reason = _cd_is_forbidden_rel_path(norm)
+    if bad:
+        raise DelegationAuthorityViolationError(
+            "child_forbidden_sensitive_path",
+            f"Child scope {norm!r} targets protected path ({bad_reason}).",
+        )
+
+    ws_resolved = workspace_root.resolve()
+    cursor = ws_resolved
+    for part in raw_parts:
+        cursor = cursor / part
+        try:
+            st = os.lstat(cursor)
+        except FileNotFoundError:
+            break
+        if stat.S_ISLNK(st.st_mode):
+            raise DelegationAuthorityViolationError(
+                "child_symlink_scope_forbidden",
+                f"Symlink component {cursor.name!r} in child scope {norm!r} is forbidden.",
+            )
+    resolved_target = (ws_resolved / norm).resolve()
+    if resolved_target != ws_resolved and ws_resolved not in resolved_target.parents:
+        raise DelegationAuthorityViolationError(
+            "child_scope_escapes_workspace",
+            f"Child scope {norm!r} resolves outside workspace_root.",
+        )
+    if is_dir_hint or (resolved_target.exists() and resolved_target.is_dir()):
+        return f"{norm}/"
+    return norm
+
+
+def child_scopes_overlap(scope_a: str, scope_b: str) -> bool:
+    """Return True when two normalized path scopes overlap (file, directory prefix, or '*')."""
+    a = scope_a.strip()
+    b = scope_b.strip()
+    if not a or not b:
+        return False
+    if a == "*" or b == "*":
+        return True
+    a_clean = a.rstrip("/")
+    b_clean = b.rstrip("/")
+    if a_clean == b_clean:
+        return True
+    if a.endswith("/") and b_clean.startswith(a_clean + "/"):
+        return True
+    if b.endswith("/") and a_clean.startswith(b_clean + "/"):
+        return True
+    return False
+
+
+def _cd_scope_is_covered_by(child_scope: str, parent_scopes: Collection[str]) -> bool:
+    """Return True iff ``child_scope`` is a strict or equal subset of at least one ``parent_scopes`` entry."""
+    for p_raw in parent_scopes:
+        p = str(p_raw).strip()
+        if p in {"*", "global:*"} or p.startswith("workspace:"):
+            return True
+        if p.startswith("path:"):
+            # scoped_grants uses either `path:<rel>` or `path:<ws>:<rel>`
+            tail = p.removeprefix("path:")
+            if not child_scope.endswith("/") and (tail == child_scope or tail.endswith(":" + child_scope)):
+                return True
+        elif p.startswith("dir:"):
+            tail = p.removeprefix("dir:").rstrip("/")
+            c_clean = child_scope.rstrip("/")
+            for candidate in (tail, tail.split(":", 1)[-1] if ":" in tail else tail):
+                if c_clean == candidate or c_clean.startswith(candidate + "/"):
+                    return True
+        else:
+            p_clean = p.rstrip("/")
+            c_clean = child_scope.rstrip("/")
+            if p == "*":
+                return True
+            if p.endswith("/") and (c_clean == p_clean or c_clean.startswith(p_clean + "/")):
+                return True
+            if not child_scope.endswith("/") and p_clean == c_clean:
+                return True
+    return False
+
+
+def snapshot_scope_file_versions(
+    workspace_root: Path,
+    scopes: Sequence[str],
+) -> dict[str, str | None]:
+    """Capture SHA-256 digests of existing regular files covered by ``scopes``."""
+    ws = workspace_root.resolve()
+    versions: dict[str, str | None] = {}
+    for sc in scopes:
+        if sc == "*":
+            continue
+        if sc.endswith("/"):
+            dir_target = ws / sc.rstrip("/")
+            if dir_target.exists() and dir_target.is_dir():
+                for root_s, dirs, files in os.walk(dir_target, followlinks=False):
+                    dirs[:] = [d for d in sorted(dirs) if d != ".git" and not (Path(root_s) / d).is_symlink()]
+                    for fname in sorted(files):
+                        fp = Path(root_s) / fname
+                        if fp.is_symlink() or not fp.is_file():
+                            continue
+                        rel = fp.relative_to(ws).as_posix()
+                        bad, _ = _cd_is_forbidden_rel_path(rel)
+                        if not bad:
+                            versions[rel] = hashlib.sha256(fp.read_bytes()).hexdigest()
+        else:
+            fp = ws / sc
+            if fp.is_symlink():
+                raise DelegationAuthorityViolationError(
+                    "child_symlink_scope_forbidden",
+                    f"Scoped file {sc!r} is a symlink.",
+                )
+            if fp.exists():
+                if not fp.is_file():
+                    raise DelegationAuthorityViolationError(
+                        "child_invalid_scope_path",
+                        f"Scoped file {sc!r} is not a regular file.",
+                    )
+                versions[sc] = hashlib.sha256(fp.read_bytes()).hexdigest()
+            else:
+                versions[sc] = None
+    return versions
+
+
+def _cd_infer_tool_capabilities(tool_name: str) -> tuple[str, ...]:
+    if tool_name in CD_READ_ONLY_TOOLS:
+        return ("workspace_read",)
+    if tool_name in CD_MUTATING_FILE_TOOLS:
+        return ("workspace_write", "workspace_read")
+    if tool_name in CD_CODE_EXEC_TOOLS:
+        return ("code_execution", "workspace_write", "workspace_read")
+    if tool_name in CD_CONTEXT_WRITE_TOOLS or tool_name == "mcp_bridge__oc_save_doc":
+        return ("context_write",)
+    if tool_name.startswith("mcp__") or tool_name.startswith("mcp_bridge__"):
+        return ("mcp_call",)
+    return ("unknown",)
+
+
+@dataclass(frozen=True, slots=True)
+class ChildAuthoritySubset:
+    """Immutable, hash-addressed subset of parent permissions granted to a child subagent (AC 1)."""
+
+    parent_policy: str
+    policy: str
+    allowed_tools: tuple[str, ...]
+    capabilities: tuple[str, ...]
+    readable_paths: tuple[str, ...]
+    writable_paths: tuple[str, ...]
+    delegated_grant_ids: tuple[str, ...] = ()
+    max_depth: int = 1
+    authority_sha256: str = ""
+
+    def __post_init__(self) -> None:
+        if self.parent_policy not in CD_POLICY_RANK or self.policy not in CD_POLICY_RANK:
+            raise DelegationAuthorityViolationError(
+                "child_invalid_policy",
+                f"Unknown parent/child policy ({self.parent_policy!r} -> {self.policy!r}).",
+            )
+        if CD_POLICY_RANK[self.policy] > CD_POLICY_RANK[self.parent_policy]:
+            raise DelegationAuthorityViolationError(
+                "child_policy_exceeds_parent",
+                f"Child policy `{self.policy}` exceeds parent policy `{self.parent_policy}`.",
+            )
+        if not self.allowed_tools:
+            raise DelegationAuthorityViolationError(
+                "child_empty_tool_subset",
+                "Child authority must declare at least one allowed tool or audit capability.",
+            )
+        if any(t in CD_FORBIDDEN_CHILD_TOOLS for t in self.allowed_tools):
+            raise DelegationAuthorityViolationError(
+                "child_recursive_delegation_forbidden",
+                "Child subagents cannot hold `delegate_subagent` authority (max_depth=1).",
+            )
+        if self.max_depth != 1:
+            raise DelegationAuthorityViolationError(
+                "child_recursive_delegation_forbidden",
+                f"Unsupported delegation depth {self.max_depth}; max_depth must be 1.",
+            )
+        if not self.authority_sha256:
+            digest = _cd_canonical_sha256(
+                {
+                    "parent_policy": self.parent_policy,
+                    "policy": self.policy,
+                    "allowed_tools": list(self.allowed_tools),
+                    "capabilities": list(self.capabilities),
+                    "readable_paths": list(self.readable_paths),
+                    "writable_paths": list(self.writable_paths),
+                    "delegated_grant_ids": list(self.delegated_grant_ids),
+                    "max_depth": self.max_depth,
+                }
+            )
+            object.__setattr__(self, "authority_sha256", digest)
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "parent_policy": self.parent_policy,
+            "policy": self.policy,
+            "allowed_tools": list(self.allowed_tools),
+            "capabilities": list(self.capabilities),
+            "readable_paths": list(self.readable_paths),
+            "writable_paths": list(self.writable_paths),
+            "delegated_grant_ids": list(self.delegated_grant_ids),
+            "max_depth": self.max_depth,
+            "authority_sha256": self.authority_sha256,
+        }
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any]) -> ChildAuthoritySubset:
+        obj = cls(
+            parent_policy=str(data["parent_policy"]),
+            policy=str(data["policy"]),
+            allowed_tools=tuple(str(x) for x in data.get("allowed_tools", ())),
+            capabilities=tuple(str(x) for x in data.get("capabilities", ())),
+            readable_paths=tuple(str(x) for x in data.get("readable_paths", ())),
+            writable_paths=tuple(str(x) for x in data.get("writable_paths", ())),
+            delegated_grant_ids=tuple(str(x) for x in data.get("delegated_grant_ids", ())),
+            max_depth=int(data.get("max_depth", 1)),
+        )
+        expected_sha = str(data.get("authority_sha256") or "")
+        if expected_sha and expected_sha != obj.authority_sha256:
+            raise DelegationStoreIntegrityError("ChildAuthoritySubset digest mismatch.")
+        return obj
+
+
+def derive_child_authority(
+    *,
+    workspace_root: Path,
+    parent_policy: str,
+    parent_revoked_capabilities: Collection[str] = (),
+    parent_allowed_scopes: Collection[str] | None = None,
+    requested_policy: str | None = None,
+    role: str = "critic",
+    requested_tools: Sequence[str] | None = None,
+    readable_paths: Sequence[str] | None = None,
+    writable_paths: Sequence[str] | None = None,
+    delegated_grant_ids: Sequence[str] = (),
+) -> ChildAuthoritySubset:
+    """Derive and validate a strict child authority subset from parent permissions (Task 1, AC 1)."""
+    if parent_policy not in CD_POLICY_RANK:
+        raise DelegationAuthorityViolationError(
+            "child_invalid_policy",
+            f"Unknown parent policy `{parent_policy}`.",
+        )
+    default_pol = "plan" if role == "critic" else parent_policy
+    eff_policy = str(requested_policy or default_pol).strip()
+    if eff_policy not in CD_POLICY_RANK:
+        raise DelegationAuthorityViolationError(
+            "child_invalid_policy",
+            f"Unknown requested child policy `{eff_policy}`.",
+        )
+    if CD_POLICY_RANK[eff_policy] > CD_POLICY_RANK[parent_policy]:
+        raise DelegationAuthorityViolationError(
+            "child_policy_exceeds_parent",
+            f"Requested child policy `{eff_policy}` exceeds parent policy `{parent_policy}`.",
+        )
+
+    raw_tools = (
+        tuple(str(t).strip() for t in requested_tools if str(t).strip())
+        if requested_tools is not None
+        else CD_DEFAULT_CRITIC_TOOLS
+    )
+    if not raw_tools:
+        raise DelegationAuthorityViolationError(
+            "child_empty_tool_subset",
+            "Child `allowed_tools` must not be empty.",
+        )
+    dedup_tools: list[str] = []
+    seen_t: set[str] = set()
+    for t in raw_tools:
+        if t in CD_FORBIDDEN_CHILD_TOOLS:
+            raise DelegationAuthorityViolationError(
+                "child_recursive_delegation_forbidden",
+                "Child subagents cannot receive `delegate_subagent` permission.",
+            )
+        if t not in seen_t:
+            seen_t.add(t)
+            dedup_tools.append(t)
+
+    revoked_set = {str(c) for c in parent_revoked_capabilities}
+    caps: set[str] = set()
+    for t in dedup_tools:
+        t_caps = _cd_infer_tool_capabilities(t)
+        if "unknown" in t_caps:
+            raise DelegationAuthorityViolationError(
+                "child_unknown_tool_forbidden",
+                f"Tool `{t}` is unknown and cannot be delegated to a child subagent.",
+            )
+        if parent_policy == "plan" and t not in CD_READ_ONLY_TOOLS:
+            raise DelegationAuthorityViolationError(
+                "child_tool_exceeds_parent",
+                f"Parent in `plan` policy cannot delegate non-read-only tool `{t}`.",
+            )
+        if eff_policy == "plan" and t not in CD_READ_ONLY_TOOLS:
+            raise DelegationAuthorityViolationError(
+                "child_tool_exceeds_child_policy",
+                f"Child in `plan` policy cannot hold non-read-only tool `{t}`.",
+            )
+        overlap_rev = revoked_set.intersection(t_caps)
+        if overlap_rev:
+            raise DelegationAuthorityViolationError(
+                "child_capability_revoked_on_parent",
+                f"Cannot delegate tool `{t}`: capability {sorted(overlap_rev)} is revoked on parent.",
+            )
+        caps.update(t_caps)
+
+    norm_write: list[str] = []
+    if writable_paths:
+        for wp in writable_paths:
+            nw = normalize_child_scope_path(workspace_root, wp, allow_wildcard=False)
+            if parent_allowed_scopes is not None and not _cd_scope_is_covered_by(nw, parent_allowed_scopes):
+                raise DelegationAuthorityViolationError(
+                    "child_scope_exceeds_parent",
+                    f"Child writable path `{nw}` exceeds parent's allowed resource scopes.",
+                )
+            if nw not in norm_write:
+                norm_write.append(nw)
+
+    needs_write = any(t in CD_MUTATING_FILE_TOOLS or t in CD_CODE_EXEC_TOOLS for t in dedup_tools)
+    if needs_write and not norm_write:
+        raise DelegationAuthorityViolationError(
+            "child_unbounded_write_scope_forbidden",
+            "Mutating or code-executing child subagents must declare explicit `writable_paths`.",
+        )
+    if not needs_write and norm_write:
+        raise DelegationAuthorityViolationError(
+            "child_write_scope_without_write_tool",
+            "Read-only child subagent cannot claim `writable_paths`.",
+        )
+
+    norm_read: list[str] = []
+    if readable_paths:
+        for rp_item in readable_paths:
+            nr = normalize_child_scope_path(workspace_root, rp_item, allow_wildcard=True)
+            if (
+                nr != "*"
+                and parent_allowed_scopes is not None
+                and not _cd_scope_is_covered_by(nr, parent_allowed_scopes)
+            ):
+                raise DelegationAuthorityViolationError(
+                    "child_scope_exceeds_parent",
+                    f"Child readable path `{nr}` exceeds parent's allowed resource scopes.",
+                )
+            if nr not in norm_read:
+                norm_read.append(nr)
+    else:
+        norm_read = ["*"] if parent_allowed_scopes is None else [
+            normalize_child_scope_path(workspace_root, wp, allow_wildcard=False) for wp in norm_write
+        ] or ["*"]
+
+    return ChildAuthoritySubset(
+        parent_policy=parent_policy,
+        policy=eff_policy,
+        allowed_tools=tuple(dedup_tools),
+        capabilities=tuple(sorted(caps)),
+        readable_paths=tuple(norm_read),
+        writable_paths=tuple(norm_write),
+        delegated_grant_ids=tuple(str(g) for g in delegated_grant_ids if str(g).strip()),
+        max_depth=1,
+    )
+
+
+def enforce_child_tool_authority(
+    authority: ChildAuthoritySubset,
+    tool_name: str,
+    args: Mapping[str, Any],
+    *,
+    workspace_root: Path,
+    live_parent_policy: str,
+    live_parent_revoked_capabilities: Collection[str] = (),
+) -> tuple[bool, str, str]:
+    """Enforce child authority subset AND live parent permission ceiling at tool execution time."""
+    if live_parent_policy not in CD_POLICY_RANK:
+        return False, "child_invalid_parent_policy", f"Unknown live parent policy `{live_parent_policy}`."
+    if CD_POLICY_RANK[authority.policy] > CD_POLICY_RANK[live_parent_policy]:
+        return (
+            False,
+            "child_parent_policy_downgraded",
+            f"Parent policy downgraded to `{live_parent_policy}`; child `{authority.policy}` authority revoked.",
+        )
+    if live_parent_policy == "plan" and tool_name not in CD_READ_ONLY_TOOLS:
+        return (
+            False,
+            "child_parent_policy_downgraded",
+            f"Parent is now `plan`; child cannot execute `{tool_name}`.",
+        )
+    if tool_name in CD_FORBIDDEN_CHILD_TOOLS:
+        return (
+            False,
+            "child_recursive_delegation_forbidden",
+            "Child subagent is forbidden from invoking `delegate_subagent`.",
+        )
+    if tool_name not in authority.allowed_tools:
+        return (
+            False,
+            "child_tool_not_in_subset",
+            f"Tool `{tool_name}` is outside child's delegated `allowed_tools` {list(authority.allowed_tools)}.",
+        )
+    req_caps = _cd_infer_tool_capabilities(tool_name)
+    revoked_hit = set(live_parent_revoked_capabilities).intersection(req_caps)
+    if revoked_hit:
+        return (
+            False,
+            "child_capability_revoked_on_parent",
+            f"Capability {sorted(revoked_hit)} was revoked on parent/session.",
+        )
+    if not set(req_caps).issubset(set(authority.capabilities)):
+        return (
+            False,
+            "child_capability_not_in_subset",
+            f"Tool `{tool_name}` requires {list(req_caps)} outside child capabilities {list(authority.capabilities)}.",
+        )
+
+    if tool_name in CD_MUTATING_FILE_TOOLS:
+        raw_p = str(args.get("path") or "").strip()
+        if not raw_p and tool_name == "rollback_edits":
+            return True, "", ""
+        try:
+            norm_p = normalize_child_scope_path(workspace_root, raw_p, allow_wildcard=False)
+        except DelegationAuthorityViolationError as exc:
+            return False, exc.code, exc.reason
+        if not any(child_scopes_overlap(norm_p, w_sc) and _cd_scope_is_covered_by(norm_p, (w_sc,)) for w_sc in authority.writable_paths):
+            return (
+                False,
+                "child_write_scope_exceeded",
+                f"Child cannot mutate `{norm_p}`; permitted `writable_paths` = {list(authority.writable_paths)}.",
+            )
+
+    if tool_name in {"read_file", "list_files", "grep_search"} and "*" not in authority.readable_paths:
+        raw_rp = str(args.get("path") or ".").strip()
+        if raw_rp in {"", "."}:
+            return (
+                False,
+                "child_read_scope_exceeded",
+                f"Whole-workspace read `{raw_rp}` exceeds restricted child `readable_paths` {list(authority.readable_paths)}.",
+            )
+        try:
+            norm_rp = normalize_child_scope_path(workspace_root, raw_rp, allow_wildcard=False)
+        except DelegationAuthorityViolationError as exc:
+            return False, exc.code, exc.reason
+        combined_read = tuple(authority.readable_paths) + tuple(authority.writable_paths)
+        if not _cd_scope_is_covered_by(norm_rp, combined_read):
+            return (
+                False,
+                "child_read_scope_exceeded",
+                f"Child cannot read `{norm_rp}`; permitted `readable_paths` = {list(combined_read)}.",
+            )
+
+    return True, "", ""
+
+
+@dataclass(frozen=True, slots=True)
+class ChildBudgetAllocation:
+    """Bounded child task budget carved strictly within parent's remaining unreserved budget (Task 1)."""
+
+    spec: execution_budget.TaskBudgetSpec
+    parent_remaining_steps_at_spawn: int
+    parent_remaining_tool_calls_at_spawn: int
+    parent_remaining_tokens_at_spawn: int
+    parent_remaining_elapsed_s_at_spawn: float
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "spec": self.spec.to_dict(),
+            "parent_remaining_steps_at_spawn": self.parent_remaining_steps_at_spawn,
+            "parent_remaining_tool_calls_at_spawn": self.parent_remaining_tool_calls_at_spawn,
+            "parent_remaining_tokens_at_spawn": self.parent_remaining_tokens_at_spawn,
+            "parent_remaining_elapsed_s_at_spawn": self.parent_remaining_elapsed_s_at_spawn,
+        }
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any]) -> ChildBudgetAllocation:
+        return cls(
+            spec=execution_budget.TaskBudgetSpec.from_dict(data["spec"]),
+            parent_remaining_steps_at_spawn=int(data["parent_remaining_steps_at_spawn"]),
+            parent_remaining_tool_calls_at_spawn=int(data["parent_remaining_tool_calls_at_spawn"]),
+            parent_remaining_tokens_at_spawn=int(data["parent_remaining_tokens_at_spawn"]),
+            parent_remaining_elapsed_s_at_spawn=float(data["parent_remaining_elapsed_s_at_spawn"]),
+        )
+
+
+def derive_child_budget_allocation(
+    parent_budget: execution_budget.TaskBudgetState,
+    *,
+    reserved_by_active_children: Mapping[str, float] | None = None,
+    requested: Mapping[str, Any] | None = None,
+) -> ChildBudgetAllocation:
+    """Derive a child ``TaskBudgetSpec`` strictly bounded by parent's unreserved remaining budget."""
+    viol = parent_budget.violation_reason(check_recovery=False)
+    if viol:
+        raise DelegationRejectedError(
+            "parent_budget_exhausted",
+            f"Parent task budget is already exhausted ({viol}); cannot delegate child subagent.",
+        )
+    res = reserved_by_active_children or {}
+    avail_steps = parent_budget.spec.max_steps - parent_budget.steps_used - int(res.get("steps", 0))
+    avail_tools = parent_budget.spec.max_tool_calls - parent_budget.tool_calls_used - int(res.get("tool_calls", 0))
+    avail_tokens = parent_budget.spec.max_tokens - parent_budget.tokens_used - int(res.get("tokens", 0))
+    avail_elapsed = round(
+        parent_budget.spec.max_elapsed_s - parent_budget.elapsed_s - float(res.get("elapsed_s", 0.0)),
+        6,
+    )
+    avail_recov = max(
+        0,
+        parent_budget.spec.max_recoveries - parent_budget.recoveries_used - int(res.get("recoveries", 0)),
+    )
+
+    if avail_steps < 1 or avail_tools < 1 or avail_tokens < 1 or avail_elapsed <= 0.0:
+        raise DelegationRejectedError(
+            "child_budget_exceeds_parent",
+            "Insufficient unreserved parent budget remaining to spawn a child subagent "
+            f"(steps={avail_steps}, tool_calls={avail_tools}, tokens={avail_tokens}, elapsed_s={avail_elapsed}).",
+        )
+
+    req = requested or {}
+
+    def _pick_int(key: str, default_cap: int, avail: int) -> int:
+        if key in req and req[key] is not None:
+            val = int(req[key])
+            if val < 1:
+                raise DelegationRejectedError("invalid_child_budget", f"Child `{key}` must be >= 1.")
+            if val > avail:
+                raise DelegationRejectedError(
+                    "child_budget_exceeds_parent",
+                    f"Requested child `{key}={val}` exceeds parent's unreserved remaining `{avail}`.",
+                )
+            return val
+        return max(1, min(default_cap, avail))
+
+    max_steps = _pick_int("max_steps", 4, avail_steps)
+    max_tools = _pick_int("max_tool_calls", 12, avail_tools)
+    max_tokens = _pick_int("max_tokens", 24_000, avail_tokens)
+
+    if "max_elapsed_s" in req and req["max_elapsed_s"] is not None:
+        max_elapsed = float(req["max_elapsed_s"])
+        if not math.isfinite(max_elapsed) or max_elapsed <= 0.0:
+            raise DelegationRejectedError("invalid_child_budget", "Child `max_elapsed_s` must be > 0.")
+        if max_elapsed > avail_elapsed + 1e-6:
+            raise DelegationRejectedError(
+                "child_budget_exceeds_parent",
+                f"Requested child `max_elapsed_s={max_elapsed}` exceeds parent's remaining `{avail_elapsed}`.",
+            )
+        max_elapsed = min(max_elapsed, avail_elapsed)
+    else:
+        max_elapsed = min(120.0, avail_elapsed)
+
+    if "max_recoveries" in req and req["max_recoveries"] is not None:
+        max_recov = int(req["max_recoveries"])
+        if max_recov < 0 or max_recov > avail_recov:
+            raise DelegationRejectedError(
+                "child_budget_exceeds_parent",
+                f"Requested child `max_recoveries={max_recov}` exceeds parent's remaining `{avail_recov}`.",
+            )
+    else:
+        max_recov = 0
+
+    return ChildBudgetAllocation(
+        spec=execution_budget.TaskBudgetSpec(
+            max_steps=max_steps,
+            max_tool_calls=max_tools,
+            max_tokens=max_tokens,
+            max_elapsed_s=max_elapsed,
+            max_recoveries=max_recov,
+        ),
+        parent_remaining_steps_at_spawn=avail_steps,
+        parent_remaining_tool_calls_at_spawn=avail_tools,
+        parent_remaining_tokens_at_spawn=avail_tokens,
+        parent_remaining_elapsed_s_at_spawn=avail_elapsed,
+    )
+
+
+def evaluate_delegation_justification(
+    *,
+    role: str,
+    objective: str,
+    parent_budget: execution_budget.TaskBudgetState,
+    writable_paths: Sequence[str] = (),
+    context_files: Sequence[str] = (),
+    parent_uncommitted_paths: Collection[str] = (),
+    benchmark_prior: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Evaluate whether subagent overhead is justified over single-agent execution (Objective, Task 4)."""
+    clean_obj = " ".join(str(objective or "").split())
+    if len(clean_obj) < 8:
+        raise DelegationRejectedError(
+            "delegation_overhead_unjustified",
+            "Delegated task objective is too trivial (< 8 chars) to justify subagent overhead.",
+        )
+    rem_steps = parent_budget.spec.max_steps - parent_budget.steps_used
+    rem_tokens = parent_budget.spec.max_tokens - parent_budget.tokens_used
+    if rem_steps < 2 or rem_tokens < 256:
+        raise DelegationRejectedError(
+            "delegation_overhead_unjustified",
+            f"Parent remaining budget (steps={rem_steps}, tokens={rem_tokens}) is too small for delegation + join.",
+        )
+    for wp in writable_paths:
+        for p_unc in parent_uncommitted_paths:
+            if child_scopes_overlap(wp, str(p_unc)):
+                raise DelegationRejectedError(
+                    "child_conflicts_with_parent_edits",
+                    f"Child writable scope `{wp}` overlaps parent's active edit `{p_unc}`; keep single-agent.",
+                )
+
+    reasons: list[str] = []
+    if benchmark_prior is not None:
+        deltas = benchmark_prior.get("multi_agent_minus_single_model")
+        if isinstance(deltas, Mapping):
+            sr_delta = float(deltas.get("success_rate", 0.0))
+            lat_delta = float(deltas.get("latency_ms", 0.0))
+            cost_delta = float(deltas.get("cost", 0.0))
+            if sr_delta < 0.0:
+                raise DelegationRejectedError(
+                    "delegation_degrades_verified_outcomes",
+                    f"Measured benchmark shows delegation degrades verified success rate ({sr_delta:+.3f}); "
+                    "refusing subagent spawn.",
+                )
+            if sr_delta == 0.0 and lat_delta > 0.0 and cost_delta > 0.0 and role != "critic":
+                raise DelegationRejectedError(
+                    "delegation_overhead_unjustified",
+                    f"Measured benchmark shows zero verified accuracy gain with higher latency (+{lat_delta:.1f}ms) "
+                    f"and cost (+{cost_delta:.2f}); execute inline in single-agent mode.",
+                )
+            reasons.append(f"measured_benchmark_success_delta:{sr_delta:+.3f}")
+
+    if role == "critic":
+        reasons.append(f"fresh_context_audit(files={len(context_files)})")
+    elif role == "verifier":
+        reasons.append("isolated_verification_pass")
+    else:
+        reasons.append(f"bounded_scoped_mutation(paths={len(writable_paths)})")
+
+    return {
+        "justified": True,
+        "role": role,
+        "reasons": reasons,
+    }
+
+
+@dataclass(frozen=True, slots=True)
+class ChildJoinOutcome:
+    """Durable parent-join record capturing child consumption, action reconciliation, and mutation fate."""
+
+    joined_at: float
+    join_disposition: ChildJoinDisposition
+    verified: bool
+    verification_summary: str
+    consumed_steps: int
+    consumed_tool_calls: int
+    consumed_tokens: int
+    consumed_elapsed_s: float
+    committed_action_ids: tuple[str, ...] = ()
+    unresolved_action_ids: tuple[str, ...] = ()
+    modified_paths: tuple[str, ...] = ()
+    rolled_back_paths: tuple[str, ...] = ()
+    parent_budget_debited: bool = True
+    output_sha256: str = ""
+
+    def __post_init__(self) -> None:
+        if self.unresolved_action_ids:
+            raise DelegationRejectedError(
+                "child_unresolved_consequential_actions",
+                f"Cannot join child with unresolved consequential actions: {list(self.unresolved_action_ids)}.",
+            )
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "joined_at": self.joined_at,
+            "join_disposition": self.join_disposition,
+            "verified": self.verified,
+            "verification_summary": self.verification_summary,
+            "consumed_steps": self.consumed_steps,
+            "consumed_tool_calls": self.consumed_tool_calls,
+            "consumed_tokens": self.consumed_tokens,
+            "consumed_elapsed_s": self.consumed_elapsed_s,
+            "committed_action_ids": list(self.committed_action_ids),
+            "unresolved_action_ids": list(self.unresolved_action_ids),
+            "modified_paths": list(self.modified_paths),
+            "rolled_back_paths": list(self.rolled_back_paths),
+            "parent_budget_debited": self.parent_budget_debited,
+            "output_sha256": self.output_sha256,
+        }
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any]) -> ChildJoinOutcome:
+        return cls(
+            joined_at=float(data["joined_at"]),
+            join_disposition=data["join_disposition"],
+            verified=bool(data["verified"]),
+            verification_summary=str(data.get("verification_summary", "")),
+            consumed_steps=int(data.get("consumed_steps", 0)),
+            consumed_tool_calls=int(data.get("consumed_tool_calls", 0)),
+            consumed_tokens=int(data.get("consumed_tokens", 0)),
+            consumed_elapsed_s=float(data.get("consumed_elapsed_s", 0.0)),
+            committed_action_ids=tuple(str(x) for x in data.get("committed_action_ids", ())),
+            unresolved_action_ids=tuple(str(x) for x in data.get("unresolved_action_ids", ())),
+            modified_paths=tuple(str(x) for x in data.get("modified_paths", ())),
+            rolled_back_paths=tuple(str(x) for x in data.get("rolled_back_paths", ())),
+            parent_budget_debited=bool(data.get("parent_budget_debited", True)),
+            output_sha256=str(data.get("output_sha256", "")),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ChildDelegationRecord:
+    """Full crash-durable record of one delegated child subagent and its join lifecycle."""
+
+    delegation_id: str
+    child_task_id: str
+    parent_task_id: str
+    session_id: str
+    parent_epoch_at_spawn: int
+    child_epoch: int
+    child_worker_id: str
+    role: ChildRole
+    objective: str
+    model_spec: str
+    status: ChildDelegationStatus
+    authority: ChildAuthoritySubset
+    budget_allocation: ChildBudgetAllocation
+    justification: dict[str, Any]
+    base_file_versions: dict[str, str | None]
+    post_file_versions: dict[str, str | None]
+    edit_batch_ids: tuple[str, ...] = ()
+    output_excerpt: str = ""
+    failure_reason: str = ""
+    join_outcome: ChildJoinOutcome | None = None
+    created_at: float = 0.0
+    updated_at: float = 0.0
+
+    @property
+    def is_joined(self) -> bool:
+        return self.status in {"joined", "joined_discarded"}
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "delegation_id": self.delegation_id,
+            "child_task_id": self.child_task_id,
+            "parent_task_id": self.parent_task_id,
+            "session_id": self.session_id,
+            "parent_epoch_at_spawn": self.parent_epoch_at_spawn,
+            "child_epoch": self.child_epoch,
+            "child_worker_id": self.child_worker_id,
+            "role": self.role,
+            "objective": self.objective,
+            "model_spec": self.model_spec,
+            "status": self.status,
+            "authority": self.authority.to_mapping(),
+            "budget_allocation": self.budget_allocation.to_mapping(),
+            "justification": dict(self.justification),
+            "base_file_versions": dict(self.base_file_versions),
+            "post_file_versions": dict(self.post_file_versions),
+            "edit_batch_ids": list(self.edit_batch_ids),
+            "output_excerpt": self.output_excerpt,
+            "failure_reason": self.failure_reason,
+            "join_outcome": self.join_outcome.to_mapping() if self.join_outcome is not None else None,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any]) -> ChildDelegationRecord:
+        jo_raw = data.get("join_outcome")
+        return cls(
+            delegation_id=str(data["delegation_id"]),
+            child_task_id=str(data["child_task_id"]),
+            parent_task_id=str(data["parent_task_id"]),
+            session_id=str(data["session_id"]),
+            parent_epoch_at_spawn=int(data.get("parent_epoch_at_spawn", 0)),
+            child_epoch=int(data.get("child_epoch", 0)),
+            child_worker_id=str(data.get("child_worker_id", "")),
+            role=data["role"],
+            objective=str(data.get("objective", "")),
+            model_spec=str(data.get("model_spec", "")),
+            status=data["status"],
+            authority=ChildAuthoritySubset.from_mapping(data["authority"]),
+            budget_allocation=ChildBudgetAllocation.from_mapping(data["budget_allocation"]),
+            justification=dict(data.get("justification", {})),
+            base_file_versions={str(k): (str(v) if v is not None else None) for k, v in dict(data.get("base_file_versions", {})).items()},
+            post_file_versions={str(k): (str(v) if v is not None else None) for k, v in dict(data.get("post_file_versions", {})).items()},
+            edit_batch_ids=tuple(str(x) for x in data.get("edit_batch_ids", ())),
+            output_excerpt=str(data.get("output_excerpt", "")),
+            failure_reason=str(data.get("failure_reason", "")),
+            join_outcome=ChildJoinOutcome.from_mapping(jo_raw) if isinstance(jo_raw, Mapping) else None,
+            created_at=float(data.get("created_at", 0.0)),
+            updated_at=float(data.get("updated_at", 0.0)),
+        )
+
+
+def _cd_reject_if_symlink(path: Path, label: str) -> None:
+    try:
+        st = os.lstat(path)
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        raise DelegationStoreIntegrityError(f"Cannot stat {label} `{path}`: {exc}") from exc
+    if stat.S_ISLNK(st.st_mode):
+        raise DelegationStoreIntegrityError(f"Refusing symlinked {label}: `{path}`.")
+
+
+class ChildDelegationStore:
+    """Crash-durable JSON sidecar store at ``<store_dir>/delegations/state.json``."""
+
+    def __init__(self, store_root: Path) -> None:
+        self._root = Path(store_root)
+        self._dir = self._root / "delegations"
+        self._state_path = self._dir / "state.json"
+        self._lock = threading.RLock()
+
+    @property
+    def state_path(self) -> Path:
+        return self._state_path
+
+    def _ensure_dir_unlocked(self) -> None:
+        _cd_reject_if_symlink(self._root, "store root")
+        self._root.mkdir(parents=True, exist_ok=True)
+        _cd_reject_if_symlink(self._dir, "delegations state directory")
+        if not self._dir.exists():
+            self._dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if not self._dir.is_dir():
+            raise DelegationStoreIntegrityError(f"Delegation state directory `{self._dir}` is not a directory.")
+        os.chmod(self._dir, 0o700)
+
+    @staticmethod
+    def _empty_state() -> dict[str, Any]:
+        return {
+            "schema_version": CD_SCHEMA_VERSION,
+            "delegations": {},
+            "benchmarks": {},
+        }
+
+    def _read_state_unlocked(self) -> dict[str, Any]:
+        _cd_reject_if_symlink(self._root, "store root")
+        _cd_reject_if_symlink(self._dir, "delegations state directory")
+        _cd_reject_if_symlink(self._state_path, "delegations state file")
+        if not self._state_path.exists():
+            return self._empty_state()
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            fd = os.open(self._state_path, flags)
+        except OSError as exc:
+            if exc.errno == errno.ELOOP:
+                raise DelegationStoreIntegrityError(f"Refusing symlinked `{self._state_path}`.") from exc
+            raise DelegationStoreIntegrityError(f"Cannot open `{self._state_path}`: {exc}") from exc
+        try:
+            st = os.fstat(fd)
+            if not stat.S_ISREG(st.st_mode):
+                raise DelegationStoreIntegrityError(f"`{self._state_path}` is not a regular file.")
+            raw = os.read(fd, st.st_size + 1)
+        finally:
+            os.close(fd)
+        try:
+            parsed = json.loads(raw.decode("utf-8"))
+        except Exception as exc:
+            raise DelegationStoreIntegrityError(f"Corrupt JSON in `{self._state_path}`: {exc}") from exc
+        if not isinstance(parsed, dict):
+            raise DelegationStoreIntegrityError(f"`{self._state_path}` root must be a JSON object.")
+        ver = parsed.get("schema_version")
+        if not isinstance(ver, int) or isinstance(ver, bool) or ver != CD_SCHEMA_VERSION:
+            raise DelegationStoreIntegrityError(
+                f"Unsupported delegations schema_version {ver!r} (expected {CD_SCHEMA_VERSION})."
+            )
+        delegations = parsed.get("delegations")
+        benchmarks = parsed.get("benchmarks")
+        if not isinstance(delegations, dict) or not isinstance(benchmarks, dict):
+            raise DelegationStoreIntegrityError(f"Malformed collections in `{self._state_path}`.")
+        return {
+            "schema_version": CD_SCHEMA_VERSION,
+            "delegations": dict(delegations),
+            "benchmarks": dict(benchmarks),
+        }
+
+    def _write_state_unlocked(self, state: Mapping[str, Any]) -> None:
+        self._ensure_dir_unlocked()
+        _cd_reject_if_symlink(self._state_path, "delegations state file")
+        encoded = (json.dumps(state, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        nonce = f"{os.getpid()}.{threading.get_ident()}.{time.time_ns()}"
+        tmp_path = self._dir / f".state.json.tmp.{nonce}"
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(tmp_path, flags, 0o600)
+        try:
+            os.fchmod(fd, 0o600)
+            view = memoryview(encoded)
+            written = 0
+            while written < len(view):
+                written += os.write(fd, view[written:])
+            os.fsync(fd)
+        except BaseException:
+            os.close(fd)
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+            raise
+        os.close(fd)
+        try:
+            os.replace(tmp_path, self._state_path)
+            os.chmod(self._state_path, 0o600)
+            dir_fd = os.open(self._dir, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+        except BaseException:
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+            raise
+
+    def reserved_budget_for_parent(self, parent_task_id: str) -> dict[str, float]:
+        """Return summed budget reservations across currently active (`running`) children."""
+        with self._lock:
+            state = self._read_state_unlocked()
+            totals = {"steps": 0.0, "tool_calls": 0.0, "tokens": 0.0, "elapsed_s": 0.0, "recoveries": 0.0}
+            for raw in state["delegations"].values():
+                rec = ChildDelegationRecord.from_mapping(raw)
+                if rec.parent_task_id == parent_task_id and rec.status == "running":
+                    totals["steps"] += rec.budget_allocation.spec.max_steps
+                    totals["tool_calls"] += rec.budget_allocation.spec.max_tool_calls
+                    totals["tokens"] += rec.budget_allocation.spec.max_tokens
+                    totals["elapsed_s"] += rec.budget_allocation.spec.max_elapsed_s
+                    totals["recoveries"] += rec.budget_allocation.spec.max_recoveries
+            return totals
+
+    def register_spawn(self, record: ChildDelegationRecord) -> ChildDelegationRecord:
+        """Atomically verify disjoint write scopes against unjoined siblings and persist spawn."""
+        with self._lock:
+            state = self._read_state_unlocked()
+            new_writes = record.authority.writable_paths
+            new_exec = "code_execution" in record.authority.capabilities
+            if new_writes or new_exec:
+                for raw in state["delegations"].values():
+                    existing = ChildDelegationRecord.from_mapping(raw)
+                    if existing.session_id != record.session_id or existing.is_joined:
+                        continue
+                    ex_writes = existing.authority.writable_paths
+                    ex_exec = "code_execution" in existing.authority.capabilities
+                    if (new_exec and (ex_exec or ex_writes)) or (ex_exec and new_writes):
+                        raise DelegationRejectedError(
+                            "child_conflicting_write_scope",
+                            f"Active unjoined child `{existing.delegation_id}` holds code-execution/write lock "
+                            "in the same workspace.",
+                        )
+                    for nw in new_writes:
+                        for ew in ex_writes:
+                            if child_scopes_overlap(nw, ew):
+                                raise DelegationRejectedError(
+                                    "child_conflicting_write_scope",
+                                    f"Child writable scope `{nw}` conflicts with unjoined sibling "
+                                    f"`{existing.delegation_id}` scope `{ew}`.",
+                                )
+            now_ts = record.created_at or time.time()
+            stored = replace(record, created_at=now_ts, updated_at=now_ts)
+            state["delegations"][stored.delegation_id] = stored.to_mapping()
+            self._write_state_unlocked(state)
+            return stored
+
+    def check_parent_mutation_conflict(
+        self,
+        session_id: str,
+        rel_path: str,
+    ) -> ChildDelegationRecord | None:
+        """Return an unjoined child record if ``rel_path`` overlaps its leased writable scope."""
+        clean_rel = rel_path.strip().replace("\\", "/").lstrip("/")
+        with self._lock:
+            state = self._read_state_unlocked()
+            for raw in state["delegations"].values():
+                rec = ChildDelegationRecord.from_mapping(raw)
+                if rec.session_id != session_id or rec.is_joined:
+                    continue
+                if "code_execution" in rec.authority.capabilities:
+                    return rec
+                for wp in rec.authority.writable_paths:
+                    if child_scopes_overlap(clean_rel, wp):
+                        return rec
+        return None
+
+    def get_delegation(self, delegation_id: str) -> ChildDelegationRecord | None:
+        with self._lock:
+            state = self._read_state_unlocked()
+            raw = state["delegations"].get(delegation_id)
+            return ChildDelegationRecord.from_mapping(raw) if isinstance(raw, Mapping) else None
+
+    def get_by_child_task_id(self, child_task_id: str) -> ChildDelegationRecord | None:
+        with self._lock:
+            state = self._read_state_unlocked()
+            for raw in state["delegations"].values():
+                rec = ChildDelegationRecord.from_mapping(raw)
+                if rec.child_task_id == child_task_id:
+                    return rec
+            return None
+
+    def list_delegations(
+        self,
+        *,
+        session_id: str | None = None,
+        parent_task_id: str | None = None,
+        unjoined_only: bool = False,
+    ) -> tuple[ChildDelegationRecord, ...]:
+        with self._lock:
+            state = self._read_state_unlocked()
+            items: list[ChildDelegationRecord] = []
+            for raw in state["delegations"].values():
+                rec = ChildDelegationRecord.from_mapping(raw)
+                if session_id is not None and rec.session_id != session_id:
+                    continue
+                if parent_task_id is not None and rec.parent_task_id != parent_task_id:
+                    continue
+                if unjoined_only and rec.is_joined:
+                    continue
+                items.append(rec)
+            items.sort(key=lambda r: (r.created_at, r.delegation_id))
+            return tuple(items)
+
+    def update_child_outcome(
+        self,
+        delegation_id: str,
+        *,
+        status: ChildDelegationStatus,
+        post_file_versions: Mapping[str, str | None] | None = None,
+        edit_batch_ids: Sequence[str] | None = None,
+        output_excerpt: str | None = None,
+        failure_reason: str | None = None,
+        now: float | None = None,
+    ) -> ChildDelegationRecord:
+        with self._lock:
+            state = self._read_state_unlocked()
+            raw = state["delegations"].get(delegation_id)
+            if not isinstance(raw, Mapping):
+                raise DelegationRejectedError("delegation_not_found", f"Delegation `{delegation_id}` does not exist.")
+            cur = ChildDelegationRecord.from_mapping(raw)
+            updated = replace(
+                cur,
+                status=status,
+                post_file_versions=(
+                    {str(k): (str(v) if v is not None else None) for k, v in post_file_versions.items()}
+                    if post_file_versions is not None
+                    else cur.post_file_versions
+                ),
+                edit_batch_ids=(tuple(str(x) for x in edit_batch_ids) if edit_batch_ids is not None else cur.edit_batch_ids),
+                output_excerpt=(str(output_excerpt)[:4000] if output_excerpt is not None else cur.output_excerpt),
+                failure_reason=(str(failure_reason)[:1000] if failure_reason is not None else cur.failure_reason),
+                updated_at=float(now if now is not None else time.time()),
+            )
+            state["delegations"][delegation_id] = updated.to_mapping()
+            self._write_state_unlocked(state)
+            return updated
+
+    def mark_joined(
+        self,
+        delegation_id: str,
+        join_outcome: ChildJoinOutcome,
+        *,
+        discarded: bool = False,
+        now: float | None = None,
+    ) -> ChildDelegationRecord:
+        with self._lock:
+            state = self._read_state_unlocked()
+            raw = state["delegations"].get(delegation_id)
+            if not isinstance(raw, Mapping):
+                raise DelegationRejectedError("delegation_not_found", f"Delegation `{delegation_id}` does not exist.")
+            cur = ChildDelegationRecord.from_mapping(raw)
+            if cur.is_joined:
+                return cur
+            updated = replace(
+                cur,
+                status=("joined_discarded" if discarded else "joined"),
+                join_outcome=join_outcome,
+                updated_at=float(now if now is not None else time.time()),
+            )
+            state["delegations"][delegation_id] = updated.to_mapping()
+            self._write_state_unlocked(state)
+            return updated
+
+    def mark_cancelled_by_parent(
+        self,
+        parent_task_id: str,
+        *,
+        reason: str = "parent_cancelled",
+        now: float | None = None,
+    ) -> tuple[ChildDelegationRecord, ...]:
+        """Propagate parent cancel/fence to all running children in durable delegation state."""
+        ts = float(now if now is not None else time.time())
+        affected: list[ChildDelegationRecord] = []
+        with self._lock:
+            state = self._read_state_unlocked()
+            changed = False
+            for did, raw in list(state["delegations"].items()):
+                rec = ChildDelegationRecord.from_mapping(raw)
+                if rec.parent_task_id == parent_task_id and rec.status == "running":
+                    upd = replace(
+                        rec,
+                        status="cancelled_unjoined",
+                        failure_reason=str(reason)[:1000],
+                        updated_at=ts,
+                    )
+                    state["delegations"][did] = upd.to_mapping()
+                    affected.append(upd)
+                    changed = True
+            if changed:
+                self._write_state_unlocked(state)
+        return tuple(affected)
+
+    def save_benchmark_summary(self, category: str, summary: Mapping[str, Any]) -> None:
+        cat = _cd_clean_id(category, "benchmark_category")
+        with self._lock:
+            state = self._read_state_unlocked()
+            state["benchmarks"][cat] = dict(summary)
+            self._write_state_unlocked(state)
+
+    def get_benchmark_summary(self, category: str) -> dict[str, Any] | None:
+        with self._lock:
+            state = self._read_state_unlocked()
+            raw = state["benchmarks"].get(category)
+            return dict(raw) if isinstance(raw, Mapping) else None
+
+    def purge_session(self, session_id: str) -> int:
+        with self._lock:
+            state = self._read_state_unlocked()
+            to_del = [
+                did
+                for did, raw in state["delegations"].items()
+                if isinstance(raw, Mapping) and str(raw.get("session_id")) == session_id
+            ]
+            if not to_del:
+                return 0
+            for did in to_del:
+                del state["delegations"][did]
+            self._write_state_unlocked(state)
+            return len(to_del)
+
+
+@dataclass(frozen=True, slots=True)
+class DelegationEvalRun:
+    """One measured single-agent or bounded-delegation run for deterministic comparison (Task 4)."""
+
+    run_id: str
+    strategy: Literal["single_model", "multi_agent"]
+    scenario_id: str
+    task_digest: str
+    config_digest: str
+    hardware_digest: str
+    outcome: Literal["completed", "failed", "cancelled"]
+    verified_success: bool
+    latency_ms: float
+    token_cost: float
+    tool_calls: int
+    peak_memory_bytes: int
+
+    def __post_init__(self) -> None:
+        if self.strategy not in {"single_model", "multi_agent"}:
+            raise ChildDelegationError(f"Invalid strategy {self.strategy!r}.")
+        if self.outcome != "completed" and self.verified_success:
+            raise ChildDelegationError("Failed or cancelled run cannot claim verified_success=True.")
+        if self.latency_ms < 0 or self.token_cost < 0 or self.tool_calls < 0 or self.peak_memory_bytes < 0:
+            raise ChildDelegationError("Benchmark metrics must be non-negative.")
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "run_id": self.run_id,
+            "strategy": self.strategy,
+            "scenario_id": self.scenario_id,
+            "task_digest": self.task_digest,
+            "config_digest": self.config_digest,
+            "hardware_digest": self.hardware_digest,
+            "outcome": self.outcome,
+            "verified_success": self.verified_success,
+            "latency_ms": round(float(self.latency_ms), 6),
+            "token_cost": round(float(self.token_cost), 6),
+            "tool_calls": int(self.tool_calls),
+            "peak_memory_bytes": int(self.peak_memory_bytes),
+        }
+
+
+def _cd_metric_stats(values: Sequence[float]) -> dict[str, float | int]:
+    return {
+        "median": round(float(statistics.median(values)), 6),
+        "spread": round(float(max(values) - min(values)), 6),
+        "minimum": round(float(min(values)), 6),
+        "maximum": round(float(max(values)), 6),
+        "count": len(values),
+    }
+
+
+def _cd_summarize_strategy(
+    strategy: Literal["single_model", "multi_agent"],
+    runs: Sequence[DelegationEvalRun],
+) -> dict[str, Any]:
+    succ = sum(1 for r in runs if r.verified_success)
+    return {
+        "strategy": strategy,
+        "run_count": len(runs),
+        "successful_runs": succ,
+        "success_rate": round(succ / len(runs), 6),
+        "latency_ms": _cd_metric_stats([r.latency_ms for r in runs]),
+        "cost": _cd_metric_stats([r.token_cost for r in runs]),
+        "tool_calls": _cd_metric_stats([float(r.tool_calls) for r in runs]),
+        "peak_memory_bytes": _cd_metric_stats([float(r.peak_memory_bytes) for r in runs]),
+    }
+
+
+def compare_delegation_runs(
+    scenario_id: str,
+    runs: Sequence[DelegationEvalRun],
+) -> dict[str, Any]:
+    """Compare matched ``single_model`` vs ``multi_agent`` runs and classify whether overhead is justified."""
+    clean_scen = _cd_clean_id(scenario_id, "scenario_id")
+    if not runs:
+        raise ChildDelegationError("Benchmark runs must be non-empty.")
+    seen_ids: set[str] = set()
+    task_digests: set[str] = set()
+    cfg_digests: set[str] = set()
+    hw_digests: set[str] = set()
+    for r in runs:
+        if r.run_id in seen_ids:
+            raise ChildDelegationError(f"Duplicate benchmark run_id {r.run_id!r}.")
+        seen_ids.add(r.run_id)
+        if r.scenario_id != clean_scen:
+            raise ChildDelegationError(f"Run {r.run_id!r} scenario mismatch ({r.scenario_id!r} != {clean_scen!r}).")
+        task_digests.add(r.task_digest)
+        cfg_digests.add(r.config_digest)
+        hw_digests.add(r.hardware_digest)
+    if len(task_digests) != 1 or len(cfg_digests) != 1 or len(hw_digests) != 1:
+        raise ChildDelegationError("Comparable runs must share identical task, config, and hardware digests.")
+
+    single_runs = [r for r in runs if r.strategy == "single_model"]
+    multi_runs = [r for r in runs if r.strategy == "multi_agent"]
+    if not single_runs or not multi_runs:
+        raise ChildDelegationError("Comparison requires at least one single_model and one multi_agent run.")
+
+    s_sum = _cd_summarize_strategy("single_model", single_runs)
+    m_sum = _cd_summarize_strategy("multi_agent", multi_runs)
+    sr_delta = round(float(m_sum["success_rate"]) - float(s_sum["success_rate"]), 6)
+    lat_delta = round(float(m_sum["latency_ms"]["median"]) - float(s_sum["latency_ms"]["median"]), 6)
+    cost_delta = round(float(m_sum["cost"]["median"]) - float(s_sum["cost"]["median"]), 6)
+    mem_delta = round(
+        float(m_sum["peak_memory_bytes"]["median"]) - float(s_sum["peak_memory_bytes"]["median"]),
+        6,
+    )
+    deltas = {
+        "success_rate": sr_delta,
+        "latency_ms": lat_delta,
+        "cost": cost_delta,
+        "peak_memory_bytes": mem_delta,
+    }
+    preserves_or_improves = sr_delta >= 0.0
+    overhead_justified = bool(sr_delta > 0.0 or (sr_delta == 0.0 and (lat_delta <= 0.0 or cost_delta <= 0.0)))
+    payload: dict[str, Any] = {
+        "schema_version": CD_SCHEMA_VERSION,
+        "scenario_id": clean_scen,
+        "task_digest": next(iter(task_digests)),
+        "config_digest": next(iter(cfg_digests)),
+        "hardware_digest": next(iter(hw_digests)),
+        "single_model": s_sum,
+        "multi_agent": m_sum,
+        "multi_agent_minus_single_model": deltas,
+        "preserves_or_improves_verified_outcomes": preserves_or_improves,
+        "delegation_overhead_justified": overhead_justified,
+        "runs": [r.to_mapping() for r in runs],
+    }
+    payload["report_sha256"] = _cd_canonical_sha256(payload)
+    return payload
+
+child_delegation = sys.modules[__name__]
+
 """Persisted workflow and durable root-task/milestone state machine (M5-P1-05)."""
 
 
@@ -33271,7 +36101,151 @@ class DurableTaskStateMachine:
         )
 
     def list_milestones(self, root_task_id: str) -> list[runtime_persistence.TaskRecord]:
-        return self.store.list_child_tasks(_validate_identifier(root_task_id, "root_task_id"))
+        root_id = _validate_identifier(root_task_id, "root_task_id")
+        return [
+            t for t in self.store.list_child_tasks(root_id)
+            if not child_delegation.is_child_subtask_id(t.task_id)
+        ]
+
+    def list_child_subtasks(self, root_task_id: str) -> list[runtime_persistence.TaskRecord]:
+        """Return delegated child subagent tasks (`::sub:`) under ``root_task_id`` (M5-P4-03)."""
+        root_id = _validate_identifier(root_task_id, "root_task_id")
+        return [
+            t for t in self.store.list_child_tasks(root_id)
+            if child_delegation.is_child_subtask_id(t.task_id)
+        ]
+
+    def spawn_child_subtask(
+        self,
+        parent_task_id: str,
+        sub_key: str,
+        *,
+        title: str = "",
+        policy: str = "plan",
+        budget_spec: execution_budget.TaskBudgetSpec | None = None,
+        now: float | None = None,
+    ) -> runtime_persistence.TaskRecord:
+        """Create a bounded child ``runtime_tasks`` row under ``parent_task_id`` (M5-P4-03)."""
+        parent_id = _validate_identifier(parent_task_id, "parent_task_id")
+        child_id = child_delegation.child_subtask_id(parent_id, sub_key)
+        if policy not in child_delegation.CD_POLICY_RANK:
+            raise WorkflowStateError(f"Unknown child policy {policy!r}.")
+        ts = time.time() if now is None else float(now)
+        init_budget = execution_budget.TaskBudgetState(
+            spec=(budget_spec if budget_spec is not None else execution_budget.TaskBudgetSpec())
+        )
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.TaskRecord:
+            conn.row_factory = sqlite3.Row
+            parent_row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (parent_id,)).fetchone()
+            if parent_row is None:
+                raise WorkflowStateError(f"Parent task {parent_id!r} does not exist.")
+            parent_pol = str(parent_row["policy"])
+            if child_delegation.CD_POLICY_RANK[policy] > child_delegation.CD_POLICY_RANK.get(parent_pol, -1):
+                raise WorkflowTransitionRejected(
+                    f"Child policy {policy!r} exceeds parent task {parent_id!r} policy {parent_pol!r}."
+                )
+            p_budget = execution_budget.TaskBudgetState.from_json(str(parent_row["budget_json"]))
+            if p_budget.cancel_requested or str(parent_row["state"]) == "cancelled":
+                raise WorkflowTransitionRejected(
+                    f"Cannot spawn child subtask under cancelled parent {parent_id!r}."
+                )
+            existing = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (child_id,)).fetchone()
+            if existing is not None:
+                return runtime_persistence._row_to_task(existing)
+            conn.execute(
+                """
+                INSERT INTO runtime_tasks (
+                    task_id, parent_task_id, session_id, title, state,
+                    current_epoch, state_version, workspace_dir, policy,
+                    budget_json, checkpoint_ref, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, 'pending', 0, 0, ?, ?, ?, '', ?, ?)
+                """,
+                (
+                    child_id,
+                    parent_id,
+                    str(parent_row["session_id"]),
+                    str(title or sub_key)[:240],
+                    str(parent_row["workspace_dir"]),
+                    policy,
+                    init_budget.to_json(),
+                    ts,
+                    ts,
+                ),
+            )
+            created = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (child_id,)).fetchone()
+            assert created is not None
+            return runtime_persistence._row_to_task(created)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def mark_child_subtask_joined(
+        self,
+        child_task_id: str,
+        *,
+        delegation_id: str,
+        disposition: str,
+        now: float | None = None,
+    ) -> runtime_persistence.TaskRecord:
+        """Atomically verify terminal/zero-orphan child state and stamp ``joined:`` marker (M5-P4-03)."""
+        cid = _validate_identifier(child_task_id, "child_task_id")
+        did = _validate_identifier(delegation_id, "delegation_id")
+        ts = time.time() if now is None else float(now)
+        marker = f"joined:{did}:{disposition}"[:256]
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.TaskRecord:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (cid,)).fetchone()
+            if row is None:
+                raise WorkflowStateError(f"Child subtask {cid!r} does not exist.")
+            c_state = str(row["state"])
+            if c_state not in {"completed", "failed", "cancelled"}:
+                raise WorkflowTransitionRejected(
+                    f"Child subtask {cid!r} in non-terminal state {c_state!r} cannot be joined."
+                )
+            active_ep = conn.execute(
+                "SELECT epoch FROM runtime_task_epochs WHERE task_id = ? AND status = 'active'",
+                (cid,),
+            ).fetchone()
+            if active_ep is not None:
+                raise WorkflowTransitionRejected(
+                    f"Child subtask {cid!r} still has active epoch {active_ep['epoch']}; release or fence before joining."
+                )
+            unres = conn.execute(
+                """
+                SELECT action_id FROM runtime_actions
+                WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                """,
+                (cid,),
+            ).fetchall()
+            if unres:
+                ids = ", ".join(str(r["action_id"]) for r in unres)
+                raise WorkflowTransitionRejected(
+                    f"Child subtask {cid!r} cannot be joined with unresolved consequential action(s): {ids}."
+                )
+            conn.execute(
+                """
+                UPDATE runtime_tasks
+                SET checkpoint_ref = ?, state_version = state_version + 1, updated_at = ?
+                WHERE task_id = ?
+                """,
+                (marker, ts, cid),
+            )
+            updated = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (cid,)).fetchone()
+            assert updated is not None
+            return runtime_persistence._row_to_task(updated)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
 
     def transition_milestone(
         self,
@@ -33540,6 +36514,20 @@ class DurableTaskStateMachine:
                     "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
                     (deferred_budget.to_json(), ts, tid),
                 )
+                child_run_rows = conn.execute(
+                    "SELECT task_id, budget_json FROM runtime_tasks WHERE parent_task_id = ? AND state IN ('running', 'waiting_approval')",
+                    (tid,),
+                ).fetchall()
+                for c_row in child_run_rows:
+                    try:
+                        cb = execution_budget.TaskBudgetState.from_json(str(c_row["budget_json"]))
+                        cb_def = replace(cb, pause_requested=True)
+                        conn.execute(
+                            "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                            (cb_def.to_json(), ts, str(c_row["task_id"])),
+                        )
+                    except execution_budget.BudgetError:
+                        pass
                 refreshed = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
                 assert refreshed is not None
                 return TaskControlResult(
@@ -33551,10 +36539,11 @@ class DurableTaskStateMachine:
             unresolved_rows = conn.execute(
                 """
                 SELECT action_id FROM runtime_actions
-                WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                  AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
                 ORDER BY created_at ASC
                 """,
-                (tid,),
+                (tid, tid),
             ).fetchall()
             if unresolved_rows:
                 raise WorkflowTransitionRejected(
@@ -33794,33 +36783,37 @@ class DurableTaskStateMachine:
                 """
                 UPDATE runtime_task_epochs
                 SET status = 'fenced', fenced_at = ?, fence_reason = 'task_cancelled'
-                WHERE task_id = ? AND status = 'active'
+                WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                  AND status = 'active'
                 """,
-                (ts, tid),
+                (ts, tid, tid),
             )
             conn.execute(
                 """
                 UPDATE runtime_actions
                 SET status = 'uncertain', error_code = 'cancelled_in_flight', updated_at = ?
-                WHERE task_id = ? AND status = 'in_flight' AND action_class != 'read_only'
+                WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                  AND status = 'in_flight' AND action_class != 'read_only'
                 """,
-                (ts, tid),
+                (ts, tid, tid),
             )
             conn.execute(
                 """
                 UPDATE runtime_actions
                 SET status = 'failed', ok = 0, error_code = 'cancelled_in_flight', updated_at = ?
-                WHERE task_id = ? AND status = 'in_flight' AND action_class = 'read_only'
+                WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                  AND status = 'in_flight' AND action_class = 'read_only'
                 """,
-                (ts, tid),
+                (ts, tid, tid),
             )
             unresolved_rows = conn.execute(
                 """
                 SELECT action_id FROM runtime_actions
-                WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                  AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
                 ORDER BY created_at ASC
                 """,
-                (tid,),
+                (tid, tid),
             ).fetchall()
             unresolved_ids = tuple(str(r["action_id"]) for r in unresolved_rows)
 
@@ -34691,13 +37684,30 @@ class DurableTaskStateMachine:
             raise WorkflowTransitionRejected(
                 f"Task {tid!r} cannot complete while milestone(s) remain incomplete: {', '.join(incomplete_ms)}."
             )
+        child_subtasks = self.list_child_subtasks(tid)
+        unjoined_subs = [
+            sub.task_id
+            for sub in child_subtasks
+            if sub.state not in {"completed", "failed", "cancelled"}
+            or not str(sub.checkpoint_ref or "").startswith("joined:")
+        ]
+        if unjoined_subs:
+            raise WorkflowTransitionRejected(
+                f"Task {tid!r} cannot complete while delegated child subtask(s) remain active or unjoined: "
+                f"{', '.join(unjoined_subs)}."
+            )
         all_actions = sorted(
             self.store.list_task_actions(tid),
             key=lambda a: (a.updated_at, a.created_at),
         )
+        child_actions = [
+            act
+            for sub in child_subtasks
+            for act in self.store.list_task_actions(sub.task_id)
+        ]
         unresolved = [
             act.action_id
-            for act in all_actions
+            for act in [*all_actions, *child_actions]
             if act.status in ("in_flight", "uncertain") and act.action_class != "read_only"
         ]
         if unresolved:
@@ -34813,20 +37823,39 @@ class DurableTaskStateMachine:
                     "UPDATE runtime_task_epochs SET status = 'released', heartbeat_at = ? WHERE task_id = ? AND epoch = ?",
                     (ts, tid, int(epoch)),
                 )
-            bad_ms = conn.execute(
-                "SELECT task_id FROM runtime_tasks WHERE parent_task_id = ? AND state != 'completed'",
+            child_rows = conn.execute(
+                "SELECT task_id, state, checkpoint_ref FROM runtime_tasks WHERE parent_task_id = ?",
                 (tid,),
             ).fetchall()
+            bad_ms = [
+                str(r["task_id"])
+                for r in child_rows
+                if not child_delegation.is_child_subtask_id(str(r["task_id"])) and str(r["state"]) != "completed"
+            ]
             if bad_ms:
                 raise WorkflowTransitionRejected(
                     f"Task {tid!r} has incomplete milestone(s) inside completion commit."
                 )
+            bad_subs = [
+                str(r["task_id"])
+                for r in child_rows
+                if child_delegation.is_child_subtask_id(str(r["task_id"]))
+                and (
+                    str(r["state"]) not in {"completed", "failed", "cancelled"}
+                    or not str(r["checkpoint_ref"] or "").startswith("joined:")
+                )
+            ]
+            if bad_subs:
+                raise WorkflowTransitionRejected(
+                    f"Task {tid!r} has active or unjoined child subtask(s) inside completion commit: {', '.join(bad_subs)}."
+                )
             bad_actions = conn.execute(
                 """
                 SELECT action_id FROM runtime_actions
-                WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                  AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
                 """,
-                (tid,),
+                (tid, tid),
             ).fetchall()
             if bad_actions:
                 raise WorkflowTransitionRejected(
@@ -34950,22 +37979,33 @@ class DurableTaskStateMachine:
                 if has_live_lease:
                     continue
 
-                # Sweep any orphaned in-flight actions on inactive epochs before deciding task state.
+                # Sweep any orphaned in-flight actions on inactive epochs (parent + children) before deciding state.
                 conn.execute(
                     """
-                    UPDATE runtime_actions
-                    SET status = 'uncertain', error_code = 'orphaned_in_flight_on_recovery', updated_at = ?
-                    WHERE task_id = ? AND status = 'in_flight' AND action_class != 'read_only'
+                    UPDATE runtime_task_epochs
+                    SET status = 'expired', fenced_at = ?, fence_reason = 'parent_recovery_sweep'
+                    WHERE task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?)
+                      AND status = 'active'
                     """,
                     (ts, tid),
                 )
                 conn.execute(
                     """
                     UPDATE runtime_actions
-                    SET status = 'failed', ok = 0, error_code = 'orphaned_in_flight_on_recovery', updated_at = ?
-                    WHERE task_id = ? AND status = 'in_flight' AND action_class = 'read_only'
+                    SET status = 'uncertain', error_code = 'orphaned_in_flight_on_recovery', updated_at = ?
+                    WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                      AND status = 'in_flight' AND action_class != 'read_only'
                     """,
-                    (ts, tid),
+                    (ts, tid, tid),
+                )
+                conn.execute(
+                    """
+                    UPDATE runtime_actions
+                    SET status = 'failed', ok = 0, error_code = 'orphaned_in_flight_on_recovery', updated_at = ?
+                    WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                      AND status = 'in_flight' AND action_class = 'read_only'
+                    """,
+                    (ts, tid, tid),
                 )
 
                 try:
@@ -34979,10 +38019,11 @@ class DurableTaskStateMachine:
                     unresolved_rows = conn.execute(
                         """
                         SELECT action_id FROM runtime_actions
-                        WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                        WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                          AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
                         ORDER BY created_at ASC
                         """,
-                        (tid,),
+                        (tid, tid),
                     ).fetchall()
                     unresolved_ids = [str(r["action_id"]) for r in unresolved_rows]
                     ckpt_ref = str(t_row["checkpoint_ref"] or "").strip()

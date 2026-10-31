@@ -25,6 +25,7 @@ from typing import Callable
 
 import pytest
 
+import child_delegation
 import mcp_client
 import process_supervision
 import routing_policy
@@ -82,6 +83,11 @@ def _write_handoffs(root: Path) -> None:
     store.reserve_switch_attempt("sess-contract")
 
 
+def _write_delegations(root: Path) -> None:
+    store = child_delegation.ChildDelegationStore(root)
+    store.save_benchmark_summary("contract-cat", {"verified": True})
+
+
 WriteFn = Callable[[Path], None]
 ErrorCls = type[BaseException]
 
@@ -117,6 +123,12 @@ STORE_CASES: list[tuple[str, WriteFn, Path, ErrorCls]] = [
         Path("handoffs") / "state.json",
         routing_policy.HandoffStoreIntegrityError,
     ),
+    (
+        "delegations",
+        _write_delegations,
+        Path("delegations") / "state.json",
+        child_delegation.DelegationStoreIntegrityError,
+    ),
 ]
 _CASES = [pytest.param(w, rel, err, id=name) for name, w, rel, err in STORE_CASES]
 
@@ -141,6 +153,7 @@ def test_every_module_with_a_durable_state_file_is_covered() -> None:
         "mcp_effects": "mcp_client",
         "security_incidents": "sandbox_boundary",
         "handoffs": "routing_policy",
+        "delegations": "child_delegation",
     }
     covered = {
         covered_modules[relative.parts[0]] for _name, _write, relative, _err in STORE_CASES
