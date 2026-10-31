@@ -3,9 +3,9 @@ id: ADR-0013
 title: process-supervision-and-in-flight-containment
 status: accepted
 date: 2026-10-31
-review_status: not-reviewed
-reviewed_by: none
-reviewed_on: none
+review_status: reviewed
+reviewed_by: arena/ff251d72-m5-agent-studio
+reviewed_on: 2026-10-31
 ---
 
 # ADR-0013: Process supervision, detached-tree termination, and durable containment barriers
@@ -130,5 +130,14 @@ integrate it across `execution_spine.py`, `side_effect_ledger.py`,
 
 ## Review Status
 
-Not reviewed. Accepted as the architectural record for `M5-P3-03`; independent human
-review has not yet been performed.
+Reviewed on 2026-10-31 by `arena/ff251d72-m5-agent-studio` (a session other than the
+implementing one), as part of the PR #60 review. The reviewer re-ran the verification
+sequence on the PR head (1127 passed, ruff, mypy, docs/ADR/governance validators, a
+reproducible bundle rebuild, `smoke_local.py --standalone`) and probed the three
+acceptance criteria independently of the shipped tests: an origin fence written by one
+`ContainmentStore` is honoured by a fresh instance on the same directory and across a
+boot-id change; persisted holds block the owning task and other tasks sharing the
+workspace but not other workspaces; and corrupt or symlinked containment state fails
+closed. No blocking findings. Two non-blocking documentation corrections were raised
+(a stale test count and a misnamed next story in the ledger handoff note) and applied
+after merge.
