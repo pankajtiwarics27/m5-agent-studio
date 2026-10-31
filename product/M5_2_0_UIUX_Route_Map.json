@@ -12,7 +12,7 @@
     "document_line": "line in static/index.html, which is what a reader of that file needs"
   },
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "484660a563a1e615e8842d573b6f24c77bb36144ed5ebd5cfcaea9c20c6e1475",
+  "frontend_sha256": "3a201cd828b3298226a76ec817bb59552f18d69ccd44b7f9035b49315ac57af9",
   "app_sha256": "e3dd15bef236555d4cb3fca12eac003a55e099b48bbefa20e313489af652f129",
   "caller_resolution": {
     "complete": true,
