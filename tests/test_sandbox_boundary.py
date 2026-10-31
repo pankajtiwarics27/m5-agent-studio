@@ -111,3 +111,92 @@ def test_build_container_invocation_matches_app_sandbox_command_and_rejects_unsa
             workspace, "true", runtime_path="/usr/bin/docker", image="--privileged"
         )
 
+
+
+# --- execution-mode gate: no path from "sandbox" to the host -------------------
+
+
+def _run_untrusted(tmp_path: Path, command: str) -> tuple[object, object]:
+    import asyncio
+    import app as studio
+
+    return asyncio.run(studio._execute_limited(tmp_path, command, timeout=10, max_output_bytes=4096))
+
+
+def test_disabled_mode_refuses_without_running_anything(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import app as studio
+
+    monkeypatch.setattr(studio, "STUDIO_EXECUTION_MODE", "disabled")
+    marker = tmp_path / "EXECUTED"
+    with pytest.raises(PermissionError, match="Code execution is disabled"):
+        _run_untrusted(tmp_path, f"touch {marker}")
+    assert not marker.exists()
+
+
+def test_sandbox_mode_without_a_runtime_refuses_instead_of_falling_back_to_the_host(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The release constraint is "unverified isolation stays unavailable".
+
+    A missing container runtime is the moment where a convenient fallback would be
+    tempting: the command is already admitted, the workspace exists, and spawning it
+    on the host would work. It must not.
+    """
+    import app as studio
+
+    monkeypatch.setattr(studio, "STUDIO_EXECUTION_MODE", "sandbox")
+    monkeypatch.setattr(studio, "STUDIO_SANDBOX_RUNTIME", "definitely-not-a-container-runtime")
+    marker = tmp_path / "EXECUTED"
+    with pytest.raises(RuntimeError, match="not installed or not on PATH"):
+        _run_untrusted(tmp_path, f"touch {marker}")
+    assert not marker.exists()
+
+
+def test_sandbox_mode_never_takes_the_host_shell_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Even with a runnable argv, sandbox mode must go through the container shape."""
+    import asyncio
+    import sys
+
+    import app as studio
+
+    monkeypatch.setattr(studio, "STUDIO_EXECUTION_MODE", "sandbox")
+    monkeypatch.setattr(studio, "_sandbox_command", lambda *a, **k: [sys.executable, "-c", "pass"])
+
+    def _host_shell_used(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("sandbox mode used the host shell")
+
+    monkeypatch.setattr(studio.asyncio, "create_subprocess_shell", _host_shell_used)
+
+    async def _go() -> tuple[object, object]:
+        proc, container = await studio._start_code_process(tmp_path, "echo hi")
+        await proc.communicate()
+        return proc, container
+
+    proc, container = asyncio.run(_go())
+    assert container is not None, "sandbox mode must return the container name it created"
+    assert getattr(proc, "returncode", None) == 0
+
+
+def test_host_mode_without_the_explicit_opt_in_degrades_to_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two independent gates: the mode *and* the opt-in, both fail closed."""
+    import app as studio
+
+    monkeypatch.setattr(studio, "STUDIO_EXECUTION_MODE", "host")
+    monkeypatch.setattr(studio, "STUDIO_ALLOW_HOST_EXECUTION", False)
+    assert studio._execution_mode() == "disabled"
+
+    monkeypatch.setattr(studio, "STUDIO_ALLOW_HOST_EXECUTION", True)
+    assert studio._execution_mode() == "host"
+
+
+def test_settings_reject_host_mode_without_the_opt_in() -> None:
+    from app import ConfigurationError, load_settings
+
+    with pytest.raises(ConfigurationError, match="STUDIO_ALLOW_HOST_EXECUTION"):
+        load_settings({"STUDIO_EXECUTION_MODE": "host"}, base_dir=Path("."))
