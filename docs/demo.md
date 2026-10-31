@@ -136,7 +136,15 @@ produced exactly this way, with no hand-editing afterwards.
 `capture_screenshots.mjs` sets the token in `sessionStorage`, switches to each
 pane through the UI's own tab control, and writes the PNGs plus
 `media/screenshots/index.json` (sha256, size, viewport, capture time for each
-image). It fails closed: if no browser or no `puppeteer-core` is available, or any
+image).
+
+Variant flags photograph a theme, a density or a narrower window instead of
+describing them: `--panes start,chat`, `--emulate-theme light`,
+`--emulate-density compact`, `--viewport 900x800`. They write to their own `--out`
+directory with their own `index.json`, so the baseline set is never overwritten by
+an experiment; [`media/tokens/README.md`](media/tokens/README.md) is the example.
+The theme and density flags seed the shell's own `localStorage` preferences before
+the first document, which is how a returning user's choice is restored. It fails closed: if no browser or no `puppeteer-core` is available, or any
 pane fails, it writes nothing and exits non-zero, so a partial or fabricated set
 cannot be mistaken for the real thing. `--dry-run` prints the capture plan without
 a browser.

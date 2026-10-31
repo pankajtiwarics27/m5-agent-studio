@@ -102,9 +102,9 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P0-06",
-    "next_recommended_story": "UIUX-P1-01",
-    "last_checkpoint": "2026-10-31T20:35:00Z",
+    "last_completed_story": "UIUX-P1-01",
+    "next_recommended_story": "UIUX-P1-02",
+    "last_checkpoint": "2026-10-31T21:10:00Z",
     "last_session_id": "arena/9110aa1b-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
@@ -231,10 +231,10 @@
         "UIUX-P1-05"
       ],
       "total": 5,
-      "done": 0,
+      "done": 1,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 5,
+      "not_started": 4,
       "percent_complete": 0
     },
     {
@@ -339,11 +339,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 6,
+    "done": 7,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 34,
-    "percent_complete": 15
+    "not_started": 33,
+    "percent_complete": 18
   },
   "stories": [
     {
@@ -1372,23 +1372,93 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P1-01 (Define tokens typography density and themes). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-10-31T20:50:00Z",
+        "updated_at": "2026-10-31T21:10:00Z",
+        "completed_at": "2026-10-31T21:10:00Z",
+        "owner_session": "arena/9110aa1b-m5-agent-studio",
+        "commit_sha": "5011052f81c307baf9935ff23e68b468dd59b5f3",
+        "changed_files": [
+          "static/index.html",
+          "studio.py",
+          "scripts/uiux_tokens.py",
+          "scripts/capture_screenshots.mjs",
+          "tests/test_uiux_tokens.py",
+          "tests/test_screenshots.py",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
+          "docs/uiux-2-0-tokens.md",
+          "docs/uiux-2-0-program.md",
+          "docs/demo.md",
+          "docs/README.md",
+          "docs/media/tokens/README.md"
+        ],
+        "evidence": [
+          "The token layer is now a closed system of 45 tokens in 7 declared groups: colour (19, both themes), typography (5 sizes/weights/line heights/tracking in use), space (5), radius (3), density (5), motion (2) and shell metrics (3), with 570 var() references. scripts/uiux_tokens.py regenerates product/M5_2_0_UIUX_Tokens.json and docs/uiux-2-0-tokens.md and fails on: a var() naming no declared token, a token nothing reads, a token in no group, a light theme missing a colour the default theme defines, a density block moving a non-density token, and any text/background pair below its contrast floor.",
+          "Three defects in the pre-existing layer were found by the checks rather than by eye: --accent-hi was declared in both themes and read nowhere (removed rather than exempted), the light theme never re-pointed --primary-text so it silently inherited the dark value, and the density re-point was duplicated as three hand-written padding rules instead of one token. The compact rules now read --strip-pad-y and friends.",
+          "The refactor is provably not a visual change at the baseline: on one running demo instance, with the stylesheet swapped between captures, all six panes are byte-identical before and after (start, harness, hall, pipeline, compare, chat), and two consecutive captures of the refactored tree are byte-identical to each other. Nothing in the committed six-image baseline was re-shot or hand-edited.",
+          "Themes and density are photographed, not described: docs/media/tokens/light-900 (light theme, Start and Chat at 900x800@2) and docs/media/tokens/compact (compact density, 1440x900@2), each with its own index.json of digests, captured through the same script by seeding the shell's persisted preferences before the first document. The captures show the shell as the approved design direction describes it: rail, workspace, inspector.",
+          "Keyboard and control preservation: no markup control was added, removed or renamed (the control inventory still reports 170 markup controls and 30 script-rendered), no route or handler changed (route map unchanged at 53 call sites), and the change touches only CSS declarations and their token values.",
+          "Closed at 5011052f81c307baf9935ff23e68b468dd59b5f3: the commit that carries the token layer, the generator and the tests, so the evidence sha is the tree the checks ran on."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "1667 passed, 1 skipped"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_tokens.py --check",
+            "exit_code": 0,
+            "result": "Design tokens are up to date: 45 tokens in 7 groups, 570 references, 20 contrast pairs (lowest 4.69:1)"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_source_manifest.py --check",
+            "exit_code": 0,
+            "result": "14 files, 6 tabs, 115 routes, pinned to 73bc5e4"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_control_inventory.py --check",
+            "exit_code": 0,
+            "result": "170 markup controls (101 chrome, 69 panes), 30 script-rendered"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_route_map.py --check",
+            "exit_code": 0,
+            "result": "53 call sites, 0 findings, 58 routes with no caller observed"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_screenshots.py",
+            "exit_code": 0,
+            "result": "Screenshots validated: 6 of 6 captured and consistent with the manifest"
+          },
+          {
+            "command": ".venv/bin/python scripts/build_studio.py && .venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "studio.py rebuilt; one inline script block parses"
+          },
+          {
+            "command": "node scripts/capture_screenshots.mjs (three runs: refactored, pre-refactor stylesheet, refactored)",
+            "exit_code": 0,
+            "result": "all six panes byte-identical between the two stylesheets; the two refactored runs identical to each other"
+          }
+        ],
         "visual_evidence": [],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "The scale holds only values something reads. A token with no reader fails the build, so the type scale is 11/12/13/14px, not a full modular scale, and it grows when a rule needs it. That is a deliberate trade: a speculative rung would pass review and then rot.",
+          "Contrast is measured in the generator, not asserted in prose. Floors: --text 7:1 against every surface, --text-dim and --text-faint 4.5:1, primary button text 4.5:1 on --accent. The light theme's --text-faint at 4.69:1 is the tightest pair and therefore the tripwire.",
+          "The legacy token block in the first <style> element stays, unparsed and superseded. Deleting it would be a bigger change than this story needs, but the generator reads only the redesign block so there is exactly one source of truth and the page says which one.",
+          "Variant captures go to docs/media/tokens with their own index.json rather than into the baseline set, because validate_screenshots.py fails on an image the manifest does not plan - the rule that keeps the baseline honest also keeps experiments out of it."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "Tokens are declared in static/index.html's #m5-redesign-system block and checked by scripts/uiux_tokens.py; run it after any CSS change and expect --check to fail until the artifacts are regenerated. Do not add a token before a rule reads it. Rebuild studio.py after editing the frontend, and re-run the source manifest because it pins the file digest. The committed baseline screenshots are still valid: the refactor was byte-identical.",
+        "next_action": "None. UIUX-P1-02 (navigation shell) starts from this token layer.",
         "readme_updated": false
       },
       "required_evidence": [

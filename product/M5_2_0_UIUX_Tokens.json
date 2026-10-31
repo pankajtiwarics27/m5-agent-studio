@@ -1,0 +1,680 @@
+{
+  "schema_version": "1.0.0",
+  "story": "UIUX-P1-01",
+  "statement": "The design tokens of the M5 Studio shell: colour, typography, space, radius, density, motion and shell metrics, defined once in static/index.html and checked for orphaned tokens, undefined references, theme parity and contrast. Checks prove declarations agree; they do not prove a screen looks right.",
+  "source": {
+    "frontend": "static/index.html",
+    "style_block": "#m5-redesign-system",
+    "style_block_sha256": "679ef6cb3b73833ecd8186c075b8be82d326e6794f5273c9589eaa35f0eab443",
+    "superseded_blocks": [
+      "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
+    ]
+  },
+  "theme_selectors": {
+    "dark": ":root (default)",
+    "light": "body[data-theme=\"light\"]",
+    "density": "body[data-density=\"compact\"]"
+  },
+  "contrast_floors": {
+    "text_roles": {
+      "text": 7.0,
+      "text-dim": 4.5,
+      "text-faint": 4.5
+    },
+    "surfaces": [
+      "bg",
+      "bg-elev",
+      "bg-card"
+    ],
+    "fill_pairs": [
+      {
+        "foreground": "--primary-text",
+        "background": "--accent",
+        "floor": 4.5
+      }
+    ]
+  },
+  "totals": {
+    "tokens": 45,
+    "groups": 7,
+    "references": 570,
+    "theme_overrides": 18,
+    "density_overrides": 5,
+    "contrast_pairs": 20,
+    "lowest_contrast_ratio": 4.69
+  },
+  "groups": {
+    "colour": [
+      "bg",
+      "bg-elev",
+      "bg-card",
+      "bg-hover",
+      "bg-code",
+      "border",
+      "border-hi",
+      "text",
+      "text-dim",
+      "text-faint",
+      "accent",
+      "primary-text",
+      "cyan",
+      "emerald",
+      "amber",
+      "rose",
+      "purple",
+      "ring"
+    ],
+    "typography": [
+      "text-2xs",
+      "text-xs",
+      "text-sm",
+      "text-base",
+      "weight-medium",
+      "weight-semibold",
+      "lh-tight",
+      "lh-base",
+      "tracking-tight"
+    ],
+    "space": [
+      "space-1",
+      "space-2",
+      "space-3",
+      "space-4",
+      "space-5"
+    ],
+    "radius": [
+      "radius-sm",
+      "radius-md",
+      "radius-lg"
+    ],
+    "density": [
+      "control-min-h",
+      "control-min-h-sm",
+      "strip-pad-y",
+      "card-pad",
+      "row-gap"
+    ],
+    "motion": [
+      "ease-out",
+      "dur-fast"
+    ],
+    "shell": [
+      "sans",
+      "mono",
+      "header-height"
+    ]
+  },
+  "tokens": [
+    {
+      "name": "--bg",
+      "group": "colour",
+      "value": "#151719",
+      "theme_overrides": {
+        "light": "#f7f7f5"
+      },
+      "density_override": null,
+      "references": 12
+    },
+    {
+      "name": "--bg-elev",
+      "group": "colour",
+      "value": "#1b1e21",
+      "theme_overrides": {
+        "light": "#ffffff"
+      },
+      "density_override": null,
+      "references": 26
+    },
+    {
+      "name": "--bg-card",
+      "group": "colour",
+      "value": "#202428",
+      "theme_overrides": {
+        "light": "#ffffff"
+      },
+      "density_override": null,
+      "references": 43
+    },
+    {
+      "name": "--bg-hover",
+      "group": "colour",
+      "value": "#292e33",
+      "theme_overrides": {
+        "light": "#eff0ed"
+      },
+      "density_override": null,
+      "references": 17
+    },
+    {
+      "name": "--bg-code",
+      "group": "colour",
+      "value": "#111315",
+      "theme_overrides": {
+        "light": "#f1f2ef"
+      },
+      "density_override": null,
+      "references": 14
+    },
+    {
+      "name": "--border",
+      "group": "colour",
+      "value": "#34393e",
+      "theme_overrides": {
+        "light": "#d9dcd8"
+      },
+      "density_override": null,
+      "references": 105
+    },
+    {
+      "name": "--border-hi",
+      "group": "colour",
+      "value": "#525a62",
+      "theme_overrides": {
+        "light": "#b7bcb7"
+      },
+      "density_override": null,
+      "references": 16
+    },
+    {
+      "name": "--text",
+      "group": "colour",
+      "value": "#e9eaec",
+      "theme_overrides": {
+        "light": "#202326"
+      },
+      "density_override": null,
+      "references": 38
+    },
+    {
+      "name": "--text-dim",
+      "group": "colour",
+      "value": "#b0b5ba",
+      "theme_overrides": {
+        "light": "#555c62"
+      },
+      "density_override": null,
+      "references": 73
+    },
+    {
+      "name": "--text-faint",
+      "group": "colour",
+      "value": "#969da4",
+      "theme_overrides": {
+        "light": "#687077"
+      },
+      "density_override": null,
+      "references": 40
+    },
+    {
+      "name": "--accent",
+      "group": "colour",
+      "value": "#5969d8",
+      "theme_overrides": {
+        "light": "#5969d8"
+      },
+      "density_override": null,
+      "references": 17
+    },
+    {
+      "name": "--primary-text",
+      "group": "colour",
+      "value": "#ffffff",
+      "theme_overrides": {
+        "light": "#ffffff"
+      },
+      "density_override": null,
+      "references": 1
+    },
+    {
+      "name": "--cyan",
+      "group": "colour",
+      "value": "#70b7c9",
+      "theme_overrides": {
+        "light": "#276e82"
+      },
+      "density_override": null,
+      "references": 9
+    },
+    {
+      "name": "--emerald",
+      "group": "colour",
+      "value": "#72b598",
+      "theme_overrides": {
+        "light": "#286e50"
+      },
+      "density_override": null,
+      "references": 9
+    },
+    {
+      "name": "--amber",
+      "group": "colour",
+      "value": "#d2aa66",
+      "theme_overrides": {
+        "light": "#80580e"
+      },
+      "density_override": null,
+      "references": 13
+    },
+    {
+      "name": "--rose",
+      "group": "colour",
+      "value": "#dc7d83",
+      "theme_overrides": {
+        "light": "#a4313a"
+      },
+      "density_override": null,
+      "references": 9
+    },
+    {
+      "name": "--purple",
+      "group": "colour",
+      "value": "#a99acb",
+      "theme_overrides": {
+        "light": "#68508c"
+      },
+      "density_override": null,
+      "references": 1
+    },
+    {
+      "name": "--ring",
+      "group": "colour",
+      "value": "#a8b4ff",
+      "theme_overrides": {
+        "light": "#4858c8"
+      },
+      "density_override": null,
+      "references": 2
+    },
+    {
+      "name": "--text-2xs",
+      "group": "typography",
+      "value": "11px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 1
+    },
+    {
+      "name": "--text-xs",
+      "group": "typography",
+      "value": "12px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 2
+    },
+    {
+      "name": "--text-sm",
+      "group": "typography",
+      "value": "13px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 2
+    },
+    {
+      "name": "--text-base",
+      "group": "typography",
+      "value": "14px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 2
+    },
+    {
+      "name": "--weight-medium",
+      "group": "typography",
+      "value": "500",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 3
+    },
+    {
+      "name": "--weight-semibold",
+      "group": "typography",
+      "value": "600",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 1
+    },
+    {
+      "name": "--lh-tight",
+      "group": "typography",
+      "value": "1.3",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 1
+    },
+    {
+      "name": "--lh-base",
+      "group": "typography",
+      "value": "1.5",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 1
+    },
+    {
+      "name": "--tracking-tight",
+      "group": "typography",
+      "value": "-0.01em",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 1
+    },
+    {
+      "name": "--space-1",
+      "group": "space",
+      "value": "4px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 2
+    },
+    {
+      "name": "--space-2",
+      "group": "space",
+      "value": "6px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 1
+    },
+    {
+      "name": "--space-3",
+      "group": "space",
+      "value": "8px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 3
+    },
+    {
+      "name": "--space-4",
+      "group": "space",
+      "value": "12px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 1
+    },
+    {
+      "name": "--space-5",
+      "group": "space",
+      "value": "16px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 1
+    },
+    {
+      "name": "--radius-sm",
+      "group": "radius",
+      "value": "6px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 2
+    },
+    {
+      "name": "--radius-md",
+      "group": "radius",
+      "value": "8px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 1
+    },
+    {
+      "name": "--radius-lg",
+      "group": "radius",
+      "value": "10px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 1
+    },
+    {
+      "name": "--control-min-h",
+      "group": "density",
+      "value": "36px",
+      "theme_overrides": {},
+      "density_override": "32px",
+      "references": 2
+    },
+    {
+      "name": "--control-min-h-sm",
+      "group": "density",
+      "value": "32px",
+      "theme_overrides": {},
+      "density_override": "28px",
+      "references": 1
+    },
+    {
+      "name": "--strip-pad-y",
+      "group": "density",
+      "value": "7px",
+      "theme_overrides": {},
+      "density_override": "4px",
+      "references": 3
+    },
+    {
+      "name": "--card-pad",
+      "group": "density",
+      "value": "13px",
+      "theme_overrides": {},
+      "density_override": "10px",
+      "references": 1
+    },
+    {
+      "name": "--row-gap",
+      "group": "density",
+      "value": "4px",
+      "theme_overrides": {},
+      "density_override": "3px",
+      "references": 1
+    },
+    {
+      "name": "--ease-out",
+      "group": "motion",
+      "value": "cubic-bezier(.2,.8,.2,1)",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 9
+    },
+    {
+      "name": "--dur-fast",
+      "group": "motion",
+      "value": "140ms",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 5
+    },
+    {
+      "name": "--sans",
+      "group": "shell",
+      "value": "Inter, \"IBM Plex Sans\", \"Segoe UI\", system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 4
+    },
+    {
+      "name": "--mono",
+      "group": "shell",
+      "value": "\"JetBrains Mono\", \"SFMono-Regular\", Consolas, \"Liberation Mono\", monospace",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 65
+    },
+    {
+      "name": "--header-height",
+      "group": "shell",
+      "value": "56px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 8
+    }
+  ],
+  "contrast": [
+    {
+      "theme": "dark",
+      "foreground": "--text",
+      "background": "--bg",
+      "ratio": 14.93,
+      "floor": 7.0,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "--text",
+      "background": "--bg-elev",
+      "ratio": 13.91,
+      "floor": 7.0,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "--text",
+      "background": "--bg-card",
+      "ratio": 12.98,
+      "floor": 7.0,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "--text-dim",
+      "background": "--bg",
+      "ratio": 8.7,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "--text-dim",
+      "background": "--bg-elev",
+      "ratio": 8.1,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "--text-dim",
+      "background": "--bg-card",
+      "ratio": 7.56,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "--text-faint",
+      "background": "--bg",
+      "ratio": 6.55,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "--text-faint",
+      "background": "--bg-elev",
+      "ratio": 6.1,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "--text-faint",
+      "background": "--bg-card",
+      "ratio": 5.69,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "--primary-text",
+      "background": "--accent",
+      "ratio": 4.73,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "foreground": "--text",
+      "background": "--bg",
+      "ratio": 14.72,
+      "floor": 7.0,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "foreground": "--text",
+      "background": "--bg-elev",
+      "ratio": 15.79,
+      "floor": 7.0,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "foreground": "--text",
+      "background": "--bg-card",
+      "ratio": 15.79,
+      "floor": 7.0,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "foreground": "--text-dim",
+      "background": "--bg",
+      "ratio": 6.33,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "foreground": "--text-dim",
+      "background": "--bg-elev",
+      "ratio": 6.79,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "foreground": "--text-dim",
+      "background": "--bg-card",
+      "ratio": 6.79,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "foreground": "--text-faint",
+      "background": "--bg",
+      "ratio": 4.69,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "foreground": "--text-faint",
+      "background": "--bg-elev",
+      "ratio": 5.03,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "foreground": "--text-faint",
+      "background": "--bg-card",
+      "ratio": 5.03,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "foreground": "--primary-text",
+      "background": "--accent",
+      "ratio": 4.73,
+      "floor": 4.5,
+      "passes": true
+    }
+  ],
+  "checks": [
+    "every var(--token) resolves to a declared token",
+    "every declared token is referenced at least once",
+    "every token belongs to a declared group",
+    "the light theme defines exactly the colour tokens the default theme defines",
+    "the density block re-points exactly the density tokens",
+    "every text token clears its floor against every surface, in every theme"
+  ],
+  "limits": [
+    "A referenced token can still be referenced by a rule that never matches; this artifact does not render the page.",
+    "Contrast is measured on the token values, not on what a browser composites: translucent overlays and images are outside the measurement.",
+    "The legacy token block is parsed by nothing here; it is superseded, not verified."
+  ]
+}

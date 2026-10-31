@@ -3991,9 +3991,22 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
 <style id="m5-redesign-system">
 
 /* M5 Agent Studio visual system — appended as a compatibility layer over legacy styles.
-   Keep selectors and behavior hooks in the original markup until the regression inventory is complete. */
+   Keep selectors and behavior hooks in the original markup until the regression inventory is complete.
+
+   ── Tokens ──────────────────────────────────────────────────────────────────
+   Everything below is defined here and nowhere else. scripts/uiux_tokens.py
+   parses this block and fails the build when: a var(--x) names no token, a token
+   is defined but never used, a theme omits a colour the default theme defines, a
+   token belongs to no declared group, or a text/background pair drops below the
+   contrast floor for its role. docs/uiux-2-0-tokens.md is generated from it.
+   The colour tokens in the first <style> block are superseded by this one; they
+   stay only so a stale rule cannot fall back to an undefined name.
+   ── */
 :root {
   color-scheme: dark;
+
+  /* Colour — roles, not shades. Dark is the default theme; every name below must
+     also exist in body[data-theme="light"]. */
   --bg: #151719;
   --bg-elev: #1b1e21;
   --bg-card: #202428;
@@ -4006,20 +4019,60 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   --text-faint: #969da4;
   --accent: #5969d8;
   --primary-text: #ffffff;
-  --accent-hi: #a8b2ff;
   --cyan: #70b7c9;
   --emerald: #72b598;
   --amber: #d2aa66;
   --rose: #dc7d83;
   --purple: #a99acb;
   --ring: #a8b4ff;
+
+  /* Typography — the sizes, weights, line heights and tracking a rule may use.
+     The scale holds only sizes something reads: uiux_tokens.py fails a token with
+     no reader, so a size reaches this list when a rule needs it, not before. */
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --lh-tight: 1.3;
+  --lh-base: 1.5;
+  --tracking-tight: -0.01em;
+
+  /* Space — one scale, so density can move the whole app rather than one panel. */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+
+  /* Density — comfortable is the default. body[data-density="compact"] re-points
+     these five values; rules read the token, never the density attribute. */
+  --control-min-h: 36px;
+  --control-min-h-sm: 32px;
+  --strip-pad-y: 7px;
+  --card-pad: 13px;
+  --row-gap: 4px;
+
+  /* Motion — a duration and an easing curve, so a transition is a choice. */
   --ease-out: cubic-bezier(.2,.8,.2,1);
+  --dur-fast: 140ms;
+
+  /* Shell metrics and families */
   --sans: Inter, "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --header-height: 56px;
 }
 body[data-theme="light"] {
   color-scheme: light;
+  /* Colours are re-pointed, never omitted: a token missing here would fall back to
+     its dark value, which is how a theme breaks only for the people who use it. */
+  --primary-text: #ffffff;
   --bg: #f7f7f5;
   --bg-elev: #ffffff;
   --bg-card: #ffffff;
@@ -4031,7 +4084,6 @@ body[data-theme="light"] {
   --text-dim: #555c62;
   --text-faint: #687077;
   --accent: #5969d8;
-  --accent-hi: #4858c8;
   --cyan: #276e82;
   --emerald: #286e50;
   --amber: #80580e;
@@ -4039,36 +4091,48 @@ body[data-theme="light"] {
   --purple: #68508c;
   --ring: #4858c8;
 }
-html, body { background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+/* Density is a token re-point, not a second stylesheet: rules below read
+   --control-min-h and friends, so compact spacing cannot drift away from the
+   comfortable layout it has to stay compatible with. */
+body[data-density="compact"] {
+  --control-min-h: 32px;
+  --control-min-h-sm: 28px;
+  --strip-pad-y: 4px;
+  --card-pad: 10px;
+  --row-gap: 3px;
+}
+html, body { background: var(--bg); color: var(--text); font-size: var(--text-base); line-height: var(--lh-base); }
 body { font-family: var(--sans); }
 .topbar {
   height: var(--header-height); min-height: var(--header-height); padding: 0 20px; gap: 18px;
   background: var(--bg-elev); border-bottom: 1px solid var(--border); backdrop-filter: none;
 }
-.brand { gap: 10px; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+.brand { gap: 10px; font-size: var(--text-base); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
 .brand-chip { width: 28px; height: 28px; border-radius: 7px; background: var(--accent); box-shadow: none; font-weight: 650; }
 .ver-badge { display: none; }
 .status-pill { background: transparent; border-color: var(--border); color: var(--text-dim); font-size: 12px; font-weight: 500; }
 .status-pill .dot { box-shadow: none; width: 6px; height: 6px; }
 .mode-tabs {
   position: fixed; left: 0; top: var(--header-height); bottom: 0; z-index: 19;
-  width: 200px; padding: 12px; display: flex; flex-direction: column; align-items: stretch;
-  background: var(--bg-elev); border-right: 1px solid var(--border); gap: 4px;
+  width: 200px; padding: var(--space-4); display: flex; flex-direction: column; align-items: stretch;
+  background: var(--bg-elev); border-right: 1px solid var(--border); gap: var(--row-gap);
   overflow-x: hidden; overflow-y: auto; border-radius: 0;
 }
 .mode-tab { width: 100%; justify-content: flex-start; }
 #mainLayout { padding-left: 200px; }
 .mode-tab {
-  border-radius: 6px; padding: 6px 10px; min-height: 36px; font-size: 13px; font-weight: 500;
-  color: var(--text-dim); transition: background 140ms ease, color 140ms ease;
+  border-radius: var(--radius-sm); padding: var(--space-2) 10px; min-height: var(--control-min-h);
+  font-size: var(--text-sm); font-weight: var(--weight-medium);
+  color: var(--text-dim); transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .mode-tab:hover { color: var(--text); background: var(--bg-hover); }
 .mode-tab.active { background: var(--bg-hover); color: var(--text); border-color: transparent; box-shadow: inset 3px 0 0 var(--accent); }
 .svg-ico { width: 16px; height: 16px; stroke-width: 1.75; }
 .btn {
   background: var(--bg-elev); color: var(--text); border: 1px solid var(--border);
-  min-height: 36px; border-radius: 7px; padding: 7px 11px; font-size: 13px; font-weight: 500;
-  box-shadow: none; transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+  min-height: var(--control-min-h); border-radius: 7px; padding: 7px 11px;
+  font-size: var(--text-sm); font-weight: var(--weight-medium);
+  box-shadow: none; transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .btn:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--border-hi); }
 .btn-primary, .btn-primary:hover:not(:disabled) { background: var(--accent); color: var(--primary-text); border-color: var(--accent); box-shadow: none; }
@@ -4078,11 +4142,11 @@ body { font-family: var(--sans); }
 .btn-emerald:hover:not(:disabled) { background: var(--bg-hover); }
 .btn-danger { background: var(--bg-elev); color: var(--text); border-color: var(--rose); }
 .btn-danger:hover:not(:disabled) { background: var(--bg-hover); }
-.btn-xs { min-height: 32px; padding: 5px 9px; font-size: 12px; border-radius: 6px; }
-.kbd { font-size: 11px; border-color: var(--border); background: var(--bg-code); color: var(--text-dim); }
+.btn-xs { min-height: var(--control-min-h-sm); padding: 5px 9px; font-size: var(--text-xs); border-radius: var(--radius-sm); }
+.kbd { font-size: var(--text-2xs); border-color: var(--border); background: var(--bg-code); color: var(--text-dim); }
 .layout { height: calc(100dvh - var(--header-height)); grid-template-columns: minmax(0, 1fr) 320px; }
 .workspace { min-width: 0; }
-.skills-strip { background: var(--bg-elev); border-bottom: 1px solid var(--border); padding: 7px 16px; gap: 7px; }
+.skills-strip { background: var(--bg-elev); border-bottom: 1px solid var(--border); padding: var(--strip-pad-y) var(--space-5); gap: 7px; }
 .skills-strip .field-lbl[hidden] { display: none; }
 .field-lbl { color: var(--text-dim) !important; font-size: 12px; }
   .skills-strip > span[aria-hidden="true"] { color: var(--border-hi) !important; }
@@ -4104,7 +4168,7 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .model-row, .msg, .h-step-card, .h-tool-card, .code-wrap, .diff-box {
   background-color: var(--bg-card); border-color: var(--border); box-shadow: none;
 }
-.m-card { border-radius: 8px; padding: 13px; }
+.m-card { border-radius: var(--radius-md); padding: var(--card-pad); }
 .config-strip, .prompt-box { border-radius: 8px; padding: 14px 16px; }
 .step-card, .starter-card { border-radius: 7px; }
 .mode-tab, .btn, .chip, .step-card, .starter-card, .chronicle-item { -webkit-tap-highlight-color: transparent; }
@@ -4116,16 +4180,15 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .harness-advanced { flex: 1 1 100%; color: var(--text-dim); }
 .harness-advanced summary { cursor: pointer; width: fit-content; padding: 4px 0; font-weight: 600; }
 .harness-advanced-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding-top: 8px; }
-body[data-density="compact"] .harness-bar { padding-block: 4px; gap: 4px 8px; }
-body[data-density="compact"] .harness-advanced-fields { padding-top: 4px; }
-body[data-density="compact"] .skills-strip { padding-block: 4px; }
+body[data-density="compact"] .harness-bar { padding-block: var(--strip-pad-y); gap: var(--space-1) var(--space-3); }
+body[data-density="compact"] .harness-advanced-fields { padding-top: var(--space-1); }
 .council-settings { padding: 8px 16px; background: var(--bg-elev); border-bottom: 1px solid var(--border); color: var(--text-dim); }
 .council-settings summary { cursor: pointer; width: fit-content; font-weight: 600; }
 .council-settings-content { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding-top: 8px; }
 .council-settings-content select { max-width: 100%; }
-.council-seat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding-top: 8px; }
+.council-seat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); padding-top: var(--space-3); }
 .council-seat-grid select { width: 100%; }
-body[data-density="compact"] .council-settings { padding-block: 4px; }
+body[data-density="compact"] .council-settings { padding-block: var(--strip-pad-y); }
 @media (max-width: 880px) { .council-seat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 
@@ -4134,7 +4197,7 @@ body[data-density="compact"] .council-settings { padding-block: 4px; }
 .agent-chip, .agent-chip.human, .agent-chip.architect, .agent-chip.coder, .agent-chip.critic, .agent-chip.judge, .agent-chip.external {
   color: var(--text-dim); background: var(--bg-card); border-color: var(--border);
 }
-.badge { color: var(--text-dim); background: var(--bg-hover); border-color: var(--border); font: 500 12px/1.3 var(--sans); }
+.badge { color: var(--text-dim); background: var(--bg-hover); border-color: var(--border); font: var(--weight-medium) var(--text-xs)/var(--lh-tight) var(--sans); }
 .badge.green, .badge.indigo, .badge.cyan, .badge.purple, .badge.amber { color: var(--text); background: var(--bg-hover); border-color: var(--border); }
 .kpi { background: var(--bg-code); border-color: var(--border); border-radius: 8px; }
 .kpi-lbl, .m-head, .step-num, .step-meta, .chronicle-meta, .msg-meta { font-size: 12px; }
@@ -4159,7 +4222,7 @@ body[data-density="compact"] .council-settings { padding-block: 4px; }
 .toast.warn { border-left-color: var(--amber); }
 .toast.err { border-left-color: var(--rose); }
 .modal-backdrop { background: rgba(10,12,14,.58); backdrop-filter: blur(2px); }
-.modal { background: var(--bg-elev); border-color: var(--border); border-radius: 10px; box-shadow: 0 18px 50px rgba(0,0,0,.22); }
+.modal { background: var(--bg-elev); border-color: var(--border); border-radius: var(--radius-lg); box-shadow: 0 18px 50px rgba(0,0,0,.22); }
 .cmd-item { font-size: 13px; }
 .cmd-item:hover, .cmd-item.selected { background: var(--bg-hover); border-color: var(--border); }
 /* Normalize legacy panels and preserve distinct meaning through text/status, not decoration. */
