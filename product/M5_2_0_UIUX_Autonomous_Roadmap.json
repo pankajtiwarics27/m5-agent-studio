@@ -106,11 +106,11 @@
     ],
     "last_completed_story": "UIUX-P1-03",
     "next_recommended_story": "UIUX-P1-04",
-    "last_checkpoint": "2026-10-31T20:13:01Z",
+    "last_checkpoint": "2026-10-31T20:41:12Z",
     "last_session_id": "arena/6200472a-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "2dab66e042ccdda01fc31ed1249f0e823fdcb4e0",
+    "last_verified_commit": "99cbb4547b84ec0095d31f5857049dd88883cb3d",
     "last_updated": "2026-11-01",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -1894,22 +1894,101 @@
       "agent_prompt": "Implement UIUX-P1-04 (Implement accessible overlays toasts and keyboard shortcuts). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
         "status": "in_progress",
-        "progress_percent": 5,
+        "progress_percent": 95,
         "attempts": 1,
         "started_at": "2026-10-31T20:13:01Z",
-        "updated_at": "2026-10-31T20:13:01Z",
+        "updated_at": "2026-10-31T20:41:12Z",
         "completed_at": null,
         "owner_session": "arena/6200472a-m5-agent-studio",
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "commit_sha": "99cbb4547b84ec0095d31f5857049dd88883cb3d",
+        "changed_files": [
+          "docs/README.md",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-overlays-keyboard.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-tokens.md",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "static/index.html",
+          "studio.py",
+          "tests/browser/accessibility_walk.mjs",
+          "tests/test_screenshot_capture_browser.py",
+          "tests/test_uiux_accessible_overlays.py"
+        ],
+        "evidence": [
+          "Acceptance: mapped existing controls remain available — preserved existing modal/command/toast workflows and actions; the generated control inventory still reports 170 markup controls (30 script-rendered) across six panes, with shared overlay behaviors added rather than replacing controls.",
+          "Acceptance: no console/page errors on tested journeys — the actual isolated-demo browser test and the 29-test screenshot/browser safety module passed; the accessibility walk fails on page errors and checks 13 conditions.",
+          "Acceptance: keyboard operation and visible focus — browser walk verifies command shortcut/combobox active option, visible command-input focus ring, modal focus entry/wrapping/restoration, nested topmost Escape handling, toast dismissal/focus pause, reduced-motion behavior, and modal fit at 420px.",
+          "Acceptance: failures/recovery remain honest and operable — toasts use a named polite live region, text-node messages, normalized error tone, labeled keyboard dismissal, and paused expiry while focused/hovered; no API, authorization, approval, or durable-state behavior changed.",
+          "Acceptance: behavior is demonstrable — browser safety module passed against the real disposable demo using only its synthetic token; it captures all six pane screenshots and the P1-04 accessibility walk exercises the overlay interactions. No canonical screenshot IDs were changed because this increment is interaction-focused; screenshot provenance hold #122 remains open.",
+          "Docs/evidence: docs/uiux-2-0-overlays-keyboard.md describes behaviors, tests and limits. This is not a screen-reader evaluation; no assistive-technology pass is claimed. Historical owner sign-off remains unbound."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q tests/test_uiux_accessible_overlays.py tests/test_uiux_roadmap.py tests/test_uiux_coordination.py --tb=short",
+            "exit_code": 0,
+            "result": "66 passed in 0.18s"
+          },
+          {
+            "command": "M5_REQUIRE_BROWSER_TESTS=1 .venv/bin/python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py --tb=short (with isolated Chromium/Puppeteer paths from /home/user/m5-p104-browser.path)",
+            "exit_code": 0,
+            "result": "29 passed in 69.71s; latest accessibility walk checks 13 conditions; synthetic token absent from output; isolated demo store sentinel unchanged"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q --tb=short",
+            "exit_code": 0,
+            "result": "1745 passed, 25 skipped, 1 Starlette/httpx deprecation warning in 153.52s"
+          },
+          {
+            "command": ".venv/bin/python -m ruff check .",
+            "exit_code": 0,
+            "result": "All checks passed"
+          },
+          {
+            "command": ".venv/bin/python -m mypy",
+            "exit_code": 0,
+            "result": "Success: no issues found in 58 source files"
+          },
+          {
+            "command": ".venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "JavaScript syntax OK (1 inline block)"
+          },
+          {
+            "command": ".venv/bin/python scripts/verify_baseline.py; .venv/bin/python scripts/demo_tour.py --check; .venv/bin/python scripts/validate_screenshots.py; .venv/bin/python scripts/validate_docs.py; .venv/bin/python scripts/check_commit_messages.py",
+            "exit_code": 0,
+            "result": "Baseline verified at 7904892d759bb66b817bb17b6f4f377874bd6e25; demo transcript current; screenshots 6/6 valid; docs validation passed (137 files); 4 commit messages valid"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_tokens.py --check; .venv/bin/python scripts/uiux_status_components.py --check; .venv/bin/python scripts/uiux_control_inventory.py --check; .venv/bin/python scripts/uiux_route_map.py --check; .venv/bin/python scripts/uiux_authorization_trace.py --check; .venv/bin/python scripts/uiux_source_manifest.py --check; .venv/bin/python scripts/uiux_preservation_signoff.py --check; .venv/bin/python scripts/build_studio.py --check; git diff --check",
+            "exit_code": 0,
+            "result": "All generated UIUX artifacts current; 170 controls, 115 routes, 37 state-changing routes traced; preservation status remains historical-approval-unbound; standalone studio.py matches static frontend"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q --tb=short (initial run before refreshing dependent generated artifacts)",
+            "exit_code": 1,
+            "result": "1740 passed, 25 skipped, 5 failed due stale frontend hashes in generated control inventory/route map after the focus-ring source edit; regenerated affected artifacts and the full suite passed on the final tree."
+          }
+        ],
+        "visual_evidence": [
+          "Actual isolated-demo browser regression captured all six pane screenshots to a temporary directory and validated the pane sequence; the repository screenshot manifest validates 6/6 existing canonical screenshots. No canonical screenshot IDs were changed, as overlay work is interaction-focused and provenance hold #122 remains open.",
+          "The browser accessibility walk exercises modal sizing at a 420px viewport and directly asserts visible focus and overlay behavior; these assertions are behavioral evidence, not a persisted overlay screenshot or screen-reader evaluation."
+        ],
         "known_regressions": [],
         "decisions": [],
-        "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace existing overlay, toast and shortcut handlers; add focused browser regressions before the smallest compatible change.",
+        "blockers": [
+          "Owner review/approval of draft PR #134 remains pending. Do not treat this implementation status as owner approval; keep the story active until the owner accepts it."
+        ],
+        "handoff_note": "Implementation and final validation are complete on draft PR #134, but the story remains in progress pending owner review/approval. Owner approval has not been recorded or implied. No canonical screenshot IDs were changed; the #122 provenance hold remains open, and browser assertions are not a screen-reader evaluation.",
+        "next_action": "Request owner review of draft PR #134; after explicit acceptance, close UIUX-P1-04 and then continue in roadmap order with UIUX-P1-05. Do not claim or start the next story yet.",
         "readme_updated": false
       },
       "required_evidence": [
