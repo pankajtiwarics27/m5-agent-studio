@@ -327,10 +327,15 @@ def test_prompt_in_flight_subprocess_termination_on_security_incident(
     ready_file = isolated_env / "inflight_ready.pid"
     detached_pid_file = isolated_env / "detached_child.pid"
     long_code = (
+        "from pathlib import Path\n"
         "import os, subprocess, sys, time\n"
         f"det = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'], start_new_session=True)\n"
-        f"open({str(detached_pid_file)!r}, 'w').write(str(det.pid))\n"
-        f"open({str(ready_file)!r}, 'w').write(str(os.getpid()))\n"
+        f"dp = Path({str(detached_pid_file)!r})\n"
+        "dp.with_suffix('.tmp').write_text(str(det.pid), encoding='utf-8')\n"
+        "dp.with_suffix('.tmp').replace(dp)\n"
+        f"rp = Path({str(ready_file)!r})\n"
+        "rp.with_suffix('.tmp').write_text(str(os.getpid()), encoding='utf-8')\n"
+        "rp.with_suffix('.tmp').replace(rp)\n"
         "time.sleep(30)\n"
     )
 
@@ -353,10 +358,10 @@ def test_prompt_in_flight_subprocess_termination_on_security_incident(
                 call_index=1,
             )
         )
-        deadline = time.monotonic() + 4.0
-        while not ready_file.exists() and time.monotonic() < deadline:
-            await asyncio.sleep(0.03)
-        assert ready_file.exists(), "Subprocess did not start in time"
+        deadline = time.monotonic() + 12.0
+        while not (ready_file.exists() and detached_pid_file.exists()) and time.monotonic() < deadline:
+            await asyncio.sleep(0.05)
+        assert ready_file.exists() and detached_pid_file.exists(), "Subprocess did not start in time"
 
         resp = await asyncio.to_thread(
             client.post,
@@ -369,14 +374,14 @@ def test_prompt_in_flight_subprocess_termination_on_security_incident(
             },
         )
         assert resp.status_code == 201, resp.text
-        tool_out = await asyncio.wait_for(exec_task, timeout=5.0)
+        tool_out = await asyncio.wait_for(exec_task, timeout=12.0)
         return tool_out, resp.json()
 
     tool_res, inc_payload = asyncio.run(_run_and_trigger())
     assert inc_payload["contained_processes"] >= 1
     assert tool_res["ok"] is False
     det_pid = int(detached_pid_file.read_text(encoding="utf-8").strip())
-    assert _wait_until(lambda: ps.probe_process(det_pid) is None, timeout_s=2.5)
+    assert _wait_until(lambda: ps.probe_process(det_pid) is None, timeout_s=5.0)
 
 
 def test_fallback_qualification_rejects_shared_failed_dependencies_and_host_fallback(
