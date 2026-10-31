@@ -28,6 +28,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import threading
 import stat
 import subprocess
 import sys
@@ -78,6 +79,40 @@ def _wait_until(predicate: Any, *, timeout_s: float = 4.0, step_s: float = 0.02)
             return True
         time.sleep(step_s)
     return bool(predicate())
+
+
+def _read_json_when_complete(path: Path, *, timeout_s: float = 5.0) -> Any:
+    """Read ``path`` once it parses, not once it merely exists.
+
+    ``Path.exists()`` turns true the moment the writer's ``open()`` creates the
+    file, which is *before* its payload is written. A test that waits for
+    existence and then calls ``json.loads`` can therefore read zero bytes and
+    fail with "Expecting value: line 1 column 1 (char 0)" - exactly the shape of
+    the intermittent CI failure this helper removes. Waiting for the content
+    instead of the container does not weaken anything the test asserts.
+    """
+    deadline = time.monotonic() + timeout_s
+    last_error: Exception | None = None
+    while time.monotonic() < deadline:
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:  # missing, empty, or mid-write
+            last_error = exc
+            time.sleep(0.02)
+    raise AssertionError(f"{path.name} never held a complete payload: {last_error}")
+
+
+def _read_int_when_complete(path: Path, *, timeout_s: float = 5.0) -> int:
+    """Read a pid written by a child process, tolerating a partially written file."""
+    deadline = time.monotonic() + timeout_s
+    last_error: Exception | None = None
+    while time.monotonic() < deadline:
+        try:
+            return int(path.read_text(encoding="utf-8").strip())
+        except (OSError, ValueError) as exc:
+            last_error = exc
+            time.sleep(0.02)
+    raise AssertionError(f"{path.name} never held a pid: {last_error}")
 
 
 def _make_session(
@@ -169,6 +204,38 @@ def test_subprocess_identity_probe_and_pid_recycling_protection(tmp_path: Path) 
         proc.wait(timeout=3)
 
 
+def test_reading_a_child_payload_waits_for_a_two_step_writer(tmp_path: Path) -> None:
+    """Regression for the intermittent CI failure on the discovery test.
+
+    The child in that test created its pid file and wrote the JSON afterwards.
+    Waiting on ``Path.exists()`` and then parsing gave, on a loaded runner,
+    ``json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)``.
+    Here the writer is deliberately two-step: an empty file first, the payload
+    later, which makes the old failure deterministic instead of incidental.
+    """
+    payload = tmp_path / "spawned_pids.json"
+    pid_file = tmp_path / "detached.pid"
+    payload.write_text("", encoding="utf-8")
+    pid_file.write_text("", encoding="utf-8")
+
+    def _write_late() -> None:
+        time.sleep(0.1)
+        payload.write_text(json.dumps({"group_child": 11, "detached_child": 22}), encoding="utf-8")
+        pid_file.write_text(" 33 \n", encoding="utf-8")
+
+    writer = threading.Thread(target=_write_late)
+    writer.start()
+    try:
+        assert _read_json_when_complete(payload) == {"group_child": 11, "detached_child": 22}
+        assert _read_int_when_complete(pid_file) == 33
+    finally:
+        writer.join()
+
+    # A file that is never completed fails loudly instead of returning junk.
+    with pytest.raises(AssertionError):
+        _read_json_when_complete(tmp_path / "never.json", timeout_s=0.1)
+
+
 def test_discover_process_tree_finds_group_children_and_setsid_detached_descendants(
     tmp_path: Path,
 ) -> None:
@@ -196,8 +263,13 @@ def test_discover_process_tree_finds_group_children_and_setsid_detached_descenda
         )
         det_out = subprocess.check_output([sys.executable, "-c", detached_code], text=True).strip()
         detached_pid = int(det_out)
-        with open({str(pids_file)!r}, "w", encoding="utf-8") as fh:
-            json.dump({{"group_child": group_child.pid, "detached_child": detached_pid}}, fh)
+        payload = {{"group_child": group_child.pid, "detached_child": detached_pid}}
+        _target = {str(pids_file)!r}
+        with open(_target + ".partial", "w", encoding="utf-8") as fh:
+            json.dump(payload, fh)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(_target + ".partial", _target)
         time.sleep(30)
         """
     )
@@ -220,8 +292,7 @@ def test_discover_process_tree_finds_group_children_and_setsid_detached_descenda
             workspace_root=tmp_path,
             session_id="s-tree",
         )
-        assert _wait_until(pids_file.exists, timeout_s=4.0)
-        spawned = json.loads(pids_file.read_text(encoding="utf-8"))
+        spawned = _read_json_when_complete(pids_file)
         grp_pid = int(spawned["group_child"])
         det_pid = int(spawned["detached_child"])
 
@@ -1148,7 +1219,8 @@ def test_ac3_mid_flight_crash_with_live_detached_child_survives_multiple_restart
         det_code = (
             "import os, pathlib, signal, time; os.setsid(); "
             "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
-            f"pathlib.Path({str(det_pid_file)!r}).write_text(str(os.getpid())); "
+            f"pathlib.Path({str(det_pid_file)!r} + '.partial').write_text(str(os.getpid())); "
+            f"os.replace({str(det_pid_file)!r} + '.partial', {str(det_pid_file)!r}); "
             "time.sleep(30)"
         )
         subprocess.Popen(
@@ -1181,8 +1253,7 @@ def test_ac3_mid_flight_crash_with_live_detached_child_survives_multiple_restart
         stderr=subprocess.DEVNULL,
     )
     try:
-        assert _wait_until(det_pid_file.exists, timeout_s=4.0)
-        det_pid = int(det_pid_file.read_text(encoding="utf-8").strip())
+        det_pid = _read_int_when_complete(det_pid_file)
         leader_probe = ps.probe_process(raw_proc.pid)
         assert leader_probe is not None
         assert ps.probe_process(det_pid) is not None
