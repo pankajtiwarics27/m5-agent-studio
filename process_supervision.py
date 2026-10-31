@@ -234,6 +234,13 @@ class PersistedBarrierHold:
     created_at: float = 0.0
     updated_at: float = 0.0
 
+    def __post_init__(self) -> None:
+        # Callers naturally hold a `Path`; without this the hold is applied in
+        # memory and then blows up inside `json.dumps` *after* the state dict was
+        # mutated, which is the worst moment for a containment record to fail.
+        if not isinstance(self.workspace_root, str):
+            object.__setattr__(self, "workspace_root", str(self.workspace_root))
+
     def to_mapping(self) -> dict[str, Any]:
         return {
             "hold_id": self.hold_id,
@@ -718,7 +725,25 @@ class ContainmentStore:
         finally:
             os.close(fd)
         os.replace(tmp_path, self._state_path)
+        # The file's own fsync makes its *contents* durable; the rename that
+        # publishes it is durable only after the containing directory is synced.
+        # Without this a crash can roll the manifest back to the previous
+        # version, losing a fence or a hold that was already reported as written.
+        self._fsync_state_dir()
         _ps_restrict_file(self._state_path)
+
+    def _fsync_state_dir(self) -> None:
+        flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+        try:
+            dir_fd = os.open(self._root, flags)
+        except OSError:  # pragma: no cover - platform without directory fds
+            return
+        try:
+            os.fsync(dir_fd)
+        except OSError:  # pragma: no cover - some filesystems refuse this
+            return
+        finally:
+            os.close(dir_fd)
 
     def record_process_started(self, record: SupervisedProcessRecord) -> None:
         with self._lock:

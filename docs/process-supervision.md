@@ -78,6 +78,12 @@ atomic temp-file + `fsync` replacement) persists `in_flight_processes`,
   - While `lingering_pids` has any live OS process, **every** overlapping action (including
     `read_file`, `rollback_edits`, and `release_holds_for_action`) is rejected with
     `lingering_process_containment` / `ContainmentHoldActiveError`.
+  - A hold is **not** cleared by the death of its lingering processes: liveness only
+    decides *which* actions are refused (`lingering_process_containment` while any pid
+    is live, the narrower barrier rules afterwards). Clearing a hold requires an
+    explicit reconciliation (`resolve_uncertain_action` / an acknowledged rollback),
+    because a process that has exited may still have changed the workspace — this is
+    a deliberate fail-closed choice, not a leak.
   - Once no live lingering OS process remains, `read_only` inspection and acknowledged
     `rollback_edits(dry_run=False, acknowledge_unresolved=True)` remain available for
     diagnosis and recovery, while conflicting mutations (`unresolved_containment_barrier`)

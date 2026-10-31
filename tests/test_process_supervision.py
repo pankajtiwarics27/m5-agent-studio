@@ -1578,3 +1578,64 @@ def test_cancel_endpoint_and_skill_script_supervision_contain_detached_children(
         for h in studio.get_containment_store().list_holds(session_id=sid)
     )
 
+
+
+def test_barrier_hold_accepts_a_path_workspace_root(tmp_path: Path) -> None:
+    """A `Path` must be normalised, not explode inside `json.dumps`.
+
+    `PersistedBarrierHold.workspace_root` is typed `str`, but callers hold a
+    `Path`. The old failure happened *after* the state dict had been mutated, so
+    the containment record was half-applied and the persistence call raised
+    `TypeError: Object of type PosixPath is not JSON serializable`.
+    """
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    store = ps.ContainmentStore(store_dir=tmp_path / "containment-root")
+    hold = ps.PersistedBarrierHold(
+        hold_id="hold-path-root",
+        session_id="sess-path-root",
+        workspace_root=workspace,  # type: ignore[arg-type]
+        barriers=(("workspace_exclusive", "scope-1"),),
+    )
+    store.persist_barrier_hold(hold)
+    assert hold.workspace_root == str(workspace)
+    persisted = store.list_holds(session_id="sess-path-root")
+    assert [h.hold_id for h in persisted] == ["hold-path-root"]
+    assert persisted[0].workspace_root == str(workspace)
+
+
+def test_state_write_fsyncs_the_containing_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`os.replace` publishes the manifest; only a directory fsync makes that durable.
+
+    Syncing the temp file makes the *contents* durable, but a crash between the
+    rename and the next directory write can roll `state.json` back to its previous
+    version — losing a fence or a hold that the caller was told was recorded.
+    """
+    store = ps.ContainmentStore(store_dir=tmp_path / "containment-root")
+    store.persist_barrier_hold(
+        ps.PersistedBarrierHold(
+            hold_id="hold-first", workspace_root=str(tmp_path), barriers=(("workspace_exclusive", "s1"),)
+        )
+    )
+
+    fsynced: list[int] = []
+    modes: list[int] = []
+    real_fsync = os.fsync
+
+    def _record(fd: int) -> None:
+        fsynced.append(fd)
+        modes.append(os.fstat(fd).st_mode)  # the fd is closed once the write returns
+        real_fsync(fd)
+
+    monkeypatch.setattr(ps.os, "fsync", _record)
+    store.persist_barrier_hold(
+        ps.PersistedBarrierHold(
+            hold_id="hold-second", workspace_root=str(tmp_path), barriers=(("workspace_exclusive", "s2"),)
+        )
+    )
+    monkeypatch.undo()
+
+    assert len(fsynced) >= 2, "expected the temp file and the containing directory to be synced"
+    assert modes[-1] & 0o040000, "the last fsync must target a directory (S_IFDIR)"
