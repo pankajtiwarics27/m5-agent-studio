@@ -123,11 +123,11 @@
     "readme_policy": "README is a verified current-state document. Update after each story and on any regression. Use confirmed commands/results; label unverified limitations. No future promises presented as current features."
   },
   "session_state": {
-    "active_story": "M5-P5-01",
-    "last_completed_story": "M5-P3-06",
-    "last_checkpoint": "2026-10-31T06:55:00Z",
+    "active_story": null,
+    "last_completed_story": "M5-P5-01",
+    "last_checkpoint": "2026-10-31T07:40:00Z",
     "last_session_id": "arena/98681cc6-m5-agent-studio",
-    "next_recommended_story": "M5-P5-01",
+    "next_recommended_story": "M5-P5-02",
     "open_risks": [
       "Parallel-agent collisions persist: a second session implemented M5-P2-03 concurrently (PR #46) while this session delivered it (PR #47), and the duplicate was closed as superseded; re-list `gh pr list --state open` immediately before claiming and claim (merge) before implementing so a collision is visible in the ledger.",
       "Container isolation UNQUALIFIED (M5-P0-04): no live runtime in the evidence environment; container-level denials not observed. dependent_execution: blocked (fail closed). The operator-run suite scripts/qualify_environment.py --sandbox (docs/qualification-suite.md, ADR-0010) is now the qualification path; M5-P3-01 stays blocked until it returns qualified on a Docker/Podman host.",
@@ -321,8 +321,8 @@
           "Authority consolidation completed 2026-10-30 on user/owner confirmation; AS roadmap retained unmodified as historical source and AS-status ledger (no history deleted)"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None \u2014 done. Authority consolidation awaits owner confirmation.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None — done. Authority consolidation awaits owner confirmation.",
         "readme_updated": true
       }
     },
@@ -376,14 +376,14 @@
           "docs/README.md"
         ],
         "evidence": [
-          "docs/m5-2-0-integration-audit.md \u00a71: all 9 reported claims verified/refuted with line evidence (claims 1 and 6 refuted; 2,3,4,5,7,8,9 confirmed)",
-          "\u00a72: FastAPI route -> tool/subprocess/SQLite/MCP traces with function and line references",
-          "\u00a73.1: all 17 direct subprocess entry points in app.py enumerated with gates; \u00a73.2: all consequential SQLite/FS write entry points enumerated",
-          "\u00a74: 42-module code-exists/integrated/tested/qualified table (5 integrated, 37 unit-tested-but-unintegrated)"
+          "docs/m5-2-0-integration-audit.md §1: all 9 reported claims verified/refuted with line evidence (claims 1 and 6 refuted; 2,3,4,5,7,8,9 confirmed)",
+          "§2: FastAPI route -> tool/subprocess/SQLite/MCP traces with function and line references",
+          "§3.1: all 17 direct subprocess entry points in app.py enumerated with gates; §3.2: all consequential SQLite/FS write entry points enumerated",
+          "§4: 42-module code-exists/integrated/tested/qualified table (5 integrated, 37 unit-tested-but-unintegrated)"
         ],
         "test_results": [
           {
-            "command": "grep/sed call-path audit (commands listed in audit doc \u00a76)",
+            "command": "grep/sed call-path audit (commands listed in audit doc §6)",
             "exit_code": 0,
             "result": "evidence captured inline"
           }
@@ -394,8 +394,8 @@
           "Skill-code subprocess paths classified as containment targets for M5-P0-03 (app.py:1831 flag-gated but sandbox-bypassing; app.py:8645 ungated)"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None \u2014 done. Containment work continues in M5-P0-03.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None — done. Containment work continues in M5-P0-03.",
         "readme_updated": true
       }
     },
@@ -645,7 +645,7 @@
           "docs/README.md"
         ],
         "evidence": [
-          "docs/m5-2-0-baseline-evidence.md \u00a72: full command log with exit codes",
+          "docs/m5-2-0-baseline-evidence.md §2: full command log with exit codes",
           "pytest: 717 passed, 1 skipped (opt-in live container test), 1 warning, 19.13s",
           "ruff/mypy/compileall/frontend-syntax/smoke_local x2/governance/security-signoff/docs/generators-no-drift/demo-tour/screenshots/adrs: all exit 0",
           "pip_audit exit 1: 21 advisories in venv bootstrap packages pip 23.0.1 + setuptools 66.1.1 only; runtime dependencies clean (recorded undiluted)",
@@ -679,12 +679,12 @@
           }
         ],
         "decisions": [
-          "verify_baseline.py initially failed on the shallow checkout; git fetch --unshallow (documented prerequisite) fixed it \u2014 both outcomes recorded",
-          "Blocked measurements (peak unified memory/swap, oMLX coding task, FTS5 load latency, live isolation) listed in evidence doc \u00a74 and never promoted to claims"
+          "verify_baseline.py initially failed on the shallow checkout; git fetch --unshallow (documented prerequisite) fixed it — both outcomes recorded",
+          "Blocked measurements (peak unified memory/swap, oMLX coding task, FTS5 load latency, live isolation) listed in evidence doc §4 and never promoted to claims"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None \u2014 done. Target-hardware telemetry moves to M5-P4-01 / M5-P0-04 on real hardware.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None — done. Target-hardware telemetry moves to M5-P4-01 / M5-P0-04 on real hardware.",
         "readme_updated": true
       }
     },
@@ -872,8 +872,8 @@
           "Old marketing-forward README content replaced per draft mandate; deep reference material (env vars, API, invariants) preserved in README reference section and docs/ links so validate_docs publication checks stay green"
         ],
         "blockers": [],
-        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit \u00a75), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
-        "next_action": "None \u2014 done. README maintenance rule: refresh with verified behavior after every subsequent story.",
+        "handoff_note": "Session 1 of the M5 2.0 program completed the four P0 ground-truth stories (M5-P0-01, -02, -05, -07) in one atomic change-set; see evidence lists and docs/m5-2-0-{roadmap-reconciliation,integration-audit,baseline-evidence}.md. Next ready story is M5-P0-03 (contain app.py:8645 ungated skill subprocess and app.py:1831 sandbox bypass, per audit §5), then M5-P0-04 (needs a live container runtime), then M5-P0-06. Never trust this status without re-reading the cited evidence.",
+        "next_action": "None — done. README maintenance rule: refresh with verified behavior after every subsequent story.",
         "readme_updated": true
       }
     },
@@ -1492,7 +1492,7 @@
           "Enforced two-tier false-completion protection: a universal ledger invariant rejecting completion when the latest run_bash action failed without a subsequent passing run, plus full TaskVerificationSpec verification (managed-edit provenance, modified-file SHA-256 deltas, Git diff, protected user-file digests, post-edit test ordering, and independent shell=False test execution)."
         ],
         "blockers": [],
-        "handoff_note": "M5-P1-06 complete: single-agent verified vertical slice, deterministic action-boundary crash injection + session reconciliation, and false-completion rejection are integrated across app.py and standalone studio.py (811 passed, 1 skipped; 12/44 modules integrated; Phase P1 at 86% \u2014 6/7 stories done). Ready for M5-P1-07 (Minimal task events, HTTP commands and existing UI).",
+        "handoff_note": "M5-P1-06 complete: single-agent verified vertical slice, deterministic action-boundary crash injection + session reconciliation, and false-completion rejection are integrated across app.py and standalone studio.py (811 passed, 1 skipped; 12/44 modules integrated; Phase P1 at 86% — 6/7 stories done). Ready for M5-P1-07 (Minimal task events, HTTP commands and existing UI).",
         "next_action": "Claim and implement M5-P1-07 on a fresh branch after M5-P1-06 merges.",
         "readme_updated": true
       }
@@ -2745,7 +2745,7 @@
           "AC '24 GB pressure measured' remains UNMEASURED: p4.pressure and p4.model_load need the owner's 24 GB Apple Silicon run (--pressure-gb N --model-command CMD). The 80% reservation is documented as policy, not a measurement (docs/model-admission.md 'What this does not claim'), and the story therefore stays blocked.",
           "Standalone bundle stays self-contained: resource_admission and model_admission are inlined into studio.py (builder now tolerates a trailing comment on the import line), verified by tests/test_release_manager.py::test_generated_standalone_has_no_local_module_imports and ::test_the_standalone_bundle_carries_the_same_policy.",
           "Task 1/2 (representative per-category coding cases + recorded uncertainty): --coding-cases takes a case set (id/category/prompt, optional declared categories) and runs every case through --model-command with STUDIO_QUALIFY_CASE_ID/CATEGORY/PROMPT in the environment, --case-runs times each. p4.coding_cases records per-case exit codes, success rate, wall_s_median, wall_s_spread_ratio, per-category completion and an explicit uncertainty block (incl. single_run_cases) instead of a bare pass. A malformed case set (duplicate/missing id, missing category, undeclared category, invalid JSON) aborts with exit 2 and writes no record. Tests: test_load_coding_cases_* , test_coding_case_probe_passes_case_identity_through_the_environment, test_coding_case_probe_records_failures_and_uncertainty, test_coding_case_probe_measures_wall_time_spread, test_malformed_coding_cases_abort_the_run_without_a_verdict.",
-          "Task 3 (thermal): p4.thermal samples thermal pressure during every load phase \u2014 macOS via `pmset -g therm` CPU_Speed_Limit (no root; powermetrics is never invoked because it needs root), Linux via /sys/class/thermal/thermal_zone*/temp \u2014 and records stress min/max plus whether throttling was observed. Where the platform exposes no readable source the check is `blocked` with the reason (this container: 35 samples, none readable) rather than a fabricated temperature. Tests: test_thermal_snapshot_parses_pmset_thermal_pressure, test_linux_thermal_readings_convert_millidegrees, test_thermal_sampler_summarises_throttling, test_thermal_check_blocks_when_the_platform_cannot_report, test_thermal_check_passes_with_readings_under_load.",
+          "Task 3 (thermal): p4.thermal samples thermal pressure during every load phase — macOS via `pmset -g therm` CPU_Speed_Limit (no root; powermetrics is never invoked because it needs root), Linux via /sys/class/thermal/thermal_zone*/temp — and records stress min/max plus whether throttling was observed. Where the platform exposes no readable source the check is `blocked` with the reason (this container: 35 samples, none readable) rather than a fabricated temperature. Tests: test_thermal_snapshot_parses_pmset_thermal_pressure, test_linux_thermal_readings_convert_millidegrees, test_thermal_sampler_summarises_throttling, test_thermal_check_blocks_when_the_platform_cannot_report, test_thermal_check_passes_with_readings_under_load.",
           "The measurement path is now executable end to end instead of 'write a harness first': scripts/model_probe.py (stdlib only, OpenAI-compatible) performs one real request and prints one JSON line in the contract the suite already parses. first_token_ms is timed from the request being sent, not from the response headers - the first version of this probe timed from the headers and reported 0.0 ms, which excluded prefill; the regression is pinned by tests/test_model_probe.py::test_first_token_latency_includes_the_wait_for_the_first_token. Token counts come only from the server's usage block, peak_memory_bytes only from a readable --server-pid; anything unobserved is omitted and explained in a notes field rather than defaulted.",
           "Observed in this environment against a local OpenAI-compatible endpoint (record: /tmp/rec3.json, not committed): p4.model_load pass (3/3 runs, first_token_ms and output_tokens carried through to a loadable model_calibration profile), p4.coding_cases pass (3/3 cases across 3 categories, per-case success_rate 1.0 and wall_s_spread_ratio recorded, case_id/case_category echoed by the probe so a per-case measurement says which case it came from), p4.thermal blocked (no readable thermal source in a container), p4.machine.fingerprint blocked off-target. The story therefore stays blocked: this is evidence that the instrument works, not that a 24 GB Apple Silicon machine qualified."
         ],
@@ -2941,22 +2941,60 @@
       "blocked_by_unknowns": [],
       "prompt": "Implement story M5-P5-01: Workspace quarantine and trusted reconstruction. Objective: Recover from suspected contaminated execution without losing user work. Inspect actual repository call paths first; do not assume a named module is integrated. Tasks: Freeze affected M5 mutations and preserve bytes; Reconstruct separate workspace from trusted baseline and accepted changes; Preserve ambiguous changes separately; Rerun relevant verification under qualified isolation. Acceptance: Unknown modification not silently trusted; Original user work preserved; Unsafe host-level compromise reported as unresolvable locally. Follow roadmap global system prompt and session protocol. Keep changes limited to this story and prerequisites; use test-first or targeted regression tests, preserve user changes, record measured evidence, update roadmap status and README truthfully. If blocked or security guarantees cannot be demonstrated, fail closed and mark blocked with evidence; never mark done without acceptance evidence.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 10,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-10-31T06:55:00Z",
-        "updated_at": "2026-10-31T06:55:00Z",
-        "completed_at": null,
+        "updated_at": "2026-10-31T07:40:00Z",
+        "completed_at": "2026-10-31",
         "owner_session": "arena/98681cc6-m5-agent-studio",
         "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "decisions": [],
-        "blockers": [],
-        "handoff_note": "",
-        "next_action": "Inspect dependencies and real code paths before editing.",
-        "readme_updated": false
+        "changed_files": [
+          "workspace_quarantine.py",
+          "app.py",
+          "scripts/build_studio.py",
+          "studio.py",
+          "pyproject.toml",
+          "README.md",
+          "tests/test_workspace_quarantine.py",
+          "docs/workspace-quarantine.md",
+          "docs/adr/0017-workspace-quarantine-and-trusted-reconstruction.md",
+          "docs/subsystem-dependency-inventory.md",
+          "product/M5_2_0_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "workspace_quarantine.py: freeze_workspace copies every byte into $HARNESS_STORE_DIR/workspace_quarantine/QUARANTINE_ID/tree, records per-entry SHA-256 in a 0600 manifest inside a 0700 record dir, makes the frozen tree read-only (0500 dirs / 0400 files), records symlinks without following them, and never modifies the source workspace",
+          "app.py: _workspace_quarantined_denial() consults find_active_quarantine() in the managed-edit gate, so write_file/edit_file return error_code=workspace_quarantined until release_quarantine(); an unreadable quarantine store denies instead of admitting the edit",
+          "workspace_quarantine.py: plan_reconstruction() classifies every baseline difference as accepted (operator-named) or ambiguous; reconstruct_workspace() builds a NEW destination from the trusted baseline + accepted files only, re-verifying each accepted file against the manifest digest, refuses an existing destination, and writes ambiguous files to a sibling .ambiguous tree with an AMBIGUOUS.md index",
+          "workspace_quarantine.py: classify_recoverability() and ReconstructionResult.isolated_verification report unresolvable_locally / unqualified_isolation when the host may be compromised and isolation is unqualified; isolation in this environment is unqualified (docs/m5-2-0-isolation-smoke-evidence.md), so qualified re-verification is NOT claimed",
+          "docs/adr/0017-workspace-quarantine-and-trusted-reconstruction.md and docs/workspace-quarantine.md: decision record plus an explicit status/limits table (freeze covers M5 mutations only; a writer bypassing M5 tools is not stopped)"
+        ],
+        "test_results": [
+          "pytest tests/test_workspace_quarantine.py -q: 18 passed",
+          "pytest tests/ -q (full suite): 1353 passed, 1 skipped",
+          "ruff check . : clean; mypy: no issues in 52 source files",
+          "scripts/build_studio.py, generate_route_matrix.py, generate_subsystem_inventory.py, generate_roadmap_status.py --check: clean (reproducible)",
+          "validate_docs.py (102 files), validate_adrs.py, validate_governance.py, validate_threat_model.py, validate_security_signoff.py, check_frontend_syntax.py, demo_tour.py --check, validate_screenshots.py: pass",
+          "smoke_local.py and smoke_local.py --standalone: pass"
+        ],
+        "decisions": [
+          "ADR-0017: quarantine preserves bytes and blocks M5 mutations (fail closed on unreadable state); recovery is baseline + operator-accepted changes only, with unattributable changes preserved in a separate labelled tree rather than promoted or deleted; host-level compromise without qualified isolation is reported as unresolvable locally rather than 'verified'."
+        ],
+        "blockers": [
+          "Qualified-isolation re-verification of a reconstructed workspace cannot be executed in this environment (isolation_status: unqualified); the module reports this state instead of assuming it."
+        ],
+        "handoff_note": "M5-P5-01 is implemented and verified locally (1353 passed, 1 skipped). Quarantine freezes M5 managed edits and preserves bytes; reconstruction is baseline + operator-accepted changes with the rest withheld in a labelled .ambiguous tree; recoverability is reported honestly (unresolvable_locally on an unqualified host, which is this environment). Next story with satisfied dependencies: M5-P5-02 ('Artifact lifecycle, provenance and selective invalidation', deps M5-P5-01 + M5-P2-04, both done).",
+        "next_action": "Claim M5-P5-02 ('Artifact lifecycle, provenance and selective invalidation') after PR #79 merges.",
+        "readme_updated": true,
+        "test_evidence": [
+          "tests/test_workspace_quarantine.py",
+          "docs/workspace-quarantine.md",
+          "docs/adr/0017-workspace-quarantine-and-trusted-reconstruction.md"
+        ],
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/79",
+        "commit_shas": [
+          "e3c5587"
+        ]
       }
     },
     {
