@@ -42,24 +42,29 @@ def test_every_modal_is_a_named_modal_dialog() -> None:
     parser = ModalParser()
     parser.feed(_source())
     assert len(parser.dialogs) == 9
-    assert all(dialog["aria-modal"] == "true" for dialog in parser.dialogs)
     assert all(dialog["aria-label"] or dialog["aria-labelledby"] for dialog in parser.dialogs)
+    # The shared controller sets aria-modal only while a backdrop is open.
+    source = _source()
+    assert 'dialog.setAttribute("aria-modal", "true")' in source
+    assert 'entry.dialog.removeAttribute("aria-modal")' in source
 
 
 def test_all_modal_open_and_close_paths_use_the_shared_focus_manager() -> None:
     source = _source()
-    assert "function openAccessibleModal(" in source
-    assert "function closeAccessibleModal(" in source
-    # Modal visibility must have one managed path: direct class toggles bypass
-    # focus trapping and focus restoration.
+    assert "function openOverlay(" in source
+    assert "function closeOverlay(" in source
+    assert "function closeTopOverlay(" in source
+    assert "function overlayTrapTab(" in source
+    assert "const overlayStack = []" in source
+    assert 'dialog.setAttribute("aria-modal", "true")' in source
+    assert "overlayInert(true)" in source
     toggles = list(re.finditer(r'\.classList\.(?:add|remove)\(["\']open["\']\)', source))
-    manager_start = source.index("function openAccessibleModal(")
-    manager_end = source.index("function trapOverlayTab(", manager_start)
-    assert len(toggles) == 2
+    assert len(toggles) == 3
+    manager_start = source.index("function openOverlay(")
+    manager_end = source.index("function closeTopOverlay(", manager_start)
     assert all(manager_start <= match.start() < manager_end for match in toggles)
-    assert "focusReturnByOverlay" in source
-    assert "getTopOpenOverlay" in source
-    assert "aria-modal" in source
+    assert "entry.opener" in source
+    assert "overlayStack.length - 1" in source
 
 
 def test_toasts_have_a_named_live_region_and_keyboard_dismissal() -> None:
@@ -83,5 +88,6 @@ def test_command_palette_uses_combobox_and_active_descendant_semantics() -> None
         assert attr in fragment
     assert 'setAttribute("aria-activedescendant"' in source
     assert 'setAttribute("aria-selected"' in source
-    assert 'e.key === "Escape"' in source
-    assert 'e.key === "Tab"' in source
+    assert 'shortcutMatches(e, "dismiss-overlay")' in source
+    assert 'keys: ["Escape"]' in source
+    assert 'event.key !== "Tab"' in source

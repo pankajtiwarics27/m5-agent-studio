@@ -160,8 +160,10 @@ async function main() {
     await page.evaluate(() => {
       document.getElementById("themeToggleBtn").focus();
       window.openContextModal();
-      window.openMcpModal();
     });
+    await page.waitForFunction(() => document.getElementById("contextModal").classList.contains("open"));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await page.evaluate(() => window.openMcpModal());
     await page.waitForFunction(() => document.getElementById("contextModal").classList.contains("open") && document.getElementById("mcpModal").classList.contains("open"));
     const modalSemantics = await page.evaluate(() => [...document.querySelectorAll(".modal-backdrop.open [role=dialog]")]
       .every((dialog) => dialog.getAttribute("aria-modal") === "true" && dialog.getAttribute("aria-label")));

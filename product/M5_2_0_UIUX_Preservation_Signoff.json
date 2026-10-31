@@ -25,12 +25,12 @@
     "current_inputs_match_approval": null,
     "approved_inputs": null,
     "current_inputs": {
-      "ledger_content_sha256": "e8e800eb785bec26af09f490bb21902e8546763806898e9fdfa727e45e7ba5fc",
-      "source_manifest_sha256": "3a0ab721f2bb2f538db26446ee794b75da539c85a5e132c9f8616cf86cb13117",
-      "control_inventory_sha256": "d8684ebabded462484d0bf99841f5688d4d22c1abec1df39dc4a7e46d59c5291",
-      "route_map_sha256": "d0829b85b223f00a87a007a3256749bc03364805772b600be616c13f658fc9b7",
-      "authorization_trace_sha256": "d4206758f4c52ffcbe3b46f497eb873667354b79fb6b47dfbdc22fd9a8683395",
-      "frontend_sha256": "3a201cd828b3298226a76ec817bb59552f18d69ccd44b7f9035b49315ac57af9",
+      "ledger_content_sha256": "b88ef80cf2cfca8903203465bd00d2b212b9030e894e4e4397d6044a9e47f0f2",
+      "source_manifest_sha256": "899ef937509afd5f240c7a987d1bdb58f65300c8d19d2108ea26b01e171ee5aa",
+      "control_inventory_sha256": "779d1f010e4345e9c47cfdc7450acb68388d5dbe292cd8acca1e37f24e820bed",
+      "route_map_sha256": "75a246a5f3d49e30fe6a6a1779736494ed0af24519af89e259a120dc9b845e7a",
+      "authorization_trace_sha256": "056e13c25f952313eb01bd4439376eccae808d45c08a726d4b9a0639c49708db",
+      "frontend_sha256": "32bb00dea76a694e9895c806ade33038b038d122ad0e33a7a22019f941deac4d",
       "screenshot_manifest_sha256": "69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92",
       "screenshot_index_sha256": "de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -39,12 +39,12 @@
     "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "5360eb05068baf1b074b8b9495d6db2a75bcb9c26c1b5d65d27ddd73bdf41146",
-    "source_manifest_sha256": "3a0ab721f2bb2f538db26446ee794b75da539c85a5e132c9f8616cf86cb13117",
-    "control_inventory_sha256": "d8684ebabded462484d0bf99841f5688d4d22c1abec1df39dc4a7e46d59c5291",
-    "route_map_sha256": "d0829b85b223f00a87a007a3256749bc03364805772b600be616c13f658fc9b7",
-    "authorization_trace_sha256": "d4206758f4c52ffcbe3b46f497eb873667354b79fb6b47dfbdc22fd9a8683395",
-    "frontend_sha256": "3a201cd828b3298226a76ec817bb59552f18d69ccd44b7f9035b49315ac57af9"
+    "ledger_sha256": "5f30adee8c698228cae362d63ee66fec03852f28d4cb3e810f4e1b490e32b1c3",
+    "source_manifest_sha256": "899ef937509afd5f240c7a987d1bdb58f65300c8d19d2108ea26b01e171ee5aa",
+    "control_inventory_sha256": "779d1f010e4345e9c47cfdc7450acb68388d5dbe292cd8acca1e37f24e820bed",
+    "route_map_sha256": "75a246a5f3d49e30fe6a6a1779736494ed0af24519af89e259a120dc9b845e7a",
+    "authorization_trace_sha256": "056e13c25f952313eb01bd4439376eccae808d45c08a726d4b9a0639c49708db",
+    "frontend_sha256": "32bb00dea76a694e9895c806ade33038b038d122ad0e33a7a22019f941deac4d"
   },
   "approval_request": [
     {
@@ -105,7 +105,7 @@
         {
           "capability": "Guided first run",
           "target": "Start primary view or progressive-disclosure inspector",
-          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics."
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         },
         {
           "capability": "readiness summary",
@@ -223,7 +223,7 @@
         {
           "capability": "Session creation",
           "target": "Harness primary view or progressive-disclosure inspector",
-          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics."
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         },
         {
           "capability": "workspace",
@@ -570,7 +570,7 @@
         {
           "capability": "Council Hall session spawning and chronicle browsing",
           "target": "Council primary view or progressive-disclosure inspector",
-          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics."
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
       "control_count": 19,
@@ -839,7 +839,7 @@
         {
           "capability": "Four-stage orchestrator with architect/coder role selection",
           "target": "Pipeline primary view or progressive-disclosure inspector",
-          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics."
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
       "control_count": 16,
@@ -1014,7 +1014,7 @@
         {
           "capability": "Multi-model selection and compare responses",
           "target": "Compare primary view or progressive-disclosure inspector",
-          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics."
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
       "control_count": 5,
@@ -1110,7 +1110,7 @@
         {
           "capability": "Active model and persona selection",
           "target": "Chat primary view or progressive-disclosure inspector",
-          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior Shared dialogs, notifications, the command palette and keyboard shortcuts remain accessible without changing any action or authorization semantics."
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         },
         {
           "capability": "conversation interface",

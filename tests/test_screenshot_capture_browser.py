@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CAPTURE = ROOT / "scripts" / "capture_screenshots.mjs"
 WALK = ROOT / "scripts" / "keyboard_walk.mjs"
 ACCESSIBILITY_WALK = ROOT / "tests" / "browser" / "accessibility_walk.mjs"
+OVERLAY_WALK = ROOT / "scripts" / "overlay_walk.mjs"
 TOKEN = "synthetic-screenshot-token-0123456789"
 TABS = ("start", "harness", "hall", "council", "debate", "chat")
 
@@ -149,6 +150,13 @@ def _accessibility_walk(base: str, env: dict[str, str], token: str = TOKEN):
     return subprocess.run(
         ["node", str(ACCESSIBILITY_WALK), "--base-url", base, "--token", token],
         cwd=ROOT, env=env, capture_output=True, text=True, timeout=60, check=False,
+    )
+
+
+def _overlay_walk(base: str, env: dict[str, str], token: str = TOKEN):
+    return subprocess.run(
+        ["node", str(OVERLAY_WALK), "--base-url", base, "--token", token, "--json"],
+        cwd=ROOT, env=env, capture_output=True, text=True, timeout=180, check=False,
     )
 
 
@@ -419,6 +427,13 @@ def test_real_isolated_demo_captures_all_six_panes(
         assert accessibility_result["failed"] == 0
         assert accessibility_result["passed"] == 13
         assert banner["token"] not in accessibility.stdout + accessibility.stderr
+        overlays = _overlay_walk(banner["url"], browser_env, token=banner["token"])
+        assert overlays.returncode == 0, overlays.stderr
+        overlay_result = json.loads(overlays.stdout)
+        assert overlay_result["failed"] == 0
+        assert overlay_result["passed"] == 78
+        assert overlay_result["blocked"] == 1
+        assert banner["token"] not in overlays.stdout + overlays.stderr
         assert sentinel.read_bytes() == before
         assert [p for p in store.rglob("*") if p.is_file()] == [sentinel]
     finally:
