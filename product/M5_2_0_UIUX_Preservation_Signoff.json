@@ -19,8 +19,8 @@
     "statement": "Signed in the ledger; this page only reports the record."
   },
   "inputs": {
-    "ledger_sha256": "89c0e156ccabb9288fc61359078fc4e52d36b054a3b393df508680183f736189",
-    "source_manifest_sha256": "c08f9fb3080379f11bad1abb46d8e7994b1d2e433092713e13869589001871f2",
+    "ledger_sha256": "deb2d5388a70b5601b6a611028bc03c133d3f254e35e9b431365c89ac8e4c330",
+    "source_manifest_sha256": "3d846158f1992853cb4cf4e29a7fcdea9f5dd911ce8faeb2a5e28db49d234ed2",
     "control_inventory_sha256": "bf3d69219d667e0bd53e4124cdd8df52af85c61225df91c96d92cefbae718ae6",
     "route_map_sha256": "384fdb251a4a845dcd9bf365e0a75a387b29384dc7f0f23e425c40fc9f0c275b",
     "authorization_trace_sha256": "7d849b1152ed143b9e23292f6c8ee6f5a114ef2117fd0a683753948d375bb260",

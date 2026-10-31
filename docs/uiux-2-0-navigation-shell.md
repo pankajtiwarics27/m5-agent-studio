@@ -80,3 +80,20 @@ Result recorded for this story: **22 of 22 checks passed**.
 * **Narrow layouts were exercised by the walk's 1440px viewport only.** The
   orientation attribute follows a media query, and that transition is read from the
   code, not driven.
+
+## Two checks that pinned a spelling rather than a fact
+
+Both were found by this story, both are the same mistake, and both are fixed where
+they live rather than by restoring the old attribute:
+
+* `validate_screenshots.py` read tab ids with a regex that expected `class` then
+  `data-tab`; once the rail gained `role` and `id`, it reported "no tabs at all".
+  It now reads each button and its `data-tab` in any order.
+* The capture script's pane assertion (added in #124, another session's hardening)
+  required `aria-current="page"` on the selected tab. It now accepts either
+  `aria-selected="true"` or `aria-current="page"`, and still proves the part that
+  matters: one active tab matching the clicked one, one active pane matching that
+  tab, and the pane visible inside the viewport.
+
+A check that fails when an element gains a legitimate attribute teaches the next
+session to avoid accessibility attributes. Both now test the invariant.
