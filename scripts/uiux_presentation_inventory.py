@@ -55,6 +55,8 @@ CONTAINERS = {
     "chatState": ("Chat", "a reply that stopped"),
     "harnessStreamState": ("Harness", "an event stream that dropped"),
     "startRecentState": ("Start", "recent work that is empty or could not be read"),
+    "startHealthState": ("Start", "a health read that did not answer"),
+    "startWorkspaceState": ("Start", "a workspace write that was refused"),
 }
 
 # Handlers this story converted. A raw writer inside one of them means the conversion

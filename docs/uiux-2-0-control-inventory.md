@@ -6,8 +6,8 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `bf1d6b1c255793972df88d5dff3f6cefbe5fca66b54b0326832429fb36f5941e`.
-* Panes: 6 · controls in panes: 70 · controls in the
+* Frontend digest: `9570e726f3c320c2c50adcaf795deb21728edb168b211527ef22014a62c5e5f4`.
+* Panes: 6 · controls in panes: 75 · controls in the
   shared chrome: 101 · script-rendered: 30.
 
 ## What this page is, and is not
@@ -21,7 +21,7 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 
 | Pane | Section | Total | Without id | Without any label | Breakdown |
 |---|---|---|---|---|---|
-| start | `pane-start` | 6 | 3 | 0 | button 5, input 1 |
+| start | `pane-start` | 11 | 5 | 0 | button 8, input 2, select 1 |
 | harness | `pane-harness` | 17 | 3 | 0 | button 4, input 2, select 9, summary 1, textarea 1 |
 | hall | `pane-hall` | 17 | 4 | 0 | button 6, select 8, summary 2, textarea 1 |
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
@@ -31,13 +31,13 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 
 ## What the numbers already say
 
-* 171 controls are in the markup and 30 more are built by script — a checklist written from the markup alone would miss 15% of the interactive surface.
-* The shared chrome carries 101 controls; all six panes together carry 70. Most of the clicking happens in the shell, not inside a tab.
-* 51 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
+* 176 controls are in the markup and 30 more are built by script — a checklist written from the markup alone would miss 15% of the interactive surface.
+* The shared chrome carries 101 controls; all six panes together carry 75. Most of the clicking happens in the shell, not inside a tab.
+* 53 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
 
-Section `pane-start`, 6 interactive elements.
+Section `pane-start`, 11 interactive elements.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
@@ -47,6 +47,11 @@ Section `pane-start`, 6 interactive elements.
 | 4 | input | startTaskInput | text | Describe a task to open in the Harness… | — |
 | 5 | button | startTaskBtn | button | Open in Harness | launchTaskFromStart() |
 | 6 | button | — | button | Refresh | loadStartRecent({ force: true }) |
+| 7 | button | — | button | Re-check health | refreshTelemetry() |
+| 8 | button | — | button | Monitor rail | toggleMonitorRail() |
+| 9 | input | startWorkspaceInput | text | ~/Projects/my-app | — |
+| 10 | select | startWorkspaceRecent | — | Recent project folders | if(this.value) pickStartWorkspace(this.value) |
+| 11 | button | startWorkspaceBtn | button | Set / Create | saveStartWorkspace() |
 
 ## Pane `harness`
 

@@ -1,0 +1,129 @@
+{
+  "schema_version": "1.0.0",
+  "story": "UIUX-P2-03",
+  "statement": "Start answers two questions with data the server already produces: whether this machine is working (runtime, memory, containers, workspace) and where a task will run. The health card renders the telemetry payload the monitor rail fetched, states whether that payload describes this machine or the demo's, and the workspace is the same setting the Harness uses - written through the same route and followed by a fresh preflight.",
+  "source": {
+    "frontend": "static/index.html",
+    "server": "app.py",
+    "routes": [
+      "/api/telemetry",
+      "/api/workspace/directory"
+    ]
+  },
+  "server": {
+    "telemetry_route": "/api/telemetry",
+    "simulated_sources": [
+      "simulated_demo"
+    ],
+    "workspace_route": "/api/workspace/directory",
+    "workspace_route_line": 4803,
+    "telemetry_fields": [
+      "docker",
+      "memory",
+      "omlx",
+      "omlx_online",
+      "telemetry_source"
+    ]
+  },
+  "health_rows": [
+    "Model runtime",
+    "Unified memory",
+    "Containers",
+    "Project workspace"
+  ],
+  "bases_used": [
+    "measured",
+    "unverified",
+    "unavailable"
+  ],
+  "tones_used": [
+    "danger",
+    "neutral",
+    "ok",
+    "warn"
+  ],
+  "frontend": {
+    "functions": {
+      "startHealthRows": true,
+      "renderStartHealth": true,
+      "renderStartWorkspace": true,
+      "pickStartWorkspace": true,
+      "saveStartWorkspace": true
+    },
+    "health": {
+      "reads_last_payload": true,
+      "no_poll": true,
+      "memory_from_payload": true,
+      "containers_from_payload": true,
+      "runtime_from_payload": true,
+      "simulated_branch": true,
+      "basis_measured": true,
+      "basis_unverified": true,
+      "basis_unavailable": true,
+      "claim_names_real_rows": true,
+      "tones": [
+        "danger",
+        "neutral",
+        "ok",
+        "warn"
+      ],
+      "uses_status_component": true,
+      "uses_evidence_component": true,
+      "workspace_row": true,
+      "failure_presented": true,
+      "failure_names_unaffected": true,
+      "one_recovery_affordance": true,
+      "real_read_time": true,
+      "absent_keeps_shape": true
+    },
+    "telemetry": {
+      "feeds_card": true,
+      "clears_on_failure": true
+    },
+    "workspace": {
+      "reads_server_payload": true,
+      "writes_through_saver": true,
+      "no_direct_fetch": true,
+      "reports_outcome": true,
+      "rereads_preflight": true,
+      "error_presentation": true,
+      "error_says_what_holds": true,
+      "error_offers_retry": true,
+      "shared_input_list": true,
+      "recent_picker": true
+    },
+    "server": {
+      "saver_returns_outcome": true
+    },
+    "styles": {
+      "row": true,
+      "value": true,
+      "workspace": true,
+      "actions": true
+    },
+    "markup": {
+      "health_rows": true,
+      "health_evidence": true,
+      "health_state": true,
+      "workspace_row": true,
+      "workspace_state": true,
+      "described_by": true
+    },
+    "startup": true
+  },
+  "totals": {
+    "health_rows": 4,
+    "bases": 3,
+    "tones": 4,
+    "routes": 2,
+    "simulated_sources": 1,
+    "findings": 0
+  },
+  "findings": [],
+  "limits": [
+    "the memory and container rows are the runtime's own report, including when that report is the demo's; the artifact and the card both say so rather than smoothing it over",
+    "the workspace row is the session payload's default_workspace, so it describes what the Harness will use even when the runtime is unreachable",
+    "the browser walk checks the card against /api/telemetry on the host it runs on, so the simulated and the live branches are asserted by whichever one that host produces, and the other is asserted structurally",
+    "setting a workspace creates the directory if it is missing - that is the server's documented behaviour of POST /api/workspace/directory, not something the pane adds"
+  ]
+}

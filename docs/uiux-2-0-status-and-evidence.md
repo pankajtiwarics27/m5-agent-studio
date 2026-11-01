@@ -39,27 +39,29 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 | `failed` | `danger` | FAILED |
 | `error` | `danger` | ERROR |
 
-10 states, 6 tones, 4 bases, 7 surfaces using the component, 4 of them live regions.
+10 states, 6 tones, 4 bases, 9 surfaces using the component, 6 of them live regions.
 
 ## Surfaces
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| `#sdlcProgressBadge` | `neutral` | no | 1349 |
-| `#onboardingSummary` | `neutral` | yes | 1496 |
-| `#startRecentSummary` | `neutral` | yes | 1536 |
-| `#harnessActiveStatusBadge` | `info` | yes | 1652 |
-| `#hallStatusBadge` | `warn` | yes | 1695 |
-| (unnamed) | `ok` | no | 1892 |
-| `#dockerStateBadge` | `neutral` | no | 1939 |
+| `#sdlcProgressBadge` | `neutral` | no | 1378 |
+| `#onboardingSummary` | `neutral` | yes | 1525 |
+| `#startRecentSummary` | `neutral` | yes | 1565 |
+| `#startHealthSummary` | `neutral` | yes | 1592 |
+| `#startWorkspaceSummary` | `neutral` | yes | 1610 |
+| `#harnessActiveStatusBadge` | `info` | yes | 1726 |
+| `#hallStatusBadge` | `warn` | yes | 1769 |
+| (unnamed) | `ok` | no | 1966 |
+| `#dockerStateBadge` | `neutral` | no | 2013 |
 
 ## Writers
 
 | Measure | Count |
 |---|---|
-| `setStatus()` call sites | 19 |
-| `evidenceNote()` call sites | 1 |
-| Evidence blocks in markup | 1 |
+| `setStatus()` call sites | 22 |
+| `evidenceNote()` call sites | 2 |
+| Evidence blocks in markup | 2 |
 | Legacy `className = "badge …"` writers | 0 |
 
 The last row is the point of the story. A writer that sets the class and the text on separate
