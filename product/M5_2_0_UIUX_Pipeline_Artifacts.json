@@ -141,7 +141,7 @@
       "detail": ""
     },
     {
-      "check": "a stopped run is stated as stopped",
+      "check": "a stopped run is stated as stopped without inferring stop from incompleteness",
       "ok": true,
       "detail": ""
     },
@@ -151,7 +151,22 @@
       "detail": ""
     },
     {
-      "check": "an error is stated, and it is not turned into a stop",
+      "check": "an error is stated as failed, and never as a stop",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a premature stream close is a failure and council_done is terminal",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "retry replays the exact captured request through the full pipeline route",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "retry is disclosed, keyboard-operable and states that all stages restart",
       "ok": true,
       "detail": ""
     },
@@ -211,7 +226,7 @@
       "detail": ""
     }
   ],
-  "check_count": 28,
+  "check_count": 31,
   "findings": [],
   "status": "clean"
 }

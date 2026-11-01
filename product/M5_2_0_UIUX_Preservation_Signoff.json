@@ -25,26 +25,26 @@
     "current_inputs_match_approval": null,
     "approved_inputs": null,
     "current_inputs": {
-      "ledger_content_sha256": "25b0cd75e3af9a8796b83920703c57ebea2ddf38f554143bcb3a2dfd5cd2a047",
-      "source_manifest_sha256": "c891f1c94329d1ca0c67187a78f451c6142560c44b9cc3a8c62960a238448759",
-      "control_inventory_sha256": "2db8f548751ab8a78aac2dddb43dfb6fe8d7727983d6b59d94fc4cd8f6cdf1b6",
-      "route_map_sha256": "e3727af18a3eebacc1dd987beddae641d89662869259261484c7b6a0cc8ed314",
-      "authorization_trace_sha256": "ac76f180c161937307e524b1fd35691272bbec5d8a7ba27fec0ce621b0e5bd49",
-      "frontend_sha256": "83735efd19d1c81dae060ae033e1f883057b595d776135362655c175026affcb",
-      "screenshot_manifest_sha256": "cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57",
-      "screenshot_index_sha256": "82ecdeb4870961951b1b8946a657438d2a3893f443e5fe182f3372ed41784f07",
+      "ledger_content_sha256": "75d72e7d43f489ff41d0aa7a9a8168a0558cb558baeaf4730b49e194d641340f",
+      "source_manifest_sha256": "37142789a7e16d6b0dc25ef5a0a8405798414338604bef7cb24e9be981b239b0",
+      "control_inventory_sha256": "3aa3e44bf969e69d89b307266a98db046e185fd75b6fd716e707bec50c99ab01",
+      "route_map_sha256": "ec85908e2a8ad0c920f6c0232729ccc3f232ee2aaa9f4c54042bf1296dfd83ae",
+      "authorization_trace_sha256": "6458ed9b5ce0df9037e7aa461b94d9d7716f1e90740597d8f353d0e9e3d93d36",
+      "frontend_sha256": "7b4e92241892a29c937aa3f747c6818d77bfb4e4c09a029d85d3b27ac23b4fc4",
+      "screenshot_manifest_sha256": "98fb7a074d1c9b05a7378f83db1378906bbb09b937371b7bd5419e5d17b6fe4b",
+      "screenshot_index_sha256": "a60d24c2b6b674128fe7160ee109cdde462a2dbf0425b3723c7d03aa38084621",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
       "route_map_generator_sha256": "923981fc78ff0f844e67691bfa966963f3959be1b9650eaf49f3b58b0a14d555"
     },
     "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "7fc1c935343a557dd9855d899eccfbe77bbbb58ddfa1860017154abec3484a75",
-    "source_manifest_sha256": "c891f1c94329d1ca0c67187a78f451c6142560c44b9cc3a8c62960a238448759",
-    "control_inventory_sha256": "2db8f548751ab8a78aac2dddb43dfb6fe8d7727983d6b59d94fc4cd8f6cdf1b6",
-    "route_map_sha256": "e3727af18a3eebacc1dd987beddae641d89662869259261484c7b6a0cc8ed314",
-    "authorization_trace_sha256": "ac76f180c161937307e524b1fd35691272bbec5d8a7ba27fec0ce621b0e5bd49",
-    "frontend_sha256": "83735efd19d1c81dae060ae033e1f883057b595d776135362655c175026affcb"
+    "ledger_sha256": "5cda7892a46eee3f19321b6b52b82288ee676d9e11908b10bbb6197cfc1ff1e6",
+    "source_manifest_sha256": "37142789a7e16d6b0dc25ef5a0a8405798414338604bef7cb24e9be981b239b0",
+    "control_inventory_sha256": "3aa3e44bf969e69d89b307266a98db046e185fd75b6fd716e707bec50c99ab01",
+    "route_map_sha256": "ec85908e2a8ad0c920f6c0232729ccc3f232ee2aaa9f4c54042bf1296dfd83ae",
+    "authorization_trace_sha256": "6458ed9b5ce0df9037e7aa461b94d9d7716f1e90740597d8f353d0e9e3d93d36",
+    "frontend_sha256": "7b4e92241892a29c937aa3f747c6818d77bfb4e4c09a029d85d3b27ac23b4fc4"
   },
   "approval_request": [
     {
@@ -55,7 +55,7 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "189 markup controls (106 chrome, 83 panes) plus 33 rendered by script"
+      "evidence": "190 markup controls (106 chrome, 84 panes) plus 33 rendered by script"
     },
     {
       "id": 3,
@@ -76,9 +76,9 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 189,
+    "markup_controls": 190,
     "chrome_controls": 106,
-    "pane_controls": 83,
+    "pane_controls": 84,
     "script_rendered_controls": 33,
     "routes": 115,
     "routes_with_resolved_or_possible_caller": 68,
@@ -1043,13 +1043,13 @@
       "preserved_capabilities": [
         {
           "capability": "Four-stage orchestrator with architect/coder role selection",
-          "target": "Pipeline primary view or progressive-disclosure inspector",
-          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+          "target": "Pipeline primary view with distinct Failed, Stopped and Done states and an explicit full-run retry",
+          "must_preserve": "Existing route, model selection and successful four-stage flow; partial output stays visible until retry; retry reuses the captured request and restarts at Architect; no checkpoint or stage-resume guarantee"
         }
       ],
-      "control_count": 16,
+      "control_count": 17,
       "counts": {
-        "button": 9,
+        "button": 10,
         "input": 1,
         "select": 5,
         "textarea": 1
@@ -1127,6 +1127,13 @@
         },
         {
           "tag": "button",
+          "id": "councilRetryBtn",
+          "text": "Retry from start",
+          "onclick": "retryCouncil()",
+          "handler": "retryCouncil"
+        },
+        {
+          "tag": "button",
           "id": "councilRunBtn",
           "text": "Run pipeline",
           "onclick": "runCouncil()",
@@ -1169,6 +1176,7 @@
         }
       ],
       "declared_handlers": [
+        "retryCouncil",
         "runCouncil",
         "selectStageFilter",
         "setCouncilPreset",

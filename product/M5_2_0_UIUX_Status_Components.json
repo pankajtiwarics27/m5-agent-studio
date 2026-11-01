@@ -77,13 +77,13 @@
       "id": null,
       "tone": "ok",
       "live": false,
-      "line": 2318
+      "line": 2320
     },
     {
       "id": "dockerStateBadge",
       "tone": "neutral",
       "live": false,
-      "line": 2365
+      "line": 2367
     }
   ],
   "state_matrix": [

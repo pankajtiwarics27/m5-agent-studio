@@ -152,15 +152,48 @@ def test_an_empty_seat_drawn_as_a_quiet_one_is_a_finding(sources):
     assert "an empty seat is drawn as empty, not as a quiet one" in _checks(broken)
 
 
-def test_a_stopped_run_drawn_as_a_finished_one_is_a_finding(sources):
+def test_an_incomplete_run_is_not_inferred_to_be_an_operator_stop(sources):
     broken = sources(
         html_transform=lambda html: html.replace(
-            "councilRun.stopped = ![1,2,3,4].every(n => stageBuffers[n] && stageBuffers[n].u);",
+            'councilRun.stopped = outcome === "stopped";',
             "councilRun.stopped = false;",
             1,
         )
     )
-    assert "a stopped run is stated as stopped" in _checks(broken)
+    assert "a stopped run is stated as stopped without inferring stop from incompleteness" in _checks(broken)
+
+
+def test_a_server_error_is_not_mislabeled_as_a_stop(sources):
+    broken = sources(
+        html_transform=lambda html: html.replace(
+            'setCouncilOutcome("failed", message);',
+            'setCouncilOutcome("stopped", message);',
+            1,
+        )
+    )
+    assert "an error is stated as failed, and never as a stop" in _checks(broken)
+
+
+def test_retry_must_reuse_the_captured_pipeline_request(sources):
+    broken = sources(
+        html_transform=lambda html: html.replace(
+            "runCouncil(lastCouncilPayload)",
+            'runCouncil({ task: document.getElementById("councilPrompt").value })',
+            1,
+        )
+    )
+    assert "retry replays the exact captured request through the full pipeline route" in _checks(broken)
+
+
+def test_retry_must_disclose_full_run_replacement(sources):
+    broken = sources(
+        html_transform=lambda html: html.replace(
+            "reruns all four stages with the same task and settings",
+            "reruns some stages with the same task and settings",
+            1,
+        )
+    )
+    assert "retry is disclosed, keyboard-operable and states that all stages restart" in _checks(broken)
 
 
 def test_an_unsaved_run_given_an_id_is_a_finding(sources):

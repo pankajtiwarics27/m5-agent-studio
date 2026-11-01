@@ -8,7 +8,7 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 189 markup controls (106 chrome, 83 panes) · 33 rendered by script.
+* 6 panes · 21 preserved capabilities · 190 markup controls (106 chrome, 84 panes) · 33 rendered by script.
 * 115 routes exist, 68 with a resolved or possible caller, 47 with none observed and 0 unknown due to unresolved edges; 46 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
@@ -28,7 +28,7 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 189 markup controls (106 chrome, 83 panes) plus 33 rendered by script |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 190 markup controls (106 chrome, 84 panes) plus 33 rendered by script |
 | 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 115 routes exist; 68 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 46 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
@@ -199,9 +199,9 @@ The four-stage pipeline view for a single request.
 
 | Capability | Target | What must not change |
 |---|---|---|
-| Four-stage orchestrator with architect/coder role selection | Pipeline primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
+| Four-stage orchestrator with architect/coder role selection | Pipeline primary view with distinct Failed, Stopped and Done states and an explicit full-run retry | Existing route, model selection and successful four-stage flow; partial output stays visible until retry; retry reuses the captured request and restarts at Architect; no checkpoint or stage-resume guarantee |
 
-**Controls — 16 in the markup:**
+**Controls — 17 in the markup:**
 
 | Tag | Id | Label | Handler |
 |---|---|---|---|
@@ -215,6 +215,7 @@ The four-stage pipeline view for a single request.
 | button | — | Token Bucket | setCouncilPreset('Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks.') |
 | button | — | Portfolio Actor | setCouncilPreset('Design an event-sourced Portfolio Rebalancer Actor in Python with integer atomic units, deterministic MarketSnapshot replay, and stale-price circuit breakers.') |
 | button | councilStopBtn | Stop | stopActiveStream() |
+| button | councilRetryBtn | Retry from start | retryCouncil() |
 | button | councilRunBtn | Run pipeline | runCouncil() |
 | button | step-card-0 | VIEWAll Stages Ready | selectStageFilter(0) |
 | button | step-card-1 | 1 • ARCHITECTSpec Idle | selectStageFilter(1) |
@@ -356,14 +357,14 @@ provenance; a matching snapshot cannot clear separate review holds.
 
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
-| `ledger_content_sha256` | `25b0cd75e3af9a8796b83920703c57ebea2ddf38f554143bcb3a2dfd5cd2a047` | `not recorded` |
-| `source_manifest_sha256` | `c891f1c94329d1ca0c67187a78f451c6142560c44b9cc3a8c62960a238448759` | `not recorded` |
-| `control_inventory_sha256` | `2db8f548751ab8a78aac2dddb43dfb6fe8d7727983d6b59d94fc4cd8f6cdf1b6` | `not recorded` |
-| `route_map_sha256` | `e3727af18a3eebacc1dd987beddae641d89662869259261484c7b6a0cc8ed314` | `not recorded` |
-| `authorization_trace_sha256` | `ac76f180c161937307e524b1fd35691272bbec5d8a7ba27fec0ce621b0e5bd49` | `not recorded` |
-| `frontend_sha256` | `83735efd19d1c81dae060ae033e1f883057b595d776135362655c175026affcb` | `not recorded` |
-| `screenshot_manifest_sha256` | `cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57` | `not recorded` |
-| `screenshot_index_sha256` | `82ecdeb4870961951b1b8946a657438d2a3893f443e5fe182f3372ed41784f07` | `not recorded` |
+| `ledger_content_sha256` | `75d72e7d43f489ff41d0aa7a9a8168a0558cb558baeaf4730b49e194d641340f` | `not recorded` |
+| `source_manifest_sha256` | `37142789a7e16d6b0dc25ef5a0a8405798414338604bef7cb24e9be981b239b0` | `not recorded` |
+| `control_inventory_sha256` | `3aa3e44bf969e69d89b307266a98db046e185fd75b6fd716e707bec50c99ab01` | `not recorded` |
+| `route_map_sha256` | `ec85908e2a8ad0c920f6c0232729ccc3f232ee2aaa9f4c54042bf1296dfd83ae` | `not recorded` |
+| `authorization_trace_sha256` | `6458ed9b5ce0df9037e7aa461b94d9d7716f1e90740597d8f353d0e9e3d93d36` | `not recorded` |
+| `frontend_sha256` | `7b4e92241892a29c937aa3f747c6818d77bfb4e4c09a029d85d3b27ac23b4fc4` | `not recorded` |
+| `screenshot_manifest_sha256` | `98fb7a074d1c9b05a7378f83db1378906bbb09b937371b7bd5419e5d17b6fe4b` | `not recorded` |
+| `screenshot_index_sha256` | `a60d24c2b6b674128fe7160ee109cdde462a2dbf0425b3723c7d03aa38084621` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |
 | `route_map_generator_sha256` | `923981fc78ff0f844e67691bfa966963f3959be1b9650eaf49f3b58b0a14d555` | `not recorded` |
 

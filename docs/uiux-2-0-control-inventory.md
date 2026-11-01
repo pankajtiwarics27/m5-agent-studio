@@ -6,8 +6,8 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `83735efd19d1c81dae060ae033e1f883057b595d776135362655c175026affcb`.
-* Panes: 6 · controls in panes: 83 · controls in the
+* Frontend digest: `7b4e92241892a29c937aa3f747c6818d77bfb4e4c09a029d85d3b27ac23b4fc4`.
+* Panes: 6 · controls in panes: 84 · controls in the
   shared chrome: 106 · script-rendered: 33.
 
 ## What this page is, and is not
@@ -24,15 +24,15 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 | start | `pane-start` | 11 | 5 | 0 | button 8, input 2, select 1 |
 | harness | `pane-harness` | 23 | 4 | 0 | button 10, input 2, select 9, summary 1, textarea 1 |
 | hall | `pane-hall` | 17 | 4 | 0 | button 6, select 8, summary 2, textarea 1 |
-| council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
+| council | `pane-council` | 17 | 2 | 0 | button 10, input 1, select 5, textarea 1 |
 | debate | `pane-debate` | 5 | 0 | 0 | button 2, input 1, select 1, textarea 1 |
 | chat | `pane-chat` | 11 | 0 | 0 | button 5, input 2, select 3, textarea 1 |
 | (chrome) | outside the panes | 106 | 43 | 0 | button 59, input 29, select 12, summary 1, textarea 5 |
 
 ## What the numbers already say
 
-* 189 controls are in the markup and 33 more are built by script — a checklist written from the markup alone would miss 15% of the interactive surface.
-* The shared chrome carries 106 controls; all six panes together carry 83. Most of the clicking happens in the shell, not inside a tab.
+* 190 controls are in the markup and 33 more are built by script — a checklist written from the markup alone would miss 15% of the interactive surface.
+* The shared chrome carries 106 controls; all six panes together carry 84. Most of the clicking happens in the shell, not inside a tab.
 * 58 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
@@ -109,7 +109,7 @@ Section `pane-hall`, 17 interactive elements.
 
 ## Pane `council`
 
-Section `pane-council`, 16 interactive elements.
+Section `pane-council`, 17 interactive elements.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
@@ -123,12 +123,13 @@ Section `pane-council`, 16 interactive elements.
 | 8 | button | — | button | Token Bucket | setCouncilPreset('Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks.') |
 | 9 | button | — | button | Portfolio Actor | setCouncilPreset('Design an event-sourced Portfolio Rebalancer Actor in Python with integer atomic units, deterministic MarketSnapshot replay, and stale-price circuit breakers.') |
 | 10 | button | councilStopBtn | — | Stop | stopActiveStream() |
-| 11 | button | councilRunBtn | — | Run pipeline | runCouncil() |
-| 12 | button | step-card-0 | button | VIEWAll Stages Ready | selectStageFilter(0) |
-| 13 | button | step-card-1 | button | 1 • ARCHITECTSpec Idle | selectStageFilter(1) |
-| 14 | button | step-card-2 | button | 2 • CODERDraft Idle | selectStageFilter(2) |
-| 15 | button | step-card-3 | button | 3 • CRITICAudit Idle | selectStageFilter(3) |
-| 16 | button | step-card-4 | button | 4 • JUDGEFinal Idle | selectStageFilter(4) |
+| 11 | button | councilRetryBtn | button | Retry from start | retryCouncil() |
+| 12 | button | councilRunBtn | — | Run pipeline | runCouncil() |
+| 13 | button | step-card-0 | button | VIEWAll Stages Ready | selectStageFilter(0) |
+| 14 | button | step-card-1 | button | 1 • ARCHITECTSpec Idle | selectStageFilter(1) |
+| 15 | button | step-card-2 | button | 2 • CODERDraft Idle | selectStageFilter(2) |
+| 16 | button | step-card-3 | button | 3 • CRITICAudit Idle | selectStageFilter(3) |
+| 17 | button | step-card-4 | button | 4 • JUDGEFinal Idle | selectStageFilter(4) |
 
 ## Pane `debate`
 

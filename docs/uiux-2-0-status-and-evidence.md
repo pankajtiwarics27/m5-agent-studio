@@ -52,8 +52,8 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 | `#startWorkspaceSummary` | `neutral` | yes | 1905 |
 | `#harnessActiveStatusBadge` | `info` | yes | 2029 |
 | `#hallStatusBadge` | `warn` | yes | 2105 |
-| (unnamed) | `ok` | no | 2318 |
-| `#dockerStateBadge` | `neutral` | no | 2365 |
+| (unnamed) | `ok` | no | 2320 |
+| `#dockerStateBadge` | `neutral` | no | 2367 |
 
 ## Writers
 

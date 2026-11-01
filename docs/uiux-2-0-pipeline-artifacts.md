@@ -32,7 +32,7 @@ drift quietly.
   and a stopped pipeline is never saved, because the record is written after the last stage;
 * a skills or reasoning claim per stage — those are the server's inputs and the stream does
   not carry them;
-* a checkpoint, a retry or a resume in this pane: those belong to UIUX-P3-07.
+* a checkpoint or stage resume: the API does not expose one; UIUX-P3-07 offers an explicit full replay from Architect and says that every stage reruns.
 
 ## The stream it reads
 
@@ -40,7 +40,7 @@ drift quietly.
 
 ## Checks
 
-28 checks, 0 findings — **clean**.
+31 checks, 0 findings — **clean**.
 
 * `pass` the pipeline chain is declared once, as four seats
 * `pass` the pane's chain is the server's chain
@@ -56,9 +56,12 @@ drift quietly.
 * `pass` the collapsed card states the artifact size too
 * `pass` the run is stated once, above the cards, as a live region
 * `pass` the run line says how many seats finished, how much was produced and how many handoffs landed
-* `pass` a stopped run is stated as stopped
+* `pass` a stopped run is stated as stopped without inferring stop from incompleteness
 * `pass` a stopped run says it was not saved, and a saved one is named by the id the server gave
-* `pass` an error is stated, and it is not turned into a stop
+* `pass` an error is stated as failed, and never as a stop
+* `pass` a premature stream close is a failure and council_done is terminal
+* `pass` retry replays the exact captured request through the full pipeline route
+* `pass` retry is disclosed, keyboard-operable and states that all stages restart
 * `pass` the sizes are the pane's own stream, said so on the page
 * `pass` there is one renderer for a stage's markdown
 * `pass` every value the rows draw is escaped

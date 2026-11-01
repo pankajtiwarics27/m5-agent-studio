@@ -2194,9 +2194,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             </div>
             <div style="display:flex; gap:8px;">
               <button id="councilStopBtn" class="btn btn-danger" style="display:none;" onclick="stopActiveStream()">Stop</button>
+              <button id="councilRetryBtn" type="button" class="btn" style="display:none;" aria-describedby="councilRetryNotice" onclick="retryCouncil()">Retry from start</button>
               <button id="councilRunBtn" class="btn btn-primary" onclick="runCouncil()">Run pipeline</button>
             </div>
           </div>
+          <p id="councilRetryNotice" role="status" aria-live="polite" style="display:none; margin:8px 0 0; color:var(--text-dim); font-size:12px;">A retry starts at Architect and reruns all four stages. It replaces the partial output currently shown.</p>
         </div>
 
         <div id="skillsAppliedNotice" style="display:none; margin-bottom:12px;"></div>
@@ -2787,10 +2789,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   let stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null}, 2:{c:"",r:"",rCount:0,m:"",u:null}, 3:{c:"",r:"",rCount:0,m:"",u:null}, 4:{c:"",r:"",rCount:0,m:"",u:null} };
   let rafPending = false;
-  // The last pipeline run: what it was asked, whether it finished, whether the server
-  // said it saved it. The stage rows are derived from `stageBuffers`; this only holds
-  // the facts that are not in a buffer.
+  // The last pipeline run: what it was asked, its terminal outcome, and whether the server
+  // confirmed a saved id. Retry keeps this exact request payload so edited form controls do
+  // not silently change what the operator is retrying.
   let councilRun = null;
+  let lastCouncilPayload = null;
   let stageRowSignature = {};
 
   function escapeHtml(s) { return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
@@ -3803,8 +3806,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (!expanded && returnFocus === true && btn) btn.focus({ preventScroll: true });
   }
   function setCouncilPreset(txt) { document.getElementById("councilPrompt").value = txt; }
-  function stopActiveStream() {
-    if (activeAbort) { activeAbort.abort(); activeAbort = null; }
+  function stopActiveStream(reason = "operator") {
+    if (activeAbort) {
+      activeAbort.abortReason = reason;
+      activeAbort.abort();
+      activeAbort = null;
+    }
     // Chat stays locked until its stream finalizer marks the Stop result. Releasing the
     // composer here would let another send race the old reader's finalizer.
   }
@@ -4775,7 +4782,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   async function clearSsdCache() { await fetch("/api/cache/clear-ssd", { method: "POST" }); refreshTelemetry(); }
 
   async function consumeSSE(url, payload, handlers, onFinally) {
-    stopActiveStream();
+    stopActiveStream("superseded");
     const controller = new AbortController();
     activeAbort = controller;
     let receivedTerminalEvent = false;
@@ -4796,18 +4803,20 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             if (line.startsWith("event:")) ev = line.slice(6).trim();
             else if (line.startsWith("data:")) dataStr += line.slice(5).trim();
           }
-          if (ev === "done" || ev === "error") receivedTerminalEvent = true;
+          if (ev === "done" || ev === "error" || ev === "council_done") receivedTerminalEvent = true;
           if (dataStr && handlers[ev]) await handlers[ev](JSON.parse(dataStr));
         }
       }
       if (controller.signal.aborted && !receivedTerminalEvent && handlers.stopped) {
-        await handlers.stopped();
+        await handlers.stopped({ reason: controller.abortReason || "operator" });
       } else if (!controller.signal.aborted && !receivedTerminalEvent && handlers.closed) {
-        await handlers.closed();
+        await handlers.closed({ message: "The stream ended before reporting completion." });
       }
     } catch (e) {
       if (e.name === "AbortError") {
-        if (!receivedTerminalEvent && handlers.stopped) await handlers.stopped();
+        if (!receivedTerminalEvent && handlers.stopped) {
+          await handlers.stopped({ reason: controller.abortReason || "operator" });
+        }
       } else if (handlers.error) {
         await handlers.error({ message: e.message });
       }
@@ -4923,6 +4932,32 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // The run, stated once: how much each seat left behind, how many handoffs happened,
   // and whether the server actually saved it. `save_run()` returns 0 when it cannot
   // write, so a zero is drawn as "not saved" rather than as a run id.
+  function syncCouncilRetryControls() {
+    const button = document.getElementById("councilRetryBtn");
+    const notice = document.getElementById("councilRetryNotice");
+    const canRetry = Boolean(councilRun && lastCouncilPayload && ["failed", "stopped"].includes(councilRun.outcome));
+    if (button) {
+      button.style.display = canRetry ? "inline-flex" : "none";
+      button.disabled = !canRetry;
+    }
+    if (notice) {
+      notice.style.display = canRetry ? "block" : "none";
+      notice.textContent = "Retry starts again at Architect and reruns all four stages with the same task and settings. It replaces any partial output currently shown.";
+    }
+  }
+
+  function setCouncilOutcome(outcome, detail = "") {
+    if (!councilRun) return;
+    councilRun.outcome = outcome;
+    councilRun.error = outcome === "failed" ? String(detail || "The stream ended without a completion event.") : null;
+    councilRun.stopped = outcome === "stopped";
+    councilRun.stopReason = outcome === "stopped" ? String(detail || "") : "";
+    const status = document.getElementById("councilTotalStatus");
+    if (status) status.textContent = outcome === "failed" ? "Failed" : outcome === "stopped" ? "Stopped" : outcome === "done" ? "Done" : "Running";
+    syncCouncilRetryControls();
+    renderCouncilArtifacts();
+  }
+
   function renderCouncilArtifacts() {
     const host = document.getElementById("councilArtifacts");
     if (!host) return;
@@ -4930,6 +4965,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       host.hidden = true;
       host.innerHTML = "";
       host.removeAttribute("data-state");
+      syncCouncilRetryControls();
       return;
     }
     const seats = PIPELINE_SEATS.map(seat => {
@@ -4942,26 +4978,29 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const totalChars = seats.reduce((total, entry) => total + entry.chars, 0);
     const handoffs = seats.filter(entry => entry.seat.reads.length && entry.chars > 0).length;
     const allDone = finished.length === PIPELINE_SEATS.length;
-    const state = councilRun.error ? "failed" : (councilRun.stopped && !allDone ? "partial" : "ok");
+    const outcome = councilRun.outcome || (councilRun.error ? "failed" : (councilRun.stopped ? "stopped" : "done"));
+    const state = outcome === "failed" ? "failed" : outcome === "stopped" ? "partial" : outcome === "running" ? "running" : "ok";
     const done = `${String(finished.length)} of ${String(PIPELINE_SEATS.length)} stages finished`;
     const volume = `${String(totalChars)} chars of output across ${String(produced.length)} seat${String(produced.length === 1 ? "" : "s")}`;
     const carried = handoffs ? `, and ${String(handoffs)} handoff${String(handoffs === 1 ? "" : "s")} carried content forward` : "";
-    const headlineHtml = councilRun.stopped && !allDone
-      ? `<strong>Stopped after ${escapeHtml(done)}.</strong> ${escapeHtml(volume)}${escapeHtml(carried)}. `
-      : `<strong>${escapeHtml(done.charAt(0).toUpperCase() + done.slice(1))}</strong> · ${escapeHtml(volume)}${escapeHtml(carried)}. `;
+    const label = outcome === "failed" ? "Failed" : outcome === "stopped" ? "Stopped" : outcome === "running" ? "Running" : "Completed";
+    const headlineHtml = `<strong>${escapeHtml(label)} after ${escapeHtml(done)}.</strong> ${escapeHtml(volume)}${escapeHtml(carried)}. `;
     const notes = [];
     if (empty.length) {
       const emptyNamesHtml = empty.map(entry => escapeHtml(entry.seat.short)).join(", ");
       notes.push(`${emptyNamesHtml} finished with no output, so the seat after it was handed an empty section.`);
     }
-    if (councilRun.error) {
-      notes.push(`The run stopped on an error: ${escapeHtml(String(councilRun.error))}`);
+    if (outcome === "failed") {
+      notes.push(`The pipeline failed: ${escapeHtml(String(councilRun.error || "The stream ended before completion."))}`);
+      notes.push("The stream did not confirm a saved run id; these partial artifacts remain on this screen only.");
     }
-    if (councilRun.stopped && !allDone) {
+    if (outcome === "stopped") {
+      notes.push(councilRun.stopReason ? escapeHtml(councilRun.stopReason) : "Stopped by the operator.");
       notes.push("A stopped pipeline is not saved: the server writes a run only after all four stages return, so what is above exists only on this screen.");
-    } else if (councilRun.savedRunId > 0) {
+    }
+    if (outcome === "done" && councilRun.savedRunId > 0) {
       notes.push(`The server reported this run saved as #${String(Number(councilRun.savedRunId))}${councilRun.totalS !== null ? ` in ${String(Number(councilRun.totalS))}s` : ""}.`);
-    } else if (allDone) {
+    } else if (outcome === "done" && allDone) {
       notes.push("The server did not report a saved run id, so these artifacts exist only on this screen.");
     }
     notes.push("Each stage reads what the seats before it produced; the sizes above count this pane's own stream, not the prompt the server assembles around them.");
@@ -5051,57 +5090,84 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       renderCouncilArtifacts();
     });
   }
-  function runCouncil() {
-    const task = document.getElementById("councilPrompt").value.trim();
-    if (!task) return;
+  function runCouncil(requestPayload = null) {
+    const payload = requestPayload
+      ? JSON.parse(JSON.stringify(requestPayload))
+      : {
+        task: document.getElementById("councilPrompt").value.trim(),
+        architect_model: document.getElementById("c-arch").value,
+        coder_model: document.getElementById("c-coder").value,
+        critic_model: document.getElementById("c-critic").value,
+        judge_model: document.getElementById("c-judge").value,
+        auto_unload: document.getElementById("c-unload").checked,
+        reasoning_mode: document.getElementById("c-reasoning").value,
+        skills: [...selectedSkills],
+      };
+    payload.task = String(payload.task || "").trim();
+    if (!payload.task) return;
+    lastCouncilPayload = JSON.parse(JSON.stringify(payload));
     document.getElementById("councilStagesContainer").innerHTML = "";
     stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null}, 2:{c:"",r:"",rCount:0,m:"",u:null}, 3:{c:"",r:"",rCount:0,m:"",u:null}, 4:{c:"",r:"",rCount:0,m:"",u:null} };
     stageRowSignature = {};
     // The task is the first thing every seat reads, and its size is the one number on
     // this screen that is known before a token arrives.
-    councilRun = { taskChars: task.length, stopped: false, savedRunId: 0, totalS: null, error: null };
+    councilRun = { taskChars: payload.task.length, stopped: false, savedRunId: 0, totalS: null, error: null, outcome: "running", stopReason: "" };
+    document.getElementById("councilTotalStatus").textContent = "Running";
+    document.getElementById("councilTotalTime").textContent = "";
+    syncCouncilRetryControls();
     renderCouncilArtifacts();
     [1,2,3,4].forEach(n => { document.getElementById(`st-state-${n}`).textContent = "Queued"; document.getElementById(`st-tps-${n}`).textContent = ""; const ch = document.getElementById(`st-chars-${n}`); if (ch) ch.textContent = ""; });
     document.querySelectorAll(".step-card").forEach(el => el.classList.remove("running", "done"));
     document.getElementById("councilRunBtn").disabled = true; document.getElementById("councilStopBtn").style.display = "inline-flex";
-    consumeSSE("/api/council/stream", {
-      task, architect_model: document.getElementById("c-arch").value, coder_model: document.getElementById("c-coder").value,
-      critic_model: document.getElementById("c-critic").value, judge_model: document.getElementById("c-judge").value,
-      auto_unload: document.getElementById("c-unload").checked, reasoning_mode: document.getElementById("c-reasoning").value, skills: [...selectedSkills]
-    }, {
+    consumeSSE("/api/council/stream", payload, {
       stage_start(d) { stageBuffers[d.stage].m = d.model; document.getElementById(`step-card-${d.stage}`).classList.add("running"); document.getElementById(`st-state-${d.stage}`).textContent = "Streaming"; scheduleStageUpdate(); },
       token(d) { if (d.kind === "reasoning") { stageBuffers[d.stage].r += d.text; stageBuffers[d.stage].rCount++; } else stageBuffers[d.stage].c += d.text; scheduleStageUpdate(); },
       stage_done(d) { stageBuffers[d.stage].u = d.usage; document.getElementById(`step-card-${d.stage}`).classList.remove("running"); document.getElementById(`step-card-${d.stage}`).classList.add("done"); document.getElementById(`st-state-${d.stage}`).textContent = "Done"; document.getElementById(`st-tps-${d.stage}`).textContent = `${d.usage.decode_tps} t/s`; scheduleStageUpdate(); },
       unloading(d) { document.getElementById(`st-state-${d.stage}`).textContent = "Unloaded"; },
       council_done(d) {
-        document.getElementById("councilTotalStatus").textContent = "Done";
         document.getElementById("councilTotalTime").textContent = `${d.total_elapsed_s}s`;
         if (councilRun) {
           // `run_id` is 0 when save_run() could not write; drawn as "not saved".
           councilRun.savedRunId = Number(d.run_id || 0);
           councilRun.totalS = d.total_elapsed_s;
-          renderCouncilArtifacts();
         }
+        setCouncilOutcome("done");
       },
-      error(d) { showToast("Council error: " + d.message, "err"); if (councilRun) { councilRun.error = d.message; renderCouncilArtifacts(); } }
+      error(d) {
+        const message = String((d && d.message) || "The server reported a pipeline error.");
+        showToast("Pipeline error: " + message, "err");
+        setCouncilOutcome("failed", message);
+      },
+      closed(d) {
+        setCouncilOutcome("failed", String((d && d.message) || "The stream ended before reporting completion."));
+      },
+      stopped(d) {
+        const reason = d && d.reason === "superseded"
+          ? "The stream was interrupted when another Studio request started."
+          : "";
+        setCouncilOutcome("stopped", reason);
+      },
     }, () => {
       document.getElementById("councilRunBtn").disabled = false;
       document.getElementById("councilStopBtn").style.display = "none";
-      // The finalizer runs on success, on Stop and on a dropped connection. Only the
-      // first leaves four finished stages, so that is the only case that is not a stop.
+      if (councilRun && councilRun.outcome === "running") {
+        setCouncilOutcome("failed", "The stream ended without a completion event.");
+      }
       if (councilRun) {
-        councilRun.stopped = ![1,2,3,4].every(n => stageBuffers[n] && stageBuffers[n].u);
-        if (councilRun.stopped) {
-          // A seat whose `stage_done` never arrived kept saying "Streaming" after the stream
-          // ended. The run is over; the card must say what the seat was left doing.
-          [1,2,3,4].forEach(n => {
-            const state = document.getElementById(`st-state-${n}`);
-            if (state && state.textContent === "Streaming") state.textContent = "Stopped";
-          });
-        }
+        const terminal = councilRun.outcome;
+        [1,2,3,4].forEach(n => {
+          const state = document.getElementById(`st-state-${n}`);
+          if (state && state.textContent === "Streaming") state.textContent = terminal === "failed" ? "Failed" : "Stopped";
+        });
+        syncCouncilRetryControls();
         renderCouncilArtifacts();
       }
     });
+  }
+
+  function retryCouncil() {
+    if (!lastCouncilPayload || !councilRun || !["failed", "stopped"].includes(councilRun.outcome)) return;
+    runCouncil(lastCouncilPayload);
   }
 
   function syncDebateArbiter() {
