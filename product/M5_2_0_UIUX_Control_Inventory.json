@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "a80bce0731b6c7b0c4c64426c16b2cc84f417bacddc77d118a3d5da42240e73e",
+  "frontend_sha256": "c8f1bdfea7003497582aa6da1595b5f2f3f0a2838d9a0edaf76582fdc1533768",
   "panes": [
     {
       "dom_id": "start",
@@ -295,9 +295,9 @@
     {
       "dom_id": "hall",
       "section_id": "pane-hall",
-      "control_count": 17,
+      "control_count": 18,
       "counts": {
-        "button": 6,
+        "button": 7,
         "select": 8,
         "summary": 2,
         "textarea": 1
@@ -332,20 +332,33 @@
           "text": "Council role models"
         },
         {
-          "tag": "select",
-          "id": "hallSeatArch"
+          "tag": "button",
+          "id": "councilReadinessRefresh",
+          "type": "button",
+          "class": "btn btn-xs",
+          "title": "Read /api/telemetry and /api/providers again",
+          "onclick": "refreshCouncilReadiness()",
+          "text": "Check again"
         },
         {
           "tag": "select",
-          "id": "hallSeatCoder"
+          "id": "hallSeatArch",
+          "aria-describedby": "hallSeatArchState"
         },
         {
           "tag": "select",
-          "id": "hallSeatCritic"
+          "id": "hallSeatCoder",
+          "aria-describedby": "hallSeatCoderState"
         },
         {
           "tag": "select",
-          "id": "hallSeatJudge"
+          "id": "hallSeatCritic",
+          "aria-describedby": "hallSeatCriticState"
+        },
+        {
+          "tag": "select",
+          "id": "hallSeatJudge",
+          "aria-describedby": "hallSeatJudgeState"
         },
         {
           "tag": "select",
@@ -370,7 +383,8 @@
         },
         {
           "tag": "select",
-          "id": "hallModelSelect"
+          "id": "hallModelSelect",
+          "aria-describedby": "hallSingleState"
         },
         {
           "tag": "button",
@@ -1363,8 +1377,8 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 189,
-    "pane_controls": 83,
+    "markup_controls": 190,
+    "pane_controls": 84,
     "chrome_controls": 106,
     "script_rendered_controls": 33,
     "script_rendered_by_function": {

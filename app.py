@@ -4305,6 +4305,9 @@ async def _stream_omlx_completion(
             "type": "usage", "decode_tps": 29.5 if "27B" in model else 42.1, "prefill_tps": 155.0,
             "ttft": 0.32, "completion_tokens": len(toks), "reasoning_tokens": 12 if think_on else 0,
             "cached_tokens": 0, "finish_reason": "stop", "elapsed_s": round(elapsed, 2),
+            # No model ran: this is the demo text above, so the flag travels with the
+            # usage line and every surface that draws a tok/s badge can decline to.
+            "demo": True,
         }
         return
 
