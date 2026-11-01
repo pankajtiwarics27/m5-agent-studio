@@ -25,7 +25,7 @@
     "current_inputs_match_approval": null,
     "approved_inputs": null,
     "current_inputs": {
-      "ledger_content_sha256": "3552451ee65885226c55ceb5112adc400fe75be5f83a174c41ecd90a936e4073",
+      "ledger_content_sha256": "8b1297aad2b9a4c97fd0187ee3c66c0d83b1c1d379a026a8286e3c66b8a754d6",
       "source_manifest_sha256": "838a55989d72c3bc3226f8ac1eb1e812a5b1157601cf92b72364057a53ae6de3",
       "control_inventory_sha256": "a1320bf58465b389eb60f8f8bc57c387220231086a73a3af0fb712d6cfc94636",
       "route_map_sha256": "c126ff91743b2f9af1e5953297a7e9806a2bafe611663b15b2b537a8defb066f",
@@ -39,7 +39,7 @@
     "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "c842669f4003c9cede501467eb4c2973494fece0f3b009a33620c871c64f4d86",
+    "ledger_sha256": "38a244c47dde20f33fee897b846e86ce8dde84d61e3bd404305e01bf10f1d8e6",
     "source_manifest_sha256": "838a55989d72c3bc3226f8ac1eb1e812a5b1157601cf92b72364057a53ae6de3",
     "control_inventory_sha256": "a1320bf58465b389eb60f8f8bc57c387220231086a73a3af0fb712d6cfc94636",
     "route_map_sha256": "c126ff91743b2f9af1e5953297a7e9806a2bafe611663b15b2b537a8defb066f",
@@ -347,22 +347,22 @@
       "preserved_capabilities": [
         {
           "capability": "Session creation",
-          "target": "Harness primary view or progressive-disclosure inspector",
+          "target": "New session remains a client-side draft; the existing Run flow still creates the durable session.",
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         },
         {
           "capability": "workspace",
-          "target": "Harness primary view or progressive-disclosure inspector",
+          "target": "Project directory, recent directories, optional worktree isolation, and session history remain in the sidebar.",
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         },
         {
           "capability": "policy",
-          "target": "Harness primary view or progressive-disclosure inspector",
+          "target": "Execution policy stays visible and keyboard-reachable without opening Run settings.",
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         },
         {
           "capability": "lead/critic",
-          "target": "Harness primary view or progressive-disclosure inspector",
+          "target": "Lead and critic selectors stay visible; Discipline, Think, and Max Steps are summarized in Run settings.",
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         },
         {

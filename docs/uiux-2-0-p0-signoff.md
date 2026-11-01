@@ -89,10 +89,10 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 
 | Capability | Target | What must not change |
 |---|---|---|
-| Session creation | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
-| workspace | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
-| policy | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
-| lead/critic | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
+| Session creation | New session remains a client-side draft; the existing Run flow still creates the durable session. | existing endpoint, permission semantics, durable state and error behavior |
+| workspace | Project directory, recent directories, optional worktree isolation, and session history remain in the sidebar. | existing endpoint, permission semantics, durable state and error behavior |
+| policy | Execution policy stays visible and keyboard-reachable without opening Run settings. | existing endpoint, permission semantics, durable state and error behavior |
+| lead/critic | Lead and critic selectors stay visible; Discipline, Think, and Max Steps are summarized in Run settings. | existing endpoint, permission semantics, durable state and error behavior |
 | streamed tool events | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | approvals | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | diffs | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
@@ -345,7 +345,7 @@ provenance; a matching snapshot cannot clear separate review holds.
 
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
-| `ledger_content_sha256` | `3552451ee65885226c55ceb5112adc400fe75be5f83a174c41ecd90a936e4073` | `not recorded` |
+| `ledger_content_sha256` | `8b1297aad2b9a4c97fd0187ee3c66c0d83b1c1d379a026a8286e3c66b8a754d6` | `not recorded` |
 | `source_manifest_sha256` | `838a55989d72c3bc3226f8ac1eb1e812a5b1157601cf92b72364057a53ae6de3` | `not recorded` |
 | `control_inventory_sha256` | `a1320bf58465b389eb60f8f8bc57c387220231086a73a3af0fb712d6cfc94636` | `not recorded` |
 | `route_map_sha256` | `c126ff91743b2f9af1e5953297a7e9806a2bafe611663b15b2b537a8defb066f` | `not recorded` |

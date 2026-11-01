@@ -106,11 +106,11 @@
     ],
     "last_completed_story": "UIUX-P2-06",
     "next_recommended_story": "UIUX-P3-01",
-    "last_checkpoint": "2026-11-01T04:27:57Z",
+    "last_checkpoint": "2026-11-01T04:57:23Z",
     "last_session_id": "arena/30b08512-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "adf15eb942dce31ed793431c9cacd80737f9880c",
+    "last_verified_commit": "83b9e2de2a5e1f1958e720b5b4ebeeaebea12fc0",
     "last_updated": "2026-11-01",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -3588,8 +3588,8 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "Harness task creation and settings hierarchy with no loss of existing functionality.",
+      "current_behavior": "DOM and handler inspection confirmed that the Harness sidebar keeps New session, project directory/save/recent paths, the optional worktree switch, and session history. The top bar keeps lead model, critic model, execution policy, and session actions visible. Its collapsed native details#harnessAdvanced disclosure is named Advanced settings and contains Discipline, Think, and Max Steps, but shows no selected values. The task composer and workflow selector remain visible. startFreshHarnessDraft() creates only a client-side draft; executeHarnessSelectedWorkflow() dispatches the existing turn/GSD/SDLC flow, and POST /api/harness/run creates durable session state when session_id is empty. Active model/policy settings continue through PATCH /api/harness/sessions/{session_id}.",
+      "target_behavior": "Keep the workspace/session sidebar, task composer, workflow selector, Run action, lead/critic selectors, execution policy, session actions, and all existing endpoints and server semantics intact. Rename the collapsed native disclosure to Run settings and summarize the current Discipline, Think, and Max Steps selections; update that summary from the existing select values on change. Preserve its existing sessionStorage preference and keep the run payloads reading the same controls directly. Add no route, durable-state schema, authorization, approval, cursor, sandbox, workspace-edit, or recovery changes.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
         "Trace relevant DOM, JS handlers, API and backend state transitions",
@@ -3632,30 +3632,154 @@
       "agent_prompt": "Implement UIUX-P3-01 (Harness task creation and settings hierarchy). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
         "status": "in_progress",
-        "progress_percent": 1,
+        "progress_percent": 90,
         "attempts": 1,
         "started_at": "2026-11-01T04:27:57Z",
-        "updated_at": "2026-11-01T04:27:57Z",
+        "updated_at": "2026-11-01T04:57:23Z",
         "completed_at": null,
         "owner_session": "arena/30b08512-m5-agent-studio",
-        "commit_sha": null,
-        "changed_files": [],
+        "commit_sha": "83b9e2de2a5e1f1958e720b5b4ebeeaebea12fc0",
+        "changed_files": [
+          "docs/media/screenshots/chat.png",
+          "docs/media/screenshots/compare.png",
+          "docs/media/screenshots/hall.png",
+          "docs/media/screenshots/harness.png",
+          "docs/media/screenshots/index.json",
+          "docs/media/screenshots/manifest.json",
+          "docs/media/screenshots/pipeline.png",
+          "docs/media/screenshots/start.png",
+          "docs/media/uiux-p3-01/README.md",
+          "docs/media/uiux-p3-01/harness-after-900x800.png",
+          "docs/media/uiux-p3-01/harness-after-desktop.png",
+          "docs/media/uiux-p3-01/harness-after-light.png",
+          "docs/media/uiux-p3-01/harness-before-900x800.png",
+          "docs/media/uiux-p3-01/harness-before-desktop.png",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-tokens.md",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "static/index.html",
+          "studio.py",
+          "tests/browser/accessibility_walk.mjs",
+          "tests/test_screenshot_capture_browser.py",
+          "tests/test_ui_disclosure.py"
+        ],
         "evidence": [
-          "Claimed before implementation at adf15eb after python3 scripts/uiux_coordination.py --github --json reported P3-01 as the sole eligible story, main current at adf15eb, no open pull requests, no marked blocker issues, and no holds. The tested merge tree matches CI-green PR head 76bf9e6; no implementation changes have started."
+          "Claimed before implementation at adf15eb after python3 scripts/uiux_coordination.py --github --json reported P3-01 as the sole eligible story, main current at adf15eb, no open pull requests, no marked blocker issues, and no holds. The tested merge tree matches CI-green PR head 76bf9e6; no implementation changes have started.",
+          "DOM/handler trace at the claimed source tree: #pane-harness retains all 17 inventoried markup controls. #harnessAdvanced is a native details/summary; it wraps harnessEfficiencyMode, harnessReasoning, and harnessMaxSteps, and its m5_harness_advanced sessionStorage key still records open/closed state. The task textarea, workflow mode and Run button remain in the composer; New session still calls startFreshHarnessDraft() only.",
+          "Call-path trace: loadHarnessSessions() GETs /api/harness/sessions; saveWorkspaceDirectory() POSTs /api/workspace/directory; selectHarnessSession() GETs /api/harness/sessions/{session_id} then resyncs from /state and the durable event stream; patchActiveHarnessSettings() PATCHes /api/harness/sessions/{session_id}; turn, GSD, and SDLC submission retain /api/harness/run, /api/harness/gsd-wave, /api/harness/sdlc/run and /api/harness/sdlc/feedback. app.py confirms the run endpoint creates durable state for an empty session_id and settings PATCH retains conservative model switching and policy-revision/grant containment behavior. No fetch call or route changed.",
+          "Acceptance map: 1) all mapped controls remain reachable: regenerated inventory remains 178 markup controls / 30 script-rendered and the structural disclosure test verifies the primary controls stay outside the disclosure while every advanced control stays inside; 2) no console/page errors on tested demo journey: screenshot capture and browser walk passed; 3) keyboard/focus: the browser walk adds five checks for Tab/focus ring, Space open/close, field visibility, live value summary and preference persistence; 4) failure/recovery behavior: this frontend-only change adds no error or recovery branch, and the existing route/state suite passed unchanged; no provider-backed failure state is claimed from a demo screenshot; 5) target behavior: desktop, 900x800, and light-theme captures show the collapsed live summary.",
+          "README unchanged by design: this is a presentation-only hierarchy change with no runtime/API contract change. The story-specific visual evidence and updated screenshot manifest document the verified UI behavior.",
+          "Implementation and artifacts verified at 83b9e2de2a5e1f1958e720b5b4ebeeaebea12fc0; current P0 preservation signoff remains historical-approval-unbound, with no owner approval inferred."
         ],
         "test_results": [
           {
             "command": ".venv/bin/python -m pytest -q tests/test_uiux_roadmap.py",
             "exit_code": 0,
             "result": "19 passed (Python 3.11.2, pytest 9.2.0); claim, counters, dependencies, and session invariants verified"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q tests/test_ui_disclosure.py",
+            "exit_code": 0,
+            "result": "7 passed (Python 3.11.2, pytest 9.2.0); ran in the session checkout; no Harness store was used"
+          },
+          {
+            "command": "M5_REQUIRE_BROWSER_TESTS=1 STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=/home/user/m5-agent-studio/tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js STUDIO_SCREENSHOT_CHROME_ARGS=--disable-gpu LD_LIBRARY_PATH=/tmp/chromium-libs/lib /home/user/m5-agent-studio/.venv/bin/python -m pytest -q tests/test_ui_disclosure.py tests/test_screenshot_capture_browser.py::test_real_isolated_demo_captures_all_six_panes",
+            "exit_code": 0,
+            "result": "8 passed in 39.24s from disposable worktree /tmp/m5-p3-01-before (Python 3.11.2, pytest 9.2.0, Chromium 153, puppeteer-core 25.16.0); synthetic token and isolated loopback demo; the accessibility walker asserts 18 checks and zero page errors"
+          },
+          {
+            "command": "M5_REQUIRE_BROWSER_TESTS=1 STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=/home/user/m5-agent-studio/tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js STUDIO_SCREENSHOT_CHROME_ARGS=--disable-gpu LD_LIBRARY_PATH=/tmp/chromium-libs/lib /home/user/m5-agent-studio/.venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "2010 passed, 1 skipped (opt-in live sandbox; not requested), 1 StarletteDeprecationWarning, 255.98s; Python 3.11.2 / pytest 9.2.0 / Chromium 153 / puppeteer-core 25.16.0; full history in disposable worktree /tmp/m5-p3-01-full with an isolated Harness store"
+          },
+          {
+            "command": "/home/user/m5-agent-studio/.venv/bin/ruff check .",
+            "exit_code": 0,
+            "result": "All checks passed; disposable full-test worktree"
+          },
+          {
+            "command": "/home/user/m5-agent-studio/.venv/bin/mypy",
+            "exit_code": 0,
+            "result": "Success: no issues found in 58 source files; disposable full-test worktree"
+          },
+          {
+            "command": "/home/user/m5-agent-studio/.venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "JavaScript syntax OK (1 inline block)"
+          },
+          {
+            "command": "/home/user/m5-agent-studio/.venv/bin/python scripts/demo_tour.py --check",
+            "exit_code": 0,
+            "result": "Committed demo transcript is up to date; disposable full-test worktree"
+          },
+          {
+            "command": "/home/user/m5-agent-studio/.venv/bin/python scripts/validate_docs.py",
+            "exit_code": 0,
+            "result": "5 required pages, 150 files scanned; disposable full-test worktree"
+          },
+          {
+            "command": "/home/user/m5-agent-studio/.venv/bin/python scripts/validate_screenshots.py",
+            "exit_code": 0,
+            "result": "6 of 6 captures valid against the manifest and index"
+          },
+          {
+            "command": "python3 scripts/uiux_source_manifest.py --check; python3 scripts/uiux_control_inventory.py --check; python3 scripts/uiux_route_map.py --check; python3 scripts/uiux_authorization_trace.py --check; python3 scripts/uiux_preservation_signoff.py --check; python3 scripts/uiux_overlay_inventory.py --check; python3 scripts/uiux_presentation_inventory.py --check; python3 scripts/uiux_onboarding_inventory.py --check; python3 scripts/uiux_status_components.py --check; python3 scripts/uiux_tokens.py --check",
+            "exit_code": 0,
+            "result": "All generated UI inventories current; route map has 54 call sites / 0 findings; preservation signoff remains historical-approval-unbound; design token contrast minimum 4.69:1; disposable full-test worktree"
+          },
+          {
+            "command": "/home/user/m5-agent-studio/.venv/bin/python scripts/build_studio.py",
+            "exit_code": 0,
+            "result": "Built studio.py at 3,129,854 bytes; byte-for-byte match with the committed standalone bundle"
           }
         ],
-        "visual_evidence": [],
+        "visual_evidence": [
+          {
+            "file": "docs/media/uiux-p3-01/harness-before-desktop.png",
+            "shows": "Harness before P3-01 at 1440x900 @2: collapsed Advanced settings has no visible selected values."
+          },
+          {
+            "file": "docs/media/uiux-p3-01/harness-before-900x800.png",
+            "shows": "Harness before P3-01 at 900x800 @2: same task composer and controls at the narrow capture size."
+          },
+          {
+            "file": "docs/media/screenshots/harness.png",
+            "shows": "Harness after P3-01 at 1440x900 @2: visible Run settings disclosure summarizes Discipline, Think and Max steps while primary task and policy controls remain in place."
+          },
+          {
+            "file": "docs/media/uiux-p3-01/harness-after-900x800.png",
+            "shows": "Harness after P3-01 at 900x800 @2: summary and task controls remain visible in the narrow layout."
+          },
+          {
+            "file": "docs/media/uiux-p3-01/harness-after-light.png",
+            "shows": "Harness after P3-01 in the light theme at 1440x900 @2: Run settings summary remains legible."
+          }
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "Use the native details/summary disclosure rather than a custom menu so browser keyboard behavior and the existing focus-visible styling remain intact.",
+          "Derive the summary with textContent from selected option labels; do not mirror or rewrite request payloads. The existing sessionStorage key and direct value reads are unchanged.",
+          "Keep workspace, task text, workflow, lead/critic, execution policy and session actions at their existing locations; only the three already-advanced run settings remain disclosed.",
+          "Do not alter app.py or any route: task creation, authorization, durable state, approvals, event cursors, action-admission/sandbox controls, workspace edits, and recovery stay on existing code paths."
+        ],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Inspect Harness DOM, handlers, route contracts, failure/recovery and preservation mapping; capture isolated baseline before implementation.",
+        "next_action": "Keep this story in progress until the draft PR receives review, CI is green on the final head, and owner approval is explicitly recorded; do not infer approval or mark done ahead of merge.",
         "readme_updated": false
       },
       "required_evidence": [
@@ -6267,25 +6391,25 @@
     {
       "tab": "Harness",
       "existing": "Session creation",
-      "target": "Harness primary view or progressive-disclosure inspector",
+      "target": "New session remains a client-side draft; the existing Run flow still creates the durable session.",
       "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
     },
     {
       "tab": "Harness",
       "existing": "workspace",
-      "target": "Harness primary view or progressive-disclosure inspector",
+      "target": "Project directory, recent directories, optional worktree isolation, and session history remain in the sidebar.",
       "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
     },
     {
       "tab": "Harness",
       "existing": "policy",
-      "target": "Harness primary view or progressive-disclosure inspector",
+      "target": "Execution policy stays visible and keyboard-reachable without opening Run settings.",
       "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
     },
     {
       "tab": "Harness",
       "existing": "lead/critic",
-      "target": "Harness primary view or progressive-disclosure inspector",
+      "target": "Lead and critic selectors stay visible; Discipline, Think, and Max Steps are summarized in Run settings.",
       "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
     },
     {
