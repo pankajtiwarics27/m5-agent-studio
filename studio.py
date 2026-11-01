@@ -4104,6 +4104,37 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .council-artifacts strong { color: var(--text); }
   .council-artifacts .council-artifacts-note { display: block; margin-top: 3px; font-size: 11.2px; color: var(--text-faint); }
   .debate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  /* ── UIUX-P4-04: a comparison states its criteria and each model's fate ──
+     The pane offered checkboxes, a question and a wall of cards. Nothing said what the
+     comparison was being judged on, a panel that failed looked like a panel that was slow, a
+     stopped run left every card saying "Streaming", and no row said which panels answered. The
+     strip below names the criteria and, for each, what could settle it; the table under the grid
+     reads the run against those criteria and refuses the two it cannot decide. */
+  .debate-criteria { margin: 0 20px 12px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
+  .debate-criteria-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .debate-criteria-head strong { color: var(--text); font-size: 12.5px; }
+  .debate-criteria-basis { color: var(--text-faint); font-size: 11.4px; line-height: 1.5; margin-bottom: 9px; }
+  .debate-criteria table, .debate-results table { width: 100%; border-collapse: collapse; font-size: 11.8px; }
+  .debate-criteria th, .debate-results th { text-align: left; color: var(--text-faint); font-size: 10.4px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--border); }
+  .debate-criteria td, .debate-results td { padding: 5px 10px 5px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--text-dim); }
+  .debate-criteria tr:last-child td, .debate-results tr:last-child td { border-bottom: none; }
+  .debate-criteria td.mono, .debate-results td.mono { font-family: var(--mono); font-size: 11px; color: var(--text); }
+  .debate-criteria .criterion-yes { color: var(--emerald); }
+  .debate-criteria .criterion-no { color: var(--amber); }
+  .debate-criteria-add { display: flex; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
+  .debate-criteria-add input { flex: 1; min-width: 180px; height: 30px; padding: 0 10px; font-size: 12px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; color: var(--text); }
+  .debate-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .debate-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-dim); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
+  .debate-tag button { border: 0; background: transparent; color: var(--text-faint); cursor: pointer; font-size: 12px; line-height: 1; padding: 0; }
+  .debate-tag button:hover { color: var(--text); }
+  .debate-summary { margin: 0 20px 10px; font-size: 12px; color: var(--text-dim); }
+  .debate-summary[data-state="bad"] { color: var(--rose); }
+  .debate-summary[data-state="mixed"] { color: var(--amber); }
+  .debate-summary[data-state="ok"] { color: var(--emerald); }
+  .debate-results { margin: 0 20px 16px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
+  .debate-results-basis { margin-top: 9px; color: var(--text-faint); font-size: 11.4px; line-height: 1.5; }
+  .debate-panel-note { font-size: 11.6px; color: var(--amber); margin-bottom: 8px; }
+  .debate-run-hint { font-size: 11.5px; color: var(--text-faint); }
 
   .chat-header-bar { padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--bg-elev); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 13px; }
@@ -6005,18 +6036,24 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <span id="debateArbiterHint" class="field-lbl" hidden>Enable Arbiter Verdict to choose an arbiter model.</span>
           </div>
         </div>
+        <!-- UIUX-P4-04: what the comparison is judged on, before it runs. -->
+        <div id="debateCriteria" class="debate-criteria" role="region" aria-label="Comparison criteria"></div>
         <div class="prompt-box">
           <textarea id="debatePrompt">Compare SQLite WAL vs DuckDB vs embedded Postgres for a local macOS telemetry &amp; vector hybrid store handling 500 writes/sec.</textarea>
           <div class="prompt-footer">
             <span style="font-size:12px; color:var(--text-faint);">Select the models to compare; responses appear side by side.</span>
-            <div style="display:flex; gap:8px;">
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span id="debateRunHint" class="debate-run-hint" role="status" aria-live="polite"></span>
               <button id="debateStopBtn" class="btn btn-danger" style="display:none;" onclick="stopActiveStream()">Stop</button>
-              <button id="debateRunBtn" class="btn btn-primary" onclick="runDebate()">Start Compare</button>
+              <button id="debateRunBtn" class="btn btn-primary" onclick="runDebate()" aria-describedby="debateRunHint">Start Compare</button>
             </div>
           </div>
         </div>
         <div id="debateSynthesisArea"></div>
+        <div id="debateSummary" class="debate-summary" role="status" aria-live="polite"></div>
         <div id="debateGrid" class="debate-grid"></div>
+        <!-- What the run left, read against the criteria above. -->
+        <div id="debateResults" class="debate-results" role="region" aria-label="Comparison results" hidden></div>
       </div>
     </section>
 
@@ -9185,6 +9222,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const chk = firstInit ? (idx < 3) : prevChecked.has(it.id);
       return `<label class="chk-lbl"><input type="checkbox" class="debate-m-chk" value="${escapeHtml(it.id)}" ${chk ? "checked" : ""}/> ${escapeHtml(it.label)}</label>`;
     }).join("");
+    // The set of models is part of what Start will do, so a rebuilt list re-states it.
+    updateDebateRunControl();
   }
 
   async function refreshTelemetry() {
@@ -10549,30 +10588,371 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
   syncDebateArbiter();
 
-  let debateSlots = {}, debateSynth = { m: "", c: "", u: null };
-  function renderDebate() {
-    document.getElementById("debateGrid").innerHTML = Object.keys(debateSlots).map(k => {
-      const s = debateSlots[k];
-      return `<div class="stage-output-card" style="margin-bottom:0;"><div class="stage-output-head"><strong>${escapeHtml(s.model)}</strong><span class="badge ${s.u?'green':'cyan'}">${s.u?s.u.decode_tps+' tok/s':s.status}</span></div><div class="stage-output-body">${renderMarkdown(s.c || "_Queued..._")}</div></div>`;
-    }).join("");
-    document.getElementById("debateSynthesisArea").innerHTML = !debateSynth.m ? "" : `<div class="stage-output-card" style="border-color:var(--accent);"><div class="stage-output-head"><strong>Arbiter Verdict (${escapeHtml(debateSynth.m)})</strong><span class="badge ${debateSynth.u?'green':'indigo'}">${debateSynth.u?debateSynth.u.decode_tps+' tok/s':'Synthesizing...'}</span></div><div class="stage-output-body">${renderMarkdown(debateSynth.c)}</div></div>`;
+  /* ── UIUX-P4-04: a comparison states its criteria and each model's fate ────
+     The pane offered checkboxes, a question and a wall of cards. Nothing said what the comparison
+     was *being judged on*, so a reader was left to infer it from the answers; a panel that failed
+     raised a toast and left its card saying "Streaming"; a comparison the reader stopped left the
+     same word on screen, and the panels behind the failure kept saying "Waiting" as if their turn
+     were still coming. There was no row that said which models answered.
+
+     What is here now:
+       * a criteria strip that names what decides the comparison and, for each criterion, whether
+         this pane can say it. Three criteria are measured from the reply and the response's own
+         finish reason; `cost` is listed with the reason it is empty (no price is configured for
+         any model, so this pane claims no money); and the reader's own criteria are listed as
+         theirs to judge, because nothing in a reply settles them;
+       * one status per panel from a fixed vocabulary - queued, running, answered, cut at the
+         length limit, demo text, no reply, failed, stopped by you, stream ended, not run - and a
+         sentence on the card saying what happened, so a failure is never drawn as slowness;
+       * a run line (`N panels · M answered · ...`) and a results table reading the run against
+         the criteria, with the two it cannot decide named at the bottom;
+       * Start is disabled on the same predicate that writes its hint, instead of doing nothing.
+
+     The server sends one `error` for the whole stream and no per-panel failure (a provider
+     exception aborts `run_stages`), so the pane attributes that error to the panel that was live
+     and says the panels behind it never ran. That is the truth the client can see; a per-panel
+     error event is the orchestrator's change to make, not this pane's to invent.
+  */
+  const DEBATE_CRITERIA = [
+    { key: "answered", label: "Answered at all", settles: "the panel's own reply", kind: "measured" },
+    { key: "finished", label: "Finished rather than cut", settles: "the response's finish reason", kind: "measured" },
+    { key: "size", label: "Size", settles: "the reply the server saved", kind: "measured" },
+    {
+      key: "cost",
+      label: "Cost",
+      settles: "a price for the model",
+      kind: "not-stated",
+      why: "no price is configured for any model, so this pane claims no money",
+    },
+  ];
+  const DEBATE_JUDGED_DEFAULTS = ["Correctness", "Fits my constraints"];
+  const DEBATE_STATUS = {
+    queued: { label: "queued", tone: "neutral" },
+    running: { label: "running", tone: "busy" },
+    answered: { label: "answered", tone: "ok" },
+    cut: { label: "cut at the length limit", tone: "warn" },
+    demo: { label: "demo text", tone: "warn" },
+    empty: { label: "no reply", tone: "warn" },
+    failed: { label: "failed", tone: "danger" },
+    stopped: { label: "stopped by you", tone: "warn" },
+    lost: { label: "stream ended", tone: "warn" },
+    "not-run": { label: "not run", tone: "neutral" },
+  };
+  // One badge per state, spelled out: `data-tone` is a fixed vocabulary and the status-component
+  // inventory reads it from the markup, so the tone is a literal here rather than an attribute
+  // computed from DEBATE_STATUS. The label still comes from DEBATE_STATUS, so the two cannot drift.
+  const DEBATE_BADGE = {
+    queued: '<span class="status" data-tone="neutral">' + escapeHtml(DEBATE_STATUS.queued.label) + "</span>",
+    running: '<span class="status" data-tone="busy">' + escapeHtml(DEBATE_STATUS.running.label) + "</span>",
+    answered: '<span class="status" data-tone="ok">' + escapeHtml(DEBATE_STATUS.answered.label) + "</span>",
+    cut: '<span class="status" data-tone="warn">' + escapeHtml(DEBATE_STATUS.cut.label) + "</span>",
+    demo: '<span class="status" data-tone="warn">' + escapeHtml(DEBATE_STATUS.demo.label) + "</span>",
+    empty: '<span class="status" data-tone="warn">' + escapeHtml(DEBATE_STATUS.empty.label) + "</span>",
+    failed: '<span class="status" data-tone="danger">' + escapeHtml(DEBATE_STATUS.failed.label) + "</span>",
+    stopped: '<span class="status" data-tone="warn">' + escapeHtml(DEBATE_STATUS.stopped.label) + "</span>",
+    lost: '<span class="status" data-tone="warn">' + escapeHtml(DEBATE_STATUS.lost.label) + "</span>",
+    "not-run": '<span class="status" data-tone="neutral">' + escapeHtml(DEBATE_STATUS["not-run"].label) + "</span>",
+  };
+  let debateJudged = DEBATE_JUDGED_DEFAULTS.slice();
+  let debateSlots = {}, debateSynth = { m: "", c: "", u: null }, debateBusy = false;
+
+  function debatePanels() {
+    return Object.keys(debateSlots).map(key => debateSlots[key]);
   }
+
+  function debateSelectedModels() {
+    return [...document.querySelectorAll(".debate-m-chk:checked")].map(box => box.value);
+  }
+
+  function debateMeta(status) {
+    return DEBATE_STATUS[status] || DEBATE_STATUS.queued;
+  }
+
+  /** What one panel met of the measured criteria - nothing about how good the answer was. */
+  function debateCriteriaMet(slot) {
+    const text = String(slot.c || "");
+    // A demo reply is the server's own text, not a model's answer: it has a size, and nothing else
+    // about the model is established by it.
+    if (slot.status === "demo") return text.length ? ["size"] : [];
+    const met = [];
+    if (text.trim()) met.push("answered");
+    if (slot.status === "answered") met.push("finished");
+    if (text.length) met.push("size");
+    return met;
+  }
+
+  function renderDebateCriteria(focusAdd = false) {
+    const host = document.getElementById("debateCriteria");
+    if (!host) return;
+    const measured = DEBATE_CRITERIA.map(criterion => {
+      const answer = criterion.kind === "measured"
+        ? '<span class="criterion-yes">yes — after each panel reports</span>'
+        : '<span class="criterion-no">no — ' + escapeHtml(criterion.why || "") + "</span>";
+      return "<tr><td>" + escapeHtml(criterion.label) + '</td><td class="mono">'
+        + escapeHtml(criterion.settles) + "</td><td>" + answer + "</td></tr>";
+    }).join("");
+    const judged = debateJudged.map((label, index) =>
+      "<tr><td>" + escapeHtml(label) + '</td><td class="mono">you</td><td>'
+      + '<span class="criterion-no">no — yours to judge</span> '
+      + '<button class="btn btn-xs" type="button" onclick="removeDebateCriterion(' + index
+      + ')" title="Remove this criterion from the stated list">Remove</button></td></tr>'
+    ).join("");
+    host.innerHTML = '<div class="debate-criteria-head"><strong>What this comparison is judged on</strong></div>'
+      + '<div class="debate-criteria-basis">Named before the run, so a reader can hold the result to it. '
+      + "Three of these are settled by what the replies and the runtime report. The rest are yours: "
+      + "nothing in a reply decides them, and this pane does not pretend otherwise.</div>"
+      + '<table><thead><tr><th scope="col">Criterion</th><th scope="col">Settled by</th>'
+      + '<th scope="col">Can this pane say it?</th></tr></thead><tbody>' + measured + judged + "</tbody></table>"
+      + '<div class="debate-criteria-add"><input id="debateCriterionInput" type="text" '
+      + 'aria-label="A criterion you will judge yourself" '
+      + 'placeholder="A criterion you will judge yourself (for example: runs on my machine)" />'
+      + '<button class="btn btn-xs" type="button" onclick="addDebateCriterion()">Add criterion</button></div>';
+    // The strip is rewritten when a criterion is added or removed, which would drop the focus of
+    // whoever was typing into it: adding a criterion is a thing you do several times in a row.
+    if (focusAdd) {
+      const input = document.getElementById("debateCriterionInput");
+      if (input) input.focus();
+    }
+  }
+
+  function addDebateCriterion() {
+    const input = document.getElementById("debateCriterionInput");
+    if (!input) return;
+    const label = String(input.value || "").trim();
+    if (!label) return;
+    if (debateJudged.some(existing => existing.toLowerCase() === label.toLowerCase())) {
+      showToast("That criterion is already stated", "info");
+      input.value = "";
+      return;
+    }
+    debateJudged.push(label);
+    input.value = "";
+    renderDebateCriteria(true);
+  }
+
+  function removeDebateCriterion(index) {
+    if (index < 0 || index >= debateJudged.length) return;
+    debateJudged.splice(index, 1);
+    renderDebateCriteria(true);
+  }
+
+  /** The end of a stream, attributed to the panels it actually ended. */
+  function debateEnd(kind, message) {
+    debatePanels().forEach(slot => {
+      if (slot.status === "running") {
+        slot.status = kind;
+        slot.error = message || "";
+      } else if (slot.status === "queued") {
+        slot.status = "not-run";
+      }
+    });
+    renderDebate();
+  }
+
+  function debateCounts() {
+    const counts = { total: 0, running: 0, queued: 0, answered: 0, cut: 0, demo: 0, empty: 0, failed: 0, stopped: 0, lost: 0, "not-run": 0 };
+    debatePanels().forEach(slot => {
+      counts.total += 1;
+      if (counts[slot.status] !== undefined) counts[slot.status] += 1;
+    });
+    return counts;
+  }
+
+  function renderDebateSummary() {
+    const host = document.getElementById("debateSummary");
+    if (!host) return;
+    const counts = debateCounts();
+    if (!counts.total) {
+      host.dataset.state = "";
+      host.textContent = "Nothing has been compared yet: choose the models, write the question, then Start Compare.";
+      return;
+    }
+    const parts = [counts.total + (counts.total === 1 ? " panel" : " panels")];
+    const add = (count, singular, plural) => { if (count) parts.push(count + " " + (count === 1 ? singular : plural)); };
+    add(counts.answered, "answered", "answered");
+    add(counts.cut, "cut at the length limit", "cut at the length limit");
+    add(counts.demo, "demo text", "demo text");
+    add(counts.empty, "with no reply", "with no reply");
+    add(counts.running, "running", "running");
+    add(counts.queued, "not started", "not started");
+    add(counts.failed, "failed", "failed");
+    add(counts.stopped, "stopped by you", "stopped by you");
+    add(counts.lost, "cut off when the stream ended", "cut off when the stream ended");
+    add(counts["not-run"], "never ran", "never ran");
+    host.textContent = parts.join(" · ");
+    const settled = counts.answered + counts.cut + counts.demo + counts.empty;
+    if (counts.failed && !settled) host.dataset.state = "bad";
+    else if (counts.failed || counts.stopped || counts.lost || counts.empty || counts.cut || counts.demo) host.dataset.state = "mixed";
+    else if (settled === counts.total && counts.total) host.dataset.state = "ok";
+    else host.dataset.state = "";
+  }
+
+  function renderDebateResults() {
+    const host = document.getElementById("debateResults");
+    if (!host) return;
+    const panels = debatePanels();
+    if (!panels.length) {
+      host.hidden = true;
+      host.innerHTML = "";
+      return;
+    }
+    host.hidden = false;
+    const rows = panels.map(slot => {
+      const meta = debateMeta(slot.status);
+      const met = debateCriteriaMet(slot);
+      const metText = met.length ? met.join(", ") : "—";
+      return "<tr><td>" + escapeHtml(slot.model) + '</td><td class="mono">' + escapeHtml(meta.label)
+        + '</td><td class="mono">' + String(String(slot.c || "").length) + " ch</td><td>"
+        + escapeHtml(metText) + "</td></tr>";
+    }).join("");
+    const judged = debateJudged.length ? debateJudged.map(label => escapeHtml(label)).join(", ") : "your own";
+    host.innerHTML = '<div class="debate-criteria-head"><strong>What this run left, read against the criteria</strong></div>'
+      + '<table><thead><tr><th scope="col">Model</th><th scope="col">Status</th><th scope="col">Size</th>'
+      + '<th scope="col">Criteria it met</th></tr></thead><tbody>' + rows + "</tbody></table>"
+      + '<div class="debate-results-basis"><strong>Not settled here:</strong> cost (no price is configured for any model) and '
+      + judged + " (yours to judge). This table reports what each reply carried and how it ended - not which reply is better.</div>";
+  }
+
+  function updateDebateRunControl() {
+    const prompt = (document.getElementById("debatePrompt") || {}).value || "";
+    const models = debateSelectedModels();
+    const hint = document.getElementById("debateRunHint");
+    const button = document.getElementById("debateRunBtn");
+    if (!hint || !button) return false;
+    const ready = Boolean(models.length) && Boolean(String(prompt).trim());
+    if (debateBusy) {
+      hint.textContent = "Running: " + models.length + (models.length === 1 ? " model" : " models");
+      button.disabled = true;
+      return false;
+    }
+    if (!models.length) hint.textContent = "Select at least one model to compare.";
+    else if (!String(prompt).trim()) hint.textContent = "Write the question to compare on.";
+    else hint.textContent = "Ready: " + models.length + (models.length === 1 ? " model" : " models") + ", one question.";
+    button.disabled = !ready;
+    return ready;
+  }
+
+  function renderDebate() {
+    const grid = document.getElementById("debateGrid");
+    if (grid) {
+      grid.innerHTML = Object.keys(debateSlots).map(key => {
+        const slot = debateSlots[key];
+        const head = '<div class="stage-output-head"><strong>' + escapeHtml(slot.model) + "</strong>"
+          + (DEBATE_BADGE[slot.status] || DEBATE_BADGE.queued) + "</div>";
+        let body;
+        if (slot.status === "failed") {
+          body = '<div class="debate-panel-note">This panel did not answer: '
+            + escapeHtml(slot.error || "the provider failed") + ". Nothing was saved for it.</div>";
+        } else if (slot.status === "stopped") {
+          body = '<div class="debate-panel-note">You stopped the comparison while this panel was running. '
+            + "What it had written is below.</div>" + renderMarkdown(slot.c || "");
+        } else if (slot.status === "lost") {
+          body = '<div class="debate-panel-note">The stream ended before this panel reported. '
+            + "What it had written is below.</div>" + renderMarkdown(slot.c || "");
+        } else if (slot.status === "not-run") {
+          body = '<div class="debate-panel-note">This panel never started: the comparison ended before its turn.</div>';
+        } else if (slot.status === "empty") {
+          body = '<div class="debate-panel-note">This panel finished without writing anything.</div>';
+        } else {
+          body = renderMarkdown(slot.c || (slot.status === "queued" ? "_Waiting for its turn..._" : ""));
+        }
+        return '<div class="stage-output-card" style="margin-bottom:0;" data-status="' + escapeHtml(slot.status) + '">'
+          + head + '<div class="stage-output-body">' + body + "</div></div>";
+      }).join("");
+    }
+    const synthesis = document.getElementById("debateSynthesisArea");
+    if (synthesis) {
+      synthesis.innerHTML = !debateSynth.m ? "" : `<div class="stage-output-card" style="border-color:var(--accent);"><div class="stage-output-head"><strong>Arbiter Verdict (${escapeHtml(debateSynth.m)})</strong><span class="badge ${debateSynth.u?'green':'indigo'}">${debateSynth.u?debateSynth.u.decode_tps+' tok/s':'Synthesizing...'}</span></div><div class="stage-output-body">${renderMarkdown(debateSynth.c)}</div></div>`;
+    }
+    renderDebateSummary();
+    renderDebateResults();
+  }
+
   function runDebate() {
     const prompt = document.getElementById("debatePrompt").value.trim();
-    const models = [...document.querySelectorAll(".debate-m-chk:checked")].map(c => c.value);
-    if (!prompt || !models.length) return;
-    debateSlots = {}; models.forEach((m, i) => (debateSlots[i] = { model: m, c: "", u: null, status: "Waiting" }));
-    debateSynth = { m: "", c: "", u: null }; renderDebate();
-    document.getElementById("debateRunBtn").disabled = true; document.getElementById("debateStopBtn").style.display = "inline-flex";
+    const models = debateSelectedModels();
+    if (!prompt || !models.length) {
+      updateDebateRunControl();
+      showToast(prompt ? "Select at least one model to compare" : "Write the question to compare on", "warn");
+      return;
+    }
+    debateBusy = true;
+    debateSlots = {};
+    models.forEach((model, index) => (debateSlots[index] = { model, c: "", u: null, status: "queued", error: "" }));
+    debateSynth = { m: "", c: "", u: null };
+    renderDebate();
+    updateDebateRunControl();
+    document.getElementById("debateStopBtn").style.display = "inline-flex";
     consumeSSE("/api/debate/stream", { prompt, models, include_synthesis: document.getElementById("d-synth").checked, judge_model: document.getElementById("d-judge").value, auto_unload: true, skills: [...selectedSkills] }, {
-      panel_start(d) { debateSlots[d.slot].status = "Streaming"; renderDebate(); },
-      token(d) { if (d.slot === "synthesis") debateSynth.c += d.text; else debateSlots[d.slot].c += d.text; renderDebate(); },
-      panel_done(d) { debateSlots[d.slot].u = d.usage; renderDebate(); },
+      panel_start(d) {
+        const slot = debateSlots[d.slot];
+        if (slot) {
+          slot.status = "running";
+          if (d.model) slot.model = d.model;
+        }
+        renderDebate();
+      },
+      token(d) {
+        if (d.slot === "synthesis") debateSynth.c += d.text;
+        else if (debateSlots[d.slot]) debateSlots[d.slot].c += d.text;
+        renderDebate();
+      },
+      panel_done(d) {
+        const slot = debateSlots[d.slot];
+        if (slot) {
+          const usage = d.usage || {};
+          const wrote = String(slot.c || "").trim().length > 0;
+          slot.u = usage;
+          // The outcome is read from the response, not from the fact that an event arrived: a
+          // panel the runtime cut, a panel the server answered itself, and a panel that wrote
+          // nothing are three different endings.
+          slot.status = usage.demo === true || usage.demo === "true" ? "demo"
+            : String(usage.finish_reason || "") === "length" ? "cut"
+              : wrote ? "answered" : "empty";
+        }
+        renderDebate();
+      },
       synthesis_start(d) { debateSynth.m = d.model; renderDebate(); },
       synthesis_done(d) { debateSynth.u = d.usage; renderDebate(); },
-      error(d) { showToast("Debate error: " + d.message, "err"); }
-    }, () => { document.getElementById("debateRunBtn").disabled = false; document.getElementById("debateStopBtn").style.display = "none"; });
+      stopped() { debateEnd("stopped", ""); },
+      closed() { debateEnd("lost", ""); },
+      error(d) {
+        showToast("Compare error: " + d.message, "err");
+        debateEnd("failed", String(d.message || "the server reported an error"));
+      }
+    }, () => {
+      debateBusy = false;
+      document.getElementById("debateStopBtn").style.display = "none";
+      // Nothing may keep saying "running" after the stream is gone.
+      if (debatePanels().some(slot => slot.status === "running" || slot.status === "queued")) debateEnd("lost", "");
+      updateDebateRunControl();
+    });
   }
+
+  // The criteria are stated before anything runs, and Start's hint obeys the same predicate that
+  // enables it - a button that silently does nothing was its own defect.
+  (function initDebatePane() {
+    renderDebateCriteria();
+    renderDebate();
+    const prompt = document.getElementById("debatePrompt");
+    if (prompt) prompt.addEventListener("input", updateDebateRunControl);
+    // Enter adds a criterion, from one listener on the strip rather than an inline handler on the
+    // input: the strip is rewritten on every add, and a delegated listener survives that.
+    const criteria = document.getElementById("debateCriteria");
+    if (criteria) {
+      criteria.addEventListener("keydown", event => {
+        if (event.key === "Enter" && event.target && event.target.id === "debateCriterionInput") {
+          event.preventDefault();
+          addDebateCriterion();
+        }
+      });
+    }
+    document.addEventListener("change", event => {
+      const target = event.target;
+      if (target && target.classList && target.classList.contains("debate-m-chk")) updateDebateRunControl();
+    });
+    updateDebateRunControl();
+  })();
 
   /* ── Chat: the conversation and the thing that starts it ───────────────────
      Two problems, one pane. The transcript named nobody: a reply's model was in a

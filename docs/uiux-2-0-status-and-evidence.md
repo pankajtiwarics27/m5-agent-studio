@@ -39,24 +39,34 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 | `failed` | `danger` | FAILED |
 | `error` | `danger` | ERROR |
 
-10 states, 6 tones, 4 bases, 12 surfaces using the component, 6 of them live regions.
+10 states, 6 tones, 4 bases, 22 surfaces using the component, 6 of them live regions.
 
 ## Surfaces
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| `#sdlcProgressBadge` | `neutral` | no | 1764 |
-| `#onboardingSummary` | `neutral` | yes | 1911 |
-| `#startRecentSummary` | `neutral` | yes | 1951 |
-| `#startHealthSummary` | `neutral` | yes | 1978 |
-| `#startWorkspaceSummary` | `neutral` | yes | 1996 |
-| `#harnessActiveStatusBadge` | `info` | yes | 2120 |
-| `#hallStatusBadge` | `warn` | yes | 2196 |
-| `#councilReadinessCount` | `neutral` | no | 2209 |
-| (unnamed) | `ok` | no | 2451 |
-| `#dockerStateBadge` | `neutral` | no | 2498 |
-| (unnamed) | `warn` | no | 4478 |
-| (unnamed) | `warn` | no | 4557 |
+| `#sdlcProgressBadge` | `neutral` | no | 1795 |
+| `#onboardingSummary` | `neutral` | yes | 1942 |
+| `#startRecentSummary` | `neutral` | yes | 1982 |
+| `#startHealthSummary` | `neutral` | yes | 2009 |
+| `#startWorkspaceSummary` | `neutral` | yes | 2027 |
+| `#harnessActiveStatusBadge` | `info` | yes | 2151 |
+| `#hallStatusBadge` | `warn` | yes | 2227 |
+| `#councilReadinessCount` | `neutral` | no | 2240 |
+| (unnamed) | `ok` | no | 2488 |
+| `#dockerStateBadge` | `neutral` | no | 2535 |
+| (unnamed) | `warn` | no | 4515 |
+| (unnamed) | `warn` | no | 4594 |
+| (unnamed) | `neutral` | no | 7018 |
+| (unnamed) | `busy` | no | 7019 |
+| (unnamed) | `ok` | no | 7020 |
+| (unnamed) | `warn` | no | 7021 |
+| (unnamed) | `warn` | no | 7022 |
+| (unnamed) | `warn` | no | 7023 |
+| (unnamed) | `danger` | no | 7024 |
+| (unnamed) | `warn` | no | 7025 |
+| (unnamed) | `warn` | no | 7026 |
+| (unnamed) | `neutral` | no | 7027 |
 
 ## Writers
 

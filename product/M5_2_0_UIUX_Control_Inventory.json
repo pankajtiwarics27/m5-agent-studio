@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "efd3a1a8499f42c0863e99229317502b83b4184b19c086d22defb918a8fdd8e8",
+  "frontend_sha256": "67891bf9e8e2ee069de1eee793d01ec189be602380346705d41507e9732dcc12",
   "panes": [
     {
       "dom_id": "start",
@@ -568,6 +568,7 @@
           "tag": "button",
           "id": "debateRunBtn",
           "class": "btn btn-primary",
+          "aria-describedby": "debateRunHint",
           "onclick": "runDebate()",
           "text": "Start Compare"
         }
@@ -1380,13 +1381,14 @@
     "markup_controls": 190,
     "pane_controls": 84,
     "chrome_controls": 106,
-    "script_rendered_controls": 35,
+    "script_rendered_controls": 38,
     "script_rendered_by_function": {
       "ensureStageCardMounted": 1,
       "harnessEvidenceChangeHtml": 1,
       "openSpawnModal": 1,
       "refreshOnboarding": 1,
       "renderCommandPaletteList": 1,
+      "renderDebateCriteria": 3,
       "renderDeliberationEvidence": 1,
       "renderHallVerdict": 1,
       "renderHarnessApprovalCardHtml": 3,

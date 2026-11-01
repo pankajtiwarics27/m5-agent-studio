@@ -1,0 +1,225 @@
+{
+  "story": "UIUX-P4-04",
+  "title": "Compare criteria and side-by-side results",
+  "generated_by": "scripts/uiux_compare_criteria_inventory.py",
+  "surfaces": {
+    "criteria": "#debateCriteria",
+    "run_line": "#debateSummary",
+    "panels": "#debateGrid",
+    "results": "#debateResults",
+    "run_hint": "#debateRunHint"
+  },
+  "criteria": [
+    {
+      "key": "answered",
+      "settled_by": "the panel's own reply",
+      "kind": "measured"
+    },
+    {
+      "key": "finished",
+      "settled_by": "the response's finish reason",
+      "kind": "measured"
+    },
+    {
+      "key": "size",
+      "settled_by": "the reply the server saved",
+      "kind": "measured"
+    },
+    {
+      "key": "cost",
+      "settled_by": "a price for the model",
+      "kind": "not-stated",
+      "why": "no price is configured for any model, so this pane claims no money"
+    },
+    {
+      "key": "judged",
+      "settled_by": "you",
+      "kind": "judged"
+    }
+  ],
+  "statuses": [
+    "queued",
+    "running",
+    "answered",
+    "cut",
+    "demo",
+    "empty",
+    "failed",
+    "stopped",
+    "lost",
+    "not-run"
+  ],
+  "status_tones": {
+    "queued": "neutral",
+    "running": "busy",
+    "answered": "ok",
+    "cut": "warn",
+    "demo": "warn",
+    "empty": "warn",
+    "failed": "danger",
+    "stopped": "warn",
+    "lost": "warn",
+    "not-run": "neutral"
+  },
+  "refusals": [
+    "cost - no price is configured for any model",
+    "judgement - the reader's criteria are theirs to judge",
+    "ranking - the table reports what each reply carried, not which reply is better"
+  ],
+  "stream_events": [
+    "panel_start",
+    "token",
+    "panel_done",
+    "synthesis_start",
+    "synthesis_done",
+    "debate_done"
+  ],
+  "captures": [
+    "compare-criteria.png",
+    "compare-partial-failure.png",
+    "compare-stopped.png",
+    "compare-offline.png",
+    "compare-light.png",
+    "compare-criteria-narrow.png"
+  ],
+  "checks": [
+    {
+      "check": "the criteria are stated before the run, in a labelled region drawn at load",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the three criteria this pane can settle are the ones the reply and the runtime report",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "cost is stated, and stated as unsettleable rather than guessed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the reader's criteria are listed as theirs to judge, and can be added and removed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Enter adds a criterion from one delegated listener, and the markup carries no inline handler",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "adding or removing a criterion keeps the focus in the add control",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a panel has one of ten states, and each carries a tone the status component accepts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a panel's outcome is read from the response, not from an event having arrived",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "no panel keeps saying it is running after the stream is gone",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the old status strings are gone from the pane",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a failed panel quotes the failure and says nothing was saved for it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a stopped or cut-off panel keeps what it had written, and says which it was",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the run line counts the panels by state",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the results table states one row per panel and the four columns",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the results refuse to score: cost and judgement are named as not settled here",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pane claims no ranking or quality anywhere in this feature",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a demo reply is credited with a size and nothing else",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the results are hidden until a panel exists",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Start is disabled on the same predicate that writes its hint",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every value the pane draws from a model or an error is escaped",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pane posts only the route it already posted, and invents none",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every control the pane had is still there and still wired",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the compare route still speaks the same six events",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the fixture can produce a stopped comparison and a cut panel",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk exercises every state this story adds",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the captures the doc lists exist and are the pane's own",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the ledger marks this story done with evidence",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "check_count": 27,
+  "findings": [],
+  "status": "clean"
+}

@@ -37,7 +37,7 @@
   "totals": {
     "tokens": 45,
     "groups": 7,
-    "references": 978,
+    "references": 1006,
     "theme_overrides": 18,
     "density_overrides": 5,
     "contrast_pairs": 20,
@@ -123,7 +123,7 @@
         "light": "#ffffff"
       },
       "density_override": null,
-      "references": 31
+      "references": 32
     },
     {
       "name": "--bg-card",
@@ -133,7 +133,7 @@
         "light": "#ffffff"
       },
       "density_override": null,
-      "references": 57
+      "references": 59
     },
     {
       "name": "--bg-hover",
@@ -163,7 +163,7 @@
         "light": "#d9dcd8"
       },
       "density_override": null,
-      "references": 137
+      "references": 143
     },
     {
       "name": "--border-hi",
@@ -183,7 +183,7 @@
         "light": "#202326"
       },
       "density_override": null,
-      "references": 65
+      "references": 69
     },
     {
       "name": "--text-dim",
@@ -193,7 +193,7 @@
         "light": "#555c62"
       },
       "density_override": null,
-      "references": 128
+      "references": 131
     },
     {
       "name": "--text-faint",
@@ -203,7 +203,7 @@
         "light": "#687077"
       },
       "density_override": null,
-      "references": 99
+      "references": 104
     },
     {
       "name": "--accent",
@@ -243,7 +243,7 @@
         "light": "#286e50"
       },
       "density_override": null,
-      "references": 27
+      "references": 29
     },
     {
       "name": "--amber",
@@ -253,7 +253,7 @@
         "light": "#80580e"
       },
       "density_override": null,
-      "references": 40
+      "references": 43
     },
     {
       "name": "--rose",
@@ -263,7 +263,7 @@
         "light": "#a4313a"
       },
       "density_override": null,
-      "references": 28
+      "references": 29
     },
     {
       "name": "--purple",
@@ -491,7 +491,7 @@
       "value": "\"JetBrains Mono\", \"SFMono-Regular\", Consolas, \"Liberation Mono\", monospace",
       "theme_overrides": {},
       "density_override": null,
-      "references": 87
+      "references": 88
     },
     {
       "name": "--header-height",

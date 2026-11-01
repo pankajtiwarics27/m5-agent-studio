@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 26,
+  "revision": 27,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,9 +102,9 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P4-03",
-    "next_recommended_story": "UIUX-P4-04",
-    "last_checkpoint": "2026-11-02T23:55:00Z",
+    "last_completed_story": "UIUX-P4-04",
+    "next_recommended_story": "UIUX-P4-05",
+    "last_checkpoint": "2026-11-02T00:00:00Z",
     "last_session_id": "arena/661f9d49-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
@@ -297,11 +297,11 @@
         "UIUX-P4-06"
       ],
       "total": 6,
-      "done": 3,
+      "done": 4,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 3,
-      "percent_complete": 50
+      "not_started": 2,
+      "percent_complete": 67
     },
     {
       "id": "P5",
@@ -344,11 +344,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 27,
+    "done": 28,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 13,
-    "percent_complete": 68
+    "not_started": 12,
+    "percent_complete": 70
   },
   "stories": [
     {
@@ -5438,8 +5438,8 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "Compare criteria and side-by-side results with no loss of existing functionality.",
+      "current_behavior": "Before this story the Compare pane was checkboxes, a question and a wall of cards whose only signal was that tokens were arriving. Nothing said what the comparison was being judged on. A panel that failed raised a toast and left its card saying 'Streaming'; a comparison the reader stopped left the same word on screen; the panels behind a failure kept saying 'Waiting' as if their turn were still coming; no row said which models answered, how much they wrote, or whether the runtime had finished the reply or cut it at the length limit; and Start was enabled with no model or no question, where it did nothing but toast.",
+      "target_behavior": "The Compare pane states what it is comparing and against which criteria before it runs, and reports each model's own status honestly: ten named states read from the response, a run line that counts them, and one results table that reads every model against the criteria while refusing the two it cannot settle (cost, and the reader's own criteria).",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
         "Trace relevant DOM, JS handlers, API and backend state transitions",
@@ -5481,24 +5481,97 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P4-04 (Compare criteria and side-by-side results). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-02T00:00:00Z",
+        "updated_at": "2026-11-02T00:00:00Z",
+        "completed_at": "2026-11-02T00:00:00Z",
+        "owner_session": "arena/a633f60d-m5-agent-studio",
         "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
-        "known_regressions": [],
-        "decisions": [],
+        "changed_files": [
+          "docs/README.md",
+          "docs/media/compare-criteria/README.md",
+          "docs/media/compare-criteria/compare-criteria-narrow.png",
+          "docs/media/compare-criteria/compare-criteria.png",
+          "docs/media/compare-criteria/compare-light.png",
+          "docs/media/compare-criteria/compare-offline.png",
+          "docs/media/compare-criteria/compare-partial-failure.png",
+          "docs/media/compare-criteria/compare-stopped.png",
+          "docs/product-roadmap-status.md",
+          "docs/uiux-2-0-compare-criteria.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-program.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-tokens.md",
+          "product/M5_2_0_UIUX_Compare_Criteria.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "scripts/compare_criteria_walk.mjs",
+          "scripts/council_readiness_seed.py",
+          "scripts/uiux_compare_criteria_inventory.py",
+          "static/index.html",
+          "studio.py",
+          "tests/test_compare_criteria.py"
+        ],
+        "evidence": [
+          "`#debateCriteria` is a labelled region above the prompt that names the comparison's criteria before anything runs, because a criterion written after the results exist is a rationalization: three the pane can settle (`Answered at all` from the panel's own reply, `Finished rather than cut` from the response's finish reason, `Size` from the reply the server saved), `Cost` with the reason it is empty (`no price is configured for any model, so this pane claims no money`), and the reader's own criteria (`Correctness`, `Fits my constraints`, add your own) marked `no \u2014 yours to judge`. The strip says in its own basis line that three are settled by what the replies and the runtime report and the rest are the reader's.",
+          "A panel now has one of ten states - `queued`, `running`, `answered`, `cut at the length limit`, `demo text`, `no reply`, `failed`, `stopped by you`, `stream ended`, `not run` - and each carries a tone from the shared status component. The outcome is read from the response, not from an event having arrived: `usage.demo` makes it demo text, a `finish_reason` of `length` makes it cut, a reply with no words makes it empty, and only a finished reply with words is `answered`. A badge is written per state so `data-tone` stays a literal of the declared vocabulary, and the label still comes from `DEBATE_STATUS` so the two cannot drift.",
+          "The endings are attributed. A server error is drawn on the panel that was live (`This panel did not answer: [groq] provider transport failed. Nothing was saved for it.`) and the panels behind it say they never started; Stop marks the live panel `stopped by you`, keeps the partial reply and says what it was; a dropped stream marks it `stream ended`; and the stream's finalizer normalizes anything left `running` or `queued`, so no panel can keep saying it is running after the stream is gone. The old `Streaming`/`Waiting` words are gone from the pane.",
+          "`#debateSummary` counts the run in one line (`2 panels \u00b7 1 answered \u00b7 1 failed`, `1 panel \u00b7 1 cut at the length limit`, `1 panel \u00b7 1 stopped by you`, `1 panel \u00b7 1 demo text`) and carries a `data-state` on the same tones; with nothing run it says `Nothing has been compared yet: choose the models, write the question, then Start Compare.` `#debateResults` is hidden until a panel exists, then states one row per model - model, status, characters, criteria it met - over a footer that refuses the two it cannot settle: `Not settled here: cost (no price is configured for any model) and Correctness, Fits my constraints (yours to judge). This table reports what each reply carried and how it ended - not which reply is better.`",
+          "A demo reply is credited with a size and nothing else: the server wrote that text, so it establishes nothing about the model's answering or finishing. A stopped or cut reply is credited with `answered, size` and never `finished`, because it did not finish.",
+          "The control that did nothing now says why: `#debateRunBtn` is disabled on the same predicate that writes `#debateRunHint` (`Select at least one model to compare.` / `Write the question to compare on.` / `Ready: 2 models, one question.`), and `runDebate` only toasts when the predicate disagrees with the DOM, which is a bug rather than a path.",
+          "One surface, one payload: the pane calls no route it did not call before. The walk's request log shows only `/api/debate/stream`, and the arbiter verdict, Stop, the checkbox list, the skill picker and the judge selector are unchanged and still wired.",
+          "Keyboard and pointer: `Enter` in the criterion input adds the criterion through one delegated listener on the strip (an inline `onkeydown` would be a second place the key can be sent from, and `scripts/uiux_chat_inventory.py` fails on it), and the strip re-focuses the input after every add or remove so a reader can type several criteria in a row.",
+          "The stream can only say what it can say: `/api/debate/stream` sends one `error` for the whole comparison, because `WorkflowOrchestrator.run_stages` lets a provider exception propagate. The pane attributes that error to the live panel and marks the rest `not run` rather than inventing a per-panel failure; a per-panel event is the orchestrator's change to make. The doc states this limit next to the statuses.",
+          "The tree this closes is recorded in `commit_sha`: a commit cannot carry its own sha, so the closeout commit that fills that field is a second commit on the same branch."
+        ],
+        "test_results": [
+          "python3 scripts/uiux_compare_criteria_inventory.py --check -> 27 checks, 0 findings, clean",
+          "node scripts/compare_criteria_walk.mjs --screenshots docs/media/compare-criteria -> 15/15 checks passed (chromium 153 via @sparticuz/chromium + puppeteer-core 25.16, STUDIO_PYTHON=.venv/bin/python; four fixtures: plain with a failing cloud alias, --slow-model stopped mid-panel, --cap-model cut at the length limit, --offline demo text)",
+          "python3 -m pytest -q tests/test_compare_criteria.py -> 22 passed",
+          "node scripts/council_readiness_walk.mjs -> 23/23; node scripts/council_deliberation_walk.mjs -> 14/14; node scripts/council_verdict_walk.mjs -> 15/15; node scripts/pipeline_artifacts_walk.mjs -> 22/22; node scripts/pipeline_recovery_walk.mjs -> 27/27 (the five walks that share this pane and this fixture, re-run because the fixture changed)",
+          "python3 -m pytest -q (full suite) -> 2306 passed, 27 skipped, 1 failed: tests/test_baseline.py::test_pinned_baseline_is_present_and_ancestral raises `Pinned commit 7904892d... is not present in this checkout`, because this sandbox checkout holds one squashed commit and cannot resolve the pinned baseline SHA; the same file's manifest check skips for the same reason, and both run in full history on CI. Nothing else failed",
+          "python3 -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py (browser env) -> 30 passed",
+          "python3 -m ruff check . -> All checks passed; python3 -m mypy -> Success: no issues found in 58 source files; python3 scripts/check_frontend_syntax.py -> JavaScript syntax OK; python3 scripts/validate_docs.py -> 5 required pages, 171 files scanned; python3 scripts/demo_tour.py --check -> up to date; python3 scripts/validate_screenshots.py -> 6 of 6 captured and consistent; python3 scripts/build_studio.py -> 3,408,203 bytes; every uiux_* inventory regenerates with no findings (control inventory 190 markup + 38 script-rendered, status components 22 surfaces, tokens 45 tokens 20 contrast pairs, route map 64 call sites, authorization trace 46 routes) and the source manifest, preservation signoff and roadmap status page reproduce"
+        ],
+        "visual_evidence": [
+          "docs/media/compare-criteria/compare-criteria.png",
+          "docs/media/compare-criteria/compare-partial-failure.png",
+          "docs/media/compare-criteria/compare-stopped.png",
+          "docs/media/compare-criteria/compare-offline.png",
+          "docs/media/compare-criteria/compare-light.png",
+          "docs/media/compare-criteria/compare-criteria-narrow.png"
+        ],
+        "known_regressions": [
+          "A comparison runs with `auto_unload: true`, so the local model it just compared can leave the catalogue: the checkbox strip is rebuilt from telemetry and stops offering it, while its card and its row stay on screen. The result is honest but confusing on a screenshot, and it is the picker's refresh behaviour (recorded under P4-01) rather than this story's; the walk's captures clip the run line, panels and results for that reason.",
+          "The server has no per-panel error event: one provider exception ends the whole `run_stages` run, so a failed comparison always leaves the panels behind it `not run` rather than failing one and carrying on. The pane says exactly that and does not pretend to have a partial panel failure it cannot observe.",
+          "Three of the ten states cannot be produced by the app in this environment: `queued` appears only between the click and the first `panel_start`, `empty` needs a runtime that finishes without words, and `stream ended` needs a socket that drops mid-run. They are asserted in the pane's vocabulary and in the inventory, and the fixture can produce six of the ten (answered, cut, demo, failed, stopped, not-run)."
+        ],
+        "decisions": [
+          "The criteria come first, in the markup and on the page, because a comparison whose criteria are written after the results is reading the results backwards. The three measurable ones name the thing that measures them (`the panel's own reply`, `the response's finish reason`, `the reply the server saved`) so a reader can check the claim.",
+          "`cost` is stated and refused rather than omitted: the pane has no price table, so it says `no price is configured for any model, so this pane claims no money`. Cost and provenance (tok/s, tokens, latency read from the response payload rather than the client clock) are UIUX-P4-05's; this story refuses the claim instead of half-making it.",
+          "A panel's status is derived from the response, not from the event: `panel_done` alone cannot distinguish a finished reply from one the runtime cut at its length limit or one the server wrote itself, and the demo path exists precisely so a reader is not shown a model's answer where there is none.",
+          "A stopped comparison says `stopped by you` and keeps what the panel had written; it does not claim the reply finished, and the criteria column reads `answered, size` for it. Losing the partial text would make Stop useless, and claiming `finished` would make it a lie.",
+          "The badge markup is written per state so `data-tone` stays a literal of the six declared tones; the label still comes from `DEBATE_STATUS` so the two cannot drift. A computed `data-tone` hides which tones the pane actually uses from the status-component inventory, which is the artifact that keeps the vocabulary honest.",
+          "Start is disabled on the same predicate that writes its hint, and `runDebate` keeps its guard as a bug-catcher rather than a user path: the story's defect was a button that was enabled, did nothing, and explained nothing.",
+          "No route, no server behaviour and no payload shape changed for this story. The two server-side changes are test tooling: `scripts/council_readiness_seed.py` gained `--slow-model` (a reply paced at 0.35 s/word so it can be stopped mid-flight) because a state a fixture cannot produce is a state no capture can show.",
+          "The captures are clips of the run line, panels and results rather than the whole pane: at a tall viewport the whole-pane crop spends half its frame on the pane's empty floor, and the checkbox strip above the run is rebuilt by telemetry, so a crop that included it could show a selection the run did not use."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
-        "readme_updated": false
+        "handoff_note": "P4-04 closed: the Compare pane states what it is judging, reports each model's own fate, and refuses to price or rank an answer. Next: UIUX-P4-05 (Compare cost and provenance) - the pane already names cost as unsettled and reads nothing but the size of a reply; P4-05 is where tok/s, tokens and latency come from the response payload instead of the client clock, and where the arbiter card's `decode_tps` badge (the one figure this pane still prints without a basis) gets the same treatment.",
+        "next_action": "Start UIUX-P4-05 from this commit; `debateCriteriaMet` and `renderDebateResults` in static/index.html are where a per-model cost/provenance column lands, and `scripts/uiux_compare_criteria_inventory.py` with `scripts/compare_criteria_walk.mjs` are the artifact pair to extend.",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",

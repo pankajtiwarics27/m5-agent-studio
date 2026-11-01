@@ -8,7 +8,7 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 190 markup controls (106 chrome, 84 panes) · 35 rendered by script.
+* 6 panes · 21 preserved capabilities · 190 markup controls (106 chrome, 84 panes) · 38 rendered by script.
 * 115 routes exist, 69 with a resolved or possible caller, 46 with none observed and 0 unknown due to unresolved edges; 46 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
@@ -28,7 +28,7 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 190 markup controls (106 chrome, 84 panes) plus 35 rendered by script |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 190 markup controls (106 chrome, 84 panes) plus 38 rendered by script |
 | 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 115 routes exist; 69 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 46 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
@@ -358,12 +358,12 @@ provenance; a matching snapshot cannot clear separate review holds.
 
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
-| `ledger_content_sha256` | `116ef8cf13720d7f4b54037bbe9ccae6185e4dd2f50e824ff30c3877c1659f01` | `not recorded` |
-| `source_manifest_sha256` | `d86a0620d0b8ccdaded0a7377a56e573a9db51bd79dec0be379a8ab4fdf927a1` | `not recorded` |
-| `control_inventory_sha256` | `44619f9ffc3fbadf93b715d91f29c347bea59e152b83a3166c2b1975395b8719` | `not recorded` |
-| `route_map_sha256` | `d9e5a9f0a1465a9ee2cfe1a67c750bfd6fc1101550ee23e18a31187122c6acc5` | `not recorded` |
-| `authorization_trace_sha256` | `27d9eddb6aedc5e754110b0469fc91cd0256843edc57d945496e25aa53f48f20` | `not recorded` |
-| `frontend_sha256` | `efd3a1a8499f42c0863e99229317502b83b4184b19c086d22defb918a8fdd8e8` | `not recorded` |
+| `ledger_content_sha256` | `33c69727e9021dd1fa3e287e98f24fbc1350e4b0e4130493ddd473b9bdbe79da` | `not recorded` |
+| `source_manifest_sha256` | `bd382a06fbf5e74df63290798ef33c79219c539249b82a39f63e86f7aee74e71` | `not recorded` |
+| `control_inventory_sha256` | `33114028c6a616d88ef2f71a80dd6d2a5749d7a9796a0107ab1978f4a8c116f5` | `not recorded` |
+| `route_map_sha256` | `6222d3e831af7c7f80ecd1d4f471f9f61eae9340f9e460c0b6091295bbb90d56` | `not recorded` |
+| `authorization_trace_sha256` | `6ee75a187c68c307b7277b3f3f38dca6c0f54a357fdae6af4179760cb4cad91b` | `not recorded` |
+| `frontend_sha256` | `67891bf9e8e2ee069de1eee793d01ec189be602380346705d41507e9732dcc12` | `not recorded` |
 | `screenshot_manifest_sha256` | `cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57` | `not recorded` |
 | `screenshot_index_sha256` | `82ecdeb4870961951b1b8946a657438d2a3893f443e5fe182f3372ed41784f07` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

@@ -189,6 +189,11 @@ class _RuntimeHandler(BaseHTTPRequestHandler):
     # actually does sometimes - the orchestrator's `content or reasoning` fallback exists
     # because of it, and the pane drew that fallback as a 0-character handoff.
     reasoning_model: str = ""
+    # UIUX-P4-04: a model that answers slowly enough to be stopped mid-panel. A comparison the
+    # reader stops is a state the pane has to draw (and used to leave saying "Streaming"), and a
+    # fixture that answers in 200 ms cannot produce it.
+    slow_model: str = ""
+    slow_word_seconds: float = 0.35
 
     def log_message(self, *_args) -> None:  # noqa: D401 - silence the access log
         return
@@ -252,6 +257,7 @@ class _RuntimeHandler(BaseHTTPRequestHandler):
         self.end_headers()
         capped = bool(self.cap_model) and model == self.cap_model
         reasoning_only = bool(self.reasoning_model) and model == self.reasoning_model
+        pace = self.slow_word_seconds if (self.slow_model and model == self.slow_model) else 0.004
         words = _reply_words(model).split(" ")
         if capped:
             # Cut where a real ceiling would cut it: the reply stops mid-sentence and the finish
@@ -264,7 +270,7 @@ class _RuntimeHandler(BaseHTTPRequestHandler):
                 packet = {"choices": [{"index": 0, "delta": delta, "finish_reason": None}]}
                 self.wfile.write(b"data: " + json.dumps(packet).encode("utf-8") + b"\n\n")
                 self.wfile.flush()
-                time.sleep(0.004)
+                time.sleep(pace)
             usage = {
                 "choices": [{"index": 0, "delta": {}, "finish_reason": "length" if capped else "stop"}],
                 "usage": {
@@ -282,13 +288,20 @@ class _RuntimeHandler(BaseHTTPRequestHandler):
             return
 
 
-def start_runtime(cap_model: str = "", reasoning_model: str = "") -> tuple[ThreadingHTTPServer, RuntimeState, str]:
+def start_runtime(
+    cap_model: str = "", reasoning_model: str = "", slow_model: str = ""
+) -> tuple[ThreadingHTTPServer, RuntimeState, str]:
     """Serve the stand-in admin API on loopback and return its base URL."""
     state = RuntimeState()
     handler = type(
         "RuntimeHandler",
         (_RuntimeHandler,),
-        {"state": state, "cap_model": cap_model, "reasoning_model": reasoning_model},
+        {
+            "state": state,
+            "cap_model": cap_model,
+            "reasoning_model": reasoning_model,
+            "slow_model": slow_model,
+        },
     )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -350,6 +363,11 @@ def main(argv: list[str] | None = None) -> int:
         default="",
         help="a model the stand-in runtime answers in reasoning only, with no content (finish_reason=stop)",
     )
+    parser.add_argument(
+        "--slow-model",
+        default="",
+        help="a model the stand-in runtime answers slowly, so a comparison can be stopped mid-panel",
+    )
     parser.add_argument("--port", type=int, default=0, help="port to bind on 127.0.0.1 (0 picks one)")
     parser.add_argument("--root", default="", help="reuse a directory as the throwaway environment")
     parser.add_argument("--ready-file", default="", help="also write the ready line to this file")
@@ -359,7 +377,9 @@ def main(argv: list[str] | None = None) -> int:
     runtime_url = ""
     if not args.offline:
         runtime, _state, runtime_url = start_runtime(
-            cap_model=args.cap_model, reasoning_model=args.reasoning_model
+            cap_model=args.cap_model,
+            reasoning_model=args.reasoning_model,
+            slow_model=args.slow_model,
         )
 
     try:
@@ -388,6 +408,7 @@ def main(argv: list[str] | None = None) -> int:
         "keyless_model": KEYLESS_MODEL,
         "capped_model": args.cap_model,
         "reasoning_model": args.reasoning_model,
+        "slow_model": args.slow_model,
         "seeded_at": round(time.time(), 3),
         "root": str(environment.root),
     }
