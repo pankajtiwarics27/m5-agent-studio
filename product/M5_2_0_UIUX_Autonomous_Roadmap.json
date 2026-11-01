@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 20,
+  "revision": 21,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,10 +102,10 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P3-04",
-    "next_recommended_story": "UIUX-P3-05",
-    "last_checkpoint": "2026-11-01T07:40:00Z",
-    "last_session_id": "arena/85ee4fee-m5-agent-studio",
+    "last_completed_story": "UIUX-P3-05",
+    "next_recommended_story": "UIUX-P3-06",
+    "last_checkpoint": "2026-11-01T07:26:00Z",
+    "last_session_id": "arena/069a2b89-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
     "last_verified_commit": "e7ff3d62e9b1291c32789c5014fc713e2357df57",
@@ -273,11 +273,11 @@
         "UIUX-P3-07"
       ],
       "total": 7,
-      "done": 4,
+      "done": 5,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 3,
-      "percent_complete": 57
+      "not_started": 2,
+      "percent_complete": 71
     },
     {
       "id": "P4",
@@ -340,11 +340,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 21,
+    "done": 22,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 19,
-    "percent_complete": 52
+    "not_started": 18,
+    "percent_complete": 55
   },
   "stories": [
     {
@@ -4513,24 +4513,136 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P3-05 (Harness pause cancel resume and crash recovery UX). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-01T07:04:00Z",
+        "updated_at": "2026-11-01T07:26:00Z",
+        "completed_at": "2026-11-01T07:26:00Z",
+        "owner_session": "arena/069a2b89-m5-agent-studio",
+        "commit_sha": "94a50373ce60e94efad729ed0a1446780bf70883",
+        "changed_files": [
+          "docs/README.md",
+          "docs/media/harness-recovery/README.md",
+          "docs/media/harness-recovery/blocked-panel.png",
+          "docs/media/harness-recovery/cancel-armed.png",
+          "docs/media/harness-recovery/cancelled-panel.png",
+          "docs/media/harness-recovery/crash-recovered.png",
+          "docs/media/harness-recovery/hostile-reason.png",
+          "docs/media/harness-recovery/paused-panel.png",
+          "docs/media/harness-recovery/resume-prepared.png",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-harness-recovery.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-program.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-tokens.md",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Harness_Evidence.json",
+          "product/M5_2_0_UIUX_Harness_Permissions.json",
+          "product/M5_2_0_UIUX_Harness_Recovery.json",
+          "product/M5_2_0_UIUX_Harness_Timeline.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "scripts/harness_recovery_seed.py",
+          "scripts/harness_recovery_walk.mjs",
+          "scripts/uiux_harness_recovery_inventory.py",
+          "static/index.html",
+          "studio.py",
+          "tests/test_harness_recovery.py"
+        ],
+        "evidence": [
+          "A run that stopped used to be one line in the log. `turn/paused` drew `Paused at step 4 - operator_pause_requested`, `turn/cancelled` drew `Cancelled - operator_cancelled`, `turn/resume_prepared` drew a next step, and none of them said what had survived, what it would cost to go on, or what a reader could press. The four routes built for exactly this moment - `POST …/pause`, `…/cancel`, `…/resume`, `…/contain` - were reachable from the API and from nowhere in the pane, whose only control was Abort: an action that ends the view, not the work. A worker that died left the task saying `running` with no stream attached, and the pane drew that as a running task.",
+          "`#harnessRecoveryPanel` sits under the session strip and above the durable log, and is one presentation - so it cannot be drawn without a cause and a `Kept:` line - over a facts list and a live note. It reads only what the server already returns: `GET …/state` (status, transitions, checkpoints, budget, turns) and `GET …/task` (task record, recovery memory, containment store, budget). Every fact on it is one of those fields. No route was added.",
+          "Seven states, each with its own story: paused at a safe boundary (the transition's own reason, printed beside a plain phrase, and the checkpoint a resume restarts from); failed (with the requirement for changed evidence); blocked (the unresolved action by id, resume refused, cancel offered); cancelled (what was fenced and revoked, and that no resume exists); running and owned by this pane (a pause lands at the next safe boundary); running and not owned by this pane (the record cannot tell another tab's run from a dead worker, and the surface says so instead of guessing); and a resume the runtime accepted, drawn as `prepared` with `nothing has run yet` rather than as progress. A completed task draws no surface at all.",
+          "The presses are the real routes: Pause (`POST …/pause`, and a deferred pause says it is deferred), Resume (`POST …/resume`), Continue (`/api/harness/run` with `resume: true`, only after an accepted resume), Cancel (`POST …/cancel`, behind a confirmation that any other action disarms), Abort (the existing `/abort`, which now says it ends the view and not the work) and Start a new session. A press that reaches the server prints the answer it got - including the string `detail` a rejected transition carries and the `{code, message}` a rejected handoff carries.",
+          "Every reason a resume would be refused is computed from the same record before the press - the task state, a failed checkpoint integrity check, unresolved consequential actions, a persisted barrier, a pending cancellation, an exhausted budget, a quarantine, unreadable recovery memory - and the action stays visible and disabled with the reason as its accessible description and the same reason in text (`Not available here — …`). `presentInto()` grew `disabled`, `reason` and a `tone` for destructive actions so a refusal could be drawn instead of hidden.",
+          "The three recovery events are one card renderer now, saying what the event did (`0 in-flight process(es) were contained`, `2 consequential action(s) were left unresolved …`) and linking back to the surface that keeps saying it after the log scrolls past.",
+          "The one capability the pane could never exercise even with the routes reachable: `/api/harness/run` accepts `resume` and the pane never sent it, so a resume the runtime had accepted was followed by a turn that started over at step 1. The request now carries the flag when a resume is prepared, and consumes the preparation in that request.",
+          "`scripts/uiux_harness_recovery_inventory.py`: 44 checks over the markup, the seven stories, the six actions, the eleven refusals, the three event cards, the escaping of every value the record supplies and the seven server contracts this story had to preserve (pause's `deferred_to_safe_boundary`, cancel's `unresolved_action_ids`/`contained_processes`, resume's `ready_to_resume`/`next_step`, containment's quarantine and barrier holds, `/task`'s recovery and containment, `/state`'s `task_status` and `transitions`, and the absence of any new recovery route). 0 findings.",
+          "`scripts/harness_recovery_walk.mjs`: 23/23 checks in a real browser against `scripts/harness_recovery_seed.py`, which drives `ensure_root_task`, `transition_task`, `save_checkpoint`, `request_pause`, `cancel_task` and a real `persist_barrier_hold()` into paused / blocked / cancelled / was-running states, then presses the pane's own controls against the real routes. It proves the prepared-resume answer, the two-press cancel, the disabled refusal, that the server's own 409 agrees with the reason the surface stated, that a reason which is markup is drawn as text (no element, no handler), that focus survives an action, that a run started after a prepared resume sends `resume: true`, and that every request the surface made was one of the four routes that already existed. No page error."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "result": "2140 passed, 26 skipped",
+            "note": "full suite on the story tree plus this ledger commit (195 s)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q tests/test_harness_recovery.py",
+            "result": "22 passed",
+            "note": "includes one rule-break test per inventory rule"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_harness_recovery_inventory.py --check",
+            "result": "harness recovery OK: 44 checks, 8 states, 11 refusals, 0 findings"
+          },
+          {
+            "command": "node scripts/harness_recovery_walk.mjs --screenshots docs/media/harness-recovery",
+            "result": "23/23 checks passed, 0 page errors"
+          },
+          {
+            "command": "node scripts/overlay_walk.mjs --base-url … --token … --json",
+            "result": "81 passed, 3 blocked, 0 failed",
+            "note": "no dialog was added, so the overlay contract is unchanged"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py",
+            "result": "30 passed in 87.94s"
+          },
+          {
+            "command": ".venv/bin/python -m ruff check .",
+            "result": "All checks passed!"
+          },
+          {
+            "command": ".venv/bin/python -m mypy",
+            "result": "Success: no issues found in 58 source files"
+          },
+          {
+            "command": ".venv/bin/python scripts/check_frontend_syntax.py",
+            "result": "JavaScript syntax OK (1 inline block(s))"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py",
+            "result": "Documentation validation passed (5 required pages, 159 files scanned)"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_screenshots.py",
+            "result": "Screenshots validated: 6 of 6 captured and consistent with the manifest"
+          }
+        ],
+        "visual_evidence": [
+          "docs/media/harness-recovery/paused-panel.png",
+          "docs/media/harness-recovery/resume-prepared.png",
+          "docs/media/harness-recovery/cancel-armed.png",
+          "docs/media/harness-recovery/cancelled-panel.png",
+          "docs/media/harness-recovery/crash-recovered.png",
+          "docs/media/harness-recovery/blocked-panel.png",
+          "docs/media/harness-recovery/hostile-reason.png"
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "No endpoint was added. The surface is drawn from `GET …/state` and `GET …/task`, and posts only to `/pause`, `/cancel`, `/resume` and the existing `/abort`; the inventory fails if a recovery route the server does not mount appears, and the walk fails if a request outside those four is made.",
+          "`POST …/contain` has no control. It is an incident response that quarantines a session and revokes its grants, and an operator button for it would be a one-press quarantine. Its effects are drawn instead: the holds it raises block a resume, and the surface names them.",
+          "The crash case is not a state the pane invents. A task left `running` with no worker is reconciled by the product's own `recover_incomplete_transitions()` at startup, which pauses it at its checkpoint with reason `recovered_incomplete_transition`; the surface prints that code beside the phrase a reader gets, so the sentence can be checked against the record.",
+          "`presentInto()` gained `disabled`, `reason` and `tone` rather than a second renderer: a recovery surface that hides the action it cannot take erases the way forward, and one that draws it enabled promises something the state refuses.",
+          "The `running`/not-following branch (a run owned by another tab) is drawn from `task_status === \"running\"` and cannot be produced by this demo, which has no model runtime; it is covered by the inventory's source rules and not by a capture, and the walk says so.",
+          "Continue cannot be pressed in the walk without a provider. The walk replaces `consumeSSE` for one request and reads the body the pane would send (`resume: true`), then restores the run state it touched, and says in its docstring that it did that."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
-        "readme_updated": false
+        "handoff_note": "The UI/UX program is 22/40 (55 %), phase P3 5/7 (71 %). Next is UIUX-P3-06. Every artifact was regenerated in the fixed order (build_studio, source manifest, the inventories, route map, authorization trace, preservation signoff) and all fourteen `--check` runs pass.",
+        "next_action": "Implement UIUX-P3-06",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",

@@ -787,6 +787,37 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .ev-file-del { color: #fda4af; }
 .ev-limits { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 11.1px; line-height: 1.5; color: var(--text-dim); }
 
+/* ── Recovery ────────────────────────────────────────────────────────────────
+   A run that stopped - paused, failed, blocked, cancelled, or a worker that died
+   with the task still saying `running` - used to look like every other run: one
+   mono line in the log and no control at all. The panel is a presentation, so it
+   cannot ship without a cause and a "kept" line, and its actions are the real
+   routes. A refusal is a disabled button carrying its reason, never a button that
+   silently does nothing. */
+.harness-recovery { flex: 0 0 auto; padding: 0 12px; background: var(--bg-elev); border-bottom: 1px solid var(--border); }
+.harness-recovery[hidden] { display: none; }
+.harness-recovery .presentation { margin: 9px 0 8px; }
+.harness-recovery-facts { display: grid; grid-template-columns: 132px 1fr; gap: 2px 10px; margin: 0 0 9px; font-size: 11.2px; color: var(--text-dim); }
+.harness-recovery-facts[hidden] { display: none; }
+.harness-recovery-facts dt { color: var(--text-faint); }
+.harness-recovery-facts dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+.harness-recovery-note { margin: 0 0 9px; font-size: 11.2px; line-height: 1.5; color: var(--text-dim); overflow-wrap: anywhere; }
+.harness-recovery-note[hidden] { display: none; }
+.harness-recovery-note[data-tone="ok"] { color: #6ee7b7; }
+.harness-recovery-note[data-tone="warn"] { color: #fde68a; }
+.harness-recovery-note[data-tone="danger"] { color: #fda4af; }
+.presentation-why { display: block; margin: var(--space-2) 0 0; font-size: 10.9px; line-height: 1.45; color: var(--text-faint); }
+.presentation-why[hidden] { display: none; }
+/* The same story in the stream, one card per recovery event, so the log says what
+   the event meant at the place it happened. */
+.hrec-card { display: flex; flex-direction: column; gap: 5px; background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--amber); border-radius: 9px; padding: 9px 11px; }
+.hrec-card[data-tone="danger"] { border-left-color: var(--rose); }
+.hrec-card[data-tone="ok"] { border-left-color: var(--emerald); }
+.hrec-head { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
+.hrec-title { font-size: 12.2px; font-weight: 700; color: var(--text); }
+.hrec-at { font-size: 10.7px; color: var(--text-faint); }
+.hrec-line { margin: 0; font-size: 11.4px; line-height: 1.5; color: var(--text-dim); overflow-wrap: anywhere; }
+
 /* The durable log, stated before the view of it: the strip says what the pane is showing
    and the list is the record itself, oldest first, one row per event with its seq. */
 .harness-timeline { flex: 0 0 auto; max-height: 45%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; border-bottom: 1px solid var(--border); background: var(--bg-elev); padding: 4px 12px; }
@@ -1976,6 +2007,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
               <button id="harnessPermissionBadge" class="harness-perm-badge" type="button" data-count="0" hidden onclick="openHarnessGrants()" title="Permissions this session holds, and the way to take them back">No permissions</button>
               <span id="harnessActiveStatusBadge" class="status" data-tone="info" role="status">READY</span>
             </div>
+          </div>
+
+          <!-- Recovery: the state the run was left in, what survived it, and the way
+               forward. Present only when the task is not simply ready or finished, and
+               built from `GET …/state` + `GET …/task` - no route was added for it. -->
+          <div id="harnessRecoveryPanel" class="harness-recovery" role="group" aria-label="Recovery" hidden>
+            <div id="harnessRecoveryStory"></div>
+            <dl id="harnessRecoveryFacts" class="harness-recovery-facts" aria-label="What survived"></dl>
+            <p id="harnessRecoveryNote" class="harness-recovery-note" role="status" aria-live="polite" hidden></p>
           </div>
 
           <!-- Durable log: the record the trajectory is a view of -->
@@ -3576,16 +3616,40 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     context.textContent = spec.context;
     const actions = document.createElement("div");
     actions.className = "presentation-actions";
+    // An action a reader cannot take is stated as such. Drawing it as an enabled
+    // button would make the surface promise something the state refuses; hiding it
+    // would erase the way forward from the story. So it stays, disabled, with its
+    // reason as the accessible description and the same reason in text below.
+    const why = document.createElement("p");
+    why.className = "presentation-why";
+    why.hidden = true;
+    const refusals = [];
     spec.actions.forEach((action, index) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = index === 0 ? "btn btn-xs btn-primary" : "btn btn-xs";
+      if (action.tone === "danger") button.classList.add("btn-danger");
       button.textContent = action.label;
       if (action.title) button.title = action.title;
+      if (action.disabled) {
+        button.disabled = true;
+        button.setAttribute("aria-disabled", "true");
+        if (action.reason) {
+          button.title = action.reason;
+          button.setAttribute("aria-describedby", "presentationWhyIsForTheseActions");
+          refusals.push(`${action.label}: ${action.reason}`);
+        }
+      }
       button.addEventListener("click", () => action.run && action.run());
       actions.appendChild(button);
     });
     body.append(title, cause, context, actions);
+    if (refusals.length) {
+      why.id = "presentationWhyIsForTheseActions";
+      why.hidden = false;
+      why.textContent = `Not available here — ${refusals.join("; ")}.`;
+      body.appendChild(why);
+    }
     box.append(icon, body);
     host.appendChild(box);
     return box;
@@ -5517,6 +5581,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     harnessApprovalRequests.clear();
     updateHarnessPermissionBadge();
     clearHarnessIncomingBrief();
+    harnessRecoveryPrepared = null;
+    harnessRecoveryPayload = null;
+    harnessRecoveryNote = null;
+    renderHarnessRecovery();
     renderHarnessStarter();
     renderHarnessSidebar();
     updateHarnessRunControl();
@@ -6134,6 +6202,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     // Re-anchored: reopen the follow stream from the new cursor (missing run
     // leaves it closed, so a resync must restore live updates).
     scheduleHarnessEventStreamRetry();
+    // The recovery surface reads the same two routes a resync just read; it is
+    // refreshed here so every path that re-reads the task state also re-draws it.
+    await refreshHarnessRecovery();
   }
 
   async function closeHarnessEventStream() {
@@ -6683,20 +6754,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       // a reader the digest of a contract they cannot see and nothing about what was checked.
       return renderHarnessVerdictCardHtml(ev);
     }
-    if (ev.type === "turn/paused") {
-      return `<div style="font-family:var(--mono); font-size:11.2px; color:#fde68a; padding:2px 4px;">Paused at step ${escapeHtml(String(ev.step || 0))} — ${escapeHtml(String(ev.reason || ""))}</div>`;
-    }
-    if (ev.type === "turn/cancelled") {
-      return `<div style="font-family:var(--mono); font-size:11.2px; color:#fda4af; padding:2px 4px;">Cancelled — ${escapeHtml(String(ev.reason || ""))}</div>`;
+    if (ev.type === "turn/paused" || ev.type === "turn/cancelled" || ev.type === "turn/resume_prepared") {
+      // One line said the reason and nothing else: what survived, what it cost to go on
+      // and what could be pressed stayed behind the API. The card says all three, and
+      // links to the surface that keeps saying them after the log scrolls past.
+      return renderHarnessRecoveryEventHtml(ev);
     }
     if (ev.type === "turn/budget_exceeded") {
       return `<div style="font-family:var(--mono); font-size:11.2px; color:#fde68a; padding:2px 4px;">Budget exhausted at step ${escapeHtml(String(ev.step || 0))} — ${escapeHtml(String(ev.reason || ""))}</div>`;
     }
     if (ev.type === "turn/max_steps_reached") {
       return `<div style="font-family:var(--mono); font-size:11.2px; color:#fde68a; padding:2px 4px;">Max steps reached (${escapeHtml(String(ev.max_steps || 0))})</div>`;
-    }
-    if (ev.type === "turn/resume_prepared") {
-      return `<div style="font-family:var(--mono); font-size:11.2px; color:#a7f3d0; padding:2px 4px;">Resume prepared — next step ${escapeHtml(String(ev.next_step || ""))} (recoveries used ${escapeHtml(String(ev.recoveries_used || 0))})</div>`;
     }
     if (ev.type === "turn/error") {
       return `<div class="h-tool-card err"><strong>Error:</strong> ${escapeHtml(ev.message || "")}</div>`;
@@ -6873,9 +6941,25 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   async function abortHarnessRun() {
+    // Abort ends this pane's view of the run; it is not a cancel and the panel says
+    // so, because "Abort" reading as "stop the work" is how a reader loses a task.
     stopActiveStream();
     if (activeHarnessId) {
-      await fetch(`/api/harness/abort/${encodeURIComponent(activeHarnessId)}`, { method: "POST" });
+      const sessionId = activeHarnessId;
+      let ok = false;
+      try {
+        const response = await fetch(`/api/harness/abort/${encodeURIComponent(sessionId)}`, { method: "POST" });
+        ok = response.ok;
+      } catch (error) { ok = false; }
+      if (activeHarnessId === sessionId) {
+        harnessRecoverySay(
+          ok
+            ? "Stopped following the run. The record, the checkpoint and the task state are untouched — Abort ends this view, not the work."
+            : "Stopped following the run locally; the server did not confirm the abort.",
+          ok ? "info" : "warn",
+        );
+        await refreshHarnessRecovery();
+      }
     }
   }
 
@@ -7438,6 +7522,626 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
 
+  // ================= UIUX-P3-05: PAUSE, CANCEL, RESUME, AND THE MORNING AFTER =================
+  // A run that stopped used to be indistinguishable from a run that never started. Pausing wrote
+  // one mono line into the log (`Paused at step 4 - operator_pause_requested`), cancelling wrote
+  // another, and the prepared-resume line was a third; none of them said what had survived, what
+  // it would cost to go on, or what the reader could press. The pane's only control was Abort -
+  // which stops the view, not the run - so the four routes built for exactly this moment
+  // (`POST …/pause`, `…/cancel`, `…/resume`, `…/contain`) were reachable from the API and from
+  // nowhere a person could see. A worker that dies leaves the task saying `running` with no
+  // stream attached, and the pane drew that as a running task.
+  //
+  // So the state a run was left in is a surface of its own, drawn from what the server already
+  // returns: `GET …/state` (status, turns, budget, event stream) and `GET …/task` (task state,
+  // transitions, checkpoints, integrity, recovery memory, containment, budget). Every fact below
+  // is one of those fields; nothing is inferred from the DOM and nothing is invented to fill a
+  // gap - a missing checkpoint is drawn as no checkpoint, and a refused action is a disabled
+  // button with the reason the runtime would give. The one thing the pane could never do even
+  // with the routes reachable was *continue*: `/run` was always posted without `resume`, so a
+  // "resume" started a fresh turn from scratch. That is wired here too, and only after a resume
+  // the runtime actually accepted.
+  const HARNESS_RECOVERY_ACTION_LABELS = {
+    pause: "Pause at a safe boundary",
+    resume: "Resume from the checkpoint",
+    continue: "Continue the run from step",
+    cancel: "Cancel this task",
+    confirm_cancel: "Confirm: cancel and fence this task",
+    abort: "Abort the run and stop following",
+    fresh: "Start a new session",
+  };
+
+  // The reason codes a stopped task carries, in plain words. Every code below is one the
+  // runtime writes today (`recover_incomplete_transitions()`, `request_pause()`,
+  // `prepare_resume()`); the code itself is printed beside the phrase, so a reader can check
+  // the sentence against the record instead of trusting it. An unknown code is printed raw.
+  const HARNESS_RECOVERY_REASONS = {
+    operator_pause_requested: "the operator asked the run to stop at the next safe boundary",
+    recovered_incomplete_transition: "the runtime found this task unfinished with no live worker when it started, and paused it at its checkpoint",
+    recovered_incomplete_with_unresolved_effects: "the runtime found unfinished actions it could not account for when it started, and blocked the task",
+    recovered_incomplete_cancel: "the runtime found a pending cancellation when it started, and applied it",
+    recovery_requires_new_evidence: "a resume was refused because nothing had changed since the failure",
+  };
+
+  function harnessRecoveryReasonPhrase(reason) {
+    const code = String(reason || "").trim();
+    if (!code) return "";
+    const phrase = HARNESS_RECOVERY_REASONS[code];
+    return phrase ? `${phrase} (${code})` : code;
+  }
+
+  let harnessRecoveryPayload = null;   // {sessionId, state, task, events, error}
+  let harnessRecoveryBusy = false;
+  let harnessRecoveryNote = null;      // {tone, text} - what the last action actually answered
+  let harnessRecoveryArmedCancel = 0;  // timestamp of the first press; cancelling takes two
+  let harnessRecoveryPrepared = null;  // {sessionId, nextStep, checkpointId} from an accepted resume
+
+  function harnessRecoveryWhen(value) {
+    if (value === null || value === undefined || value === "") return "";
+    const seconds = Number(value);
+    if (Number.isFinite(seconds) && seconds > 1_000_000_000) return harnessClockFrom(seconds) || String(value);
+    return String(value);
+  }
+
+  function harnessRecoveryStatus(payload) {
+    if (!payload) return "pending";
+    const doc = (payload.task && payload.task.task) || {};
+    const state = payload.state || {};
+    return String(doc.state || state.task_status || "pending").toLowerCase();
+  }
+
+  function harnessRecoveryLastTransition(payload) {
+    const rows = (payload && payload.task && Array.isArray(payload.task.transitions)) ? payload.task.transitions : [];
+    return rows.length ? rows[rows.length - 1] : null;
+  }
+
+  function harnessRecoveryUnresolvedActions(payload) {
+    const ids = new Set();
+    const events = (payload && Array.isArray(payload.events)) ? payload.events : [];
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const ev = events[index];
+      if (ev && ev.type === "turn/cancelled" && Array.isArray(ev.unresolved_action_ids)) {
+        ev.unresolved_action_ids.forEach(id => ids.add(String(id)));
+        break;
+      }
+    }
+    const holds = (payload && payload.task && payload.task.containment && Array.isArray(payload.task.containment.persisted_barriers))
+      ? payload.task.containment.persisted_barriers
+      : [];
+    holds.forEach(hold => { if (hold && hold.action_id) ids.add(String(hold.action_id)); });
+    return [...ids];
+  }
+
+  // Every reason a resume would be refused, in the runtime's own terms: the pane states them
+  // instead of letting the reader find out by pressing a button and reading a 409.
+  function harnessRecoveryResumeRefusals(payload, status) {
+    const refusals = [];
+    const doc = (payload && payload.task) || {};
+    const task = doc.task || {};
+    const recovery = doc.recovery || {};
+    const containment = doc.containment || {};
+    const budget = doc.budget || {};
+    if (payload && payload.error) {
+      refusals.push(`the task record could not be read (${payload.error}), so a resume cannot be promised`);
+    }
+    if (doc.checkpoint_integrity_error) {
+      refusals.push(`the newest checkpoint failed its integrity check (${doc.checkpoint_integrity_error})`);
+    }
+    if (status === "running") refusals.push("a run is in progress: pause or cancel it first");
+    if (status === "blocked") refusals.push("the task is blocked on effects the runtime cannot account for");
+    if (status === "cancelled") refusals.push("a cancelled task is not resumable: its lease is fenced and its grants revoked");
+    if (status === "completed") refusals.push("the task is already complete");
+    if (budget.cancel_requested) refusals.push("a cancellation is already pending for this task");
+    if (budget.exhausted_reason) refusals.push(`the task budget is exhausted (${String(budget.exhausted_reason)})`);
+    if (containment.quarantined) refusals.push("the session is quarantined: resume is refused until the incident is cleared");
+    const holds = Array.isArray(containment.persisted_barriers) ? containment.persisted_barriers : [];
+    if (holds.length) refusals.push(`${holds.length} persisted barrier(s) hold this workspace, so it cannot be taken exclusively`);
+    const unresolved = harnessRecoveryUnresolvedActions(payload);
+    if (unresolved.length) {
+      refusals.push(`${unresolved.length} consequential action(s) were left unresolved (${unresolved.join(", ")}): they must be reconciled first`);
+    }
+    if (recovery.error) refusals.push(`the recovery memory could not be read (${recovery.error})`);
+    return refusals;
+  }
+
+  function harnessRecoveryFacts(payload) {
+    const facts = [];
+    const doc = (payload && payload.task) || {};
+    const task = doc.task || {};
+    const recovery = doc.recovery || {};
+    const containment = doc.containment || {};
+    const budget = doc.budget || {};
+    const spec = budget.spec || {};
+    const memory = recovery.budget || {};
+    const limits = memory.limits || {};
+    const verdict = recovery.latest_verdict || null;
+    const checkpoints = Array.isArray(doc.checkpoints) ? doc.checkpoints : [];
+    const latest = doc.latest_checkpoint || null;
+    const milestones = Array.isArray(doc.milestones) ? doc.milestones : [];
+    const completed = milestones.filter(entry => entry && entry.state === "completed").length;
+
+    facts.push({
+      label: "Task",
+      value: `${task.state || "unknown"} · epoch ${Number(task.current_epoch || 0)}${task.updated_at ? ` · updated ${harnessRecoveryWhen(task.updated_at)}` : ""}`,
+      mono: true,
+    });
+    facts.push({
+      label: "Latest checkpoint",
+      value: latest
+        ? `seq ${latest.seq} · step ${latest.step} · ${latest.status}${latest.created_at ? ` · ${harnessRecoveryWhen(latest.created_at)}` : ""}`
+        : (checkpoints.length ? `${checkpoints.length} recorded, none loadable with integrity` : "none recorded — nothing here can be resumed"),
+      mono: true,
+    });
+    facts.push({
+      label: "Checkpoints",
+      value: checkpoints.length ? `${checkpoints.length} recorded, each holding step, payload hash and evidence refs` : "none recorded",
+      mono: false,
+    });
+    facts.push({
+      label: "Recovery budget",
+      value: recovery.error
+        ? `unreadable: ${recovery.error}`
+        : `${Number(memory.retries_used || 0)}/${Number(limits.max_retries || 0)} retries · ${Number(memory.replans_used || 0)}/${Number(limits.max_replans || 0)} replans · ${Number(memory.rollbacks_used || 0)}/${Number(limits.max_rollbacks || 0)} rollbacks`,
+      mono: true,
+    });
+    facts.push({
+      label: "Attempts",
+      value: recovery.error
+        ? "unknown"
+        : `${Number(recovery.attempt_count || 0)} recorded, ${Number(recovery.failure_count || 0)} failed${verdict ? ` · latest verdict: ${verdict.state}${Number(verdict.repeat_count || 0) ? ` (repeated ${Number(verdict.repeat_count)})` : ""}` : ""}`,
+      mono: false,
+    });
+    facts.push({
+      label: "Task budget",
+      value: `${Number(budget.steps_used || 0)}/${Number(spec.max_steps || 0)} steps · ${Number(budget.recoveries_used || 0)}/${Number(spec.max_recoveries || 0)} recoveries${budget.pause_requested ? " · pause pending" : ""}${budget.cancel_requested ? " · cancel pending" : ""}`,
+      mono: true,
+    });
+    facts.push({
+      label: "Containment",
+      value: containment.error
+        ? `unreadable: ${containment.error}`
+        : `${(containment.in_flight_processes || []).length} in flight · ${(containment.persisted_barriers || []).length} barrier(s) · ${Number(containment.fenced_origin_count || 0)} fenced origin(s)${containment.quarantined ? " · quarantined" : ""}`,
+      mono: false,
+    });
+    if (milestones.length) {
+      facts.push({ label: "Milestones", value: `${completed}/${milestones.length} completed`, mono: true });
+    }
+    const unresolved = harnessRecoveryUnresolvedActions(payload);
+    if (unresolved.length) {
+      facts.push({ label: "Unresolved", value: unresolved.join(", "), mono: true });
+    }
+    return facts;
+  }
+
+  // The story: what happened (title), why (cause), what survived (context - the presentation
+  // prepends "Kept:"), the facts behind each, and the actions with their refusals.
+  function harnessRecoveryStory(payload) {
+    if (!payload || !payload.sessionId) return null;
+    const status = harnessRecoveryStatus(payload);
+    const doc = payload.task || {};
+    const task = doc.task || {};
+    const recovery = doc.recovery || {};
+    const containment = doc.containment || {};
+    const latest = doc.latest_checkpoint || null;
+    const transition = harnessRecoveryLastTransition(payload);
+    const reason = String((transition && transition.reason) || (recovery.pause_reason || "") || "");
+    // A prepared resume only exists on a task that is still paused or failed: a resume the
+    // runtime accepted does not move the task itself, so any other state means the preparation
+    // is stale (it was cancelled under us) and must not be drawn as the way forward.
+    const prepared = harnessRecoveryPrepared
+      && harnessRecoveryPrepared.sessionId === payload.sessionId
+      && (status === "paused" || status === "failed")
+      ? harnessRecoveryPrepared
+      : null;
+    // "Following" means this pane owns the run, not that a log stream is open: the
+    // stream tails a durable log and connects whether a worker is alive or not, so
+    // using it here would draw a dead run as a live one.
+    const following = Boolean(harnessRunActive);
+    const refusals = harnessRecoveryResumeRefusals(payload, status);
+    const checkpointLine = latest ? `step ${latest.step} (seq ${latest.seq}, ${latest.status})` : "no loadable checkpoint";
+    const canResume = !refusals.length;
+
+    let story = null;
+    if (prepared) {
+      story = {
+        kind: "recovery",
+        tone: "paused",
+        title: `Resume prepared — the next turn continues from step ${prepared.nextStep}`,
+        cause: "the runtime checked the checkpoint, the unresolved effects and the recovery budget, and accepted the resume. It has not run anything yet.",
+        context: `the checkpoint at ${checkpointLine} is loaded, so pressing Run now continues from there instead of starting the turn over.`,
+        actions: [
+          { id: "continue", label: `${HARNESS_RECOVERY_ACTION_LABELS.continue} ${prepared.nextStep}`, title: "Run the next turn from the prepared checkpoint" },
+          { id: "cancel", label: HARNESS_RECOVERY_ACTION_LABELS.cancel, tone: "danger", title: "Fence the lease, revoke this session's grants and mark the task cancelled" },
+        ],
+      };
+    } else if (status === "running") {
+      story = following
+        ? {
+          kind: "recovery",
+          tone: "running",
+          title: "Running — this pane is running it; a pause lands at the next safe boundary",
+          cause: "the runtime is mid-turn. Nothing is interrupted inside an action, so a pause takes effect where the next step would begin.",
+          context: `every step already taken is in the log, and ${checkpointLine} is where a resume would restart.`,
+          actions: [
+            { id: "pause", label: HARNESS_RECOVERY_ACTION_LABELS.pause, title: "Ask the runtime to stop between steps" },
+          ],
+        }
+        : {
+          kind: "recovery",
+          tone: "crash",
+          title: "This task says it is running, and this pane is not the run that is running it",
+          cause: "this pane owns no run for the task. That is either a run in another tab or process, or a worker that died leaving the task marked running — the record cannot tell those apart, and neither can this pane.",
+          context: `the durable log, ${checkpointLine} and the budget survive a dead worker; the work since that checkpoint does not.`,
+          actions: [
+            { id: "pause", label: HARNESS_RECOVERY_ACTION_LABELS.pause, title: "Ask the runtime to stop at the next safe boundary, if anything is still running" },
+            { id: "cancel", label: HARNESS_RECOVERY_ACTION_LABELS.cancel, tone: "danger", title: "Fence the lease, revoke this session's grants and mark the task cancelled" },
+            { id: "abort", label: HARNESS_RECOVERY_ACTION_LABELS.abort, title: "Stop following the run; the record is untouched" },
+            { id: "resume", label: HARNESS_RECOVERY_ACTION_LABELS.resume, disabled: true, reason: "a run is in progress: pause or cancel it first" },
+          ],
+        };
+    } else if (status === "paused") {
+      story = {
+        kind: "recovery",
+        tone: "paused",
+        title: "Paused at a safe boundary",
+        cause: `it stopped between steps: ${reason ? harnessRecoveryReasonPhrase(reason) : "the record gives no reason"}. Nothing will move until something asks it to.`,
+        context: `${checkpointLine} is where a resume restarts, and the log above holds every step taken before it.`,
+        actions: [
+          { id: "resume", label: HARNESS_RECOVERY_ACTION_LABELS.resume, disabled: !canResume, reason: refusals.join("; ") },
+          { id: "cancel", label: HARNESS_RECOVERY_ACTION_LABELS.cancel, tone: "danger", title: "Fence the lease, revoke this session's grants and mark the task cancelled" },
+        ],
+      };
+    } else if (status === "failed") {
+      const verdict = recovery.latest_verdict || null;
+      story = {
+        kind: "error",
+        tone: "failed",
+        title: "The run failed",
+        cause: reason
+          ? `the runtime recorded the failure as ${harnessRecoveryReasonPhrase(reason)}${verdict && verdict.reason ? ` — ${verdict.reason}` : ""}.`
+          : "the runtime recorded a failure without a reason it could name.",
+        context: `everything up to ${checkpointLine} is still recorded. A resume needs changed evidence — the same attempt, unchanged, is refused.`,
+        actions: [
+          { id: "resume", label: HARNESS_RECOVERY_ACTION_LABELS.resume, disabled: !canResume, reason: refusals.join("; ") },
+          { id: "cancel", label: HARNESS_RECOVERY_ACTION_LABELS.cancel, tone: "danger", title: "Fence the lease, revoke this session's grants and mark the task cancelled" },
+        ],
+      };
+    } else if (status === "blocked") {
+      const unresolved = harnessRecoveryUnresolvedActions(payload);
+      story = {
+        kind: "error",
+        tone: "blocked",
+        title: "Blocked on effects the runtime cannot account for",
+        cause: `a consequential action was interrupted and its outcome is unknown${unresolved.length ? ` (${unresolved.join(", ")})` : ""}, so the runtime will not restart work it cannot account for.`,
+        context: `${checkpointLine} and the log are intact. A cancel fences the unresolved actions and turns them into barriers you can reconcile.`,
+        actions: [
+          { id: "cancel", label: HARNESS_RECOVERY_ACTION_LABELS.cancel, tone: "danger", title: "Fence the lease, revoke this session's grants and mark the task cancelled" },
+          { id: "resume", label: HARNESS_RECOVERY_ACTION_LABELS.resume, disabled: true, reason: refusals.join("; ") },
+        ],
+      };
+    } else if (status === "cancelled") {
+      story = {
+        kind: "recovery",
+        tone: "cancelled",
+        title: "Cancelled",
+        cause: `the task was cancelled: ${reason ? harnessRecoveryReasonPhrase(reason) : "the record gives no reason"}. Its lease was fenced, this session's grants revoked and its in-flight processes contained.`,
+        context: "the log, the checkpoints and the milestone record survive. A cancelled task cannot be resumed — a new session is the way forward.",
+        actions: [
+          { id: "fresh", label: HARNESS_RECOVERY_ACTION_LABELS.fresh, title: "Open an empty draft session; this one stays in the list with its record intact" },
+        ],
+      };
+    }
+    if (!story) return null;
+    story.facts = harnessRecoveryFacts(payload);
+    story.status = status;
+    if (harnessRecoveryArmedCancel && story.actions) {
+      const cancel = story.actions.find(action => action.id === "cancel");
+      if (cancel) {
+        cancel.label = HARNESS_RECOVERY_ACTION_LABELS.confirm_cancel;
+        cancel.title = "Cancelling fences the lease, revokes this session's grants and cannot be undone";
+      }
+    }
+    return story;
+  }
+
+  function harnessRecoveryFactsHtml(facts) {
+    if (!facts || !facts.length) return "";
+    return facts
+      .map(fact => `<dt>${escapeHtml(fact.label)}</dt><dd${fact.mono ? ' class="mono"' : ""}>${escapeHtml(fact.value)}</dd>`)
+      .join("");
+  }
+
+  function harnessRecoverySay(text, tone) {
+    // A note is one session's answer. Carrying it to another session would attribute a
+    // resume to a task that never had one, so it is stamped and checked.
+    harnessRecoveryNote = text ? { text: String(text), tone: tone || "info", sessionId: activeHarnessId || "" } : null;
+    const node = document.getElementById("harnessRecoveryNote");
+    if (!node) return;
+    if (!harnessRecoveryNote) {
+      node.hidden = true;
+      node.textContent = "";
+      node.removeAttribute("data-tone");
+      return;
+    }
+    node.hidden = false;
+    node.textContent = harnessRecoveryNote.text;
+    node.dataset.tone = harnessRecoveryNote.tone;
+  }
+
+  function renderHarnessRecovery() {
+    const host = document.getElementById("harnessRecoveryPanel");
+    const storyHost = document.getElementById("harnessRecoveryStory");
+    const factsHost = document.getElementById("harnessRecoveryFacts");
+    if (!host || !storyHost || !factsHost) return;
+    const story = harnessRecoveryStory(harnessRecoveryPayload);
+    if (!story) {
+      host.hidden = true;
+      storyHost.innerHTML = "";
+      factsHost.innerHTML = "";
+      factsHost.hidden = true;
+      harnessRecoverySay(null);
+      return;
+    }
+    host.hidden = false;
+    const focusAfter = document.activeElement && storyHost.contains(document.activeElement)
+      ? document.activeElement.dataset.actionId
+      : null;
+    presentInto(storyHost, {
+      kind: story.kind,
+      title: story.title,
+      cause: story.cause,
+      context: story.context,
+      actions: story.actions.map(action => ({
+        label: action.label,
+        title: action.title,
+        tone: action.tone,
+        disabled: action.disabled,
+        reason: action.reason,
+        run: () => harnessRecoveryAct(action.id),
+      })),
+    });
+    const buttons = storyHost.querySelectorAll(".presentation-actions .btn");
+    buttons.forEach((button, index) => {
+      const action = story.actions[index];
+      if (!action) return;
+      button.dataset.actionId = action.id;
+      button.setAttribute("aria-label", action.disabled && action.reason ? `${action.label} (not available: ${action.reason})` : action.label);
+    });
+    factsHost.hidden = false;
+    factsHost.innerHTML = harnessRecoveryFactsHtml(story.facts);
+    const note = harnessRecoveryNote && harnessRecoveryNote.sessionId === harnessRecoveryPayload.sessionId
+      ? harnessRecoveryNote
+      : null;
+    harnessRecoverySay(note ? note.text : null, note ? note.tone : "info");
+    // The action that was pressed may be gone (a resume turns the story into a prepared
+    // one) - focus is given to the same action when it survives and to the panel otherwise,
+    // so a keyboard reader is never dropped back to the top of the page.
+    if (focusAfter) {
+      const next = storyHost.querySelector(`.presentation-actions .btn[data-action-id="${focusAfter}"]`);
+      if (next && !next.disabled) { next.focus(); return; }
+      host.setAttribute("tabindex", "-1");
+      host.focus();
+    }
+  }
+
+  function focusHarnessRecovery() {
+    const host = document.getElementById("harnessRecoveryPanel");
+    if (!host || host.hidden) {
+      showToast("This session has no recovery state to show.", "info");
+      return;
+    }
+    host.scrollIntoView({ block: "nearest" });
+    const primary = host.querySelector(".presentation-actions .btn:not(:disabled)");
+    if (primary) primary.focus();
+    else { host.setAttribute("tabindex", "-1"); host.focus(); }
+  }
+
+  async function refreshHarnessRecovery() {
+    const sessionId = activeHarnessId;
+    if (!sessionId) {
+      harnessRecoveryPayload = null;
+      renderHarnessRecovery();
+      return;
+    }
+    if (harnessRecoveryBusy) return;
+    harnessRecoveryBusy = true;
+    let task = null;
+    let error = "";
+    try {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/task`);
+      if (response.ok) task = await response.json();
+      else error = `the task read answered HTTP ${response.status}`;
+    } catch (fetchError) {
+      error = `the task could not be read: ${fetchError.message}`;
+    }
+    let state = harnessSnapshot;
+    if (!state) {
+      try {
+        const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`);
+        if (response.ok) state = await response.json();
+      } catch (ignored) { /* the task read already reports what could not be read */ }
+    }
+    harnessRecoveryBusy = false;
+    if (activeHarnessId !== sessionId) return;
+    if (harnessRecoveryPrepared && harnessRecoveryPrepared.sessionId !== sessionId) harnessRecoveryPrepared = null;
+    harnessRecoveryPayload = { sessionId, state, task, error, events: harnessCachedEvents() };
+    renderHarnessRecovery();
+  }
+
+  function harnessRecoveryRefusalDetail(payload, status) {
+    // Two shapes leave the server: a string `detail` for a rejected transition, and
+    // `{code, message}` for a rejected handoff. Both are printed as they arrived.
+    if (payload && typeof payload === "object") {
+      if (typeof payload.message === "string" && payload.message.trim()) {
+        return payload.code ? `${payload.code}: ${payload.message}` : payload.message;
+      }
+      if (typeof payload.code === "string" && payload.code.trim()) return payload.code;
+      if (typeof payload.detail === "string" && payload.detail.trim()) return payload.detail;
+      if (payload.detail && typeof payload.detail === "object") return harnessRecoveryRefusalDetail(payload.detail, status);
+    }
+    if (typeof payload === "string" && payload.trim()) return payload;
+    return `HTTP ${status}`;
+  }
+
+  async function harnessRecoveryPost(path, body) {
+    const sessionId = activeHarnessId;
+    if (!sessionId) return { ok: false, status: 0, data: null };
+    try {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body || {}),
+      });
+      let data = null;
+      try { data = await response.json(); } catch (ignored) { data = null; }
+      return { ok: response.ok, status: response.status, data };
+    } catch (error) {
+      return { ok: false, status: 0, data: { detail: `the request never reached the server: ${error.message}` } };
+    }
+  }
+
+  async function harnessRecoveryAct(id) {
+    const payload = harnessRecoveryPayload;
+    if (!payload || !payload.sessionId) return;
+    const story = harnessRecoveryStory(payload);
+    const action = story ? story.actions.find(entry => entry.id === id) : null;
+    if (action && action.disabled) {
+      harnessRecoverySay(`Not available: ${action.reason}`, "warn");
+      return;
+    }
+    // Any action other than the cancel being confirmed disarms it: a confirmation that
+    // outlives the reader's attention is a one-press cancel wearing a two-press label.
+    if (id !== "cancel") harnessRecoveryArmedCancel = 0;
+    if (id === "pause") {
+      const result = await harnessRecoveryPost("pause", { reason: "operator_pause_requested" });
+      if (!result.ok) {
+        harnessRecoverySay(`The runtime refused the pause: ${harnessRecoveryRefusalDetail(result.data, result.status)}`, "danger");
+      } else if (result.data && result.data.deferred_to_safe_boundary) {
+        harnessRecoverySay("Pause requested. It lands at the next safe boundary — nothing has stopped yet, and pending approvals are rejected now.", "warn");
+      } else {
+        harnessRecoverySay("Paused at a safe boundary. The checkpoint below is where a resume restarts.", "ok");
+      }
+    } else if (id === "resume") {
+      const result = await harnessRecoveryPost("resume", {});
+      if (!result.ok) {
+        harnessRecoverySay(`The runtime refused the resume: ${harnessRecoveryRefusalDetail(result.data, result.status)}`, "danger");
+      } else {
+        const data = result.data || {};
+        const checkpoint = data.checkpoint || {};
+        harnessRecoveryPrepared = {
+          sessionId: payload.sessionId,
+          nextStep: Number(data.next_step || 1),
+          checkpointId: String(checkpoint.checkpoint_id || ""),
+        };
+        harnessRecoverySay(`Resume prepared from step ${Number(data.next_step || 1)}. Nothing has run yet: pressing Run continues from the checkpoint instead of starting over.`, "ok");
+      }
+    } else if (id === "continue") {
+      const prepared = harnessRecoveryPrepared;
+      const prompt = harnessLastPrompt();
+      if (!prepared) {
+        harnessRecoverySay("Nothing is prepared: resume first, so the next turn continues from a checkpoint the runtime accepted.", "warn");
+        return;
+      }
+      if (!prompt) {
+        harnessRecoverySay("No earlier prompt is in this session's log, so there is no turn to continue. Type the next instruction instead.", "warn");
+        return;
+      }
+      const input = document.getElementById("harnessPromptInput");
+      if (input) { input.value = prompt; fitHarnessComposer(); }
+      runHarnessTurn();
+      return;
+    } else if (id === "cancel") {
+      if (!harnessRecoveryArmedCancel) {
+        harnessRecoveryArmedCancel = Date.now();
+        renderHarnessRecovery();
+        harnessRecoverySay("Pressing cancel again fences this task: its lease is fenced, its grants revoked, its in-flight processes contained, and a cancelled task cannot be resumed.", "warn");
+        return;
+      }
+      harnessRecoveryArmedCancel = 0;
+      const result = await harnessRecoveryPost("cancel", { reason: "operator_cancelled" });
+      if (!result.ok) {
+        harnessRecoverySay(`The runtime refused the cancel: ${harnessRecoveryRefusalDetail(result.data, result.status)}`, "danger");
+      } else {
+        const data = result.data || {};
+        harnessRecoveryPrepared = null;
+        const unresolved = Array.isArray(data.unresolved_action_ids) ? data.unresolved_action_ids : [];
+        harnessRecoverySay(
+          `Cancelled. ${Number(data.contained_processes || 0)} process(es) contained, ${unresolved.length} action(s) left unresolved${unresolved.length ? ` (${unresolved.join(", ")})` : ""}. Nothing in this session can be resumed now.`,
+          unresolved.length ? "warn" : "ok",
+        );
+      }
+    } else if (id === "abort") {
+      abortHarnessRun();
+      harnessRecoverySay("Stopped following the run. The record, the checkpoint and the task state are untouched — Abort ends this view, not the work.", "info");
+      return;
+    } else if (id === "fresh") {
+      startFreshHarnessDraft();
+      return;
+    }
+    await harnessResyncFromSnapshot("recovery_action");
+    await refreshHarnessRecovery();
+  }
+
+  function harnessLastPrompt() {
+    const events = harnessCachedEvents() || [];
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const ev = events[index];
+      if (ev && ev.type === "turn/start" && String(ev.prompt || "").trim()) return String(ev.prompt);
+    }
+    return "";
+  }
+
+  function harnessResumePrepared() {
+    return Boolean(harnessRecoveryPrepared && harnessRecoveryPrepared.sessionId === activeHarnessId);
+  }
+
+  // The same story where it happened: one card per recovery event, so the log stops
+  // saying "Cancelled — operator_cancelled" and starts saying what that did.
+  function renderHarnessRecoveryEventHtml(ev) {
+    const when = ev.created_at || ev.ts ? harnessRecoveryWhen(ev.created_at || ev.ts) : "";
+    const atHtml = when ? `<span class="hrec-at mono">${escapeHtml(when)}</span>` : "";
+    const openHtml = `<button class="btn btn-xs" type="button" onclick="focusHarnessRecovery()">Recovery</button>`;
+    if (ev.type === "turn/paused") {
+      return `<div class="hrec-card" data-tone="paused">
+        <div class="hrec-head"><span class="hrec-title">Paused at a safe boundary</span>${atHtml}</div>
+        <p class="hrec-line">The runtime stopped between steps: ${escapeHtml(String(ev.reason || "no reason recorded"))}. Nothing is interrupted mid-action, so the step after this one is untouched.</p>
+        <div class="ev-actions">${openHtml}</div>
+      </div>`;
+    }
+    if (ev.type === "turn/cancelled") {
+      const unresolved = Array.isArray(ev.unresolved_action_ids) ? ev.unresolved_action_ids : [];
+      return `<div class="hrec-card" data-tone="danger">
+        <div class="hrec-head"><span class="hrec-title">Cancelled</span>${atHtml}</div>
+        <p class="hrec-line">Reason: ${escapeHtml(String(ev.reason || "none recorded"))}. ${escapeHtml(String(Number(ev.contained_processes || 0)))} in-flight process(es) were contained and this session's grants were revoked.</p>
+        <p class="hrec-line">${unresolved.length
+          ? `${escapeHtml(String(unresolved.length))} consequential action(s) were left unresolved (${escapeHtml(unresolved.join(", "))}) and now hold this workspace: they block a resume until they are reconciled.`
+          : "No consequential action was left unresolved, so no barrier was raised."}</p>
+        <div class="ev-actions">${openHtml}</div>
+      </div>`;
+    }
+    if (ev.type === "turn/resume_prepared") {
+      const completed = Array.isArray(ev.completed_milestone_ids) ? ev.completed_milestone_ids : [];
+      return `<div class="hrec-card" data-tone="ok">
+        <div class="hrec-head"><span class="hrec-title">Resume prepared — the next turn starts at step ${escapeHtml(String(ev.next_step || 1))}</span>${atHtml}</div>
+        <p class="hrec-line">The runtime checked the checkpoint${ev.checkpoint_id ? ` ${escapeHtml(String(ev.checkpoint_id).slice(0, 12))}` : ""}, the unresolved effects and the budget. Nothing has run: this only says a resume would be accepted.</p>
+        <p class="hrec-line">${escapeHtml(String(Number(ev.recoveries_used || 0)))} recover(y/ies) used${completed.length ? ` · ${escapeHtml(String(completed.length))} milestone(s) already complete and not repeated` : ""}.</p>
+        <div class="ev-actions">${openHtml}</div>
+      </div>`;
+    }
+    return "";
+  }
+
+  window.M5HarnessRecovery = {
+    status: harnessRecoveryStatus,
+    story: harnessRecoveryStory,
+    facts: harnessRecoveryFacts,
+    refusals: harnessRecoveryResumeRefusals,
+    refresh: refreshHarnessRecovery,
+    focus: focusHarnessRecovery,
+    prepared: harnessResumePrepared,
+    payload: () => harnessRecoveryPayload,
+  };
+
   function runHarnessTurn() {
     const input = document.getElementById("harnessPromptInput");
     const prompt = input.value.trim();
@@ -7482,9 +8186,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     }
 
     setHarnessRunActive(true);
+    // A prepared resume is the only thing that makes this turn a continuation: the
+    // runtime asked for `resume` and the pane never sent it, so every "resume" used to
+    // start the turn over from step 1. The flag is consumed by the request that uses it.
+    const resumingFromCheckpoint = harnessResumePrepared();
+    if (resumingFromCheckpoint) harnessRecoveryPrepared = null;
     consumeSSE("/api/harness/run", {
       session_id: activeHarnessId || "",
       prompt,
+      resume: resumingFromCheckpoint,
       workspace_dir: document.getElementById("harnessWorkspaceInput").value.trim(),
       use_worktree: document.getElementById("harnessUseWorktree").checked,
       policy: document.getElementById("harnessPolicy").value,

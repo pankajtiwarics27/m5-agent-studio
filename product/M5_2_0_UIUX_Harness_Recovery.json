@@ -1,0 +1,352 @@
+{
+  "schema_version": "m5-uiux-harness-recovery/1",
+  "document_type": "uiux_story_inventory",
+  "program": "M5 2.0 UI/UX",
+  "story": "UIUX-P3-05",
+  "title": "Harness pause cancel resume and crash recovery UX",
+  "generator": "scripts/uiux_harness_recovery_inventory.py",
+  "regenerate_with": "python3 scripts/uiux_harness_recovery_inventory.py",
+  "check_with": "python3 scripts/uiux_harness_recovery_inventory.py --check",
+  "statement": "A stopped run is a state with a cause, a checkpoint and a way forward, and it is drawn from the record the server already keeps: GET …/state and GET …/task. The four routes that answer it - pause, cancel, resume and abort - are pressable from the pane, and a refusal is a disabled button carrying the reason the runtime would give.",
+  "functions": {
+    "harnessRecoveryStatus": true,
+    "harnessRecoveryLastTransition": true,
+    "harnessRecoveryUnresolvedActions": true,
+    "harnessRecoveryResumeRefusals": true,
+    "harnessRecoveryFacts": true,
+    "harnessRecoveryFactsHtml": true,
+    "harnessRecoveryReasonPhrase": true,
+    "harnessRecoveryStory": true,
+    "harnessRecoverySay": true,
+    "renderHarnessRecovery": true,
+    "focusHarnessRecovery": true,
+    "refreshHarnessRecovery": true,
+    "harnessRecoveryRefusalDetail": true,
+    "harnessRecoveryPost": true,
+    "harnessRecoveryAct": true,
+    "harnessLastPrompt": true,
+    "harnessResumePrepared": true,
+    "renderHarnessRecoveryEventHtml": true
+  },
+  "surface": {
+    "panel": "<div id=\"harnessRecoveryPanel\" class=\"harness-recovery\" role=\"group\" aria-label=\"Recovery\" hidden>",
+    "story_host": "<div id=\"harnessRecoveryStory\">",
+    "facts_host": "<dl id=\"harnessRecoveryFacts\" class=\"harness-recovery-facts\" aria-label=\"What survived\">",
+    "note": "<p id=\"harnessRecoveryNote\" class=\"harness-recovery-note\" role=\"status\" aria-live=\"polite\" hidden>",
+    "reads": [
+      "GET /api/harness/sessions/{session_id}/state",
+      "GET /api/harness/sessions/{session_id}/task"
+    ]
+  },
+  "states": [
+    "paused at a safe boundary",
+    "failed, with the requirement for changed evidence",
+    "blocked on unresolved effects, resume refused",
+    "cancelled, with no resume offered",
+    "running and owned by this pane, pause offered",
+    "running and not owned by this pane, drawn as a possibly dead worker",
+    "a resume the runtime accepted, drawn as prepared and not as progress",
+    "nothing to recover, drawn as nothing"
+  ],
+  "actions": [
+    {
+      "id": "pause",
+      "label": "Pause at a safe boundary",
+      "route": "POST …/pause",
+      "notes": "a deferred pause says so"
+    },
+    {
+      "id": "resume",
+      "label": "Resume from the checkpoint",
+      "route": "POST …/resume",
+      "notes": "a refusal is printed as the server sent it"
+    },
+    {
+      "id": "continue",
+      "label": "Continue the run from step N",
+      "route": "POST /api/harness/run with resume=true",
+      "notes": "only after an accepted resume"
+    },
+    {
+      "id": "cancel",
+      "label": "Cancel this task",
+      "route": "POST …/cancel",
+      "notes": "two presses; reports what it fenced"
+    },
+    {
+      "id": "abort",
+      "label": "Abort the run and stop following",
+      "route": "POST /api/harness/abort/{session_id}",
+      "notes": "ends the view, not the work"
+    },
+    {
+      "id": "fresh",
+      "label": "Start a new session",
+      "route": "none",
+      "notes": "the only way forward from a cancelled task"
+    }
+  ],
+  "refusals": [
+    "a run is in progress",
+    "blocked on effects the runtime cannot account for",
+    "a cancelled task is not resumable",
+    "the task is already complete",
+    "a cancellation is already pending",
+    "the task budget is exhausted",
+    "the session is quarantined",
+    "persisted barrier(s) hold this workspace",
+    "consequential action(s) were left unresolved",
+    "failed its integrity check",
+    "the recovery memory could not be read"
+  ],
+  "events": {
+    "turn/paused": "what stopping at a safe boundary did",
+    "turn/cancelled": "the reason, the processes contained and the actions left unresolved",
+    "turn/resume_prepared": "the step the next turn continues from, and that nothing has run"
+  },
+  "routes": [
+    "POST /api/harness/sessions/{session_id}/pause",
+    "POST /api/harness/sessions/{session_id}/cancel",
+    "POST /api/harness/sessions/{session_id}/resume",
+    "POST /api/harness/abort/{session_id}",
+    "GET /api/harness/sessions/{session_id}/state",
+    "GET /api/harness/sessions/{session_id}/task"
+  ],
+  "checks": [
+    {
+      "check": "one recovery surface, under the session strip",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the surface is a labelled group that starts hidden",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the surface has a story host, a facts list and a live note",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every function the surface needs exists once",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the surface reads only the two routes that already existed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the panel is refreshed by every authoritative resync",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a new draft clears the surface instead of showing the last session's state",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every state a run can be left in has its own story",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "no story can be drawn without a title, a cause, a kept line and an action",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a running task this pane is not running is not drawn as a live one",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a blocked task offers cancel and draws resume as unavailable",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a cancelled task offers no resume at all",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a prepared resume is drawn only on a task that is still paused or failed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the reason code is printed beside the phrase a reader gets",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the facts are the record's own fields, and a missing one is named as missing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "one request helper, and it posts to the session's own routes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "pause, cancel and resume are the presses the surface makes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "abort still has exactly one call site",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "abort says what it does not do",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "cancel takes two presses and any other action disarms it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a refused action is refused before any request is made",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a refusal is drawn as a disabled button with its reason, never as a hidden one",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the reason is in text as well as in the accessible name",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "focus survives an action",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every reason a resume would be refused is stated before the press",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the server's own refusal is printed as it arrived",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a refused resume keeps the surface honest instead of silently reverting",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the three recovery events have exactly one renderer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the one-line recovery renderers are gone",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the card states what the event did and links back to the surface",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a prepared resume is what makes the next run a continuation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the preparation is consumed by the request that uses it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "no value from the record reaches the page unescaped",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a note belongs to the session whose action produced it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every preserved route is still mounted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "pause still defers to a safe boundary and says which it is",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "cancel still fences, revokes, contains and reports what it left unresolved",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "resume still validates the checkpoint, the effects and the budget before it prepares",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "containment and the recovery memory still reach the pane through /task",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the state route still publishes the task status and its transitions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "containment still quarantines and reports what it contained",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "no route was added for recovery",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every route the pane calls is mounted by the server",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the surface posts to no route outside pause, cancel, resume and abort",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "limits": [
+    "the surface draws the record; it cannot tell a live worker from a dead one, and it says so instead of guessing. The product's own `recover_incomplete_transitions()` settles that question at startup, and the surface draws its answer (`recovered_incomplete_transition`)",
+    "a resume prepares a run and consumes a recovery slot; it starts nothing. The pane says `nothing has run yet` and only the next `/run` continues the checkpoint",
+    "`Contain` has no control in this pane: it is an incident response that quarantines a session and revokes its grants, and an operator-facing button for it would be a one-press quarantine. Its effect is drawn - the holds it raises block a resume, and the surface says so",
+    "the pending-approval case is P3-03's surface: a pause rejects pending approvals, and the panel states that rather than redrawing the approval cards",
+    "the demo has no model runtime, so the walk cannot press Continue without a provider; the request the pane would send is read instead, and the walk says it did that"
+  ],
+  "totals": {
+    "checks": 44,
+    "states": 8,
+    "actions": 6,
+    "refusals": 11,
+    "preserved_routes": 7
+  },
+  "findings": []
+}

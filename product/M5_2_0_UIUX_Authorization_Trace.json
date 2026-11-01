@@ -9,55 +9,55 @@
   "statement": "For state-changing route candidates resolved by the browser map: the shared gates every request passes, handler refusals, referenced authority and durable-state subsystems, and possible effects. The route map is a lexical scan, not proof of exhaustive browser coverage; a reference is evidence of a consultation, not proof of enforcement.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
   "app_sha256": "e3dd15bef236555d4cb3fca12eac003a55e099b48bbefa20e313489af652f129",
-  "route_map_sha256": "bef110f6b267cb8adcdda9614af2498886cd594ef630333c8e50f8c99e621404",
+  "route_map_sha256": "4c1c1214b34740696f942e5080b5229569c283f844eaad498f3257391a6e68fc",
   "totals": {
     "routes_in_app": 115,
     "state_changing_routes_in_app": 77,
-    "traced_routes": 38,
+    "traced_routes": 46,
     "route_map_unresolved_call_sites": 0,
     "route_map_unresolved_caller_edges": 0,
     "route_map_unresolved_method_edges": 0,
     "traced_by_method": {
       "DELETE": 5,
       "PATCH": 3,
-      "POST": 30
+      "POST": 38
     },
-    "routes_with_authority_subsystem": 13,
-    "routes_with_authority_directly": 8,
-    "routes_with_state_subsystem": 31,
-    "routes_with_state_directly": 12,
+    "routes_with_authority_subsystem": 20,
+    "routes_with_authority_directly": 13,
+    "routes_with_state_subsystem": 39,
+    "routes_with_state_directly": 16,
     "routes_with_durable_writes": 3,
-    "routes_that_can_leave_the_machine": 22,
+    "routes_that_can_leave_the_machine": 23,
     "distinct_handler_refusals": 9,
     "refusals_by_status": {
-      "400": 66,
-      "401": 38,
-      "403": 43,
-      "404": 11,
-      "409": 10,
-      "413": 38,
+      "400": 84,
+      "401": 46,
+      "403": 52,
+      "404": 19,
+      "409": 16,
+      "413": 46,
       "429": 6,
       "500": 1,
       "502": 1,
-      "503": 5,
-      "507": 2
+      "503": 9,
+      "507": 3
     },
     "shared_refusals_by_status": {
-      "400": 38,
-      "401": 38,
-      "403": 38,
-      "413": 38,
+      "400": 46,
+      "401": 46,
+      "403": 46,
+      "413": 46,
       "429": 6
     },
     "handler_refusals_by_status": {
-      "400": 28,
-      "403": 5,
-      "404": 11,
-      "409": 10,
+      "400": 38,
+      "403": 6,
+      "404": 19,
+      "409": 16,
       "500": 1,
       "502": 1,
-      "503": 5,
-      "507": 2,
+      "503": 9,
+      "507": 3,
       "dynamic": 1
     }
   },
@@ -1509,7 +1509,8 @@
       "handler_line": 12592,
       "response": "json",
       "ui_callers": [
-        "applyHarnessWorktree"
+        "applyHarnessWorktree",
+        "harnessRecoveryPost"
       ],
       "shared_gates": [
         {
@@ -1581,12 +1582,89 @@
     },
     {
       "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/cancel",
+      "handler": "api_cancel_harness_session",
+      "handler_line": 13324,
+      "response": "json",
+      "ui_callers": [
+        "harnessRecoveryPost"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "f\"Harness session {session_id!r} not found.\""
+        },
+        {
+          "status": 409,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [
+        "process_supervision"
+      ],
+      "state": [
+        "workflow_state"
+      ],
+      "support": [],
+      "authority_via_helpers": [
+        "scoped_grants"
+      ],
+      "state_via_helpers": [
+        "runtime_persistence",
+        "task_events"
+      ],
+      "helpers_scanned": [
+        "get_harness_session_db",
+        "_resolve_pending_tool_approval",
+        "get_scoped_grant_store",
+        "get_process_supervisor",
+        "get_child_delegation_store",
+        "get_task_state_machine",
+        "_update_harness_session_state",
+        "_append_harness_event",
+        "_containment_summary_or_none",
+        "_serialize_task_record"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
       "path": "/api/harness/sessions/{session_id}/compact",
       "handler": "api_compact_harness_session",
       "handler_line": 12622,
       "response": "json",
       "ui_callers": [
-        "compactActiveHarness"
+        "compactActiveHarness",
+        "harnessRecoveryPost"
       ],
       "shared_gates": [
         {
@@ -1626,6 +1704,243 @@
       "helpers_scanned": [
         "get_harness_session_db",
         "compact_harness_session_messages"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/contain",
+      "handler": "api_contain_harness_session",
+      "handler_line": 13432,
+      "response": "json",
+      "ui_callers": [
+        "harnessRecoveryPost"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "f\"Harness session {session_id!r} not found.\""
+        },
+        {
+          "status": 400,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [
+        "sandbox_boundary",
+        "process_supervision"
+      ],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [
+        "scoped_grants"
+      ],
+      "state_via_helpers": [
+        "runtime_persistence",
+        "side_effect_ledger",
+        "task_events"
+      ],
+      "helpers_scanned": [
+        "get_harness_session_db",
+        "_resolve_pending_tool_approval",
+        "get_scoped_grant_store",
+        "get_process_supervisor",
+        "get_worker_lease_coordinator",
+        "get_durable_action_ledger",
+        "get_security_incident_store",
+        "_update_harness_session_state",
+        "_append_harness_event",
+        "_containment_summary_or_none"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/delegations",
+      "handler": "api_create_harness_delegation",
+      "handler_line": 16702,
+      "response": "json",
+      "ui_callers": [
+        "harnessRecoveryPost"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "f\"Harness session {session_id!r} not found.\""
+        },
+        {
+          "status": 400,
+          "detail": "\"Request body must be a JSON object.\""
+        },
+        {
+          "status": 503,
+          "detail": "{\"code\": \"delegation_state_corrupt\", \"message\": str(exc)}"
+        },
+        {
+          "status": 403,
+          "detail": "exc.to_mapping()"
+        },
+        {
+          "status": 409,
+          "detail": "exc.to_mapping()"
+        }
+      ],
+      "authority": [],
+      "state": [],
+      "support": [
+        "child_delegation"
+      ],
+      "authority_via_helpers": [
+        "scoped_grants",
+        "workspace_quarantine"
+      ],
+      "state_via_helpers": [
+        "runtime_persistence"
+      ],
+      "helpers_scanned": [
+        "get_harness_session_db",
+        "run_bounded_child_delegation_async",
+        "spawn_child_delegation_async"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/grants",
+      "handler": "api_issue_harness_session_grant",
+      "handler_line": 13824,
+      "response": "json",
+      "ui_callers": [
+        "harnessRecoveryPost"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "f\"Harness session {session_id!r} not found.\""
+        },
+        {
+          "status": 400,
+          "detail": "\"Request body must be a JSON object.\""
+        },
+        {
+          "status": 400,
+          "detail": "\"`capabilities`, `resource_scopes`, and `tool_names` must be lists.\""
+        },
+        {
+          "status": 400,
+          "detail": "\"`exact_args` must be a JSON object when provided.\""
+        },
+        {
+          "status": 400,
+          "detail": "str(exc)"
+        },
+        {
+          "status": 503,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [
+        "scoped_grants"
+      ],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence",
+        "task_events",
+        "workspace_snapshots"
+      ],
+      "helpers_scanned": [
+        "get_harness_session_db",
+        "get_scoped_grant_store",
+        "_safe_append_harness_event"
       ],
       "durable_writes": 0,
       "effects": {
@@ -1717,6 +2032,316 @@
         "outbound_http": false,
         "os_keyring": false,
         "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/pause",
+      "handler": "api_pause_harness_session",
+      "handler_line": 13281,
+      "response": "json",
+      "ui_callers": [
+        "harnessRecoveryPost"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "f\"Harness session {session_id!r} not found.\""
+        },
+        {
+          "status": 409,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [],
+      "state": [
+        "workflow_state"
+      ],
+      "support": [],
+      "authority_via_helpers": [
+        "scoped_grants"
+      ],
+      "state_via_helpers": [
+        "runtime_persistence",
+        "task_events"
+      ],
+      "helpers_scanned": [
+        "get_harness_session_db",
+        "_resolve_pending_tool_approval",
+        "get_task_state_machine",
+        "_update_harness_session_state",
+        "_append_harness_event",
+        "_serialize_task_record"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/resume",
+      "handler": "api_resume_harness_session",
+      "handler_line": 17716,
+      "response": "json",
+      "ui_callers": [
+        "harnessRecoveryPost"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "f\"Harness session {session_id!r} not found.\""
+        },
+        {
+          "status": 409,
+          "detail": "str(exc)"
+        },
+        {
+          "status": 503,
+          "detail": "{\"code\": \"handoff_state_corrupt\", \"message\": str(exc)}"
+        },
+        {
+          "status": 409,
+          "detail": "exc.to_mapping()"
+        }
+      ],
+      "authority": [
+        "execution_budget",
+        "routing_policy"
+      ],
+      "state": [
+        "workflow_checkpoints",
+        "workflow_state"
+      ],
+      "support": [],
+      "authority_via_helpers": [
+        "execution_spine"
+      ],
+      "state_via_helpers": [
+        "runtime_persistence",
+        "side_effect_ledger",
+        "task_events"
+      ],
+      "helpers_scanned": [
+        "get_harness_session_db",
+        "get_task_state_machine",
+        "get_worker_lease_coordinator",
+        "_extract_session_known_action_args",
+        "get_mcp_effect_store",
+        "reconcile_mcp_effects_async",
+        "get_portable_handoff_store",
+        "_verify_active_session_handoff",
+        "_append_harness_event",
+        "_serialize_task_record"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/snapshots",
+      "handler": "api_capture_harness_session_snapshot",
+      "handler_line": 12934,
+      "response": "json",
+      "ui_callers": [
+        "harnessRecoveryPost"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "f\"Harness session {session_id!r} not found.\""
+        },
+        {
+          "status": 507,
+          "detail": "str(exc)"
+        },
+        {
+          "status": 400,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [],
+      "state": [
+        "workspace_snapshots"
+      ],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence",
+        "task_events"
+      ],
+      "helpers_scanned": [
+        "get_harness_session_db",
+        "_workspace_snapshot_store",
+        "_request_disk_full_safe_pause",
+        "_safe_append_harness_event"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/switch-model",
+      "handler": "api_switch_harness_session_model",
+      "handler_line": 14961,
+      "response": "json",
+      "ui_callers": [
+        "harnessRecoveryPost"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "f\"Harness session {session_id!r} not found.\""
+        },
+        {
+          "status": 400,
+          "detail": "\"Request body must be a JSON object.\""
+        },
+        {
+          "status": 400,
+          "detail": "{\"code\": \"missing_target_model\", \"message\": \"Provide `target_lead_model` and/or `target_critic_model`.\"},"
+        },
+        {
+          "status": 503,
+          "detail": "{\"code\": \"handoff_state_corrupt\", \"message\": str(exc)},"
+        },
+        {
+          "status": 409,
+          "detail": "exc.to_mapping()"
+        },
+        {
+          "status": 400,
+          "detail": "{\"code\": \"invalid_switch_request\", \"message\": str(exc)},"
+        }
+      ],
+      "authority": [
+        "routing_policy"
+      ],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [
+        "workspace_quarantine"
+      ],
+      "state_via_helpers": [
+        "artifact_lineage",
+        "runtime_persistence",
+        "workflow_checkpoints"
+      ],
+      "helpers_scanned": [
+        "get_harness_session_db",
+        "execute_conservative_model_switch_async"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": true,
+        "os_keyring": false,
+        "via_helpers": true,
         "streams": false
       }
     },

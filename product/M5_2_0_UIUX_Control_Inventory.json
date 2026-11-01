@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "fe9a66795fe783a550708779a9d4e5eb2bfa4fb0ff44d09721ce5e0c065ee19f",
+  "frontend_sha256": "ba0057db7086e49813c9c5cd9e9b59603f428760caf0ada3951ca121cb5dd46c",
   "panes": [
     {
       "dom_id": "start",
@@ -1366,7 +1366,7 @@
     "markup_controls": 189,
     "pane_controls": 83,
     "chrome_controls": 106,
-    "script_rendered_controls": 32,
+    "script_rendered_controls": 33,
     "script_rendered_by_function": {
       "ensureStageCardMounted": 1,
       "harnessEvidenceChangeHtml": 1,
@@ -1375,6 +1375,7 @@
       "renderCommandPaletteList": 1,
       "renderHarnessApprovalCardHtml": 3,
       "renderHarnessGrants": 4,
+      "renderHarnessRecoveryEventHtml": 1,
       "renderHarnessSidebar": 1,
       "renderHarnessTimeline": 1,
       "renderHarnessVerdictCardHtml": 2,

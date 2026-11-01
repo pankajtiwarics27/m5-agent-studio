@@ -6,9 +6,9 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `fe9a66795fe783a550708779a9d4e5eb2bfa4fb0ff44d09721ce5e0c065ee19f`.
+* Frontend digest: `ba0057db7086e49813c9c5cd9e9b59603f428760caf0ada3951ca121cb5dd46c`.
 * Panes: 6 · controls in panes: 83 · controls in the
-  shared chrome: 106 · script-rendered: 32.
+  shared chrome: 106 · script-rendered: 33.
 
 ## What this page is, and is not
 
@@ -31,7 +31,7 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 
 ## What the numbers already say
 
-* 189 controls are in the markup and 32 more are built by script — a checklist written from the markup alone would miss 14% of the interactive surface.
+* 189 controls are in the markup and 33 more are built by script — a checklist written from the markup alone would miss 15% of the interactive surface.
 * The shared chrome carries 106 controls; all six panes together carry 83. Most of the clicking happens in the shell, not inside a tab.
 * 58 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
@@ -277,7 +277,7 @@ attributed to one.
 
 ## Controls built by script
 
-32 interactive tags appear as template strings inside the
+33 interactive tags appear as template strings inside the
 inline script rather than in the markup. They are attributed to the nearest preceding function
 and are **not** in the tables above:
 
@@ -290,6 +290,7 @@ and are **not** in the tables above:
 | `renderCommandPaletteList` | 1 |
 | `renderHarnessApprovalCardHtml` | 3 |
 | `renderHarnessGrants` | 4 |
+| `renderHarnessRecoveryEventHtml` | 1 |
 | `renderHarnessSidebar` | 1 |
 | `renderHarnessTimeline` | 1 |
 | `renderHarnessVerdictCardHtml` | 2 |

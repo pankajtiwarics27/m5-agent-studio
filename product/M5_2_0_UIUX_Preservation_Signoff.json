@@ -25,12 +25,12 @@
     "current_inputs_match_approval": null,
     "approved_inputs": null,
     "current_inputs": {
-      "ledger_content_sha256": "551509b2545b7624a8ff60c77c9fd88fcd0a7a30a689c1a602f3f231a8e91cb6",
-      "source_manifest_sha256": "022be9776ac9708e71e079e0adf8397e289c3f72a06305cb167a65c41d974d9d",
-      "control_inventory_sha256": "4efbd27eebc52b6c77f072f1268a986a4ad01472d40ff8e4fa77e007b3d41c84",
-      "route_map_sha256": "bef110f6b267cb8adcdda9614af2498886cd594ef630333c8e50f8c99e621404",
-      "authorization_trace_sha256": "e31060b2a5b9039fff6b4440acec8bdbb9eb2fd9f4e1dcd05cbaf70e451d18b7",
-      "frontend_sha256": "fe9a66795fe783a550708779a9d4e5eb2bfa4fb0ff44d09721ce5e0c065ee19f",
+      "ledger_content_sha256": "748f591536c752fedab98d0834cb8729af29bf318911ef0236f39d43bccad4e1",
+      "source_manifest_sha256": "cd40a82ce18496119e3173e19cbab7aa6e5be2755568693049625e305738ade7",
+      "control_inventory_sha256": "fd46f828a33e8c6593e36be24b4da70ff46aa33f26d21ce9e76d5a46e30cf069",
+      "route_map_sha256": "4c1c1214b34740696f942e5080b5229569c283f844eaad498f3257391a6e68fc",
+      "authorization_trace_sha256": "6187efeaf6b7f54a87cf8e5e54f476fe2c77dc62a8399901037ff730be0017d9",
+      "frontend_sha256": "ba0057db7086e49813c9c5cd9e9b59603f428760caf0ada3951ca121cb5dd46c",
       "screenshot_manifest_sha256": "cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57",
       "screenshot_index_sha256": "82ecdeb4870961951b1b8946a657438d2a3893f443e5fe182f3372ed41784f07",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -39,12 +39,12 @@
     "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "377d5ea112cc14d315a2488f0cad99758b0607892e69fd7531189fd50feb76f2",
-    "source_manifest_sha256": "022be9776ac9708e71e079e0adf8397e289c3f72a06305cb167a65c41d974d9d",
-    "control_inventory_sha256": "4efbd27eebc52b6c77f072f1268a986a4ad01472d40ff8e4fa77e007b3d41c84",
-    "route_map_sha256": "bef110f6b267cb8adcdda9614af2498886cd594ef630333c8e50f8c99e621404",
-    "authorization_trace_sha256": "e31060b2a5b9039fff6b4440acec8bdbb9eb2fd9f4e1dcd05cbaf70e451d18b7",
-    "frontend_sha256": "fe9a66795fe783a550708779a9d4e5eb2bfa4fb0ff44d09721ce5e0c065ee19f"
+    "ledger_sha256": "599b59d19d879094145a006a90041262ea21a2b2396d4de55128851456d1fe82",
+    "source_manifest_sha256": "cd40a82ce18496119e3173e19cbab7aa6e5be2755568693049625e305738ade7",
+    "control_inventory_sha256": "fd46f828a33e8c6593e36be24b4da70ff46aa33f26d21ce9e76d5a46e30cf069",
+    "route_map_sha256": "4c1c1214b34740696f942e5080b5229569c283f844eaad498f3257391a6e68fc",
+    "authorization_trace_sha256": "6187efeaf6b7f54a87cf8e5e54f476fe2c77dc62a8399901037ff730be0017d9",
+    "frontend_sha256": "ba0057db7086e49813c9c5cd9e9b59603f428760caf0ada3951ca121cb5dd46c"
   },
   "approval_request": [
     {
@@ -55,12 +55,12 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "189 markup controls (106 chrome, 83 panes) plus 32 rendered by script"
+      "evidence": "189 markup controls (106 chrome, 83 panes) plus 33 rendered by script"
     },
     {
       "id": 3,
       "ask": "Review route candidates and preserve confirmed browser-reachable routes and their gates",
-      "evidence": "115 routes exist; 60 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 38 state-changing candidates; the lexical scan is not exhaustive"
+      "evidence": "115 routes exist; 68 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 46 state-changing candidates; the lexical scan is not exhaustive"
     },
     {
       "id": 4,
@@ -79,16 +79,16 @@
     "markup_controls": 189,
     "chrome_controls": 106,
     "pane_controls": 83,
-    "script_rendered_controls": 32,
+    "script_rendered_controls": 33,
     "routes": 115,
-    "routes_with_resolved_or_possible_caller": 60,
-    "routes_no_caller_observed": 55,
+    "routes_with_resolved_or_possible_caller": 68,
+    "routes_no_caller_observed": 47,
     "routes_unknown_frontend_caller": 0,
     "route_map_unresolved_call_sites": 0,
     "route_map_unresolved_caller_edges": 0,
     "route_map_unresolved_method_edges": 0,
-    "state_changing_routes_traced": 38,
-    "pane_routes_reached": 35,
+    "state_changing_routes_traced": 46,
+    "pane_routes_reached": 36,
     "pane_routes_excluded": 34,
     "route_walk_depth": 2,
     "screenshots_captured": 6,
@@ -689,6 +689,18 @@
           "handler": "harnessResyncFromSnapshot",
           "via": [
             "harnessResyncFromSnapshot"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/harness/sessions/{session_id}/task",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "refreshHarnessRecovery",
+          "via": [
+            "abortHarnessRun",
+            "refreshHarnessRecovery"
           ]
         },
         {
