@@ -100,16 +100,18 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": null,
-    "active_stories": [],
+    "active_story": "UIUX-P3-01",
+    "active_stories": [
+      "UIUX-P3-01"
+    ],
     "last_completed_story": "UIUX-P2-06",
     "next_recommended_story": "UIUX-P3-01",
-    "last_checkpoint": "2026-11-02T03:05:00Z",
-    "last_session_id": "arena/d4825f6c-m5-agent-studio",
+    "last_checkpoint": "2026-11-01T04:27:57Z",
+    "last_session_id": "arena/30b08512-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "38471c6cd721e5dcbd36dc02185cc63aa4da2923",
-    "last_updated": "2026-11-02",
+    "last_verified_commit": "adf15eb942dce31ed793431c9cacd80737f9880c",
+    "last_updated": "2026-11-01",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
       "Tab labels in this ledger (Start, Harness, Council, Pipeline, Compare, Chat) are NOT the DOM ids in static/index.html (start, harness, hall, council, debate, chat): 'Council' is data-tab=hall and 'Pipeline' is data-tab=council, while data-tab=council is the Pipeline pane. tab_registry records the mapping and tests/test_uiux_roadmap.py fails if it drifts. A session that greps for a 'pipeline' tab will not find one.",
@@ -261,7 +263,7 @@
       "id": "P3",
       "name": "Harness and Pipeline",
       "title": "Harness and Pipeline",
-      "status": "not_started",
+      "status": "in_progress",
       "story_ids": [
         "UIUX-P3-01",
         "UIUX-P3-02",
@@ -273,9 +275,9 @@
       ],
       "total": 7,
       "done": 0,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 7,
+      "not_started": 6,
       "percent_complete": 0
     },
     {
@@ -340,9 +342,9 @@
   "overall_progress": {
     "total_stories": 40,
     "done": 17,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 23,
+    "not_started": 22,
     "percent_complete": 42
   },
   "stories": [
@@ -3629,23 +3631,31 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P3-01 (Harness task creation and settings hierarchy). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 1,
+        "attempts": 1,
+        "started_at": "2026-11-01T04:27:57Z",
+        "updated_at": "2026-11-01T04:27:57Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/30b08512-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
-        "evidence": [],
-        "test_results": [],
+        "evidence": [
+          "Claimed before implementation at adf15eb after python3 scripts/uiux_coordination.py --github --json reported P3-01 as the sole eligible story, main current at adf15eb, no open pull requests, no marked blocker issues, and no holds. The tested merge tree matches CI-green PR head 76bf9e6; no implementation changes have started."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q tests/test_uiux_roadmap.py",
+            "exit_code": 0,
+            "result": "19 passed (Python 3.11.2, pytest 9.2.0); claim, counters, dependencies, and session invariants verified"
+          }
+        ],
         "visual_evidence": [],
         "known_regressions": [],
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "next_action": "Inspect Harness DOM, handlers, route contracts, failure/recovery and preservation mapping; capture isolated baseline before implementation.",
         "readme_updated": false
       },
       "required_evidence": [
