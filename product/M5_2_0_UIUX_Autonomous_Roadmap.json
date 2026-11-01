@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 22,
+  "revision": 23,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,13 +102,13 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P3-06",
-    "next_recommended_story": "UIUX-P3-07",
-    "last_checkpoint": "2026-11-01T18:40:00Z",
-    "last_session_id": "arena/720477ad-m5-agent-studio",
+    "last_completed_story": "UIUX-P3-07",
+    "next_recommended_story": "UIUX-P4-01",
+    "last_checkpoint": "2026-11-01T20:05:00Z",
+    "last_session_id": "arena/0431dbf8-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "e508b9a79b4ab4e62cbff697035ff36e0416fddc",
+    "last_verified_commit": "f4fb612278b54eb5c685a28319491fc15fab8a8d",
     "last_updated": "2026-11-01",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -262,7 +262,7 @@
       "id": "P3",
       "name": "Harness and Pipeline",
       "title": "Harness and Pipeline",
-      "status": "in_progress",
+      "status": "done",
       "story_ids": [
         "UIUX-P3-01",
         "UIUX-P3-02",
@@ -273,11 +273,11 @@
         "UIUX-P3-07"
       ],
       "total": 7,
-      "done": 6,
+      "done": 7,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 1,
-      "percent_complete": 86
+      "not_started": 0,
+      "percent_complete": 100
     },
     {
       "id": "P4",
@@ -340,11 +340,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 23,
+    "done": 24,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 17,
-    "percent_complete": 58
+    "not_started": 16,
+    "percent_complete": 60
   },
   "stories": [
     {
@@ -4853,23 +4853,70 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P3-07 (Pipeline retry failure and checkpoint recovery). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-01T19:10:00Z",
+        "updated_at": "2026-11-01T20:05:00Z",
+        "completed_at": "2026-11-01T20:05:00Z",
+        "owner_session": "arena/0431dbf8-m5-agent-studio",
+        "commit_sha": "bbeb2d1701732d720b014367dd5a33af5daf15da",
+        "changed_files": [
+          "docs/README.md",
+          "docs/media/pipeline-artifacts/pipeline-all-stages.png",
+          "docs/media/pipeline-artifacts/pipeline-empty-seat.png",
+          "docs/media/pipeline-artifacts/pipeline-run-line.png",
+          "docs/media/pipeline-artifacts/pipeline-step-chars.png",
+          "docs/media/pipeline-artifacts/pipeline-streaming.png",
+          "docs/media/pipeline-recovery/README.md",
+          "docs/media/pipeline-recovery/checkpoint-after-reload.png",
+          "docs/media/pipeline-recovery/failed-run-seats.png",
+          "docs/media/pipeline-recovery/failed-run.png",
+          "docs/media/pipeline-recovery/reloaded-from-export.png",
+          "docs/media/pipeline-recovery/restored-from-checkpoint.png",
+          "docs/media/pipeline-recovery/run-on-record.png",
+          "docs/uiux-2-0-pipeline-recovery.md",
+          "docs/uiux-2-0-program.md",
+          "product/M5_2_0_UIUX_Pipeline_Recovery.json",
+          "scripts/pipeline_recovery_seed.py",
+          "scripts/pipeline_recovery_walk.mjs",
+          "scripts/uiux_pipeline_recovery_inventory.py",
+          "static/index.html",
+          "tests/test_pipeline_recovery.py"
+        ],
+        "evidence": [
+          "A run that failed was a toast: `Council error: HTTP 503` for four seconds, then nothing. The seat it died on was not named, the output that had survived was not named, and there was no record anywhere - `save_run()` writes a run only after the fourth seat returns - so reloading the page threw away the only copy, and the only way to try again was to retype the task, which may not have been the task that failed.",
+          "`#pipelineRecovery` is one block under the run line, built by `presentInto()`, so it cannot ship without a title, a cause, a `Kept:` line and at least one action. It draws six states from what happened: a seat that failed (named, with the provider's own message, the characters that survived and the note that nothing is on record), a run the operator stopped, a stream that ended without the run's final event, a run read back from this browser's checkpoint, a run read back from the server's export, and a finished run announcing the id the server saved.",
+          "Retry re-posts the payload the run was started with instead of re-reading the controls, and says that the server has no single-seat entry point, so all four seats run again; the run line then says which attempt it is drawing. The salvage is written to `localStorage` before the page can go away (capped at 60,000 characters, truncated per seat and said to be truncated), offered after a reload rather than drawn, restored without re-running anything, and never described as the server's record. A run that was saved is read back through `GET /api/history/export` - the bundle an operator can already download, which redacts credentials - and a run that was not saved is never given an id.",
+          "Three endings are three states: `failed`, `stopped` and `dropped`, each with its own title and cause, so a failure no longer reads as a stop. A seat that was left mid-stream stops claiming to be streaming or connecting: the card says `Stopped`, the pill says `Stopped mid-seat`, and the artifact row says what it stopped after instead of `produced so far`.",
+          "No endpoint was added: `/api/runs` still does not exist, and the only route this story calls is the export that already existed. The council route, its seven events, its run record, `save_run()`'s ordering and the shared stream reader are pinned by the inventory."
+        ],
+        "test_results": [
+          "python3 scripts/uiux_pipeline_recovery_inventory.py --check -> 33 checks, 0 findings, clean",
+          "node scripts/pipeline_recovery_walk.mjs --screenshots docs/media/pipeline-recovery -> 27/27 checks passed (chromium 153.0.0 via @sparticuz/chromium, puppeteer-core 25.16.0)",
+          "node scripts/pipeline_artifacts_walk.mjs --screenshots docs/media/pipeline-artifacts -> 22/22 checks passed (the P3-06 walk, re-run because this story changed the stage pills and artifact labels)",
+          "python3 -m pytest -q tests/test_pipeline_recovery.py -> 28 passed",
+          "python3 -m pytest -q tests/test_screenshot_capture_browser.py (with STUDIO_SCREENSHOT_CHROME + STUDIO_PUPPETEER_CORE) -> 30 passed",
+          "python3 -m pytest -q (full suite) -> 2202 passed, 26 skipped (the skips are the live-container opt-in and the browser tests' own env gate, which the run above satisfies)"
+        ],
+        "visual_evidence": [
+          "docs/media/pipeline-recovery/failed-run.png",
+          "docs/media/pipeline-recovery/failed-run-seats.png",
+          "docs/media/pipeline-recovery/checkpoint-after-reload.png",
+          "docs/media/pipeline-recovery/restored-from-checkpoint.png",
+          "docs/media/pipeline-recovery/run-on-record.png",
+          "docs/media/pipeline-recovery/reloaded-from-export.png"
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "The checkpoint is the pane's own `localStorage` copy, not a server record: a pipeline has no checkpoint table, and `save_run()` writes only after the fourth seat, so the honest move was to keep the salvage where the pane can actually keep it and say so on the surface.",
+          "A saved run is read back through `GET /api/history/export` rather than a new `GET /api/runs`: the export already exists, already redacts credentials, and already carries `payload_json`.",
+          "Retry re-runs all four seats because the route has no single-seat entry point; saying so is required, building one would be a runtime change this story's non-regression clause rules out.",
+          "The dropped-stream branch is staged by hand in the walk (setting the run's end reason and re-rendering) because a loopback stream cannot be dropped deterministically; the wiring itself is checked in source, and the doc states the limit."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "P3 is complete. This story adds no route and no runtime change; it reuses the export and the four-seat route. P4 (Council) is next, starting at UIUX-P4-01.",
+        "next_action": "Start UIUX-P4-01 (Council participant roles and resource readiness).",
         "readme_updated": false
       },
       "required_evidence": [

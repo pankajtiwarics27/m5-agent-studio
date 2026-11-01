@@ -215,11 +215,18 @@ def called_routes(source: str) -> list[str]:
 
 
 def pipeline_section(html: str) -> str:
-    """The P3-06 block: from its banner comment to `window.M5Pipeline`."""
+    """The P3-06 block: from its banner comment to the next story's banner.
+
+    Bounded by the *next* story rather than by the card mount, because P3-07 inserted its own
+    block in between; a section that swallowed its successor would report that successor's route
+    and its renderer as this story's.
+    """
     start = html.find("// ── UIUX-P3-06:")
     if start < 0:
         return ""
-    end = html.find("function ensureStageCardMounted(", start)
+    end = html.find("/* ── UIUX-P3-07:", start)
+    if end < 0:
+        end = html.find("function ensureStageCardMounted(", start)
     return html[start:end] if end > start else html[start : start + 30000]
 
 
@@ -310,6 +317,17 @@ def build_inventory() -> dict:
     mount = function_body(html, "ensureStageCardMounted")
     schedule = function_body(html, "scheduleStageUpdate")
     council = function_body(html, "runCouncil")
+    run_start = function_body(html, "startPipelineRun")
+    reset_source = council + run_start
+    # The run's lifecycle - the reset, the stream handlers and the finalizer - moved out of
+    # `runCouncil` when P3-07 needed to start a run from a recorded payload. The rules below are
+    # about what the pane does, not about which function holds the line, so they read all of it.
+    lifecycle = (
+        council
+        + run_start
+        + function_body(html, "pipelineStreamHandlers")
+        + function_body(html, "pipelineStreamFinalizer")
+    )
     section = pipeline_section(html)
 
     artifacts_host = element(html, "councilArtifacts")
@@ -413,25 +431,32 @@ def build_inventory() -> dict:
         "finished.length" in summary and "PIPELINE_SEATS.length" in summary and "totalChars" in summary and "handoffs" in summary,
         summary[:220],
     )
+    # P3-07 gave the endings three words of their own (`Failed` / `Ended` / `Stopped`) and moved
+    # the decision into a single `endedWord`; a stop must still be one of them and must still be
+    # drawn as `partial`, never as a finished run.
+    ended_word = re.search(r'const endedWord = [^;]+;', summary)
     check(
         "a stopped run is stated as stopped",
-        'councilRun.stopped = ![1,2,3,4].every(n => stageBuffers[n] && stageBuffers[n].u);' in council
-        and "Stopped after" in summary
-        and 'host.dataset.state = state' in summary
+        "councilRun.stopped = !allDone;" in lifecycle
+        and bool(ended_word)
+        and '"Stopped"' in (ended_word.group(0) if ended_word else "")
+        and "host.dataset.state = state" in summary
         and '"partial"' in summary,
         "a stop that reads as a finish is the lie this story exists to remove",
     )
     check(
         "a stopped run says it was not saved, and a saved one is named by the id the server gave",
         "A stopped pipeline is not saved" in summary
-        and "councilRun.savedRunId = Number(d.run_id || 0)" in council
+        and "councilRun.savedRunId = Number(d.run_id || 0)" in lifecycle
         and "councilRun.savedRunId > 0" in summary
         and "save_run(\"council\"" in council_body,
         "save_run returns 0 when it cannot write; a zero drawn as a run id is an invented record",
     )
     check(
         "an error is stated, and it is not turned into a stop",
-        "councilRun.error = d.message" in council and "councilRun.error" in summary and "councilRun.error ? \"failed\"" in summary,
+        "councilRun.error = d.message" in lifecycle
+        and "councilRun.error" in summary
+        and "councilRun.error ? \"failed\"" in summary,
         "an error is not the operator's stop, and the surface must not call it one",
     )
     check(
@@ -455,10 +480,11 @@ def build_inventory() -> dict:
     # ── a fresh run starts clean ──────────────────────────────────────────────
     check(
         "a new run clears the rows instead of inheriting them",
-        "stageRowSignature = {};" in council
-        and "councilRun = { taskChars: task.length" in council
-        and 'document.getElementById("councilStagesContainer").innerHTML = "";' in council
-        and 'renderCouncilArtifacts();' in council,
+        "stageRowSignature = {};" in reset_source
+        and "councilRun = {" in reset_source
+        and "taskChars: task.length" in reset_source
+        and 'document.getElementById("councilStagesContainer").innerHTML = "";' in reset_source
+        and 'renderCouncilArtifacts();' in reset_source,
         "a row left over from the last run would describe a run that is not on screen",
     )
     check(
@@ -522,7 +548,7 @@ def build_inventory() -> dict:
     )
     check(
         "the pane draws the chain from the stream and posts only the council route",
-        section_routes == [] and "/api/council/stream" in called_routes(council),
+        section_routes == [] and "/api/council/stream" in called_routes(run_start),
         f"council calls={called_routes(council)}",
     )
 
