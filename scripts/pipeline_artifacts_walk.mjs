@@ -20,7 +20,10 @@
  *   1. every stage card carries a row naming what that seat reads and which seat it feeds;
  *   2. the upstream size is the output the seats before it actually streamed, not the task;
  *   3. the first seat's row counts the task alone, and the last seat says it ends the run;
- *   4. every stage card carries the artifact it produced - characters, tokens, tok/s;
+ *   4. every stage card carries the artifact it produced - its characters, and what the reply
+ *      was: this fixture serves the demo path, so a reply is demo text and is given no tok/s
+ *      (UIUX-P4-02 removed the fabricated figure from this row; the token-and-rate form is
+ *      checked against a real runtime by scripts/council_deliberation_walk.mjs);
  *   5. a seat that produced nothing is drawn as empty, and the run line says the next seat was
  *      handed an empty section;
  *   6. the run line states how many seats finished, the total output, the handoffs that carried
@@ -393,8 +396,11 @@ async function run(args) {
         `taskChars=${full.rows[1].taskChars} prompt=${PROMPT.length} 4="${full.rows[4].handoff}"`,
       );
       record(
-        "every stage card carries the artifact it produced",
-        [1, 2, 4].every((stage) => /chars/.test(full.rows[stage].artifact || "") && /tokens/.test(full.rows[stage].artifact || "") && full.rows[stage].chars === charsOf(stage) && full.rows[stage].chars > 0),
+        "every stage card carries the artifact it produced, and a demo reply keeps no fabricated rate",
+        [1, 2, 4].every((stage) => /chars/.test(full.rows[stage].artifact || "")
+          && /demo text written by the server/.test(full.rows[stage].artifact || "")
+          && !/tok\/s/.test(full.rows[stage].artifact || "")
+          && full.rows[stage].chars === charsOf(stage) && full.rows[stage].chars > 0),
         JSON.stringify([1, 2, 4].map((stage) => ({ stage, artifact: full.rows[stage].artifact }))),
       );
       record(

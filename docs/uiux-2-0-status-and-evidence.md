@@ -45,23 +45,23 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| `#sdlcProgressBadge` | `neutral` | no | 1716 |
-| `#onboardingSummary` | `neutral` | yes | 1863 |
-| `#startRecentSummary` | `neutral` | yes | 1903 |
-| `#startHealthSummary` | `neutral` | yes | 1930 |
-| `#startWorkspaceSummary` | `neutral` | yes | 1948 |
-| `#harnessActiveStatusBadge` | `info` | yes | 2072 |
-| `#hallStatusBadge` | `warn` | yes | 2148 |
-| `#councilReadinessCount` | `neutral` | no | 2161 |
-| (unnamed) | `ok` | no | 2394 |
-| `#dockerStateBadge` | `neutral` | no | 2441 |
-| (unnamed) | `warn` | no | 4194 |
+| `#sdlcProgressBadge` | `neutral` | no | 1741 |
+| `#onboardingSummary` | `neutral` | yes | 1888 |
+| `#startRecentSummary` | `neutral` | yes | 1928 |
+| `#startHealthSummary` | `neutral` | yes | 1955 |
+| `#startWorkspaceSummary` | `neutral` | yes | 1973 |
+| `#harnessActiveStatusBadge` | `info` | yes | 2097 |
+| `#hallStatusBadge` | `warn` | yes | 2173 |
+| `#councilReadinessCount` | `neutral` | no | 2186 |
+| (unnamed) | `ok` | no | 2423 |
+| `#dockerStateBadge` | `neutral` | no | 2470 |
+| (unnamed) | `warn` | no | 4223 |
 
 ## Writers
 
 | Measure | Count |
 |---|---|
-| `setStatus()` call sites | 26 |
+| `setStatus()` call sites | 27 |
 | `evidenceNote()` call sites | 4 |
 | Evidence blocks in markup | 2 |
 | Legacy `className = "badge …"` writers | 0 |

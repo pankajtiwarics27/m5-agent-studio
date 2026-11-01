@@ -146,6 +146,14 @@ def _activity_payload(state: RuntimeState) -> dict:
 
 class _RuntimeHandler(BaseHTTPRequestHandler):
     state: RuntimeState
+    # UIUX-P4-02: a model whose replies the runtime stops at its length limit. A real runtime
+    # truncates; the fixture has to be able to, or the pane's "cut at the length limit" row can
+    # only ever be exercised by a unit test and never seen on a screen.
+    cap_model: str = ""
+    # UIUX-P4-02: a model that answers in reasoning only, which is what the local runtime
+    # actually does sometimes - the orchestrator's `content or reasoning` fallback exists
+    # because of it, and the pane drew that fallback as a 0-character handoff.
+    reasoning_model: str = ""
 
     def log_message(self, *_args) -> None:  # noqa: D401 - silence the access log
         return
@@ -207,15 +215,23 @@ class _RuntimeHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-cache")
         self.end_headers()
+        capped = bool(self.cap_model) and model == self.cap_model
+        reasoning_only = bool(self.reasoning_model) and model == self.reasoning_model
         words = f"The fixture runtime answered as {model}. It streams, so the pane can see a real seat finish.".split(" ")
+        if capped:
+            # Cut where a real ceiling would cut it: the reply stops mid-sentence and the finish
+            # reason says why. The token count stays the truth of what was actually written.
+            words = words[:6]
+
         try:
             for word in words:
-                packet = {"choices": [{"index": 0, "delta": {"content": word + " "}, "finish_reason": None}]}
+                delta = {"reasoning_content": word + " "} if reasoning_only else {"content": word + " "}
+                packet = {"choices": [{"index": 0, "delta": delta, "finish_reason": None}]}
                 self.wfile.write(b"data: " + json.dumps(packet).encode("utf-8") + b"\n\n")
                 self.wfile.flush()
                 time.sleep(0.004)
             usage = {
-                "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+                "choices": [{"index": 0, "delta": {}, "finish_reason": "length" if capped else "stop"}],
                 "usage": {
                     "completion_tokens": len(words),
                     "prompt_tokens": 128,
@@ -231,10 +247,14 @@ class _RuntimeHandler(BaseHTTPRequestHandler):
             return
 
 
-def start_runtime() -> tuple[ThreadingHTTPServer, RuntimeState, str]:
+def start_runtime(cap_model: str = "", reasoning_model: str = "") -> tuple[ThreadingHTTPServer, RuntimeState, str]:
     """Serve the stand-in admin API on loopback and return its base URL."""
     state = RuntimeState()
-    handler = type("RuntimeHandler", (_RuntimeHandler,), {"state": state})
+    handler = type(
+        "RuntimeHandler",
+        (_RuntimeHandler,),
+        {"state": state, "cap_model": cap_model, "reasoning_model": reasoning_model},
+    )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -285,6 +305,16 @@ def seed(environment: demo_tour.DemoEnvironment, runtime_url: str, *, provider: 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--offline", action="store_true", help="serve with no runtime behind the app")
+    parser.add_argument(
+        "--cap-model",
+        default="",
+        help="a model whose replies the stand-in runtime stops at its length limit (finish_reason=length)",
+    )
+    parser.add_argument(
+        "--reasoning-model",
+        default="",
+        help="a model the stand-in runtime answers in reasoning only, with no content (finish_reason=stop)",
+    )
     parser.add_argument("--port", type=int, default=0, help="port to bind on 127.0.0.1 (0 picks one)")
     parser.add_argument("--root", default="", help="reuse a directory as the throwaway environment")
     parser.add_argument("--ready-file", default="", help="also write the ready line to this file")
@@ -293,7 +323,9 @@ def main(argv: list[str] | None = None) -> int:
     runtime: ThreadingHTTPServer | None = None
     runtime_url = ""
     if not args.offline:
-        runtime, _state, runtime_url = start_runtime()
+        runtime, _state, runtime_url = start_runtime(
+            cap_model=args.cap_model, reasoning_model=args.reasoning_model
+        )
 
     try:
         environment = demo_tour.make_environment(Path(args.root).expanduser() if args.root else None)
@@ -319,6 +351,8 @@ def main(argv: list[str] | None = None) -> int:
         "unloaded_fits_model": FITS_MODEL,
         "keyless_alias": KEYLESS_ALIAS,
         "keyless_model": KEYLESS_MODEL,
+        "capped_model": args.cap_model,
+        "reasoning_model": args.reasoning_model,
         "seeded_at": round(time.time(), 3),
         "root": str(environment.root),
     }

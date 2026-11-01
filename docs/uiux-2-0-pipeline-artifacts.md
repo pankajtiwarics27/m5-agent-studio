@@ -67,6 +67,6 @@ drift quietly.
 * `pass` the story adds no endpoint
 * `pass` the council route speaks the same seven events
 * `pass` the run record still carries what it carried
-* `pass` the per-stage inputs the stream cannot carry are not claimed on the page
+* `pass` the per-stage inputs are claimed only from the stream that now carries them
 * `pass` the routes this story must leave alone are still mounted
 * `pass` the pane draws the chain from the stream and posts only the council route
