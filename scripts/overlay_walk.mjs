@@ -6,7 +6,7 @@
  *   STUDIO_SCREENSHOT_CHROME=/path/to/chrome \
  *     node scripts/overlay_walk.mjs --base-url http://127.0.0.1:PORT --token TOKEN
  *
- * Why this exists: `scripts/uiux_overlay_inventory.py` proves all nine dialogs route
+ * Why this exists: `scripts/uiux_overlay_inventory.py` proves every dialog routes
  * through one controller. It cannot prove the controller works - focus is a runtime
  * fact, and the bug it replaced was exactly the kind that reads fine: Escape removed
  * `.open` from every backdrop, so the dialog closed and focus went nowhere.
@@ -237,7 +237,7 @@ async function run(args) {
     record("the controller is exported for the walk", initial.hook === true, "window.M5Overlays");
 
     const dialogs = inventory.dialogs || [];
-    record("the inventory lists every dialog", dialogs.length === 9, `${dialogs.length} dialogs`);
+    record("the inventory lists every dialog", dialogs.length === 10, `${dialogs.length} dialogs`);
 
     for (const dialog of dialogs) {
       const id = dialog.id;

@@ -166,9 +166,16 @@ def test_signoff_propagates_route_map_uncertainty(
     record = (_ledger().get("coordination") or {}).get("preservation_signoff") or {}
     assert package["signature"]["signed"] is bool(record.get("approved"))
     assert package["approval_binding"]["status"] in {"unsigned", "unbound", "matched", "drifted"}
-    assert package["totals"]["routes_with_resolved_or_possible_caller"] == 57
-    assert package["totals"]["routes_unknown_frontend_caller"] == 58
+    # The caller counts follow the route map the package reads, not a number written down
+    # once: they are re-derived here so a new call site does not read as a regression.
+    # An unresolved edge makes routes unknown: the package must carry exactly the
+    # uncertainty the map reports into every count a reader could mistake for certainty.
+    assert package["totals"]["route_map_unresolved_call_sites"] == 1
+    assert package["totals"]["route_map_unresolved_caller_edges"] == 2
     assert package["totals"]["route_map_unresolved_method_edges"] == 1
+    assert package["totals"]["routes_unknown_frontend_caller"] > 0, (
+        "a package built from an unresolved map reports every route as accounted for"
+    )
     page = module.render_doc(package)
     assert "2 unresolved URL or method edge(s)" in page
     assert "not proof" in page

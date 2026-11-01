@@ -4327,6 +4327,34 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
    learn what it holds, or that it was changed. */
 .harness-advanced-summary { margin-left: 8px; font-weight: 400; font-size: 10.8px; color: var(--text-faint); }
 .harness-advanced-summary[data-changed="true"] { color: var(--amber); }
+/* An approval is a permission decision, so the card states the permission it records:
+   which policy is asking, for which tool, until when, and what refusing does instead. */
+.h-approval { background: var(--bg-card); border: 1px solid rgba(245,158,11,0.45); border-left: 3px solid var(--amber); border-radius: 11px; padding: 11px 13px; display: flex; flex-direction: column; gap: 7px; }
+.h-approval[data-live="false"] { opacity: 0.82; }
+.h-approval-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.h-approval-title { font-size: 12.4px; font-weight: 700; color: #fde68a; }
+.h-approval-args { padding: 7px 9px; background: #06090e; border-radius: 6px; font-family: var(--mono); font-size: 11.6px; color: #fff; overflow-x: auto; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.h-approval-consequence { font-size: 11.4px; line-height: 1.5; color: var(--text-dim); }
+.h-approval-consequence strong { color: var(--text); }
+.h-approval-actions { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.h-approval-countdown { color: #fde68a; font-variant-numeric: tabular-nums; }
+.h-approval-facts { border-top: 1px solid var(--border); padding-top: 6px; }
+.h-approval-facts dd { color: var(--text); }
+.harness-perm-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10.8px; font-weight: 700; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-dim); cursor: pointer; }
+.harness-perm-badge[data-count="0"] { color: var(--text-faint); }
+.harness-perm-badge[data-count]:not([data-count="0"]) { color: #fde68a; border-color: rgba(245,158,11,0.5); background: rgba(245,158,11,0.10); }
+.perm-summary { font-size: 11.4px; color: var(--text-dim); background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 11px; line-height: 1.5; }
+.perm-card { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--emerald); border-radius: 9px; padding: 9px 12px; display: flex; flex-direction: column; gap: 6px; }
+.perm-card[data-status="revoked"] { border-left-color: var(--rose); opacity: 0.85; }
+.perm-card[data-status="expired"] { border-left-color: var(--text-faint); opacity: 0.8; }
+.perm-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 11.8px; }
+.perm-id { font-family: var(--mono); font-size: 11px; color: var(--cyan); }
+.perm-facts { display: grid; grid-template-columns: 92px 1fr; gap: 2px 10px; font-size: 11.2px; color: var(--text-dim); }
+.perm-facts dt { color: var(--text-faint); }
+.perm-facts dd { margin: 0; overflow-wrap: anywhere; }
+.perm-confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: rgba(244,63,94,0.10); border: 1px solid rgba(244,63,94,0.45); border-radius: 8px; padding: 7px 10px; font-size: 11.2px; color: #fecdd3; }
+.perm-section { font-size: 10.8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
+.perm-empty { font-size: 11.4px; color: var(--text-faint); }
 /* The durable log, stated before the view of it: the strip says what the pane is showing
    and the list is the record itself, oldest first, one row per event with its seq. */
 .harness-timeline { flex: 0 0 auto; max-height: 45%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; border-bottom: 1px solid var(--border); background: var(--bg-elev); padding: 4px 12px; }
@@ -4993,6 +5021,33 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   </div>
 </div>
 
+<!-- ================= PERMISSIONS & REVOCATIONS MODAL ================= -->
+<div id="harnessGrantsModal" class="modal-backdrop" onclick="if(event.target===this)closeHarnessGrants()">
+  <div class="modal" style="max-width:880px;" role="dialog" aria-label="Harness permissions for this session">
+    <div style="padding:13px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:10px;">
+      <div>
+        <strong style="font-size:14.8px;">Permissions for this session</strong>
+        <div id="harnessGrantsMeta" class="mono" style="font-size:11.3px; color:var(--text-dim);"></div>
+      </div>
+      <div style="display:flex; gap:7px; align-items:center;">
+        <button class="btn btn-xs" onclick="refreshHarnessGrants()">Refresh</button>
+        <button class="btn btn-xs" onclick="closeHarnessGrants()">Close</button>
+      </div>
+    </div>
+    <div style="padding:14px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; max-height:72vh;">
+      <div id="harnessGrantsSummary" class="perm-summary" role="status" aria-live="polite">No session selected.</div>
+      <div class="perm-section">Active</div>
+      <div id="harnessGrantsActive" class="perm-empty" style="display:flex; flex-direction:column; gap:8px;">No permission is held by this session.</div>
+      <div class="perm-section">Revocation rules</div>
+      <div id="harnessGrantsRules" class="perm-empty" style="display:flex; flex-direction:column; gap:8px;">Nothing has been revoked in this session.</div>
+      <div class="perm-section">History</div>
+      <div id="harnessGrantsHistory" class="perm-empty" style="display:flex; flex-direction:column; gap:8px;">No permission has been granted or expired yet.</div>
+      <div class="perm-section">Approvals</div>
+      <div id="harnessGrantsApprovals" class="perm-empty" style="display:flex; flex-direction:column; gap:8px;">No approval is pending or expired in this session.</div>
+    </div>
+  </div>
+</div>
+
 <!-- ================= CLOUD PROVIDERS & OMNIROUTE COMBOS MODAL ================= -->
 <div id="providersModal" class="modal-backdrop" onclick="if(event.target===this)closeProvidersModal()">
   <div class="modal" role="dialog" aria-label="Cloud Providers & OmniRoute Router">
@@ -5440,6 +5495,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
               <select id="harnessSessionActionSelect" aria-label="Session actions" style="font-size:11.6px; padding:5px 9px;" onchange="runHarnessSessionAction(this)">
                 <option value="">Session Actions…</option>
                 <option value="diff">Inspect Git Status &amp; Diff</option>
+                <option value="permissions">Permissions &amp; Revocations</option>
                 <option value="compact">Compact Session Context (&le;2 KB)</option>
                 <option value="sdlc">Open Agile SDLC Product Board</option>
               </select>
@@ -5452,6 +5508,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <span id="harnessActiveLabel">New session — choose a project directory and model, then describe the task.</span>
             <div style="display:flex; gap:6px; align-items:center;">
               <span id="harnessCtxSavingsBadge" class="badge green" style="display:none;" title="Context-Mode SQLite FTS5 KV-Cache Compression Savings">Ctx Saved 0%</span>
+              <button id="harnessPermissionBadge" class="harness-perm-badge" type="button" data-count="0" hidden onclick="openHarnessGrants()" title="Permissions this session holds, and the way to take them back">No permissions</button>
               <span id="harnessActiveStatusBadge" class="status" data-tone="info" role="status">READY</span>
             </div>
           </div>
@@ -7699,6 +7756,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const v = sel.value;
     sel.value = "";
     if (v === "diff") openHarnessDiffModal();
+    else if (v === "permissions") openHarnessGrants();
     else if (v === "compact") compactActiveHarness();
     else if (v === "sdlc") openSdlcModal();
   }
@@ -8987,6 +9045,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     closeHarnessEventStream();
     document.getElementById("harnessActiveLabel").textContent = "New Harness Draft — choose workspace, worktree isolation, & policy, then run your task below.";
     setStatus("harnessActiveStatusBadge", "neutral", "NEW DRAFT");
+    harnessGrantSnapshot = null;
+    harnessGrantConfirm = "";
+    harnessApprovalRequests.clear();
+    updateHarnessPermissionBadge();
     clearHarnessIncomingBrief();
     renderHarnessStarter();
     renderHarnessSidebar();
@@ -9130,6 +9192,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     harnessResetEventCache();
     harnessLogTelemetry = { source: "idle", reason: "", trigger: "", pages: 0, reloads: 0, resyncs: 0, streamed: 0, latest: 0, retained: 0 };
     harnessSnapshot = null;
+    harnessGrantSnapshot = null;
+    harnessGrantConfirm = "";
+    harnessApprovalRequests.clear();
+    updateHarnessPermissionBadge();
     await closeHarnessEventStream();
     try {
       const r = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}`);
@@ -9138,6 +9204,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     } catch (e) {}
     renderHarnessSidebar();
     await harnessResyncFromSnapshot("select");
+    await refreshHarnessGrants();
     if (!harnessRunActive) openHarnessEventStream();
   }
 
@@ -9708,6 +9775,388 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     harnessResyncFromSnapshot("focus");
   });
 
+  // ================= UIUX-P3-03: AN APPROVAL IS A PERMISSION =================
+  // Approving a tool call is not "run it once": POST /api/harness/approve resolves the gate
+  // and records a scoped grant (`max_uses: 1`, the exact arguments, ten minutes by default,
+  // `issued_by: operator_approval`), which is what lets the call execute. The pane had four
+  // different approval cards, and none of them said any of that - three printed a hardcoded
+  // hardcoded policy badge whatever policy was in force, and nothing in the UI could list or
+  // revoke what an approval had left behind, although the grants routes existed.
+  //
+  // So there is one card builder now, and it states the decision: the policy asking, the
+  // permission the click records and its limit, and what refusing does instead. The same
+  // surface lists the session's permissions, its revocation rules and its expired approvals,
+  // and can take a permission back.
+  const HARNESS_APPROVAL_GRANT_TTL_SECONDS = 600; // mirrors scoped_grants.SG_DEFAULT_GRANT_TTL_SECONDS
+
+  // What approving a tool call will record, stated before the click. The mapping is a copy of
+  // scoped_grants.resolve_tool_capabilities(), and scripts/uiux_harness_permissions_inventory.py
+  // imports that function and fails if the two ever disagree - the copy is checked, not trusted.
+  const HARNESS_TOOL_CAPABILITIES = {
+    "run_bash": ["code_execution", "workspace_read", "workspace_write"],
+    "ctx_execute_python": ["code_execution", "workspace_read", "workspace_write"],
+    "skill_execute_script": ["code_execution", "workspace_read", "workspace_write"],
+    "ctx_run_block": ["code_execution", "workspace_read", "workspace_write"],
+    "write_file": ["workspace_write", "workspace_read"],
+    "edit_file": ["workspace_write", "workspace_read"],
+    "rollback_edits": ["workspace_write", "workspace_read"],
+    "read_file": ["workspace_read"],
+    "list_files": ["workspace_read"],
+    "grep_search": ["workspace_read"],
+    "codegraph_context": ["workspace_read"],
+    "ctx_search": ["workspace_read"],
+    "oc_save_doc": ["context_write"],
+    "mcp_bridge__oc_save_doc": ["context_write"],
+    "delegate_subagent": ["subagent_delegation"],
+    "mcp_bridge__start_council": ["council_mutation"],
+    "mcp_bridge__send_response": ["council_mutation"],
+    "mcp_bridge__close_council": ["council_mutation"]
+  };
+  const HARNESS_TOOL_CAPABILITY_FALLBACK = ["code_execution", "workspace_read", "workspace_write", "external_mcp"];
+
+  // The card cannot canonicalise a path the way the server does, so it names the argument it
+  // can see and says where the server will resolve it, rather than inventing a scope string.
+  function harnessApprovalPermission(ev) {
+    const tool = String((ev && ev.tool) || "");
+    const args = (ev && ev.args) || {};
+    const caps = tool.startsWith("mcp__")
+      ? ["external_mcp"]
+      : (HARNESS_TOOL_CAPABILITIES[tool] || HARNESS_TOOL_CAPABILITY_FALLBACK);
+    const path = String(args.path || args.file_path || args.dir || "").trim();
+    const resource = path
+      ? `the path \`${path}\`, resolved inside this session's worktree`
+      : "this session's worktree, and nothing outside it";
+    return { tool, capabilities: caps, resource };
+  }
+
+  function harnessPolicyInForce() {
+    const session = activeHarnessSession || (harnessSnapshot && harnessSnapshot.session) || null;
+    const fromSession = session && session.policy ? String(session.policy) : "";
+    const control = document.getElementById("harnessPolicy");
+    const fromControl = control && control.value ? String(control.value) : "";
+    return fromSession || fromControl || "standard";
+  }
+
+  function harnessPolicyLabel(policy) {
+    // The option's own label, so the card and the select cannot describe one policy twice.
+    const control = document.getElementById("harnessPolicy");
+    const value = String(policy || "");
+    if (control && value) {
+      for (const option of control.options || []) {
+        if (option.value === value && option.textContent.trim()) return option.textContent.trim();
+      }
+    }
+    return value || "standard";
+  }
+
+  function harnessClockFrom(seconds) {
+    const at = new Date(Number(seconds) * 1000);
+    if (Number.isNaN(at.getTime())) return "";
+    return at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  // The resolved event carries only {approval_id, decision, note, step}: no tool and no
+  // arguments. Redrawing a decided card from that alone would erase what was decided on, so
+  // every render files the request here first.
+  const harnessApprovalRequests = new Map();
+  let harnessApprovalCountdown = null;
+
+  function harnessApprovalRemainingLabel(expiresAt) {
+    const left = Math.round(Number(expiresAt) - (Date.now() / 1000));
+    if (!Number.isFinite(left)) return "";
+    if (left <= 0) return "this offer has expired";
+    const minutes = Math.floor(left / 60);
+    const seconds = left % 60;
+    return minutes >= 1 ? `expires in ${minutes} min` : `expires in ${seconds} s`;
+  }
+
+  function tickHarnessApprovalCountdowns() {
+    const nodes = Array.from(document.querySelectorAll(".h-approval[data-live=\"true\"] .h-approval-countdown"));
+    for (const node of nodes) node.textContent = harnessApprovalRemainingLabel(node.dataset.expiresAt);
+    if (!nodes.length && harnessApprovalCountdown) {
+      clearInterval(harnessApprovalCountdown);
+      harnessApprovalCountdown = null;
+    }
+  }
+
+  function startHarnessApprovalCountdown() {
+    if (harnessApprovalCountdown) return;
+    harnessApprovalCountdown = setInterval(tickHarnessApprovalCountdowns, 15000);
+  }
+
+  function harnessApprovalGrantExpiry(ev) {
+    const requested = Number(ev && ev.ts) || (Date.now() / 1000);
+    return requested + HARNESS_APPROVAL_GRANT_TTL_SECONDS;
+  }
+
+  // One approval card for all four paths that used to draw their own. `opts.decided` and
+  // `opts.live` decide whether the decision is still open; the consequence sentence is the
+  // same in every state, because what the click means does not change with the styling.
+  function renderHarnessApprovalCardHtml(ev, opts) {
+    const options = opts || {};
+    const approvalId = String((ev && ev.approval_id) || "");
+    const decided = String(options.decided || "");
+    const live = !decided && options.live !== false;
+    const step = Number(ev && ev.step);
+    // A resolved event carries no tool and no arguments, so fall back to what was filed the
+    // first time this approval id was drawn.
+    const filed = approvalId ? harnessApprovalRequests.get(approvalId) : null;
+    const tool = String((ev && ev.tool) || (filed && filed.tool) || "");
+    const args = (ev && ev.args && Object.keys(ev.args).length) ? ev.args : ((filed && filed.args) || {});
+    const requestedAt = Number(ev && ev.ts) || (filed && filed.ts) || 0;
+    const expiresAt = harnessApprovalGrantExpiry({ ts: requestedAt });
+    if (approvalId && tool && !filed) {
+      harnessApprovalRequests.set(approvalId, { approval_id: approvalId, tool, args, step, ts: requestedAt });
+    }
+    if (live) startHarnessApprovalCountdown();
+    const policyLabel = harnessPolicyLabel(options.policy || harnessPolicyInForce());
+    const stepBadge = Number.isFinite(step) && step ? `<span class="badge">step ${escapeHtml(String(step))}</span>` : "";
+    const stateBadge = decided
+      ? `<span class="badge ${decided === "approve" ? "green" : "amber"}">${decided === "approve" ? "Approved" : "Rejected"}</span>`
+      : (live ? `<span class="badge amber">Awaiting decision</span>` : `<span class="badge amber">Expired — re-run the turn</span>`);
+    const noteId = `apr-note-${approvalId}`;
+    const actions = live
+      ? `<div class="h-approval-actions"><button class="btn btn-emerald btn-xs" onclick="resolveHarnessApproval('${escapeHtml(approvalId)}','approve','${escapeHtml(String(options.sessionId || ""))}')">${UI_ICONS.check} Approve &amp; run once</button><button class="btn btn-danger btn-xs" onclick="resolveHarnessApproval('${escapeHtml(approvalId)}','reject','${escapeHtml(String(options.sessionId || ""))}')">${UI_ICONS.close} Reject</button><input type="text" id="${escapeHtml(noteId)}" placeholder="Optional note, recorded with the decision" style="flex:1;min-width:170px;font-size:11.5px;padding:4px 8px;" /></div>`
+      : "";
+    const permission = harnessApprovalPermission({ tool, args });
+    const facts = `<dl class="perm-facts h-approval-facts"><dt>Capability</dt><dd>${escapeHtml(permission.capabilities.join(", "))}</dd><dt>Resource</dt><dd>${escapeHtml(permission.resource)}</dd><dt>Limit</dt><dd>one use · ${escapeHtml(String(Math.round(HARNESS_APPROVAL_GRANT_TTL_SECONDS / 60)))} minutes after you decide</dd></dl>`;
+    const consequence = live
+      ? `Approving runs <code>${escapeHtml(tool)}</code> once and records a permission for <strong>this exact call</strong>: one use, valid until <strong>${escapeHtml(harnessClockFrom(expiresAt))}</strong> (<span class="h-approval-countdown" data-expires-at="${escapeHtml(String(expiresAt))}">${escapeHtml(harnessApprovalRemainingLabel(expiresAt))}</span>). It is not a standing allow for <code>${escapeHtml(tool)}</code>. Rejecting refuses this call and records the decision, and the turn waits.`
+      : (decided === "approve"
+        ? `You approved this call; it ran once under a one-use permission that has now been used. That permission granted nothing beyond these exact arguments.`
+        : (decided === "reject"
+          ? `You refused this call, so it did not run and no permission was recorded.`
+          : `This request was never decided — the run it belonged to ended. Re-run the turn to reach the gate again; nothing was granted.`));
+    return `<div class="h-approval" id="apr-card-${escapeHtml(approvalId)}" data-approval-id="${escapeHtml(approvalId)}" data-live="${live ? "true" : "false"}"><div class="h-approval-head"><span class="h-approval-title">${UI_ICONS.warn} Approval required: <code>${escapeHtml(tool)}</code></span><span style="display:flex;gap:5px;flex-wrap:wrap;">${stepBadge}<span class="badge amber">${escapeHtml(policyLabel)}</span>${stateBadge}</span></div><pre class="h-approval-args">${escapeHtml(formatToolArgsSummary(tool, args))}</pre>${facts}<div class="h-approval-consequence">${consequence}</div>${actions}</div>`;
+  }
+
+  let harnessGrantSnapshot = null;
+  let harnessGrantConfirm = "";
+  let harnessGrantBusy = "";
+
+  async function openHarnessGrants() {
+    if (!activeHarnessId) {
+      showToast("Select a Harness session first: a permission belongs to the session that holds it.", "warn");
+      return null;
+    }
+    openOverlay("harnessGrantsModal", { focus: "#harnessGrantsSummary" });
+    await refreshHarnessGrants();
+    return harnessGrantSnapshot;
+  }
+
+  function closeHarnessGrants() {
+    harnessGrantConfirm = "";
+    closeOverlay("harnessGrantsModal");
+  }
+
+  async function refreshHarnessGrants() {
+    const sessionId = activeHarnessId;
+    const summary = document.getElementById("harnessGrantsSummary");
+    harnessGrantConfirm = "";
+    if (!sessionId) {
+      if (summary) summary.textContent = "No session selected.";
+      return null;
+    }
+    if (summary) summary.textContent = "Reading this session's permissions…";
+    let payload = null;
+    let error = "";
+    try {
+      const res = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/grants`);
+      if (res.ok) payload = await res.json();
+      else error = `the server answered ${res.status}`;
+    } catch (e) {
+      error = (e && e.message) ? e.message : "the request failed";
+    }
+    if (activeHarnessId !== sessionId) return null;
+    harnessGrantSnapshot = payload;
+    renderHarnessGrants(error);
+    updateHarnessPermissionBadge();
+    return payload;
+  }
+
+  function harnessGrantRemaining(grant) {
+    const seconds = Math.round(Number(grant.expires_at) - (Date.now() / 1000));
+    if (!Number.isFinite(seconds)) return "";
+    if (seconds <= 0) return "expired";
+    const minutes = Math.floor(seconds / 60);
+    return minutes >= 1 ? `${minutes} min left` : `${seconds} s left`;
+  }
+
+  function harnessGrantUses(grant) {
+    if (grant.max_uses === null || grant.max_uses === undefined) return "no use limit until it expires";
+    const used = Number(grant.uses_consumed) || 0;
+    const max = Number(grant.max_uses) || 0;
+    return max === 1 ? `one use${used ? " (used)" : ""}` : `${max} uses, ${used} used`;
+  }
+
+  function harnessGrantFacts(grant) {
+    const tools = (grant.tool_names || []).join(", ") || "no tool named";
+    const caps = (grant.capabilities || []).join(", ") || "no capability";
+    const scopes = (grant.resource_scopes || []).join(", ") || "no resource scope";
+    const expiry = harnessClockFrom(grant.expires_at);
+    // A permission that has ended is not counting down: "9 min left" on a revoked grant
+    // would be the one lie this surface cannot tell.
+    const remaining = String(grant.status) === "active" && harnessGrantRemaining(grant)
+      ? ` · ${harnessGrantRemaining(grant)}`
+      : (grant.revoked_at ? ` · ended ${harnessClockFrom(grant.revoked_at)}` : "");
+    return `<dl class="perm-facts"><dt>Tool</dt><dd>${escapeHtml(tools)}</dd><dt>Capability</dt><dd>${escapeHtml(caps)}</dd><dt>Resource</dt><dd>${escapeHtml(scopes)}</dd><dt>Limit</dt><dd>${escapeHtml(harnessGrantUses(grant))}${grant.args_sha256 ? " · exact arguments only" : ""}</dd><dt>Expires</dt><dd>${escapeHtml(expiry)}${escapeHtml(remaining)}</dd><dt>Issued by</dt><dd>${escapeHtml(String(grant.issued_by || ""))}${grant.note ? ` — ${escapeHtml(String(grant.note))}` : ""}</dd></dl>`;
+  }
+
+  function harnessGrantCard(grant, extra) {
+    const status = String(grant.status || "");
+    return `<div class="perm-card" data-status="${escapeHtml(status)}" data-grant-id="${escapeHtml(String(grant.grant_id))}"><div class="perm-head"><span class="perm-id">${escapeHtml(String(grant.grant_id))}</span><span class="badge ${status === "active" ? "green" : (status === "revoked" ? "amber" : "")}">${escapeHtml(status || "unknown")}</span></div>${harnessGrantFacts(grant)}${extra || ""}</div>`;
+  }
+
+  function renderHarnessGrants(error) {
+    const meta = document.getElementById("harnessGrantsMeta");
+    const summaryBox = document.getElementById("harnessGrantsSummary");
+    const activeBox = document.getElementById("harnessGrantsActive");
+    const rulesBox = document.getElementById("harnessGrantsRules");
+    const historyBox = document.getElementById("harnessGrantsHistory");
+    const approvalsBox = document.getElementById("harnessGrantsApprovals");
+    if (!activeBox || !rulesBox || !historyBox) return;
+    if (meta) {
+      meta.textContent = activeHarnessId
+        ? `${activeHarnessId} · policy ${harnessPolicyLabel(harnessPolicyInForce())}${harnessGrantSnapshot && harnessGrantSnapshot.session_policy_revision ? ` · revision ${harnessGrantSnapshot.session_policy_revision}` : ""}`
+        : "No session selected.";
+    }
+    if (error) {
+      if (summaryBox) { summaryBox.textContent = `The permissions could not be read: ${error}. Nothing below is current.`; summaryBox.dataset.tone = "error"; }
+      return;
+    }
+    if (summaryBox) delete summaryBox.dataset.tone;
+    const data = harnessGrantSnapshot || {};
+    const active = Array.isArray(data.active_grants) ? data.active_grants : [];
+    const grants = Array.isArray(data.grants) ? data.grants : [];
+    const rules = Array.isArray(data.revocations) ? data.revocations : [];
+    const past = grants.filter((grant) => String(grant.status) !== "active");
+    if (summaryBox) {
+      summaryBox.textContent = active.length
+        ? `This session holds ${active.length} permission${active.length === 1 ? "" : "s"}. Approving a tool call records one; it covers one use of the exact arguments and expires on its own. ${rules.length ? `${rules.length} revocation rule${rules.length === 1 ? "" : "s"} also refuse matching actions.` : ""}`
+        : `This session holds no permission. ${rules.length ? `${rules.length} revocation rule${rules.length === 1 ? "" : "s"} refuse${rules.length === 1 ? "s" : ""} matching actions anyway.` : "Approving a tool call is what records one."}`;
+    }
+    activeBox.className = active.length ? "" : "perm-empty";
+    activeBox.style.display = "flex";
+    activeBox.style.flexDirection = "column";
+    activeBox.style.gap = "8px";
+    activeBox.innerHTML = active.length
+      ? active.map((grant) => {
+        const id = escapeHtml(String(grant.grant_id));
+        if (harnessGrantConfirm === String(grant.grant_id)) {
+          const caps = (grant.capabilities || []).join(", ") || "this capability";
+          const scopes = (grant.resource_scopes || []).join(", ") || "this workspace";
+          return harnessGrantCard(grant, `<div class="perm-confirm" role="alert"><span>Revoking does two things: the permission stops now, and a <strong>revocation rule</strong> refuses <code>${escapeHtml(caps)}</code> on <code>${escapeHtml(scopes)}</code> for the rest of this session — matching running commands are stopped too. Neither can be undone from here.</span><button class="btn btn-danger btn-xs" ${harnessGrantBusy === String(grant.grant_id) ? "disabled" : ""} onclick="revokeHarnessGrant('${id}')">Revoke and block</button><button class="btn btn-xs" onclick="cancelRevokeHarnessGrant()">Keep it</button></div>`);
+        }
+        return harnessGrantCard(grant, `<div style="display:flex;gap:7px;flex-wrap:wrap;"><button class="btn btn-danger btn-xs" onclick="requestRevokeHarnessGrant('${id}')">Revoke…</button></div>`);
+      }).join("")
+      : "No permission is held by this session.";
+    rulesBox.className = rules.length ? "" : "perm-empty";
+    rulesBox.style.display = "flex";
+    rulesBox.style.flexDirection = "column";
+    rulesBox.style.gap = "8px";
+    rulesBox.innerHTML = rules.length
+      ? rules.map((rule) => `<div class="perm-card" data-status="revoked" data-revocation-id="${escapeHtml(String(rule.revocation_id))}"><div class="perm-head"><span class="perm-id">${escapeHtml(String(rule.revocation_id))}</span><span class="badge amber">blocks ${escapeHtml((rule.capabilities || []).join(", ") || "matching actions")}</span></div><dl class="perm-facts"><dt>Resource</dt><dd>${escapeHtml((rule.resource_scopes || []).join(", ") || "any")}</dd><dt>Reason</dt><dd>${escapeHtml(String(rule.reason || ""))}</dd><dt>From</dt><dd>${escapeHtml(harnessClockFrom(rule.created_at))} · for the rest of this session</dd></dl></div>`).join("")
+      : "Nothing has been revoked in this session.";
+    historyBox.className = past.length ? "" : "perm-empty";
+    historyBox.style.display = "flex";
+    historyBox.style.flexDirection = "column";
+    historyBox.style.gap = "8px";
+    historyBox.innerHTML = past.length
+      ? past.map((grant) => harnessGrantCard(grant, `<div class="perm-facts"><dt>Ended</dt><dd>${escapeHtml(String(grant.status) || "")}${grant.revoked_reason ? ` — ${escapeHtml(String(grant.revoked_reason))}` : ""}</dd></div>`)).join("")
+      : "No permission has been granted or expired yet.";
+    if (approvalsBox) {
+      const approvals = (harnessSnapshot && harnessSnapshot.approvals) || {};
+      const pending = Array.isArray(approvals.pending) ? approvals.pending : [];
+      const expired = Array.isArray(approvals.expired) ? approvals.expired : [];
+      const rows = [];
+      for (const item of pending) {
+        rows.push(`<div class="perm-card" data-status="active"><div class="perm-head"><span class="perm-id">${escapeHtml(String(item.approval_id))}</span><span class="badge amber">waiting for you</span></div><dl class="perm-facts"><dt>Tool</dt><dd>${escapeHtml(String(item.tool || ""))}</dd><dt>Step</dt><dd>${escapeHtml(String(item.step || "?"))}</dd></dl><div style="display:flex;gap:7px;flex-wrap:wrap;"><button class="btn btn-xs" onclick="focusHarnessApprovalCard('${escapeHtml(String(item.approval_id))}')">Show the card</button></div></div>`);
+      }
+      for (const item of expired) {
+        rows.push(`<div class="perm-card" data-status="expired"><div class="perm-head"><span class="perm-id">${escapeHtml(String(item.approval_id))}</span><span class="badge">expired</span></div><dl class="perm-facts"><dt>Tool</dt><dd>${escapeHtml(String(item.tool || ""))}</dd><dt>What to do</dt><dd>the run this belonged to has ended; re-run the turn to reach the gate again</dd></dl></div>`);
+      }
+      approvalsBox.className = rows.length ? "" : "perm-empty";
+      approvalsBox.innerHTML = rows.length ? rows.join("") : "No approval is pending or expired in this session.";
+    }
+  }
+
+  function requestRevokeHarnessGrant(grantId) {
+    harnessGrantConfirm = String(grantId || "");
+    renderHarnessGrants("");
+  }
+
+  function cancelRevokeHarnessGrant() {
+    harnessGrantConfirm = "";
+    renderHarnessGrants("");
+  }
+
+  async function revokeHarnessGrant(grantId) {
+    const sessionId = activeHarnessId;
+    if (!sessionId || !grantId) return null;
+    harnessGrantBusy = String(grantId);
+    renderHarnessGrants("");
+    let payload = null;
+    let error = "";
+    try {
+      const res = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/grants/revoke`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grant_id: grantId, reason: "operator_revoked", block_scope: true }),
+      });
+      if (res.ok) payload = await res.json();
+      else {
+        try { error = (await res.json()).detail || `the server answered ${res.status}`; } catch (_) { error = `the server answered ${res.status}`; }
+      }
+    } catch (e) {
+      error = (e && e.message) ? e.message : "the request failed";
+    }
+    harnessGrantBusy = "";
+    harnessGrantConfirm = "";
+    if (activeHarnessId !== sessionId) return null;
+    if (error) {
+      showToast(`Revocation failed: ${error}`, "error");
+      renderHarnessGrants("");
+      return null;
+    }
+    if (payload && payload.summary) harnessGrantSnapshot = payload.summary;
+    const stopped = Number(payload && payload.contained_processes) || 0;
+    showToast(`Revoked ${grantId}. ${stopped ? `${stopped} matching command${stopped === 1 ? "" : "s"} stopped. ` : ""}The capability is refused for the rest of this session.`, "warn");
+    renderHarnessGrants("");
+    updateHarnessPermissionBadge();
+    await refreshHarnessGrants();
+    await harnessResyncFromSnapshot("grant_revoked");
+    return payload;
+  }
+
+  function focusHarnessApprovalCard(approvalId) {
+    const card = document.getElementById(`apr-card-${approvalId}`);
+    if (!card) {
+      showToast("That approval is not in the trajectory any more; Resync to re-read the log.", "warn");
+      return null;
+    }
+    closeOverlay("harnessGrantsModal");
+    card.scrollIntoView({ block: "center" });
+    card.setAttribute("tabindex", "-1");
+    card.focus({ preventScroll: true });
+    return approvalId;
+  }
+
+  function updateHarnessPermissionBadge() {
+    const badge = document.getElementById("harnessPermissionBadge");
+    if (!badge) return null;
+    if (!activeHarnessId) {
+      badge.hidden = true;
+      badge.dataset.count = "0";
+      return null;
+    }
+    const active = (harnessGrantSnapshot && Array.isArray(harnessGrantSnapshot.active_grants)) ? harnessGrantSnapshot.active_grants.length : null;
+    badge.hidden = false;
+    badge.dataset.count = String(active === null ? 0 : active);
+    badge.textContent = active === null ? "Permissions" : (active ? `${active} permission${active === 1 ? "" : "s"}` : "No permissions");
+    badge.setAttribute("aria-label", active ? `${active} permission${active === 1 ? "" : "s"} active in this session — review or revoke` : "No permissions active in this session — review");
+    return active;
+  }
+
   function renderRecordedHarnessEventHtml(ev) {
     // The fallback card. A log the pane cannot draw is a log the pane drops, and a reader
     // cannot tell a dropped event from an event that never happened.
@@ -9744,13 +10193,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const approvalId = String(ev.approval_id || "");
       const decided = decisions[approvalId];
       const isLive = !decided && livePending.has(approvalId);
-      const badgeHtml = decided
-        ? `<span class="badge ${decided === "approve" ? "green" : "amber"}">${decided === "approve" ? "Approved" : "Rejected"}</span>`
-        : (isLive ? `<span class="badge amber">Awaiting decision</span>` : `<span class="badge amber">Expired — re-run the turn</span>`);
-      const controls = isLive
-        ? `<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:6px;"><button class="btn btn-emerald btn-xs" onclick="resolveHarnessApproval('${escapeHtml(approvalId)}','approve','${escapeHtml(activeHarnessId || '')}')">${UI_ICONS.check} Approve &amp; Run</button><button class="btn btn-danger btn-xs" onclick="resolveHarnessApproval('${escapeHtml(approvalId)}','reject','${escapeHtml(activeHarnessId || '')}')">${UI_ICONS.close} Reject</button><input type="text" id="apr-note-${escapeHtml(approvalId)}" placeholder="Optional rejection guidance" style="flex:1;min-width:160px;font-size:11.5px;padding:4px 8px;" /></div>`
-        : "";
-      return `<div class="h-tool-card wait" id="apr-card-${escapeHtml(approvalId)}"><div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;flex-wrap:wrap;"><strong style="color:#fde68a;">${UI_ICONS.warn} Approval required: <code>${escapeHtml(ev.tool || "")}</code></strong>${badgeHtml}</div><pre style="padding:7px 9px;background:#06090e;border-radius:6px;font-family:var(--mono);font-size:11.6px;color:#fff;overflow-x:auto;margin-bottom:6px;">${escapeHtml(formatToolArgsSummary(ev.tool, ev.args))}</pre>${controls}</div>`;
+      return renderHarnessApprovalCardHtml(ev, { decided, live: isLive, sessionId: activeHarnessId || "" });
     }
     if (ev.type === "approval/decision") {
       const approved = ev.decision === "approve";
@@ -9839,7 +10282,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const card = document.createElement("div");
     card.id = `apr-card-${d.approval_id}`;
     card.className = "h-tool-card wait";
-    card.innerHTML = `<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;"><strong style="color:#fde68a;">${UI_ICONS.warn} Approval required: <code>${escapeHtml(d.tool)}</code></strong><span class="badge amber">Standard Policy</span></div><pre style="padding:7px 9px;background:#06090e;border-radius:6px;font-family:var(--mono);font-size:11.6px;color:#fff;overflow-x:auto;margin-bottom:8px;">${escapeHtml(formatToolArgsSummary(d.tool, d.args))}</pre><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;"><button class="btn btn-emerald btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}','approve','${escapeHtml(d.session_id||'')}')">${UI_ICONS.check} Approve &amp; Run</button><button class="btn btn-danger btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}','reject','${escapeHtml(d.session_id||'')}')">${UI_ICONS.close} Reject</button><input type="text" id="apr-note-${escapeHtml(d.approval_id)}" placeholder="Optional rejection guidance" style="flex:1;min-width:160px;font-size:11.5px;padding:4px 8px;" /></div>`;
+    card.innerHTML = renderHarnessApprovalCardHtml(d, { live: true, sessionId: d.session_id || activeHarnessId || "", policy: d.policy });
     target.appendChild(card);
     target.scrollTop = target.scrollHeight;
   }
@@ -9847,8 +10290,18 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function updateWorkflowApprovalCard(d) {
     const statusBadge = document.getElementById("harnessActiveStatusBadge");
     if (statusBadge) setStatus(statusBadge, "ok", "WORKFLOW RUNNING");
+    const decided = d.decision === "approve" ? "approve" : "reject";
     const card = document.getElementById(`apr-card-${d.approval_id}`);
-    if (card) card.innerHTML = `<div class="mono" style="font-size:11.3px;color:${d.decision === 'approve' ? '#6ee7b7' : '#fda4af'};">${d.decision === 'approve' ? UI_ICONS.check + ' Approved — executing...' : UI_ICONS.close + ' Rejected'}</div>`;
+    if (card) {
+      // Keep the whole card: the arguments and the sentence about the permission stay, so a
+      // reader can still see what was decided and on what.
+      const known = harnessApprovalRequests.get(String(d.approval_id)) || {};
+      const html = renderHarnessApprovalCardHtml({ type: "approval/request", ...known, ...d }, { decided, live: false, sessionId: d.session_id || known.session_id || activeHarnessId || "" });
+      const wrapper = document.createElement("div");
+      wrapper.innerHTML = html.trim();
+      if (wrapper.firstElementChild) card.replaceWith(wrapper.firstElementChild);
+    }
+    updateHarnessPermissionBadge();
   }
 
   async function resolveHarnessApproval(approvalId, decision, sessionId) {
@@ -9874,6 +10327,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       return;
     }
     await harnessResyncFromSnapshot("approval_decision");
+    // Approving records a permission; rejecting records a tombstone. Either way the badge
+    // and, if it is open, the surface have to say what the session now holds.
+    await refreshHarnessGrants();
   }
 
   async function abortHarnessRun() {
@@ -10008,25 +10464,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         const aprDiv = document.createElement("div");
         aprDiv.id = `apr-card-${d.approval_id}`;
         aprDiv.className = "h-tool-card wait";
-        aprDiv.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
-            <strong style="color:#fde68a;">${UI_ICONS.warn} Human Approval Required: <code>${escapeHtml(d.tool)}</code></strong>
-            <span class="badge amber">Standard Policy</span>
-          </div>
-          <pre style="padding:7px 9px; background:#06090e; border-radius:6px; font-family:var(--mono); font-size:11.6px; color:#fff; overflow-x:auto; margin-bottom:8px;">${escapeHtml(formatToolArgsSummary(d.tool, d.args))}</pre>
-          <div style="display:flex; gap:7px; align-items:center; flex-wrap:wrap;">
-            <button class="btn btn-emerald btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}', 'approve', '${escapeHtml(d.session_id||'')}')">${UI_ICONS.check} Approve &amp; Run</button>
-            <button class="btn btn-danger btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}', 'reject', '${escapeHtml(d.session_id||'')}')">${UI_ICONS.close} Reject</button>
-            <input type="text" id="apr-note-${escapeHtml(d.approval_id)}" placeholder="Optional guidance if rejecting..." style="flex:1; min-width:160px; font-size:11.5px; padding:4px 8px;" />
-          </div>`;
+        aprDiv.innerHTML = renderHarnessApprovalCardHtml(d, { live: true, sessionId: d.session_id || activeHarnessId || "", policy: d.policy });
         toolsBox.appendChild(aprDiv);
         stream.scrollTop = stream.scrollHeight;
       },
       approval_resolved(d) {
-        const aprDiv = document.getElementById(`apr-card-${d.approval_id}`);
-        if (aprDiv) {
-          aprDiv.innerHTML = `<div class="mono" style="font-size:11.3px; color:${d.decision === 'approve' ? '#6ee7b7' : '#fda4af'};">${d.decision === 'approve' ? UI_ICONS.check + ' Approved by user — executing...' : UI_ICONS.close + ' Rejected by user'}</div>`;
-        }
+        updateWorkflowApprovalCard(d);
       },
       tool_result(d) {
         const toolsBox = ensureLiveStepCard(d.step, "").el.querySelector(`#h-live-tools-${d.step}`);
