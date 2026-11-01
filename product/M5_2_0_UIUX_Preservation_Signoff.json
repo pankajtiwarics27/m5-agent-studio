@@ -25,26 +25,26 @@
     "current_inputs_match_approval": null,
     "approved_inputs": null,
     "current_inputs": {
-      "ledger_content_sha256": "706291144c04c07b524acd555779d2b4026516dcc9498f49570f675f1063f39a",
-      "source_manifest_sha256": "d7a9a5e1c2f840d417d7640b22e65c4fe76841acf9e91736a258622daa265fa5",
-      "control_inventory_sha256": "995bdeafa2b458984413088b700f5b9369c849aa4765e69bd7d88b2aa3d0042e",
-      "route_map_sha256": "9376278dc3ae7ccbc3a88575c927581ca1a8136ddf394e557588c60749849c62",
-      "authorization_trace_sha256": "8e2041e1d520f62ab77c45c6a1ba475448d1db9cf84212ee4691f9cc7598cdd6",
-      "frontend_sha256": "6e50c2aaa80042843991ccf45f6ea437076d0880d5fd7b0c2969a114f96b969a",
-      "screenshot_manifest_sha256": "69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92",
-      "screenshot_index_sha256": "de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0",
+      "ledger_content_sha256": "038f27bdcb52dc65b5d414096f17fe1d9e93068f59ca7dcab5d4cdf71803360c",
+      "source_manifest_sha256": "2be11bcb238c1db91e0d68088d98b01ca90897c37ba80933b88e599ecef5531c",
+      "control_inventory_sha256": "5b0f8c9cb075cd77256fc84ac3045ed0798fdeb3f45d2be708cca81b4282e3f4",
+      "route_map_sha256": "626bdd45bb1b9871f28bb5181bdb77578c6f7eb427476a91d9ce18afdbc09149",
+      "authorization_trace_sha256": "461d91b9aabb2969224b827b41f1dc3f5a64cc283b14719faa623e89f1bd21f2",
+      "frontend_sha256": "36d01245ff34319ff671c1e3cac1cfaf2d34ed4e3042537c79bec2f0a7942713",
+      "screenshot_manifest_sha256": "cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57",
+      "screenshot_index_sha256": "82ecdeb4870961951b1b8946a657438d2a3893f443e5fe182f3372ed41784f07",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
       "route_map_generator_sha256": "923981fc78ff0f844e67691bfa966963f3959be1b9650eaf49f3b58b0a14d555"
     },
     "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "ddd6aa83065502c3a840333112caae7201c956de10d1f3cb3d8d8852a709dc90",
-    "source_manifest_sha256": "d7a9a5e1c2f840d417d7640b22e65c4fe76841acf9e91736a258622daa265fa5",
-    "control_inventory_sha256": "995bdeafa2b458984413088b700f5b9369c849aa4765e69bd7d88b2aa3d0042e",
-    "route_map_sha256": "9376278dc3ae7ccbc3a88575c927581ca1a8136ddf394e557588c60749849c62",
-    "authorization_trace_sha256": "8e2041e1d520f62ab77c45c6a1ba475448d1db9cf84212ee4691f9cc7598cdd6",
-    "frontend_sha256": "6e50c2aaa80042843991ccf45f6ea437076d0880d5fd7b0c2969a114f96b969a"
+    "ledger_sha256": "e786189165929b0153a8a3daa7c50a55199e262d8154a09d42d57c47877bb5e6",
+    "source_manifest_sha256": "2be11bcb238c1db91e0d68088d98b01ca90897c37ba80933b88e599ecef5531c",
+    "control_inventory_sha256": "5b0f8c9cb075cd77256fc84ac3045ed0798fdeb3f45d2be708cca81b4282e3f4",
+    "route_map_sha256": "626bdd45bb1b9871f28bb5181bdb77578c6f7eb427476a91d9ce18afdbc09149",
+    "authorization_trace_sha256": "461d91b9aabb2969224b827b41f1dc3f5a64cc283b14719faa623e89f1bd21f2",
+    "frontend_sha256": "36d01245ff34319ff671c1e3cac1cfaf2d34ed4e3042537c79bec2f0a7942713"
   },
   "approval_request": [
     {
@@ -55,12 +55,12 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "185 markup controls (103 chrome, 82 panes) plus 29 rendered by script"
+      "evidence": "182 markup controls (101 chrome, 81 panes) plus 31 rendered by script"
     },
     {
       "id": 3,
       "ask": "Review route candidates and preserve confirmed browser-reachable routes and their gates",
-      "evidence": "115 routes exist; 59 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 38 state-changing candidates; the lexical scan is not exhaustive"
+      "evidence": "115 routes exist; 57 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 37 state-changing candidates; the lexical scan is not exhaustive"
     },
     {
       "id": 4,
@@ -76,18 +76,18 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 185,
-    "chrome_controls": 103,
-    "pane_controls": 82,
-    "script_rendered_controls": 29,
+    "markup_controls": 182,
+    "chrome_controls": 101,
+    "pane_controls": 81,
+    "script_rendered_controls": 31,
     "routes": 115,
-    "routes_with_resolved_or_possible_caller": 59,
-    "routes_no_caller_observed": 56,
+    "routes_with_resolved_or_possible_caller": 57,
+    "routes_no_caller_observed": 58,
     "routes_unknown_frontend_caller": 0,
     "route_map_unresolved_call_sites": 0,
     "route_map_unresolved_caller_edges": 0,
     "route_map_unresolved_method_edges": 0,
-    "state_changing_routes_traced": 38,
+    "state_changing_routes_traced": 37,
     "pane_routes_reached": 34,
     "pane_routes_excluded": 34,
     "route_walk_depth": 2,
@@ -401,9 +401,9 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 22,
+      "control_count": 21,
       "counts": {
-        "button": 9,
+        "button": 8,
         "input": 2,
         "select": 9,
         "summary": 1,
@@ -469,7 +469,7 @@
         {
           "tag": "summary",
           "id": null,
-          "text": "Advanced settings",
+          "text": "Run settings",
           "onclick": null,
           "handler": null
         },
@@ -497,7 +497,7 @@
         {
           "tag": "select",
           "id": "harnessSessionActionSelect",
-          "text": "Session Actions… Inspect Git Status & Diff Permissions & Revocations Compact Session Context (≤2 KB) Open Agile SDLC Product Board",
+          "text": "Session Actions… Inspect Git Status & Diff Compact Session Context (≤2 KB) Open Agile SDLC Product Board",
           "onclick": null,
           "handler": null
         },
@@ -507,13 +507,6 @@
           "text": "Abort",
           "onclick": "abortHarnessRun()",
           "handler": "abortHarnessRun"
-        },
-        {
-          "tag": "button",
-          "id": "harnessPermissionBadge",
-          "text": "No permissions",
-          "onclick": "openHarnessGrants()",
-          "handler": "openHarnessGrants"
         },
         {
           "tag": "button",
@@ -570,7 +563,6 @@
         "executeHarnessSelectedWorkflow",
         "harnessResyncFromSnapshot",
         "jumpToLatestHarnessEvent",
-        "openHarnessGrants",
         "replayHarnessLog",
         "saveWorkspaceDirectory",
         "startFreshHarnessDraft",
@@ -649,18 +641,6 @@
         },
         {
           "method": "GET",
-          "path": "/api/harness/sessions/{session_id}/grants",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "refreshHarnessGrants",
-          "via": [
-            "openHarnessGrants",
-            "refreshHarnessGrants"
-          ]
-        },
-        {
-          "method": "GET",
           "path": "/api/harness/sessions/{session_id}/sdlc",
           "certainty": "certain",
           "state_changing": false,
@@ -697,6 +677,24 @@
           "handler": "abortHarnessRun",
           "via": [
             "abortHarnessRun"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/harness/approve",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "resolveHarnessApproval",
+          "via": [
+            "executeHarnessSelectedWorkflow",
+            "runHarnessTurn",
+            "resolveHarnessApproval"
           ]
         },
         {
@@ -1444,9 +1442,9 @@
     }
   ],
   "chrome": {
-    "control_count": 103,
+    "control_count": 101,
     "counts": {
-      "button": 56,
+      "button": 54,
       "input": 29,
       "select": 12,
       "summary": 1,

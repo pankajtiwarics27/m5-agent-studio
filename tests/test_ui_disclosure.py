@@ -37,6 +37,21 @@ def test_harness_disclosure_keeps_essential_and_stop_controls_visible():
     assert parser.attrs["densityToggleBtn"]["aria-pressed"] == "false"
 
 
+def test_harness_run_settings_summary_is_live_and_names_the_group():
+    parser = Elements()
+    source = (Path(__file__).resolve().parents[1] / "static/index.html").read_text()
+    parser.feed(source)
+
+    assert parser.attrs["harnessAdvancedSummary"]
+    assert ("details", "harnessAdvanced") in parser.parents["harnessAdvancedSummary"]
+    assert (
+        '<summary><span>Run settings</span>'
+        '<span id="harnessAdvancedSummary" class="harness-advanced-summary"></span></summary>'
+    ) in source
+    assert "function harnessRunPlan()" in source
+    assert 'summary.dataset.changed = plan.changed ? "true" : "false"' in source
+
+
 def test_council_disclosure_keeps_round_and_stop_available():
     parser = Elements()
     parser.feed((Path(__file__).resolve().parents[1] / "static/index.html").read_text())

@@ -8,7 +8,7 @@ The Harness prints what Run will do before it is pressed - the project directory
 
 Nine controls decide a Harness run, and before this story none of them said what the run would do with them.
 A reader had to know already that `plan` means read-only, that the critic is a sub-agent the lead delegates
-to, and that three more settings were folded into a group that said only "Advanced settings". The composer
+to, and that three more settings were folded into a group that said only "Run settings". The composer
 now prints the plan above Run:
 
 | Row | What it prints | Where it is read from |

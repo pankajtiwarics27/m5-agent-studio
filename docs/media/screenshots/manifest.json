@@ -20,7 +20,7 @@
       "tab": "harness",
       "title": "Harness",
       "file": "harness.png",
-      "purpose": "An agent session over a workspace, with the diff, approval, and abort controls."
+      "purpose": "Harness task creation, workspace and run settings, with the diff, approval and abort controls still reachable."
     },
     {
       "id": "hall",

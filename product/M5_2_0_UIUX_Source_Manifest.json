@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "6e50c2aaa80042843991ccf45f6ea437076d0880d5fd7b0c2969a114f96b969a",
-      "bytes": 453099,
-      "lines": 7743
+      "sha256": "36d01245ff34319ff671c1e3cac1cfaf2d34ed4e3042537c79bec2f0a7942713",
+      "bytes": 426725,
+      "lines": 7300
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "c9781d2599d3d15b27fae7c7b40cd69e0c3d1459d55a04e870fb7838d421e31c",
-      "bytes": 3190749,
-      "lines": 70772
+      "sha256": "ff55a25f2b30e13ac4e42d7fde950057116abc02c34983ccc1b5e8c369a4c11e",
+      "bytes": 3164375,
+      "lines": 70329
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -40,8 +40,8 @@
     {
       "path": "docs/media/screenshots/manifest.json",
       "role": "the screenshot set every visual claim is checked against",
-      "sha256": "69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92",
-      "bytes": 1404,
+      "sha256": "cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57",
+      "bytes": 1435,
       "lines": 54
     },
     {
@@ -299,9 +299,9 @@
     {
       "path": "tests/browser/accessibility_walk.mjs",
       "role": "browser accessibility walk with the current-main Chat handoff checks",
-      "sha256": "f130a6b84efc884609c83321bec5efbb3b5cac6f5d827d6283086c5c7a436d33",
-      "bytes": 13594,
-      "lines": 256
+      "sha256": "d6925149e9dde36baf500a337952b887dcaecf1af76f9dee2cc057ff7c7dd7c5",
+      "bytes": 18108,
+      "lines": 330
     },
     {
       "path": "tests/test_presentations.py",
@@ -327,9 +327,9 @@
     {
       "path": "tests/test_screenshot_capture_browser.py",
       "role": "runs browser-backed UI and screenshot safety regressions",
-      "sha256": "ea79dc9f59fd932fab174da7d9adfc4dee6ef3b7fd3fe2f3417739b1a7e28555",
-      "bytes": 25140,
-      "lines": 645
+      "sha256": "24f993d8baa7e6f10977b2a01dd296a7d4d2ff84019759c927ad7d31c18245b7",
+      "bytes": 24876,
+      "lines": 642
     },
     {
       "path": "tests/test_uiux_source_manifest.py",
@@ -348,8 +348,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "6e50c2aaa80042843991ccf45f6ea437076d0880d5fd7b0c2969a114f96b969a",
-    "lines": 7743,
+    "sha256": "36d01245ff34319ff671c1e3cac1cfaf2d34ed4e3042537c79bec2f0a7942713",
+    "lines": 7300,
     "tab_count": 6,
     "tabs": [
       {
@@ -395,8 +395,8 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 56,
-    "api_literal_count": 50,
+    "fetch_call_count": 54,
+    "api_literal_count": 48,
     "api_literals": [
       "/api/cache/clear-ssd",
       "/api/chat/stream",
@@ -423,8 +423,6 @@
       "/api/harness/sessions/{param}/compact",
       "/api/harness/sessions/{param}/diff",
       "/api/harness/sessions/{param}/events/stream?cursor={param}",
-      "/api/harness/sessions/{param}/grants",
-      "/api/harness/sessions/{param}/grants/revoke",
       "/api/harness/sessions/{param}/sdlc",
       "/api/harness/sessions/{param}/state",
       "/api/mcp/import-json",
@@ -925,7 +923,7 @@
   },
   "screenshot_manifest": {
     "path": "docs/media/screenshots/manifest.json",
-    "sha256": "69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92",
+    "sha256": "cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57",
     "viewport": {
       "width": 1440,
       "height": 900,

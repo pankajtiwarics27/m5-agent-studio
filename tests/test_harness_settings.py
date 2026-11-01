@@ -329,8 +329,8 @@ def test_a_copied_policy_description_is_caught(sources):
 def test_a_summary_that_hides_its_contents_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            '<summary>Advanced settings<span id="harnessAdvancedSummary" class="harness-advanced-summary"></span></summary>',
-            "<summary>Advanced settings</summary>",
+            '<summary><span>Run settings</span><span id="harnessAdvancedSummary" class="harness-advanced-summary"></span></summary>',
+            '<summary><span>Run settings</span></summary>',
             1,
         )
     )

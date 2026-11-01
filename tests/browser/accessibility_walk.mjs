@@ -115,6 +115,80 @@ async function main() {
     await page.waitForSelector("#cmdPaletteModal .modal[role=dialog]", { timeout: 10000 });
     await new Promise((resolve) => setTimeout(resolve, 500));
 
+    // Harness run settings stay collapsed by default, but their current values are
+    // visible in the native disclosure summary and remain keyboard-operable.
+    const initialRunSettings = await page.evaluate(() => {
+      const details = document.getElementById("harnessAdvanced");
+      const summary = details?.querySelector("summary");
+      const valueSummary = summary?.querySelector("#harnessAdvancedSummary");
+      return {
+        collapsed: details ? !details.open : false,
+        label: summary?.querySelector("span")?.textContent.trim() || "",
+        values: valueSummary?.textContent.replace(/\s+/g, " ").trim() || "",
+        changed: valueSummary?.dataset.changed || "",
+        discipline: document.getElementById("harnessEfficiencyMode")?.value,
+        reasoning: document.getElementById("harnessReasoning")?.value,
+        steps: document.getElementById("harnessMaxSteps")?.value,
+      };
+    });
+    results.push(check("Harness Run settings summarize current values while collapsed",
+      initialRunSettings.collapsed && initialRunSettings.label === "Run settings" &&
+      initialRunSettings.values.includes("Ponytail + Concise") && initialRunSettings.values.includes("Low") &&
+      initialRunSettings.values.includes("10 steps") && initialRunSettings.changed === "false" &&
+      initialRunSettings.discipline === "ponytail+concise" && initialRunSettings.reasoning === "low" &&
+      initialRunSettings.steps === "10", JSON.stringify(initialRunSettings)));
+
+    await page.focus("#harnessPolicy");
+    await page.keyboard.press("Tab");
+    const runSettingsFocus = await page.evaluate(() => {
+      const summary = document.querySelector("#harnessAdvanced > summary");
+      return {
+        focused: document.activeElement === summary,
+        visibleRing: summary ? getComputedStyle(summary).outlineStyle === "solid" &&
+          Number.parseFloat(getComputedStyle(summary).outlineWidth) >= 2 : false,
+      };
+    });
+    results.push(check("Tab moves from policy to Run settings with a visible focus ring",
+      runSettingsFocus.focused && runSettingsFocus.visibleRing, JSON.stringify(runSettingsFocus)));
+
+    await page.keyboard.press("Space");
+    const openedRunSettings = await page.evaluate(() => ({
+      open: document.getElementById("harnessAdvanced").open,
+      focused: document.activeElement === document.querySelector("#harnessAdvanced > summary"),
+      fieldsVisible: ["harnessEfficiencyMode", "harnessReasoning", "harnessMaxSteps"]
+        .every((id) => document.getElementById(id).getClientRects().length > 0),
+    }));
+    results.push(check("Space opens Run settings and exposes all advanced controls",
+      openedRunSettings.open && openedRunSettings.focused && openedRunSettings.fieldsVisible,
+      JSON.stringify(openedRunSettings)));
+
+    await page.select("#harnessReasoning", "medium");
+    await page.select("#harnessMaxSteps", "16");
+    const updatedRunSettings = await page.evaluate(() => ({
+      values: document.getElementById("harnessAdvancedSummary").textContent,
+      changed: document.getElementById("harnessAdvancedSummary").dataset.changed,
+      reasoning: document.getElementById("harnessReasoning").value,
+      steps: document.getElementById("harnessMaxSteps").value,
+    }));
+    results.push(check("Run settings summary follows changed controls without altering their values",
+      updatedRunSettings.values.includes("Medium") && updatedRunSettings.values.includes("16 steps") &&
+      updatedRunSettings.values.includes("changed") && updatedRunSettings.changed === "true" &&
+      updatedRunSettings.reasoning === "medium" && updatedRunSettings.steps === "16",
+      JSON.stringify(updatedRunSettings)));
+
+    await page.focus("#harnessAdvanced summary");
+    await page.keyboard.press("Space");
+    await page.waitForFunction(() => !document.getElementById("harnessAdvanced").open);
+    await page.waitForFunction(() => sessionStorage.getItem("m5_harness_advanced") === "closed");
+    const closedRunSettings = await page.evaluate(() => ({
+      collapsed: !document.getElementById("harnessAdvanced").open,
+      focus: document.activeElement === document.querySelector("#harnessAdvanced > summary"),
+      preference: sessionStorage.getItem("m5_harness_advanced"),
+    }));
+    results.push(check("Space closes Run settings and retains its existing disclosure preference",
+      closedRunSettings.collapsed && closedRunSettings.focus && closedRunSettings.preference === "closed",
+      JSON.stringify(closedRunSettings)));
+
     // Command palette: shortcut, combobox semantics, active option and focus loop.
     await page.focus("#themeToggleBtn");
     await page.keyboard.down("Control");

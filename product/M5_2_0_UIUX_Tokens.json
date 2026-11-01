@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "7235db4a4c9e2ce9fcd990235b0ee5d75e9884ade168dba3555d8e0de2fd7ed9",
+    "style_block_sha256": "dec7760c1fc2db4d79d3b1adf26bd04e0c96f3aa923b4d8bf615a432f0e6ed81",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -37,7 +37,7 @@
   "totals": {
     "tokens": 45,
     "groups": 7,
-    "references": 827,
+    "references": 803,
     "theme_overrides": 18,
     "density_overrides": 5,
     "contrast_pairs": 20,
@@ -133,7 +133,7 @@
         "light": "#ffffff"
       },
       "density_override": null,
-      "references": 51
+      "references": 47
     },
     {
       "name": "--bg-hover",
@@ -163,7 +163,7 @@
         "light": "#d9dcd8"
       },
       "density_override": null,
-      "references": 119
+      "references": 114
     },
     {
       "name": "--border-hi",
@@ -183,7 +183,7 @@
         "light": "#202326"
       },
       "density_override": null,
-      "references": 52
+      "references": 50
     },
     {
       "name": "--text-dim",
@@ -193,7 +193,7 @@
         "light": "#555c62"
       },
       "density_override": null,
-      "references": 101
+      "references": 96
     },
     {
       "name": "--text-faint",
@@ -203,7 +203,7 @@
         "light": "#687077"
       },
       "density_override": null,
-      "references": 72
+      "references": 67
     },
     {
       "name": "--accent",
@@ -233,7 +233,7 @@
         "light": "#276e82"
       },
       "density_override": null,
-      "references": 16
+      "references": 15
     },
     {
       "name": "--emerald",
@@ -243,7 +243,7 @@
         "light": "#286e50"
       },
       "density_override": null,
-      "references": 20
+      "references": 19
     },
     {
       "name": "--amber",
@@ -253,7 +253,7 @@
         "light": "#80580e"
       },
       "density_override": null,
-      "references": 30
+      "references": 29
     },
     {
       "name": "--rose",
@@ -263,7 +263,7 @@
         "light": "#a4313a"
       },
       "density_override": null,
-      "references": 20
+      "references": 19
     },
     {
       "name": "--purple",
@@ -491,7 +491,7 @@
       "value": "\"JetBrains Mono\", \"SFMono-Regular\", Consolas, \"Liberation Mono\", monospace",
       "theme_overrides": {},
       "density_override": null,
-      "references": 84
+      "references": 85
     },
     {
       "name": "--header-height",
