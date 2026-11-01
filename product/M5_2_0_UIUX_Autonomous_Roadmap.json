@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 12,
+  "revision": 13,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,13 +102,13 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P2-02",
-    "next_recommended_story": "UIUX-P2-03",
-    "last_checkpoint": "2026-11-01T14:05:00Z",
-    "last_session_id": "arena/49f97cdd-m5-agent-studio",
+    "last_completed_story": "UIUX-P2-03",
+    "next_recommended_story": "UIUX-P2-04",
+    "last_checkpoint": "2026-11-01T21:20:00Z",
+    "last_session_id": "arena/6b27eb7d-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "20a67e1",
+    "last_verified_commit": "9f09ddda775fb460c1bb498c32d065eff28fcac9",
     "last_updated": "2026-11-01",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -251,11 +251,11 @@
         "UIUX-P2-06"
       ],
       "total": 6,
-      "done": 2,
+      "done": 3,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 4,
-      "percent_complete": 33
+      "not_started": 3,
+      "percent_complete": 50
     },
     {
       "id": "P3",
@@ -339,11 +339,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 13,
+    "done": 14,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 27,
-    "percent_complete": 32
+    "not_started": 26,
+    "percent_complete": 35
   },
   "stories": [
     {
@@ -2660,8 +2660,8 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "Start system health and workspace selection with no loss of existing functionality.",
+      "current_behavior": "Recorded at P2-03. The pane that answers 'should I start here?' had no answer to 'is this machine working?'. GET /api/telemetry already reported the runtime verdict, unified memory, containers and perf, but only the telemetry rail drew it; the Start pane never read it. The page also had no second way to see which directory a task would run in: that setting lived only on the Harness pane (#harnessWorkspaceInput), read from GET /api/harness/sessions' default_workspace/git_info and written by POST /api/workspace/directory, so a reader landing on Start could begin a task - the launcher arrived in P2-02 - without ever seeing where it would run or whether the machine could run it. The demo has no model runtime, so /api/telemetry answers with _demo_telemetry_payload() and telemetry_source='simulated_demo' there: a surface that rendered those numbers plainly would present the demo's figures as this machine's.",
+      "target_behavior": "Start shows a System health card and a Project workspace card. The health card draws four rows - model runtime, unified memory (used/total plus the oMLX cap), containers, and the project workspace - from the payload renderTelemetry() already fetched, so it never polls and the card and the rail cannot disagree; every value comes out of that payload; and the evidence line states the basis: measured when a runtime answered, unverified plus a Demo data pill when the payload is simulated, unavailable when nothing answered. In the simulated and unavailable cases the claim says which rows still describe this machine (the workspace row, which comes from the session list). The workspace card names the configured directory and its git state, writes through the Harness's own saveWorkspaceDirectory()/POST /api/workspace/directory, re-reads the preflight afterwards, and presents a refusal with its cause, the directory still in force, and Retry.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
         "Trace relevant DOM, JS handlers, API and backend state transitions",
@@ -2703,24 +2703,169 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P2-03 (Start system health and workspace selection). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-01T19:40:00Z",
+        "updated_at": "2026-11-01T21:20:00Z",
+        "completed_at": "2026-11-01T21:20:00Z",
+        "owner_session": "arena/6b27eb7d-m5-agent-studio",
+        "commit_sha": "9f09ddda775fb460c1bb498c32d065eff28fcac9",
+        "changed_files": [
+          "static/index.html",
+          "studio.py",
+          "scripts/uiux_start_health_inventory.py",
+          "scripts/start_health_walk.mjs",
+          "scripts/uiux_presentation_inventory.py",
+          "tests/test_start_health.py",
+          "docs/uiux-2-0-start-health.md",
+          "docs/uiux-2-0-program.md",
+          "docs/README.md",
+          "docs/media/start/health.png",
+          "docs/media/start/workspace.png",
+          "docs/media/start/failed.png",
+          "docs/media/start/offline.png",
+          "docs/media/start/health-narrow.png",
+          "docs/media/start/README.md",
+          "product/M5_2_0_UIUX_Start_Health.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "The gap was a read nobody did. GET /api/telemetry (app.py) has reported omlx_online, memory, omlx.ceiling_gb, models and docker since the rail was built, and the Start pane drew none of it; the workspace lived only on the Harness pane. Both answers existed; neither was where a reader starts.",
+          "One payload, two surfaces. renderTelemetry() now stores the payload it just read in lastTelemetry and the card renders that; the inventory fails if the card contains a fetch( of its own, if renderTelemetry() stops feeding it, or if a failed read leaves the old payload in place. There is still exactly one poll loop.",
+          "Nothing is invented. The memory row is memory.omlx_gb + orbstack_gb + macos_apps_gb over total_gb with omlx.ceiling_gb as the cap, the container row is docker.containers.length with orbstack_detected, the runtime row is omlx_online, and the workspace row is default_workspace. The read time is the pane's own Date.now(): the payload has no timestamp, and the first draft's d.read_at was caught by the inventory's invented-field rule before it shipped.",
+          "The demo is labelled, not trusted. This host has no model runtime, so /api/telemetry returned telemetry_source='simulated_demo' and the walk (not the author) observed it: pill Demo data, basis unverified, claim 'no model runtime answered, so the runtime and memory rows are the demo payload and describe no machine. The workspace row is still this machine's'. The measured branch is asserted structurally by the inventory and by the same walk on a host that has a runtime.",
+          "The card keeps its shape when it cannot read. The first draft dropped the memory and container rows when there was no payload; the walk caught that two rows, not three, said 'not measured yet'. A row that disappears reads as 'that part is fine', so all four rows now persist and say they do not know, and the absent_keeps_shape rule fails if that regresses.",
+          "A failed read is actionable. Basis unavailable alone left the reader nothing to press, so the card presents an error naming GET /api/telemetry, saying the workspace row is unaffected and why, and offering Re-check and Monitor rail - while the footer buttons hide, so the same two controls are not printed twice in one card.",
+          "The workspace is one setting, written one way. saveStartWorkspace() calls saveWorkspaceDirectory(), the handler the Harness already uses, which now returns { ok, dir, recent, git } instead of only toasting; startWorkspaceInput joined syncProjectDirInputs() so the two panes cannot point at different directories. The walk proved it end to end: row, server default_workspace and #harnessWorkspaceInput all changed together and all came back.",
+          "A change is followed by a fresh preflight. After a successful write the pane re-reads /api/onboarding/preflight (the walk counted the requests: 2 -> 4) and the workspace step reports ready for the new directory. A checklist that keeps saying the workspace is unwritable after it was set is worse than no checklist.",
+          "A refusal says what is still true. With POST /api/workspace/directory aborted the pane presented 'The workspace was not changed / Cause: Failed to fetch / Kept: <dir> is still the project directory; nothing was created or moved' with Retry and Open Harness, the row still showed the old directory, and the server still reported it. Pressing Retry with Enter performed the write the route had refused.",
+          "Failures were photographed, not described. The walk frames each capture on its subject (startWorkspaceState, startHealthState) after a first attempt showed a toast and the fold above the card - the picture has to show the thing being judged.",
+          "The walk restores the workspace in a finally block over HTTP, so a crash mid-walk cannot leave the demo pointing at a scratch directory; its own scratch capture is named health-narrow.png because narrow.png belongs to P2-01 and a second walk silently overwriting it would make that picture describe a pane it never showed.",
+          "Regression arms unchanged: status_walk 74/74, keyboard_walk 22/22, overlay_walk 78 passed / 1 blocked (harnessDiffModal needs an active session, as before), presentation_walk 20/20, start_walk 18/18, start_recent_walk 16/16.",
+          "The acceptance criteria are the reviewer's call. This story records what was run and what was seen; it does not declare its own criteria met. The artifacts prove freshness, not owner review - see the historical-approval-unbound note (issue #126)."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "1865 passed, 25 skipped (a shallow clone fails the two pinned-commit tests until git fetch --unshallow; that is the environment, not the change)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest tests/test_start_health.py -q",
+            "exit_code": 0,
+            "result": "36 passed - 20 positive rules plus 16 negative cases that break a rule in a copy of the markup"
+          },
+          {
+            "command": "node scripts/start_health_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "21 of 21 checks passed (four toned rows, memory/containers/runtime held against /api/telemetry, simulated basis labelled, workspace row, change through the pane reaching row + server + Harness field + preflight, restore, refused write presented and retried, refused telemetry read with one recovery affordance and the workspace row intact, recovery, 900px, no page errors)"
+          },
+          {
+            "command": "node scripts/start_health_walk.mjs --screenshots docs/media/start",
+            "exit_code": 0,
+            "result": "21 of 21 with five captures: health.png, workspace.png, failed.png, offline.png, health-narrow.png"
+          },
+          {
+            "command": "node scripts/start_recent_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "16 of 16 checks passed"
+          },
+          {
+            "command": "node scripts/start_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "18 of 18 checks passed"
+          },
+          {
+            "command": "node scripts/presentation_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "20 of 20 checks passed"
+          },
+          {
+            "command": "node scripts/keyboard_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "22 of 22 checks passed"
+          },
+          {
+            "command": "node scripts/status_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "74 of 74 checks passed"
+          },
+          {
+            "command": "node scripts/overlay_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "78 passed, 0 failed, 1 blocked (harnessDiffModal needs an active Harness session - same prerequisite as P2-02)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest tests/test_screenshot_capture_browser.py -q (with STUDIO_SCREENSHOT_CHROME/puppeteer-core set)",
+            "exit_code": 0,
+            "result": "29 passed - the browser safety regressions, including the isolated demo that captures all six panes"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_start_health_inventory.py --check",
+            "exit_code": 0,
+            "result": "4 rows, 3 bases, 4 tones, 2 routes, 0 findings"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_presentation_inventory.py --check",
+            "exit_code": 0,
+            "result": "3 kinds, 9 call sites across 8 containers, 3 raw writers left, 0 findings (startHealthState and startWorkspaceState registered)"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_route_map.py --check && .venv/bin/python scripts/uiux_authorization_trace.py --check && .venv/bin/python scripts/uiux_preservation_signoff.py --check",
+            "exit_code": 0,
+            "result": "clean; sign-off: historical-approval-unbound, 21 capabilities across 6 panes, 176 markup controls, 37 state-changing routes traced"
+          },
+          {
+            "command": ".venv/bin/python -m ruff check . && .venv/bin/python -m mypy",
+            "exit_code": 0,
+            "result": "clean"
+          },
+          {
+            "command": ".venv/bin/python scripts/build_studio.py && .venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "studio.py rebuilt (3,094,851 bytes); one inline script block parses"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py",
+            "exit_code": 0,
+            "result": "Documentation validation passed (5 required pages, 144 files scanned)"
+          }
+        ],
+        "visual_evidence": [
+          "docs/media/start/health.png - the card in the state this host is actually in: DEMO DATA pill, four rows (runtime not reachable CHECK, 4.8 / 24 GB used cap 20.8 GB, 2 running OrbStack, the demo workspace), and Basis: unverified with the sentence naming which row is still real.",
+          "docs/media/start/workspace.png - after Set / Create with a scratch directory: the row, the recent-folders select and the Harness's own field hold the same path; the note says the preflight is being re-read.",
+          "docs/media/start/failed.png - POST /api/workspace/directory refused: the error presentation with cause, 'Kept: <dir> is still the project directory', Retry and Open Harness, and the row above still showing the directory in force.",
+          "docs/media/start/offline.png - GET /api/telemetry refused: OFFLINE, Basis: unavailable, three rows saying 'not measured yet', the failure box owning the recovery, and the workspace row untouched.",
+          "docs/media/start/health-narrow.png - both cards at 900px, no horizontal overflow. Captured by scripts/start_health_walk.mjs --screenshots; docs/media/start/README.md records the commands and which walk owns which file."
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "The health card renders the rail's payload instead of fetching. Two readers of one endpoint with two clocks is how a card and a rail start disagreeing; there is still one poll loop.",
+          "The basis is chosen from the payload, not from optimism. A simulated payload is a real state the demo tour produces on every run, so rendering it plainly would be the most common lie in the product.",
+          "The claim names the rows that survive a failed or simulated read. 'No row here describes this machine' was the first draft for the unavailable case and it was wrong: the workspace row never came from telemetry.",
+          "The card keeps four rows when it knows nothing. A row that disappears because it could not be read is indistinguishable from a row that is fine.",
+          "A failed read presents one recovery, and the footer hides while it does. The same two buttons twice inside one card is noise; exactly one affordance at a time.",
+          "The workspace is written by the Harness's handler, not by a Start-specific copy. saveWorkspaceDirectory() now returns its outcome so a second caller can present a failure instead of only toasting it - one behaviour, two callers.",
+          "Changing the workspace re-reads the preflight rather than patching the checklist locally. The server owns readiness; the pane's job is to ask again.",
+          "A refused write names the directory still in force. 'It failed' leaves the reader unsure whether their project moved; the interesting fact is that nothing did.",
+          "The demo's simulated numbers are not hidden from the capture. The screenshots show DEMO DATA because that is the honest state of this host, and a picture of a healthier machine would be documenting a machine nobody ran.",
+          "The two new presentation containers were registered in the P1-05 inventory rather than special-cased. Registering the container is what makes test_presentations fail when a container is wired but never drawn into."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
-        "readme_updated": false
+        "handoff_note": "P2-03 is complete in commit 9f09ddd and the artifacts were verified at that commit. Next is UIUX-P2-04 (Start shortcuts and recents): the pane now has health and workspace, so a keyboard-first reader still has no way to jump to a session or a saved task from here - check what the command palette (P1-04) already offers before adding a third launcher, and remember that any static/index.html edit makes all thirteen uiux_* generators stale until regenerated (route_map -> authorization_trace -> preservation_signoff, in that order). The ledger's last_verified_commit records 9f09ddd; the merge commit of this PR should be recorded by the next session when it re-pins. Open item unchanged: the sign-off reports historical-approval-unbound (#126) and it is the owner's call - do not invent binding_schema/approved_inputs/binding_reference.",
+        "next_action": "UIUX-P2-04 - Start shortcuts and recents; read the P1-04 shortcut registry and the palette before adding any new control.",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",
