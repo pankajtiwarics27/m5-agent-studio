@@ -12,23 +12,23 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "bd6cd2ddd507ab2d0f416abb4145d9006873d60b5581e2d2f73b834a321c8bf9",
-      "bytes": 593703,
-      "lines": 10234
+      "sha256": "ef82d29821c432d3af050ed370d762cdc7ce39c0f6f876f408cdf9b4c97da783",
+      "bytes": 613103,
+      "lines": 10649
     },
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "e3dd15bef236555d4cb3fca12eac003a55e099b48bbefa20e313489af652f129",
-      "bytes": 1004849,
-      "lines": 21689
+      "sha256": "256be0ab320b2e2db4f9d7d8f74913077f5ffcef2f659955e5f69a36fc30b2f0",
+      "bytes": 1005045,
+      "lines": 21692
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "34d8f1b8d66bbbe6a9eb20dc95688ba630b9611030c5f6c017233da8d7c78ac3",
-      "bytes": 3331353,
-      "lines": 73263
+      "sha256": "5e331ee463ab3d6a49d27a5a634ac3d1d08a951d7d024f4bb5579ec368012e95",
+      "bytes": 3350949,
+      "lines": 73681
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -299,9 +299,9 @@
     {
       "path": "tests/browser/accessibility_walk.mjs",
       "role": "browser accessibility walk with the current-main Chat handoff checks",
-      "sha256": "3c18bd9f8879567ec8f9d1a4f1c2fde432510d52f35b9ec86218823ed29987ec",
-      "bytes": 39438,
-      "lines": 653
+      "sha256": "280026be916bd38f67574847705ce7c9c864df01e2268a617512d1146cdb7dc2",
+      "bytes": 23515,
+      "lines": 428
     },
     {
       "path": "tests/test_presentations.py",
@@ -327,7 +327,7 @@
     {
       "path": "tests/test_screenshot_capture_browser.py",
       "role": "runs browser-backed UI and screenshot safety regressions",
-      "sha256": "44813e29347b0f416970dae17d0282e72018c95337a4f5bef2d0c60cac4b313b",
+      "sha256": "f699d82526dda47d86d64a75a337efa28082f8b3dee04dc06969345787ee2647",
       "bytes": 25196,
       "lines": 646
     },
@@ -348,8 +348,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "bd6cd2ddd507ab2d0f416abb4145d9006873d60b5581e2d2f73b834a321c8bf9",
-    "lines": 10234,
+    "sha256": "ef82d29821c432d3af050ed370d762cdc7ce39c0f6f876f408cdf9b4c97da783",
+    "lines": 10649,
     "tab_count": 6,
     "tabs": [
       {
@@ -395,8 +395,8 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 63,
-    "api_literal_count": 53,
+    "fetch_call_count": 64,
+    "api_literal_count": 54,
     "api_literals": [
       "/api/cache/clear-ssd",
       "/api/chat/stream",
@@ -436,6 +436,7 @@
       "/api/mcp/servers/{param}/call",
       "/api/mcp/servers/{param}/sync",
       "/api/models/unload-all",
+      "/api/models/{param}/load",
       "/api/models/{param}/{param}",
       "/api/onboarding/preflight",
       "/api/onboarding/preflight?probe=local",
@@ -455,7 +456,7 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "e3dd15bef236555d4cb3fca12eac003a55e099b48bbefa20e313489af652f129",
+    "sha256": "256be0ab320b2e2db4f9d7d8f74913077f5ffcef2f659955e5f69a36fc30b2f0",
     "route_count": 115,
     "by_method": {
       "DELETE": 5,

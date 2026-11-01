@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "bd6cd2ddd507ab2d0f416abb4145d9006873d60b5581e2d2f73b834a321c8bf9",
+  "frontend_sha256": "ef82d29821c432d3af050ed370d762cdc7ce39c0f6f876f408cdf9b4c97da783",
   "panes": [
     {
       "dom_id": "start",
@@ -295,9 +295,9 @@
     {
       "dom_id": "hall",
       "section_id": "pane-hall",
-      "control_count": 17,
+      "control_count": 18,
       "counts": {
-        "button": 6,
+        "button": 7,
         "select": 8,
         "summary": 2,
         "textarea": 1
@@ -315,7 +315,7 @@
           "tag": "button",
           "id": "hallFullRoundBtn",
           "class": "btn btn-amber",
-          "aria-describedby": "hallReadinessStatus",
+          "aria-describedby": "councilReadinessSummary",
           "title": "Sequentially summon all four configured Council seats",
           "onclick": "runHallFullRound()",
           "text": "Run full round"
@@ -324,7 +324,6 @@
           "tag": "button",
           "id": "hallConcludeBtn",
           "class": "btn",
-          "aria-describedby": "hallReadinessStatus",
           "title": "Convene remaining voices if needed, then pin Lead Arbiter Final Verdict",
           "onclick": "summonConclusion()",
           "text": "Finish and pin summary"
@@ -334,24 +333,33 @@
           "text": "Council role models"
         },
         {
+          "tag": "button",
+          "id": "councilReadinessRefresh",
+          "type": "button",
+          "class": "btn btn-xs",
+          "title": "Read /api/telemetry and /api/providers again",
+          "onclick": "refreshCouncilReadiness()",
+          "text": "Check again"
+        },
+        {
           "tag": "select",
           "id": "hallSeatArch",
-          "aria-describedby": "hallReadinessStatus"
+          "aria-describedby": "hallSeatArchState"
         },
         {
           "tag": "select",
           "id": "hallSeatCoder",
-          "aria-describedby": "hallReadinessStatus"
+          "aria-describedby": "hallSeatCoderState"
         },
         {
           "tag": "select",
           "id": "hallSeatCritic",
-          "aria-describedby": "hallReadinessStatus"
+          "aria-describedby": "hallSeatCriticState"
         },
         {
           "tag": "select",
           "id": "hallSeatJudge",
-          "aria-describedby": "hallReadinessStatus"
+          "aria-describedby": "hallSeatJudgeState"
         },
         {
           "tag": "select",
@@ -377,21 +385,20 @@
         {
           "tag": "select",
           "id": "hallModelSelect",
-          "aria-describedby": "hallSingleReadinessStatus"
+          "aria-describedby": "hallSingleState"
         },
         {
           "tag": "button",
           "id": "hallSummonBtn",
           "class": "btn btn-xs",
-          "aria-describedby": "hallSingleReadinessStatus",
-          "title": "Summon only the selected role and model",
+          "aria-describedby": "hallSingleState",
+          "title": "Summon only this single selected voice",
           "onclick": "summonSingleAgent()",
           "text": "Ask one model"
         },
         {
           "tag": "textarea",
           "id": "hallHumanInput",
-          "aria-describedby": "hallReadinessStatus",
           "placeholder": "Ask a question or steer the Council as Human Operative (Enter = Send)...",
           "rows": "2"
         },
@@ -405,7 +412,7 @@
           "tag": "button",
           "id": "hallSendBtn",
           "class": "btn btn-primary",
-          "aria-describedby": "hallReadinessStatus",
+          "aria-describedby": "councilReadinessSummary",
           "onclick": "submitHallComposer()",
           "text": "Send"
         }
@@ -1320,7 +1327,7 @@
         "tag": "button",
         "id": "spawnConveneBtn",
         "class": "btn btn-primary",
-        "aria-describedby": "hallReadinessStatus",
+        "aria-describedby": "councilReadinessSummary",
         "onclick": "confirmSpawnSession(true)",
         "text": "Spawn & Convene 4-LLM Council"
       },
@@ -1376,8 +1383,8 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 189,
-    "pane_controls": 83,
+    "markup_controls": 190,
+    "pane_controls": 84,
     "chrome_controls": 106,
     "script_rendered_controls": 33,
     "script_rendered_by_function": {

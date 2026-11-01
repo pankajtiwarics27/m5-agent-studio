@@ -248,8 +248,8 @@ def test_a_card_that_polls_is_caught(sources):
 def test_a_rail_that_stops_feeding_the_card_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            "    lastTelemetry = d;\n    startHealthReadAt = Date.now();\n    renderStartHealth();",
-            "    lastTelemetry = d;\n    startHealthReadAt = Date.now();",
+            "    startHealthReadAt = Date.now();\n    councilTelemetryReadAt = startHealthReadAt;\n    renderStartHealth();",
+            "    startHealthReadAt = Date.now();\n    councilTelemetryReadAt = startHealthReadAt;",
             1,
         )
     )

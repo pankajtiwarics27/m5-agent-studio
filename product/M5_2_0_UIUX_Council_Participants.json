@@ -1,0 +1,252 @@
+{
+  "story": "UIUX-P4-01",
+  "title": "Council participant roles and resource readiness",
+  "generated_by": "scripts/uiux_council_participants_inventory.py",
+  "seats": [
+    {
+      "seat": 1,
+      "role": "Staff Architect",
+      "picker": "hallSeatArch",
+      "row": "hallSeatArchState"
+    },
+    {
+      "seat": 2,
+      "role": "Fast Coder / Analyst",
+      "picker": "hallSeatCoder",
+      "row": "hallSeatCoderState"
+    },
+    {
+      "seat": 3,
+      "role": "Adversarial Critic",
+      "picker": "hallSeatCritic",
+      "row": "hallSeatCriticState"
+    },
+    {
+      "seat": 4,
+      "role": "Lead Arbiter",
+      "picker": "hallSeatJudge",
+      "row": "hallSeatJudgeState"
+    }
+  ],
+  "states": [
+    "ready",
+    "configured",
+    "stale",
+    "demo",
+    "needs-load",
+    "needs-memory",
+    "loading",
+    "needs-key",
+    "not-configured",
+    "unknown-model",
+    "no-model",
+    "unverified"
+  ],
+  "reads": {
+    "runtime": "GET /api/telemetry (omlx_online, models[].loaded/size_gb, omlx.ceiling_gb, omlx.used_gb)",
+    "providers": "GET /api/providers (alias, enabled, has_key, models) and combos[].targets",
+    "round": "POST /api/hall/sessions/{id}/summon, one seat at a time, in order",
+    "load": "POST /api/models/{model}/load"
+  },
+  "actions": [
+    "load",
+    "providers",
+    "choose",
+    "check"
+  ],
+  "checks": [
+    {
+      "check": "four seats, one per role, each with its label, purpose and readiness row",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the seat numbers stay on the labels, so the mapped controls keep their names",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the role names are the server's own AGENT_ROLES labels, not retyped",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the transcript takes its seat and role from the role_key the route stored",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "each seat picker is described by the row that judges it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the single-model asker is judged by the same rows",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "there is one readiness classifier, and no second copy of the states",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the states the rows can draw are exactly the twelve the artifact lists",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "no seat is ready because a picker says so: readiness starts from the reads",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a local seat on a runtime that is not answering is demo text, not ready",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the memory claim reads the ceiling and the used bytes, and invents no number",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "an alias without a key, and an alias that is not saved, are both stated rather than green",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a combo is judged by its targets, not by existing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pane's route resolution mirrors the server's parse_model_route",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the round is dispatched from the same plan the rows read",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the plan keeps the fallback chain: seat picker, then the Pipeline's, then the catalogue",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the round keeps its order, its reasoning modes and its pinning seat",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every state that is not ready offers an action, and only actions that exist",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the load action posts the route the server already mounts, and says what happened",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the providers action opens the panel the shell already has",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the choose action moves focus to the picker rather than describing it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Check again reads both endpoints and re-renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the rows are built as nodes with textContent, so a model id cannot inject markup",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a row is only redrawn when what it says changes, and focus follows the button",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the summary counts ready and configured assignments, and names both reads",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a full round and spawn-and-convene are preflighted before any summon or session write",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "single-seat dispatch is blocked by the same readiness classifier at both entry points",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "readiness shows the exact model id and source, preserves missing ids, and states local resource policy",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "note-only and open-empty-room controls remain available when round readiness is blocked",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the rows are re-read on the way into the pane, and the poll does not fight the reader",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a demo reply is labelled before it is given a tok/s badge",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the server marks the demo usage line, so the pane has something to read",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a failed seat is a presentation with a cause, what was kept and an action",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the failed seat redraws the server's transcript, so no card keeps saying Connecting",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the story adds no endpoint: every route it calls was already mounted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the summon route still speaks its four events and saves through append_hall_message",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the summon route keeps its defaults, so a seat-less caller behaves as before",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pane still posts only a summon, and the same one",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "check_count": 38,
+  "findings": [],
+  "status": "clean"
+}

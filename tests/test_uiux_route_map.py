@@ -175,7 +175,11 @@ def test_a_runtime_chosen_segment_flags_every_candidate_as_possible() -> None:
         assert "modelAction" in row["possible_callers"]
         assert "modelAction" not in row["callers"], "a runtime-chosen segment is not proof of a route"
 
-    assert {route["caller_certainty"] for route in (load, unload)} == {"possible"}
+    # UIUX-P4-01 adds a caller that posts the load route itself, with the model id as the only
+    # interpolated segment: that is proof for load, and none for unload.
+    assert "councilSeatAction" in load["callers"]
+    assert load["caller_certainty"] == "certain"
+    assert unload["caller_certainty"] == "possible"
     for route in _map()["routes"]:
         assert not set(route["callers"]) & set(route["possible_callers"])
         assert route["used_by_frontend"] == bool(route["callers"] or route["possible_callers"])

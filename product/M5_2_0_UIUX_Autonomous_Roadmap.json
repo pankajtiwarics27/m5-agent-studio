@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 23,
+  "revision": 24,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -100,15 +100,15 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": "UIUX-P4-01",
+    "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P3-07",
-    "next_recommended_story": "UIUX-P4-01",
-    "last_checkpoint": "2026-11-01T20:05:57Z",
-    "last_session_id": "arena/a8c52e51-m5-agent-studio",
+    "last_completed_story": "UIUX-P4-01",
+    "next_recommended_story": "UIUX-P4-02",
+    "last_checkpoint": "2026-11-02T21:40:00Z",
+    "last_session_id": "arena/468fb393-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "4f88fddf63f33cccd72e9c205dd13d91f1725738",
+    "last_verified_commit": "37d9cd85925a76c069dce8bb68b6ef18c4f25edd",
     "last_updated": "2026-11-02",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -120,7 +120,9 @@
       "The program's prose had drifted from the code at the pin: the program page still said 102 routes and 11 pinned files while app.py mounts 115 and the manifest now pins 12. Counts in docs are re-derived from the artifacts, not remembered.",
       "PR #104 was closed rather than merged: its UIUX-P0-03 work was ported to #109 and landed there, but the runtime-program benchmark diagnostics that branch also carried still need their own pull request in the runtime program.",
       "UIUX-P0-05 cannot be closed in this environment: the six baseline screenshots need Chrome/Chromium and puppeteer-core, neither of which is vendored. The test-results half is capturable here; the visual half needs a machine with a browser, and the owner has said they will capture there.",
-      "Two sessions are closing UI/UX stories against the same static/index.html at the same time. P3-01 and the P2-04 work merged without a source conflict because they own different panes, but every generated artifact conflicted: resolve those by regenerating from the merged source rather than by choosing a side, and re-run the full suite on the merged tree, because each story's own numbers describe its own commit."
+      "Two sessions are closing UI/UX stories against the same static/index.html at the same time. P3-01 and the P2-04 work merged without a source conflict because they own different panes, but every generated artifact conflicted: resolve those by regenerating from the merged source rather than by choosing a side, and re-run the full suite on the merged tree, because each story's own numbers describe its own commit.",
+      "The demo path's fabricated tok/s figures still reach `perf_samples`: `_stream_omlx_completion` yields 29.5/42.1 for text it wrote itself, `record_perf` stores them, and the throughput card and leaderboard count them. UIUX-P4-01 labels the reply and declines the badge, but it did not change the write, because that is a runtime-program defect and belongs to the M5 stories, not to a UI pull request.",
+      "`syncUnifiedSelectors` offers only resident local models, so loading a model rebuilds the catalogue and can re-pick a seat whose model was not in it. The Council readiness row always describes what the round would post, but an operator's earlier pick can change under them; the fix belongs to the model selector, and is recorded rather than patched inside a story about roles and readiness."
     ]
   },
   "tab_registry": [
@@ -293,11 +295,11 @@
         "UIUX-P4-06"
       ],
       "total": 6,
-      "done": 0,
-      "in_progress": 1,
+      "done": 1,
+      "in_progress": 0,
       "blocked": 0,
       "not_started": 5,
-      "percent_complete": 0
+      "percent_complete": 17
     },
     {
       "id": "P5",
@@ -340,11 +342,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 24,
-    "in_progress": 1,
+    "done": 25,
+    "in_progress": 0,
     "blocked": 0,
     "not_started": 15,
-    "percent_complete": 60
+    "percent_complete": 62
   },
   "stories": [
     {
@@ -421,11 +423,11 @@
           "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
         ],
         "evidence": [
-          "Acceptance criterion 1 (controls reachable and functionally equivalent): the manifest pins the tree as it is — 6 tabs with dom_id/label/title/shortcut/switchTab target parsed from static/index.html, and 102 routes parsed from app.py (36 GET, 58 POST, 5 DELETE, 3 PATCH). No file under static/ or app.py is in changed_files, so no control moved; the inventory is the before-state every later story is diffed against.",
+          "Acceptance criterion 1 (controls reachable and functionally equivalent): the manifest pins the tree as it is \u2014 6 tabs with dom_id/label/title/shortcut/switchTab target parsed from static/index.html, and 102 routes parsed from app.py (36 GET, 58 POST, 5 DELETE, 3 PATCH). No file under static/ or app.py is in changed_files, so no control moved; the inventory is the before-state every later story is diffed against.",
           "Acceptance criteria 2 and 3 (no console errors, keyboard and focus states): NOT exercised and not claimed. Capture and interactive checks need a browser (Chrome/Chromium plus puppeteer-core, deliberately not vendored); scripts/validate_screenshots.py reports 0 of 6 captured, and the manifest records that state instead of implying a rendered pane.",
-          "Acceptance criterion 4 (failure states actionable and honest): applied to the artifact itself — an uncaptured screenshot is recorded as captured:false, a missing tracked file is an error rather than an omission, and a ledger pin that is not a full 40-char sha makes the generator refuse to build.",
+          "Acceptance criterion 4 (failure states actionable and honest): applied to the artifact itself \u2014 an uncaptured screenshot is recorded as captured:false, a missing tracked file is an error rather than an omission, and a ledger pin that is not a full 40-char sha makes the generator refuse to build.",
           "Acceptance criterion 5 (demonstrable by screenshot or test): 11 tests in tests/test_uiux_source_manifest.py re-derive every claim from disk, and two of them prove the guard fires (drift makes --check exit 1; a short pin is rejected).",
-          "Determinism: the generator takes the pin from the ledger rather than HEAD, so committing the manifest does not invalidate it; --check compares bytes and names the files that drifted. It caught this story's own drift — #99 changed studio.py mid-story and --check reported it before the manifest was regenerated.",
+          "Determinism: the generator takes the pin from the ledger rather than HEAD, so committing the manifest does not invalidate it; --check compares bytes and names the files that drifted. It caught this story's own drift \u2014 #99 changed studio.py mid-story and --check reported it before the manifest was regenerated.",
           "Provenance note: this manifest describes this checkout only. It was not compared with the roadmap's web extracts, so where the two disagree the checkout wins."
         ],
         "test_results": [
@@ -577,8 +579,8 @@
         ],
         "evidence": [
           "Acceptance criterion 1 (all mapped controls reachable and functionally equivalent): 170 controls in the markup, each attributed to its pane section by an html.parser walk rather than by reading, plus 30 controls rendered by inline-script templates attributed to the function that renders them. No markup or route changed in this story, so this is the exact before-state the later stories are diffed against.",
-          "Acceptance criterion 5 (demonstrable by test): 9 tests in tests/test_uiux_control_inventory.py — totals add up, panes equal the manifest's six tabs in order with the same pin, handlers are call expressions, the generated page carries every pane and every limitation, --check fails on a moved control (proved on a temporary copy) and passes on the tree.",
-          "Acceptance criteria 2 and 3 (no console errors, keyboard and focus states): NOT exercised and not claimed — no browser here, nothing rendered. The inventory says so in not_verified rather than implying a rendering.",
+          "Acceptance criterion 5 (demonstrable by test): 9 tests in tests/test_uiux_control_inventory.py \u2014 totals add up, panes equal the manifest's six tabs in order with the same pin, handlers are call expressions, the generated page carries every pane and every limitation, --check fails on a moved control (proved on a temporary copy) and passes on the tree.",
+          "Acceptance criteria 2 and 3 (no console errors, keyboard and focus states): NOT exercised and not claimed \u2014 no browser here, nothing rendered. The inventory says so in not_verified rather than implying a rendering.",
           "Two inventory facts that constrain the rest of the program: 101 of the 170 markup controls sit in the shared chrome (all six panes have 69 between them), and 58 controls have no id, so no selector-based test can reach them until one exists or a stable hook is introduced.",
           "Completeness is bounded honestly: script-rendered controls are a separate list, their function attribution is a heuristic, a wrapping label element is not resolved, and the mount for every pane was checked against static/index.html rather than assumed."
         ],
@@ -2609,7 +2611,7 @@
           }
         ],
         "visual_evidence": [
-          "docs/media/start/recent.png - the card with the session the walk created: title, \"0 steps · standard · workspace\", a READY pill from the shared state table, the composer and Refresh, and the note quoting the preflight (not ready, next: Connect a model source).",
+          "docs/media/start/recent.png - the card with the session the walk created: title, \"0 steps \u00b7 standard \u00b7 workspace\", a READY pill from the shared state table, the composer and Refresh, and the note quoting the preflight (not ready, next: Connect a model source).",
           "docs/media/start/handoff.png - the Harness after the handoff: the typed task in the composer, focused, with no session created and no stream started.",
           "docs/media/start/empty.png - the empty presentation with its two actions, reached by deleting the walk's own session.",
           "Captured by scripts/start_recent_walk.mjs --screenshots while it created and deleted its own state; docs/media/start/README.md records the commands."
@@ -3082,9 +3084,9 @@
           }
         ],
         "visual_evidence": [
-          "docs/media/chat/transcript.png - a transcript the walk wrote: YOU 3 and MODEL DEMO-LOCAL-MODEL 4 headers with turn numbers, the summary '4 messages · 2 replies', Jump to latest because the reader is scrolled up, and the composer's amber note quoting the telemetry probe.",
+          "docs/media/chat/transcript.png - a transcript the walk wrote: YOU 3 and MODEL DEMO-LOCAL-MODEL 4 headers with turn numbers, the summary '4 messages \u00b7 2 replies', Jump to latest because the reader is scrolled up, and the composer's amber note quoting the telemetry probe.",
           "docs/media/chat/scrolled.png - the case the rule exists for: a new answer appended while the reader is at the top; the view does not move and the jump control appears.",
-          "docs/media/chat/answered.png - a real send answered by the demo's scripted runtime: 'say READY' as a labelled turn, the answer with its model above and '42.1 tok/s · 53 tok' below, Send enabled and Stop gone.",
+          "docs/media/chat/answered.png - a real send answered by the demo's scripted runtime: 'say READY' as a labelled turn, the answer with its model above and '42.1 tok/s \u00b7 53 tok' below, Send enabled and Stop gone.",
           "docs/media/chat/cleared.png - Clear presented as a recovery with Undo and the count of removed turns, an empty transcript that says what will appear, and Clear disabled with nothing to clear.",
           "docs/media/chat/failure.png - POST /api/chat/stream refused: the error kind with cause 'Failed to fetch', the promise that the message and transcript are kept, Retry and Dismiss, and the placeholder rolled back.",
           "docs/media/chat/narrow.png - the pane at 900px: no horizontal overflow, composer note still visible. Captured by scripts/chat_walk.mjs --screenshots; docs/media/chat/README.md records which capture is written and which is real."
@@ -3219,11 +3221,11 @@
           "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
         ],
         "evidence": [
-          "A reply was the product of a request the pane never showed. #chatModel, #chatReasoning, the tools checkbox, the active skill set and the message list all went to POST /api/chat/stream, and none of it was printed, so \"why did it answer like that?\" had no answer in the pane. chatContextSnapshot() is now called once, when the request is built, stored on the turn as m.context, and printed as \"Context: model <id> · <persona> · reasoning <mode> · tools on (read-only)|tools off · N skills · N messages sent · <directory>\". Recomputing it at render time would describe the composer as it is now, not the request that went out, so the inventory fails on any chatContextSnapshot() call inside renderChatMessages().",
+          "A reply was the product of a request the pane never showed. #chatModel, #chatReasoning, the tools checkbox, the active skill set and the message list all went to POST /api/chat/stream, and none of it was printed, so \"why did it answer like that?\" had no answer in the pane. chatContextSnapshot() is now called once, when the request is built, stored on the turn as m.context, and printed as \"Context: model <id> \u00b7 <persona> \u00b7 reasoning <mode> \u00b7 tools on (read-only)|tools off \u00b7 N skills \u00b7 N messages sent \u00b7 <directory>\". Recomputing it at render time would describe the composer as it is now, not the request that went out, so the inventory fails on any chatContextSnapshot() call inside renderChatMessages().",
           "Two different facts were being collapsed into one. The workspace field is usually empty, and the server then reads WORKSPACE_ROOT. Printing only what was sent would leave the reader guessing which directory the tools touched; printing only the effective one would hide that nothing was sent. The snapshot carries workspace (literally sent, possibly \"\") and workspace_effective (what the server will read), and the walk proves both: a written turn shows \"the configured default project directory\", and a real send records workspace \"/tmp/m5-demo-.../workspace\" -> reads the same path.",
           "The line leads with the model because the turn header names the model that answered. They agree today; if the server ever falls back they would not, and the context line is the record of what was asked for.",
-          "A tool call was a border colour and 72 characters of JSON. app.py yields chat_tool with step, tool, args, ok, elapsed_ms and a preview capped at 500 characters; the pane drew a tinted box and JSON.stringify(t.args).slice(0,72), so the rest of the arguments was unreachable and a failed call looked like a slightly redder successful one. Each row now prints a status word (OK/FAILED) with a tone, data-tool-status, the tool, \"step N · N ms · N B of arguments\", and a disclosure holding the whole argument object and the output, labelled with the server cap.",
-          "The summary is the part a reader who opens nothing sees. \"2 tool calls · 1 failed · 127 ms\" is computed from the same list the rows are drawn from, so the count and the rows cannot disagree.",
+          "A tool call was a border colour and 72 characters of JSON. app.py yields chat_tool with step, tool, args, ok, elapsed_ms and a preview capped at 500 characters; the pane drew a tinted box and JSON.stringify(t.args).slice(0,72), so the rest of the arguments was unreachable and a failed call looked like a slightly redder successful one. Each row now prints a status word (OK/FAILED) with a tone, data-tool-status, the tool, \"step N \u00b7 N ms \u00b7 N B of arguments\", and a disclosure holding the whole argument object and the output, labelled with the server cap.",
+          "The summary is the part a reader who opens nothing sees. \"2 tool calls \u00b7 1 failed \u00b7 127 ms\" is computed from the same list the rows are drawn from, so the count and the rows cannot disagree.",
           "The streaming clock is measured and it stops. sendChatRequest() records timing.startedAt before the fetch and stamps firstTokenAt inside the token() handler; the finished turn freezes endedAt in done(). Before a token arrives the turn says \"waiting for the first token\" rather than a zero. There is no timer: the numbers are a snapshot per render, which is why they freeze instead of ticking, and the page says so.",
           "Two rules the first draft got wrong, caught by the walk rather than by review. A turn drawn with no usage but no send flag read aria-busy=\"false\", so the transcript announced itself idle while an answer was arriving: busy now follows chatHistory.some(m => m.role === \"assistant\" && !m.usage) as well as the pane's own flag. And the context line omitted the model while claiming to record the request: the walk asserts the model appears before any other field.",
           "The pane and the route are checked against each other. The inventory reads the chat_tool dict out of app.py and the preview cap, and fails if the pane reads a field the route does not send (tool.duration_ms, in the negative test), if the route stops sending elapsed_ms, or if the cap changes while the pane still says 500.",
@@ -3291,11 +3293,11 @@
         "visual_evidence": [
           {
             "file": "docs/media/chat/context-tools.png",
-            "shows": "One answer with its context line, Reasoning Trace · 49 chars, 2 tool calls · 1 failed · 127 ms, an OK row and a FAILED row each with step, time and argument size, and 1.8s · first token 0.41s · 41.2 tok/s · 320 tok below the answer."
+            "shows": "One answer with its context line, Reasoning Trace \u00b7 49 chars, 2 tool calls \u00b7 1 failed \u00b7 127 ms, an OK row and a FAILED row each with step, time and argument size, and 1.8s \u00b7 first token 0.41s \u00b7 41.2 tok/s \u00b7 320 tok below the answer."
           },
           {
             "file": "docs/media/chat/streaming.png",
-            "shows": "A turn in flight reading streaming… · 1.2s · waiting for the first token · 128 chars under its own context line, with the finished turn above it still showing its own frozen figures."
+            "shows": "A turn in flight reading streaming\u2026 \u00b7 1.2s \u00b7 waiting for the first token \u00b7 128 chars under its own context line, with the finished turn above it still showing its own frozen figures."
           },
           {
             "file": "docs/media/chat/sent-context.png",
@@ -3678,7 +3680,7 @@
           "Nine controls decided a Harness run and none of them said what the run would do with them, and \"can this run?\" had three answers: a toast in the GSD path, a different toast in the SDLC path, and a silent `return` in the turn path. The composer now prints the plan above Run - `directory` (plus `direct` or `isolated git worktree`), `policy`, `models` (lead, then the critic or `same`), `workflow` (the mode with the three advanced settings it depends on, and `N changed` in words) - and every value is read from the control the run payload posts.",
           "The plan covers the payload by construction, and the inventory enforces it from both ends: `ids_in_the_payload` is parsed out of the `consumeSSE(\"/api/harness/run\", {...})` and `/api/harness/gsd-wave` payload objects, `ids_the_plan_reads` is parsed out of `harnessRunPlan()` (plus the `HARNESS_ADVANCED_IDS` list it iterates), and `covers_the_run_payload` fails when a control is added to the payload without being added to the plan. `watches_the_same_controls` fails when the change listeners and the payload diverge, so the plan cannot go stale against a control it is not watching.",
           "The policy is printed as the option's own label. The first version of the row appended a description from a `HARNESS_POLICY_EFFECT` table and read \"Standard (Ask before Bash) - asks before Bash\"; the table was deleted, the row now prints `harnessSelectedText(\"harnessPolicy\")`, and `policy_is_the_option_label` fails if a second description of a policy appears anywhere in the file. One string, so the sentence a reader sees cannot drift from the option they chose.",
-          "The three settings that used to hide inside `<details id=\"harnessAdvanced\">` now state their own contents while the group is closed: the summary reads `Ponytail + Concise · Low · 10 steps`, and appends `· changed` when one differs from the `data-default` its own markup declares. `declared_default_is_the_selected_option` pins each declared default to the option the markup ships selected, so a fresh pane cannot open marked as changed, and `changed_is_marked_in_words` keeps the word - colour is reinforcement, never the status.",
+          "The three settings that used to hide inside `<details id=\"harnessAdvanced\">` now state their own contents while the group is closed: the summary reads `Ponytail + Concise \u00b7 Low \u00b7 10 steps`, and appends `\u00b7 changed` when one differs from the `data-default` its own markup declares. `declared_default_is_the_selected_option` pins each declared default to the option the markup ships selected, so a fresh pane cannot open marked as changed, and `changed_is_marked_in_words` keeps the word - colour is reinforcement, never the status.",
           "`harnessRunState()` is one predicate for Run, exactly as `chatSendReason()` is for Send: `updateHarnessRunControl()` sets `button.disabled = !state.ready` and writes the same answer into a polite live region that the composer points at with `aria-describedby`. The reasons are `running`, `board`, `no-task` and `ready`; the board mode needs no task because opening the SDLC board runs nothing, and the inventory fails if that exception is lost.",
           "Two real defects closed with that predicate. `executeHarnessSelectedWorkflow()` now consults it before dispatching, so an empty task is the sentence beside Run rather than a silent `return` (the GSD and SDLC paths keep their own guards for their own buttons); and because `harnessRunActive` is the first branch, Enter in a busy composer can no longer start a second stream - before this story `runHarnessTurn()` set the button's `disabled` but the keydown handler called the dispatcher directly. `setHarnessRunActive()` re-evaluates on both edges, so a finished run leaves an empty box and Run off rather than enabled and inert.",
           "The pane now answers the brief UIUX-P2-06 carries. `handOffChatToHarness()` records what it carried, and a banner that starts hidden appears with the counts (`2 messages, 2 tool calls (1 failed)`), the model and the effective directory the reply was sent with, and the difference: `This run changes 2 settings: the model (demo-local-model -> combo/hybrid-resilient); the project directory (/tmp/chat-read-project -> /tmp/p3-01-walk-project)`. It keeps comparing as controls change, says `This run uses the same model and project directory it was read with` when nothing differs, writes only when the sentence changes, and goes when the task goes - a run consumes it, **+ New session** clears it, and emptying the composer clears it.",
@@ -3753,7 +3755,7 @@
         "visual_evidence": [
           {
             "file": "docs/media/harness/plan.png",
-            "shows": "The Harness at 1440x900 with RUN WILL above Run: DIRECTORY /tmp/m5-demo-.../workspace · direct, POLICY Standard (Ask before Bash), MODELS [Combo · Auto-Fallback] Local M5 Multi-Model Fallback (2 targets) · critic same, WORKFLOW Autonomous Turn (Step Loop) · Ponytail + Concise · Low · 10 steps - the same three values the collapsed Advanced settings group carries in its summary - and the sentence beside Run asking for a task."
+            "shows": "The Harness at 1440x900 with RUN WILL above Run: DIRECTORY /tmp/m5-demo-.../workspace \u00b7 direct, POLICY Standard (Ask before Bash), MODELS [Combo \u00b7 Auto-Fallback] Local M5 Multi-Model Fallback (2 targets) \u00b7 critic same, WORKFLOW Autonomous Turn (Step Loop) \u00b7 Ponytail + Concise \u00b7 Low \u00b7 10 steps - the same three values the collapsed Advanced settings group carries in its summary - and the sentence beside Run asking for a task."
           },
           {
             "file": "docs/media/harness/no-task.png",
@@ -3903,8 +3905,8 @@
         ],
         "evidence": [
           "The pane dropped 25 of the 43 event types app.py emits, and the walk proves it in a browser: a session created through POST /api/harness/sessions (which makes the server append session/init) drew an empty trajectory before this story and now draws a card - `every held event draws a card, so session/init is no longer a blank trajectory - cards=1 held=1`. The counts are the server's: `harness_timeline_inventory.py` parses the types out of the _append_harness_event/_safe_append_harness_event call sites (43) and out of the renderer (18 with a card), and 18 + 25 = 43 with no type left in between.",
-          "`renderStoredHarnessEventHtml()` now ends in `renderRecordedHarnessEventHtml(ev)`, so a type with no card arrives as a compact line read from the event (`session/init  standard policy · direct /tmp/... · lead Qwen3.8-27B`, `security/policy_revision  standard -> plan (revision 2)`, `edit/applied  applied · src/app.py`). The inventory fails on `renderer_ends_in_the_fallback`, on any `return \"\"` in the renderer, and on a card for a type nothing emits (`no_dead_branches`) - a dead branch is a card no event can reach.",
-          "The strip states what the trajectory is: `following the log from seq 13 · 13 events held · replayed 3 times` while the stream fills it, `1 event held, seq 1-1 · cursor 1 of 1` after a page read with the stream closed, `the log did not resume (events_pruned), so this view is the snapshot's: task state and 9 events, seq 5-13` when the fallback fired, and `· 4 earlier events pruned, retained from seq 5 · this view holds 9 of the 13 events last reported` for a pruned or incomplete view. Every one of those sentences is produced by harnessLogState() from the log it holds and the last page it read, not from prose; the walk reads each one out of the DOM.",
+          "`renderStoredHarnessEventHtml()` now ends in `renderRecordedHarnessEventHtml(ev)`, so a type with no card arrives as a compact line read from the event (`session/init  standard policy \u00b7 direct /tmp/... \u00b7 lead Qwen3.8-27B`, `security/policy_revision  standard -> plan (revision 2)`, `edit/applied  applied \u00b7 src/app.py`). The inventory fails on `renderer_ends_in_the_fallback`, on any `return \"\"` in the renderer, and on a card for a type nothing emits (`no_dead_branches`) - a dead branch is a card no event can reach.",
+          "The strip states what the trajectory is: `following the log from seq 13 \u00b7 13 events held \u00b7 replayed 3 times` while the stream fills it, `1 event held, seq 1-1 \u00b7 cursor 1 of 1` after a page read with the stream closed, `the log did not resume (events_pruned), so this view is the snapshot's: task state and 9 events, seq 5-13` when the fallback fired, and `\u00b7 4 earlier events pruned, retained from seq 5 \u00b7 this view holds 9 of the 13 events last reported` for a pruned or incomplete view. Every one of those sentences is produced by harnessLogState() from the log it holds and the last page it read, not from prose; the walk reads each one out of the DOM.",
           "The reader's place survives a frame. `harnessStreamNearBottom()` (28px slack, the chat transcript's rule) is consulted once before the transcript is rewritten: a pinned view follows, and a reading view keeps its `scrollTop` and its open `<details>` cards - the walk scrolls to 0, replays, and reads `scrollTop 0 -> 0`. Jump to latest is drawn only when the reader is away from the newest event (`hidden at bottom=true shown when up=true`), and pressing it is what returns them (`hidden after=true atBottom=true`). The walk asks the browser for pixels, not for the `hidden` property, because `.btn` sets its own display and had made the first version of the button always visible.",
           "Replay rebuilds from the record: `replayHarnessLog()` empties the cache, re-reads the log from its first retained event and re-renders from what came back - `before=13 after=13 cards=13`, twice, with `replayed 1 time` then `replayed 2 times`, so a replay is countable and a duplicate is impossible (the seq-keyed merge is untouched). A replay that hits a gap does not pretend: it records the reason, says so, and resyncs the authoritative snapshot instead.",
           "The engine underneath is unchanged: the six gap reasons (no_page, snapshot_required, cursor_ahead, events_pruned, sequence_gap, missing_events), seq-deduplication, the cursor, snapshot_required handling, the pruned-history notice, the three stream frames (task_event, resync_required, stream_error) and the resync path that re-reads /state and re-anchors the stream all still work, and the inventory fails if any of them goes. No endpoint was added: the strip reads the four routes the pane already had.",
@@ -3960,11 +3962,11 @@
         "visual_evidence": [
           {
             "file": "docs/media/harness-timeline/log-open.png",
-            "shows": "The Harness at 1440x900 with a newly created session: the Session log strip saying `1 event held, seq 1-1 · cursor 1 of 1`, opened to its single row `#1 session/init · standard policy · direct /tmp/m5-demo-.../workspace · lead Qwen3.8-27B`, and below it the card that row points at - the session that used to draw an empty trajectory."
+            "shows": "The Harness at 1440x900 with a newly created session: the Session log strip saying `1 event held, seq 1-1 \u00b7 cursor 1 of 1`, opened to its single row `#1 session/init \u00b7 standard policy \u00b7 direct /tmp/m5-demo-.../workspace \u00b7 lead Qwen3.8-27B`, and below it the card that row points at - the session that used to draw an empty trajectory."
           },
           {
             "file": "docs/media/harness-timeline/replayed.png",
-            "shows": "The same session after twelve policy changes: `13 events`, `following the log from seq 13 · 13 events held · replayed 3 times`, rows #1 session/init, #2 standard -> plan (revision 2), #3 plan -> autonomous (revision 3)..., Replay and Resync in the bar, and the recorded-event cards in the trajectory matching the rows one for one."
+            "shows": "The same session after twelve policy changes: `13 events`, `following the log from seq 13 \u00b7 13 events held \u00b7 replayed 3 times`, rows #1 session/init, #2 standard -> plan (revision 2), #3 plan -> autonomous (revision 3)..., Replay and Resync in the bar, and the recorded-event cards in the trajectory matching the rows one for one."
           },
           {
             "file": "docs/media/harness-timeline/pruned.png",
@@ -4117,9 +4119,9 @@
         ],
         "evidence": [
           "Four paths could raise an approval and each drew its own card; three printed the same hardcoded `Standard Policy` badge whatever policy was in force. `renderHarnessApprovalCardHtml()` is now the only builder and all four paths draw with it, and the policy it prints is the option's own label from `#harnessPolicy` (`harnessPolicyLabel()`), so the card and the select cannot describe one policy two ways. The inventory fails if a second headline, a second decision control or a policy literal comes back.",
-          "The card states what the click records, in the units the store uses: tool, exact arguments, capability (`scoped_grants.resolve_tool_capabilities()`), resource, and `one use · 10 minutes after you decide`. The capability line is a client table that this story's inventory imports the real function to check - 18 tools and the `mcp__*` rule - so the copy is verified rather than trusted, and the ttl it prints is compared with `SG_DEFAULT_GRANT_TTL_SECONDS`. The resource line names the path argument it can see and says where the server will resolve it; the surface prints the canonical `path:<worktree>:<rel>` from the record, so the pane never invents a scope it did not receive.",
+          "The card states what the click records, in the units the store uses: tool, exact arguments, capability (`scoped_grants.resolve_tool_capabilities()`), resource, and `one use \u00b7 10 minutes after you decide`. The capability line is a client table that this story's inventory imports the real function to check - 18 tools and the `mcp__*` rule - so the copy is verified rather than trusted, and the ttl it prints is compared with `SG_DEFAULT_GRANT_TTL_SECONDS`. The resource line names the path argument it can see and says where the server will resolve it; the surface prints the canonical `path:<worktree>:<rel>` from the record, so the pane never invents a scope it did not receive.",
           "The old streamed card posted `activeHarnessId` and the workflow cards posted `d.session_id`, which is how a stale card could earn a 403. Every path now passes the session it drew with, `resolveHarnessApproval()` falls back to the selected session only when the card carried none, and the walk captures the `POST /api/harness/approve` body to prove `session_id` is the seeded session.",
-          "Expiry is stated while the offer is live: the card counts down from the request (`expires in 9 min`, then seconds), one interval drives every live card and clears itself when the last one is gone, and an offer whose slot is gone reads `Expired — re-run the turn` with `Re-run the turn to reach the gate again` - not as a refusal, because nothing was refused. A decided card keeps its arguments: the resolved event carries only `{approval_id, decision, note, step}`, so the request is filed in `harnessApprovalRequests` when it is first drawn and the decided card is redrawn from it.",
+          "Expiry is stated while the offer is live: the card counts down from the request (`expires in 9 min`, then seconds), one interval drives every live card and clears itself when the last one is gone, and an offer whose slot is gone reads `Expired \u2014 re-run the turn` with `Re-run the turn to reach the gate again` - not as a refusal, because nothing was refused. A decided card keeps its arguments: the resolved event carries only `{approval_id, decision, note, step}`, so the request is filed in `harnessApprovalRequests` when it is first drawn and the decided card is redrawn from it.",
           "The permissions surface (`#harnessGrantsModal`, opened by `#harnessPermissionBadge` in the session strip and by `Permissions & Revocations` in the session actions) lists what the session holds with tool, capability, canonical resource, limit, expiry, `issued_by` and note; the revocation rules that refuse matching actions; the history of grants that ended and how; and the approvals still waiting (with a link to the card) or expired. A failed read says it failed instead of drawing an empty session, a slow read is dropped when the reader has selected another session, and the badge says `No permissions` in words.",
           "Revoking is two steps and says what it does: that the grant stops, that a revocation rule refuses the capability on the scope for the rest of the session, that matching running commands are stopped too, and that neither can be undone from here. That last sentence is the one the story had to get right - the store permits issuing a fresh grant after a revocation (verified against the live API before this story), so only `check_revocation_denials()` stops the action, and the confirmation says so rather than offering an undo that does not exist.",
           "The walk could not ask the API for an approval, because no route mints one: `_PENDING_APPROVALS` is in-process state written only when a running turn reaches the gate, and the demo has no runtime. `scripts/harness_permissions_seed.py` therefore boots the ordinary isolated demo environment and calls the app's own `_create_pending_tool_approval()` twice and lets one slot lapse the way the runtime does. The approvals, grants and events are the server's own records; only the arrival is staged, and the fixture says so in its own docstring.",
@@ -4180,19 +4182,19 @@
         "visual_evidence": [
           {
             "file": "docs/media/harness-permissions/approval-card.png",
-            "shows": "An approval before any decision at 1440x900: the policy in force (`Standard (Ask before Bash)`, the option's own label), `step 3`, `run_bash` with the exact command, `Capability code_execution, workspace_read, workspace_write`, `Resource this session's worktree, and nothing outside it`, `Limit one use · 10 minutes after you decide`, the expiry clock with a live countdown, the sentence that approving records a one-use permission for this exact call and is not a standing allow, and the two decision controls."
+            "shows": "An approval before any decision at 1440x900: the policy in force (`Standard (Ask before Bash)`, the option's own label), `step 3`, `run_bash` with the exact command, `Capability code_execution, workspace_read, workspace_write`, `Resource this session's worktree, and nothing outside it`, `Limit one use \u00b7 10 minutes after you decide`, the expiry clock with a live countdown, the sentence that approving records a one-use permission for this exact call and is not a standing allow, and the two decision controls."
           },
           {
             "file": "docs/media/harness-permissions/expired.png",
-            "shows": "An offer nobody answered: the card is drawn at 0.82 opacity with no decision buttons, and says `This request was never decided — the run it belonged to ended. Re-run the turn to reach the gate again; nothing was granted.`"
+            "shows": "An offer nobody answered: the card is drawn at 0.82 opacity with no decision buttons, and says `This request was never decided \u2014 the run it belonged to ended. Re-run the turn to reach the gate again; nothing was granted.`"
           },
           {
             "file": "docs/media/harness-permissions/permissions-open.png",
-            "shows": "The permissions surface opened from the badge: `hns-c5a74e19 · policy Standard (Ask before Bash) · revision 1`, the grant the approval recorded under the approval id itself with its canonical `workspace:/tmp/m5-demo-.../workspace` scope, `one use · exact arguments only`, `9 min left` and `operator_approval`, and the expired offer beneath it."
+            "shows": "The permissions surface opened from the badge: `hns-c5a74e19 \u00b7 policy Standard (Ask before Bash) \u00b7 revision 1`, the grant the approval recorded under the approval id itself with its canonical `workspace:/tmp/m5-demo-.../workspace` scope, `one use \u00b7 exact arguments only`, `9 min left` and `operator_approval`, and the expired offer beneath it."
           },
           {
             "file": "docs/media/harness-permissions/revoked.png",
-            "shows": "The same surface after a two-step revoke: `This session holds no permission. 1 revocation rule refuses matching actions anyway.`, the rule `blocks code_execution, workspace_write` on that workspace for the rest of the session, and the grant in the history as `revoked — operator_revoked` with no countdown left to mislead."
+            "shows": "The same surface after a two-step revoke: `This session holds no permission. 1 revocation rule refuses matching actions anyway.`, the rule `blocks code_execution, workspace_write` on that workspace for the rest of the session, and the grant in the history as `revoked \u2014 operator_revoked` with no countdown left to mislead."
           }
         ],
         "known_regressions": [],
@@ -4342,12 +4344,12 @@
           "studio.py"
         ],
         "evidence": [
-          "A verdict used to be a label. `turn/verified` drew `Completion verified (spec_sha256…)` - the digest of a contract the reader could not see - and `turn/verification_failed` drew a failure code and a reason, while the transcript, the exit code, the revision, the classification and the acceptance coverage that decided it stayed in the log. A third outcome, `turn/stagnation_paused`, was not drawn as a verdict at all. `renderHarnessVerdictCardHtml()` now draws all three from the report the runtime persisted (`TaskVerificationReport.to_dict()` is the event payload): the contract digest, the command with its exit code and classification, the revision the result is tied to and whether it moved, the modified files, the patch digest, the environment, the failing tests with their kind, the covered and uncovered criteria, and the output behind a disclosure. The inventory fails if a second verdict renderer appears or the one-line label comes back.",
+          "A verdict used to be a label. `turn/verified` drew `Completion verified (spec_sha256\u2026)` - the digest of a contract the reader could not see - and `turn/verification_failed` drew a failure code and a reason, while the transcript, the exit code, the revision, the classification and the acceptance coverage that decided it stayed in the log. A third outcome, `turn/stagnation_paused`, was not drawn as a verdict at all. `renderHarnessVerdictCardHtml()` now draws all three from the report the runtime persisted (`TaskVerificationReport.to_dict()` is the event payload): the contract digest, the command with its exit code and classification, the revision the result is tied to and whether it moved, the modified files, the patch digest, the environment, the failing tests with their kind, the covered and uncovered criteria, and the output behind a disclosure. The inventory fails if a second verdict renderer appears or the one-line label comes back.",
           "The card never invents a value the record does not hold: a report with no captured revision says `no revision captured`, one whose command never executed says `the verification command never ran`, and the card ends with `A verdict is the runtime's record of one turn: this card draws it, and re-runs nothing`. The inventory breaks both fallbacks in a copy of the source to prove they are checked.",
-          "The record behind the card is `#harnessEvidenceModal`, reached from the session actions (`Verification & Artifacts`), the command palette, every verdict card and the diff dialog. It reads only routes that already existed - `GET …/task` and `GET …/diff` - and draws six sections: the verdict (code, facts, failures, evidence refs, transcript digest, output), the contract (command, first stage, required output markers, required and modified files, protected digests, baseline digests, the rules in force, known failures, declared criteria), the observation (exit code, classification, pre-existing failures classified as pre-existing, output digest, and the coverage the transcript actually demonstrated), the change (branch, status, per-file +n/-m), the artifacts (checkpoints, the latest checkpoint's evidence refs, the artifact lineage, the revision a re-run would be tied to), and four statements of what the surface does not prove. No endpoint was added; the inventory fails on an invented or unmounted verification route.",
+          "The record behind the card is `#harnessEvidenceModal`, reached from the session actions (`Verification & Artifacts`), the command palette, every verdict card and the diff dialog. It reads only routes that already existed - `GET \u2026/task` and `GET \u2026/diff` - and draws six sections: the verdict (code, facts, failures, evidence refs, transcript digest, output), the contract (command, first stage, required output markers, required and modified files, protected digests, baseline digests, the rules in force, known failures, declared criteria), the observation (exit code, classification, pre-existing failures classified as pre-existing, output digest, and the coverage the transcript actually demonstrated), the change (branch, status, per-file +n/-m), the artifacts (checkpoints, the latest checkpoint's evidence refs, the artifact lineage, the revision a re-run would be tied to), and four statements of what the surface does not prove. No endpoint was added; the inventory fails on an invented or unmounted verification route.",
           "Coverage is drawn as what the transcript printed, not as what the contract hoped: `evaluate_acceptance_coverage()` counts a test id only when it appears in the output and is not among the classified failures, so an uncovered criterion is drawn `NOT COVERED` and counted (`1 declared criterion(s) were not covered by an observed test`). The contract section draws the same criteria as `declared` with no verdict mark, because the contract is the gate and the observation is what happened when it was applied - a first pass drew them as uncovered there and the walk caught the contradiction.",
           "Three absences are drawn as absences, proved in the walk: no verdict in the log (`No verdict is recorded in this session's log yet`), no contract on the session (`This session has no verification contract, so completion was not gated by one`), and an unreadable diff (`The workspace diff could not be read`). None is drawn as a pass; the walk selects a seeded session that has a contract and no verdict and asserts both that no card is drawn and that the record's verdict block carries no tone.",
-          "The change is counted once. `harnessDiffFiles()` parses the unified diff, skipping `diff --git`, `+++`, `---` and `@@` so a hunk header cannot be read as an addition, and both the record and `#harnessDiffModal` count with it - the dialog now shows `1 file(s) · +1 −1 · on master` above the diff and says `This is the worktree as it is now. It is not frozen at any verdict`. The parser is exercised against output real `git` produced in a temporary repository, not a hand-written sample.",
+          "The change is counted once. `harnessDiffFiles()` parses the unified diff, skipping `diff --git`, `+++`, `---` and `@@` so a hunk header cannot be read as an addition, and both the record and `#harnessDiffModal` count with it - the dialog now shows `1 file(s) \u00b7 +1 \u22121 \u00b7 on master` above the diff and says `This is the worktree as it is now. It is not frozen at any verdict`. The parser is exercised against output real `git` produced in a temporary repository, not a hand-written sample.",
           "The fixture cannot fake a verdict: only `TaskStateMachine.verify_task_completion()` produces a report, and the demo has no model runtime. `scripts/harness_evidence_seed.py` therefore builds two git workspaces, sets a real `TaskVerificationSpec` on each session, and lets that verifier decide - one workspace passes its test, one fails it - then appends the reports with `_append_harness_event()`, the writer a turn uses, and records a checkpoint with the store's own `save_checkpoint()`. What is staged is the `turn/start` and `turn/end` bookends; the revision, environment, exit code, transcript digest, classified failures and coverage are the verifier's.",
           "The diff, apply and task contracts are unchanged and checked: `_compute_git_diff()` still redacts (`combined = redact_text(`), bounds the payload at 50 000 characters and previews untracked files, `/apply` still refuses a read-only policy and reports a quarantined workspace, and `/task` still returns the spec, the evidence preview, the checkpoints and the lineage - the inventory fails if any of those checks stop seeing what they look for, and a test breaks each one in a copy of `app.py`."
         ],
@@ -4406,15 +4408,15 @@
         "visual_evidence": [
           {
             "file": "docs/media/harness-evidence/verdict-card.png",
-            "shows": "A verified turn as one card at 1440x900: `Completion verified`, the claim sentence, and the facts the verdict rests on - `Contract spec 93ddcca159a8…`, `Command exit 0 · passed`, `Revision 442794aaab… · 1 uncommitted`, `Files 2 modified: src/total.py, tests/test_total.py`, `Patch sha256 b0441966b811…`, `Environment python 3.11.2 on Linux x86_64` - with the covered criterion, the output behind a disclosure, and the two controls that open the record and the diff."
+            "shows": "A verified turn as one card at 1440x900: `Completion verified`, the claim sentence, and the facts the verdict rests on - `Contract spec 93ddcca159a8\u2026`, `Command exit 0 \u00b7 passed`, `Revision 442794aaab\u2026 \u00b7 1 uncommitted`, `Files 2 modified: src/total.py, tests/test_total.py`, `Patch sha256 b0441966b811\u2026`, `Environment python 3.11.2 on Linux x86_64` - with the covered criterion, the output behind a disclosure, and the two controls that open the record and the diff."
           },
           {
             "file": "docs/media/harness-evidence/verdict-record.png",
-            "shows": "The record behind it: `hns-… · Completion verified · spec 93ddcca159a8… · branch master`, then the verdict block with its evidence refs (`patch_verification`, `test_verification`) and transcript digest, the contract (`Test command … -m pytest -v tests`, `Required modified src/total.py`, the rules in force, `none declared before this run`), the declared criterion marked `DECLARED`, and the observation beginning with `Exit code 0` and `Classification passed`."
+            "shows": "The record behind it: `hns-\u2026 \u00b7 Completion verified \u00b7 spec 93ddcca159a8\u2026 \u00b7 branch master`, then the verdict block with its evidence refs (`patch_verification`, `test_verification`) and transcript digest, the contract (`Test command \u2026 -m pytest -v tests`, `Required modified src/total.py`, the rules in force, `none declared before this run`), the declared criterion marked `DECLARED`, and the observation beginning with `Exit code 0` and `Classification passed`."
           },
           {
             "file": "docs/media/harness-evidence/rejected-card.png",
-            "shows": "A rejected turn, drawn as a rejection: `Completion rejected` in the danger tone, the claim that the evidence did not support the run, `verification_test_failed_introduced — Authoritative test command exited with code 1 (classification=introduced; failures: tests/test_total.py::test_total_sums_a_list)`, then `Command exit 1 · introduced`, the revision, the files and the patch, and the failing test row marked `INTRODUCED assert 7 == 6`."
+            "shows": "A rejected turn, drawn as a rejection: `Completion rejected` in the danger tone, the claim that the evidence did not support the run, `verification_test_failed_introduced \u2014 Authoritative test command exited with code 1 (classification=introduced; failures: tests/test_total.py::test_total_sums_a_list)`, then `Command exit 1 \u00b7 introduced`, the revision, the files and the patch, and the failing test row marked `INTRODUCED assert 7 == 6`."
           },
           {
             "file": "docs/media/harness-evidence/rejected-record.png",
@@ -4427,7 +4429,7 @@
         ],
         "known_regressions": [],
         "decisions": [
-          "The surface reads `GET …/task` and `GET …/diff` and adds no route. Both carried everything the story needed - the contract and the read-only evidence preview were already in the task view, and the diff was already in the diff route - so the story is a pane change, and the inventory fails if a verification endpoint appears that the server does not mount.",
+          "The surface reads `GET \u2026/task` and `GET \u2026/diff` and adds no route. Both carried everything the story needed - the contract and the read-only evidence preview were already in the task view, and the diff was already in the diff route - so the story is a pane change, and the inventory fails if a verification endpoint appears that the server does not mount.",
           "The verdict is drawn from the durable event payload rather than from a new record: `turn/verified`, `turn/verification_failed` and `turn/stagnation_paused` already carry `TaskVerificationReport.to_dict()`, so the card reads the same fields the log holds and a resync repaints it without a second source of truth.",
           "A declared acceptance criterion is drawn as `declared` in the contract section and as `covered`/`not covered` only in the observation, because a contract is a promise and coverage is a measurement. The first implementation judged coverage in both places; the walk showed the same criterion reading `NOT COVERED` in the contract and `covered` in the observation, and the renderer was split rather than the wording patched.",
           "The diff dialog gained a per-file summary and an honesty note instead of a second diff view: one parser (`harnessDiffFiles()`) counts the change for both the dialog and the record, so the two cannot disagree about how many files moved.",
@@ -4562,12 +4564,12 @@
           "tests/test_harness_recovery.py"
         ],
         "evidence": [
-          "A run that stopped used to be one line in the log. `turn/paused` drew `Paused at step 4 - operator_pause_requested`, `turn/cancelled` drew `Cancelled - operator_cancelled`, `turn/resume_prepared` drew a next step, and none of them said what had survived, what it would cost to go on, or what a reader could press. The four routes built for exactly this moment - `POST …/pause`, `…/cancel`, `…/resume`, `…/contain` - were reachable from the API and from nowhere in the pane, whose only control was Abort: an action that ends the view, not the work. A worker that died left the task saying `running` with no stream attached, and the pane drew that as a running task.",
-          "`#harnessRecoveryPanel` sits under the session strip and above the durable log, and is one presentation - so it cannot be drawn without a cause and a `Kept:` line - over a facts list and a live note. It reads only what the server already returns: `GET …/state` (status, transitions, checkpoints, budget, turns) and `GET …/task` (task record, recovery memory, containment store, budget). Every fact on it is one of those fields. No route was added.",
+          "A run that stopped used to be one line in the log. `turn/paused` drew `Paused at step 4 - operator_pause_requested`, `turn/cancelled` drew `Cancelled - operator_cancelled`, `turn/resume_prepared` drew a next step, and none of them said what had survived, what it would cost to go on, or what a reader could press. The four routes built for exactly this moment - `POST \u2026/pause`, `\u2026/cancel`, `\u2026/resume`, `\u2026/contain` - were reachable from the API and from nowhere in the pane, whose only control was Abort: an action that ends the view, not the work. A worker that died left the task saying `running` with no stream attached, and the pane drew that as a running task.",
+          "`#harnessRecoveryPanel` sits under the session strip and above the durable log, and is one presentation - so it cannot be drawn without a cause and a `Kept:` line - over a facts list and a live note. It reads only what the server already returns: `GET \u2026/state` (status, transitions, checkpoints, budget, turns) and `GET \u2026/task` (task record, recovery memory, containment store, budget). Every fact on it is one of those fields. No route was added.",
           "Seven states, each with its own story: paused at a safe boundary (the transition's own reason, printed beside a plain phrase, and the checkpoint a resume restarts from); failed (with the requirement for changed evidence); blocked (the unresolved action by id, resume refused, cancel offered); cancelled (what was fenced and revoked, and that no resume exists); running and owned by this pane (a pause lands at the next safe boundary); running and not owned by this pane (the record cannot tell another tab's run from a dead worker, and the surface says so instead of guessing); and a resume the runtime accepted, drawn as `prepared` with `nothing has run yet` rather than as progress. A completed task draws no surface at all.",
-          "The presses are the real routes: Pause (`POST …/pause`, and a deferred pause says it is deferred), Resume (`POST …/resume`), Continue (`/api/harness/run` with `resume: true`, only after an accepted resume), Cancel (`POST …/cancel`, behind a confirmation that any other action disarms), Abort (the existing `/abort`, which now says it ends the view and not the work) and Start a new session. A press that reaches the server prints the answer it got - including the string `detail` a rejected transition carries and the `{code, message}` a rejected handoff carries.",
-          "Every reason a resume would be refused is computed from the same record before the press - the task state, a failed checkpoint integrity check, unresolved consequential actions, a persisted barrier, a pending cancellation, an exhausted budget, a quarantine, unreadable recovery memory - and the action stays visible and disabled with the reason as its accessible description and the same reason in text (`Not available here — …`). `presentInto()` grew `disabled`, `reason` and a `tone` for destructive actions so a refusal could be drawn instead of hidden.",
-          "The three recovery events are one card renderer now, saying what the event did (`0 in-flight process(es) were contained`, `2 consequential action(s) were left unresolved …`) and linking back to the surface that keeps saying it after the log scrolls past.",
+          "The presses are the real routes: Pause (`POST \u2026/pause`, and a deferred pause says it is deferred), Resume (`POST \u2026/resume`), Continue (`/api/harness/run` with `resume: true`, only after an accepted resume), Cancel (`POST \u2026/cancel`, behind a confirmation that any other action disarms), Abort (the existing `/abort`, which now says it ends the view and not the work) and Start a new session. A press that reaches the server prints the answer it got - including the string `detail` a rejected transition carries and the `{code, message}` a rejected handoff carries.",
+          "Every reason a resume would be refused is computed from the same record before the press - the task state, a failed checkpoint integrity check, unresolved consequential actions, a persisted barrier, a pending cancellation, an exhausted budget, a quarantine, unreadable recovery memory - and the action stays visible and disabled with the reason as its accessible description and the same reason in text (`Not available here \u2014 \u2026`). `presentInto()` grew `disabled`, `reason` and a `tone` for destructive actions so a refusal could be drawn instead of hidden.",
+          "The three recovery events are one card renderer now, saying what the event did (`0 in-flight process(es) were contained`, `2 consequential action(s) were left unresolved \u2026`) and linking back to the surface that keeps saying it after the log scrolls past.",
           "The one capability the pane could never exercise even with the routes reachable: `/api/harness/run` accepts `resume` and the pane never sent it, so a resume the runtime had accepted was followed by a turn that started over at step 1. The request now carries the flag when a resume is prepared, and consumes the preparation in that request.",
           "`scripts/uiux_harness_recovery_inventory.py`: 44 checks over the markup, the seven stories, the six actions, the eleven refusals, the three event cards, the escaping of every value the record supplies and the seven server contracts this story had to preserve (pause's `deferred_to_safe_boundary`, cancel's `unresolved_action_ids`/`contained_processes`, resume's `ready_to_resume`/`next_step`, containment's quarantine and barrier holds, `/task`'s recovery and containment, `/state`'s `task_status` and `transitions`, and the absence of any new recovery route). 0 findings.",
           "`scripts/harness_recovery_walk.mjs`: 23/23 checks in a real browser against `scripts/harness_recovery_seed.py`, which drives `ensure_root_task`, `transition_task`, `save_checkpoint`, `request_pause`, `cancel_task` and a real `persist_barrier_hold()` into paused / blocked / cancelled / was-running states, then presses the pane's own controls against the real routes. It proves the prepared-resume answer, the two-press cancel, the disabled refusal, that the server's own 409 agrees with the reason the surface stated, that a reason which is markup is drawn as text (no element, no handler), that focus survives an action, that a run started after a prepared resume sends `resume: true`, and that every request the surface made was one of the four routes that already existed. No page error."
@@ -4592,7 +4594,7 @@
             "result": "23/23 checks passed, 0 page errors"
           },
           {
-            "command": "node scripts/overlay_walk.mjs --base-url … --token … --json",
+            "command": "node scripts/overlay_walk.mjs --base-url \u2026 --token \u2026 --json",
             "result": "81 passed, 3 blocked, 0 failed",
             "note": "no dialog was added, so the overlay contract is unchanged"
           },
@@ -4632,8 +4634,8 @@
         ],
         "known_regressions": [],
         "decisions": [
-          "No endpoint was added. The surface is drawn from `GET …/state` and `GET …/task`, and posts only to `/pause`, `/cancel`, `/resume` and the existing `/abort`; the inventory fails if a recovery route the server does not mount appears, and the walk fails if a request outside those four is made.",
-          "`POST …/contain` has no control. It is an incident response that quarantines a session and revokes its grants, and an operator button for it would be a one-press quarantine. Its effects are drawn instead: the holds it raises block a resume, and the surface names them.",
+          "No endpoint was added. The surface is drawn from `GET \u2026/state` and `GET \u2026/task`, and posts only to `/pause`, `/cancel`, `/resume` and the existing `/abort`; the inventory fails if a recovery route the server does not mount appears, and the walk fails if a request outside those four is made.",
+          "`POST \u2026/contain` has no control. It is an incident response that quarantines a session and revokes its grants, and an operator button for it would be a one-press quarantine. Its effects are drawn instead: the holds it raises block a resume, and the surface names them.",
           "The crash case is not a state the pane invents. A task left `running` with no worker is reconciled by the product's own `recover_incomplete_transitions()` at startup, which pauses it at its checkpoint with reason `recovered_incomplete_transition`; the surface prints that code beside the phrase a reader gets, so the sentence can be checked against the record.",
           "`presentInto()` gained `disabled`, `reason` and `tone` rather than a second renderer: a recovery surface that hides the action it cannot take erases the way forward, and one that draws it enabled promises something the state refuses.",
           "The `running`/not-following branch (a run owned by another tab) is drawn from `task_status === \"running\"` and cannot be produced by this demo, which has no model runtime; it is covered by the inventory's source rules and not by a capture, and the walk says so.",
@@ -4939,7 +4941,7 @@
     {
       "id": "UIUX-P4-01",
       "title": "Council participant roles and resource readiness",
-      "description": "Make Council participant roles, selected models, locality and current resource readiness visible before a single-seat summon or four-seat round, while preserving Hall behavior and backend contracts.",
+      "description": "Incrementally implement council participant roles and resource readiness using current code as authoritative baseline.",
       "phase": "P4",
       "priority": "P2",
       "tab_or_component": "Council",
@@ -4951,19 +4953,17 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "At baseline 4f88fddf63f33cccd72e9c205dd13d91f1725738, Hall role selectors are populated by syncUnifiedSelectors() from the existing /api/telemetry catalog: loaded/loading local models, enabled cloud providers and configured fallback combos. The header #hallRoster only lists voices after they have spoken; it does not show the four configured assignments or their locality/readiness. runHallFullRound() and summonSingleAgent() do not preflight empty, stale, loading or unavailable selections; the Hall summon endpoint can fall back to its default model when a model is omitted and reports runtime failures only through SSE. Telemetry already exposes local loaded/is_loading state, while the global residency panel shows memory usage; the role settings do not explain per-seat resource implications. No new route is needed.",
-      "target_behavior": "Before any invocation, the Hall shows all four configured roles with the exact selected model ID, locality/source and a readiness state grounded in the existing catalog and telemetry. Local seats are marked ready only when loaded, and loading/unavailable/empty roles cannot start a full round. Single-seat summon is gated by its selected role/model readiness too. The UI explains that local models use shared machine memory and are unloaded after their Hall turn; cloud/combo status means configured, not guaranteed reachable. Existing open-room, chronicles, post-only messages, session persistence, summon/conclude flows and endpoints remain unchanged.",
+      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
+      "target_behavior": "Council participant roles and resource readiness with no loss of existing functionality.",
       "implementation_steps": [
-        "Confirm HEAD, clean worktree, merged UIUX-P3-07 prerequisite, source pin and no competing claim",
-        "Trace #pane-hall, #hallRoster, four seat selectors, single-seat selector, catalog/telemetry refresh and Hall summon request path",
-        "Use the current validated hall screenshot as before evidence and add regressions for empty, loaded, loading, missing and configured remote selections",
-        "Render an accessible four-seat roster with role, exact model, locality and catalog/telemetry readiness; keep actual session participants visible",
-        "Add concise shared-memory/per-turn unload disclosure without suggesting a provider health check or changing backend state",
-        "Gate full-round, spawn-and-convene, and single-seat actions when their selected assignments are not ready; preserve empty-room and post-only paths",
-        "Exercise model-catalog refresh, changed selections, narrow viewport, keyboard operation and failure states in an isolated demo",
-        "Capture after evidence and update the Council preservation matrix and generated inventories",
-        "Run targeted and baseline tests; verify existing endpoints, authorization and persisted chronicles are unchanged",
-        "Regenerate studio.py if static/index.html changes; commit verified changes and update tracking"
+        "Confirm HEAD, worktree and prerequisite evidence",
+        "Trace relevant DOM, JS handlers, API and backend state transitions",
+        "Capture before screenshot and regression fixtures",
+        "Make smallest compatible UI change",
+        "Exercise empty, loading, streaming, success, failure and recovery cases as applicable",
+        "Capture after screenshot and update preservation matrix",
+        "Run relevant tests and record exact command/result",
+        "Commit only verified changes and update tracking"
       ],
       "non_regression": [
         "Keep existing endpoints and authorization contracts",
@@ -4972,120 +4972,103 @@
         "Preserve user workspace edits and session recovery"
       ],
       "acceptance_criteria": [
-        "Before a round, all four configured Council roles are visible with the exact selected model ID, locality/source and readiness state; actual session participant names remain visible after messages arrive",
-        "Readiness reflects the existing catalog and telemetry: a missing, stale, empty, loading or unloaded local assignment cannot start; enabled cloud/fallback entries are labeled as configured rather than live-verified",
-        "Full-round, spawn-and-convene and single-seat invocation controls are keyboard-operable and guarded by the relevant assignment readiness; Open Empty Room and Post note only continue to work",
-        "The Hall states that local seats consume shared machine memory while loaded and are unloaded after their turn; it does not imply that a cloud provider is reachable just because it is configured",
-        "Existing chronicles, roles, model choices, conclusions, permission semantics, durable session state and /api/hall/* contracts are preserved; no backend endpoint or persistence change is introduced",
-        "No console errors; keyboard focus and narrow viewport behavior work; empty, loading, ready and unavailable states are demonstrated by tests or validated screenshots"
+        "All mapped existing controls remain reachable and functionally equivalent",
+        "No console errors on tested journeys",
+        "Keyboard operation and focus states work",
+        "Failure and recovery states are actionable and honest",
+        "Target UI behavior is demonstrable by screenshot or test"
       ],
       "tests": {
         "unit": [
-          "readiness classification for empty, catalog-missing, local-loaded, local-loading, local-unloaded, cloud and combo choices",
-          "button gating and state update when catalog or seat selection changes"
+          "handler and rendering state tests"
         ],
         "integration": [
-          "existing /api/telemetry model status and /api/hall/* payload/error contracts remain unchanged",
-          "no summon request is issued when a required seat is not ready"
+          "API contract and error-path tests"
         ],
         "e2e": [
-          "Council empty room, pre-round roster, four-seat ready round, unavailable seat blocked, single-seat ready/unready, and note-only preservation"
+          "existing flow preservation and new journey smoke test"
         ],
         "visual": [
-          "before/after Council Hall roster at desktop and narrow viewport",
-          "dark and light themes where the current screenshots support both"
+          "desktop and narrow viewport before/after screenshots",
+          "dark and light theme where implemented"
         ]
       },
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P4-01 (Council participant roles and resource readiness). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 75,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
-        "started_at": "2026-11-01T20:03:52Z",
-        "updated_at": "2026-11-01T20:44:54Z",
-        "completed_at": null,
-        "owner_session": "arena/a8c52e51-m5-agent-studio",
-        "commit_sha": null,
+        "started_at": "2026-11-02T18:05:00Z",
+        "updated_at": "2026-11-02T21:40:00Z",
+        "completed_at": "2026-11-02T21:40:00Z",
+        "owner_session": "arena/468fb393-m5-agent-studio",
+        "commit_sha": "aa6c9b2c386d8d6b2fd679b21f131b75d1b6a635",
         "changed_files": [
-          "docs/media/screenshots/chat.png",
-          "docs/media/screenshots/compare.png",
-          "docs/media/screenshots/hall.png",
-          "docs/media/screenshots/harness.png",
-          "docs/media/screenshots/index.json",
-          "docs/media/screenshots/manifest.json",
-          "docs/media/screenshots/p4-01-narrow-dark/hall.png",
-          "docs/media/screenshots/p4-01-narrow-dark/index.json",
-          "docs/media/screenshots/pipeline.png",
-          "docs/media/screenshots/start.png",
-          "docs/uiux-2-0-authorization-trace.md",
-          "docs/uiux-2-0-control-inventory.md",
-          "docs/uiux-2-0-overlays.md",
-          "docs/uiux-2-0-p0-signoff.md",
-          "docs/uiux-2-0-presentations.md",
-          "docs/uiux-2-0-route-map.md",
-          "docs/uiux-2-0-status-and-evidence.md",
-          "docs/uiux-2-0-tokens.md",
-          "product/M5_2_0_UIUX_Authorization_Trace.json",
-          "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
-          "product/M5_2_0_UIUX_Control_Inventory.json",
-          "product/M5_2_0_UIUX_Onboarding.json",
-          "product/M5_2_0_UIUX_Overlays.json",
-          "product/M5_2_0_UIUX_Presentations.json",
-          "product/M5_2_0_UIUX_Preservation_Signoff.json",
-          "product/M5_2_0_UIUX_Route_Map.json",
-          "product/M5_2_0_UIUX_Source_Manifest.json",
-          "product/M5_2_0_UIUX_Status_Components.json",
-          "product/M5_2_0_UIUX_Tokens.json",
+          "app.py",
+          "docs/README.md",
+          "docs/media/council-participants/README.md",
+          "docs/media/council-participants/council-demo-replies.png",
+          "docs/media/council-participants/council-readiness-light.png",
+          "docs/media/council-participants/council-readiness-mixed.png",
+          "docs/media/council-participants/council-readiness-narrow.png",
+          "docs/media/council-participants/council-readiness-offline.png",
+          "docs/media/council-participants/council-seat-loaded.png",
+          "docs/media/council-participants/council-summon-failed.png",
+          "docs/uiux-2-0-council-participants.md",
+          "docs/uiux-2-0-program.md",
+          "product/M5_2_0_UIUX_Council_Participants.json",
+          "scripts/council_readiness_seed.py",
+          "scripts/council_readiness_walk.mjs",
+          "scripts/uiux_council_participants_inventory.py",
+          "scripts/uiux_presentation_inventory.py",
           "static/index.html",
           "studio.py",
-          "tests/browser/accessibility_walk.mjs",
-          "tests/test_screenshot_capture_browser.py"
+          "tests/test_council_participants.py",
+          "tests/test_start_health.py",
+          "tests/test_uiux_route_map.py"
         ],
         "evidence": [
-          "Preflight at HEAD 4f88fddf63f33cccd72e9c205dd13d91f1725738: worktree clean, current main, the ledger source pin 73bc5e417c1508b41127f3d7162c4afdcbcdbfc4 is an ancestor, and UIUX-P3-07 is done.",
-          "scripts/uiux_coordination.py --github --json: UIUX-P4-01 locally eligible; no active ledger claims, open PRs or blocking issues; no holds after fetching full history.",
-          "Baseline evidence already validated: docs/media/screenshots/hall.png shows the existing Council Hall, four role-model selectors, global Local oMLX Residency panel, and speaker-only #hallRoster.",
-          "Source trace: static/index.html syncUnifiedSelectors() consumes /api/telemetry catalog; loaded local models, enabled cloud providers and fallback combos are grouped, but assignment readiness is not surfaced per role.",
-          "Source trace: runHallFullRound() and summonSingleAgent() have no readiness preflight; app.py /api/hall/sessions/{session_id}/summon consumes model/role and surfaces failures as SSE. Existing routes are sufficient; no endpoint change is planned.",
-          "Implementation evidence: static/index.html renders the four configured role cards with exact selected IDs, source/locality and catalog/telemetry-backed readiness; actual session participants remain separately displayed from the configured roster.",
-          "Readiness and invocation evidence: tests/browser/accessibility_walk.mjs covers empty, missing, loading, loaded, unloaded and stale assignments; blocked spawn-and-convene, full-round and single-seat actions issue no summon requests, while Open Empty Room, Post note only and typed note retention remain available.",
-          "Disclosure evidence: the Hall states that local seats share machine memory while loaded and are unloaded after each Hall turn; cloud and combo/fallback entries are configured only, not reachability-verified.",
-          "Compatibility evidence: implementation changed only the existing frontend, generated frontend bundle, UIUX evidence/inventory artifacts, screenshots and browser tests; no backend route, authorization, persistence or API contract was added or changed.",
-          "Visual evidence: six standard pane screenshots were recaptured with scripts/capture_screenshots.mjs; the dedicated 420x1200 dark Hall capture is docs/media/screenshots/p4-01-narrow-dark/hall.png. scripts/validate_screenshots.py reports 6/6 for the standard manifest.",
-          "Documentation scope: no README or API documentation change was needed because this is a frontend-only clarification; the Hall itself carries the shared-memory, unload and configured-not-reachable disclosures."
+          "The Council pane had four pickers and no answers: it could not say what a seat was for, and it could not say whether the model in a picker was resident, loadable, reachable, or missing an API key. On a machine whose local runtime was down, every local seat was answered by `_stream_omlx_completion`'s canned demo text while the transcript drew a tok/s badge for text no model produced, and a seat that failed said so in a four-second toast while its card went on saying \"Connecting...\".",
+          "Each of the four seats now carries its role - the server's own `AGENT_ROLES` label (Staff Architect, Fast Coder / Analyst, Adversarial Critic, Lead Arbiter), which the pane keeps in one map and applies to the transcript card from the `role_key` the summon route already stored - plus one line saying what the seat is for and one verdict read from `GET /api/telemetry` and `GET /api/providers`: `READY` with the memory a resident model holds, `NEEDS LOAD` / `NEEDS MEMORY` with the gigabytes it needs against the ceiling and what is left, `NEEDS KEY` for an alias saved without one, `NOT LISTED` for a model the runtime does not serve, `DEMO TEXT` when the runtime is not answering at all, `NO MODEL` when the picker is empty, and `UNVERIFIED` when telemetry has not answered. Each non-ready row offers the one action that exists - load it, open the providers panel, or move focus to the picker - and every row is described by an `evidenceNote` basis that names both reads and how old they are.",
+          "The rows and the round read one `hallSeatPlan()`, so a row cannot describe a seat the dispatch would not post; the plan keeps the old fallback chain (the seat's picker, then the Pipeline's picker for the same seat, then the catalogue default). A combo is judged by its targets rather than by existing, so a combo of local models on a dead runtime is demo text. The summary counts the rows and says the round stops at the first seat that fails, because `runHallFullRound` breaks there.",
+          "The demo path's usage line now carries `demo: true`, so a reply the server wrote itself is labelled a demo reply and is not given the tok/s badge it did not earn. A failed seat is a `presentInto()` block naming the seat, quoting the provider, stating that nothing was saved for that model, with Retry / Check readiness / Ask one model, and the server's transcript is redrawn first so no card keeps claiming to connect.",
+          "No endpoint was added: the only route the story calls is `POST /api/models/{model_id:path}/load`, which the Residency panel already used, and the route map now records the new caller as a certain one. The summon route's four events, its defaults, `append_hall_message`'s usage column, and the four seat pickers are pinned by the inventory."
         ],
         "test_results": [
-          "Coordination preflight: python3 scripts/uiux_coordination.py --github --json -> P4-01 eligible, 0 open PRs, 0 blockers, source pin ancestor after `git fetch --unshallow origin`.",
-          "Python 3.11.2, /tmp/uiux-p4-claim-venv: python -m pytest -q tests/test_uiux_roadmap.py -> 19 passed after claim and counter updates.",
-          "python3 scripts/uiux_source_manifest.py --check -> 48 files, 6 tabs, 115 routes; pin 73bc5e417c15 current.",
-          "python3 scripts/uiux_preservation_signoff.py --check -> 21 capabilities, 6 panes, 189 markup controls; historical approval remains unbound.",
-          "python3 scripts/validate_docs.py -> passed (5 required pages, 164 files scanned); python3 scripts/validate_screenshots.py -> 6/6.",
-          "git diff --check -> exit 0.",
-          "Full baseline in disposable /tmp/uiux-p4-verification with the current patch: python -m pytest -q -> 2202 passed, 26 skipped, 1 deprecation warning, 0 failures. Skips are the explicit live-container opt-in and browser-regression cases without browser environment variables; focused browser integration was run separately.",
-          "Focused browser evidence: standalone tests/browser/accessibility_walk.mjs -> 23/23 checks; tests/test_screenshot_capture_browser.py::test_real_isolated_demo_captures_all_six_panes -> 1 passed in 40.26s using the isolated demo.",
-          "python3 scripts/validate_docs.py -> passed (5 required pages, 164 files scanned); python3 scripts/validate_screenshots.py -> 6/6; python3 scripts/check_frontend_syntax.py -> passed; python3 scripts/demo_tour.py --check -> transcript current.",
-          "UIUX generated evidence checks passed: source manifest 48 files/6 tabs/115 routes; control inventory 189 controls; route map 63 call sites; authorization trace 46 state-changing routes; preservation sign-off remains historical-approval-unbound; overlays, presentations, onboarding, status components and design tokens report 0 findings; git diff --check -> exit 0."
+          "python3 scripts/uiux_council_participants_inventory.py --check -> 35 checks, 0 findings, clean",
+          "node scripts/council_readiness_walk.mjs --screenshots docs/media/council-participants -> 23/23 checks passed (chromium via @sparticuz/chromium, puppeteer-core 25; two fixtures: a stand-in oMLX runtime and an offline machine)",
+          "node scripts/pipeline_recovery_walk.mjs -> 27/27 checks passed (the P3-07 walk, re-run because this story touches the Council pane and the shared presentation builder)",
+          "node scripts/pipeline_artifacts_walk.mjs -> 22/22 checks passed",
+          "node scripts/keyboard_walk.mjs --base-url <fixture> -> 22/22 checks passed",
+          "python3 -m pytest -q tests/test_council_participants.py -> 34 passed",
+          "python3 -m pytest -q tests/test_screenshot_capture_browser.py (with STUDIO_SCREENSHOT_CHROME + STUDIO_PUPPETEER_CORE) -> 30 passed",
+          "python3 -m pytest -q (full suite, after the ledger commit) -> 2236 passed, 26 skipped (the skips are the live-container opt-in and the browser tests' own env gate, which the run above satisfies)",
+          "python3 -m ruff check . -> All checks passed; python3 -m mypy -> Success: no issues found in 58 source files; python3 scripts/check_frontend_syntax.py -> JavaScript syntax OK; python3 scripts/validate_docs.py -> 5 required pages, 166 files scanned; python3 scripts/demo_tour.py --check -> up to date; every scripts/uiux_*.py --check -> clean"
         ],
         "visual_evidence": [
-          "docs/media/screenshots/hall.png",
-          "docs/media/screenshots/p4-01-narrow-dark/hall.png",
-          "docs/media/screenshots/start.png",
-          "docs/media/screenshots/harness.png",
-          "docs/media/screenshots/pipeline.png",
-          "docs/media/screenshots/compare.png",
-          "docs/media/screenshots/chat.png"
+          "docs/media/council-participants/council-readiness-mixed.png",
+          "docs/media/council-participants/council-seat-loaded.png",
+          "docs/media/council-participants/council-summon-failed.png",
+          "docs/media/council-participants/council-readiness-offline.png",
+          "docs/media/council-participants/council-demo-replies.png",
+          "docs/media/council-participants/council-readiness-narrow.png",
+          "docs/media/council-participants/council-readiness-light.png"
         ],
-        "known_regressions": [],
+        "known_regressions": [
+          "The demo path's usage line still reports fabricated tok/s figures (29.5 / 42.1) and `record_perf` still stores them, because the flag the pane now reads (`demo`) does not stop the write; the pane no longer draws a figure for a demo reply, but the perf samples and the throughput card still count it. Recorded as an open risk for the runtime program rather than fixed inside a UI pull request.",
+          "`syncUnifiedSelectors` rebuilds the seat pickers from the catalogue, which lists only resident local models; loading a model can therefore re-pick a seat whose model was not in the catalogue. The row stays true to what the round would post, but the operator's earlier choice can change under them."
+        ],
         "decisions": [
-          "Use the detailed P4-01 Council row in docs/uiux-2-0-transformation-plan.md as the refined scope rather than replacing the progressed roadmap.",
-          "Readiness is a truthful UI preflight from the existing catalog/telemetry snapshot: local models must be loaded; enabled cloud and combo entries are only configured, not guaranteed reachable.",
-          "Keep model loading explicit via existing controls, disclose shared-memory/per-turn unload implications, and make no backend, route, authorization, persistence or model-admission contract change."
+          "The role names are read from the server's `AGENT_ROLES` labels rather than invented for the pane, and the transcript's seat tag is derived from the `role_key` the route already stored, so no new field and no new event were needed.",
+          "Readiness is derived in the pane from two existing reads (`/api/telemetry`, `/api/providers`) instead of a new endpoint: both are already authorised, polled and cached, and a server route would have had to duplicate `parse_model_route`'s rules across the wire. The pane's `councilRouteOf` mirrors that function, and the inventory fails if the two stop agreeing.",
+          "A seat that cannot answer is stated but not blocked: the round still dispatches all four in order and stops at the first failure, which the summary now says out loud. Refusing to dispatch would change existing behaviour and take the demo path away from the preview.",
+          "The demo reply is labelled and loses its tok/s badge, but the fabricated figures are still written to `perf_samples`; that write is a runtime-program defect and is recorded as an open risk instead of being changed inside this UI story."
         ],
         "blockers": [],
-        "handoff_note": "Implementation and local verification evidence are recorded; keep UIUX-P4-01 in progress and PR #155 a draft pending owner approval and independent review. Do not treat generated preservation/sign-off artifacts as owner approval.",
-        "next_action": "Request independent review on draft PR #155, address any findings, and retain in_progress status until owner approval and review are recorded.",
-        "readme_updated": false
+        "handoff_note": "UIUX-P4-01 is complete. The Council pane's readiness rows, the transcript's seat tags and demo labels, and the summon failure block are all pinned by scripts/uiux_council_participants_inventory.py; the fixture scripts/council_readiness_seed.py stages a runtime (or, with --offline, a machine without one) so the states can be driven again.",
+        "next_action": "UIUX-P4-02 (Council deliberation stages and evidence).",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",
@@ -7104,8 +7087,8 @@
     {
       "tab": "Council",
       "existing": "Council Hall session spawning and chronicle browsing",
-      "target": "Council Hall retains chronicles and participants while showing four configured roles with model, locality and readiness before invocation; local-memory implications are explicit.",
-      "must_preserve": "Existing /api/hall/* behavior, authorization, durable sessions, single-seat and full-round flows, conclusions and note-only posting; readiness uses existing catalog/telemetry, local not-ready seats cannot start, cloud/combo status is not a reachability guarantee."
+      "target": "Council primary view or progressive-disclosure inspector",
+      "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
     },
     {
       "tab": "Pipeline",

@@ -25,26 +25,26 @@
     "current_inputs_match_approval": null,
     "approved_inputs": null,
     "current_inputs": {
-      "ledger_content_sha256": "0dc5c2558573fe25a49659c45279e271b112af35664a9e120e54ebd8c31a98cf",
-      "source_manifest_sha256": "be35bc452101d61daf2e6ff21f1da8726951ae2857501a83bfe186189cc1ad50",
-      "control_inventory_sha256": "dddffbae8e6b8be6bd372727ded97c6b28c3e1df61cccb9f6459a30813490c08",
-      "route_map_sha256": "049a6b568a1b04ff97b41a36f00af8fcd554f08e051196f49638c7f666f11de6",
-      "authorization_trace_sha256": "3338b9d1882ed46ab81c5b7c6b159d6a23f59882186fba0ed161193c7cbad8fa",
-      "frontend_sha256": "bd6cd2ddd507ab2d0f416abb4145d9006873d60b5581e2d2f73b834a321c8bf9",
+      "ledger_content_sha256": "90c5fa1893ca87ba69e5f85fab7bf3d9c9cfa0a372d9afeb6c3dd2ce30c45aa9",
+      "source_manifest_sha256": "6afef59fdce586d24a71a751f4e07fb6353c15f4a99ee67c5e9bb1e6adf51a9e",
+      "control_inventory_sha256": "aee28ae040df4d372b8746c9fa67c10f0a201d088f435d0e5bf328fe70570993",
+      "route_map_sha256": "78d6c4df8bcff4127b978206e2ffc529bd3e9328bb219a61f0fc647523dfa657",
+      "authorization_trace_sha256": "907c3a7599aae323812fdfbe9dad0cbf9c658cfc1dd38c2a4d73f6dbcec67a9e",
+      "frontend_sha256": "ef82d29821c432d3af050ed370d762cdc7ce39c0f6f876f408cdf9b4c97da783",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
-      "screenshot_index_sha256": "a47aac866ec5e324a466c26f6a3605e870951c2a081834695697b09060d10b06",
+      "screenshot_index_sha256": "0fa81561ac870619a2517fcf6f382055a98c9eb573e35c07bcde0faf4d2b1941",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
       "route_map_generator_sha256": "923981fc78ff0f844e67691bfa966963f3959be1b9650eaf49f3b58b0a14d555"
     },
     "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "35d33dff0a41a4c890359d27be275b4ecf2ac8c2ccb865fcc936e5392656b150",
-    "source_manifest_sha256": "be35bc452101d61daf2e6ff21f1da8726951ae2857501a83bfe186189cc1ad50",
-    "control_inventory_sha256": "dddffbae8e6b8be6bd372727ded97c6b28c3e1df61cccb9f6459a30813490c08",
-    "route_map_sha256": "049a6b568a1b04ff97b41a36f00af8fcd554f08e051196f49638c7f666f11de6",
-    "authorization_trace_sha256": "3338b9d1882ed46ab81c5b7c6b159d6a23f59882186fba0ed161193c7cbad8fa",
-    "frontend_sha256": "bd6cd2ddd507ab2d0f416abb4145d9006873d60b5581e2d2f73b834a321c8bf9"
+    "ledger_sha256": "8eb614d2fb44a46a9d8d4c97d942cc9da38b19766a0a7446ce561dc7ec0fbc64",
+    "source_manifest_sha256": "6afef59fdce586d24a71a751f4e07fb6353c15f4a99ee67c5e9bb1e6adf51a9e",
+    "control_inventory_sha256": "aee28ae040df4d372b8746c9fa67c10f0a201d088f435d0e5bf328fe70570993",
+    "route_map_sha256": "78d6c4df8bcff4127b978206e2ffc529bd3e9328bb219a61f0fc647523dfa657",
+    "authorization_trace_sha256": "907c3a7599aae323812fdfbe9dad0cbf9c658cfc1dd38c2a4d73f6dbcec67a9e",
+    "frontend_sha256": "ef82d29821c432d3af050ed370d762cdc7ce39c0f6f876f408cdf9b4c97da783"
   },
   "approval_request": [
     {
@@ -55,7 +55,7 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "189 markup controls (106 chrome, 83 panes) plus 33 rendered by script"
+      "evidence": "190 markup controls (106 chrome, 84 panes) plus 33 rendered by script"
     },
     {
       "id": 3,
@@ -76,9 +76,9 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 189,
+    "markup_controls": 190,
     "chrome_controls": 106,
-    "pane_controls": 83,
+    "pane_controls": 84,
     "script_rendered_controls": 33,
     "routes": 115,
     "routes_with_resolved_or_possible_caller": 69,
@@ -88,7 +88,7 @@
     "route_map_unresolved_caller_edges": 0,
     "route_map_unresolved_method_edges": 0,
     "state_changing_routes_traced": 46,
-    "pane_routes_reached": 35,
+    "pane_routes_reached": 37,
     "pane_routes_excluded": 34,
     "route_walk_depth": 2,
     "screenshots_captured": 6,
@@ -801,13 +801,13 @@
       "preserved_capabilities": [
         {
           "capability": "Council Hall session spawning and chronicle browsing",
-          "target": "Council Hall retains chronicles and participants while showing four configured roles with model, locality and readiness before invocation; local-memory implications are explicit.",
-          "must_preserve": "Existing /api/hall/* behavior, authorization, durable sessions, single-seat and full-round flows, conclusions and note-only posting; readiness uses existing catalog/telemetry, local not-ready seats cannot start, cloud/combo status is not a reachability guarantee."
+          "target": "Council primary view or progressive-disclosure inspector",
+          "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 17,
+      "control_count": 18,
       "counts": {
-        "button": 6,
+        "button": 7,
         "select": 8,
         "summary": 2,
         "textarea": 1
@@ -840,6 +840,13 @@
           "text": "Council role models",
           "onclick": null,
           "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "councilReadinessRefresh",
+          "text": "Check again",
+          "onclick": "refreshCouncilReadiness()",
+          "handler": "refreshCouncilReadiness"
         },
         {
           "tag": "select",
@@ -935,6 +942,7 @@
       ],
       "declared_handlers": [
         "openSpawnModal",
+        "refreshCouncilReadiness",
         "runHallFullRound",
         "stopActiveStream",
         "submitHallComposer",
@@ -966,6 +974,30 @@
             "runHallFullRound",
             "summonAgentPromise",
             "selectHallSession"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/providers",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "loadProviders",
+          "via": [
+            "refreshCouncilReadiness",
+            "loadProviders"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/telemetry",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "refreshTelemetry",
+          "via": [
+            "refreshCouncilReadiness",
+            "refreshTelemetry"
           ]
         },
         {

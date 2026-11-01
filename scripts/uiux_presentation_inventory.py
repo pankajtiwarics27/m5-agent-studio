@@ -51,6 +51,7 @@ KINDS = ("empty", "error", "recovery")
 CONTAINERS = {
     "onboardingState": ("Start", "a preflight that could not be read"),
     "hallStream": ("Council", "no round yet"),
+    "hallSummonState": ("Council", "a seat that failed to answer"),
     "debateSynthesisArea": ("Compare", "no comparison yet"),
     "chatState": ("Chat", "a reply that stopped"),
     "harnessStreamState": ("Harness", "an event stream that dropped"),
