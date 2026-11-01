@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 21,
+  "revision": 22,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,13 +102,13 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P3-05",
-    "next_recommended_story": "UIUX-P3-06",
-    "last_checkpoint": "2026-11-01T07:26:00Z",
-    "last_session_id": "arena/069a2b89-m5-agent-studio",
+    "last_completed_story": "UIUX-P3-06",
+    "next_recommended_story": "UIUX-P3-07",
+    "last_checkpoint": "2026-11-01T18:40:00Z",
+    "last_session_id": "arena/720477ad-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "e7ff3d62e9b1291c32789c5014fc713e2357df57",
+    "last_verified_commit": "e508b9a79b4ab4e62cbff697035ff36e0416fddc",
     "last_updated": "2026-11-01",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -273,11 +273,11 @@
         "UIUX-P3-07"
       ],
       "total": 7,
-      "done": 5,
+      "done": 6,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 2,
-      "percent_complete": 71
+      "not_started": 1,
+      "percent_complete": 86
     },
     {
       "id": "P4",
@@ -340,11 +340,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 22,
+    "done": 23,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 18,
-    "percent_complete": 55
+    "not_started": 17,
+    "percent_complete": 58
   },
   "stories": [
     {
@@ -4719,23 +4719,63 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P3-06 (Pipeline stages dependencies and artifacts). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-01T18:00:00Z",
+        "updated_at": "2026-11-01T18:40:00Z",
+        "completed_at": "2026-11-01T18:40:00Z",
+        "owner_session": "arena/720477ad-m5-agent-studio",
+        "commit_sha": "f2eda865d5570ad9639ebb384d868c9960c1073b",
+        "changed_files": [
+          "docs/README.md",
+          "docs/media/pipeline-artifacts/README.md",
+          "docs/media/pipeline-artifacts/pipeline-all-stages.png",
+          "docs/media/pipeline-artifacts/pipeline-empty-seat.png",
+          "docs/media/pipeline-artifacts/pipeline-run-line.png",
+          "docs/media/pipeline-artifacts/pipeline-step-chars.png",
+          "docs/media/pipeline-artifacts/pipeline-stopped-run.png",
+          "docs/media/pipeline-artifacts/pipeline-streaming.png",
+          "docs/uiux-2-0-pipeline-artifacts.md",
+          "docs/uiux-2-0-program.md",
+          "product/M5_2_0_UIUX_Pipeline_Artifacts.json",
+          "scripts/pipeline_artifacts_seed.py",
+          "scripts/pipeline_artifacts_walk.mjs",
+          "scripts/uiux_pipeline_artifacts_inventory.py",
+          "static/index.html",
+          "tests/test_pipeline_artifacts.py"
+        ],
+        "evidence": [
+          "The four seats are a chain - the architect writes a spec, the builder is handed it, the critic is handed both, the judge is handed all three - and that chain lived only in `api_council_stream`'s input lambdas. The pane drew four cards carrying a state and a tok/s, so a finished run could not answer the two questions a pipeline raises: what did each seat receive, and what did it hand on? A seat that produced nothing looked exactly like a seat that had just started, and a run that was stopped looked like a run that was still going.",
+          "Every stage card now carries two rows. The handoff row names what the seat reads (`the task + the Architect's spec and the Builder's draft`), the characters of upstream output it was handed, and the seat it feeds (or `ends the run` for the judge); the artifact row states what it produced - characters, tokens, tok/s, the reasoning it kept - or `produced nothing` with the empty section the next seat was handed. The collapsed step card carries its seat's character count, and `#councilArtifacts` above the cards is one live run line: how many seats finished, the total output, the handoffs that carried content forward, and whether the server saved the run.",
+          "The chain is mirrored in `PIPELINE_SEATS` and checked against `app.py` on every inventory run: the pane's copy is compared with the `c['...']` reads in each stage's input lambda, so a mirror that drifts is a failing check rather than a quiet lie.",
+          "What the surface refuses to claim is stated on it. The sizes count this pane's own stream, not the prompt the server assembles around them, and the page says so. `save_run()` is called after the fourth seat returns and returns `0` when it cannot write, so a stopped pipeline is drawn as stopped and is never given a run id; a run that finished without one says its artifacts exist only on this screen. No endpoint was added to read a saved run back: `/api/runs` does not exist and this story did not create it.",
+          "The empty seat was staged, not invented: `scripts/pipeline_artifacts_seed.py` wraps the server's own `stream_any_model` so one model arrives with usage and no content and another streams slowly enough to Stop. The events, the character counts and the run id are the server's answers."
+        ],
+        "test_results": [
+          "python3 scripts/uiux_pipeline_artifacts_inventory.py --check -> 28 checks, 0 findings, clean",
+          "node scripts/pipeline_artifacts_walk.mjs --screenshots docs/media/pipeline-artifacts -> 22/22 checks passed (chromium 153.0.0 via @sparticuz/chromium, puppeteer-core 25.16.0)",
+          "python3 -m pytest -q tests/test_pipeline_artifacts.py -> 30 passed",
+          "python3 -m pytest -q tests/test_screenshot_capture_browser.py (with STUDIO_SCREENSHOT_CHROME + STUDIO_PUPPETEER_CORE) -> 30 passed",
+          "python3 -m pytest -q (full suite) -> 2170 passed, 26 skipped (the skips are the live-container opt-in and the browser tests' own env gate, which the run above satisfies)"
+        ],
+        "visual_evidence": [
+          "docs/media/pipeline-artifacts/pipeline-all-stages.png",
+          "docs/media/pipeline-artifacts/pipeline-run-line.png",
+          "docs/media/pipeline-artifacts/pipeline-empty-seat.png",
+          "docs/media/pipeline-artifacts/pipeline-step-chars.png",
+          "docs/media/pipeline-artifacts/pipeline-streaming.png",
+          "docs/media/pipeline-artifacts/pipeline-stopped-run.png"
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "The dependency view is derived from the stream the pane already receives, not from a new route: no event carries the prompt or the dependency edges, so a per-stage handoff is drawn from the known chain plus the content this pane streamed, and the page states which of the two it is.",
+          "Staging the empty seat and the slow seat in the walk's fixture was preferred to asserting behaviour no demo run can reach; the fixture wraps the server's own stream function and writes no records.",
+          "A seat whose `stage_done` never arrived no longer keeps saying `Streaming` after the run ends: the finalizer marks it `Stopped`, and a finished seat with no output says it finished with no output rather than `Streaming...`."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "P3-06 adds no route and no runtime change. UIUX-P3-07 (pipeline retry, failure and checkpoint recovery) is the next Pipeline story and the only one left in P3; a checkpoint for a pipeline run does not exist yet, so a retry surface would need one.",
+        "next_action": "Confirm no blockers and start UIUX-P3-07.",
         "readme_updated": false
       },
       "required_evidence": [

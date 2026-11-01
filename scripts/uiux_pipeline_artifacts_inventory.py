@@ -491,10 +491,14 @@ def build_inventory() -> dict:
             + [event for event in forwarded if f'"{event}"' not in passthrough]
         ),
     )
+    # The record `save_run("council", …)` writes, read as its own dict literal: `council_done`
+    # also carries a `total_elapsed_s`, so searching the whole route would pass on that alone.
+    record_match = re.search(r'save_run\("council", task\[:100\], \{(.*?)\}\)', council_body, re.S)
+    record_keys = set(re.findall(r'"([a-z_]+)":', record_match.group(1))) if record_match else set()
     check(
         "the run record still carries what it carried",
-        all(f'"{key}":' in council_body for key in RUN_RECORD_KEYS),
-        ", ".join(key for key in RUN_RECORD_KEYS if f'"{key}":' not in council_body),
+        record_keys == set(RUN_RECORD_KEYS),
+        f"record keys={sorted(record_keys)}",
     )
     stage_lines = {
         int(match.group(1)): line
