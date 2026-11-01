@@ -62,6 +62,11 @@ class WorkflowStage:
     max_tokens: int
     reasoning_mode: str = "off"
     temperature: float = 0.0
+    # Stage facts the application already knows and the screen has no other way to learn:
+    # whether this stage was given the caller's skill playbook, for instance. They are
+    # published on `stage_start` so a pane can state what a seat was allowed instead of
+    # mirroring the route's configuration and hoping the copy stays true.
+    meta: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -132,6 +137,12 @@ class WorkflowOrchestrator:
                     "key": stage.key,
                     "title": stage.title,
                     "model": stage.model,
+                    # The contract the stage runs under. A card that draws a tok/s and a
+                    # character count but not the ceiling those numbers were measured
+                    # against cannot tell a seat that finished from one that was cut off.
+                    "max_tokens": stage.max_tokens,
+                    "reasoning_mode": stage.reasoning_mode,
+                    **(dict(stage.meta) if stage.meta else {}),
                 },
             )
             messages: list[Message] = [

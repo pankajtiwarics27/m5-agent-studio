@@ -5415,11 +5415,18 @@ async def api_council_stream(request: Request) -> StreamingResponse:
             if skill_summaries:
                 yield _sse("skills_applied", {"skills": skill_summaries})
 
+            # What each seat is allowed, stated on `stage_start` rather than mirrored in the
+            # browser: the ceiling its tokens are counted against, whether the reasoning mode
+            # the caller chose reaches it, and whether it was handed the skill playbook.
+            # The critic is deliberately given none of the three - an adversary that shares the
+            # author's playbook is auditing its own homework - and the screen said nothing about
+            # it, so a reader could not tell a seat that ignored the setting from one never given it.
+            uses_skills = bool(skill_block.strip())
             stages_cfg: list[WorkflowStage] = [
-                WorkflowStage(1, "architect", "1. Architect / Strategist", architect_model, AGENT_ROLES["architect"]["system"] + skill_block, lambda _c: task, 2400, reasoning_mode),
-                WorkflowStage(2, "coder", "2. Builder / Deep Analyst", coder_model, AGENT_ROLES["coder"]["system"] + skill_block, lambda c: f"Matter / Task:\n{task}\n\nSeat 1 (Architect / Strategist) Output:\n{c['architect']}", 4096),
-                WorkflowStage(3, "critic", "3. Adversarial Red-Team Critic", critic_model, AGENT_ROLES["critic"]["system"], lambda c: f"Matter / Task:\n{task}\n\nSeat 1 Thesis/Spec:\n{c['architect']}\n\nSeat 2 Build/Analysis:\n{c['coder']}", 2400),
-                WorkflowStage(4, "judge", "4. Lead Arbiter Synthesis", judge_model, AGENT_ROLES["judge"]["system"] + skill_block, lambda c: f"Matter / Task:\n{task}\n\nSeat 1 Thesis/Spec:\n{c['architect']}\n\nSeat 2 Build/Analysis:\n{c['coder']}\n\nSeat 3 Adversarial Critique:\n{c['critic']}", 6144, reasoning_mode),
+                WorkflowStage(1, "architect", "1. Architect / Strategist", architect_model, AGENT_ROLES["architect"]["system"] + skill_block, lambda _c: task, 2400, reasoning_mode, meta={"skills": uses_skills}),
+                WorkflowStage(2, "coder", "2. Builder / Deep Analyst", coder_model, AGENT_ROLES["coder"]["system"] + skill_block, lambda c: f"Matter / Task:\n{task}\n\nSeat 1 (Architect / Strategist) Output:\n{c['architect']}", 4096, meta={"skills": uses_skills}),
+                WorkflowStage(3, "critic", "3. Adversarial Red-Team Critic", critic_model, AGENT_ROLES["critic"]["system"], lambda c: f"Matter / Task:\n{task}\n\nSeat 1 Thesis/Spec:\n{c['architect']}\n\nSeat 2 Build/Analysis:\n{c['coder']}", 2400, meta={"skills": False}),
+                WorkflowStage(4, "judge", "4. Lead Arbiter Synthesis", judge_model, AGENT_ROLES["judge"]["system"] + skill_block, lambda c: f"Matter / Task:\n{task}\n\nSeat 1 Thesis/Spec:\n{c['architect']}\n\nSeat 2 Build/Analysis:\n{c['coder']}\n\nSeat 3 Adversarial Critique:\n{c['critic']}", 6144, reasoning_mode, meta={"skills": uses_skills}),
             ]
 
             orchestrator = _workflow_orchestrator(client, "council")

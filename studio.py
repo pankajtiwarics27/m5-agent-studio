@@ -4033,6 +4033,31 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .stage-handoff { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 7px 14px; border-bottom: 1px solid var(--border); background: rgba(99,102,241,0.05); font-size: 11.4px; color: var(--text-dim); }
   .stage-handoff .stage-edge { color: var(--text-faint); font-size: 10.6px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
   .stage-handoff .stage-size { font-family: var(--mono); color: var(--text); }
+  /* ── UIUX-P4-02: what a seat was allowed, and what the run can be audited on ──
+     The four seats ran under a ceiling, a reasoning mode and a skills decision that
+     only `api_council_stream` knew. A card drew "812 tok/s" and "1 842 chars" and never
+     said what those were counted against, so a seat that spent its whole budget read
+     exactly like one that had answered in full. The chips below are the server's own
+     `stage_start` facts (never a copy), and the table states one row per seat. */
+  .stage-contract { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; padding: 6px 14px; border-bottom: 1px solid var(--border); font-size: 11.2px; color: var(--text-dim); }
+  .stage-contract[hidden] { display: none; }
+  .stage-contract .contract-key { color: var(--text-faint); font-size: 10.4px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .stage-contract .contract-chip { font-family: var(--mono); font-size: 10.8px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-dim); white-space: nowrap; }
+  .stage-contract[data-verdict="capped"] .contract-chip[data-chip="verdict"] { border-color: var(--amber); color: var(--amber); }
+  .stage-contract[data-verdict="demo"] .contract-chip[data-chip="verdict"] { border-color: var(--cyan); color: var(--cyan); }
+  .deliberation-evidence { margin: 0 0 13px; padding: 11px 14px; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-sm); background: var(--bg-card); font-size: 12px; line-height: 1.55; color: var(--text-dim); }
+  .deliberation-evidence[hidden] { display: none; }
+  .deliberation-evidence .deliberation-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+  .deliberation-evidence .deliberation-head strong { color: var(--text); }
+  .deliberation-evidence .deliberation-basis { margin-top: 8px; color: var(--text-faint); font-size: 11.4px; }
+  .deliberation-evidence .deliberation-table { width: 100%; border-collapse: collapse; font-size: 11.6px; }
+  .deliberation-evidence .deliberation-table th { text-align: left; color: var(--text-faint); font-size: 10.4px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 8px 4px 0; border-bottom: 1px solid var(--border); }
+  .deliberation-evidence .deliberation-table td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .deliberation-evidence .deliberation-table tr:last-child td { border-bottom: none; }
+  .deliberation-evidence .deliberation-table td.mono { font-family: var(--mono); font-size: 11px; color: var(--text); }
+  .deliberation-evidence .deliberation-verdict[data-verdict="capped"] { color: var(--amber); }
+  .deliberation-evidence .deliberation-verdict[data-verdict="demo"] { color: var(--cyan); }
+  .deliberation-evidence .deliberation-verdict[data-verdict="no-output"] { color: var(--rose); }
   .stage-empty-output { color: var(--text-faint); font-size: 13px; font-style: italic; }
   .stage-artifact { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 8px 14px; border-top: 1px solid var(--border); background: rgba(255,255,255,0.02); font-size: 11.4px; color: var(--text-dim); }
   .stage-artifact[data-empty="true"] { color: #fda4af; }
@@ -5874,7 +5899,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap; justify-content:space-between;">
             <label class="chk-lbl"><input type="checkbox" id="c-unload" checked /> Auto-unload local M5 models between stages (Cloud voices skip unload automatically)</label>
             <div style="display:flex; align-items:center; gap:8px;">
-              <label class="field-lbl" for="c-reasoning" style="margin:0;">Reasoning:</label>
+              <label class="field-lbl" for="c-reasoning" style="margin:0;" title="Seats 1 and 4 reason; the Builder and the Critic run without it">Reasoning (seats 1 and 4):</label>
               <select id="c-reasoning" style="padding:4px 8px; font-size:12px;">
                 <option value="off" selected>Off — Direct Fast (~29 tok/s)</option>
                 <option value="low">Low — Bounded (900t cap)</option>
@@ -5930,6 +5955,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
              Built with presentInto(), so it cannot ship without a cause, a Kept: line
              and at least one action - which is what "Error: HTTP 500" never had. -->
         <div id="pipelineRecovery" class="pipeline-recovery" role="group" aria-label="Pipeline recovery" hidden></div>
+        <!-- One row per seat: what it was allowed (the server's own `stage_start`), what it was
+             handed, what it produced, and whether the run can be audited on it. Filled by
+             renderDeliberationEvidence(); the copy button writes the same table as markdown. -->
+        <div id="deliberationEvidence" class="deliberation-evidence" role="region" aria-label="Deliberation evidence" hidden></div>
         <div id="councilStagesContainer"></div>
       </div>
     </section>
@@ -6488,7 +6517,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   let activeHallId = null;
   let activeHallData = null;
 
-  let stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null}, 2:{c:"",r:"",rCount:0,m:"",u:null}, 3:{c:"",r:"",rCount:0,m:"",u:null}, 4:{c:"",r:"",rCount:0,m:"",u:null} };
+  let stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 2:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 3:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 4:{c:"",r:"",rCount:0,m:"",u:null,k:null} };
   let rafPending = false;
   // The last pipeline run: what it was asked, whether it finished, whether the server
   // said it saved it. The stage rows are derived from `stageBuffers`; this only holds
@@ -8995,13 +9024,31 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return buffer && typeof buffer.c === "string" ? buffer.c.length : 0;
   }
 
-  // What a seat consumed: the task plus the seats its input lambda reads. `chars` counts
-  // only the upstream content this pane streamed - the template that frames it is the
-  // server's and is not guessed at.
+  /* ── UIUX-P4-02: what a seat hands on is `content or reasoning`, not `content` ──
+     `WorkflowOrchestrator.run_stages` stores `context[stage.key] = result.content or
+     result.reasoning`. So a seat that returns only a reasoning trace hands the next seat its
+     thinking, and a seat that returns neither hands on an empty section - and the handoff row
+     counted content alone, which made the first case read as `0 chars`, the second as `0 chars`,
+     and a seat that had not started as `0 chars` too. Three different facts, one number. */
+  function pipelineCarried(seat) {
+    const buffer = stageBuffers[Number(seat.stage)] || {};
+    const content = typeof buffer.c === "string" ? buffer.c : "";
+    const reasoning = typeof buffer.r === "string" ? buffer.r : "";
+    const started = Boolean(buffer.m) || Boolean(buffer.u) || content.length > 0 || reasoning.length > 0;
+    if (content.length) return { chars: content.length, via: "output" };
+    if (reasoning.length) return { chars: reasoning.length, via: "reasoning" };
+    if (!started) return { chars: 0, via: "not-run" };
+    return { chars: 0, via: buffer.u ? "nothing" : "not-run" };
+  }
+
+  // What a seat consumed: the task plus the seats its input lambda reads, counting what each
+  // of them actually handed on (see pipelineCarried). `chars` counts only the upstream content
+  // this pane streamed - the template that frames it is the server's and is not guessed at.
   function pipelineHandoff(seat) {
     const upstream = (seat.reads || []).map(key => {
       const source = pipelineSeatByKey(key);
-      return { key, label: source ? source.label : key, chars: pipelineChars(source ? source.stage : 0) };
+      const carried = pipelineCarried({ stage: source ? source.stage : 0 });
+      return { key, label: source ? source.label : key, chars: carried.chars, via: carried.via };
     });
     const chars = upstream.reduce((total, entry) => total + entry.chars, 0);
     const next = PIPELINE_SEATS.find(candidate => (candidate.reads || []).includes(seat.key)) || null;
@@ -9022,15 +9069,255 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const host = document.getElementById(`stage-handoff-${stage}`);
     if (!seat || !host) return;
     const handoff = pipelineHandoff(seat);
+    // A predecessor that handed on its reasoning instead of an output, or nothing at all, is
+    // not a size the reader can interpret on its own: the row says which it was. The phrases
+    // are built as plain text and escaped once at the join - the row is markup, a label is not.
+    const notes = handoff.upstream
+      .filter(entry => entry.via === "reasoning" || entry.via === "nothing")
+      .map(entry => {
+        const name = entry.label.replace(/^the /, "").replace(/'s .*$/, "");
+        const what = entry.via === "reasoning" ? "its reasoning (no output)" : "nothing (no output)";
+        return name + ": " + what;
+      });
     const fromHtml = handoff.upstream.length
       ? `<span>reads</span><span>${escapeHtml(pipelineUpstreamList(seat))}</span><span class="stage-edge">upstream</span><span class="stage-size">${escapeHtml(String(handoff.chars))} chars</span>`
       : `<span>reads</span><span>the task</span><span class="stage-size">${escapeHtml(String(handoff.taskChars))} chars</span>`;
     const feedsHtml = handoff.feeds
       ? `<span class="stage-edge">feeds</span><span>${escapeHtml(handoff.feeds.short)}</span>`
       : `<span class="stage-edge">ends the run</span>`;
-    host.innerHTML = `${fromHtml}${feedsHtml}`;
+    const notesHtml = notes.length ? `<span class="stage-edge">carried</span><span>${escapeHtml(notes.join("; "))}</span>` : "";
+    host.dataset.carried = handoff.upstream.map(entry => entry.key + ":" + entry.via).join(",");
+    host.innerHTML = `${fromHtml}${notesHtml}${feedsHtml}`;
     host.dataset.upstream = String(handoff.chars);
     host.dataset.taskChars = String(handoff.taskChars);
+  }
+
+  /* ── UIUX-P4-02: a seat's contract, and the run's evidence ──────────────────
+     `stage_start` now carries the ceiling the seat's tokens are counted against, the
+     reasoning mode the caller chose for it, and whether it was handed the skill
+     playbook - three facts that live in `api_council_stream` and that this pane used
+     to neither know nor say. So a seat that spent its entire 2 400-token budget drew
+     the same row as one that answered in 300, and the Critic - deliberately given no
+     skills and no reasoning - looked like a seat that had been given both and used
+     neither. Both are audit questions about a deliberation, and both were unanswerable.
+
+     The contract arrives with the seat; nothing here guesses it. `pipelineContract`
+     reads only what the server sent, and a stage that has not started has no contract
+     and no chips - absence is drawn as absence, not as a default. */
+  function pipelineContract(stage) {
+    const buffer = stageBuffers[Number(stage)] || {};
+    const contract = buffer.k || null;
+    const usage = buffer.u || null;
+    const budget = contract && Number.isFinite(Number(contract.max_tokens)) ? Number(contract.max_tokens) : null;
+    const tokens = usage ? Number(usage.completion_tokens || 0) : 0;
+    const finish = usage ? String(usage.finish_reason || "") : "";
+    const demo = Boolean(usage && (usage.demo === true || usage.demo === "true"));
+    // Two different cuts, and the pane must not conflate them: the runtime stopped because it
+    // hit its own length limit, or the seat spent the whole budget this run set for it. Both
+    // mean the next seat read a truncated reply; only the second is the number on the chip.
+    const cappedBy = !usage || demo ? "" : (finish === "length" ? "length" : (budget !== null && tokens >= budget ? "budget" : ""));
+    return {
+      contract,
+      budget,
+      tokens,
+      finish,
+      demo,
+      capped: Boolean(cappedBy),
+      cappedBy,
+      reasoningMode: contract ? String(contract.reasoning_mode || "off") : "",
+      skills: Boolean(contract && contract.skills),
+      model: buffer.m || "",
+    };
+  }
+
+  // A seat's verdict is one of six things, and none of them may be drawn as another.
+  function pipelineStageVerdict(stage) {
+    const view = pipelineContract(stage);
+    const buffer = stageBuffers[Number(stage)] || {};
+    const content = typeof buffer.c === "string" ? buffer.c : "";
+    if (view.demo) return { id: "demo", label: "demo text", note: "the runtime was offline, so the server wrote this reply" };
+    if (view.capped) {
+      const label = view.cappedBy === "length"
+        ? "cut at the length limit"
+        : (view.budget === null ? "spent its whole budget" : `spent its ${String(view.budget)}-token budget`);
+      const note = view.cappedBy === "length"
+        ? "the runtime stopped this reply at its length limit, and the next seat reads the cut text"
+        : "this seat spent the whole budget the run set for it, and the next seat reads the cut text";
+      return { id: "capped", label, note };
+    }
+    if (buffer.u) {
+      if (content.length) return { id: "done", label: "answered", note: "" };
+      return { id: "no-output", label: "no output", note: "finished with an empty reply, so the next seat is handed an empty section" };
+    }
+    if (buffer.m) return { id: "streaming", label: "streaming", note: "" };
+    return { id: "not-run", label: "not run", note: "" };
+  }
+
+  function renderStageContract(stage) {
+    const seat = pipelineSeat(stage);
+    const host = document.getElementById("stage-contract-" + String(stage));
+    if (!seat || !host) return;
+    const view = pipelineContract(stage);
+    if (!view.contract) {
+      // No contract, no row. A stage that has not started was allowed nothing because it has
+      // not been given anything yet, and four chips reading "0 tok" would be a lie.
+      if (!host.hidden) host.hidden = true;
+      if (host.innerHTML) host.innerHTML = "";
+      host.removeAttribute("data-verdict");
+      return;
+    }
+    const verdict = pipelineStageVerdict(stage);
+    const skillsText = view.skills ? "skills applied" : "no skills";
+    const chips = [
+      `<span class="contract-chip" data-chip="budget">budget ${escapeHtml(String(view.budget))} tok</span>`,
+      `<span class="contract-chip" data-chip="reasoning">reasoning ${escapeHtml(view.reasoningMode)}</span>`,
+      `<span class="contract-chip" data-chip="skills">${escapeHtml(skillsText)}</span>`,
+    ];
+    if (verdict.id === "capped" || verdict.id === "demo") {
+      chips.push(`<span class="contract-chip" data-chip="verdict">${escapeHtml(verdict.label)}</span>`);
+    } else if (verdict.id === "done" || verdict.id === "no-output") {
+      chips.push(`<span class="contract-chip" data-chip="spent">spent ${escapeHtml(String(view.tokens))} tok</span>`);
+    }
+    // The chips are this function's own markup, built from escaped parts above; naming the
+    // joined string is what tells a reader (and the escape check) where it came from.
+    const chipsHtml = chips.join("");
+    const html = `<span class="contract-key">allowed</span>${chipsHtml}`;
+    host.dataset.verdict = verdict.id;
+    host.hidden = false;
+    if (host.dataset.signature === html) return;
+    host.dataset.signature = html;
+    host.innerHTML = html;
+  }
+
+  // One row per seat, and every cell is a number the server sent or the pane counted.
+  function deliberationRows() {
+    return PIPELINE_SEATS.map(seat => {
+      const buffer = stageBuffers[seat.stage] || {};
+      const content = typeof buffer.c === "string" ? buffer.c : "";
+      const reasoning = typeof buffer.r === "string" ? buffer.r : "";
+      const usage = buffer.u || null;
+      const view = pipelineContract(seat.stage);
+      const handoff = pipelineHandoff(seat);
+      const carried = pipelineCarried(seat);
+      const verdict = pipelineStageVerdict(seat.stage);
+      const given = seat.reads.length
+        ? handoff.upstream
+          .map(entry => entry.key + " " + String(entry.chars) + " ch"
+            + (entry.via === "reasoning" ? " (reasoning)" : (entry.via === "nothing" ? " (empty)" : "")))
+          .join(" + ")
+        : "the task";
+      const budgetText = view.budget === null ? "?" : String(view.budget);
+      const skillsText = view.skills ? "skills" : "no skills";
+      const allowed = view.contract
+        ? String(budgetText + " tok · reasoning " + view.reasoningMode + " · " + skillsText)
+        : "";
+      const produced = usage
+        ? (view.demo
+          ? `${String(content.length)} ch · demo text, no tok/s`
+          : `${String(content.length)} ch · ${String(usage.completion_tokens || 0)} tok · ${String(usage.decode_tps)} tok/s${reasoning.length ? ` · ${String(reasoning.length)} ch reasoning` : ""}`)
+        : (content.length ? `${String(content.length)} ch so far` : "");
+      const carriedLabel = String(carried.chars) + " ch"
+        + (carried.via === "reasoning" ? " (reasoning)" : (carried.via === "nothing" ? " (nothing)" : ""));
+      return {
+        stage: seat.stage,
+        key: seat.key,
+        seat: seat.short,
+        model: view.model,
+        allowed,
+        given: seat.reads.length
+          ? given + " · task " + String(handoff.taskChars) + " ch"
+          : "task " + String(handoff.taskChars) + " ch",
+        produced,
+        carried: carriedLabel,
+        verdict,
+      };
+    });
+  }
+
+  function deliberationEvidenceMarkdown() {
+    const rows = deliberationRows();
+    const taskChars = councilRun ? councilRun.taskChars : 0;
+    const lines = [
+      "# Council deliberation evidence",
+      "",
+      `Task: ${String(taskChars)} characters. Attempt ${String(councilRun ? councilRun.attempt : 0)}. Every figure is from the server's stage_start (budget, reasoning mode, skills) or stage_done (tokens, tok/s, finish reason); the given sizes are the characters this pane streamed.`,
+      "",
+      "| Seat | Model | Allowed | Given | Produced | Carried | Verdict |",
+      "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+    ];
+    rows.forEach(row => {
+      const cells = [row.seat, row.model || "—", row.allowed || "—", row.given || "—", row.produced || "—", row.carried, row.verdict.label];
+      lines.push("| " + cells.map(cell => String(cell).replace(/\|/g, "\\|")).join(" | ") + " |");
+    });
+    return lines.join("\n");
+  }
+
+  function copyDeliberationEvidence(btn) {
+    const markdown = deliberationEvidenceMarkdown();
+    const done = () => {
+      if (!btn) return;
+      const previous = btn.textContent;
+      btn.textContent = "Copied!";
+      setTimeout(() => { btn.textContent = previous; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(markdown).then(done, () => showToast("The clipboard refused; the table is on screen", "warn"));
+    } else {
+      showToast("This browser has no clipboard; the table is on screen", "warn");
+    }
+  }
+
+  // The table is a view of the same run the cards draw, so it is drawn with them: one
+  // signature per run stops a token-by-token rewrite of a table that has not changed.
+  function renderDeliberationEvidence() {
+    const host = document.getElementById("deliberationEvidence");
+    if (!host) return;
+    if (!councilRun) {
+      host.hidden = true;
+      host.innerHTML = "";
+      host.removeAttribute("data-state");
+      host.removeAttribute("data-signature");
+      return;
+    }
+    const rows = deliberationRows();
+    const signature = rows.map(row => [row.model, row.allowed, row.given, row.produced, row.carried, row.verdict.id].join("|")).join("~")
+      + "#" + String(councilRun.attempt) + "#" + String(councilRun.taskChars);
+    const finished = rows.filter(row => row.verdict.id === "done" || row.verdict.id === "capped" || row.verdict.id === "demo" || row.verdict.id === "no-output").length;
+    const capped = rows.filter(row => row.verdict.id === "capped");
+    const demo = rows.filter(row => row.verdict.id === "demo");
+    const state = demo.length ? "demo" : (capped.length ? "capped" : "ok");
+    if (host.dataset.signature !== signature || host.hidden) {
+      const head = `<div class="deliberation-head"><span><strong>Deliberation evidence</strong> · ${escapeHtml(String(finished))} of 4 seats accounted for</span><button type="button" class="btn btn-xs" onclick="copyDeliberationEvidence(this)">Copy evidence</button></div>`;
+      const body = `<table class="deliberation-table"><thead><tr><th>Seat</th><th>Model</th><th>Allowed</th><th>Given</th><th>Produced</th><th>Carried</th><th>Verdict</th></tr></thead><tbody>`
+        + rows.map(row => `<tr data-stage="${escapeHtml(String(row.stage))}" data-verdict="${escapeHtml(row.verdict.id)}">`
+          + `<td>${escapeHtml(row.seat)}</td>`
+          + `<td class="mono">${escapeHtml(row.model || "—")}</td>`
+          + `<td class="mono">${escapeHtml(row.allowed || "—")}</td>`
+          + `<td class="mono">${escapeHtml(row.given)}</td>`
+          + `<td class="mono">${escapeHtml(row.produced || "—")}</td>`
+          + `<td class="mono">${escapeHtml(row.carried)}</td>`
+          + `<td class="deliberation-verdict" data-verdict="${escapeHtml(row.verdict.id)}" title="${escapeHtml(row.verdict.note)}">${escapeHtml(row.verdict.label)}</td>`
+          + `</tr>`).join("")
+        + `</tbody></table>`;
+      const notes = [];
+      if (capped.length) notes.push(capped.map(row => row.seat).join(", ") + " did not finish a reply: it was cut at the limit above, and the seat after it read the cut text.");
+      if (demo.length) notes.push(demo.map(row => row.seat).join(", ") + " returned demo text: this machine's local runtime was not answering, so the server wrote those replies itself and they are not the models' work.");
+      if (!notes.length) notes.push("Each seat was handed the task plus what the seats before it carried forward.");
+      notes.push("A seat that produced no output still hands on its reasoning trace (the server passes content or reasoning); a seat that produced neither hands on an empty section.");
+      const html = head + body + `<div class="deliberation-basis">${escapeHtml(notes.join(" "))}</div>`;
+      const focused = document.activeElement;
+      const hadFocus = Boolean(focused && focused.getAttribute && focused.getAttribute("onclick") === "copyDeliberationEvidence(this)");
+      host.dataset.signature = signature;
+      host.innerHTML = html;
+      // The button is the only control here, and the table is rewritten under it whenever a
+      // number changes: a redraw must not drop the focus a keyboard user put there.
+      if (hadFocus) {
+        const replacement = host.querySelector(".deliberation-head .btn");
+        if (replacement) replacement.focus();
+      }
+    }
+    host.hidden = false;
+    host.dataset.state = state;
   }
 
   function renderStageArtifact(stage) {
@@ -9054,12 +9341,28 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       return;
     }
     if (empty) {
-      host.innerHTML = `<span class="stage-artifact-key">produced nothing</span>`
-        + `<span>the seat finished with an empty output, so the next one is handed an empty ${escapeHtml(seat.label.replace(/^the /, "").replace(/'s .*$/, ""))} section</span>`;
+      // UIUX-P4-02: an empty output is not always an empty handoff. The orchestrator passes
+      // `content or reasoning`, so a seat that returned only thinking handed the next one its
+      // thinking - and this row used to promise an empty section in both cases.
+      const carried = pipelineCarried(seat);
+      const handed = carried.via === "reasoning"
+        ? `<span>the seat finished with an empty output, so the next one is handed its ${escapeHtml(String(carried.chars))} characters of reasoning instead</span>`
+        : `<span>the seat finished with an empty output, so the next one is handed an empty ${escapeHtml(seat.label.replace(/^the /, "").replace(/'s .*$/, ""))} section</span>`;
+      host.innerHTML = `<span class="stage-artifact-key">produced nothing</span>` + handed;
       return;
     }
     const tokens = Number(usage.completion_tokens || 0);
     const reasoningTokens = Number(usage.reasoning_tokens || 0);
+    // UIUX-P4-02: demo text carries the demo path's own figures (29.5 / 42.1 tok/s for text no
+    // model produced). The chars are real - this pane streamed them - but the rate is not a rate.
+    if (usage.demo === true || usage.demo === "true") {
+      host.dataset.demo = "true";
+      host.innerHTML = `<span class="stage-artifact-key">${escapeHtml(seat.short)} produced</span>`
+        + `<span class="stage-artifact-size">${escapeHtml(String(chars))} chars</span>`
+        + `<span>· demo text written by the server, so no throughput figure is reported</span>`;
+      return;
+    }
+    host.removeAttribute("data-demo");
     host.innerHTML = `<span class="stage-artifact-key">${escapeHtml(seat.short)} produced</span>`
       + `<span class="stage-artifact-size">${escapeHtml(String(chars))} chars</span>`
       + `<span>· ${escapeHtml(String(tokens))} tokens</span>`
@@ -9071,6 +9374,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // and whether the server actually saved it. `save_run()` returns 0 when it cannot
   // write, so a zero is drawn as "not saved" rather than as a run id.
   function renderCouncilArtifacts() {
+    // The evidence table and the run line read the same buffers, so they are drawn together:
+    // two surfaces describing one run must never disagree about how many seats answered.
+    renderDeliberationEvidence();
     const host = document.getElementById("councilArtifacts");
     if (!host) return;
     if (!councilRun) {
@@ -9087,7 +9393,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const produced = seats.filter(entry => entry.chars > 0);
     const empty = seats.filter(entry => entry.usage && entry.chars === 0);
     const totalChars = seats.reduce((total, entry) => total + entry.chars, 0);
-    const handoffs = seats.filter(entry => entry.seat.reads.length && entry.chars > 0).length;
+    // A handoff is only a handoff if something was carried: a seat that finished empty hands the
+    // next one an empty section, and counting it as a link would overstate the run.
+    const handoffs = seats.filter(entry => entry.seat.reads.length && pipelineCarried(entry.seat).chars > 0).length;
     const allDone = finished.length === PIPELINE_SEATS.length;
     // A recovered view is neither a stopped run nor a finished one: it is a copy, and the line
     // above the seats has to say so before a reader mistakes it for a live run.
@@ -9116,8 +9424,21 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         : "Read back from this browser's checkpoint; nothing was re-run, and this is not the server's record.");
     }
     if (empty.length) {
-      const emptyNamesHtml = empty.map(entry => escapeHtml(entry.seat.short)).join(", ");
-      notes.push(`${emptyNamesHtml} finished with no output, so the seat after it was handed an empty section.`);
+      // UIUX-P4-02: an empty output is not an empty handoff. The orchestrator passes
+      // `content or reasoning`, so the same fact has to read the same way here as it does on
+      // the stage card and in the evidence table - three surfaces, one sentence.
+      const thinking = empty.filter(entry => pipelineCarried(entry.seat).via === "reasoning");
+      const silent = empty.filter(entry => pipelineCarried(entry.seat).via !== "reasoning");
+      const parts = [];
+      if (thinking.length) {
+        parts.push(thinking.map(entry => entry.seat.short).join(", ")
+          + " finished with no output, so the seat after it was handed its reasoning instead");
+      }
+      if (silent.length) {
+        parts.push(silent.map(entry => entry.seat.short).join(", ")
+          + " finished with no output, so the seat after it was handed an empty section");
+      }
+      notes.push(parts.join("; ") + ".");
     }
     if (councilRun.error && !recovered) {
       notes.push(`The run stopped on an error: ${escapeHtml(String(councilRun.error))}`);
@@ -9147,6 +9468,16 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     host.innerHTML = html;
   }
 
+  window.M5Deliberation = {
+    contract: pipelineContract,
+    carried: pipelineCarried,
+    verdict: pipelineStageVerdict,
+    rows: deliberationRows,
+    markdown: deliberationEvidenceMarkdown,
+    copy: copyDeliberationEvidence,
+    render: renderDeliberationEvidence,
+  };
+
   window.M5Pipeline = {
     seats: PIPELINE_SEATS,
     handoff: pipelineHandoff,
@@ -9162,9 +9493,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // signature that captures the row's content and skip the innerHTML rewrite otherwise.
   function updateStageRows(stage) {
     const buffer = stageBuffers[Number(stage)] || {};
-    const signature = `${(buffer.c || "").length}|${(buffer.r || "").length}|${buffer.u ? 1 : 0}|${councilRun ? councilRun.taskChars : 0}`;
+    const contract = buffer.k ? `${buffer.k.max_tokens}|${buffer.k.reasoning_mode}|${buffer.k.skills}` : "-";
+    const signature = `${(buffer.c || "").length}|${(buffer.r || "").length}|${buffer.u ? 1 : 0}|${councilRun ? councilRun.taskChars : 0}|${contract}`;
     if (stageRowSignature[stage] === signature) return;
     stageRowSignature[stage] = signature;
+    renderStageContract(stage);
     renderStageHandoff(stage);
     renderStageArtifact(stage);
     const chars = document.getElementById(`st-chars-${stage}`);
@@ -9334,7 +9667,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function applyRecoveredStages(stages, meta) {
     if (!Array.isArray(stages) || !stages.length) return false;
     document.getElementById("councilStagesContainer").innerHTML = "";
-    stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null}, 2:{c:"",r:"",rCount:0,m:"",u:null}, 3:{c:"",r:"",rCount:0,m:"",u:null}, 4:{c:"",r:"",rCount:0,m:"",u:null} };
+    stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 2:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 3:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 4:{c:"",r:"",rCount:0,m:"",u:null,k:null} };
     stageRowSignature = {};
     stages.forEach(stage => {
       const seat = pipelineSeat(stage.stage);
@@ -9571,7 +9904,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function clearPipelineView() {
     document.getElementById("councilStagesContainer").innerHTML = "";
-    stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null}, 2:{c:"",r:"",rCount:0,m:"",u:null}, 3:{c:"",r:"",rCount:0,m:"",u:null}, 4:{c:"",r:"",rCount:0,m:"",u:null} };
+    stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 2:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 3:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 4:{c:"",r:"",rCount:0,m:"",u:null,k:null} };
     stageRowSignature = {};
     councilRun = null;
     [1,2,3,4].forEach(n => { document.getElementById(`st-state-${n}`).textContent = "Idle"; document.getElementById(`st-tps-${n}`).textContent = ""; const ch = document.getElementById(`st-chars-${n}`); if (ch) ch.textContent = ""; });
@@ -9671,8 +10004,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     let card = document.getElementById(`stage-dom-${s}`);
     if (!card) {
       card = document.createElement("div"); card.id = `stage-dom-${s}`; card.className = "stage-output-card";
-      card.innerHTML = `<div class="stage-output-head"><div><strong>${STAGE_TITLES[s]}</strong> <span id="stage-mod-${s}" class="mono" style="color:var(--text-dim); font-size:12px; margin-left:8px;"></span></div><div style="display:flex; gap:8px; align-items:center;"><span id="stage-pill-${s}" class="badge cyan">Connecting...</span><button class="btn btn-xs" onclick="copyStageMarkdown(${s}, this)">Copy MD</button></div></div><div id="stage-handoff-${s}" class="stage-handoff"></div><div class="stage-output-body"><details id="stage-think-${s}" class="think-box" style="display:none;"><summary><span id="stage-think-lbl-${s}">Reasoning</span></summary><pre id="stage-think-pre-${s}"></pre></details><div id="stage-md-${s}"></div></div><div id="stage-artifact-${s}" class="stage-artifact"></div>`;
+      card.innerHTML = `<div class="stage-output-head"><div><strong>${STAGE_TITLES[s]}</strong> <span id="stage-mod-${s}" class="mono" style="color:var(--text-dim); font-size:12px; margin-left:8px;"></span></div><div style="display:flex; gap:8px; align-items:center;"><span id="stage-pill-${s}" class="badge cyan">Connecting...</span><button class="btn btn-xs" onclick="copyStageMarkdown(${s}, this)">Copy MD</button></div></div><div id="stage-contract-${s}" class="stage-contract" hidden></div><div id="stage-handoff-${s}" class="stage-handoff"></div><div class="stage-output-body"><details id="stage-think-${s}" class="think-box" style="display:none;"><summary><span id="stage-think-lbl-${s}">Reasoning</span></summary><pre id="stage-think-pre-${s}"></pre></details><div id="stage-md-${s}"></div></div><div id="stage-artifact-${s}" class="stage-artifact"></div>`;
       container.appendChild(card);
+      renderStageContract(s);
       renderStageHandoff(s);
     }
     for (let k = 1; k <= 4; k++) { const c = document.getElementById(`stage-dom-${k}`); if (c) c.style.display = (stageFilter === 0 || stageFilter === k) ? "block" : "none"; }
@@ -9710,7 +10044,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           : (st.u
             ? `<div class="stage-empty-output">This seat finished with no output.</div>`
             : `<div style="color:var(--text-faint); font-size:13px;">Streaming...</div>`);
-        if (st.u) { const pill = document.getElementById(`stage-pill-${k}`); setStatus(pill, "ok", `${st.u.decode_tps} tok/s • TTFT ${st.u.ttft}s • ${st.u.completion_tokens} tok`); }
+        // A demo reply was written by the server, not generated by a model, so it has no tok/s to
+        // report - the same rule the Hall's cards and this pane's evidence table follow. The
+        // stepper's own meta is set in the `stage_done` handler for the same reason.
+        if (st.u) {
+          const pill = document.getElementById(`stage-pill-${k}`);
+          const demo = st.u.demo === true || st.u.demo === "true";
+          if (demo) setStatus(pill, "info", "demo reply • the runtime was offline");
+          else setStatus(pill, "ok", `${st.u.decode_tps} tok/s • TTFT ${st.u.ttft}s • ${st.u.completion_tokens} tok`);
+        }
         updateStageRows(k);
       }
       renderCouncilArtifacts();
@@ -9727,7 +10069,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function startPipelineRun(payload, options) {
     const task = (options && options.task) || payload.task || "";
     document.getElementById("councilStagesContainer").innerHTML = "";
-    stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null}, 2:{c:"",r:"",rCount:0,m:"",u:null}, 3:{c:"",r:"",rCount:0,m:"",u:null}, 4:{c:"",r:"",rCount:0,m:"",u:null} };
+    stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 2:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 3:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 4:{c:"",r:"",rCount:0,m:"",u:null,k:null} };
     stageRowSignature = {};
     pipelineRecoveryNote = "";
     // The task is the first thing every seat reads, and its size is the one number on
@@ -9759,9 +10101,33 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // by a stream the walk controls: the state a run is left in is decided here, not in the route.
   function pipelineStreamHandlers() {
     return {
-      stage_start(d) { stageBuffers[d.stage].m = d.model; if (councilRun) councilRun.activeStage = Number(d.stage); document.getElementById(`step-card-${d.stage}`).classList.add("running"); document.getElementById(`st-state-${d.stage}`).textContent = "Streaming"; scheduleStageUpdate(); },
+      stage_start(d) {
+        stageBuffers[d.stage].m = d.model;
+        // The four fields the seat runs under, kept exactly as the server sent them. A route
+        // that stops publishing one of them leaves the contract incomplete, which is drawn as
+        // unknown rather than filled in with a default this pane invented.
+        stageBuffers[d.stage].k = {
+          max_tokens: d.max_tokens === undefined ? null : d.max_tokens,
+          reasoning_mode: d.reasoning_mode === undefined ? null : d.reasoning_mode,
+          skills: d.skills === undefined ? null : d.skills,
+        };
+        if (councilRun) councilRun.activeStage = Number(d.stage);
+        document.getElementById(`step-card-${d.stage}`).classList.add("running");
+        document.getElementById(`st-state-${d.stage}`).textContent = "Streaming";
+        scheduleStageUpdate();
+      },
       token(d) { if (d.kind === "reasoning") { stageBuffers[d.stage].r += d.text; stageBuffers[d.stage].rCount++; } else stageBuffers[d.stage].c += d.text; scheduleStageUpdate(); },
-      stage_done(d) { stageBuffers[d.stage].u = d.usage; document.getElementById(`step-card-${d.stage}`).classList.remove("running"); document.getElementById(`step-card-${d.stage}`).classList.add("done"); document.getElementById(`st-state-${d.stage}`).textContent = "Done"; document.getElementById(`st-tps-${d.stage}`).textContent = `${d.usage.decode_tps} t/s`; scheduleStageUpdate(); },
+      stage_done(d) {
+        stageBuffers[d.stage].u = d.usage;
+        document.getElementById(`step-card-${d.stage}`).classList.remove("running");
+        document.getElementById(`step-card-${d.stage}`).classList.add("done");
+        document.getElementById(`st-state-${d.stage}`).textContent = "Done";
+        // UIUX-P4-02: a demo reply carries the server's own figures (29.5 / 42.1 tok/s for text no
+        // model produced). The stepper used to print one; it now says what the reply was.
+        const demo = d.usage && (d.usage.demo === true || d.usage.demo === "true");
+        document.getElementById(`st-tps-${d.stage}`).textContent = demo ? "demo" : `${d.usage.decode_tps} t/s`;
+        scheduleStageUpdate();
+      },
       unloading(d) { document.getElementById(`st-state-${d.stage}`).textContent = "Unloaded"; },
       council_done(d) {
         document.getElementById("councilTotalStatus").textContent = "Done";
@@ -15901,11 +16267,18 @@ async def api_council_stream(request: Request) -> StreamingResponse:
             if skill_summaries:
                 yield _sse("skills_applied", {"skills": skill_summaries})
 
+            # What each seat is allowed, stated on `stage_start` rather than mirrored in the
+            # browser: the ceiling its tokens are counted against, whether the reasoning mode
+            # the caller chose reaches it, and whether it was handed the skill playbook.
+            # The critic is deliberately given none of the three - an adversary that shares the
+            # author's playbook is auditing its own homework - and the screen said nothing about
+            # it, so a reader could not tell a seat that ignored the setting from one never given it.
+            uses_skills = bool(skill_block.strip())
             stages_cfg: list[WorkflowStage] = [
-                WorkflowStage(1, "architect", "1. Architect / Strategist", architect_model, AGENT_ROLES["architect"]["system"] + skill_block, lambda _c: task, 2400, reasoning_mode),
-                WorkflowStage(2, "coder", "2. Builder / Deep Analyst", coder_model, AGENT_ROLES["coder"]["system"] + skill_block, lambda c: f"Matter / Task:\n{task}\n\nSeat 1 (Architect / Strategist) Output:\n{c['architect']}", 4096),
-                WorkflowStage(3, "critic", "3. Adversarial Red-Team Critic", critic_model, AGENT_ROLES["critic"]["system"], lambda c: f"Matter / Task:\n{task}\n\nSeat 1 Thesis/Spec:\n{c['architect']}\n\nSeat 2 Build/Analysis:\n{c['coder']}", 2400),
-                WorkflowStage(4, "judge", "4. Lead Arbiter Synthesis", judge_model, AGENT_ROLES["judge"]["system"] + skill_block, lambda c: f"Matter / Task:\n{task}\n\nSeat 1 Thesis/Spec:\n{c['architect']}\n\nSeat 2 Build/Analysis:\n{c['coder']}\n\nSeat 3 Adversarial Critique:\n{c['critic']}", 6144, reasoning_mode),
+                WorkflowStage(1, "architect", "1. Architect / Strategist", architect_model, AGENT_ROLES["architect"]["system"] + skill_block, lambda _c: task, 2400, reasoning_mode, meta={"skills": uses_skills}),
+                WorkflowStage(2, "coder", "2. Builder / Deep Analyst", coder_model, AGENT_ROLES["coder"]["system"] + skill_block, lambda c: f"Matter / Task:\n{task}\n\nSeat 1 (Architect / Strategist) Output:\n{c['architect']}", 4096, meta={"skills": uses_skills}),
+                WorkflowStage(3, "critic", "3. Adversarial Red-Team Critic", critic_model, AGENT_ROLES["critic"]["system"], lambda c: f"Matter / Task:\n{task}\n\nSeat 1 Thesis/Spec:\n{c['architect']}\n\nSeat 2 Build/Analysis:\n{c['coder']}", 2400, meta={"skills": False}),
+                WorkflowStage(4, "judge", "4. Lead Arbiter Synthesis", judge_model, AGENT_ROLES["judge"]["system"] + skill_block, lambda c: f"Matter / Task:\n{task}\n\nSeat 1 Thesis/Spec:\n{c['architect']}\n\nSeat 2 Build/Analysis:\n{c['coder']}\n\nSeat 3 Adversarial Critique:\n{c['critic']}", 6144, reasoning_mode, meta={"skills": uses_skills}),
             ]
 
             orchestrator = _workflow_orchestrator(client, "council")
@@ -73370,6 +73743,11 @@ class WorkflowStage:
     max_tokens: int
     reasoning_mode: str = "off"
     temperature: float = 0.0
+    # Stage facts the application already knows and the screen has no other way to learn:
+    # whether this stage was given the caller's skill playbook, for instance. They are
+    # published on `stage_start` so a pane can state what a seat was allowed instead of
+    # mirroring the route's configuration and hoping the copy stays true.
+    meta: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -73440,6 +73818,12 @@ class WorkflowOrchestrator:
                     "key": stage.key,
                     "title": stage.title,
                     "model": stage.model,
+                    # The contract the stage runs under. A card that draws a tok/s and a
+                    # character count but not the ceiling those numbers were measured
+                    # against cannot tell a seat that finished from one that was cut off.
+                    "max_tokens": stage.max_tokens,
+                    "reasoning_mode": stage.reasoning_mode,
+                    **(dict(stage.meta) if stage.meta else {}),
                 },
             )
             messages: list[Message] = [

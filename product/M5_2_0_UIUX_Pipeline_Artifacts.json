@@ -196,7 +196,7 @@
       "detail": ""
     },
     {
-      "check": "the per-stage inputs the stream cannot carry are not claimed on the page",
+      "check": "the per-stage inputs are claimed only from the stream that now carries them",
       "ok": true,
       "detail": ""
     },

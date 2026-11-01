@@ -25,12 +25,12 @@
     "current_inputs_match_approval": null,
     "approved_inputs": null,
     "current_inputs": {
-      "ledger_content_sha256": "90c5fa1893ca87ba69e5f85fab7bf3d9c9cfa0a372d9afeb6c3dd2ce30c45aa9",
-      "source_manifest_sha256": "d54227898067742201d584681389514ec5c136b50514fc2ed3dd367f92788500",
-      "control_inventory_sha256": "28a2965b2d75946d0f24ebca6f181d53aa488446bda4535e16e0c3c68b3b03b2",
-      "route_map_sha256": "7db399ab46512983a1f7e99a2537baea2a1fce92763b5270aa0707b1fc5fe94a",
-      "authorization_trace_sha256": "0dabef2571f600dff50d20d340abd18a1255155bbd680aaf9c5fbb08e6db58b5",
-      "frontend_sha256": "c8f1bdfea7003497582aa6da1595b5f2f3f0a2838d9a0edaf76582fdc1533768",
+      "ledger_content_sha256": "394940db37dd7bf68952d2de34ebd334db8b15bb668eadb3e651462ca2252a57",
+      "source_manifest_sha256": "088b058b11685327c6a47f7ab3ab73532684bb8aa759e52595904c92ee69b092",
+      "control_inventory_sha256": "46ed7e95efc98eb24ab4e794ca38e50e87838d0a2d3f2db9e55828dca15fc046",
+      "route_map_sha256": "d83ca89276eadc7fef205c7f3df2fd6af332cbc7de06e545578e0d8615c75409",
+      "authorization_trace_sha256": "d7c045b36a2de11eecc9fe5fb2629d2416b65da0b64244475412c13bab34ad40",
+      "frontend_sha256": "7541d16bbc72cbb548a26383363c645163339f51d813090719646fa87c5cbf13",
       "screenshot_manifest_sha256": "cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57",
       "screenshot_index_sha256": "82ecdeb4870961951b1b8946a657438d2a3893f443e5fe182f3372ed41784f07",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -39,12 +39,12 @@
     "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "8eb614d2fb44a46a9d8d4c97d942cc9da38b19766a0a7446ce561dc7ec0fbc64",
-    "source_manifest_sha256": "d54227898067742201d584681389514ec5c136b50514fc2ed3dd367f92788500",
-    "control_inventory_sha256": "28a2965b2d75946d0f24ebca6f181d53aa488446bda4535e16e0c3c68b3b03b2",
-    "route_map_sha256": "7db399ab46512983a1f7e99a2537baea2a1fce92763b5270aa0707b1fc5fe94a",
-    "authorization_trace_sha256": "0dabef2571f600dff50d20d340abd18a1255155bbd680aaf9c5fbb08e6db58b5",
-    "frontend_sha256": "c8f1bdfea7003497582aa6da1595b5f2f3f0a2838d9a0edaf76582fdc1533768"
+    "ledger_sha256": "cb76adb3c22b5675ee49f2dbe1990014f3975c794783d3e78f332df225c3b0b1",
+    "source_manifest_sha256": "088b058b11685327c6a47f7ab3ab73532684bb8aa759e52595904c92ee69b092",
+    "control_inventory_sha256": "46ed7e95efc98eb24ab4e794ca38e50e87838d0a2d3f2db9e55828dca15fc046",
+    "route_map_sha256": "d83ca89276eadc7fef205c7f3df2fd6af332cbc7de06e545578e0d8615c75409",
+    "authorization_trace_sha256": "d7c045b36a2de11eecc9fe5fb2629d2416b65da0b64244475412c13bab34ad40",
+    "frontend_sha256": "7541d16bbc72cbb548a26383363c645163339f51d813090719646fa87c5cbf13"
   },
   "approval_request": [
     {
@@ -55,7 +55,7 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "190 markup controls (106 chrome, 84 panes) plus 33 rendered by script"
+      "evidence": "190 markup controls (106 chrome, 84 panes) plus 34 rendered by script"
     },
     {
       "id": 3,
@@ -79,7 +79,7 @@
     "markup_controls": 190,
     "chrome_controls": 106,
     "pane_controls": 84,
-    "script_rendered_controls": 33,
+    "script_rendered_controls": 34,
     "routes": 115,
     "routes_with_resolved_or_possible_caller": 69,
     "routes_no_caller_observed": 46,
