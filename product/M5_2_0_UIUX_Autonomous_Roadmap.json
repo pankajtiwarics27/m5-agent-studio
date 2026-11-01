@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 16,
+  "revision": 17,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,14 +102,14 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P2-06",
-    "next_recommended_story": "UIUX-P3-01",
-    "last_checkpoint": "2026-11-02T03:05:00Z",
-    "last_session_id": "arena/d4825f6c-m5-agent-studio",
+    "last_completed_story": "UIUX-P3-01",
+    "next_recommended_story": "UIUX-P3-02",
+    "last_checkpoint": "2026-11-01T04:45:00Z",
+    "last_session_id": "arena/213dcf55-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "38471c6cd721e5dcbd36dc02185cc63aa4da2923",
-    "last_updated": "2026-11-02",
+    "last_verified_commit": "32fb0e49e934a9a43407cf110619ba073f319c4d",
+    "last_updated": "2026-11-01",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
       "Tab labels in this ledger (Start, Harness, Council, Pipeline, Compare, Chat) are NOT the DOM ids in static/index.html (start, harness, hall, council, debate, chat): 'Council' is data-tab=hall and 'Pipeline' is data-tab=council, while data-tab=council is the Pipeline pane. tab_registry records the mapping and tests/test_uiux_roadmap.py fails if it drifts. A session that greps for a 'pipeline' tab will not find one.",
@@ -261,7 +261,7 @@
       "id": "P3",
       "name": "Harness and Pipeline",
       "title": "Harness and Pipeline",
-      "status": "not_started",
+      "status": "in_progress",
       "story_ids": [
         "UIUX-P3-01",
         "UIUX-P3-02",
@@ -272,11 +272,11 @@
         "UIUX-P3-07"
       ],
       "total": 7,
-      "done": 0,
+      "done": 1,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 7,
-      "percent_complete": 0
+      "not_started": 6,
+      "percent_complete": 14
     },
     {
       "id": "P4",
@@ -339,11 +339,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 17,
+    "done": 18,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 23,
-    "percent_complete": 42
+    "not_started": 22,
+    "percent_complete": 45
   },
   "stories": [
     {
@@ -3586,7 +3586,7 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
+      "current_behavior": "Before this story the Harness bar held nine controls that decided a run and none of them said what the run would do with them - the meaning of a policy, the role of the sub-agent critic and three settings folded into a collapsed group all had to be known already - and an empty task was answered three different ways: a toast in the GSD path, another toast in the SDLC path, and a silent return in the turn path.",
       "target_behavior": "Harness task creation and settings hierarchy with no loss of existing functionality.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
@@ -3629,24 +3629,145 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P3-01 (Harness task creation and settings hierarchy). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-01T03:40:00Z",
+        "updated_at": "2026-11-01T04:45:00Z",
+        "completed_at": "2026-11-01T04:45:00Z",
+        "owner_session": "arena/213dcf55-m5-agent-studio",
+        "commit_sha": "32fb0e49e934a9a43407cf110619ba073f319c4d",
+        "changed_files": [
+          "static/index.html",
+          "studio.py",
+          "scripts/uiux_harness_settings_inventory.py",
+          "scripts/harness_settings_walk.mjs",
+          "tests/test_harness_settings.py",
+          "docs/uiux-2-0-harness-settings.md",
+          "docs/uiux-2-0-program.md",
+          "docs/README.md",
+          "docs/media/harness/README.md",
+          "docs/media/harness/plan.png",
+          "docs/media/harness/no-task.png",
+          "docs/media/harness/brief-from-chat.png",
+          "docs/media/harness/brief-aligned.png",
+          "docs/media/harness/plan-narrow.png",
+          "product/M5_2_0_UIUX_Harness_Settings.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-tokens.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "Nine controls decided a Harness run and none of them said what the run would do with them, and \"can this run?\" had three answers: a toast in the GSD path, a different toast in the SDLC path, and a silent `return` in the turn path. The composer now prints the plan above Run - `directory` (plus `direct` or `isolated git worktree`), `policy`, `models` (lead, then the critic or `same`), `workflow` (the mode with the three advanced settings it depends on, and `N changed` in words) - and every value is read from the control the run payload posts.",
+          "The plan covers the payload by construction, and the inventory enforces it from both ends: `ids_in_the_payload` is parsed out of the `consumeSSE(\"/api/harness/run\", {...})` and `/api/harness/gsd-wave` payload objects, `ids_the_plan_reads` is parsed out of `harnessRunPlan()` (plus the `HARNESS_ADVANCED_IDS` list it iterates), and `covers_the_run_payload` fails when a control is added to the payload without being added to the plan. `watches_the_same_controls` fails when the change listeners and the payload diverge, so the plan cannot go stale against a control it is not watching.",
+          "The policy is printed as the option's own label. The first version of the row appended a description from a `HARNESS_POLICY_EFFECT` table and read \"Standard (Ask before Bash) - asks before Bash\"; the table was deleted, the row now prints `harnessSelectedText(\"harnessPolicy\")`, and `policy_is_the_option_label` fails if a second description of a policy appears anywhere in the file. One string, so the sentence a reader sees cannot drift from the option they chose.",
+          "The three settings that used to hide inside `<details id=\"harnessAdvanced\">` now state their own contents while the group is closed: the summary reads `Ponytail + Concise · Low · 10 steps`, and appends `· changed` when one differs from the `data-default` its own markup declares. `declared_default_is_the_selected_option` pins each declared default to the option the markup ships selected, so a fresh pane cannot open marked as changed, and `changed_is_marked_in_words` keeps the word - colour is reinforcement, never the status.",
+          "`harnessRunState()` is one predicate for Run, exactly as `chatSendReason()` is for Send: `updateHarnessRunControl()` sets `button.disabled = !state.ready` and writes the same answer into a polite live region that the composer points at with `aria-describedby`. The reasons are `running`, `board`, `no-task` and `ready`; the board mode needs no task because opening the SDLC board runs nothing, and the inventory fails if that exception is lost.",
+          "Two real defects closed with that predicate. `executeHarnessSelectedWorkflow()` now consults it before dispatching, so an empty task is the sentence beside Run rather than a silent `return` (the GSD and SDLC paths keep their own guards for their own buttons); and because `harnessRunActive` is the first branch, Enter in a busy composer can no longer start a second stream - before this story `runHarnessTurn()` set the button's `disabled` but the keydown handler called the dispatcher directly. `setHarnessRunActive()` re-evaluates on both edges, so a finished run leaves an empty box and Run off rather than enabled and inert.",
+          "The pane now answers the brief UIUX-P2-06 carries. `handOffChatToHarness()` records what it carried, and a banner that starts hidden appears with the counts (`2 messages, 2 tool calls (1 failed)`), the model and the effective directory the reply was sent with, and the difference: `This run changes 2 settings: the model (demo-local-model -> combo/hybrid-resilient); the project directory (/tmp/chat-read-project -> /tmp/p3-01-walk-project)`. It keeps comparing as controls change, says `This run uses the same model and project directory it was read with` when nothing differs, writes only when the sentence changes, and goes when the task goes - a run consumes it, **+ New session** clears it, and emptying the composer clears it.",
+          "The task box grows with the task. A carried brief arrived in a two-row textarea that showed its first two lines and hid the rest, including the sentence that nothing had run; `fitHarnessComposer()` sizes the box to its content between a two-row floor and a ten-row ceiling, follows the reader as they type, and returns it to rest when a run takes the task away. Manual resizing stays off (`resize:none`) so a drag cannot fight the fitter - the walk measures both the growth and the rest.",
+          "Accessibility, found by walking the pane rather than assuming it: the four `<label>`s naming the lead model, the critic, the execution policy and the max steps had no `for`, so those selects had no accessible name, and the task box had no name at all. All four labels are associated, the composer carries `aria-label=\"Your task for the Harness\"` and `aria-describedby=\"harnessRunHint\"`, and the inventory fails on any of the ten controls in the bar and composer that carries no visible text of its own and no label or `aria-label`.",
+          "Nothing that worked stopped working: eleven controls in the bar, the sidebar and the composer are pinned to the handler or binding that made each work (`PRESERVED_CONTROLS`), and the five routes they write through (`POST /api/workspace/directory`, `PATCH /api/harness/sessions/{id}`, `POST /api/harness/run`, `/gsd-wave`, `/sdlc/run`) are checked to be still mounted in `app.py`. No route was added: the plan reads state that is already in the pane and writes nothing.",
+          "`scripts/harness_settings_walk.mjs` drives the same surface in a browser against `scripts/demo_tour.py --serve` and reported 24 of 24: the plan and its four rows, each control moving the row that claims it (policy, worktree box, workflow mode with the Run button's label, max steps with the changed word while the group is closed, directory, critic), Run off with the sentence for an empty task and pressing it anyway starting nothing while returning the cursor, the board mode needing no task, the banner from a real Chat handoff with its counts and its mismatch, the banner flipping to `match` when the model and directory are aligned, the box growing to show the whole brief and resting afterwards, the banner clearing three ways, every control named, the group opening and closing from the keyboard, no overflow at 900px, and no page errors."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "2014 passed, 25 skipped (tests/test_live_sandbox.py and the browser-marked captures need explicit opt-in; the browser suite was run separately below) in 155s"
+          },
+          {
+            "command": "LD_LIBRARY_PATH=/tmp:/tmp/chromium-libs/lib STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js STUDIO_SCREENSHOT_CHROME_ARGS=\"--disable-gpu\" M5_REQUIRE_BROWSER_TESTS=1 .venv/bin/python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py --tb=short",
+            "exit_code": 0,
+            "result": "29 passed in 82.68s (the six-pane captures and the accessibility walk, on @sparticuz/chromium 153.0.0 + puppeteer-core 25.16.0)"
+          },
+          {
+            "command": "node scripts/harness_settings_walk.mjs --base-url http://127.0.0.1:8899 --token <demo> --screenshots docs/media/harness",
+            "exit_code": 0,
+            "result": "24 of 24 checks passed, 0 page errors, five captures written"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q tests/test_harness_settings.py",
+            "exit_code": 0,
+            "result": "38 passed (15 of them negative: each rule broken in a copy of the source)"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_harness_settings_inventory.py --check",
+            "exit_code": 0,
+            "result": "harness settings OK: 81 checks, 4 reasons, 0 findings"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_control_inventory.py && .venv/bin/python scripts/uiux_route_map.py && .venv/bin/python scripts/uiux_authorization_trace.py && .venv/bin/python scripts/uiux_tokens.py && .venv/bin/python scripts/uiux_status_components.py && .venv/bin/python scripts/uiux_overlays.py 2>/dev/null; .venv/bin/python scripts/uiux_overlay_inventory.py && .venv/bin/python scripts/uiux_onboarding_inventory.py && .venv/bin/python scripts/uiux_presentation_inventory.py && .venv/bin/python scripts/uiux_source_manifest.py",
+            "exit_code": 0,
+            "result": "All regenerated for the changed frontend; every --check clean afterwards (control inventory, route map, authorization trace, tokens, status components, overlays, onboarding, presentations, source manifest)"
+          },
+          {
+            "command": ".venv/bin/python -q -m ruff check . && .venv/bin/python -m mypy && .venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "ruff: all checks passed; mypy: no issues in 58 source files; frontend syntax OK (1 inline block)"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py && .venv/bin/python scripts/validate_screenshots.py && .venv/bin/python scripts/demo_tour.py --check && .venv/bin/python scripts/verify_baseline.py && .venv/bin/python scripts/validate_security_signoff.py",
+            "exit_code": 0,
+            "result": "Docs: 150 files scanned; screenshots 6 of 6; demo transcript current; baseline verified at 7904892; security sign-off consistent (deferred, 12 boundaries, 7 findings)"
+          },
+          {
+            "command": ".venv/bin/python scripts/build_studio.py && .venv/bin/python scripts/uiux_preservation_signoff.py",
+            "exit_code": 0,
+            "result": "studio.py rebuilt (3,138,360 bytes) from the changed frontend; preservation package regenerated against the new tree and ledger"
+          }
+        ],
+        "visual_evidence": [
+          {
+            "file": "docs/media/harness/plan.png",
+            "shows": "The Harness at 1440x900 with RUN WILL above Run: DIRECTORY /tmp/m5-demo-.../workspace · direct, POLICY Standard (Ask before Bash), MODELS [Combo · Auto-Fallback] Local M5 Multi-Model Fallback (2 targets) · critic same, WORKFLOW Autonomous Turn (Step Loop) · Ponytail + Concise · Low · 10 steps - the same three values the collapsed Advanced settings group carries in its summary - and the sentence beside Run asking for a task."
+          },
+          {
+            "file": "docs/media/harness/no-task.png",
+            "shows": "The composer with an empty box: Run visibly disabled and the amber sentence \"Describe the task in the box above, then Run. Nothing runs until there is one.\" beside it, with the plan above."
+          },
+          {
+            "file": "docs/media/harness/brief-from-chat.png",
+            "shows": "A conversation handed over from Chat: the From Chat banner counting 2 messages, 2 tool calls (1 failed) and naming both settings this run changes (the model demo-local-model -> combo/hybrid-resilient, the directory /tmp/chat-read-project -> /tmp/p3-01-walk-project), the whole carried brief visible in the box that grew to hold it, and the plan below it."
+          },
+          {
+            "file": "docs/media/harness/brief-aligned.png",
+            "shows": "The same handoff after choosing demo-local-model and typing /tmp/chat-read-project: the banner reads \"This run uses the same model and project directory it was read with\", and the plan and the brief now agree."
+          },
+          {
+            "file": "docs/media/harness/plan-narrow.png",
+            "shows": "The same surface at 900px: the plan wraps inside the composer with no horizontal overflow, the hint and Run still reachable."
+          }
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "The plan prints; it does not ask. It adds no route, no request and no stored draft: every value is read from a control that already exists, so a reader can see what a run will use without the pane acquiring a second source of truth about it.",
+          "A policy is described by its own option label and by nothing else. The first attempt kept a description table in the script, which printed the same fact twice (\"Standard (Ask before Bash) - asks before Bash\"); the table is gone and the inventory fails if a second description appears, because two sentences about one policy is one sentence that can rot.",
+          "The advanced settings belong to the workflow row rather than a fifth row. They shape the same decision, and a plan that grows a row per control is a plan a reader skips; the collapsed group's summary carries the same values so the group and the row cannot disagree.",
+          "Run's state and Run's sentence are one predicate, and a run in flight is the first branch of it. That is what makes an empty task a sentence instead of silence and what stops a second run from a second Enter - both were reachable before, in two different code paths.",
+          "The task box is sized by the pane, not by the reader. The P2-06 brief needs more than two rows and a drag handle would fight a fitter that runs on every keystroke, so `resize` stays off and the fitter owns the height between a two-row floor and a ten-row ceiling.",
+          "The story re-pins nothing: `source_commit_sha` stays at the tree UIUX-P0-06 approved, because this story changed the frontend (so the source manifest, route map, authorization trace, control inventory, tokens, status components, overlays, onboarding, presentations and the preservation package were all regenerated in the same commit) but did not change the baseline the program is measured against."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
-        "readme_updated": false
+        "handoff_note": "UIUX-P3-01 is the Harness stating what it will do and whether it can. The composer prints a plan built from the same controls the run payload posts (directory and isolation mode, policy, lead and critic, workflow with the three advanced settings), the collapsed advanced group carries its own values and says 'changed' in words, one predicate drives both Run's disabled state and the sentence beside it (so an empty task is a sentence rather than the three different answers the paths used to give, and a second run cannot start while one is in flight), a banner answers a brief carried from Chat with its counts and the settings this run changes, and the task box grew to show the task between a two-row floor and a ten-row ceiling. Gates: 2014 passed / 25 skipped, the browser suite 29 passed on the pinned Chromium, 38 harness rules (15 negative), 24 walk checks, five captures in docs/media/harness, every regenerated artifact current, ruff/mypy/frontend syntax clean. That is 1 of 7 in phase P3 and 18 of 40 in the program. UIUX-P3-02 (Harness durable timeline and event replay) is next: the pane now says what it will do before a run, and the story after it is what the reader sees of what it did - the durable per-session event log, the cursor and the replay that the TASK events already provide but the trajectory does not yet show as a timeline.",
+        "next_action": "UIUX-P3-02: Harness durable timeline and event replay - trace the durable event log, cursor and resync paths (harnessResyncFromSnapshot, openHarnessEventStream, renderStoredHarnessEventHtml) before changing the trajectory",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",
