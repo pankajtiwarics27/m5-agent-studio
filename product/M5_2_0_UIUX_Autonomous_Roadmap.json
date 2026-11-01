@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 22,
+  "revision": 23,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -100,16 +100,18 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": null,
-    "active_stories": [],
+    "active_story": "UIUX-P3-07",
+    "active_stories": [
+      "UIUX-P3-07"
+    ],
     "last_completed_story": "UIUX-P3-06",
     "next_recommended_story": "UIUX-P3-07",
-    "last_checkpoint": "2026-11-01T18:40:00Z",
-    "last_session_id": "arena/720477ad-m5-agent-studio",
+    "last_checkpoint": "2026-11-01T19:01:39Z",
+    "last_session_id": "arena/7377a37a-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "e508b9a79b4ab4e62cbff697035ff36e0416fddc",
-    "last_updated": "2026-11-01",
+    "last_verified_commit": "f4fb612278b54eb5c685a28319491fc15fab8a8d",
+    "last_updated": "2026-11-02",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
       "Tab labels in this ledger (Start, Harness, Council, Pipeline, Compare, Chat) are NOT the DOM ids in static/index.html (start, harness, hall, council, debate, chat): 'Council' is data-tab=hall and 'Pipeline' is data-tab=council, while data-tab=council is the Pipeline pane. tab_registry records the mapping and tests/test_uiux_roadmap.py fails if it drifts. A session that greps for a 'pipeline' tab will not find one.",
@@ -120,7 +122,8 @@
       "The program's prose had drifted from the code at the pin: the program page still said 102 routes and 11 pinned files while app.py mounts 115 and the manifest now pins 12. Counts in docs are re-derived from the artifacts, not remembered.",
       "PR #104 was closed rather than merged: its UIUX-P0-03 work was ported to #109 and landed there, but the runtime-program benchmark diagnostics that branch also carried still need their own pull request in the runtime program.",
       "UIUX-P0-05 cannot be closed in this environment: the six baseline screenshots need Chrome/Chromium and puppeteer-core, neither of which is vendored. The test-results half is capturable here; the visual half needs a machine with a browser, and the owner has said they will capture there.",
-      "Two sessions are closing UI/UX stories against the same static/index.html at the same time. P3-01 and the P2-04 work merged without a source conflict because they own different panes, but every generated artifact conflicted: resolve those by regenerating from the merged source rather than by choosing a side, and re-run the full suite on the merged tree, because each story's own numbers describe its own commit."
+      "Two sessions are closing UI/UX stories against the same static/index.html at the same time. P3-01 and the P2-04 work merged without a source conflict because they own different panes, but every generated artifact conflicted: resolve those by regenerating from the merged source rather than by choosing a side, and re-run the full suite on the merged tree, because each story's own numbers describe its own commit.",
+      "P3-07 is intentionally a full-run retry only: the Pipeline API persists completed runs but has no stage checkpoint/resume contract, so the UI must not imply recovery from a checkpoint."
     ]
   },
   "tab_registry": [
@@ -274,9 +277,9 @@
       ],
       "total": 7,
       "done": 6,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 1,
+      "not_started": 0,
       "percent_complete": 86
     },
     {
@@ -341,9 +344,9 @@
   "overall_progress": {
     "total_stories": 40,
     "done": 23,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 17,
+    "not_started": 16,
     "percent_complete": 58
   },
   "stories": [
@@ -4797,8 +4800,8 @@
     },
     {
       "id": "UIUX-P3-07",
-      "title": "Pipeline retry failure and checkpoint recovery",
-      "description": "Incrementally implement pipeline retry failure and checkpoint recovery using current code as authoritative baseline.",
+      "title": "Pipeline failure and explicit full-run retry",
+      "description": "Distinguish failed, stopped and completed Pipeline runs, and offer an honest retry that replays the full four-stage request from the beginning; checkpoint restore remains out of scope.",
       "phase": "P3",
       "priority": "P0",
       "tab_or_component": "Pipeline",
@@ -4810,17 +4813,18 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "Pipeline retry failure and checkpoint recovery with no loss of existing functionality.",
+      "current_behavior": "At baseline f4fb612278b54eb5c685a28319491fc15fab8a8d, static/index.html runCouncil() clears the current stage buffers, posts the task and current settings to POST /api/council/stream, and handles stage_start, token, stage_done, council_done and error. Its finalizer marks every incomplete run stopped, including SSE errors. The endpoint runs all four stages from Architect and calls save_run only after the chain finishes; it exposes no checkpoint or stage-resume route.",
+      "target_behavior": "Pipeline outcomes are honestly distinguished as Done, Failed or Stopped. After failure or operator stop, the partial attempt remains inspectable and an explicit retry replays the exact captured request from Architect through all four stages. Before the retry clears/replaces partial output, the UI states that all stages will run again; it makes no checkpoint or resume claim.",
       "implementation_steps": [
-        "Confirm HEAD, worktree and prerequisite evidence",
-        "Trace relevant DOM, JS handlers, API and backend state transitions",
-        "Capture before screenshot and regression fixtures",
-        "Make smallest compatible UI change",
-        "Exercise empty, loading, streaming, success, failure and recovery cases as applicable",
-        "Capture after screenshot and update preservation matrix",
-        "Run relevant tests and record exact command/result",
-        "Commit only verified changes and update tracking"
+        "Confirm HEAD, clean worktree, merged UIUX-P3-06 prerequisite and source pin for this story",
+        "Trace the Pipeline DOM, runCouncil(), consumeSSE(), abort path, /api/council/stream payload and backend terminal events",
+        "Capture before evidence and add regressions for done, server error, transport close and operator stop",
+        "Track the exact last request payload and add a keyboard-operable full-run retry action after an incomplete terminal outcome",
+        "Keep partial output visible until the operator retries; clearly state that retry starts at Architect and replaces the displayed partial attempt",
+        "Exercise empty, loading, streaming, success, failure, stop and replay-from-start cases at desktop and narrow viewport",
+        "Capture after evidence and update the Pipeline preservation matrix and screenshot manifest",
+        "Run targeted and baseline tests; record exact commands/results and the unchanged backend contract",
+        "Regenerate the embedded studio bundle when static/index.html changes, then commit only verified changes and update tracking"
       ],
       "non_regression": [
         "Keep existing endpoints and authorization contracts",
@@ -4829,11 +4833,12 @@
         "Preserve user workspace edits and session recovery"
       ],
       "acceptance_criteria": [
-        "All mapped existing controls remain reachable and functionally equivalent",
-        "No console errors on tested journeys",
-        "Keyboard operation and focus states work",
-        "Failure and recovery states are actionable and honest",
-        "Target UI behavior is demonstrable by screenshot or test"
+        "All mapped existing Pipeline controls remain reachable and the successful four-stage flow and artifacts remain functionally equivalent",
+        "A server SSE error or premature stream close is presented as Failed with an actionable reason; an operator abort is presented as Stopped; success is presented as Done",
+        "After an incomplete run, partial stage output remains inspectable until the operator explicitly retries",
+        "Retry is keyboard-operable, reuses the exact captured task/settings payload, starts again at Architect, and explicitly states that every stage will run again and the displayed partial attempt will be replaced",
+        "The UI does not imply checkpoint persistence, stage resume, or recovery guarantees absent from the current API",
+        "No console errors on tested journeys; focus states work; target behavior is demonstrated by test or validated screenshot"
       ],
       "tests": {
         "unit": [
@@ -4851,25 +4856,37 @@
         ]
       },
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
-      "agent_prompt": "Implement UIUX-P3-07 (Pipeline retry failure and checkpoint recovery). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
+      "agent_prompt": "Implement the owner-approved UIUX-P3-07 re-scope: honest Pipeline failure/stop states and an explicit full-run retry from Architect using the captured request. Do not add backend endpoints, checkpoint persistence, or stage resume. Verify dependencies and source pin, preserve existing controls and success behavior, test error/close/stop/replay paths, capture real screenshots where available, and mark done only with evidence.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 1,
+        "attempts": 1,
+        "started_at": "2026-11-01T19:01:39Z",
+        "updated_at": "2026-11-01T19:01:39Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/7377a37a-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
-        "evidence": [],
-        "test_results": [],
+        "evidence": [
+          "Claim baseline: assigned branch was clean at origin/main HEAD f4fb612278b54eb5c685a28319491fc15fab8a8d; PR #152 (UIUX-P3-06) is merged at this commit.",
+          "Coordination preflight: scripts/uiux_coordination.py --github reported UIUX-P3-07 as the next locally eligible story and inspected zero open PRs.",
+          "Owner-approved scope change: full-run replay from Architect replaces checkpoint restore; no backend/runtime contract changes are permitted in this UI story.",
+          "Source trace: static/index.html runCouncil() posts to /api/council/stream; app.py api_council_stream runs four stages in order and calls save_run only after completion. No checkpoint or resume route exists."
+        ],
+        "test_results": [
+          "Python 3.11.2, temporary /tmp/uiux-claim-venv: /tmp/uiux-claim-venv/bin/python -m pytest -q tests/test_uiux_roadmap.py -> 19 passed after the claim/scope metadata update.",
+          "Python 3.11.2: python3 scripts/validate_docs.py -> passed (5 required pages, 162 files scanned).",
+          "git diff --check -> exit 0 before the claim commit."
+        ],
         "visual_evidence": [],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "Per owner direction, re-scope P3-07 to explicit full-run replay from the start. Retrying reuses the last captured task/settings and reruns all four stages; checkpoint restore and backend changes are out of scope.",
+          "Partial stage output remains visible until an explicit retry; retry copy warns that the partial attempt will be replaced."
+        ],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "next_action": "Push this claim/scope metadata commit, open the UIUX-P3-07 draft PR, and recheck open PRs for a competing claim before writing implementation code.",
         "readme_updated": false
       },
       "required_evidence": [
