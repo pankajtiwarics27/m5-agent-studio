@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 13,
+  "revision": 14,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,13 +102,13 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P2-03",
-    "next_recommended_story": "UIUX-P2-04",
-    "last_checkpoint": "2026-11-01T21:20:00Z",
-    "last_session_id": "arena/6b27eb7d-m5-agent-studio",
+    "last_completed_story": "UIUX-P2-04",
+    "next_recommended_story": "UIUX-P2-05",
+    "last_checkpoint": "2026-11-01T23:40:00Z",
+    "last_session_id": "arena/769ff32c-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "9f09ddda775fb460c1bb498c32d065eff28fcac9",
+    "last_verified_commit": "6689ce1dfb5713350c12d364abe99926fc7a7df2",
     "last_updated": "2026-11-01",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -251,11 +251,11 @@
         "UIUX-P2-06"
       ],
       "total": 6,
-      "done": 3,
+      "done": 4,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 3,
-      "percent_complete": 50
+      "not_started": 2,
+      "percent_complete": 67
     },
     {
       "id": "P3",
@@ -339,11 +339,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 14,
+    "done": 15,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 26,
-    "percent_complete": 35
+    "not_started": 25,
+    "percent_complete": 38
   },
   "stories": [
     {
@@ -2900,8 +2900,8 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "Chat composer and conversation hierarchy with no loss of existing functionality.",
+      "current_behavior": "Recorded at P2-04. The Chat pane could send and stream, but it named nobody and promised the wrong thing. renderChatMessages() drew a bare .msg per turn: an answer's model lived in a .msg-meta footer *under* the answer, a question carried no label at all, nothing numbered the turns, and the function ended with `box.scrollTop = box.scrollHeight`, so the pane dragged the reader to the bottom on every token - reading back through a long reply was a fight with the stream. The composer said \"(Enter to send)\" in its placeholder, which was true, and then sent whatever #chatModel held including an empty string, leaving /api/chat/stream to explain; the Send button was enabled in states that could not work and gave no reason when it failed. The tools checkbox explained nothing at all: /api/chat/stream runs the turn under policy 'plan' (read-only) and falls back to WORKSPACE_ROOT when no directory is sent. Clear wiped chatHistory and drew \"Session cleared.\" - one stray click from a long conversation the server cannot give back.",
+      "target_behavior": "Every turn carries its role, its number and - for an answer - the model that produced it, above the content, from one CHAT_ROLES table; the transcript is role=log with aria-live=off and aria-busy while streaming, follows the stream only when the reader was already within CHAT_PIN_SLACK of the bottom, and otherwise keeps the position and offers Jump to latest (which moves scroll and focus together). One predicate, chatSendReason(), decides whether the composer can send; the disabled button and the sentence under it both read it, and the sentence is a live region rewritten only when its reason or the model changes. The reasons are: streaming, no-model, runtime-offline (read from the telemetry verdict, local models only, worded as what the probe reported), tools-readonly (naming the directory it would read and the 'plan' policy), and ready (saying what Enter does). Clear keeps the turns it removes and presents Undo; Enter sends and Shift+Enter adds a line, in one handler, matching the placeholder.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
         "Trace relevant DOM, JS handlers, API and backend state transitions",
@@ -2943,24 +2943,170 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P2-04 (Chat composer and conversation hierarchy). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-01T22:00:00Z",
+        "updated_at": "2026-11-01T23:40:00Z",
+        "completed_at": "2026-11-01T23:40:00Z",
+        "owner_session": "arena/769ff32c-m5-agent-studio",
+        "commit_sha": "6689ce1dfb5713350c12d364abe99926fc7a7df2",
+        "changed_files": [
+          "static/index.html",
+          "studio.py",
+          "scripts/uiux_chat_inventory.py",
+          "scripts/chat_walk.mjs",
+          "scripts/uiux_route_map.py",
+          "tests/test_chat_composer.py",
+          "tests/test_presentations.py",
+          "docs/uiux-2-0-chat.md",
+          "docs/uiux-2-0-program.md",
+          "docs/README.md",
+          "docs/media/chat/README.md",
+          "docs/media/chat/transcript.png",
+          "docs/media/chat/scrolled.png",
+          "docs/media/chat/answered.png",
+          "docs/media/chat/cleared.png",
+          "docs/media/chat/failure.png",
+          "docs/media/chat/narrow.png",
+          "product/M5_2_0_UIUX_Chat.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "docs/uiux-2-0-p0-signoff.md",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "The transcript named nobody. A reply's model was a footer under the reply, a question had no label, and nothing numbered the turns, so 'which answer is this?' was a scroll rather than a glance. CHAT_ROLES now gives every role a label and a tone in one table, and each turn prints data-role, the label, the model (answers) and its index.",
+          "The pane fought the reader. renderChatMessages() ended with an unconditional scrollTop assignment; every streamed token yanked the view to the bottom. It now measures chatNearBottom() before re-rendering, follows only if the reader was already there, and shows Jump to latest otherwise - the walk proves it by scrolling to the top and appending a turn (scrollTop 0 -> 0, jump visible).",
+          "The transcript is a log, not a live region. role=log with aria-live=off and aria-busy while streaming: the pane re-renders on every token, and a live region there would read the whole conversation aloud repeatedly. What is announced is the composer's reason, which changes only when the answer to 'can I send?' changes.",
+          "The composer had no single answer. It promised Enter-to-send and then sent an empty model id when #chatModel held nothing. chatSendReason() is now the only predicate: the disabled button and the sentence both read it, and the walk proves that a blocked Send returns without sending, focuses the composer, and says why.",
+          "The hint is written once per answer. The kind of live region that announces 'no model selected' on every token is worse than no live region, so the text is rewritten only when its reason or the model changes (chatHintSignature).",
+          "The reasons are ranked by what a reader needs first. The first draft put the tools note above the runtime verdict; on this host the probe says the runtime is not answering, so the composer told the reader about read-only tools while the send was about to fail. runtime-offline now precedes tools-readonly.",
+          "The runtime warning is a report, not a prophecy. The first wording was 'will probably fail' - and the demo then answered from its scripted runtime directly above it. It now says what the telemetry probe reported and what happens if it is right (the message is kept, Retry is offered).",
+          "The tools note describes the route. /api/chat/stream runs the turn under policy 'plan' and falls back to WORKSPACE_ROOT when no directory is sent, so the sentence says read-only and names the directory - the first draft claimed the tools 'will refuse', a failure the server does not produce. The inventory fails if the policy literal in app.py changes.",
+          "Clear is undoable. clearChat() keeps the turns it removes and presents the recovery kind with Undo, and Clear is disabled when the transcript is empty. The walk clears, reads the count in the presentation, presses Undo with the keyboard, and gets every turn back with the cursor in the composer.",
+          "Enter sends, Shift+Enter does not, in one handler. The rule is scoped to the chat handler specifically: three other composers on the shell bind Enter too, and a rule that read the whole file would be satisfied by any of them.",
+          "A real send works end to end. The demo replays a scripted reply, so the walk types a message, presses Enter, and checks the answer's label, its model header and its tok/s meta, plus the composer returning to idle with Stop hidden and the field cleared. The failure surface is reached by refusing POST /api/chat/stream: error kind, cause 'Failed to fetch', the message kept, the empty placeholder rolled back so Retry sends one message and not two.",
+          "Two shared defects surfaced because the artifacts caught them lying. uiux_route_map._brace_end() treated the apostrophe in a comment as an opening quote, so one comment stretched a function's body across the file: stopActiveStream inherited every call after it and the sign-off attributed Council's /api/hall/sessions/{id}/summon to Chat and Pipeline. The scanner now skips // and /* */ comments, and the sign-off attributes that route to Council alone. Separately, the P1-05 negative test unwired only the first presentInto(\"chatState\"), which stopped being a hole once Clear got its own; it now unwires every call site.",
+          "The acceptance criteria are the reviewer's call. This story records what was run and what was seen; the artifacts prove freshness, not owner review (issue #126)."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "1903 passed, 25 skipped"
+          },
+          {
+            "command": ".venv/bin/python -m pytest tests/test_chat_composer.py -q",
+            "exit_code": 0,
+            "result": "38 passed - 19 positive rules plus 19 negative cases that break a rule in a copy of the markup"
+          },
+          {
+            "command": "node scripts/chat_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "21 of 21 checks passed (labels/numbers/model header, log semantics, scroll pinning, jump-to-latest with focus, no-model blocking, ready sentence, tools read-only, cloud-vs-local runtime warning, Shift+Enter, clear+undo, a real streamed answer, a refused route presented, 900px, no page errors)"
+          },
+          {
+            "command": "node scripts/chat_walk.mjs --screenshots docs/media/chat",
+            "exit_code": 0,
+            "result": "21 of 21 with six captures: transcript.png, scrolled.png, answered.png, cleared.png, failure.png, narrow.png"
+          },
+          {
+            "command": "node scripts/start_health_walk.mjs / start_recent_walk.mjs / start_walk.mjs --base-url http://127.0.0.1:<port>",
+            "exit_code": 0,
+            "result": "21/21, 16/16 and 18/18 - the Start pane is unchanged by this story"
+          },
+          {
+            "command": "node scripts/presentation_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "20 of 20 checks passed"
+          },
+          {
+            "command": "node scripts/keyboard_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "22 of 22 checks passed"
+          },
+          {
+            "command": "node scripts/status_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "74 of 74 checks passed"
+          },
+          {
+            "command": "node scripts/overlay_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>",
+            "exit_code": 0,
+            "result": "78 passed, 0 failed, 1 blocked (harnessDiffModal needs an active Harness session - same prerequisite as before)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest tests/test_screenshot_capture_browser.py -q (with STUDIO_SCREENSHOT_CHROME/puppeteer-core set)",
+            "exit_code": 0,
+            "result": "29 passed - the browser safety regressions including the isolated six-pane demo"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_chat_inventory.py --check",
+            "exit_code": 0,
+            "result": "2 roles, 5 send reasons, 9 route fields, 0 findings"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_presentation_inventory.py --check",
+            "exit_code": 0,
+            "result": "3 kinds, 9 call sites across 8 containers, 3 raw writers left, 0 findings"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_route_map.py --check && .venv/bin/python scripts/uiux_authorization_trace.py --check && .venv/bin/python scripts/uiux_preservation_signoff.py --check",
+            "exit_code": 0,
+            "result": "clean; sign-off: historical-approval-unbound, 21 capabilities across 6 panes, 177 markup controls, 37 state-changing routes traced"
+          },
+          {
+            "command": ".venv/bin/python -m ruff check . && .venv/bin/python -m mypy",
+            "exit_code": 0,
+            "result": "clean; no issues in 58 source files"
+          },
+          {
+            "command": ".venv/bin/python scripts/build_studio.py && .venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "studio.py rebuilt (3,106,670 bytes); one inline script block parses"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py",
+            "exit_code": 0,
+            "result": "Documentation validation passed (5 required pages, 146 files scanned)"
+          }
+        ],
+        "visual_evidence": [
+          "docs/media/chat/transcript.png - a transcript the walk wrote: YOU 3 and MODEL DEMO-LOCAL-MODEL 4 headers with turn numbers, the summary '4 messages · 2 replies', Jump to latest because the reader is scrolled up, and the composer's amber note quoting the telemetry probe.",
+          "docs/media/chat/scrolled.png - the case the rule exists for: a new answer appended while the reader is at the top; the view does not move and the jump control appears.",
+          "docs/media/chat/answered.png - a real send answered by the demo's scripted runtime: 'say READY' as a labelled turn, the answer with its model above and '42.1 tok/s · 53 tok' below, Send enabled and Stop gone.",
+          "docs/media/chat/cleared.png - Clear presented as a recovery with Undo and the count of removed turns, an empty transcript that says what will appear, and Clear disabled with nothing to clear.",
+          "docs/media/chat/failure.png - POST /api/chat/stream refused: the error kind with cause 'Failed to fetch', the promise that the message and transcript are kept, Retry and Dismiss, and the placeholder rolled back.",
+          "docs/media/chat/narrow.png - the pane at 900px: no horizontal overflow, composer note still visible. Captured by scripts/chat_walk.mjs --screenshots; docs/media/chat/README.md records which capture is written and which is real."
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "Roles get words in one table (CHAT_ROLES). A label typed into each branch is the way a transcript ends up saying 'Assistant' in one place and 'Model' in another.",
+          "The model is named above its answer. A footer under a long answer tells the reader who spoke only after they have read it.",
+          "The transcript is a log with aria-live=off. The pane rewrites its innerHTML on every token; a live region there would read the conversation aloud repeatedly, so the composer's reason is what gets announced.",
+          "Scroll follows the reader. An unconditional jump to the bottom is the pane deciding that the newest token matters more than what the reader is looking at.",
+          "One predicate for 'can I send'. The disabled button and the sentence are the same answer; two copies drift the first time one is edited.",
+          "The hint is written only when its reason changes, so a live region does not repeat itself per token.",
+          "The runtime warning is ranked above the tools note, and is worded as what the probe reported. A demo can answer from a script while the probe is down, so a prophecy would be contradicted by the pane above it.",
+          "The tools sentence describes the route (read-only under 'plan', default project root) instead of inventing a refusal.",
+          "Clear is undoable and disabled when empty: the transcript exists only in this page, and the server cannot give it back.",
+          "Failure leaves the message and drops the empty placeholder, so Retry re-sends one message rather than two.",
+          "The key rule is scoped to the chat composer. Three other composers bind Enter; a file-wide rule would pass on any of them.",
+          "The shared brace scanner now skips comments. A tool that silently mis-attributes routes is worse than one that fails loudly, and the sign-off test is what caught it."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
-        "readme_updated": false
+        "handoff_note": "P2-04 is complete in commit 6689ce1 and the artifacts were verified at that commit. Next is UIUX-P2-05. Two things worth carrying forward beyond the usual regeneration order (build_studio -> source_manifest -> route_map -> authorization_trace -> preservation_signoff, all after any index.html edit): (1) uiux_route_map._brace_end() now skips // and /* */ comments - if a future pane's routes look attributed to the wrong tab, check the scanner before believing the attribution; (2) the demo has no live runtime but /api/chat/stream replays a scripted reply, so a walk can prove a real streamed answer - do not assume a send fails just because the telemetry probe says omlx_online is false. The ledger's last_verified_commit records 6689ce1; the next session should record the merge commit of this PR when it re-pins. Open item unchanged: historical-approval-unbound (#126), the owner's call - do not invent binding_schema/approved_inputs/binding_reference.",
+        "next_action": "UIUX-P2-05 - read the story and the P1-04 shortcut registry before adding any control to the Chat pane.",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",

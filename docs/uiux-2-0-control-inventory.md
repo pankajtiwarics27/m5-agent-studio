@@ -6,8 +6,8 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `9570e726f3c320c2c50adcaf795deb21728edb168b211527ef22014a62c5e5f4`.
-* Panes: 6 · controls in panes: 75 · controls in the
+* Frontend digest: `9dd929b331e33b813a8b7da5635314b858db8434274758a53d8dc005cebe2731`.
+* Panes: 6 · controls in panes: 76 · controls in the
   shared chrome: 101 · script-rendered: 30.
 
 ## What this page is, and is not
@@ -26,14 +26,14 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 | hall | `pane-hall` | 17 | 4 | 0 | button 6, select 8, summary 2, textarea 1 |
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
 | debate | `pane-debate` | 5 | 0 | 0 | button 2, input 1, select 1, textarea 1 |
-| chat | `pane-chat` | 9 | 1 | 0 | button 3, input 2, select 3, textarea 1 |
+| chat | `pane-chat` | 10 | 0 | 0 | button 4, input 2, select 3, textarea 1 |
 | (chrome) | outside the panes | 101 | 38 | 0 | button 54, input 29, select 12, summary 1, textarea 5 |
 
 ## What the numbers already say
 
-* 176 controls are in the markup and 30 more are built by script — a checklist written from the markup alone would miss 15% of the interactive surface.
-* The shared chrome carries 101 controls; all six panes together carry 75. Most of the clicking happens in the shell, not inside a tab.
-* 53 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
+* 177 controls are in the markup and 30 more are built by script — a checklist written from the markup alone would miss 14% of the interactive surface.
+* The shared chrome carries 101 controls; all six panes together carry 76. Most of the clicking happens in the shell, not inside a tab.
+* 52 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
 
@@ -138,7 +138,7 @@ Section `pane-debate`, 5 interactive elements.
 
 ## Pane `chat`
 
-Section `pane-chat`, 9 interactive elements.
+Section `pane-chat`, 10 interactive elements.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
@@ -147,10 +147,11 @@ Section `pane-chat`, 9 interactive elements.
 | 3 | select | chatReasoning | — | Off Low Medium | — |
 | 4 | input | chatToolsEnabled | checkbox | — | — |
 | 5 | input | chatUnload | checkbox | — | — |
-| 6 | button | — | — | Clear | clearChat() |
-| 7 | textarea | chatInput | — | Message your selected Local or Cloud model... (Enter to send) | — |
-| 8 | button | chatStopBtn | — | Stop | stopActiveStream() |
-| 9 | button | chatSendBtn | — | Send | sendChat() |
+| 6 | button | chatClearBtn | — | Clear | clearChat() |
+| 7 | button | chatJumpLatest | button | Jump to latest ↓ | jumpToLatestChatTurn() |
+| 8 | textarea | chatInput | — | Message your selected model… (Enter sends, Shift+Enter adds a line) | — |
+| 9 | button | chatStopBtn | — | Stop | stopActiveStream() |
+| 10 | button | chatSendBtn | — | Send | sendChat() |
 
 ## Shared chrome
 

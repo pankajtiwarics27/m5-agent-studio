@@ -8,7 +8,7 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 176 markup controls (101 chrome, 75 panes) · 30 rendered by script.
+* 6 panes · 21 preserved capabilities · 177 markup controls (101 chrome, 76 panes) · 30 rendered by script.
 * 115 routes exist, 57 with a resolved or possible caller, 58 with none observed and 0 unknown due to unresolved edges; 37 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
@@ -28,7 +28,7 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 176 markup controls (101 chrome, 75 panes) plus 30 rendered by script |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 177 markup controls (101 chrome, 76 panes) plus 30 rendered by script |
 | 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 115 routes exist; 57 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 37 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
@@ -68,58 +68,17 @@ The preflight checklist a new user sees first: what is ready, what still needs t
 | select | startWorkspaceRecent | Recent folders… | — |
 | button | startWorkspaceBtn | Set / Create | saveStartWorkspace() |
 
-**Routes reached from this pane's controls — 49, walking at most 2 calls; 8 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
+**Routes reached from this pane's controls — 8, walking at most 2 calls; 0 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
 
 | Method | Route | Certainty | State-changing | Walk | Gates that can refuse it |
 |---|---|---|---|---|---|
-| DELETE | `/api/combos/{alias}` | certain | yes | `launchTaskFromStart` → `switchTab` → `removeCombo` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| DELETE | `/api/harness/sessions/{session_id}` | certain | yes | `launchTaskFromStart` → `switchTab` → `deleteHarnessSession` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| DELETE | `/api/mcp/servers/{alias}` | certain | yes | `launchTaskFromStart` → `switchTab` → `deleteMcpServer` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| DELETE | `/api/opencontext/docs/{doc_id}` | certain | yes | `launchTaskFromStart` → `switchTab` → `deleteOpenContextDoc` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| DELETE | `/api/providers/{alias}` | certain | yes | `launchTaskFromStart` → `switchTab` → `removeProvider` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| GET | `/api/codegraph/analyze` | certain | no | `launchTaskFromStart` → `switchTab` → `refreshCodeGraphOverview` | — |
 | GET | `/api/hall/sessions` | certain | no | `launchTaskFromStart` → `switchTab` → `refreshHallSessions` | — |
-| GET | `/api/hall/sessions/{session_id}` | certain | no | `launchTaskFromStart` → `switchTab` → `selectHallSession` | — |
-| GET | `/api/harness/external-configs` | certain | no | `launchTaskFromStart` → `switchTab` → `openExternalHarnessModal` | — |
 | GET | `/api/harness/sessions` | certain | no | `loadStartRecent` | — |
-| GET | `/api/harness/sessions/{session_id}` | certain | no | `launchTaskFromStart` → `switchTab` → `selectHarnessSession` | — |
-| GET | `/api/harness/sessions/{session_id}/diff` | certain | no | `launchTaskFromStart` → `switchTab` → `openHarnessDiffModal` | — |
-| GET | `/api/harness/sessions/{session_id}/events` | certain | no | `launchTaskFromStart` → `switchTab` → `harnessFetchEventPage` | — |
-| GET | `/api/harness/sessions/{session_id}/events/stream` | certain | no | `launchTaskFromStart` → `switchTab` → `openHarnessEventStream` | — |
-| GET | `/api/harness/sessions/{session_id}/sdlc` | certain | no | `launchTaskFromStart` → `switchTab` → `refreshSdlcBoard` | — |
-| GET | `/api/harness/sessions/{session_id}/state` | certain | no | `launchTaskFromStart` → `switchTab` → `openHarnessEventStream` | — |
-| GET | `/api/mcp/servers` | certain | no | `launchTaskFromStart` → `switchTab` → `loadMcpServers` | — |
 | GET | `/api/onboarding/preflight` | certain | no | `refreshOnboarding` | — |
-| GET | `/api/opencontext/docs` | certain | no | `launchTaskFromStart` → `switchTab` → `loadOpenContextDocs` | — |
-| GET | `/api/opencontext/lint` | certain | no | `launchTaskFromStart` → `switchTab` → `runOpenContextLintUI` | — |
-| GET | `/api/opencontext/search` | certain | no | `launchTaskFromStart` → `switchTab` → `searchOpenContextUI` | — |
 | GET | `/api/providers` | certain | no | `openProvidersModal` → `loadProviders` | — |
-| GET | `/api/skills` | certain | no | `launchTaskFromStart` → `switchTab` → `loadSkills` | — |
 | GET | `/api/telemetry` | certain | no | `refreshTelemetry` | — |
-| GET | `/api/workspace/files` | certain | no | `launchTaskFromStart` → `switchTab` → `openSpawnModal` | — |
-| PATCH | `/api/harness/sessions/{session_id}` | certain | yes | `launchTaskFromStart` → `switchTab` → `patchActiveHarnessSettings` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| PATCH | `/api/mcp/servers/{alias}` | certain | yes | `launchTaskFromStart` → `switchTab` → `toggleMcpServerEnabled` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| PATCH | `/api/opencontext/docs/{doc_id}` | certain | yes | `launchTaskFromStart` → `switchTab` → `togglePinOpenContextDoc` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/cache/clear-ssd` | certain | yes | `launchTaskFromStart` → `switchTab` → `clearSsdCache` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/codegraph/query` | certain | yes | `launchTaskFromStart` → `switchTab` → `runCodeGraphPlayground` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/combos` | certain | yes | `launchTaskFromStart` → `switchTab` → `saveCombo` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/hall/sessions` | certain | yes | `launchTaskFromStart` → `switchTab` → `confirmSpawnSession` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/hall/sessions/{session_id}/message` | certain | yes | `launchTaskFromStart` → `switchTab` → `postHumanHallMessage` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/harness/abort/{session_id}` | certain | yes | `launchTaskFromStart` → `switchTab` → `abortHarnessRun` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/harness/approve` | certain | yes | `launchTaskFromStart` → `switchTab` → `resolveHarnessApproval` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/harness/sessions/{session_id}/apply` | certain | yes | `launchTaskFromStart` → `switchTab` → `applyHarnessWorktree` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/harness/sessions/{session_id}/compact` | certain | yes | `launchTaskFromStart` → `switchTab` → `compactActiveHarness` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/mcp/import-json` | certain | yes | `launchTaskFromStart` → `switchTab` → `importMcpJson` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/mcp/servers` | certain | yes | `launchTaskFromStart` → `switchTab` → `saveMcpServer` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/mcp/servers/{alias}/call` | certain | yes | `launchTaskFromStart` → `switchTab` → `runMcpPlayground` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/mcp/servers/{alias}/sync` | certain | yes | `launchTaskFromStart` → `switchTab` → `syncMcpServer` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/models/unload-all` | certain | yes | `launchTaskFromStart` → `switchTab` → `unloadAllModels` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/models/{model_id:path}/load` | possible | yes | `launchTaskFromStart` → `switchTab` → `modelAction` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/models/{model_id:path}/unload` | possible | yes | `launchTaskFromStart` → `switchTab` → `modelAction` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/opencontext/docs` | certain | yes | `launchTaskFromStart` → `switchTab` → `saveOpenContextDoc` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/providers` | certain | yes | `launchTaskFromStart` → `switchTab` → `saveProvider` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/providers/fetch-models` | certain | yes | `launchTaskFromStart` → `switchTab` → `fetchRemoteModels` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/skills/install` | certain | yes | `launchTaskFromStart` → `switchTab` → `installSkill` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
+| POST | `/api/models/{model_id:path}/load` | possible | yes | `refreshTelemetry` → `renderTelemetry` → `modelAction` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
+| POST | `/api/models/{model_id:path}/unload` | possible | yes | `refreshTelemetry` → `renderTelemetry` → `modelAction` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | POST | `/api/workspace/directory` | certain | yes | `saveStartWorkspace` → `saveWorkspaceDirectory` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 
 ### Harness (`data-tab="harness"`, Alt+1)
@@ -297,7 +256,7 @@ A single streaming conversation with the selected model.
 | Active model and persona selection | Chat primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | conversation interface | Chat primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 
-**Controls — 9 in the markup:**
+**Controls — 10 in the markup:**
 
 | Tag | Id | Label | Handler |
 |---|---|---|---|
@@ -306,7 +265,8 @@ A single streaming conversation with the selected model.
 | select | chatReasoning | Off Low Medium | — |
 | input | chatToolsEnabled | — | — |
 | input | chatUnload | — | — |
-| button | — | Clear | clearChat() |
+| button | chatClearBtn | Clear | clearChat() |
+| button | chatJumpLatest | Jump to latest ↓ | jumpToLatestChatTurn() |
 | textarea | chatInput | — | — |
 | button | chatStopBtn | Stop | stopActiveStream() |
 | button | chatSendBtn | Send | sendChat() |
@@ -381,16 +341,16 @@ provenance; a matching snapshot cannot clear separate review holds.
 
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
-| `ledger_content_sha256` | `c2c2c50ae6c280dd5a7309767120e3770dff74a5faeeae7ea0682fea4523f349` | `not recorded` |
-| `source_manifest_sha256` | `ba483b58841cdc4667169bd81b8779b345eec36f1516ab6558ab025d5596fc4d` | `not recorded` |
-| `control_inventory_sha256` | `77124be4205ef54d1a4969c649d3d3625a0ef5b5f8f4b878500d45ee0dab26c1` | `not recorded` |
-| `route_map_sha256` | `2085fdcc288fd1efee2f13721956bef7e17f106bd5460d19eecc1ecbba815f9e` | `not recorded` |
-| `authorization_trace_sha256` | `b1c2e873963e0eb55b82e445d079637bbe71118c60932d8492663a050d6bdaa0` | `not recorded` |
-| `frontend_sha256` | `9570e726f3c320c2c50adcaf795deb21728edb168b211527ef22014a62c5e5f4` | `not recorded` |
+| `ledger_content_sha256` | `c288d7fe52e4bc571e5a7985468724a624871f12e2d33da02944a44b8185bfb9` | `not recorded` |
+| `source_manifest_sha256` | `468d589a4c7e9def08f2a2ed1be38e34a561fcc32d90c0ef2809effa23648fa6` | `not recorded` |
+| `control_inventory_sha256` | `955403780f91f26d7b26636f12be6ced8c4176b9a545131697617a64bd853dfb` | `not recorded` |
+| `route_map_sha256` | `302d322d6a25cdf61698c640d140ac4c59643060c88f9f036f1c80ae76ffde37` | `not recorded` |
+| `authorization_trace_sha256` | `904eaa3db27eaacb1f3af2b7324b0a8337b5bf4465dbdc12081bdef7715a8f30` | `not recorded` |
+| `frontend_sha256` | `9dd929b331e33b813a8b7da5635314b858db8434274758a53d8dc005cebe2731` | `not recorded` |
 | `screenshot_manifest_sha256` | `69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92` | `not recorded` |
 | `screenshot_index_sha256` | `de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |
-| `route_map_generator_sha256` | `b60f8e88e6dba6f31dea75b6c79ce18b45c5bb221f84227d915be9f6b97d5c23` | `not recorded` |
+| `route_map_generator_sha256` | `923981fc78ff0f844e67691bfa966963f3959be1b9650eaf49f3b58b0a14d555` | `not recorded` |
 
 Changed inputs: unknown (no bound snapshot).
 
