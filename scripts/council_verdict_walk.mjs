@@ -282,6 +282,20 @@ async function startSession(page, args, task) {
   throw new Error("the composer never created a hall session");
 }
 
+/** Exercise the already-mounted server path when a browser preflight would block it. */
+async function summonThroughExistingRoute(page, sessionId, model, roleKey) {
+  const result = await page.evaluate(async ({ id, selectedModel, role }) => {
+    const response = await fetch(`/api/hall/sessions/${encodeURIComponent(id)}/summon`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: selectedModel, role_key: role, reasoning_mode: "off", auto_unload: true, skills: [] }),
+    });
+    const body = await response.text();
+    return { status: response.status, body };
+  }, { id: sessionId, selectedModel: model, role: roleKey });
+  if (result.status !== 200) throw new Error(`the existing summon route returned ${result.status}: ${result.body}`);
+}
+
 /** Run the four seats and wait until the session holds one reply per seat. */
 async function runRound(page, args) {
   await page.evaluate(() => document.getElementById("hallFullRoundBtn").click());
@@ -301,9 +315,28 @@ async function runRound(page, args) {
 async function conclude(page, args) {
   // The readiness refresh rewrites the seat pickers while a round runs, so the value the button
   // will read is set again here - the walk asks the picker's own seat for its verdict, as an
-  // operator who looked at the picker would.
+  // operator who looked at the picker would. A round unloads local models after each turn, so
+  // refresh and Load now for the Arbiter rather than asking an unready single seat to dispatch.
+  await page.evaluate(async () => refreshCouncilReadiness());
   const chosen = await page.evaluate(() => document.getElementById("hallSeatJudge").value);
   if (!chosen) throw new Error("the Arbiter's picker is empty");
+  let readiness = await page.evaluate(() => ({
+    state: document.getElementById("hallSeatJudgeState").dataset.state,
+    action: document.getElementById("hallSeatJudgeState").querySelector("button")?.dataset.action || "",
+  }));
+  if (readiness.action === "load") {
+    await page.evaluate(() => document.getElementById("hallSeatJudgeStateAction")?.click());
+  }
+  for (let attempt = 0; attempt < 100 && !["ready", "configured"].includes(readiness.state); attempt += 1) {
+    await sleep(args.settleMs);
+    readiness = await page.evaluate(() => ({
+      state: document.getElementById("hallSeatJudgeState").dataset.state,
+      action: document.getElementById("hallSeatJudgeState").querySelector("button")?.dataset.action || "",
+    }));
+  }
+  if (!["ready", "configured"].includes(readiness.state)) {
+    throw new Error(`the Arbiter remained unavailable after readiness refresh: ${readiness.state}`);
+  }
   await page.evaluate(() => document.getElementById("hallConcludeBtn").click());
   for (let attempt = 0; attempt < 200; attempt += 1) {
     await sleep(args.settleMs);
@@ -394,6 +427,22 @@ async function run(args) {
     await pickModel(page, "hallSeatCritic", fits);
     await pickModel(page, "hallSeatJudge", loaded);
     await sleep(args.settleMs * 2);
+    await page.evaluate(() => document.getElementById("hallSeatCoderStateAction")?.click());
+    let readyRows = null;
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      await sleep(args.settleMs);
+      readyRows = await page.evaluate(() => ({
+        coder: document.getElementById("hallSeatCoderState").dataset.state,
+        critic: document.getElementById("hallSeatCriticState").dataset.state,
+        disabled: document.getElementById("hallFullRoundBtn").disabled,
+      }));
+      if (readyRows.coder === "ready" && readyRows.critic === "ready" && !readyRows.disabled) break;
+    }
+    record(
+      "a fitting local model is loaded before the readiness-guarded round",
+      Boolean(readyRows && readyRows.coder === "ready" && readyRows.critic === "ready" && !readyRows.disabled),
+      JSON.stringify(readyRows),
+    );
     const unpinned = await runRound(page, args);
     record(
       "four replies and nothing pinned: the verdict area says no decision has been reached",
@@ -570,12 +619,27 @@ async function run(args) {
     offlinePage.on("console", (message) => { if (message.type() === "error") pageErrors.push(message.text()); });
     await offlinePage.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
     await openHall(offlinePage, args, args.offlineBaseUrl, args.offlineToken);
-    await startSession(offlinePage, args, TASK);
+    const offlineSessionId = await startSession(offlinePage, args, TASK);
     await pickModel(offlinePage, "hallSeatArch", loaded);
     await pickModel(offlinePage, "hallSeatCoder", fits);
     await pickModel(offlinePage, "hallSeatCritic", loaded);
     await pickModel(offlinePage, "hallSeatJudge", fits);
-    const demo = await runRound(offlinePage, args);
+    const offlineBlocked = await offlinePage.evaluate(() => document.getElementById("hallFullRoundBtn").disabled);
+    record(
+      "the offline Hall still blocks its local assignments before an invocation",
+      offlineBlocked,
+      `round disabled=${offlineBlocked}`,
+    );
+    // P4-01 deliberately blocks a user-initiated offline round. To exercise P4-03's rendering of
+    // the server's existing demo transcript (including the runtime-dropping-after-preflight edge),
+    // this isolated fixture calls the same mounted summon route directly after asserting the UI is
+    // blocked. P4-01 separately asserts that the blocked UI sends no such request.
+    for (const [role, model] of [["architect", loaded], ["coder", fits], ["critic", loaded], ["judge", fits]]) {
+      await summonThroughExistingRoute(offlinePage, offlineSessionId, model, role);
+    }
+    await offlinePage.evaluate(async () => selectHallSession(activeHallId));
+    await sleep(args.settleMs * 4);
+    const demo = await readVerdict(offlinePage);
     record(
       "with no runtime the four demo replies are one voice, and the pane says so instead of consensus",
       !demo.hidden
@@ -590,9 +654,10 @@ async function run(args) {
     await shoot(offlinePage, "council-verdict-offline", "#pane-hall");
 
     record("no page error occurred", pageErrors.length === 0, pageErrors.slice(0, 3).join(" | "));
-    const unexpected = posts.filter((path) => !/^\/api\/hall\/sessions(\/|$)/.test(path));
+    const unexpected = posts.filter((path) => !/^\/api\/hall\/sessions(\/|$)/.test(path)
+      && !/^\/api\/models\/[^/]+\/load$/.test(path));
     record(
-      "the pane posts nothing it did not post before: hall sessions, messages and summons",
+      "the pane uses only existing Hall/session routes and the existing local model-load route",
       unexpected.length === 0,
       [...new Set(posts)].join(", "),
     );

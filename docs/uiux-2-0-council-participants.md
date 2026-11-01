@@ -8,11 +8,14 @@ regenerate it, and the check behind it stays true.
 | Where | What it does |
 | :--- | :--- |
 | each seat | names its role, says what the seat is for, and states whether the thing it points at can answer |
-| a resident model | `READY`, with the memory it is holding |
+| a resident model | `READY`, with the exact model id and the memory it is holding |
+| a configured cloud or fallback route | `CONFIGURED`; provider reachability is explicitly not confirmed |
+| stale telemetry or provider configuration | `STALE READ`; invocation stays blocked until Check again refreshes it |
+| the Hall resource policy | local seats share machine memory while resident; the Hall requests unload after each local turn |
 | a model that has to load | `NEEDS LOAD` / `NEEDS MEMORY`, with the gigabytes it needs and what is left under the ceiling, and **Load now** |
 | a saved alias with no key | `NEEDS KEY`, with **Open providers** |
 | a model the runtime does not list | `NOT LISTED`, with **Pick another model** (which moves focus to the picker) |
-| a runtime that is not answering | `DEMO TEXT`, because the reply will be the server's canned text and not the model's |
+| a local runtime that is not answering | `DEMO TEXT`; the affected seat is blocked before the server can return its canned text |
 | a round | each reply carries its seat and role, and a demo reply is labelled one and gets no tok/s badge |
 | a seat that fails | one block: which seat, the provider's own message, that nothing was saved for it, and the actions that exist |
 
@@ -25,7 +28,7 @@ regenerate it, and the check behind it stays true.
 
 ## The states a row can draw
 
-`ready`, `demo`, `needs-load`, `needs-memory`, `loading`, `needs-key`, `not-configured`, `unknown-model`, `no-model`, `unverified`
+`ready`, `configured`, `stale`, `demo`, `needs-load`, `needs-memory`, `loading`, `needs-key`, `not-configured`, `unknown-model`, `no-model`, `unverified`
 
 ## What it reads, and what it refuses to invent
 
@@ -37,20 +40,22 @@ regenerate it, and the check behind it stays true.
 ## What it refuses to do
 
 * call a seat ready because a picker holds a model — every `ready` is gated on a read, and a
-  runtime that is not answering is `DEMO TEXT`, not a green pill;
+  local runtime that is not answering is `DEMO TEXT` and blocks dispatch;
 * claim a combo is ready because it exists — a combo is judged by its targets, and a combo of
-  local models on a dead runtime is demo text;
-* give a demo reply a tok/s badge — the usage line the demo path writes carries `demo: true`,
-  so the card labels it and declines the figure it did not earn;
+  local models on a dead runtime is demo text and blocks dispatch;
+* give a demo reply a tok/s badge — if runtime state changes after preflight, the usage line
+  carries `demo: true`, so the card labels it and declines the figure it did not earn;
 * describe a seat the round would not post — the rows and `runHallFullRound()` read the same
   `hallSeatPlan()`, so a row cannot disagree with the dispatch;
 * add an endpoint — the only route this story calls is `POST /api/models/{model}/load`, which
   the Residency panel already used;
-* promise that a round continues past a failing seat — it stops there, and the summary says so.
+* send a full round, single-seat summon, or spawn-and-convene while its required assignment is not ready;
+* call a cloud or fallback route reachable just because it is configured;
+* replace a selected model id silently when that id disappears from the current catalog.
 
 ## Checks
 
-35 checks, 0 findings — **clean**.
+38 checks, 0 findings — **clean**.
 
 * `pass` four seats, one per role, each with its label, purpose and readiness row
 * `pass` the seat numbers stay on the labels, so the mapped controls keep their names
@@ -59,7 +64,7 @@ regenerate it, and the check behind it stays true.
 * `pass` each seat picker is described by the row that judges it
 * `pass` the single-model asker is judged by the same rows
 * `pass` there is one readiness classifier, and no second copy of the states
-* `pass` the states the rows can draw are exactly the ten the artifact lists
+* `pass` the states the rows can draw are exactly the twelve the artifact lists
 * `pass` no seat is ready because a picker says so: readiness starts from the reads
 * `pass` a local seat on a runtime that is not answering is demo text, not ready
 * `pass` the memory claim reads the ceiling and the used bytes, and invents no number
@@ -76,8 +81,11 @@ regenerate it, and the check behind it stays true.
 * `pass` Check again reads both endpoints and re-renders
 * `pass` the rows are built as nodes with textContent, so a model id cannot inject markup
 * `pass` a row is only redrawn when what it says changes, and focus follows the button
-* `pass` the summary is the rows' count, and the basis names both reads
-* `pass` the summary says the round stops at the first seat that fails, because it does
+* `pass` the summary counts ready and configured assignments, and names both reads
+* `pass` a full round and spawn-and-convene are preflighted before any summon or session write
+* `pass` single-seat dispatch is blocked by the same readiness classifier at both entry points
+* `pass` readiness shows the exact model id and source, preserves missing ids, and states local resource policy
+* `pass` note-only and open-empty-room controls remain available when round readiness is blocked
 * `pass` the rows are re-read on the way into the pane, and the poll does not fight the reader
 * `pass` a demo reply is labelled before it is given a tok/s badge
 * `pass` the server marks the demo usage line, so the pane has something to read

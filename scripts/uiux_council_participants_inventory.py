@@ -18,12 +18,12 @@ What is measured here:
   into the transcript by the `role_key` the route already stored;
 * **one resolution**: `hallSeatPlan()` is what both the readiness rows and `runHallFullRound()`
   read, so a row cannot describe a seat the round does not post;
-* **the ten states** the rows can draw, each with the read it stands on - `ready`, `demo`,
-  `needs-load`, `needs-memory`, `loading`, `needs-key`, `not-configured`, `unknown-model`,
-  `no-model`, `unverified` - and the actions that exist for them;
+* **the twelve states** the rows can draw, each with the read it stands on - including `configured`
+  for cloud/fallback routes whose reachability is not tested and `stale` for expired reads;
 * **the honesty**: a seat is never ready because a picker says so, a combo is judged by its
-  targets, an offline runtime is demo text rather than a green pill, demo replies are labelled
-  and lose the tok/s badge they did not earn, and a failed seat is a block, not a toast;
+  targets, an offline runtime is `DEMO TEXT` and blocks invocation rather than a green pill,
+  configured cloud routes are not claimed reachable, demo replies are labelled and lose the
+  tok/s badge they did not earn, and a failed seat is a block, not a toast;
 * **the preservation**: the four seat pickers and their ids, the round's order and reasoning
   modes, the summon route's events and defaults, `append_hall_message`'s usage column, and the
   fact that this story adds no endpoint.
@@ -55,6 +55,8 @@ CALLED_PATH = re.compile("""["'`](/api/[^"'`]*)["'`]""")
 # The states the rows can draw, and the tag that proves each branch exists.
 STATES = (
     ("ready", "READY"),
+    ("configured", "CONFIGURED"),
+    ("stale", "STALE READ"),
     ("demo", "DEMO TEXT"),
     ("needs-load", "NEEDS LOAD"),
     ("needs-memory", "NEEDS MEMORY"),
@@ -260,7 +262,8 @@ def build_inventory() -> dict:
     check(
         "the single-model asker is judged by the same rows",
         element(html, "hallSingleState") != ""
-        and 'councilSeatReadiness(councilValue("hallModelSelect"))' in render
+        and 'const singleModel = councilValue("hallModelSelect");' in render
+        and 'const singleVerdict = councilSeatReadiness(singleModel);' in render
         and "hallSingleState" in block,
         "one model asked on its own is a seat too",
     )
@@ -275,7 +278,7 @@ def build_inventory() -> dict:
     )
     drawn = set(returned_states(checker))
     check(
-        "the states the rows can draw are exactly the ten the artifact lists",
+        "the states the rows can draw are exactly the twelve the artifact lists",
         drawn == {name for name, _ in STATES},
         f"missing={sorted({name for name, _ in STATES} - drawn)} extra={sorted(drawn - {name for name, _ in STATES})}",
     )
@@ -329,7 +332,8 @@ def build_inventory() -> dict:
     # ── one plan, one round ──────────────────────────────────────────────────
     check(
         "the round is dispatched from the same plan the rows read",
-        "councilSeatPlan().map(" in round_body
+        "const seatPlan = councilSeatPlan();" in round_body
+        and "const plan = seatPlan.map(" in round_body
         and 'pickPreferred(unifiedCatalog, "27b", 0)' not in round_body
         and 'document.getElementById("hallSeatArch")' not in round_body,
         round_body[:240],
@@ -400,19 +404,47 @@ def build_inventory() -> dict:
         "a poll that rebuilds the row throws a keyboard user out of it",
     )
     check(
-        "the summary is the rows' count, and the basis names both reads",
+        "the summary counts ready and configured assignments, and names both reads",
         'counts.ready += 1' in render
-        and "`${counts.ready}/${total} READY`" in render
+        and 'counts.configured += 1' in render
+        and "CONFIGURED" in render
         and 'evidenceNote(basis, "derived"' in render
         and "GET /api/telemetry and GET /api/providers" in render
         and 'evidenceNote(basis, "unavailable"' in render,
         render[-400:],
     )
+    spawn_body = function_body(html, "confirmSpawnSession")
+    single_body = function_body(html, "summonSingleAgent")
+    low_level_summon = function_body(html, "summonAgentPromise")
     check(
-        "the summary says the round stops at the first seat that fails, because it does",
-        "stops at the first seat that fails" in render
-        and "catch (e) { break; }" in round_body,
-        "a promise the loop does not keep is the same lie as a badge nobody earned",
+        "a full round and spawn-and-convene are preflighted before any summon or session write",
+        "const issues = councilInvocationIssues(seatPlan);" in round_body
+        and round_body.find("if (issues.length)") < round_body.find("summonAgentPromise(")
+        and "const issues = councilInvocationIssues(councilSeatPlan());" in spawn_body
+        and spawn_body.find("if (issues.length)") < spawn_body.find('fetch("/api/hall/sessions"'),
+        "all assigned seats must be ready or configured before a full round is sent",
+    )
+    check(
+        "single-seat dispatch is blocked by the same readiness classifier at both entry points",
+        "councilCanInvoke(verdict)" in single_body
+        and "councilCanInvoke(verdict)" in low_level_summon
+        and low_level_summon.find("councilCanInvoke(verdict)") < low_level_summon.find("consumeSSE("),
+        "an unready selected seat must not reach the summon endpoint",
+    )
+    check(
+        "readiness shows the exact model id and source, preserves missing ids, and states local resource policy",
+        "seat-model-id" in row and "seat-source" in row
+        and "[Unavailable]" in function_body(html, "syncUnifiedSelectors")
+        and "share this machine’s memory" in html
+        and "does not confirm provider reachability" in html,
+        "the assignment identity and its limits must be visible before invoking",
+    )
+    check(
+        "note-only and open-empty-room controls remain available when round readiness is blocked",
+        "sendButton.disabled = !noteOnly && (invocationBusy || !allSeatsCanInvoke)" in render
+        and "confirmSpawnSession(false)" in html
+        and "autoConvene" in function_body(html, "postHumanHallMessage"),
+        "a readiness guard must not remove empty-room or note-only paths",
     )
     check(
         "the rows are re-read on the way into the pane, and the poll does not fight the reader",
@@ -520,11 +552,14 @@ def render_doc(payload: dict) -> str:
         "| Where | What it does |",
         "| :--- | :--- |",
         "| each seat | names its role, says what the seat is for, and states whether the thing it points at can answer |",
-        "| a resident model | `READY`, with the memory it is holding |",
+        "| a resident model | `READY`, with the exact model id and the memory it is holding |",
+        "| a configured cloud or fallback route | `CONFIGURED`; provider reachability is explicitly not confirmed |",
+        "| stale telemetry or provider configuration | `STALE READ`; invocation stays blocked until Check again refreshes it |",
+        "| the Hall resource policy | local seats share machine memory while resident; the Hall requests unload after each local turn |",
         "| a model that has to load | `NEEDS LOAD` / `NEEDS MEMORY`, with the gigabytes it needs and what is left under the ceiling, and **Load now** |",
         "| a saved alias with no key | `NEEDS KEY`, with **Open providers** |",
         "| a model the runtime does not list | `NOT LISTED`, with **Pick another model** (which moves focus to the picker) |",
-        "| a runtime that is not answering | `DEMO TEXT`, because the reply will be the server's canned text and not the model's |",
+        "| a local runtime that is not answering | `DEMO TEXT`; the affected seat is blocked before the server can return its canned text |",
         "| a round | each reply carries its seat and role, and a demo reply is labelled one and gets no tok/s badge |",
         "| a seat that fails | one block: which seat, the provider's own message, that nothing was saved for it, and the actions that exist |",
         "",
@@ -549,16 +584,19 @@ def render_doc(payload: dict) -> str:
         "## What it refuses to do",
         "",
         "* call a seat ready because a picker holds a model — every `ready` is gated on a read, and a",
-        "  runtime that is not answering is `DEMO TEXT`, not a green pill;",
+        "  local runtime that is not answering is `DEMO TEXT` and blocks dispatch;",
         "* claim a combo is ready because it exists — a combo is judged by its targets, and a combo of",
-        "  local models on a dead runtime is demo text;",
-        "* give a demo reply a tok/s badge — the usage line the demo path writes carries `demo: true`,",
-        "  so the card labels it and declines the figure it did not earn;",
+        "  local models on a dead runtime is demo text and blocks dispatch;",
+        "* give a demo reply a tok/s badge — if runtime state changes after preflight, the usage line",
+        "  carries `demo: true`, so the card labels it and declines the figure it did not earn;",
+
         "* describe a seat the round would not post — the rows and `runHallFullRound()` read the same",
         "  `hallSeatPlan()`, so a row cannot disagree with the dispatch;",
         "* add an endpoint — the only route this story calls is `POST /api/models/{model}/load`, which",
         "  the Residency panel already used;",
-        "* promise that a round continues past a failing seat — it stops there, and the summary says so.",
+        "* send a full round, single-seat summon, or spawn-and-convene while its required assignment is not ready;",
+        "* call a cloud or fallback route reachable just because it is configured;",
+        "* replace a selected model id silently when that id disappears from the current catalog.",
         "",
         "## Checks",
         "",

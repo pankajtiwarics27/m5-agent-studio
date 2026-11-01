@@ -30,6 +30,8 @@
   ],
   "states": [
     "ready",
+    "configured",
+    "stale",
     "demo",
     "needs-load",
     "needs-memory",
@@ -89,7 +91,7 @@
       "detail": ""
     },
     {
-      "check": "the states the rows can draw are exactly the ten the artifact lists",
+      "check": "the states the rows can draw are exactly the twelve the artifact lists",
       "ok": true,
       "detail": ""
     },
@@ -174,12 +176,27 @@
       "detail": ""
     },
     {
-      "check": "the summary is the rows' count, and the basis names both reads",
+      "check": "the summary counts ready and configured assignments, and names both reads",
       "ok": true,
       "detail": ""
     },
     {
-      "check": "the summary says the round stops at the first seat that fails, because it does",
+      "check": "a full round and spawn-and-convene are preflighted before any summon or session write",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "single-seat dispatch is blocked by the same readiness classifier at both entry points",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "readiness shows the exact model id and source, preserves missing ids, and states local resource policy",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "note-only and open-empty-room controls remain available when round readiness is blocked",
       "ok": true,
       "detail": ""
     },
@@ -229,7 +246,7 @@
       "detail": ""
     }
   ],
-  "check_count": 35,
+  "check_count": 38,
   "findings": [],
   "status": "clean"
 }

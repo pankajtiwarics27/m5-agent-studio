@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "efd3a1a8499f42c0863e99229317502b83b4184b19c086d22defb918a8fdd8e8",
+  "frontend_sha256": "3d9ccde449a11ec657fd4cffbb6ae2ef1436d7cf485f53fe6657ca2e3630a1d5",
   "panes": [
     {
       "dom_id": "start",
@@ -302,7 +302,7 @@
         "summary": 2,
         "textarea": 1
       },
-      "controls_without_id": 4,
+      "controls_without_id": 3,
       "controls_without_label": 0,
       "controls": [
         {
@@ -315,7 +315,8 @@
           "tag": "button",
           "id": "hallFullRoundBtn",
           "class": "btn btn-amber",
-          "title": "Sequentially summon Seat 1 -> Seat 2 -> Seat 3 -> Seat 4 across your 4 Council LLMs",
+          "aria-describedby": "councilReadinessSummary",
+          "title": "Sequentially summon all four configured Council seats",
           "onclick": "runHallFullRound()",
           "text": "Run full round"
         },
@@ -390,6 +391,7 @@
           "tag": "button",
           "id": "hallSummonBtn",
           "class": "btn btn-xs",
+          "aria-describedby": "hallSingleState",
           "title": "Summon only this single selected voice",
           "onclick": "summonSingleAgent()",
           "text": "Ask one model"
@@ -408,7 +410,9 @@
         },
         {
           "tag": "button",
+          "id": "hallSendBtn",
           "class": "btn btn-primary",
+          "aria-describedby": "councilReadinessSummary",
           "onclick": "submitHallComposer()",
           "text": "Send"
         }
@@ -1321,7 +1325,9 @@
       },
       {
         "tag": "button",
+        "id": "spawnConveneBtn",
         "class": "btn btn-primary",
+        "aria-describedby": "councilReadinessSummary",
         "onclick": "confirmSpawnSession(true)",
         "text": "Spawn & Convene 4-LLM Council"
       },

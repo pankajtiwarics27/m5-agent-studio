@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `efd3a1a8499f42c0863e99229317502b83b4184b19c086d22defb918a8fdd8e8`.
+* Frontend digest: `3d9ccde449a11ec657fd4cffbb6ae2ef1436d7cf485f53fe6657ca2e3630a1d5`.
 * Panes: 6 · controls in panes: 84 · controls in the
   shared chrome: 106 · script-rendered: 35.
 
@@ -23,17 +23,17 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 |---|---|---|---|---|---|
 | start | `pane-start` | 11 | 5 | 0 | button 8, input 2, select 1 |
 | harness | `pane-harness` | 23 | 4 | 0 | button 10, input 2, select 9, summary 1, textarea 1 |
-| hall | `pane-hall` | 18 | 4 | 0 | button 7, select 8, summary 2, textarea 1 |
+| hall | `pane-hall` | 18 | 3 | 0 | button 7, select 8, summary 2, textarea 1 |
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
 | debate | `pane-debate` | 5 | 0 | 0 | button 2, input 1, select 1, textarea 1 |
 | chat | `pane-chat` | 11 | 0 | 0 | button 5, input 2, select 3, textarea 1 |
-| (chrome) | outside the panes | 106 | 43 | 0 | button 59, input 29, select 12, summary 1, textarea 5 |
+| (chrome) | outside the panes | 106 | 42 | 0 | button 59, input 29, select 12, summary 1, textarea 5 |
 
 ## What the numbers already say
 
 * 190 controls are in the markup and 35 more are built by script — a checklist written from the markup alone would miss 16% of the interactive surface.
 * The shared chrome carries 106 controls; all six panes together carry 84. Most of the clicking happens in the shell, not inside a tab.
-* 58 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
+* 56 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
 
@@ -106,7 +106,7 @@ Section `pane-hall`, 18 interactive elements.
 | 15 | button | hallSummonBtn | — | Ask one model | summonSingleAgent() |
 | 16 | textarea | hallHumanInput | — | Ask a question or steer the Council as Human Operative (Enter = Send)... | — |
 | 17 | select | hallSendModeSelect | — | Council message action | — |
-| 18 | button | — | — | Send | submitHallComposer() |
+| 18 | button | hallSendBtn | — | Send | submitHallComposer() |
 
 ## Pane `council`
 
@@ -267,7 +267,7 @@ attributed to one.
 | 96 | textarea | spawnRequestInput | — | Design an event-sourced local-first task queue on macOS with crash-safe SQLite WAL persistence, zero-polling wakeups, and backpressure. | — |
 | 97 | button | — | — | Cancel | closeSpawnModal() |
 | 98 | button | — | — | Open Empty Room | confirmSpawnSession(false) |
-| 99 | button | — | — | Spawn & Convene 4-LLM Council | confirmSpawnSession(true) |
+| 99 | button | spawnConveneBtn | — | Spawn & Convene 4-LLM Council | confirmSpawnSession(true) |
 | 100 | select | integrationsQuickMenu | — | Open studio tools and integrations | openIntegrationFromMenu(this) |
 | 101 | button | monitorToggleBtn | — | Telemetry | toggleMonitorRail() |
 | 102 | button | — | — | Unload models | unloadAllModels() |

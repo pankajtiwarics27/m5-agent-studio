@@ -45,18 +45,18 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| `#sdlcProgressBadge` | `neutral` | no | 1764 |
-| `#onboardingSummary` | `neutral` | yes | 1911 |
-| `#startRecentSummary` | `neutral` | yes | 1951 |
-| `#startHealthSummary` | `neutral` | yes | 1978 |
-| `#startWorkspaceSummary` | `neutral` | yes | 1996 |
-| `#harnessActiveStatusBadge` | `info` | yes | 2120 |
-| `#hallStatusBadge` | `warn` | yes | 2196 |
-| `#councilReadinessCount` | `neutral` | no | 2209 |
-| (unnamed) | `ok` | no | 2451 |
-| `#dockerStateBadge` | `neutral` | no | 2498 |
-| (unnamed) | `warn` | no | 4478 |
-| (unnamed) | `warn` | no | 4557 |
+| `#sdlcProgressBadge` | `neutral` | no | 1769 |
+| `#onboardingSummary` | `neutral` | yes | 1916 |
+| `#startRecentSummary` | `neutral` | yes | 1956 |
+| `#startHealthSummary` | `neutral` | yes | 1983 |
+| `#startWorkspaceSummary` | `neutral` | yes | 2001 |
+| `#harnessActiveStatusBadge` | `info` | yes | 2125 |
+| `#hallStatusBadge` | `warn` | yes | 2201 |
+| `#councilReadinessCount` | `neutral` | no | 2214 |
+| (unnamed) | `ok` | no | 2458 |
+| `#dockerStateBadge` | `neutral` | no | 2505 |
+| (unnamed) | `warn` | no | 4496 |
+| (unnamed) | `warn` | no | 4575 |
 
 ## Writers
 

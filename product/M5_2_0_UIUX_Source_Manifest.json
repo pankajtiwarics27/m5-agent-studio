@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "efd3a1a8499f42c0863e99229317502b83b4184b19c086d22defb918a8fdd8e8",
-      "bytes": 647854,
-      "lines": 11219
+      "sha256": "3d9ccde449a11ec657fd4cffbb6ae2ef1436d7cf485f53fe6657ca2e3630a1d5",
+      "bytes": 656189,
+      "lines": 11363
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "4bcff414bcefea5e16184ee2896cfb66bbeb49db0cf2d55dd5b8d7d498b3cbdc",
-      "bytes": 3387259,
-      "lines": 74269
+      "sha256": "14793bc0da3ff6b706c00a14f0db4c07bc5a581b1c1ee50e53e51d68466faa82",
+      "bytes": 3395594,
+      "lines": 74413
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -40,8 +40,8 @@
     {
       "path": "docs/media/screenshots/manifest.json",
       "role": "the screenshot set every visual claim is checked against",
-      "sha256": "cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57",
-      "bytes": 1435,
+      "sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
+      "bytes": 1598,
       "lines": 54
     },
     {
@@ -348,8 +348,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "efd3a1a8499f42c0863e99229317502b83b4184b19c086d22defb918a8fdd8e8",
-    "lines": 11219,
+    "sha256": "3d9ccde449a11ec657fd4cffbb6ae2ef1436d7cf485f53fe6657ca2e3630a1d5",
+    "lines": 11363,
     "tab_count": 6,
     "tabs": [
       {
@@ -929,7 +929,7 @@
   },
   "screenshot_manifest": {
     "path": "docs/media/screenshots/manifest.json",
-    "sha256": "cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57",
+    "sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
     "viewport": {
       "width": 1440,
       "height": 900,

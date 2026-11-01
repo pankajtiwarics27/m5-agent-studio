@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "captured_at": "2026-11-01T05:22:48.801Z",
+  "captured_at": "2026-11-01T21:24:50.737Z",
   "viewport": {
     "width": 1440,
     "height": 900,
@@ -15,22 +15,22 @@
       "id": "start",
       "tab": "start",
       "file": "start.png",
-      "bytes": 474671,
-      "sha256": "3798ed6604d66e95835cdc25693aaebef224e97695627fbcca4591ee28ce81a9"
+      "bytes": 476133,
+      "sha256": "c58f16923b2246c0eafaa84c70a87ce34db1c51a90b4b9b4601a2715dd298c08"
     },
     {
       "id": "harness",
       "tab": "harness",
       "file": "harness.png",
-      "bytes": 512740,
-      "sha256": "716215aa41fcea2332243ceef7b708237beaa32fc389eb835004a1a6c86d792d"
+      "bytes": 516475,
+      "sha256": "8f719c582afdf8ca4aa156c97c5545ed830be9cf1c704395b2e2c19a159df7c8"
     },
     {
       "id": "hall",
       "tab": "hall",
       "file": "hall.png",
-      "bytes": 350007,
-      "sha256": "bdee24d09ada9625aefcf0ece6069e49fbd7f15c6c7b160747cf7c37d18e5159"
+      "bytes": 480751,
+      "sha256": "b9513e8e60c329a17f45c105cf7f18662d052017428411e90a6c01bcc4c619b3"
     },
     {
       "id": "council",
