@@ -4293,7 +4293,7 @@
         "updated_at": "2026-11-01T07:40:00Z",
         "completed_at": "2026-11-01T07:40:00Z",
         "owner_session": "arena/85ee4fee-m5-agent-studio",
-        "commit_sha": null,
+        "commit_sha": "0a3361cfd38b35112f1ef6da23363aec8ba148f5",
         "changed_files": [
           "static/index.html",
           "scripts/uiux_harness_evidence_inventory.py",
@@ -4355,12 +4355,12 @@
           {
             "command": ".venv/bin/python -m pytest -q",
             "exit_code": 0,
-            "result": "__PYTEST_FULL__"
+            "result": "2118 passed, 26 skipped on the story tree (branch arena/85ee4fee-m5-agent-studio over origin/main 6883c2a); the 26 skips are the live container-runtime opt-in and the browser regressions, which this story runs in their own invocation below"
           },
           {
             "command": "LD_LIBRARY_PATH=/tmp:/tmp/chromium-libs/lib STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=$PWD/tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js STUDIO_SCREENSHOT_CHROME_ARGS=\"--disable-gpu\" .venv/bin/python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py",
             "exit_code": 0,
-            "result": "__BROWSER_SUITE__"
+            "result": "30 passed in 88.29s: the six-pane captures still validate, the overlay walk now reports 81 passing and 3 blocked (the diff dialog, P3-03's permissions surface and this story's record, each on the Harness-session prerequisite), and the seeded store is unchanged by the walks"
           },
           {
             "command": "STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=$PWD/tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js LD_LIBRARY_PATH=/tmp:/tmp/chromium-libs/lib STUDIO_SCREENSHOT_CHROME_ARGS=\"--disable-gpu\" STUDIO_PYTHON=$PWD/.venv/bin/python node scripts/harness_evidence_walk.mjs --screenshots docs/media/harness-evidence",
@@ -4400,7 +4400,7 @@
           {
             "command": "every scripts/uiux_*.py --check, with uiux_source_manifest.py, build_studio.py, generate_roadmap_status.py and uiux_preservation_signoff.py last",
             "exit_code": 0,
-            "result": "__INVENTORY_CHAIN__"
+            "result": "all 17 inventories OK (control inventory 188 markup + 32 script-rendered, route map 58 call sites, authorization trace 38 routes, tokens 45 in 7 groups, overlays 11 dialogs, presentations 12 call sites, harness settings 81, harness timeline 81, harness permissions 124, harness evidence 116, chat handoff 53, recent work 8, start health 3 bases/2 routes), source manifest 48 files/6 tabs/115 routes pinned 73bc5e41, studio.py built (3,229,506 bytes), roadmap dashboard and the P0-06 sign-off package up to date"
           }
         ],
         "visual_evidence": [
