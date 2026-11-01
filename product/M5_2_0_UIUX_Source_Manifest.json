@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "a80bce0731b6c7b0c4c64426c16b2cc84f417bacddc77d118a3d5da42240e73e",
-      "bytes": 579699,
-      "lines": 10012
+      "sha256": "bd6cd2ddd507ab2d0f416abb4145d9006873d60b5581e2d2f73b834a321c8bf9",
+      "bytes": 593703,
+      "lines": 10234
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "7c4547faa60b1196fc0162dc57b5df3ebf9068fa9abe6155091bfe7add19873b",
-      "bytes": 3317349,
-      "lines": 73041
+      "sha256": "34d8f1b8d66bbbe6a9eb20dc95688ba630b9611030c5f6c017233da8d7c78ac3",
+      "bytes": 3331353,
+      "lines": 73263
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -40,8 +40,8 @@
     {
       "path": "docs/media/screenshots/manifest.json",
       "role": "the screenshot set every visual claim is checked against",
-      "sha256": "cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57",
-      "bytes": 1435,
+      "sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
+      "bytes": 1598,
       "lines": 54
     },
     {
@@ -299,9 +299,9 @@
     {
       "path": "tests/browser/accessibility_walk.mjs",
       "role": "browser accessibility walk with the current-main Chat handoff checks",
-      "sha256": "280026be916bd38f67574847705ce7c9c864df01e2268a617512d1146cdb7dc2",
-      "bytes": 23515,
-      "lines": 428
+      "sha256": "3c18bd9f8879567ec8f9d1a4f1c2fde432510d52f35b9ec86218823ed29987ec",
+      "bytes": 39438,
+      "lines": 653
     },
     {
       "path": "tests/test_presentations.py",
@@ -327,7 +327,7 @@
     {
       "path": "tests/test_screenshot_capture_browser.py",
       "role": "runs browser-backed UI and screenshot safety regressions",
-      "sha256": "f699d82526dda47d86d64a75a337efa28082f8b3dee04dc06969345787ee2647",
+      "sha256": "44813e29347b0f416970dae17d0282e72018c95337a4f5bef2d0c60cac4b313b",
       "bytes": 25196,
       "lines": 646
     },
@@ -348,8 +348,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "a80bce0731b6c7b0c4c64426c16b2cc84f417bacddc77d118a3d5da42240e73e",
-    "lines": 10012,
+    "sha256": "bd6cd2ddd507ab2d0f416abb4145d9006873d60b5581e2d2f73b834a321c8bf9",
+    "lines": 10234,
     "tab_count": 6,
     "tabs": [
       {
@@ -928,7 +928,7 @@
   },
   "screenshot_manifest": {
     "path": "docs/media/screenshots/manifest.json",
-    "sha256": "cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57",
+    "sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
     "viewport": {
       "width": 1440,
       "height": 900,

@@ -35,55 +35,55 @@
       "id": "sdlcProgressBadge",
       "tone": "neutral",
       "live": false,
-      "line": 1684
+      "line": 1698
     },
     {
       "id": "onboardingSummary",
       "tone": "neutral",
       "live": true,
-      "line": 1831
+      "line": 1845
     },
     {
       "id": "startRecentSummary",
       "tone": "neutral",
       "live": true,
-      "line": 1871
+      "line": 1885
     },
     {
       "id": "startHealthSummary",
       "tone": "neutral",
       "live": true,
-      "line": 1898
+      "line": 1912
     },
     {
       "id": "startWorkspaceSummary",
       "tone": "neutral",
       "live": true,
-      "line": 1916
+      "line": 1930
     },
     {
       "id": "harnessActiveStatusBadge",
       "tone": "info",
       "live": true,
-      "line": 2040
+      "line": 2054
     },
     {
       "id": "hallStatusBadge",
       "tone": "warn",
       "live": true,
-      "line": 2116
+      "line": 2130
     },
     {
       "id": null,
       "tone": "ok",
       "live": false,
-      "line": 2333
+      "line": 2351
     },
     {
       "id": "dockerStateBadge",
       "tone": "neutral",
       "live": false,
-      "line": 2380
+      "line": 2398
     }
   ],
   "state_matrix": [

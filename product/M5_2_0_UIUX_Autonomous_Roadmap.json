@@ -5000,21 +5000,60 @@
       "agent_prompt": "Implement UIUX-P4-01 (Council participant roles and resource readiness). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
         "status": "in_progress",
-        "progress_percent": 5,
+        "progress_percent": 75,
         "attempts": 1,
         "started_at": "2026-11-01T20:03:52Z",
-        "updated_at": "2026-11-01T20:05:57Z",
+        "updated_at": "2026-11-01T20:44:54Z",
         "completed_at": null,
         "owner_session": "arena/a8c52e51-m5-agent-studio",
         "commit_sha": null,
-        "changed_files": [],
+        "changed_files": [
+          "docs/media/screenshots/chat.png",
+          "docs/media/screenshots/compare.png",
+          "docs/media/screenshots/hall.png",
+          "docs/media/screenshots/harness.png",
+          "docs/media/screenshots/index.json",
+          "docs/media/screenshots/manifest.json",
+          "docs/media/screenshots/p4-01-narrow-dark/hall.png",
+          "docs/media/screenshots/p4-01-narrow-dark/index.json",
+          "docs/media/screenshots/pipeline.png",
+          "docs/media/screenshots/start.png",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-tokens.md",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "static/index.html",
+          "studio.py",
+          "tests/browser/accessibility_walk.mjs",
+          "tests/test_screenshot_capture_browser.py"
+        ],
         "evidence": [
           "Preflight at HEAD 4f88fddf63f33cccd72e9c205dd13d91f1725738: worktree clean, current main, the ledger source pin 73bc5e417c1508b41127f3d7162c4afdcbcdbfc4 is an ancestor, and UIUX-P3-07 is done.",
           "scripts/uiux_coordination.py --github --json: UIUX-P4-01 locally eligible; no active ledger claims, open PRs or blocking issues; no holds after fetching full history.",
           "Baseline evidence already validated: docs/media/screenshots/hall.png shows the existing Council Hall, four role-model selectors, global Local oMLX Residency panel, and speaker-only #hallRoster.",
           "Source trace: static/index.html syncUnifiedSelectors() consumes /api/telemetry catalog; loaded local models, enabled cloud providers and fallback combos are grouped, but assignment readiness is not surfaced per role.",
           "Source trace: runHallFullRound() and summonSingleAgent() have no readiness preflight; app.py /api/hall/sessions/{session_id}/summon consumes model/role and surfaces failures as SSE. Existing routes are sufficient; no endpoint change is planned.",
-          "No implementation edits have been made yet; the exact acceptance criteria and evidence plan above are grounded in the existing P4-01 transformation-plan row."
+          "Implementation evidence: static/index.html renders the four configured role cards with exact selected IDs, source/locality and catalog/telemetry-backed readiness; actual session participants remain separately displayed from the configured roster.",
+          "Readiness and invocation evidence: tests/browser/accessibility_walk.mjs covers empty, missing, loading, loaded, unloaded and stale assignments; blocked spawn-and-convene, full-round and single-seat actions issue no summon requests, while Open Empty Room, Post note only and typed note retention remain available.",
+          "Disclosure evidence: the Hall states that local seats share machine memory while loaded and are unloaded after each Hall turn; cloud and combo/fallback entries are configured only, not reachability-verified.",
+          "Compatibility evidence: implementation changed only the existing frontend, generated frontend bundle, UIUX evidence/inventory artifacts, screenshots and browser tests; no backend route, authorization, persistence or API contract was added or changed.",
+          "Visual evidence: six standard pane screenshots were recaptured with scripts/capture_screenshots.mjs; the dedicated 420x1200 dark Hall capture is docs/media/screenshots/p4-01-narrow-dark/hall.png. scripts/validate_screenshots.py reports 6/6 for the standard manifest.",
+          "Documentation scope: no README or API documentation change was needed because this is a frontend-only clarification; the Hall itself carries the shared-memory, unload and configured-not-reachable disclosures."
         ],
         "test_results": [
           "Coordination preflight: python3 scripts/uiux_coordination.py --github --json -> P4-01 eligible, 0 open PRs, 0 blockers, source pin ancestor after `git fetch --unshallow origin`.",
@@ -5022,10 +5061,20 @@
           "python3 scripts/uiux_source_manifest.py --check -> 48 files, 6 tabs, 115 routes; pin 73bc5e417c15 current.",
           "python3 scripts/uiux_preservation_signoff.py --check -> 21 capabilities, 6 panes, 189 markup controls; historical approval remains unbound.",
           "python3 scripts/validate_docs.py -> passed (5 required pages, 164 files scanned); python3 scripts/validate_screenshots.py -> 6/6.",
-          "git diff --check -> exit 0."
+          "git diff --check -> exit 0.",
+          "Full baseline in disposable /tmp/uiux-p4-verification with the current patch: python -m pytest -q -> 2202 passed, 26 skipped, 1 deprecation warning, 0 failures. Skips are the explicit live-container opt-in and browser-regression cases without browser environment variables; focused browser integration was run separately.",
+          "Focused browser evidence: standalone tests/browser/accessibility_walk.mjs -> 23/23 checks; tests/test_screenshot_capture_browser.py::test_real_isolated_demo_captures_all_six_panes -> 1 passed in 40.26s using the isolated demo.",
+          "python3 scripts/validate_docs.py -> passed (5 required pages, 164 files scanned); python3 scripts/validate_screenshots.py -> 6/6; python3 scripts/check_frontend_syntax.py -> passed; python3 scripts/demo_tour.py --check -> transcript current.",
+          "UIUX generated evidence checks passed: source manifest 48 files/6 tabs/115 routes; control inventory 189 controls; route map 63 call sites; authorization trace 46 state-changing routes; preservation sign-off remains historical-approval-unbound; overlays, presentations, onboarding, status components and design tokens report 0 findings; git diff --check -> exit 0."
         ],
         "visual_evidence": [
-          "docs/media/screenshots/hall.png"
+          "docs/media/screenshots/hall.png",
+          "docs/media/screenshots/p4-01-narrow-dark/hall.png",
+          "docs/media/screenshots/start.png",
+          "docs/media/screenshots/harness.png",
+          "docs/media/screenshots/pipeline.png",
+          "docs/media/screenshots/compare.png",
+          "docs/media/screenshots/chat.png"
         ],
         "known_regressions": [],
         "decisions": [
@@ -5034,8 +5083,8 @@
           "Keep model loading explicit via existing controls, disclose shared-memory/per-turn unload implications, and make no backend, route, authorization, persistence or model-admission contract change."
         ],
         "blockers": [],
-        "handoff_note": "Claimed on the active branch after clean coordination preflight. Keep the story in progress; do not mark done or imply owner approval until implementation evidence and independent review are complete.",
-        "next_action": "Commit and push the P4-01 claim, open a draft PR, recheck coordination, then implement the readiness roster and preflight guards.",
+        "handoff_note": "Implementation and local verification evidence are recorded; keep UIUX-P4-01 in progress and PR #155 a draft pending owner approval and independent review. Do not treat generated preservation/sign-off artifacts as owner approval.",
+        "next_action": "Request independent review on draft PR #155, address any findings, and retain in_progress status until owner approval and review are recorded.",
         "readme_updated": false
       },
       "required_evidence": [

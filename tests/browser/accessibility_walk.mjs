@@ -415,7 +415,232 @@ async function main() {
       fabricatedApproval.allButtonsStayDisabled && fabricatedApproval.refreshedLive === "false" &&
       fabricatedApproval.refreshedButtons === 0 && /never decided|nothing was granted/i.test(fabricatedApproval.refreshedText),
       JSON.stringify(fabricatedApproval)));
-    results.push(check("no browser page errors during the overlay walk", errors.length === 0, errors.join("; ")));
+    const hallReadiness = await page.evaluate(async () => {
+      const original = {
+        telemetry: lastTelemetry,
+        telemetryAt: lastTelemetryAt,
+        signature: lastCatalogSignature,
+        selectors: Object.fromEntries(["hallSeatArch", "hallSeatCoder", "hallSeatCritic", "hallSeatJudge", "hallModelSelect"]
+          .map((id) => [id, document.getElementById(id).value])),
+        role: document.getElementById("hallRoleSelect").value,
+        mode: document.getElementById("hallSendModeSelect").value,
+        input: document.getElementById("hallHumanInput").value,
+        spawnInput: document.getElementById("spawnRequestInput").value,
+        hallId: activeHallId,
+        hallData: activeHallData,
+        hallTitle: document.getElementById("hallTitle").textContent,
+        hallStatus: document.getElementById("hallStatusBadge").textContent,
+        seatSettingsOpen: document.getElementById("hallSeatsSettings").open,
+        singleSettingsOpen: document.getElementById("hallSingleSettings").open,
+      };
+      if (!original.telemetry) throw new Error("Council readiness walk requires the isolated demo telemetry snapshot");
+      const source = JSON.parse(JSON.stringify(original.telemetry));
+      const localReady = { id: "M5-Qwen3.8-27B-Local", display_name: "M5-Qwen3.8-27B-Local", role_hint: "Architect", loaded: true, is_loading: false, size_gb: 16.6, pinned: false, is_default: true, model_type: "llm", mtp_enabled: false, oq_a8_enabled: false, ttl_seconds: 120, ttl_remaining_seconds: 120, active_requests: 0, live_tps: 0 };
+      const localLoading = { ...localReady, id: "M5-Qwen3.6-Loading", display_name: "M5-Qwen3.6-Loading", loaded: false, is_loading: true };
+      const localUnloaded = { ...localReady, loaded: false, is_loading: false, ttl_remaining_seconds: null };
+      const cloud = { id: "demo-cloud::council-model", label: "[Cloud • demo-cloud] council-model", group: "Cloud • Demo", source: "cloud", provider: "demo-cloud", size_gb: 0 };
+      const combo = { id: "combo/synthetic-review-route", label: "[Combo • Auto-Fallback] Synthetic review route", group: "Smart Fallback Combos", source: "combo", provider: "combo", size_gb: 0 };
+      const localCatalog = (model) => ({ id: model.id, label: `[M5 Local • Loaded] ${model.id}`, group: "Local M5 (Loaded in RAM)", source: "local", provider: "omlx", size_gb: model.size_gb, loaded: model.loaded });
+      const readyTelemetry = { ...source, models: [localReady, localLoading, localUnloaded], loaded_models: [localReady, localLoading], unloaded_models: [localUnloaded], catalog: [localCatalog(localReady), localCatalog(localLoading), cloud, combo] };
+      const unloadedTelemetry = { ...readyTelemetry, models: [localUnloaded], loaded_models: [], unloaded_models: [localUnloaded], catalog: [cloud, combo] };
+      const requests = [];
+      const originalFetch = window.fetch;
+      const originalParticipants = document.getElementById("hallParticipants").innerHTML;
+      const originalParticipantsHidden = document.getElementById("hallParticipants").hidden;
+      let readyState, emptyState, missingState, loadingState, unloadedState, staleState, participants;
+      let emptyRoomEnabled = false;
+      let noteOnlyEnabled = false;
+      let noteRetained = false;
+      try {
+        renderTelemetry(readyTelemetry);
+        document.getElementById("hallSeatArch").value = localReady.id;
+        document.getElementById("hallSeatCoder").value = cloud.id;
+        document.getElementById("hallSeatCritic").value = combo.id;
+        document.getElementById("hallSeatJudge").value = localReady.id;
+        document.getElementById("hallModelSelect").value = localReady.id;
+        document.getElementById("hallRoleSelect").value = "architect";
+        renderHallReadiness();
+        readyState = {
+          roles: [...document.querySelectorAll("#hallRoster .hall-seat-role")].map((node) => node.textContent.trim()),
+          cards: [...document.querySelectorAll("#hallRoster .hall-seat-card")].map((node) => node.innerText.replace(/\s+/g, " ").trim()),
+          fullRoundEnabled: !document.getElementById("hallFullRoundBtn").disabled,
+          singleEnabled: !document.getElementById("hallSummonBtn").disabled,
+          spawnConveneEnabled: !document.getElementById("spawnConveneBtn").disabled,
+          reachabilityDisclosure: document.getElementById("hallReadinessStatus").textContent.includes("not reachability-tested"),
+          memoryDisclosure: document.querySelector("#hallSeatsSettings .hall-resource-note")?.textContent || "",
+        };
+
+        document.getElementById("hallSeatCoder").value = "";
+        renderHallReadiness();
+        emptyState = {
+          status: document.querySelector("#hallRoster .hall-seat-card:nth-child(2) .hall-seat-state")?.textContent,
+          roundDisabled: document.getElementById("hallFullRoundBtn").disabled,
+        };
+        const missingOption = document.createElement("option");
+        missingOption.value = "demo-cloud::removed-model";
+        missingOption.textContent = "[Unavailable] demo-cloud::removed-model";
+        missingOption.dataset.source = "cloud";
+        missingOption.dataset.provider = "demo-cloud";
+        document.getElementById("hallSeatCoder").appendChild(missingOption);
+        document.getElementById("hallSeatCoder").value = missingOption.value;
+        renderHallReadiness();
+        missingState = {
+          status: document.querySelector("#hallRoster .hall-seat-card:nth-child(2) .hall-seat-state")?.textContent,
+          roundDisabled: document.getElementById("hallFullRoundBtn").disabled,
+        };
+        document.getElementById("hallSeatCoder").removeChild(missingOption);
+        document.getElementById("hallSeatCoder").value = cloud.id;
+        renderHallReadiness();
+
+        document.getElementById("hallSeatCritic").value = localLoading.id;
+        renderHallReadiness();
+        loadingState = {
+          status: document.querySelector("#hallRoster .hall-seat-card:nth-child(3) .hall-seat-state")?.textContent,
+          roundDisabled: document.getElementById("hallFullRoundBtn").disabled,
+        };
+
+        document.getElementById("hallSeatCritic").value = combo.id;
+        renderHallReadiness();
+        renderTelemetry(unloadedTelemetry);
+        unloadedState = {
+          architectModel: document.getElementById("hallSeatArch").value,
+          architectStatus: document.querySelector("#hallRoster .hall-seat-card:nth-child(1) .hall-seat-state")?.textContent,
+          judgeStatus: document.querySelector("#hallRoster .hall-seat-card:nth-child(4) .hall-seat-state")?.textContent,
+          singleModel: document.getElementById("hallModelSelect").value,
+          roundDisabled: document.getElementById("hallFullRoundBtn").disabled,
+          singleDisabled: document.getElementById("hallSummonBtn").disabled,
+          spawnDisabled: document.getElementById("spawnConveneBtn").disabled,
+        };
+
+        lastTelemetryAt = Date.now() - HALL_TELEMETRY_MAX_AGE_MS - 1;
+        renderHallReadiness();
+        staleState = {
+          status: document.querySelector("#hallRoster .hall-seat-card:nth-child(2) .hall-seat-state")?.textContent,
+          roundDisabled: document.getElementById("hallFullRoundBtn").disabled,
+        };
+        document.getElementById("hallSendModeSelect").value = "post_only";
+        renderHallReadiness();
+        noteOnlyEnabled = !document.getElementById("hallSendBtn").disabled;
+        emptyRoomEnabled = ![...document.querySelectorAll("#spawnModal button")]
+          .find((button) => button.textContent.includes("Open Empty Room"))?.disabled;
+
+        activeHallId = "synthetic-council-session";
+        activeHallData = { title: "Synthetic Council", status: "active", participants: ["Architect (M5-Qwen3.8-27B-Local)", "Human Operative"], context_files: ["docs/brief.md"], messages: [], conclusion_text: "" };
+        renderActiveHall();
+        participants = {
+          shown: !document.getElementById("hallParticipants").hidden,
+          text: document.getElementById("hallParticipants").innerText.replace(/\s+/g, " ").trim(),
+          seatRolesRemain: document.querySelectorAll("#hallRoster .hall-seat-card").length === 4 &&
+            document.querySelector("#hallRoster").textContent.includes("Architect / Thesis"),
+        };
+
+        window.fetch = async (input, init = {}) => {
+          requests.push({ url: String(input), method: init.method || "GET" });
+          throw new Error("Council readiness guard should prevent this API call");
+        };
+        document.getElementById("hallHumanInput").value = "Keep this note until seats are ready.";
+        await confirmSpawnSession(true).catch(() => {});
+        await runHallFullRound(false).catch(() => {});
+        await summonSingleAgent().catch(() => {});
+        await postHumanHallMessage(true).catch(() => {});
+        noteRetained = document.getElementById("hallHumanInput").value === "Keep this note until seats are ready.";
+      } finally {
+        window.fetch = originalFetch;
+        activeHallId = original.hallId;
+        activeHallData = original.hallData;
+        lastCatalogSignature = "";
+        if (original.telemetry) renderTelemetry(original.telemetry);
+        for (const [id, value] of Object.entries(original.selectors)) {
+          const select = document.getElementById(id);
+          select.value = value && [...select.options].some((option) => option.value === value) ? value : "";
+        }
+        document.getElementById("hallRoleSelect").value = original.role;
+        document.getElementById("hallSendModeSelect").value = original.mode;
+        document.getElementById("hallHumanInput").value = original.input;
+        document.getElementById("spawnRequestInput").value = original.spawnInput;
+        document.getElementById("hallSeatsSettings").open = original.seatSettingsOpen;
+        document.getElementById("hallSingleSettings").open = original.singleSettingsOpen;
+        if (original.hallData) renderActiveHall();
+        else {
+          document.getElementById("hallParticipants").innerHTML = originalParticipants;
+          document.getElementById("hallParticipants").hidden = originalParticipantsHidden;
+          document.getElementById("hallTitle").textContent = original.hallTitle;
+          document.getElementById("hallStatusBadge").textContent = original.hallStatus;
+        }
+        lastTelemetryAt = original.telemetryAt;
+        renderHallReadiness();
+        document.getElementById("toastStack").replaceChildren();
+      }
+      return { readyState, emptyState, missingState, loadingState, unloadedState, staleState, participants, emptyRoomEnabled, noteOnlyEnabled, noteRetained, requests };
+    });
+    results.push(check("Council roster shows four roles, exact model IDs, source and truthful readiness",
+      hallReadiness.readyState.roles.length === 4 && hallReadiness.readyState.roles[0] === "1. Architect / Thesis" &&
+      hallReadiness.readyState.roles[3] === "4. Lead Arbiter" &&
+      hallReadiness.readyState.cards.join(" ").includes("M5-Qwen3.8-27B-Local") &&
+      hallReadiness.readyState.cards.join(" ").includes("demo-cloud::council-model") &&
+      hallReadiness.readyState.cards.join(" ").includes("combo/synthetic-review-route") &&
+      hallReadiness.readyState.cards.join(" ").includes("Local · oMLX") &&
+      hallReadiness.readyState.cards.join(" ").includes("Cloud · demo-cloud") &&
+      hallReadiness.readyState.cards.join(" ").includes("Fallback combo") &&
+      hallReadiness.readyState.fullRoundEnabled && hallReadiness.readyState.singleEnabled &&
+      hallReadiness.readyState.spawnConveneEnabled && hallReadiness.readyState.reachabilityDisclosure &&
+      /share this machine’s memory/i.test(hallReadiness.readyState.memoryDisclosure), JSON.stringify(hallReadiness.readyState)));
+    results.push(check("Council preflight blocks empty, missing, loading, unloaded and stale assignments without silently replacing their IDs",
+      hallReadiness.emptyState.status === "Choose a model" && hallReadiness.emptyState.roundDisabled &&
+      hallReadiness.missingState.status === "Unavailable" && hallReadiness.missingState.roundDisabled &&
+      hallReadiness.loadingState.status === "Loading" && hallReadiness.loadingState.roundDisabled &&
+      hallReadiness.unloadedState.architectModel === "M5-Qwen3.8-27B-Local" &&
+      hallReadiness.unloadedState.architectStatus === "Not loaded" && hallReadiness.unloadedState.judgeStatus === "Not loaded" &&
+      hallReadiness.unloadedState.singleModel === "M5-Qwen3.8-27B-Local" &&
+      hallReadiness.unloadedState.roundDisabled && hallReadiness.unloadedState.singleDisabled && hallReadiness.unloadedState.spawnDisabled &&
+      hallReadiness.staleState.status === "Stale telemetry" && hallReadiness.staleState.roundDisabled, JSON.stringify(hallReadiness)));
+    results.push(check("Council readiness guards preserve Open Empty Room, Post note only and actual session participants without invoking",
+      hallReadiness.emptyRoomEnabled && hallReadiness.noteOnlyEnabled && hallReadiness.noteRetained &&
+      hallReadiness.participants.shown && hallReadiness.participants.text.includes("Architect (M5-Qwen3.8-27B-Local)") &&
+      hallReadiness.participants.text.includes("Human Operative") && hallReadiness.participants.text.includes("docs/brief.md") &&
+      hallReadiness.participants.seatRolesRemain && hallReadiness.requests.length === 0, JSON.stringify(hallReadiness)));
+
+    const narrowPage = await browser.newPage();
+    const narrowErrors = [];
+    try {
+      await narrowPage.setViewport({ width: 420, height: 1200, deviceScaleFactor: 1 });
+      narrowPage.on("pageerror", (error) => narrowErrors.push(String(error)));
+      await narrowPage.evaluateOnNewDocument((origin, value) => {
+        if (window.top === window && window.location.origin === origin) {
+          window.sessionStorage.setItem("m5_api_token", value);
+        }
+      }, url.origin, token);
+      const narrowResponse = await narrowPage.goto(url.href, { waitUntil: "domcontentloaded", timeout: 30000 });
+      if (!narrowResponse || narrowResponse.status() !== 200 || narrowPage.url() !== url.href) {
+        throw new Error("narrow Council demo did not serve a direct successful HTML document");
+      }
+      await narrowPage.waitForFunction(() => document.querySelectorAll("#hallRoster .hall-seat-card").length === 4, { timeout: 10000 });
+      await narrowPage.evaluate(() => switchTab("hall"));
+      const narrowHall = await narrowPage.evaluate(() => {
+        const pane = document.getElementById("pane-hall");
+        const roster = document.getElementById("hallRoster");
+        const rect = roster.getBoundingClientRect();
+        const cards = [...roster.querySelectorAll(".hall-seat-card")].map((card) => {
+          const box = card.getBoundingClientRect();
+          return { left: box.left, right: box.right, width: box.width, clientWidth: card.clientWidth, scrollWidth: card.scrollWidth };
+        });
+        return {
+          viewport: innerWidth,
+          visible: rect.width > 0 && rect.height > 0,
+          columns: getComputedStyle(roster).gridTemplateColumns.split(" ").length,
+          cardsFit: cards.length === 4 && cards.every((card) => card.width > 0 && card.left >= rect.left - 1 && card.right <= rect.right + 1),
+          cardsNoOverflow: cards.every((card) => card.scrollWidth <= card.clientWidth + 1),
+          paneNoOverflow: pane.scrollWidth <= pane.clientWidth + 1,
+        };
+      });
+      results.push(check("Council four-seat roster remains readable in a fresh 420px viewport",
+        narrowHall.viewport === 420 && narrowHall.visible && narrowHall.columns === 2 &&
+        narrowHall.cardsFit && narrowHall.cardsNoOverflow && narrowHall.paneNoOverflow && narrowErrors.length === 0,
+        JSON.stringify({ ...narrowHall, errors: narrowErrors })));
+    } finally {
+      await narrowPage.close();
+    }
+    results.push(check("no browser page errors during the overlay and Council readiness walks", errors.length === 0, errors.join("; ")));
   } finally {
     await browser.close();
   }

@@ -178,7 +178,7 @@ A council session: who was asked, what each participant said, in order.
 | button | hallSummonBtn | Ask one model | summonSingleAgent() |
 | textarea | hallHumanInput | — | — |
 | select | hallSendModeSelect | Send & run 4-LLM round Post note only | — |
-| button | — | Send | submitHallComposer() |
+| button | hallSendBtn | Send | submitHallComposer() |
 
 **Routes reached from this pane's controls — 6, walking at most 2 calls; 7 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
 
@@ -355,14 +355,14 @@ provenance; a matching snapshot cannot clear separate review holds.
 
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
-| `ledger_content_sha256` | `2e9e2da2f04b30e48323420021b9c907be56ed59365831c0b511c9c801460b1e` | `not recorded` |
-| `source_manifest_sha256` | `3424d28807f965e9241dcb9c19a9eb2bd8214562c9b8e7d03ce0141254da0b5b` | `not recorded` |
-| `control_inventory_sha256` | `886c5696d6470cf1d1964f9768528106dfabe1dc266645dd308f4f1e1bd4ff0a` | `not recorded` |
-| `route_map_sha256` | `a9655ae590394e5c454a27c7eeb59f46f75b975601529ad17d4ac90b5fd6c432` | `not recorded` |
-| `authorization_trace_sha256` | `f5cd2160b11181885f6f5f1f33fb9954f5d3ad8137b1270b1457c84cf386ac1a` | `not recorded` |
-| `frontend_sha256` | `a80bce0731b6c7b0c4c64426c16b2cc84f417bacddc77d118a3d5da42240e73e` | `not recorded` |
-| `screenshot_manifest_sha256` | `cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57` | `not recorded` |
-| `screenshot_index_sha256` | `82ecdeb4870961951b1b8946a657438d2a3893f443e5fe182f3372ed41784f07` | `not recorded` |
+| `ledger_content_sha256` | `0dc5c2558573fe25a49659c45279e271b112af35664a9e120e54ebd8c31a98cf` | `not recorded` |
+| `source_manifest_sha256` | `be35bc452101d61daf2e6ff21f1da8726951ae2857501a83bfe186189cc1ad50` | `not recorded` |
+| `control_inventory_sha256` | `dddffbae8e6b8be6bd372727ded97c6b28c3e1df61cccb9f6459a30813490c08` | `not recorded` |
+| `route_map_sha256` | `049a6b568a1b04ff97b41a36f00af8fcd554f08e051196f49638c7f666f11de6` | `not recorded` |
+| `authorization_trace_sha256` | `3338b9d1882ed46ab81c5b7c6b159d6a23f59882186fba0ed161193c7cbad8fa` | `not recorded` |
+| `frontend_sha256` | `bd6cd2ddd507ab2d0f416abb4145d9006873d60b5581e2d2f73b834a321c8bf9` | `not recorded` |
+| `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
+| `screenshot_index_sha256` | `a47aac866ec5e324a466c26f6a3605e870951c2a081834695697b09060d10b06` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |
 | `route_map_generator_sha256` | `923981fc78ff0f844e67691bfa966963f3959be1b9650eaf49f3b58b0a14d555` | `not recorded` |
 
