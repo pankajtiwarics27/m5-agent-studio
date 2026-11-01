@@ -65,25 +65,25 @@
       "id": "harnessActiveStatusBadge",
       "tone": "info",
       "live": true,
-      "line": 2024
+      "line": 2029
     },
     {
       "id": "hallStatusBadge",
       "tone": "warn",
       "live": true,
-      "line": 2100
+      "line": 2105
     },
     {
       "id": null,
       "tone": "ok",
       "live": false,
-      "line": 2313
+      "line": 2318
     },
     {
       "id": "dockerStateBadge",
       "tone": "neutral",
       "live": false,
-      "line": 2360
+      "line": 2365
     }
   ],
   "state_matrix": [

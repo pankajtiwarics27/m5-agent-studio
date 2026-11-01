@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "28177f63b17fe5b2720d5dd2b06b0c3bfcd8432122cb60c63e6de0e0978156a1",
-      "bytes": 546401,
-      "lines": 9330
+      "sha256": "83735efd19d1c81dae060ae033e1f883057b595d776135362655c175026affcb",
+      "bytes": 550526,
+      "lines": 9403
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "239555398af745e55dd573461f935754a32c1793a42a0ffd96e58f909ba2ddb3",
-      "bytes": 3284051,
-      "lines": 72359
+      "sha256": "1933a58271c17ac24c22bd1883bd07fa360879bb0150009216a02b8f726f8b0b",
+      "bytes": 3288176,
+      "lines": 72432
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -299,9 +299,9 @@
     {
       "path": "tests/browser/accessibility_walk.mjs",
       "role": "browser accessibility walk with the current-main Chat handoff checks",
-      "sha256": "d6925149e9dde36baf500a337952b887dcaecf1af76f9dee2cc057ff7c7dd7c5",
-      "bytes": 18108,
-      "lines": 330
+      "sha256": "280026be916bd38f67574847705ce7c9c864df01e2268a617512d1146cdb7dc2",
+      "bytes": 23515,
+      "lines": 428
     },
     {
       "path": "tests/test_presentations.py",
@@ -327,7 +327,7 @@
     {
       "path": "tests/test_screenshot_capture_browser.py",
       "role": "runs browser-backed UI and screenshot safety regressions",
-      "sha256": "195b2bec9cf79f2c0ffe419dd85b206d4595fc361e4083b0b1fcbf724ace16bb",
+      "sha256": "f699d82526dda47d86d64a75a337efa28082f8b3dee04dc06969345787ee2647",
       "bytes": 25196,
       "lines": 646
     },
@@ -348,8 +348,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "28177f63b17fe5b2720d5dd2b06b0c3bfcd8432122cb60c63e6de0e0978156a1",
-    "lines": 9330,
+    "sha256": "83735efd19d1c81dae060ae033e1f883057b595d776135362655c175026affcb",
+    "lines": 9403,
     "tab_count": 6,
     "tabs": [
       {
@@ -395,7 +395,7 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 61,
+    "fetch_call_count": 62,
     "api_literal_count": 52,
     "api_literals": [
       "/api/cache/clear-ssd",

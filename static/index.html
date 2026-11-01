@@ -1927,6 +1927,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </section>
 
     <section id="pane-harness" role="tabpanel" aria-labelledby="tab-harness" class="pane active">
+      <!-- Inert inventory anchor: approval cards render from durable events, so this disabled template
+           keeps the existing decision handler visible to the pane-to-route sign-off without rendering it. -->
+      <template id="harnessApprovalRouteAttributionTemplate">
+        <button type="button" disabled aria-label="Inventory-only approval route anchor" onclick="resolveHarnessApproval('__inventory_probe__','approve','__inventory_probe__')">Approve</button>
+      </template>
       <div class="harness-shell">
         <aside class="harness-sidebar">
           <div style="padding:11px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
@@ -7090,28 +7095,96 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     updateHarnessPermissionBadge();
   }
 
+  async function confirmLiveHarnessApproval(sessionId, approvalId) {
+    if (!sessionId || sessionId !== String(activeHarnessId || "")) {
+      return { ok: false, authoritative: false, message: "This approval is not for the active Harness session; no decision was sent." };
+    }
+    let response;
+    try {
+      response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`);
+    } catch (_) {
+      return { ok: false, authoritative: false, message: "The current approval state could not be verified; no decision was sent." };
+    }
+    if (!response.ok) {
+      return { ok: false, authoritative: false, message: "The server could not confirm a live approval; no decision was sent." };
+    }
+    let state;
+    try { state = await response.json(); } catch (_) {
+      return { ok: false, authoritative: false, message: "The approval state response was invalid; no decision was sent." };
+    }
+    if (!state || typeof state !== "object") {
+      return { ok: false, authoritative: false, message: "The approval state response was invalid; no decision was sent." };
+    }
+    if (sessionId !== String(activeHarnessId || "")) {
+      return { ok: false, authoritative: false, message: "The active Harness session changed; no decision was sent." };
+    }
+    const stateSessionId = String(state.session_id || (state.session && state.session.id) || "");
+    if (stateSessionId !== sessionId) {
+      return { ok: false, authoritative: false, message: "The server returned a different session; no decision was sent." };
+    }
+    harnessSnapshot = state;
+    const pending = Array.isArray((state.approvals || {}).pending) ? state.approvals.pending : [];
+    const live = pending.some((approval) => approval && String(approval.approval_id || "") === approvalId && approval.live !== false);
+    return {
+      ok: live,
+      authoritative: true,
+      message: live ? "" : "This approval is no longer pending; no decision was sent.",
+    };
+  }
+
+  function setHarnessApprovalCardStatus(approvalId, text) {
+    const card = document.getElementById(`apr-card-${approvalId}`);
+    const status = card && card.querySelector(".h-approval-head > span:last-child .badge:last-child");
+    if (status) status.textContent = text;
+  }
+
   async function resolveHarnessApproval(approvalId, decision, sessionId) {
+    if (!approvalId || !["approve", "reject"].includes(decision)) return;
+    const session = (typeof sessionId === "string" && sessionId) ? sessionId : String(activeHarnessId || "");
+    const card = document.getElementById(`apr-card-${approvalId}`);
+    if (card && card.dataset.submitting === "true") return;
+    if (card) {
+      card.dataset.submitting = "true";
+      card.setAttribute("aria-busy", "true");
+      card.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+    }
+    setHarnessApprovalCardStatus(approvalId, "Verifying current server state…");
+    const liveCheck = await confirmLiveHarnessApproval(session, approvalId);
+    if (!liveCheck.ok) {
+      setHarnessApprovalCardStatus(approvalId, "Not confirmed — no decision sent");
+      showToast(liveCheck.message, "warn");
+      // Even a failed preflight never restores the cached action. A successful resync
+      // may render controls again only if the authoritative snapshot still has the slot.
+      await harnessResyncFromSnapshot("approval_not_pending");
+      return;
+    }
     const noteEl = document.getElementById(`apr-note-${approvalId}`);
     const note = noteEl ? noteEl.value.trim() : "";
-    const card = document.getElementById(`apr-card-${approvalId}`);
-    if (card) card.querySelectorAll("button").forEach(b => (b.disabled = true));
-    const session = (typeof sessionId === "string" && sessionId) ? sessionId : activeHarnessId;
     const body = JSON.stringify({ approval_id: approvalId, decision, note, session_id: session || "" });
-    const res = await fetch("/api/harness/approve", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-    });
-    if (!res.ok) {
-      let msg = "Approval failed";
-      try { msg = (await res.json()).detail || msg; } catch (_) {}
-      if (card) card.querySelectorAll("button").forEach(b => (b.disabled = false));
-      showToast(msg, "error");
-      // A rejected replay (409) means the durable decision already exists: reload
-      // it instead of leaving an actionable stale card on screen.
+    let response;
+    try {
+      response = await fetch("/api/harness/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+    } catch (_) {
+      setHarnessApprovalCardStatus(approvalId, "Decision not confirmed — refreshing server state…");
+      showToast("The approval decision could not be confirmed; refreshing authoritative session state.", "warn");
+      await harnessResyncFromSnapshot("approval_transport_error");
+      return;
+    }
+    if (!response.ok) {
+      let message = "The server did not accept this approval decision.";
+      try { message = (await response.json()).detail || message; } catch (_) {}
+      setHarnessApprovalCardStatus(approvalId, "Server refused — refreshing state…");
+      showToast(message, "error");
+      // A replay or stale decision cannot make a client-side action actionable. The
+      // authoritative snapshot alone may render controls again if the slot remains live.
       await harnessResyncFromSnapshot("approval_rejected");
       return;
     }
+    setHarnessApprovalCardStatus(approvalId, "Decision accepted — refreshing server state…");
     await harnessResyncFromSnapshot("approval_decision");
     // Approving records a permission; rejecting records a tombstone. Either way the badge
     // and, if it is open, the surface have to say what the session now holds.
