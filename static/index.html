@@ -223,6 +223,29 @@
   .voice-card.judge { align-self: flex-start; border-left: 3px solid var(--amber); width: 100%; }
   .voice-card.external { align-self: flex-start; border-left: 3px solid var(--purple); width: 100%; }
   .voice-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 12px; }
+  /* ── UIUX-P4-03: the verdict area - agreement, dissent and the decision ──
+     A session ended with a log and, if someone pinned one, a conclusion banner. Nothing said
+     which seats' replies the conclusion carried, nothing said whether four seats had said four
+     things or the same thing four times, and a session with nothing pinned looked the same as
+     one that had settled something. The block below states the decision, measures how much of
+     each reply it carries, and leaves every reply where it was: dissent is named, never merged. */
+  .hall-verdict { margin: 0 18px 9px; padding: 11px 15px; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-sm); background: var(--bg-card); font-size: 12px; line-height: 1.55; color: var(--text-dim); }
+  .hall-verdict[hidden] { display: none; }
+  .hall-verdict[data-state="open"] { border-left-color: var(--amber); }
+  .hall-verdict[data-state="single"] { border-left-color: var(--rose); }
+  .hall-verdict .verdict-head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+  .hall-verdict .verdict-head strong { color: var(--text); }
+  .hall-verdict .verdict-table { width: 100%; border-collapse: collapse; font-size: 11.6px; }
+  .hall-verdict .verdict-table th { text-align: left; color: var(--text-faint); font-size: 10.4px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 8px 4px 0; border-bottom: 1px solid var(--border); }
+  .hall-verdict .verdict-table td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .hall-verdict .verdict-table tr:last-child td { border-bottom: none; }
+  .hall-verdict .verdict-table td.mono { font-family: var(--mono); font-size: 11px; color: var(--text); }
+  .hall-verdict .verdict-reading[data-reading="decision"] { color: var(--emerald); }
+  .hall-verdict .verdict-reading[data-reading="mostly"] { color: var(--cyan); }
+  .hall-verdict .verdict-reading[data-reading="partly"] { color: var(--text-dim); }
+  .hall-verdict .verdict-reading[data-reading="dissent"] { color: var(--amber); }
+  .hall-verdict .verdict-reading[data-reading="same"] { color: var(--rose); }
+  .hall-verdict .verdict-basis { margin-top: 8px; color: var(--text-faint); font-size: 11.4px; }
   .conclusion-banner { margin: 0 18px 9px; padding: 11px 15px; border-radius: 11px; background: rgba(245, 158, 11, 0.10); border: 1px solid rgba(245, 158, 11, 0.45); }
   .hall-composer { padding: 10px 18px; background: var(--bg-elev); border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-end; }
 
@@ -2246,6 +2269,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div id="hallStream" class="hall-stream"></div>
 
           <div id="hallConclusionBanner" class="conclusion-banner" style="display:none;"></div>
+          <!-- The verdict area: the decision's provenance, and what each reply's wording has to do
+               with it. It reads under the pinned text on purpose - the decision first, then the
+               measurement of what it carries. Filled by renderHallVerdict() from the session the
+               server returned; no reply text is merged, summarised or re-worded here. -->
+          <div id="hallVerdict" class="hall-verdict" role="region" aria-label="Council verdict" hidden></div>
 
           <div class="hall-composer">
             <textarea id="hallHumanInput" rows="2" style="flex:1; resize:none;" placeholder="Ask a question or steer the Council as Human Operative (Enter = Send)..."></textarea>
@@ -4194,6 +4222,312 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     renderActiveHall(); refreshHallSessions();
   }
 
+  /* ── UIUX-P4-03: the verdict - agreement, dissent and the decision ─────────
+     What the pane could say before: the transcript, and - if someone pinned one - a banner whose
+     only claim was "Pinned Council Conclusion (author)". It could not say whether the decision
+     carried what the other seats wrote, whether four seats had produced four readings or one
+     reading four times, or that a session ending with nothing pinned has reached no decision.
+
+     This block states the decision's provenance and measures, per reply, how much of that reply's
+     wording the decision also contains. The measure is intentionally blunt and named for what it
+     is: the fraction of a reply's 4-word sequences that reappear in the text it is compared with
+     (single words for a reply shorter than four). It is a text measure, not a reading of intent.
+     A seat that makes the same point in its own words will score low, and the pane says so rather
+     than calling it disagreement; a seat that repeats a phrase will score high, and the pane calls
+     that shared wording, not assent. Nothing here merges, summarises or rewrites a reply: dissent
+     is named and left in the transcript, which is what "never averaged away" has to mean.
+     
+     When no decision is pinned the same measure runs between replies instead, because the failure
+     it catches is the one that matters most in a council of local models: several seats answered
+     with the same words (one model picked four times, or the offline demo text), which a naive
+     results pane would present as consensus.
+  */
+  const VERDICT_SHINGLE_SIZE = 4;
+  const VERDICT_SAME = 0.85;     // same words as another seat
+  const VERDICT_MOSTLY = 0.70;   // the decision largely carries this reply
+  const VERDICT_PARTLY = 0.25;   // some of this reply's wording reaches the decision
+
+  function hallVerdictWords(text) {
+    return String(text || "").toLowerCase().replace(/[^\p{L}\p{N}\s]+/gu, " ").split(/\s+/).filter(Boolean);
+  }
+
+  function hallVerdictShingles(text) {
+    const words = hallVerdictWords(text);
+    const size = words.length >= VERDICT_SHINGLE_SIZE ? VERDICT_SHINGLE_SIZE : 1;
+    const set = new Set();
+    for (let index = 0; index + size <= words.length; index += 1) {
+      set.add(words.slice(index, index + size).join(" "));
+    }
+    return set;
+  }
+
+  // Containment of `a` in `b`, 0..1 - "how much of this reply's wording is also in that text".
+  // Containment and not Jaccard on purpose: a short reply carried by a long decision should read
+  // as carried, and Jaccard would punish it for the decision's length alone.
+  function hallVerdictContainedIn(a, b) {
+    const left = hallVerdictShingles(a);
+    const right = hallVerdictShingles(b);
+    if (!left.size || !right.size) return 0;
+    let shared = 0;
+    left.forEach(shingle => { if (right.has(shingle)) shared += 1; });
+    return shared / left.size;
+  }
+
+  function hallVerdictReplies() {
+    const messages = (activeHallData && activeHallData.messages) || [];
+    const replies = [];
+    messages.forEach((m, index) => {
+      if (!m || !m.content || m.role_key === "human") return;
+      const role = COUNCIL_ROLES[m.role_key] || null;
+      replies.push({
+        index,
+        author: m.author || "",
+        roleKey: m.role_key || "",
+        seat: role ? role.seat : 0,
+        label: role ? "Seat " + role.seat + " · " + role.label : (m.author || "A voice"),
+        model: m.model || "",
+        chars: String(m.content).length,
+        content: String(m.content),
+        demo: Boolean(m.usage && (m.usage.demo === true || m.usage.demo === "true")),
+      });
+    });
+    // A seat can answer more than once - the Arbiter is asked for its verdict after the round, and
+    // that reply is a message like any other. Without a position the table would draw two identical
+    // rows under one name and read as a duplication bug.
+    const counts = {};
+    replies.forEach(reply => {
+      const key = reply.roleKey || reply.author;
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    const seen = {};
+    replies.forEach(reply => {
+      const key = reply.roleKey || reply.author;
+      seen[key] = (seen[key] || 0) + 1;
+      reply.occurrence = seen[key];
+      reply.ofSeat = counts[key];
+      reply.display = reply.label + (reply.ofSeat > 1 ? " (reply " + reply.occurrence + ")" : "");
+    });
+    return replies;
+  }
+
+  // Greedy in transcript order: a reply joins the first group it is ≥ VERDICT_SAME contained in
+  // (either direction). Deterministic, and explainable to the reader - "the same words as Seat 3".
+  function hallVerdictGroups(replies) {
+    const groups = [];
+    replies.forEach(reply => {
+      const home = groups.find(group =>
+        hallVerdictContainedIn(reply.content, group.rep.content) >= VERDICT_SAME ||
+        hallVerdictContainedIn(group.rep.content, reply.content) >= VERDICT_SAME);
+      if (home) home.members.push(reply);
+      else groups.push({ rep: reply, members: [reply] });
+    });
+    return groups;
+  }
+
+  function hallVerdictDecision() {
+    const session = activeHallData || {};
+    if (!session.conclusion_text) return null;
+    const text = String(session.conclusion_text);
+    // The pin path stores the seat's own reply, so the reply it came from is the one whose author
+    // the server recorded *and* whose words it kept. Matching the author alone would claim a
+    // provenance for a conclusion that was edited after pinning; matching text alone would credit
+    // the first seat that happened to say the same thing (two seats on one model do exactly that).
+    const replies = hallVerdictReplies();
+    const author = session.conclusion_author || "";
+    const from = replies.filter(reply => reply.author === author && reply.content.trim() === text.trim()).pop() || null;
+    return {
+      text,
+      author: session.conclusion_author || "",
+      at: Number(session.conclusion_at || 0),
+      closed: session.status === "closed",
+      from,
+    };
+  }
+
+  function hallVerdictSummary() {
+    const replies = hallVerdictReplies();
+    const decision = hallVerdictDecision();
+    const groups = hallVerdictGroups(replies);
+    const rows = replies.map(reply => {
+      if (decision) {
+        if (decision.from && decision.from.index === reply.index) {
+          return { reply, share: 1, against: "", reading: "decision", text: "is the decision" };
+        }
+        const share = hallVerdictContainedIn(reply.content, decision.text);
+        const reading = share >= VERDICT_MOSTLY ? "mostly" : share >= VERDICT_PARTLY ? "partly" : "dissent";
+        const word = reading === "mostly" ? "mostly in the decision"
+          : reading === "partly" ? "partly in the decision" : "not in the decision";
+        return { reply, share, against: "the decision", reading, text: word };
+      }
+      let best = { share: 0, other: null };
+      replies.forEach(other => {
+        if (other.index === reply.index) return;
+        const share = Math.max(
+          hallVerdictContainedIn(reply.content, other.content),
+          hallVerdictContainedIn(other.content, reply.content));
+        if (share > best.share) best = { share, other };
+      });
+      if (!best.other) return { reply, share: 0, against: "", reading: "own", text: "its own words" };
+      const who = (best.other.seat ? "Seat " + best.other.seat : best.other.author)
+        + (best.other.ofSeat > 1 ? " (reply " + best.other.occurrence + ")" : "");
+      if (best.share >= VERDICT_SAME) return { reply, share: best.share, against: who, reading: "same", text: "the same words as " + who };
+      if (best.share >= VERDICT_PARTLY) return { reply, share: best.share, against: who, reading: "echo", text: "echoes " + who };
+      return { reply, share: best.share, against: who, reading: "own", text: "its own words" };
+    });
+    const dissent = rows.filter(row => row.reading === "dissent");
+    const repeated = groups.filter(group => group.members.length > 1);
+    const state = decision
+      ? (dissent.length ? "open" : "settled")
+      : (repeated.length ? "single" : "none");
+    return { session: activeHallData || {}, replies, decision, groups, rows, dissent, repeated, voices: groups.length, state };
+  }
+
+  function hallVerdictWhen(seconds) {
+    if (!seconds) return "";
+    try {
+      return new Date(seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    } catch (e) { return ""; }
+  }
+
+  function hallVerdictMarkdown() {
+    const v = hallVerdictSummary();
+    const lines = [];
+    lines.push("## Council verdict - " + (v.session.title || v.session.id || "session"));
+    lines.push("");
+    lines.push(v.replies.length + (v.replies.length === 1 ? " reply · " : " replies · ") + v.voices + (v.voices === 1 ? " voice" : " voices"));
+    if (v.decision) {
+      const from = v.decision.from ? "pinned from " + v.decision.from.display + "'s reply" : "pinned by " + (v.decision.author || "an unnamed author");
+      lines.push("Decision: " + from + (v.decision.at ? " at " + hallVerdictWhen(v.decision.at) : ""));
+    } else {
+      lines.push("Decision: none pinned");
+    }
+    lines.push("");
+    const decisionColumn = v.decision ? "Shared wording with the decision" : "Shared wording with another seat";
+    lines.push("| Seat | Model | Size | " + decisionColumn + " | Reading |");
+    lines.push("| --- | --- | --- | --- | --- |");
+    v.rows.forEach(row => {
+      const share = (row.reading === "decision" || row.reading === "own") ? "—" : Math.round(row.share * 100) + " %";
+      lines.push("| " + [row.reply.display, row.reply.model || "—", row.reply.chars + " ch" + (row.reply.demo ? " (demo text)" : ""), share, row.text].join(" | ") + " |");
+    });
+    lines.push("");
+    lines.push("Basis: shared wording is the fraction of a reply's 4-word sequences that also appear in the text it is compared with (single words for a reply shorter than four). It measures text, not intent.");
+    if (v.decision && v.dissent.length) {
+      lines.push("Dissent: " + v.dissent.length + " of " + v.replies.length + " replies are not carried into the decision and stay in the transcript as written.");
+    }
+    return lines.join("\n");
+  }
+
+  function copyHallVerdict(btn) {
+    const markdown = hallVerdictMarkdown();
+    const done = () => {
+      if (!btn) return;
+      const previous = btn.textContent;
+      btn.textContent = "Copied!";
+      setTimeout(() => { btn.textContent = previous; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(markdown).then(done, () => showToast("The clipboard refused; the verdict is on screen", "warn"));
+    } else {
+      showToast("This browser has no clipboard; the verdict is on screen", "warn");
+    }
+  }
+
+  function renderHallVerdict() {
+    const box = document.getElementById("hallVerdict");
+    if (!box) return;
+    const v = hallVerdictSummary();
+    if (!v.replies.length) {
+      box.hidden = true;
+      box.innerHTML = "";
+      return;
+    }
+    box.hidden = false;
+    box.dataset.state = v.state;
+    // The block is drawn again on every token of a live seat. One signature per session state
+    // keeps it from rewriting a table that has not changed - which is also what keeps the focus
+    // on its copy control while a round is streaming into the transcript above.
+    const signature = JSON.stringify([
+      v.state,
+      v.decision ? [v.decision.author, v.decision.at, v.decision.text.length] : null,
+      v.rows.map(row => [row.reply.display, row.reply.chars, row.reading, Math.round(row.share * 1000)]),
+    ]);
+    if (box.dataset.signature === signature) return;
+    box.dataset.signature = signature;
+
+    const voiceWord = v.voices === 1 ? "1 voice" : v.voices + " voices";
+    const replyWord = v.replies.length === 1 ? "1 reply" : v.replies.length + " replies";
+    let decisionLine;
+    if (v.decision) {
+      const from = v.decision.from
+        ? "pinned from " + escapeHtml(v.decision.from.display) + "'s reply, word for word"
+        : "pinned by " + escapeHtml(v.decision.author || "an unnamed author");
+      const when = hallVerdictWhen(v.decision.at);
+      decisionLine = "decision " + from + (when ? " at " + when : "");
+    } else {
+      decisionLine = "no decision pinned";
+    }
+    const provenance = v.decision
+      ? (v.decision.from
+        ? "The decision is one seat's reply as written; it is not a synthesis of the others."
+        : "The decision was written by " + escapeHtml(v.decision.author || "an unnamed author") + "; it is not one of the seat replies.")
+      : "conclusion_text is empty: nothing has been settled. Ask the Judge for its verdict, or close the session with a conclusion.";
+
+    const columnHead = v.decision ? "Shared wording with the decision" : "Shared wording with another seat";
+    const rows = v.rows.map(row => {
+      const share = (row.reading === "decision" || row.reading === "own") ? "—" : Math.round(row.share * 100) + " %";
+      const demo = row.reply.demo ? ' <span class="status" data-tone="warn" title="The server wrote this reply because the runtime was offline; it is not the named model\'s text.">demo text</span>' : "";
+      return "<tr><td>" + escapeHtml(row.reply.display) + "</td>"
+        + '<td class="mono">' + escapeHtml(row.reply.model || "—") + "</td>"
+        + '<td class="mono">' + row.reply.chars + " ch" + demo + "</td>"
+        + '<td class="mono">' + share + "</td>"
+        + '<td class="verdict-reading" data-reading="' + row.reading + '">' + escapeHtml(row.text) + "</td></tr>";
+    }).join("");
+
+    let dissentLine = "";
+    if (v.decision && v.dissent.length) {
+      const names = v.dissent.map(row => escapeHtml(row.reply.display) + " (" + Math.round(row.share * 100) + " %)").join(", ");
+      dissentLine = "<div class=\"verdict-basis\" style=\"color:var(--amber);\"><strong>Dissent:</strong> "
+        + v.dissent.length + " of " + v.replies.length + " replies are not carried into the decision - " + names
+        + ". Each stays in the transcript above, as written.</div>";
+    } else if (v.decision) {
+      dissentLine = "<div class=\"verdict-basis\" style=\"color:var(--emerald);\">Every reply's wording appears in the decision.</div>";
+    } else if (v.repeated.length) {
+      const groups = v.repeated.map(group => {
+        const parts = group.members.map(member => member.seat ? "Seat " + member.seat : member.author);
+        const names = parts.length > 2
+          ? parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1]
+          : parts.join(" and ");
+        const share = Math.round(hallVerdictContainedIn(group.members[group.members.length - 1].content, group.rep.content) * 100);
+        return escapeHtml(names) + " (" + share + " %)";
+      }).join("; ");
+      const lead = v.voices === 1
+        ? "One voice, not " + v.replies.length + ":"
+        : "Repeated wording:";
+      dissentLine = "<div class=\"verdict-basis\" style=\"color:var(--rose);\"><strong>" + lead + "</strong> "
+        + groups + " answered with the same words. A result that counted replies would call this consensus; it is the same answer, repeated.</div>";
+    }
+
+    box.innerHTML = '<div class="verdict-head"><strong>Verdict</strong>'
+      + "<span>" + replyWord + " · " + voiceWord + " · " + decisionLine + "</span>"
+      + '<button class="btn btn-xs" onclick="copyHallVerdict(this)" title="Copy the verdict as a markdown table">Copy verdict</button></div>'
+      + '<div class="verdict-provenance">' + provenance + "</div>"
+      + '<table class="verdict-table"><thead><tr><th scope="col">Seat</th><th scope="col">Model</th><th scope="col">Size</th><th scope="col">'
+      + columnHead + '</th><th scope="col">Reading</th></tr></thead><tbody>' + rows + "</tbody></table>"
+      + dissentLine
+      + '<div class="verdict-basis">Basis: shared wording is the fraction of a reply\'s 4-word sequences that also appear in the text it is compared with (single words for a reply shorter than four). It measures text, not intent - a seat can make the same point in its own words and read as "not in the decision", or repeat a phrase without agreeing. Replies are never merged here.</div>';
+  }
+
+  window.M5CouncilVerdict = {
+    shingles: hallVerdictShingles,
+    containedIn: hallVerdictContainedIn,
+    replies: hallVerdictReplies,
+    groups: hallVerdictGroups,
+    decision: hallVerdictDecision,
+    summary: hallVerdictSummary,
+    markdown: hallVerdictMarkdown,
+    render: renderHallVerdict,
+  };
+
   function renderActiveHall(liveCardHtml = "") {
     if (!activeHallData) return;
     const s = activeHallData;
@@ -4235,6 +4569,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       cBanner.style.display = "block";
       cBanner.innerHTML = `<div style="margin-bottom:5px;"><strong style="color:var(--text);">Pinned Council Conclusion (${escapeHtml(s.conclusion_author || '')})</strong></div>` + renderMarkdown(s.conclusion_text);
     } else cBanner.style.display = "none";
+
+    // P4-03: the verdict area is drawn from the same session payload, after the transcript it
+    // describes - so a reply and the decision's coverage of it are one screen.
+    renderHallVerdict();
   }
 
   async function postHumanHallMessage(autoConvene = true) {

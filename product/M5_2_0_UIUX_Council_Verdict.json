@@ -1,0 +1,190 @@
+{
+  "story": "UIUX-P4-03",
+  "title": "Council consensus, disagreement and results",
+  "generated_by": "scripts/uiux_council_verdict_inventory.py",
+  "surfaces": {
+    "transcript": "#hallStream",
+    "decision": "#hallConclusionBanner",
+    "verdict": "#hallVerdict"
+  },
+  "decision": {
+    "stored_in": [
+      "conclusion_author",
+      "conclusion_text",
+      "conclusion_at"
+    ],
+    "writers": [
+      "api_hall_summon (pin_as_conclusion)",
+      "api_hall_close"
+    ],
+    "is_a_seat_reply": true,
+    "matched_on": "the author the server recorded and the words it kept"
+  },
+  "measure": {
+    "name": "shared wording",
+    "algorithm": "containment of a reply's n-word sequences in the text it is compared with",
+    "n": 4,
+    "short_text": "single words for a reply shorter than four words",
+    "thresholds": {
+      "same": 0.85,
+      "mostly": 0.7,
+      "partly": 0.25
+    },
+    "claims": "text, not intent"
+  },
+  "readings": [
+    "is the decision",
+    "mostly in the decision",
+    "partly in the decision",
+    "not in the decision",
+    "the same words as",
+    "echoes",
+    "its own words"
+  ],
+  "columns": [
+    "Seat",
+    "Model",
+    "Size",
+    "Shared wording",
+    "Reading"
+  ],
+  "stream_events": [
+    "summon_start",
+    "token",
+    "summon_done",
+    "error"
+  ],
+  "captures": [
+    "council-verdict-unpinned.png",
+    "council-verdict-pinned.png",
+    "council-verdict-decision.png",
+    "council-verdict-narrow.png",
+    "council-verdict-light.png",
+    "council-verdict-offline.png"
+  ],
+  "checks": [
+    {
+      "check": "the session table records a conclusion with its author and the time it was pinned",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a pinned verdict is the seat's own reply, closed by the call that saves it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a human can close a session with a conclusion that is not any seat's reply",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the session payload carries the conclusion to the pane",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the hall stream still speaks the same four events",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the verdict area is a labelled region, hidden until there is a reply",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the verdict is drawn with the transcript it describes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the decision's provenance is a reply the server recorded, matched on author and words",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every other reply is measured against the decision, and the pinned seat is not",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the measure is containment of 4-word sequences, and the pane says so",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pane never calls shared wording agreement or consensus",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a session with nothing pinned says that nothing is settled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pane counts voices, not replies",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a seat that answered more than once is told apart",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "dissent is named, counted, and left where it is",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the block is not rewritten while nothing in it has moved",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Copy verdict writes the same table as markdown",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pinned conclusion banner still draws the pinned text",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every value the verdict draws is escaped",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pane calls no route for the verdict, and invents none",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the fixture answers each catalogue model with its own paragraph, and a stranger with a line",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk exercises every state this story adds",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the captures the doc lists exist and are the pane's own",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the ledger marks this story done with evidence",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "check_count": 24,
+  "findings": [],
+  "status": "clean"
+}
