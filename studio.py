@@ -4309,6 +4309,28 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .harness-advanced { flex: 1 1 100%; color: var(--text-dim); }
 .harness-advanced summary { cursor: pointer; width: fit-content; padding: 4px 0; font-weight: 600; }
 .harness-advanced-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding-top: 8px; }
+/* The collapsed group states its own contents, so a reader does not have to open it to
+   learn what it holds, or that it was changed. */
+.harness-advanced-summary { margin-left: 8px; font-weight: 400; font-size: 10.8px; color: var(--text-faint); }
+.harness-advanced-summary[data-changed="true"] { color: var(--amber); }
+/* The plan is the answer to "what will Run do?" printed before it is pressed. Every value
+   is read from the control the run payload reads, so it cannot describe a run this pane
+   would not start. */
+.harness-plan { flex: 1 1 100%; display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 12px; padding: 6px 9px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 7px; font-size: 11.2px; color: var(--text-dim); }
+.harness-plan-title { font-family: var(--mono); font-size: 9.9px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); }
+.harness-plan-body { display: flex; flex-wrap: wrap; gap: 2px 14px; min-width: 0; }
+.harness-plan-row { display: flex; align-items: baseline; gap: 5px; min-width: 0; max-width: 100%; }
+.harness-plan-key { font-family: var(--mono); font-size: 9.9px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); }
+.harness-plan-value { color: var(--text); overflow-wrap: anywhere; }
+.harness-plan-row[data-changed="true"] .harness-plan-value { color: var(--amber); }
+.harness-run-hint { flex: 1 1 180px; min-width: 0; font-size: 11.2px; color: var(--text-faint); }
+.harness-run-hint[data-reason="ready"] { color: var(--text-dim); }
+.harness-run-hint[data-reason="running"] { color: var(--text-dim); }
+.harness-run-hint[data-reason="no-task"] { color: var(--amber); }
+.harness-brief { flex: 1 1 100%; display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 7px; padding: 5px 9px; border: 1px solid var(--border); border-left: 3px solid var(--cyan); border-radius: 6px; background: var(--bg-card); font-size: 11.2px; color: var(--text-dim); }
+.harness-brief[hidden] { display: none; }
+.harness-brief[data-match="mismatch"] { border-left-color: var(--amber); }
+.harness-brief-tag { font-family: var(--mono); font-size: 9.9px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); }
 body[data-density="compact"] .harness-bar { padding-block: var(--strip-pad-y); gap: var(--space-1) var(--space-3); }
 body[data-density="compact"] .harness-advanced-fields { padding-top: var(--space-1); }
 .council-settings { padding: 8px 16px; background: var(--bg-elev); border-bottom: 1px solid var(--border); color: var(--text-dim); }
@@ -5317,15 +5339,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <!-- Harness Top Control Bar -->
           <div class="harness-bar">
             <div style="display:flex; flex-direction:column; min-width:170px; flex:1;">
-              <label class="field-lbl" style="margin-bottom:2px;">Lead Agent Model</label>
+              <label class="field-lbl" style="margin-bottom:2px;" for="harnessLeadModel">Lead Agent Model</label>
               <select id="harnessLeadModel" onchange="handleModelSelectChange(this, patchActiveHarnessSettings)"></select>
             </div>
             <div style="display:flex; flex-direction:column; min-width:155px; flex:1;">
-              <label class="field-lbl" style="margin-bottom:2px;">Sub-Agent Critic</label>
+              <label class="field-lbl" style="margin-bottom:2px;" for="harnessCriticModel">Sub-Agent Critic</label>
               <select id="harnessCriticModel" onchange="handleModelSelectChange(this, patchActiveHarnessSettings)"></select>
             </div>
             <div style="display:flex; flex-direction:column;">
-              <label class="field-lbl" style="margin-bottom:2px;">Execution Policy</label>
+              <label class="field-lbl" style="margin-bottom:2px;" for="harnessPolicy">Execution Policy</label>
               <select id="harnessPolicy" onchange="patchActiveHarnessSettings()">
                 <option value="standard">Standard (Ask before Bash)</option>
                 <option value="autonomous">Autonomous (Auto Build &amp; Test)</option>
@@ -5333,11 +5355,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
               </select>
             </div>
             <details class="harness-advanced" id="harnessAdvanced">
-              <summary>Advanced settings</summary>
+              <summary>Advanced settings<span id="harnessAdvancedSummary" class="harness-advanced-summary"></span></summary>
               <div class="harness-advanced-fields">
             <div style="display:flex; flex-direction:column;">
               <label class="field-lbl" style="margin-bottom:2px;" for="harnessEfficiencyMode">Discipline</label>
-              <select id="harnessEfficiencyMode" title="Ponytail v5 Senior Dev Ladder (-53% code, 98% test rate) + Caveman ASD-STE100 Concise Mode">
+              <select id="harnessEfficiencyMode" data-default="ponytail+concise" title="Ponytail v5 Senior Dev Ladder (-53% code, 98% test rate) + Caveman ASD-STE100 Concise Mode">
                 <option value="ponytail+concise" selected>Ponytail + Concise</option>
                 <option value="ponytail">Ponytail Senior</option>
                 <option value="concise">Concise (STE100)</option>
@@ -5346,7 +5368,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             </div>
             <div style="display:flex; flex-direction:column;">
               <label class="field-lbl" style="margin-bottom:2px;" for="harnessReasoning">Think</label>
-              <select id="harnessReasoning">
+              <select id="harnessReasoning" data-default="low">
                 <option value="off">Off (Fastest)</option>
                 <option value="low" selected>Low</option>
                 <option value="medium">Medium</option>
@@ -5354,8 +5376,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
               </select>
             </div>
             <div style="display:flex; flex-direction:column;">
-              <label class="field-lbl" style="margin-bottom:2px;">Max Steps</label>
-              <select id="harnessMaxSteps">
+              <label class="field-lbl" style="margin-bottom:2px;" for="harnessMaxSteps">Max Steps</label>
+              <select id="harnessMaxSteps" data-default="10">
                 <option value="6">6 steps</option>
                 <option value="10" selected>10 steps</option>
                 <option value="16">16 steps</option>
@@ -5390,8 +5412,16 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
           <!-- Multi-Turn Autonomous Task Composer (Unified Mode Dropdown + Primary Run Action) -->
           <div class="hall-composer">
-            <textarea id="harnessPromptInput" rows="2" style="flex:1; resize:none;" placeholder="Describe an engineering task, 3-Wave Spec, or full product build for your Project Directory..."></textarea>
-            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <div id="harnessIncomingBrief" class="harness-brief" data-match="unknown" role="status" aria-live="polite" hidden>
+              <span class="harness-brief-tag">From Chat</span>
+              <span id="harnessIncomingBriefText"></span>
+            </div>
+            <textarea id="harnessPromptInput" rows="2" style="flex:1; resize:none;" placeholder="Describe an engineering task, 3-Wave Spec, or full product build for your Project Directory..." aria-label="Your task for the Harness" aria-describedby="harnessRunHint"></textarea>
+            <div id="harnessRunPlan" class="harness-plan" role="group" aria-label="What Run will do">
+              <span class="harness-plan-title">Run will</span>
+              <span id="harnessRunPlanBody" class="harness-plan-body"></span>
+            </div>
+            <div class="harness-composer-row" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; flex:1 1 100%;">
               <select id="harnessWorkflowMode" aria-label="Harness workflow mode" style="height:38px; font-size:12.2px; padding:0 10px;" onchange="syncHarnessWorkflowModeUI()">
                 <option value="turn" selected>Autonomous Turn (Step Loop)</option>
                 <option value="gsd">Plan, Build, Verify (GSD 3-Wave)</option>
@@ -5399,6 +5429,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
                 <option value="sdlc_modal">Agile SDLC Board &amp; Backlog…</option>
               </select>
               <button id="harnessRunBtn" class="btn btn-primary" style="height:38px;" onclick="executeHarnessSelectedWorkflow()">Run</button>
+              <span id="harnessRunHint" class="harness-run-hint" data-reason="no-task" role="status" aria-live="polite"></span>
             </div>
           </div>
         </div>
@@ -7609,6 +7640,239 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     else if (v === "sdlc") openSdlcModal();
   }
 
+  // ================= UIUX-P3-01: WHAT RUN WILL DO, AND WHY IT CAN =================
+  // The bar above holds nine controls that decide a run, and none of them said what the
+  // run would do with them: that "plan" means read-only, that the critic is a sub-agent,
+  // that three more settings hid behind a collapsed group. So the composer prints the
+  // plan, read from the same controls the run payload reads, and Run's own state comes
+  // from one predicate - the way chatSendReason() drives Send.
+
+  // The three settings inside the collapsed group, and only those: the group's own
+  // summary states them, so the plan and the summary cannot disagree.
+  const HARNESS_ADVANCED_IDS = ["harnessEfficiencyMode", "harnessReasoning", "harnessMaxSteps"];
+  const HARNESS_PLAN_INPUT_IDS = [
+    "harnessWorkspaceInput",
+    "harnessUseWorktree",
+    "harnessPolicy",
+    "harnessLeadModel",
+    "harnessCriticModel",
+    "harnessWorkflowMode",
+    ...HARNESS_ADVANCED_IDS,
+  ];
+
+  function harnessSettingValue(id) {
+    const node = document.getElementById(id);
+    return node ? String(node.value || "").trim() : "";
+  }
+
+  function harnessSelectedText(id) {
+    const node = document.getElementById(id);
+    if (!node || !node.value) return "";
+    const option = node.options ? node.options[node.selectedIndex] : null;
+    return option ? String(option.textContent || "").trim() : node.value;
+  }
+
+  function harnessRunPlan() {
+    const dirNode = document.getElementById("harnessWorkspaceInput");
+    const dir = dirNode ? String(dirNode.value || "").trim() : "";
+    const worktree = document.getElementById("harnessUseWorktree");
+    const policy = harnessSettingValue("harnessPolicy");
+    const mode = harnessSettingValue("harnessWorkflowMode") || "turn";
+    const lead = harnessSettingValue("harnessLeadModel");
+    const critic = harnessSettingValue("harnessCriticModel");
+    const advanced = HARNESS_ADVANCED_IDS.map((id) => {
+      const node = document.getElementById(id);
+      const declared = node && node.dataset ? node.dataset.default : undefined;
+      return {
+        id,
+        value: harnessSelectedText(id) || "unset",
+        // "Changed" is measured against the value the control declares, not against a
+        // constant copied into this script, so the two cannot drift apart.
+        changed: Boolean(node) && declared !== undefined && node.value !== declared,
+      };
+    });
+    const changed = advanced.filter((item) => item.changed);
+    const rows = [
+      {
+        key: "directory",
+        changed: false,
+        value:
+          `${dir || "the server's default project directory"}` +
+          (worktree && worktree.checked ? " · isolated git worktree" : " · direct"),
+      },
+      {
+        // The option's own label is the whole sentence: the plan prints the policy the
+        // select shows rather than a second description of it that could drift.
+        key: "policy",
+        changed: false,
+        value: harnessSelectedText("harnessPolicy") || "no policy selected - the server decides what it may do",
+      },
+      {
+        key: "models",
+        changed: false,
+        // The ids are what the payload sends; the labels are what a reader recognises. The
+        // equality test is on the id, so "critic same" cannot be a label coincidence.
+        value: lead
+          ? `${harnessSelectedText("harnessLeadModel") || lead} · critic ${
+              critic ? (critic === lead ? "same" : harnessSelectedText("harnessCriticModel") || critic) : "none"
+            }`
+          : "no model selected - the server decides",
+      },
+      {
+        key: "workflow",
+        // Advanced settings belong to the same decision as the workflow, so they are part
+        // of its row: a reader never has to open a collapsed group to learn what will run.
+        changed: changed.length > 0,
+        value:
+          `${harnessSelectedText("harnessWorkflowMode") || "a workflow this pane cannot read"} · ` +
+          `${advanced.map((item) => item.value).join(" · ")}` +
+          (changed.length ? ` · ${changed.length} changed` : ""),
+      },
+    ];
+    return { rows, advanced, changed: changed.length, mode, lead, critic, dir, policy };
+  }
+
+  let harnessPlanSignature = "";
+
+  function renderHarnessRunPlan() {
+    const host = document.getElementById("harnessRunPlanBody");
+    if (!host) return null;
+    const plan = harnessRunPlan();
+    const signature = plan.rows
+      .map((row) => `${row.key}\u0000${row.value}\u0000${row.changed}`)
+      .join("\u0001");
+    if (signature !== harnessPlanSignature) {
+      harnessPlanSignature = signature;
+      host.innerHTML = plan.rows
+        .map(
+          (row) =>
+            `<span class="harness-plan-row" data-plan="${escapeHtml(row.key)}" data-changed="${
+              row.changed ? "true" : "false"
+            }"><span class="harness-plan-key">${escapeHtml(row.key)}</span><span class="harness-plan-value">${escapeHtml(
+              row.value,
+            )}</span></span>`,
+        )
+        .join("");
+    }
+    // The collapsed group says what it holds and whether it was changed, in words: a
+    // reader who never opens it is not missing a decision.
+    const summary = document.getElementById("harnessAdvancedSummary");
+    if (summary) {
+      const text = plan.advanced.map((item) => item.value).join(" · ") + (plan.changed ? " · changed" : "");
+      if (summary.textContent !== text) summary.textContent = text;
+      summary.dataset.changed = plan.changed ? "true" : "false";
+    }
+    return plan;
+  }
+
+  // One predicate for Run, like chatSendReason() for Send: the button's disabled state and
+  // the sentence beside it are the same answer, and the sentence is a polite live region.
+  function harnessRunState() {
+    const plan = harnessRunPlan();
+    const input = document.getElementById("harnessPromptInput");
+    const task = input ? String(input.value || "").trim() : "";
+    if (harnessRunActive) {
+      return {
+        reason: "running",
+        ready: false,
+        plan,
+        hint: "Running. Abort stops it and keeps what has already streamed; this run keeps the settings it started with.",
+      };
+    }
+    if (plan.mode === "sdlc_modal") {
+      return {
+        reason: "board",
+        ready: true,
+        plan,
+        hint: "Opens the Agile SDLC board. No task is needed here, and nothing runs until you start something in the board.",
+      };
+    }
+    if (!task) {
+      return {
+        reason: "no-task",
+        ready: false,
+        plan,
+        hint: "Describe the task in the box above, then Run. Nothing runs until there is one.",
+      };
+    }
+    return {
+      reason: "ready",
+      ready: true,
+      plan,
+      hint: "Run starts one task with the plan above and streams it into the trajectory.",
+    };
+  }
+
+  function updateHarnessRunControl() {
+    const plan = renderHarnessRunPlan();
+    const state = harnessRunState();
+    const button = document.getElementById("harnessRunBtn");
+    if (button) button.disabled = !state.ready;
+    const hint = document.getElementById("harnessRunHint");
+    if (hint) {
+      hint.dataset.reason = state.reason;
+      if (hint.textContent !== state.hint) hint.textContent = state.hint;
+    }
+    renderHarnessIncomingBrief(plan);
+    return state;
+  }
+
+  // What Chat carried, and where this run departs from it. The banner appears only when a
+  // brief arrived in this composer, and it compares live: change the model or the
+  // directory and the sentence changes with it.
+  let harnessIncomingBrief = null;
+
+  function renderHarnessIncomingBrief(plan) {
+    const host = document.getElementById("harnessIncomingBrief");
+    const text = document.getElementById("harnessIncomingBriefText");
+    if (!host || !text) return null;
+    if (!harnessIncomingBrief) {
+      host.hidden = true;
+      host.dataset.match = "unknown";
+      if (text.textContent) text.textContent = "";
+      return null;
+    }
+    const carried = harnessIncomingBrief;
+    const context = carried.context || null;
+    const runPlan = plan || harnessRunPlan();
+    const differences = [];
+    if (context && context.model && runPlan.lead && context.model !== runPlan.lead) {
+      differences.push(`the model (${context.model} -> ${runPlan.lead})`);
+    }
+    if (context && context.workspace_effective && runPlan.dir && context.workspace_effective !== runPlan.dir) {
+      differences.push(`the project directory (${context.workspace_effective} -> ${runPlan.dir})`);
+    }
+    const counts =
+      `${chatCount(carried.messages, "message")}, ${chatCount(carried.calls, "tool call")}` +
+      (carried.failed ? ` (${carried.failed} failed)` : "");
+    const change = differences.length
+      ? `This run changes ${differences.length === 1 ? "one setting" : `${differences.length} settings`}: ${differences.join("; ")}.`
+      : "This run uses the same model and project directory it was read with.";
+    const sentence = `Carried ${counts}. ${change} Nothing starts until you press Run.`;
+    host.dataset.match = differences.length ? "mismatch" : "match";
+    if (text.textContent !== sentence) text.textContent = sentence;
+    host.hidden = false;
+    return { differences };
+  }
+
+  // Two rows is the resting size. A carried brief or a long task grows the box up to a
+  // bound, because a task a reader cannot see is a task they cannot check before Run.
+  function fitHarnessComposer() {
+    const box = document.getElementById("harnessPromptInput");
+    if (!box) return 0;
+    box.style.height = "auto";
+    const lines = parseFloat(getComputedStyle(box).lineHeight) || 18;
+    const wanted = Math.min(Math.max(box.scrollHeight, lines * 2 + 12), lines * 10 + 12);
+    box.style.height = `${Math.round(wanted)}px`;
+    return Math.round(wanted);
+  }
+
+  function clearHarnessIncomingBrief() {
+    if (!harnessIncomingBrief) return;
+    harnessIncomingBrief = null;
+    renderHarnessIncomingBrief();
+  }
+
   function syncHarnessWorkflowModeUI() {
     const modeSel = document.getElementById("harnessWorkflowMode");
     const btn = document.getElementById("harnessRunBtn");
@@ -7618,15 +7882,27 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     else if (m === "gsd") { btn.textContent = "Run 3-Wave"; btn.className = "btn btn-amber"; }
     else if (m === "sdlc_full") { btn.textContent = "Run SDLC"; btn.className = "btn btn-emerald"; }
     else if (m === "sdlc_modal") { btn.textContent = "Open Board"; btn.className = "btn btn-cyan"; }
+    // The label changed because the decision changed: the plan and the hint move with it.
+    updateHarnessRunControl();
   }
 
   function executeHarnessSelectedWorkflow() {
-    const modeSel = document.getElementById("harnessWorkflowMode");
-    const mode = modeSel ? modeSel.value : "turn";
+    const state = harnessRunState();
+    if (!state.ready) {
+      // The hint beside Run already said this - no toast, and no silent nothing.
+      updateHarnessRunControl();
+      const input = document.getElementById("harnessPromptInput");
+      if (input) input.focus();
+      return null;
+    }
+    const mode = state.plan.mode;
+    // The task is being consumed, so the banner that describes it goes with it.
+    if (mode !== "sdlc_modal") clearHarnessIncomingBrief();
     if (mode === "gsd") runGsdWaveTurn();
     else if (mode === "sdlc_full") startSdlcRun("full");
     else if (mode === "sdlc_modal") openSdlcModal();
     else runHarnessTurn();
+    return mode;
   }
 
   function startSdlcSelectedMode() {
@@ -7713,6 +7989,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     // The set of models is part of the composer's answer: a pane that had "no model
     // selected" one poll ago may have one now, and vice versa.
     updateChatComposer();
+    updateHarnessRunControl();
 
     // Debate checkboxes include only Loaded Local M5 + Cloud/Combo Models
     const prevChecked = new Set([...document.querySelectorAll(".debate-m-chk:checked")].map(c => c.value));
@@ -8306,6 +8583,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     }
     switchTab("harness");
     composer.value = brief;
+    // The brief, remembered as what arrived: the Harness prints what it carried and where
+    // this run departs from it. A sentence that is only written once would be gone on the
+    // next settings change.
+    harnessIncomingBrief = {
+      messages: stats.messages,
+      calls: stats.calls,
+      failed: stats.failed,
+      context: stats.context,
+    };
     composer.dispatchEvent(new Event("input"));
     composer.focus();
     presentInto("chatState", {
@@ -8556,8 +8842,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     closeHarnessEventStream();
     document.getElementById("harnessActiveLabel").textContent = "New Harness Draft — choose workspace, worktree isolation, & policy, then run your task below.";
     setStatus("harnessActiveStatusBadge", "neutral", "NEW DRAFT");
+    clearHarnessIncomingBrief();
     renderHarnessStarter();
     renderHarnessSidebar();
+    updateHarnessRunControl();
   }
 
   function syncProjectDirInputs(val) {
@@ -8570,6 +8858,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       if (el && el.value !== clean) el.value = clean;
     }
     updateChatComposer();
+    updateHarnessRunControl();
   }
 
   function renderRecentDirsSelect(recentDirs, currentDir) {
@@ -8686,6 +8975,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (sess.policy) document.getElementById("harnessPolicy").value = sess.policy;
     if (sess.lead_model && unifiedCatalog.some(x => x.id === sess.lead_model)) document.getElementById("harnessLeadModel").value = sess.lead_model;
     if (sess.critic_model && unifiedCatalog.some(x => x.id === sess.critic_model)) document.getElementById("harnessCriticModel").value = sess.critic_model;
+    updateHarnessRunControl();
   }
 
   async function selectHarnessSession(id) {
@@ -9016,6 +9306,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function setHarnessRunActive(active) {
     harnessRunActive = !!active;
+    // Run is off while a run is in flight, and its state after the run comes from the same
+    // predicate as before it: a finished run leaves an empty box, so Run says so.
+    updateHarnessRunControl();
     if (!harnessRunActive && activeHarnessId) {
       harnessResyncFromSnapshot("turn_end");
       openHarnessEventStream();
@@ -9209,8 +9502,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function runHarnessTurn() {
     const input = document.getElementById("harnessPromptInput");
     const prompt = input.value.trim();
-    if (!prompt) return;
+    if (!prompt) {
+      updateHarnessRunControl();
+      input.focus();
+      return;
+    }
     input.value = "";
+    fitHarnessComposer();
 
     const stream = document.getElementById("harnessStream");
     if (!activeHarnessId) stream.innerHTML = "";
@@ -9353,6 +9651,21 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   document.getElementById("harnessPromptInput").addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); executeHarnessSelectedWorkflow(); }
   });
+  // One listener per control the plan reads, so the plan cannot describe a control it is
+  // not watching.
+  for (const id of HARNESS_PLAN_INPUT_IDS) {
+    const node = document.getElementById(id);
+    if (node) node.addEventListener("change", () => updateHarnessRunControl());
+  }
+  document.getElementById("harnessPromptInput").addEventListener("input", () => {
+    // An emptied box is not the brief Chat carried any more, so the banner goes.
+    const box = document.getElementById("harnessPromptInput");
+    if (harnessIncomingBrief && box && !box.value.trim()) clearHarnessIncomingBrief();
+    fitHarnessComposer();
+    updateHarnessRunControl();
+  });
+  fitHarnessComposer();
+  updateHarnessRunControl();
   // Enter sends and Shift+Enter does not: the composer's placeholder says exactly this,
   // and it is the only keydown handler that sends.
   document.getElementById("chatInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } });
@@ -9698,6 +10011,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const prompt = input.value.trim();
     if (!prompt) { showToast("Describe the engineering goal first, then click GSD 3-Wave Spec!", "warn"); return; }
     input.value = "";
+    fitHarnessComposer();
 
     const stream = document.getElementById("harnessStream");
     if (!activeHarnessId) stream.innerHTML = "";

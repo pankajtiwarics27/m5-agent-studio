@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "7b99848ef5a6155c1cbb274910d95ef95684a775badaca2340a2ef5c695bcd00",
+  "frontend_sha256": "82a0f1ac3a2f723f587be8f93f2e715667673b5b37ea44692e9ce650232153e1",
   "panes": [
     {
       "dom_id": "start",
@@ -179,16 +179,25 @@
           "tag": "select",
           "id": "harnessEfficiencyMode",
           "title": "Ponytail v5 Senior Dev Ladder (-53% code, 98% test rate) + Caveman ASD-STE100 Concise Mode",
+          "data": {
+            "data-default": "ponytail+concise"
+          },
           "text": "Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose"
         },
         {
           "tag": "select",
           "id": "harnessReasoning",
+          "data": {
+            "data-default": "low"
+          },
           "text": "Off (Fastest) Low Medium xHigh"
         },
         {
           "tag": "select",
           "id": "harnessMaxSteps",
+          "data": {
+            "data-default": "10"
+          },
           "text": "6 steps 10 steps 16 steps 24 steps"
         },
         {
@@ -208,6 +217,8 @@
         {
           "tag": "textarea",
           "id": "harnessPromptInput",
+          "aria-label": "Your task for the Harness",
+          "aria-describedby": "harnessRunHint",
           "placeholder": "Describe an engineering task, 3-Wave Spec, or full product build for your Project Directory...",
           "rows": "2"
         },
