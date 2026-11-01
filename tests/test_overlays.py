@@ -22,9 +22,10 @@ inventory is source-level:
 * the drawer declares itself modal only while it covers the page.
 
 What these tests cannot do is press a key: that is `scripts/overlay_walk.mjs`, which
-opens every dialog with real key events and reported 80 passing, 2 blocked on the
-Harness-session prerequisite the app enforces (the diff dialog and P3-03's permissions
-surface, whose only control is a badge the pane hides with no session selected), 0 failing.
+opens every dialog with real key events and reported 81 passing, 3 blocked on the
+Harness-session prerequisite the app enforces (the diff dialog, P3-03's permissions surface,
+whose only control is a badge the pane hides with no session selected, and P3-04's verification
+record, which describes a session and refuses to open without one), 0 failing.
 """
 
 from __future__ import annotations
@@ -56,6 +57,7 @@ DIALOG_IDS = {
     "sdlcModal",
     "spawnModal",
     "harnessGrantsModal",
+    "harnessEvidenceModal",
 }
 
 
@@ -105,7 +107,7 @@ def test_every_dialog_is_named_labelled_and_wired() -> None:
     payload = _payload()
     ids = {dialog["id"] for dialog in payload["dialogs"]}
     assert ids == DIALOG_IDS
-    assert payload["totals"]["dialogs_via_controller"] == 10
+    assert payload["totals"]["dialogs_via_controller"] == 11
     for dialog in payload["dialogs"]:
         assert dialog["role"] == "dialog", dialog["id"]
         assert dialog["label"], dialog["id"]

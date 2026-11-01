@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "7a74804e8b2a3503c504358bf0d2a58e278cd12271fd61f2509b397bbc678e34",
+  "frontend_sha256": "46d37ca1e8b244dace04d6bcc48d8679c8fb15e670cd84e24dd50ba5bb36315a",
   "panes": [
     {
       "dom_id": "start",
@@ -205,7 +205,7 @@
           "id": "harnessSessionActionSelect",
           "aria-label": "Session actions",
           "onchange": "runHarnessSessionAction(this)",
-          "text": "Session Actions… Inspect Git Status & Diff Permissions & Revocations Compact Session Context (≤2 KB) Open Agile SDLC Product Board"
+          "text": "Session Actions… Inspect Git Status & Diff Permissions & Revocations Compact Session Context (≤2 KB) Open Agile SDLC Product Board Verification & Artifacts"
         },
         {
           "tag": "button",
@@ -646,9 +646,9 @@
     }
   ],
   "chrome": {
-    "control_count": 103,
+    "control_count": 106,
     "counts": {
-      "button": 56,
+      "button": 59,
       "input": 29,
       "select": 12,
       "summary": 1,
@@ -1041,7 +1041,26 @@
       {
         "tag": "button",
         "class": "btn btn-xs",
+        "title": "The contract, the observation and the artifacts this change belongs to",
+        "onclick": "openHarnessEvidenceModal()",
+        "text": "Verification & artifacts"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
         "onclick": "closeHarnessDiffModal()",
+        "text": "Close"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "refreshHarnessEvidence()",
+        "text": "Refresh"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "closeHarnessEvidenceModal()",
         "text": "Close"
       },
       {
@@ -1337,12 +1356,13 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 185,
+    "markup_controls": 188,
     "pane_controls": 82,
-    "chrome_controls": 103,
-    "script_rendered_controls": 29,
+    "chrome_controls": 106,
+    "script_rendered_controls": 32,
     "script_rendered_by_function": {
       "ensureStageCardMounted": 1,
+      "harnessEvidenceChangeHtml": 1,
       "openSpawnModal": 1,
       "refreshOnboarding": 1,
       "renderCommandPaletteList": 1,
@@ -1350,6 +1370,7 @@
       "renderHarnessGrants": 4,
       "renderHarnessSidebar": 1,
       "renderHarnessTimeline": 1,
+      "renderHarnessVerdictCardHtml": 2,
       "renderMarkdown": 1,
       "renderMcpUI": 7,
       "renderOpenContextDocs": 3,

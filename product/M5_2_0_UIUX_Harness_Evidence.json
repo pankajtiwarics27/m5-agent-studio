@@ -1,0 +1,217 @@
+{
+  "schema_version": "1.0.0",
+  "story": "UIUX-P3-04",
+  "statement": "A completion claim in the Harness is a claim about evidence, and the pane now draws it as one: a verdict card that states the contract's digest, the command and its exit code, the revision the result is tied to, the files and the patch - and opens the record behind it, which holds the contract the session set, the observation the runtime wrote (including which declarations an observed test actually covered), the change the claim is attached to, counted per file from the same diff the diff dialog draws, and the checkpoints and revision a re-run would be tied to - while a session with no verdict, no contract or no readable diff says exactly that instead of implying a pass.",
+  "source": {
+    "frontend": "static/index.html",
+    "server": "app.py"
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions/{session_id}/task",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions/{session_id}/diff",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/apply",
+      "mounted": true
+    }
+  ],
+  "frontend": {
+    "functions": {
+      "harnessVerdictTone": true,
+      "harnessEvidenceShort": true,
+      "harnessEvidenceTestEvidence": true,
+      "harnessEvidenceFacts": true,
+      "harnessEvidenceFailures": true,
+      "harnessEvidenceCoverage": true,
+      "harnessEvidenceStagnationLabel": true,
+      "harnessEvidenceDeclaredHtml": true,
+      "harnessEvidenceFactListHtml": true,
+      "harnessEvidenceCoverageHtml": true,
+      "harnessEvidenceFailuresHtml": true,
+      "harnessDiffFiles": true,
+      "renderHarnessVerdictCardHtml": true,
+      "harnessLatestVerdict": true,
+      "openHarnessEvidenceModal": true,
+      "closeHarnessEvidenceModal": true,
+      "refreshHarnessEvidence": true,
+      "harnessEvidenceMetaText": true,
+      "harnessEvidenceVerdictHtml": true,
+      "harnessEvidenceSpecHtml": true,
+      "harnessEvidenceObservedHtml": true,
+      "harnessEvidenceChangeHtml": true,
+      "harnessEvidenceArtifactsHtml": true,
+      "harnessEvidenceLimitsHtml": true,
+      "renderHarnessEvidence": true
+    },
+    "card": {
+      "one_builder": true,
+      "one_renderer_for_three_outcomes": true,
+      "the_one_line_label_is_gone": true,
+      "the_one_line_refusal_is_gone": true,
+      "three_tones": true,
+      "handles_the_pause_outcome": true,
+      "states_the_contract": true,
+      "states_the_command_and_exit": true,
+      "states_the_revision": true,
+      "states_the_files": true,
+      "states_the_patch": true,
+      "states_the_environment": true,
+      "will_not_invent_a_command": true,
+      "will_not_invent_a_revision": true,
+      "names_the_claim": true,
+      "names_the_failure_code": true,
+      "draws_the_failures": true,
+      "draws_the_coverage": true,
+      "keeps_the_output_behind_a_disclosure": true,
+      "opens_the_record": true,
+      "opens_the_diff": true,
+      "says_it_reruns_nothing": true,
+      "tone_is_a_data_attribute": true
+    },
+    "coverage": {
+      "a_declared_criterion_is_not_a_pass": true,
+      "a_missing_test_is_drawn": true,
+      "coverage_is_read_from_the_report": true,
+      "the_declared_list_says_declared": true,
+      "covered_is_stated": true,
+      "an_uncovered_criterion_is_counted": true,
+      "a_failure_names_its_kind": true,
+      "the_contract_does_not_judge": true
+    },
+    "record": {
+      "dialog_exists": true,
+      "is_a_dialog": true,
+      "is_named": true,
+      "closes_on_the_backdrop": true,
+      "opens_through_the_controller": true,
+      "closes_through_the_controller": true,
+      "refuses_without_a_session": true,
+      "lists": {
+        "harnessEvidenceVerdict": true,
+        "harnessEvidenceSpec": true,
+        "harnessEvidenceObserved": true,
+        "harnessEvidenceChange": true,
+        "harnessEvidenceArtifacts": true,
+        "harnessEvidenceLimits": true
+      },
+      "reads_the_contract_route": true,
+      "reads_the_diff_route": true,
+      "keeps_the_session_it_asked_about": true,
+      "will_not_race_itself": true,
+      "says_what_failed_to_read": true,
+      "draws_a_missing_verdict_as_missing": true,
+      "draws_a_missing_contract_as_missing": true,
+      "draws_a_missing_diff_as_missing": true,
+      "the_verdict_names_the_refs": true,
+      "the_verdict_names_the_transcript": true,
+      "the_contract_states_the_rules": true,
+      "the_contract_states_the_command": true,
+      "the_contract_states_required_files": true,
+      "the_contract_states_known_failures": true,
+      "the_contract_says_it_is_not_a_result": true,
+      "the_observation_states_the_exit": true,
+      "the_observation_states_the_classification": true,
+      "the_observation_says_pre_existing_is_not_introduced": true,
+      "the_change_counts_per_file": true,
+      "the_change_states_totals": true,
+      "the_change_says_what_it_is_not": true,
+      "the_artifacts_list_checkpoints": true,
+      "the_artifacts_list_the_latest": true,
+      "the_artifacts_list_the_lineage": true,
+      "the_artifacts_state_the_next_run_target": true,
+      "the_artifacts_say_a_checkpoint_is_not_a_copy": true,
+      "the_limits_are_drawn": true,
+      "the_limits_are_declared": true
+    },
+    "change": {
+      "the_diff_is_parsed_once": true,
+      "hunk_headers_are_skipped": true,
+      "markers_are_skipped": true,
+      "the_dialog_reuses_it": true,
+      "the_dialog_counts_the_change": true,
+      "the_dialog_says_what_it_is": true,
+      "the_dialog_offers_the_record": true,
+      "the_dialog_summary_has_a_home": true
+    },
+    "reachability": {
+      "from_the_session_actions": true,
+      "from_the_palette": true,
+      "from_every_verdict_card": true,
+      "from_the_diff_dialog": true,
+      "the_timeline_summary_says_it": true,
+      "the_surface_is_read_only": true,
+      "alters_nothing_but_itself": true
+    }
+  },
+  "server": {
+    "diff_contract": {
+      "still_mounted": true,
+      "still_returns_the_git_diff": true,
+      "still_reports_a_branch": true,
+      "still_reports_a_status": true,
+      "still_redacts": true,
+      "still_previews_untracked": true,
+      "still_says_when_it_is_not_a_repo": true,
+      "still_bounds_the_payload": true
+    },
+    "apply_contract": {
+      "still_mounted": true,
+      "still_refuses_a_plan_policy": true,
+      "still_handles_a_quarantined_workspace": true,
+      "still_emits_the_event": true,
+      "the_story_did_not_touch_it": true
+    },
+    "task_contract": {
+      "still_mounted": true,
+      "still_returns_the_spec": true,
+      "still_returns_the_evidence_preview": true,
+      "still_returns_the_checkpoints": true,
+      "still_returns_the_lineage": true,
+      "a_failed_capture_is_empty_not_fatal": true
+    }
+  },
+  "styles": {
+    "verdict": true,
+    "verdict_rejected": true,
+    "verdict_paused": true,
+    "verdict_facts": true,
+    "coverage": true,
+    "coverage_uncovered": true,
+    "coverage_declared": true,
+    "failure": true,
+    "output": true,
+    "record_block": true,
+    "record_verdict": true,
+    "record_facts": true,
+    "record_files": true,
+    "record_limits": true,
+    "wraps_long_paths": true
+  },
+  "totals": {
+    "checks": 116,
+    "functions": 25,
+    "record_sections": 6,
+    "routes": 3,
+    "routes_called": 51,
+    "routes_unmounted": 0,
+    "styles": 15,
+    "findings": 0
+  },
+  "findings": [],
+  "limits": [
+    "the verdict is drawn from the record the runtime wrote (`TaskVerificationReport.to_dict()` inside `turn/verified` / `turn/verification_failed` / `turn/stagnation_paused`); the surface does not re-run the command, and the card says so rather than implying a fresh result",
+    "the diff is read live from the worktree, so a change made after the turn appears in it; the record says that instead of presenting the diff as a copy frozen at the verdict",
+    "the contract is read from `GET …/task`, which also computes a read-only evidence preview (the workspace revision and the environment a next command would run in). When that capture fails the server returns null and the surface states that it is missing rather than guessing",
+    "acceptance coverage is what the transcript printed: a test id counts only when it appears in the output and is not among the classified failures, so an uncovered criterion is drawn as uncovered and fails closed",
+    "both fixtures are the product's own records: `scripts/harness_evidence_seed.py` builds two git workspaces and lets `TaskStateMachine.verify_task_completion()` decide - one passes, one fails - then appends the reports with `_append_harness_event()`. What is staged is the turn bookends, because the demo has no model runtime to run one",
+    "the surface lists the session's own checkpoints and the store-wide lineage summary; it is not a global audit view and does not read another session's records"
+  ]
+}

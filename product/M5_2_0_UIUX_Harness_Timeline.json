@@ -80,9 +80,9 @@
       "summary_reads_the_event": true,
       "no_dead_branches": true,
       "types_emitted": 43,
-      "types_with_a_card": 18,
-      "types_described_by_name": 25,
-      "types_with_only_the_generic_preview": 18
+      "types_with_a_card": 16,
+      "types_described_by_name": 23,
+      "types_with_only_the_generic_preview": 20
     },
     "trajectory": {
       "every_card_carries_its_seq": true,
@@ -217,8 +217,6 @@
         "approval/request",
         "approval/decision",
         "turn/end",
-        "turn/verified",
-        "turn/verification_failed",
         "turn/paused",
         "turn/cancelled",
         "turn/budget_exceeded",
@@ -237,8 +235,6 @@
         "approval/request",
         "approval/decision",
         "turn/end",
-        "turn/verified",
-        "turn/verification_failed",
         "turn/paused",
         "turn/cancelled",
         "turn/budget_exceeded",
@@ -271,6 +267,8 @@
         "turn/lessons_retrieved",
         "turn/lessons_invalidated",
         "turn/stagnation_paused",
+        "turn/verification_failed",
+        "turn/verified",
         "turn/lesson_promotion_rejected",
         "turn/lesson_promoted"
       ],
@@ -283,9 +281,9 @@
     "strip_controls": 8,
     "functions": 10,
     "event_types_emitted": 43,
-    "event_types_with_a_card": 18,
-    "event_types_described_by_name": 25,
-    "event_types_with_only_the_generic_preview": 18,
+    "event_types_with_a_card": 16,
+    "event_types_described_by_name": 23,
+    "event_types_with_only_the_generic_preview": 20,
     "checks": 81,
     "findings": 0
   },

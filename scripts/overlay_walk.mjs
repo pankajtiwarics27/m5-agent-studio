@@ -52,6 +52,9 @@ const PALETTE_QUERIES = {
   // The diff dialog's only markup control is a Refresh button *inside* it, so its
   // keyboard path is the palette row that names it.
   harnessDiffModal: "Inspect Harness Git",
+  // P3-04: the record behind a verdict has four entry points, and the palette is the
+  // one that works with no session selected (the card and the dialog need one).
+  harnessEvidenceModal: "what a completion claim rests on",
   providersModal: "Configure model providers",
   sdlcModal: "Plan and deliver a product",
 };
@@ -237,7 +240,7 @@ async function run(args) {
     record("the controller is exported for the walk", initial.hook === true, "window.M5Overlays");
 
     const dialogs = inventory.dialogs || [];
-    record("the inventory lists every dialog", dialogs.length === 10, `${dialogs.length} dialogs`);
+    record("the inventory lists every dialog", dialogs.length === 11, `${dialogs.length} dialogs`);
 
     for (const dialog of dialogs) {
       const id = dialog.id;
