@@ -2949,7 +2949,7 @@
         "progress_percent": 95,
         "attempts": 1,
         "started_at": "2026-11-01T02:09:19Z",
-        "updated_at": "2026-11-01T03:07:49Z",
+        "updated_at": "2026-11-01T03:13:34Z",
         "completed_at": null,
         "owner_session": "arena/de531f8c-m5-agent-studio",
         "commit_sha": null,
@@ -3049,6 +3049,11 @@
             "command": "GitHub Actions CI run 41267654582 for draft PR #141",
             "exit_code": 0,
             "result": "All four jobs passed: Python 3.11, 3.12, 3.13 and Browser safety regressions. Browser suite completed in 1m51s; all CI validations, tests and generated-artifact checks passed."
+          },
+          {
+            "command": "GitHub Actions CI run 41267997132 for draft PR #141",
+            "exit_code": 1,
+            "result": "Python 3.11/3.12/3.13 jobs passed; Browser safety regressions failed at the browser-backed step. Hosted logs again returned EOF. A prior run (41267654582) passed all jobs; local mandatory browser suite passes 30 tests. The current hosted failure is unresolved and blocks merge."
           }
         ],
         "visual_evidence": [
@@ -3065,9 +3070,11 @@
           "Represent cancellation as a visible stopped transcript state, stream/network failures as failed plus the existing retry/dismiss presentation, and an unexpected clean close as an error; retain partial output where present.",
           "Make retry reuse the existing user turn rather than duplicating it; preserve the user's selected model/persona/reasoning and existing tools/unload controls."
         ],
-        "blockers": [],
-        "handoff_note": "Implementation and measured evidence are in draft PR #141. The latest GitHub Actions run (41267654582) passed all jobs, including Browser safety. P2-04 deliberately remains in_progress at 95% pending owner/reviewer acceptance; no approval or completion is claimed.",
-        "next_action": "Await owner/reviewer feedback on draft PR #141 and address requested changes. Keep the story in_progress until acceptance is recorded; do not imply owner approval.",
+        "blockers": [
+          "Latest GitHub Actions run 41267997132 failed Browser safety regressions; the hosted log endpoint returned EOF. A prior run passed and the exact browser suite passes locally, but the current hosted failure must be resolved or followed by a clean required check before merge."
+        ],
+        "handoff_note": "Implementation and measured evidence are in draft PR #141. The latest hosted run (41267997132) failed Browser safety while the Python matrix passed; hosted logs were unavailable (EOF). A prior run passed, but this latest failure remains unresolved. P2-04 remains in_progress at 95%; no owner approval or completion is claimed.",
+        "next_action": "Diagnose the failed hosted Browser safety check or obtain a clean required run for the current head. Keep PR #141 draft and do not merge or bypass checks; afterward await owner/reviewer acceptance.",
         "readme_updated": false
       },
       "required_evidence": [
