@@ -156,7 +156,7 @@ A council session: who was asked, what each participant said, in order.
 
 | Capability | Target | What must not change |
 |---|---|---|
-| Council Hall session spawning and chronicle browsing | Council primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
+| Council Hall session spawning and chronicle browsing | Council Hall retains chronicles and participants while showing four configured roles with model, locality and readiness before invocation; local-memory implications are explicit. | Existing /api/hall/* behavior, authorization, durable sessions, single-seat and full-round flows, conclusions and note-only posting; readiness uses existing catalog/telemetry, local not-ready seats cannot start, cloud/combo status is not a reachability guarantee. |
 
 **Controls — 17 in the markup:**
 
@@ -355,7 +355,7 @@ provenance; a matching snapshot cannot clear separate review holds.
 
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
-| `ledger_content_sha256` | `868c3d647502b8c9158b1d378cac5c0f126ab1d4a3910d4cd42f65ae5e8cb839` | `not recorded` |
+| `ledger_content_sha256` | `2e9e2da2f04b30e48323420021b9c907be56ed59365831c0b511c9c801460b1e` | `not recorded` |
 | `source_manifest_sha256` | `3424d28807f965e9241dcb9c19a9eb2bd8214562c9b8e7d03ce0141254da0b5b` | `not recorded` |
 | `control_inventory_sha256` | `886c5696d6470cf1d1964f9768528106dfabe1dc266645dd308f4f1e1bd4ff0a` | `not recorded` |
 | `route_map_sha256` | `a9655ae590394e5c454a27c7eeb59f46f75b975601529ad17d4ac90b5fd6c432` | `not recorded` |

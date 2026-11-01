@@ -100,16 +100,16 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": null,
+    "active_story": "UIUX-P4-01",
     "active_stories": [],
     "last_completed_story": "UIUX-P3-07",
     "next_recommended_story": "UIUX-P4-01",
-    "last_checkpoint": "2026-11-01T20:05:00Z",
-    "last_session_id": "arena/0431dbf8-m5-agent-studio",
+    "last_checkpoint": "2026-11-01T20:05:57Z",
+    "last_session_id": "arena/a8c52e51-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "f4fb612278b54eb5c685a28319491fc15fab8a8d",
-    "last_updated": "2026-11-01",
+    "last_verified_commit": "4f88fddf63f33cccd72e9c205dd13d91f1725738",
+    "last_updated": "2026-11-02",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
       "Tab labels in this ledger (Start, Harness, Council, Pipeline, Compare, Chat) are NOT the DOM ids in static/index.html (start, harness, hall, council, debate, chat): 'Council' is data-tab=hall and 'Pipeline' is data-tab=council, while data-tab=council is the Pipeline pane. tab_registry records the mapping and tests/test_uiux_roadmap.py fails if it drifts. A session that greps for a 'pipeline' tab will not find one.",
@@ -283,7 +283,7 @@
       "id": "P4",
       "name": "Council and Compare",
       "title": "Council and Compare",
-      "status": "not_started",
+      "status": "in_progress",
       "story_ids": [
         "UIUX-P4-01",
         "UIUX-P4-02",
@@ -294,9 +294,9 @@
       ],
       "total": 6,
       "done": 0,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 6,
+      "not_started": 5,
       "percent_complete": 0
     },
     {
@@ -341,9 +341,9 @@
   "overall_progress": {
     "total_stories": 40,
     "done": 24,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 16,
+    "not_started": 15,
     "percent_complete": 60
   },
   "stories": [
@@ -4939,7 +4939,7 @@
     {
       "id": "UIUX-P4-01",
       "title": "Council participant roles and resource readiness",
-      "description": "Incrementally implement council participant roles and resource readiness using current code as authoritative baseline.",
+      "description": "Make Council participant roles, selected models, locality and current resource readiness visible before a single-seat summon or four-seat round, while preserving Hall behavior and backend contracts.",
       "phase": "P4",
       "priority": "P2",
       "tab_or_component": "Council",
@@ -4951,17 +4951,19 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "Council participant roles and resource readiness with no loss of existing functionality.",
+      "current_behavior": "At baseline 4f88fddf63f33cccd72e9c205dd13d91f1725738, Hall role selectors are populated by syncUnifiedSelectors() from the existing /api/telemetry catalog: loaded/loading local models, enabled cloud providers and configured fallback combos. The header #hallRoster only lists voices after they have spoken; it does not show the four configured assignments or their locality/readiness. runHallFullRound() and summonSingleAgent() do not preflight empty, stale, loading or unavailable selections; the Hall summon endpoint can fall back to its default model when a model is omitted and reports runtime failures only through SSE. Telemetry already exposes local loaded/is_loading state, while the global residency panel shows memory usage; the role settings do not explain per-seat resource implications. No new route is needed.",
+      "target_behavior": "Before any invocation, the Hall shows all four configured roles with the exact selected model ID, locality/source and a readiness state grounded in the existing catalog and telemetry. Local seats are marked ready only when loaded, and loading/unavailable/empty roles cannot start a full round. Single-seat summon is gated by its selected role/model readiness too. The UI explains that local models use shared machine memory and are unloaded after their Hall turn; cloud/combo status means configured, not guaranteed reachable. Existing open-room, chronicles, post-only messages, session persistence, summon/conclude flows and endpoints remain unchanged.",
       "implementation_steps": [
-        "Confirm HEAD, worktree and prerequisite evidence",
-        "Trace relevant DOM, JS handlers, API and backend state transitions",
-        "Capture before screenshot and regression fixtures",
-        "Make smallest compatible UI change",
-        "Exercise empty, loading, streaming, success, failure and recovery cases as applicable",
-        "Capture after screenshot and update preservation matrix",
-        "Run relevant tests and record exact command/result",
-        "Commit only verified changes and update tracking"
+        "Confirm HEAD, clean worktree, merged UIUX-P3-07 prerequisite, source pin and no competing claim",
+        "Trace #pane-hall, #hallRoster, four seat selectors, single-seat selector, catalog/telemetry refresh and Hall summon request path",
+        "Use the current validated hall screenshot as before evidence and add regressions for empty, loaded, loading, missing and configured remote selections",
+        "Render an accessible four-seat roster with role, exact model, locality and catalog/telemetry readiness; keep actual session participants visible",
+        "Add concise shared-memory/per-turn unload disclosure without suggesting a provider health check or changing backend state",
+        "Gate full-round, spawn-and-convene, and single-seat actions when their selected assignments are not ready; preserve empty-room and post-only paths",
+        "Exercise model-catalog refresh, changed selections, narrow viewport, keyboard operation and failure states in an isolated demo",
+        "Capture after evidence and update the Council preservation matrix and generated inventories",
+        "Run targeted and baseline tests; verify existing endpoints, authorization and persisted chronicles are unchanged",
+        "Regenerate studio.py if static/index.html changes; commit verified changes and update tracking"
       ],
       "non_regression": [
         "Keep existing endpoints and authorization contracts",
@@ -4970,47 +4972,70 @@
         "Preserve user workspace edits and session recovery"
       ],
       "acceptance_criteria": [
-        "All mapped existing controls remain reachable and functionally equivalent",
-        "No console errors on tested journeys",
-        "Keyboard operation and focus states work",
-        "Failure and recovery states are actionable and honest",
-        "Target UI behavior is demonstrable by screenshot or test"
+        "Before a round, all four configured Council roles are visible with the exact selected model ID, locality/source and readiness state; actual session participant names remain visible after messages arrive",
+        "Readiness reflects the existing catalog and telemetry: a missing, stale, empty, loading or unloaded local assignment cannot start; enabled cloud/fallback entries are labeled as configured rather than live-verified",
+        "Full-round, spawn-and-convene and single-seat invocation controls are keyboard-operable and guarded by the relevant assignment readiness; Open Empty Room and Post note only continue to work",
+        "The Hall states that local seats consume shared machine memory while loaded and are unloaded after their turn; it does not imply that a cloud provider is reachable just because it is configured",
+        "Existing chronicles, roles, model choices, conclusions, permission semantics, durable session state and /api/hall/* contracts are preserved; no backend endpoint or persistence change is introduced",
+        "No console errors; keyboard focus and narrow viewport behavior work; empty, loading, ready and unavailable states are demonstrated by tests or validated screenshots"
       ],
       "tests": {
         "unit": [
-          "handler and rendering state tests"
+          "readiness classification for empty, catalog-missing, local-loaded, local-loading, local-unloaded, cloud and combo choices",
+          "button gating and state update when catalog or seat selection changes"
         ],
         "integration": [
-          "API contract and error-path tests"
+          "existing /api/telemetry model status and /api/hall/* payload/error contracts remain unchanged",
+          "no summon request is issued when a required seat is not ready"
         ],
         "e2e": [
-          "existing flow preservation and new journey smoke test"
+          "Council empty room, pre-round roster, four-seat ready round, unavailable seat blocked, single-seat ready/unready, and note-only preservation"
         ],
         "visual": [
-          "desktop and narrow viewport before/after screenshots",
-          "dark and light theme where implemented"
+          "before/after Council Hall roster at desktop and narrow viewport",
+          "dark and light themes where the current screenshots support both"
         ]
       },
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P4-01 (Council participant roles and resource readiness). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 5,
+        "attempts": 1,
+        "started_at": "2026-11-01T20:03:52Z",
+        "updated_at": "2026-11-01T20:05:57Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/a8c52e51-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "evidence": [
+          "Preflight at HEAD 4f88fddf63f33cccd72e9c205dd13d91f1725738: worktree clean, current main, the ledger source pin 73bc5e417c1508b41127f3d7162c4afdcbcdbfc4 is an ancestor, and UIUX-P3-07 is done.",
+          "scripts/uiux_coordination.py --github --json: UIUX-P4-01 locally eligible; no active ledger claims, open PRs or blocking issues; no holds after fetching full history.",
+          "Baseline evidence already validated: docs/media/screenshots/hall.png shows the existing Council Hall, four role-model selectors, global Local oMLX Residency panel, and speaker-only #hallRoster.",
+          "Source trace: static/index.html syncUnifiedSelectors() consumes /api/telemetry catalog; loaded local models, enabled cloud providers and fallback combos are grouped, but assignment readiness is not surfaced per role.",
+          "Source trace: runHallFullRound() and summonSingleAgent() have no readiness preflight; app.py /api/hall/sessions/{session_id}/summon consumes model/role and surfaces failures as SSE. Existing routes are sufficient; no endpoint change is planned.",
+          "No implementation edits have been made yet; the exact acceptance criteria and evidence plan above are grounded in the existing P4-01 transformation-plan row."
+        ],
+        "test_results": [
+          "Coordination preflight: python3 scripts/uiux_coordination.py --github --json -> P4-01 eligible, 0 open PRs, 0 blockers, source pin ancestor after `git fetch --unshallow origin`.",
+          "Python 3.11.2, /tmp/uiux-p4-claim-venv: python -m pytest -q tests/test_uiux_roadmap.py -> 19 passed after claim and counter updates.",
+          "python3 scripts/uiux_source_manifest.py --check -> 48 files, 6 tabs, 115 routes; pin 73bc5e417c15 current.",
+          "python3 scripts/uiux_preservation_signoff.py --check -> 21 capabilities, 6 panes, 189 markup controls; historical approval remains unbound.",
+          "python3 scripts/validate_docs.py -> passed (5 required pages, 164 files scanned); python3 scripts/validate_screenshots.py -> 6/6.",
+          "git diff --check -> exit 0."
+        ],
+        "visual_evidence": [
+          "docs/media/screenshots/hall.png"
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "Use the detailed P4-01 Council row in docs/uiux-2-0-transformation-plan.md as the refined scope rather than replacing the progressed roadmap.",
+          "Readiness is a truthful UI preflight from the existing catalog/telemetry snapshot: local models must be loaded; enabled cloud and combo entries are only configured, not guaranteed reachable.",
+          "Keep model loading explicit via existing controls, disclose shared-memory/per-turn unload implications, and make no backend, route, authorization, persistence or model-admission contract change."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "Claimed on the active branch after clean coordination preflight. Keep the story in progress; do not mark done or imply owner approval until implementation evidence and independent review are complete.",
+        "next_action": "Commit and push the P4-01 claim, open a draft PR, recheck coordination, then implement the readiness roster and preflight guards.",
         "readme_updated": false
       },
       "required_evidence": [
@@ -7030,8 +7055,8 @@
     {
       "tab": "Council",
       "existing": "Council Hall session spawning and chronicle browsing",
-      "target": "Council primary view or progressive-disclosure inspector",
-      "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+      "target": "Council Hall retains chronicles and participants while showing four configured roles with model, locality and readiness before invocation; local-memory implications are explicit.",
+      "must_preserve": "Existing /api/hall/* behavior, authorization, durable sessions, single-seat and full-round flows, conclusions and note-only posting; readiness uses existing catalog/telemetry, local not-ready seats cannot start, cloud/combo status is not a reachability guarantee."
     },
     {
       "tab": "Pipeline",
