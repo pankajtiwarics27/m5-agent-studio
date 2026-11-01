@@ -4859,35 +4859,87 @@
       "agent_prompt": "Implement the owner-approved UIUX-P3-07 re-scope: honest Pipeline failure/stop states and an explicit full-run retry from Architect using the captured request. Do not add backend endpoints, checkpoint persistence, or stage resume. Verify dependencies and source pin, preserve existing controls and success behavior, test error/close/stop/replay paths, capture real screenshots where available, and mark done only with evidence.",
       "tracking": {
         "status": "in_progress",
-        "progress_percent": 1,
+        "progress_percent": 95,
         "attempts": 1,
         "started_at": "2026-11-01T19:01:39Z",
-        "updated_at": "2026-11-01T19:01:39Z",
+        "updated_at": "2026-11-01T19:36:10Z",
         "completed_at": null,
         "owner_session": "arena/7377a37a-m5-agent-studio",
-        "commit_sha": null,
-        "changed_files": [],
+        "commit_sha": "88dffb6685e570b688ce8e76a8d98f755fff19c2",
+        "changed_files": [
+          "docs/media/pipeline-artifacts/README.md",
+          "docs/media/pipeline-artifacts/pipeline-failed-run.png",
+          "docs/media/pipeline-artifacts/pipeline-replayed-run.png",
+          "docs/media/pipeline-artifacts/pipeline-stopped-run.png",
+          "docs/media/screenshots/index.json",
+          "docs/media/screenshots/manifest.json",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-pipeline-artifacts.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-tokens.md",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Pipeline_Artifacts.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "scripts/pipeline_artifacts_walk.mjs",
+          "scripts/uiux_pipeline_artifacts_inventory.py",
+          "static/index.html",
+          "studio.py",
+          "tests/test_pipeline_artifacts.py",
+          "tests/test_screenshot_capture_browser.py",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+        ],
         "evidence": [
           "Claim baseline: assigned branch was clean at origin/main HEAD f4fb612278b54eb5c685a28319491fc15fab8a8d; PR #152 (UIUX-P3-06) is merged at this commit.",
           "Coordination preflight: scripts/uiux_coordination.py --github reported UIUX-P3-07 as the next locally eligible story and inspected zero open PRs.",
           "Owner-approved scope change: full-run replay from Architect replaces checkpoint restore; no backend/runtime contract changes are permitted in this UI story.",
-          "Source trace: static/index.html runCouncil() posts to /api/council/stream; app.py api_council_stream runs four stages in order and calls save_run only after completion. No checkpoint or resume route exists."
+          "Source trace: static/index.html runCouncil() posts to /api/council/stream; app.py api_council_stream runs four stages in order and calls save_run only after completion. No checkpoint or resume route exists.",
+          "Implementation commit 88dffb6685e570b688ce8e76a8d98f755fff19c2 adds truthful Done/Failed/Stopped outcomes, retains partial stage output, and presents a keyboard-operable Retry from start action only after failure or stop.",
+          "Retry deep-copies and resubmits the exact last /api/council/stream payload (task, four model selections, unload setting, reasoning mode and selected skills); it clears/replaces partial output only when invoked and reruns all four stages from Architect. No server code, route, checkpoint or resume contract was changed.",
+          "Acceptance 1: inventory reports 190 markup controls across six panes; existing Pipeline controls remain present; browser regression walk passes all four-stage success and artifact checks.",
+          "Acceptance 2: browser walk covers server error, premature stream close, operator abort and successful completion; 31/31 checks pass, with Failed, Stopped and Done labels verified.",
+          "Acceptance 3: failure and stop screenshots show partial stage output retained before retry; retry is explicit and does not clear the attempt before activation.",
+          "Acceptance 4: browser walk verifies exact captured request replay, restart at Architect, full-stage rerun, output replacement, narrow viewport visibility and keyboard activation/focus.",
+          "Acceptance 5: retry copy explicitly says all four stages rerun from Architect and partial output is replaced; no checkpoint, stage-resume, persistence or backend guarantee is claimed.",
+          "Acceptance 6: browser walk reports zero page errors; keyboard and narrow viewport assertions pass. Screenshots are isolated demo evidence, documented in docs/media/pipeline-artifacts/README.md.",
+          "Docs/evidence updated: docs/uiux-2-0-pipeline-artifacts.md and generated source-dependent inventories, route map, control inventory, authorization trace, tokens, presentations, status components and preservation sign-off; root README/API docs were not changed because the backend contract is unchanged."
         ],
         "test_results": [
-          "Python 3.11.2, temporary /tmp/uiux-claim-venv: /tmp/uiux-claim-venv/bin/python -m pytest -q tests/test_uiux_roadmap.py -> 19 passed after the claim/scope metadata update.",
-          "Python 3.11.2: python3 scripts/validate_docs.py -> passed (5 required pages, 162 files scanned).",
-          "git diff --check -> exit 0 before the claim commit."
+          ".venv/bin/python -m pytest -q -> 2177 passed, 27 skipped, 1 Starlette/httpx deprecation warning.",
+          "M5_REQUIRE_BROWSER_TESTS=1 .venv/bin/python -m pytest -q tests/test_screenshot_capture_browser.py -> 31 passed in 102.41s.",
+          "STUDIO_SCREENSHOT_CHROME=/tmp/m5-browser/tmp/chromium STUDIO_PUPPETEER_CORE=$PWD/tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js STUDIO_SCREENSHOT_CHROME_ARGS=--disable-gpu LD_LIBRARY_PATH=/tmp/m5-browser/libs/lib TMPDIR=/tmp/m5-browser/tmp STUDIO_PYTHON=$PWD/.venv/bin/python node scripts/pipeline_artifacts_walk.mjs --screenshots /tmp/uiux-p3-07-walk --json -> 31/31 checks pass (final screenshot capture walk).",
+          ".venv/bin/python -m pytest -q tests/test_pipeline_artifacts.py -> 33 passed.",
+          ".venv/bin/python scripts/uiux_pipeline_artifacts_inventory.py --check -> 31 checks, 0 findings.",
+          ".venv/bin/python -m ruff check . -> passed; .venv/bin/python -m mypy -> passed (58 source files).",
+          ".venv/bin/python scripts/check_frontend_syntax.py -> passed; .venv/bin/python scripts/demo_tour.py --check -> passed.",
+          "Generated-artifact --check commands -> passed; .venv/bin/python scripts/validate_screenshots.py -> 6/6; .venv/bin/python scripts/validate_docs.py -> passed (5 required pages, 162 files scanned).",
+          "git diff --check -> passed before the implementation commit; git diff --cached --check -> passed before commit 88dffb6."
         ],
-        "visual_evidence": [],
+        "visual_evidence": [
+          "docs/media/pipeline-artifacts/pipeline-stopped-run.png",
+          "docs/media/pipeline-artifacts/pipeline-failed-run.png",
+          "docs/media/pipeline-artifacts/pipeline-replayed-run.png",
+          "docs/media/screenshots/pipeline.png"
+        ],
         "known_regressions": [],
         "decisions": [
           "Per owner direction, re-scope P3-07 to explicit full-run replay from the start. Retrying reuses the last captured task/settings and reruns all four stages; checkpoint restore and backend changes are out of scope.",
           "Partial stage output remains visible until an explicit retry; retry copy warns that the partial attempt will be replaced."
         ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Push this claim/scope metadata commit, open the UIUX-P3-07 draft PR, and recheck open PRs for a competing claim before writing implementation code.",
-        "readme_updated": false
+        "handoff_note": "Implementation is pushed/pending publication on draft PR #153. Keep the story in progress at 95% until independent review and owner disposition; do not self-certify approval or merge.",
+        "next_action": "Push implementation and final evidence/tracking commits to the existing branch, update draft PR #153 with scope and verification results, and await independent review.",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",
@@ -7006,8 +7058,8 @@
     {
       "tab": "Pipeline",
       "existing": "Four-stage orchestrator with architect/coder role selection",
-      "target": "Pipeline primary view or progressive-disclosure inspector",
-      "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
+      "target": "Pipeline primary view with distinct Failed, Stopped and Done states and an explicit full-run retry",
+      "must_preserve": "Existing route, model selection and successful four-stage flow; partial output stays visible until retry; retry reuses the captured request and restarts at Architect; no checkpoint or stage-resume guarantee"
     },
     {
       "tab": "Compare",
