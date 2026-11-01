@@ -3914,7 +3914,12 @@
           {
             "command": ".venv/bin/python -m pytest -q",
             "exit_code": 0,
-            "result": "2046 passed, 26 skipped in 165.44s on the feature commit c5b5219 (the three tests/test_uiux_preservation_signoff.py cases fail until that package is regenerated for this tree, which it is in the ledger commit)"
+            "result": "2049 passed, 26 skipped in 163.15s on the ledger tree; the same suite on the feature commit c5b5219 was 2046 passed with the three tests/test_uiux_preservation_signoff.py cases failing until that package was regenerated for this tree"
+          },
+          {
+            "command": "LD_LIBRARY_PATH=/tmp:/tmp/chromium-libs/lib STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=/home/user/m5-agent-studio/tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js STUDIO_SCREENSHOT_CHROME_ARGS=\"--disable-gpu\" M5_REQUIRE_BROWSER_TESTS=1 .venv/bin/python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py",
+            "exit_code": 0,
+            "result": "30 passed in 87.30s: the six-pane captures and the keyboard/accessibility walk still pass with the changed frontend, and the committed screenshots were not rewritten by the run"
           },
           {
             "command": ".venv/bin/python -m pytest -q tests/test_harness_timeline.py",
