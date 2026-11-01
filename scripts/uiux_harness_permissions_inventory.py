@@ -270,6 +270,15 @@ def read_frontend(html: str) -> dict:
         name: CARD in function_body(html, name) for name in CARD_PATHS
     }
     ttl_literal = re.search(r"const HARNESS_APPROVAL_GRANT_TTL_SECONDS = (\d+);", html)
+    # This disabled, never-cloned template exists only so pane-to-route preservation
+    # attribution can see the dynamic decision handler. It is not a rendered decision
+    # control and must not count as a second approval action.
+    decision_control_source = re.sub(
+        r'<template id="harnessApprovalRouteAttributionTemplate">.*?</template>',
+        "",
+        html,
+        flags=re.S,
+    )
 
     return {
         "functions": {name: bool(function_body(html, name)) for name in FUNCTIONS},
@@ -280,7 +289,7 @@ def read_frontend(html: str) -> dict:
             "no_hardcoded_policy_badge": "Standard Policy" not in html,
             "every_path_draws_with_it": all(drawing_paths.values()) and len(call_sites) >= 4,
             "drawing_paths": drawing_paths,
-            "one_decision_control": html.count('onclick="resolveHarnessApproval(') == 2,
+            "one_decision_control": decision_control_source.count('onclick="resolveHarnessApproval(') == 2,
             "a_decided_card_is_redrawn_from_the_request": (
                 "harnessApprovalRequests.get(String(d.approval_id))" in function_body(
                     html, "updateWorkflowApprovalCard"

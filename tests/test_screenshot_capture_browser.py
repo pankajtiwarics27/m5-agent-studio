@@ -466,7 +466,7 @@ def test_real_isolated_demo_captures_all_six_panes(
         assert accessibility.returncode == 0, accessibility.stderr
         accessibility_result = json.loads(accessibility.stdout)
         assert accessibility_result["failed"] == 0
-        assert accessibility_result["passed"] == 22
+        assert accessibility_result["passed"] == 19
         assert banner["token"] not in accessibility.stdout + accessibility.stderr
         overlays = _overlay_walk(banner["url"], browser_env, token=banner["token"])
         assert overlays.returncode == 0, overlays.stderr

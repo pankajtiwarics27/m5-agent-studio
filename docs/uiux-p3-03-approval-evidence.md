@@ -1,18 +1,15 @@
-# UIUX-P3-03 approval UX evidence
+# P3-03 supplemental evidence: re-confirm the pending approval
 
-The Harness approval card now makes the decision boundary visible before either action: who requested the call, the tool and argument preview, its session-bound one-use scope, request/grant expiry, the consequence of rejection, and the fact that policy, action-admission, and sandbox checks remain server-authoritative. Pending controls require a live, same-session approval in the latest server snapshot before the existing approval endpoint is called. A refused or unconfirmed request stays disabled until authoritative state is reloaded. The controls come from an inert, in-pane template so the preservation inventory and route attribution can map them: Harness `/state` verification and `/api/harness/approve` remain visible as the two sides of the approval journey.
+The main P3-03 implementation and its owner attribution are preserved from merged PR #149. Its approval-card and permissions evidence remains in [`uiux-2-0-harness-permissions.md`](uiux-2-0-harness-permissions.md) and [`media/harness-permissions/`](media/harness-permissions/). This branch adds one narrowly scoped client safeguard: immediately before the existing `POST /api/harness/approve`, the click handler fetches the existing session-state endpoint and confirms that the same session still reports this approval ID as pending. The approval API, server-side session scoping, durable task state, replay protection, action-admission rules, sandbox checks, and execution flow are unchanged.
 
-## Screenshots
+If the session changed, the state request fails, or the server no longer reports the pending slot, the client sends no decision and keeps the controls disabled. A successful authoritative reload is the only path that can render an action again. The server remains authoritative and re-checks the approval when the existing POST arrives; this preflight is not an authorization grant and cannot replace those checks.
 
-- [Before](media/uiux-p3-03/approval-before.png): original approval card, captured before implementation.
-- [After](media/uiux-p3-03/approval-after.png): updated disclosure and decision controls.
+## Adversarial browser evidence
 
-Both captures were made against a disposable `scripts/demo_tour.py --serve` instance. The approval request and `run_bash` arguments were synthetic display data (`echo synthetic preview`) injected only into the browser DOM; no approval endpoint was called, no tool was executed, no provider/model was contacted, and no real token or user workspace was used. These screenshots demonstrate presentation only; they are not authorization or execution evidence.
+`tests/browser/accessibility_walk.mjs` constructs a deliberately false client cache containing a fabricated pending approval ID. The stubbed server `/state` response reports no pending slot and lists the ID as expired. The test keyboard-activates the visible approve control and verifies that the browser requests fresh state but sends neither `POST /api/harness/approve` nor any execution request; after re-sync, the card has no decision controls. This exercises a hostile client-side state assertion without minting a server approval or running a tool.
 
-## Verification
+`tests/test_harness_approval_ui.py` additionally verifies that the current approval handler checks the session ID and matching live pending slot before reaching the single, unchanged approval POST, and that stale/failed paths do not re-enable cached controls. A disabled, never-cloned template anchor makes the dynamically rendered decision handler visible to the pane inventory; the regenerated preservation sign-off now attributes both `GET /api/harness/sessions/{session_id}/state` and `POST /api/harness/approve` to Harness.
 
-- `tests/test_harness_approval_ui.py` checks that the disclosure matches the server's current 600-second approval wait and grant TTL, and that the client verifies fresh server state before using the unchanged approval endpoint.
-- The browser accessibility walk checks the live-card copy and controls, no controls for expired or cross-session requests, a 420px layout, and an adversarial fabricated approval. In that adversarial case, the server snapshot reports no pending slot; the client sends neither `/api/harness/approve` nor an execution request and leaves the action disabled.
-- Existing server-side approval endpoint tests remain authoritative for session scoping, replay protection, authentication, unknown approvals, abort, and timeout. No backend authorization or approval semantics were changed.
+On the reconciled tree, the full suite passed **2,113 tests, 1 skipped** (live sandbox requires explicit opt-in), with one existing Starlette deprecation warning. Ruff, mypy, frontend syntax, browser-backed six-pane and accessibility walks, docs/screenshots validation, and all generated UI/UX inventory checks passed.
 
-This is implementation evidence for review, not owner sign-off. `UIUX-P3-03` remains in progress pending independent review and owner approval.
+This is supplemental implementation evidence for independent review. It does not alter the P3-03 status, owner session, or approval recorded on main, and it is not a substitute for owner review or sign-off.

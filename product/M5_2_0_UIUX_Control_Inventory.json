@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "7a74804e8b2a3503c504358bf0d2a58e278cd12271fd61f2509b397bbc678e34",
+  "frontend_sha256": "de1ad22ff72ff64e8e93711d17bf121dcf69753105e3a0460c8faeabb5fbad4c",
   "panes": [
     {
       "dom_id": "start",
@@ -112,17 +112,24 @@
     {
       "dom_id": "harness",
       "section_id": "pane-harness",
-      "control_count": 22,
+      "control_count": 23,
       "counts": {
-        "button": 9,
+        "button": 10,
         "input": 2,
         "select": 9,
         "summary": 1,
         "textarea": 1
       },
-      "controls_without_id": 3,
+      "controls_without_id": 4,
       "controls_without_label": 0,
       "controls": [
+        {
+          "tag": "button",
+          "type": "button",
+          "aria-label": "Inventory-only approval route anchor",
+          "onclick": "resolveHarnessApproval('__inventory_probe__','approve','__inventory_probe__')",
+          "text": "Approve"
+        },
         {
           "tag": "button",
           "class": "btn",
@@ -1337,8 +1344,8 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 185,
-    "pane_controls": 82,
+    "markup_controls": 186,
+    "pane_controls": 83,
     "chrome_controls": 103,
     "script_rendered_controls": 29,
     "script_rendered_by_function": {

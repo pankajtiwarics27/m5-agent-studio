@@ -26,11 +26,11 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "2f9b16ee8585144bcfd876915b397be90fbe83d9b2bd3b9e023f202f2b07cb21",
-      "source_manifest_sha256": "cee1d2b0330a8743c6ec800949e7c887c62fa534a8e0cef5835dae59fb60a138",
-      "control_inventory_sha256": "b537705d6744c3bc1fdb85ef0cf5f4be683154d90c64e16020b338feed5b5f31",
-      "route_map_sha256": "9060a7361f22df65cbce09f43deea2aebb91d961e9fd38ea4b8e9e42dafcfd1a",
-      "authorization_trace_sha256": "f266bc4d291effa157e2583742411ab0566befdb144d263d0c2f37ef025b5149",
-      "frontend_sha256": "7a74804e8b2a3503c504358bf0d2a58e278cd12271fd61f2509b397bbc678e34",
+      "source_manifest_sha256": "60d1a126735876fcde68994cef7aa26c5ca4b1c6cc09608fb708f111c2c6e203",
+      "control_inventory_sha256": "26baf40800b25c7dfc03019e7149051097f1bab21e6f7d8d035acb8f5269816b",
+      "route_map_sha256": "7782a338455d92ff9f4b80bc495258e550e283e16c9f5a51e94e26205a69ad6c",
+      "authorization_trace_sha256": "670d1adaa36c3fce7df845b4dffac2b061118f5bd7efbb19f37cd90ffe41304f",
+      "frontend_sha256": "de1ad22ff72ff64e8e93711d17bf121dcf69753105e3a0460c8faeabb5fbad4c",
       "screenshot_manifest_sha256": "cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57",
       "screenshot_index_sha256": "82ecdeb4870961951b1b8946a657438d2a3893f443e5fe182f3372ed41784f07",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -40,11 +40,11 @@
   },
   "inputs": {
     "ledger_sha256": "807048a5921a86246b83c25d9aeed76cd7ee66fe63a83331d91dff7bf3bdd83c",
-    "source_manifest_sha256": "cee1d2b0330a8743c6ec800949e7c887c62fa534a8e0cef5835dae59fb60a138",
-    "control_inventory_sha256": "b537705d6744c3bc1fdb85ef0cf5f4be683154d90c64e16020b338feed5b5f31",
-    "route_map_sha256": "9060a7361f22df65cbce09f43deea2aebb91d961e9fd38ea4b8e9e42dafcfd1a",
-    "authorization_trace_sha256": "f266bc4d291effa157e2583742411ab0566befdb144d263d0c2f37ef025b5149",
-    "frontend_sha256": "7a74804e8b2a3503c504358bf0d2a58e278cd12271fd61f2509b397bbc678e34"
+    "source_manifest_sha256": "60d1a126735876fcde68994cef7aa26c5ca4b1c6cc09608fb708f111c2c6e203",
+    "control_inventory_sha256": "26baf40800b25c7dfc03019e7149051097f1bab21e6f7d8d035acb8f5269816b",
+    "route_map_sha256": "7782a338455d92ff9f4b80bc495258e550e283e16c9f5a51e94e26205a69ad6c",
+    "authorization_trace_sha256": "670d1adaa36c3fce7df845b4dffac2b061118f5bd7efbb19f37cd90ffe41304f",
+    "frontend_sha256": "de1ad22ff72ff64e8e93711d17bf121dcf69753105e3a0460c8faeabb5fbad4c"
   },
   "approval_request": [
     {
@@ -55,7 +55,7 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "185 markup controls (103 chrome, 82 panes) plus 29 rendered by script"
+      "evidence": "186 markup controls (103 chrome, 83 panes) plus 29 rendered by script"
     },
     {
       "id": 3,
@@ -76,9 +76,9 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 185,
+    "markup_controls": 186,
     "chrome_controls": 103,
-    "pane_controls": 82,
+    "pane_controls": 83,
     "script_rendered_controls": 29,
     "routes": 115,
     "routes_with_resolved_or_possible_caller": 59,
@@ -88,7 +88,7 @@
     "route_map_unresolved_caller_edges": 0,
     "route_map_unresolved_method_edges": 0,
     "state_changing_routes_traced": 38,
-    "pane_routes_reached": 34,
+    "pane_routes_reached": 35,
     "pane_routes_excluded": 34,
     "route_walk_depth": 2,
     "screenshots_captured": 6,
@@ -401,15 +401,22 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 22,
+      "control_count": 23,
       "counts": {
-        "button": 9,
+        "button": 10,
         "input": 2,
         "select": 9,
         "summary": 1,
         "textarea": 1
       },
       "controls": [
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Approve",
+          "onclick": "resolveHarnessApproval('__inventory_probe__','approve','__inventory_probe__')",
+          "handler": "resolveHarnessApproval"
+        },
         {
           "tag": "button",
           "id": null,
@@ -572,6 +579,7 @@
         "jumpToLatestHarnessEvent",
         "openHarnessGrants",
         "replayHarnessLog",
+        "resolveHarnessApproval",
         "saveWorkspaceDirectory",
         "startFreshHarnessDraft",
         "toggleHarnessTimeline"
@@ -697,6 +705,22 @@
           "handler": "abortHarnessRun",
           "via": [
             "abortHarnessRun"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/harness/approve",
+          "certainty": "certain",
+          "state_changing": true,
+          "gates": [
+            "host_allowlist",
+            "origin_check",
+            "bearer_token",
+            "body_size_limit"
+          ],
+          "handler": "resolveHarnessApproval",
+          "via": [
+            "resolveHarnessApproval"
           ]
         },
         {
