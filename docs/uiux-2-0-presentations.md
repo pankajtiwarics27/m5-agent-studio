@@ -24,16 +24,16 @@ is a bug in the caller, and the `error` kind is already how bugs are shown.
 
 | Container | Pane | Kind | Actions | Line |
 |---|---|---|---|---|
-| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 2754 |
-| `#startRecentState` | Start | `empty` | `Start a session`, `Open Harness` | 2813 |
-| `#startRecentState` | Start | `error` | `Retry`, `Open Harness` | 2888 |
-| `#startHealthState` | Start | `error` | `Re-check`, `Monitor rail` | 2982 |
-| `#startWorkspaceState` | Start | `error` | `Retry`, `Open Harness` | 3066 |
-| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 3363 |
-| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 3377 |
-| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 3387 |
-| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 3401 |
-| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 4483 |
+| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 2764 |
+| `#startRecentState` | Start | `empty` | `Start a session`, `Open Harness` | 2823 |
+| `#startRecentState` | Start | `error` | `Retry`, `Open Harness` | 2898 |
+| `#startHealthState` | Start | `error` | `Re-check`, `Monitor rail` | 2992 |
+| `#startWorkspaceState` | Start | `error` | `Retry`, `Open Harness` | 3076 |
+| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 3373 |
+| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 3387 |
+| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 3397 |
+| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 3411 |
+| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 4596 |
 
 10 call sites across 8 of 8 containers: 3 empty, 5 error, 2 recovery.
 
@@ -59,9 +59,9 @@ should not quietly become a pane rewrite:
 
 | Handler | Line |
 |---|---|
-| `installSkill()` | 3675 |
-| `openHarnessDiffModal()` | 5254 |
-| `runMcpPlayground()` | 5738 |
+| `installSkill()` | 3685 |
+| `openHarnessDiffModal()` | 5390 |
+| `runMcpPlayground()` | 5874 |
 
 ## Checks and limits
 

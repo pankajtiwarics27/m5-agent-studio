@@ -19,6 +19,21 @@ replays from its scripted runtime, so the answer in `answered.png` is a real str
 These are not mock-ups. `transcript.png` and `scrolled.png` show a transcript the walk
 wrote on purpose; everything else is the pane reacting to the server it was pointed at.
 
+## The context and the tools (UIUX-P2-05)
+
+Captured by `node scripts/chat_context_walk.mjs --screenshots docs/media/chat`, which
+writes one turn with a passing and a failing tool call and then sends one real message.
+
+| File | What it shows |
+|---|---|
+| `context-tools.png` | The context line under the model header (`model demo-local-model · Principal Engineer & UI Architect · reasoning off · tools on (read-only) · 2 messages sent · the configured default project directory`), `Reasoning Trace · 49 chars`, `2 tool calls · 1 failed · 127 ms`, then `OK grep_search step 1 · 120 ms · 45 B of arguments` and `FAILED read_file step 2 · 7 ms · 35 B of arguments`, and below the answer `1.8s · first token 0.41s · 41.2 tok/s · 320 tok`. |
+| `streaming.png` | A turn in flight: `streaming… · 1.2s · waiting for the first token · 128 chars`, drawn with its context and its `data-streaming` mark while the transcript reports `aria-busy="true"`. The finished turn above it still shows its own figures - they did not move when this one arrived. |
+| `sent-context.png` | A real send (`say READY`, Entered, answered by the scripted runtime): the context recorded on that turn names the model, the persona and the workspace the server actually read. |
+| `narrow-context.png` | The same surface at 900px: no horizontal overflow, the context line and the tool rows intact. |
+
+Regenerate those four with the same command as above, pointing it at
+`node scripts/chat_context_walk.mjs`. See `docs/uiux-2-0-chat-context.md`.
+
 Regenerate:
 
     python3 scripts/demo_tour.py --serve            # prints the port and token

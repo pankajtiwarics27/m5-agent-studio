@@ -1,0 +1,150 @@
+{
+  "schema_version": "1.0.0",
+  "story": "UIUX-P2-05",
+  "statement": "Every Chat answer records the context it was sent - persona, reasoning mode, tools, skills, message count and the directory that will be read - and prints it; every tool call prints a status word, its step, its time and the size of its arguments, with the arguments and the server's capped output one disclosure below; and a streaming turn reports how long it has been going and when the first token arrived, measured.",
+  "source": {
+    "frontend": "static/index.html",
+    "server": "app.py",
+    "routes": [
+      "/api/chat/stream"
+    ]
+  },
+  "server": {
+    "route": "/api/chat/stream",
+    "event": "chat_tool",
+    "fields": [
+      "args",
+      "elapsed_ms",
+      "ok",
+      "preview",
+      "step",
+      "tool"
+    ],
+    "preview_cap": 500
+  },
+  "context_fields": [
+    "messages",
+    "model",
+    "persona",
+    "reasoning",
+    "skills",
+    "tools",
+    "workspace",
+    "workspace_effective"
+  ],
+  "tool_event_fields": [
+    "step",
+    "tool",
+    "args",
+    "ok",
+    "elapsed_ms",
+    "preview"
+  ],
+  "tool_output_cap": 500,
+  "frontend": {
+    "functions": {
+      "chatContextSnapshot": true,
+      "chatContextLine": true,
+      "renderChatTool": true,
+      "chatToolSummary": true,
+      "chatStreamingMeta": true
+    },
+    "context": {
+      "captured_at_send": true,
+      "not_recomputed": true,
+      "persona_from_the_helper": true,
+      "attached_to_the_turn": true,
+      "rendered": true,
+      "fields": [
+        "messages",
+        "model",
+        "persona",
+        "reasoning",
+        "skills",
+        "tools",
+        "workspace",
+        "workspace_effective"
+      ],
+      "sent_vs_effective": true,
+      "payload_reads_the_same_values": true,
+      "persona_label_from_the_select": true,
+      "skills_count_from_the_set": true,
+      "message_count_from_the_request": true,
+      "line_names_the_model": true,
+      "line_names_the_effective_workspace": true,
+      "skills_only_when_sent": true
+    },
+    "tools": {
+      "status_word": true,
+      "status_rendered": true,
+      "status_tone": true,
+      "not_colour_only": true,
+      "step_shown": true,
+      "elapsed_shown": true,
+      "args_size_shown": true,
+      "full_args_in_body": true,
+      "args_not_truncated": true,
+      "output_cap_stated": true,
+      "summary_counts": true,
+      "summary_total_ms": true,
+      "summary_rendered": true,
+      "rows_rendered": true,
+      "reasoning_size": true,
+      "turn_marks_failed_turns": true
+    },
+    "busy": {
+      "follows_a_streaming_turn": true,
+      "keeps_the_send_flag": true
+    },
+    "timing": {
+      "measured": true,
+      "started_at_send": true,
+      "first_token_on_first_token": true,
+      "streaming_meta_says_waiting": true,
+      "final_meta_shows_ttft": true,
+      "no_timer": true,
+      "clock_frozen_at_done": true,
+      "finished_elapsed_uses_it": true,
+      "snapshot_is_documented": true
+    },
+    "payload": {
+      "fields": [
+        "auto_unload",
+        "messages",
+        "model",
+        "reasoning_mode",
+        "skills",
+        "tools_enabled",
+        "workspace_dir"
+      ],
+      "tool_fields_read": [
+        "args",
+        "elapsed_ms",
+        "ok",
+        "preview",
+        "step",
+        "tool"
+      ]
+    },
+    "styles": {
+      "context": true,
+      "status": true,
+      "status_tones": true,
+      "summary": true,
+      "label": true
+    }
+  },
+  "totals": {
+    "context_fields": 8,
+    "tool_event_fields": 6,
+    "tool_status_tone": 2,
+    "findings": 0
+  },
+  "findings": [],
+  "limits": [
+    "the streaming clock is a snapshot taken at each render: the pane has no timer, so the number stops moving when no token arrives. That is deliberate - a frozen clock is a fact, a guessed tick is not - and it is stated here and on the page",
+    "the tool output is whatever the server sent, capped at 500 characters in app.py; the pane says so instead of implying the model saw more",
+    "the first-token time is when the browser applied the first token it received, which includes the network and the pane's own render cost - it is not the model's TTFT, and the perf record in the rail is where the model's own number lives",
+    "the walk writes the turns it judges, because a scripted demo reply does not call tools; the real send it also performs proves the context line on a live request"
+  ]
+}
