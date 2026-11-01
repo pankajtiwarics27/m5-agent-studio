@@ -4032,6 +4032,20 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .msg.assistant { align-self: flex-start; background: var(--bg-card); width: 100%; }
   .msg-meta { font-family: var(--mono); font-size: 11px; color: var(--text-faint); margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
   .chat-composer { padding: 11px 20px; border-top: 1px solid var(--border); background: var(--bg-elev); }
+  /* One row per turn, named at the top: a transcript whose only label is a footer
+     under the reply asks the reader to scroll to find out who is speaking. */
+  .chat-turn-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-family: var(--mono); font-size: 10.6px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-faint); }
+  .chat-turn-role { color: var(--text-dim); font-weight: 700; }
+  .chat-turn-index { margin-left: auto; opacity: 0.7; }
+  .msg[data-role="user"] .chat-turn-role { color: var(--accent); }
+  .msg[data-streaming="true"] { border-color: var(--accent); }
+  .chat-transcript-bar { display: flex; align-items: center; gap: 10px; padding: 6px 20px; border-bottom: 1px solid var(--border); background: var(--bg-elev); }
+  .chat-turn-summary { font-family: var(--mono); font-size: 10.8px; color: var(--text-faint); }
+  .chat-jump { margin-left: auto; }
+  .chat-composer-hint { margin-top: 7px; font-size: 11.6px; color: var(--text-dim); display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .chat-composer-hint[data-reason="no-model"], .chat-composer-hint[data-reason="runtime-offline"] { color: var(--amber); }
+  .chat-composer-hint[data-reason="tools-readonly"] { color: var(--text-dim); }
+  .chat-composer-hint code { font-family: var(--mono); font-size: 11px; color: var(--text); }
 
   /* Markdown */
   .md { font-size: 14px; line-height: 1.62; color: var(--text); word-wrap: break-word; }
@@ -5569,20 +5583,29 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         </div>
         <label class="chk-lbl" style="margin-top:14px;" title="Automatically execute Read-Only Workspace, CodeGraph, OpenContext & MCP tools when Qwen/Claude/models emit <tool_call>"><input type="checkbox" id="chatToolsEnabled" checked /> Workspace + MCP Tools</label>
         <label class="chk-lbl" style="margin-top:14px;"><input type="checkbox" id="chatUnload" /> Unload M5 after reply</label>
-        <button class="btn btn-xs" style="margin-top:14px; margin-left:auto;" onclick="clearChat()">Clear</button>
+        <button class="btn btn-xs" id="chatClearBtn" style="margin-top:14px; margin-left:auto;" onclick="clearChat()" title="Clear the transcript on this pane (undoable)">Clear</button>
       </div>
       <div id="chatState"></div>
-      <div id="chatMessages" class="chat-messages">
+      <div class="chat-transcript-bar">
+        <span id="chatTurnSummary" class="chat-turn-summary">No messages yet</span>
+        <button class="btn btn-xs chat-jump" id="chatJumpLatest" type="button" hidden onclick="jumpToLatestChatTurn()"
+                title="Scroll the transcript to the newest turn">Jump to latest ↓</button>
+      </div>
+      <div id="chatMessages" class="chat-messages" role="log" aria-label="Conversation" aria-live="off" aria-relevant="additions">
         <div style="color:var(--text-faint); text-align:center; margin-top:40px; font-size:13px;">
           Chat with any Local M5 model, Cloud API, or Auto-Fallback Combo (`http://127.0.0.1:3000/v1` also works directly inside Cursor / OpenCode / Cline!).
         </div>
       </div>
       <div class="chat-composer">
         <div style="display:flex; gap:10px; align-items:flex-end;">
-          <textarea id="chatInput" rows="2" style="flex:1; resize:none;" placeholder="Message your selected Local or Cloud model... (Enter to send)"></textarea>
+          <textarea id="chatInput" rows="2" style="flex:1; resize:none;"
+                    placeholder="Message your selected model… (Enter sends, Shift+Enter adds a line)"
+                    aria-describedby="chatComposerHint"></textarea>
           <button id="chatStopBtn" class="btn btn-danger" style="display:none; height:40px;" onclick="stopActiveStream()">Stop</button>
-          <button id="chatSendBtn" class="btn btn-primary" style="height:40px;" onclick="sendChat()">Send</button>
+          <button id="chatSendBtn" class="btn btn-primary" style="height:40px;" onclick="sendChat()" aria-describedby="chatComposerHint">Send</button>
         </div>
+        <!-- What pressing Send will do, in the same words the button obeys. -->
+        <div id="chatComposerHint" class="chat-composer-hint" data-reason="idle" role="status" aria-live="polite"></div>
       </div>
     </section>
   </main>
@@ -7048,7 +7071,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (!expanded && returnFocus === true && btn) btn.focus({ preventScroll: true });
   }
   function setCouncilPreset(txt) { document.getElementById("councilPrompt").value = txt; }
-  function stopActiveStream() { if (activeAbort) { activeAbort.abort(); activeAbort = null; } }
+  function stopActiveStream() {
+    if (activeAbort) { activeAbort.abort(); activeAbort = null; }
+    // The abort's own finally clears chatBusy; this only makes the composer answer the
+    // click immediately instead of at the next frame.
+    if (chatBusy) { chatBusy = false; renderChatMessages(); }
+  }
 
   // ================= CLOUD PROVIDERS & OMNIROUTE ROUTER =================
   async function loadProviders() {
@@ -7662,6 +7690,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       if (!firstInit && prevVal && prevVal !== "__custom__" && unifiedCatalog.some(x => x.id === prevVal)) sel.value = prevVal;
       else if (defVal) sel.value = defVal;
     }
+    // The set of models is part of the composer's answer: a pane that had "no model
+    // selected" one poll ago may have one now, and vice versa.
+    updateChatComposer();
 
     // Debate checkboxes include only Loaded Local M5 + Cloud/Combo Models
     const prevChecked = new Set([...document.querySelectorAll(".debate-m-chk:checked")].map(c => c.value));
@@ -7690,6 +7721,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     lastTelemetry = d;
     startHealthReadAt = Date.now();
     renderStartHealth();
+    updateChatComposer();
     const pill = document.getElementById("connPill");
     pill.className = d.omlx_online ? "status-pill" : "status-pill demo";
     document.getElementById("connText").textContent = d.omlx_online ? "oMLX Live (:8000)" : "Preview Demo";
@@ -7890,23 +7922,215 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     }, () => { document.getElementById("debateRunBtn").disabled = false; document.getElementById("debateStopBtn").style.display = "none"; });
   }
 
+  /* ── Chat: the conversation and the thing that starts it ───────────────────
+     Two problems, one pane. The transcript named nobody: a reply's model was in a
+     footer under it, a question had no label at all, and the pane scrolled itself to
+     the bottom on every token, so reading back through a long answer was a fight.
+     And the composer made a promise it could not keep - "Enter to send" was true,
+     but with no model selected it sent an empty model id and let the server explain.
+
+     What is here now: every turn carries its role and its number at the top, the pane
+     only follows the stream when the reader was already at the bottom (otherwise it
+     offers a way back down), the composer states what Send will do and disables the
+     button on the same predicate that writes the sentence, and Clear is undoable
+     rather than a one-way door. */
+
+  const CHAT_ROLES = {
+    user: { label: "You", tone: "info" },
+    assistant: { label: "Model", tone: "ok" },
+  };
+  const CHAT_PIN_SLACK = 80;
+  let chatBusy = false;
+  let chatHintSignature = "";
+
+  function chatModelId() {
+    const el = document.getElementById("chatModel");
+    const value = el ? String(el.value || "").trim() : "";
+    // __custom__ is a prompt, not a model: sending it would ask the server to answer
+    // as a placeholder.
+    return value === "__custom__" ? "" : value;
+  }
+
+  function chatModelIsLocal(model) {
+    if (!model) return false;
+    const id = model.toLowerCase();
+    return !id.includes("::") && !id.startsWith("combo:");
+  }
+
+  function chatRuntimeOffline(model) {
+    // Only a local model depends on the loopback runtime, and the rail already knows
+    // whether it answered: the composer reads that verdict instead of guessing.
+    if (!chatModelIsLocal(model) || !lastTelemetry) return false;
+    return lastTelemetry.omlx_online === false;
+  }
+
+  function chatToolDirectory() {
+    const ws = document.getElementById("harnessWorkspaceInput");
+    return ws ? String(ws.value || "").trim() : "";
+  }
+
+  function chatToolsOn() {
+    const tools = document.getElementById("chatToolsEnabled");
+    return Boolean(tools && tools.checked);
+  }
+
+  /* The single answer to "can this composer send, and why not". The button state and
+     the sentence both come from here: a disabled button that explains itself
+     differently from the text under it is two answers to one question. */
+  function chatSendReason() {
+    if (chatBusy) return "streaming";
+    if (!chatModelId()) return "no-model";
+    return "";
+  }
+
+  function chatComposerState() {
+    const model = chatModelId();
+    const reason = chatSendReason();
+    if (reason === "streaming") {
+      return { reason, tone: "busy", hint: `Replying with ${model}. Stop keeps the part that already arrived and puts the cursor back in the composer.` };
+    }
+    if (reason === "no-model") {
+      return { reason, tone: "warn", hint: "No model is selected, so Send is off. Pick one in the header above, or load one on demand in the monitor rail." };
+    }
+    if (chatRuntimeOffline(model)) {
+      // Ranked above the tools sentence: a runtime that is not answering ends the turn,
+      // while the tools constraint only shapes it. Worded as what the probe reported,
+      // not as a prophecy - a demo can answer from a script while the probe is down.
+      return { reason: "runtime-offline", tone: "warn", hint: `The telemetry probe says the local runtime is not answering, so a local model may fail here. If it does, the error keeps your message and offers Retry.` };
+    }
+    if (chatToolsOn()) {
+      // Not a warning: the route falls back to the configured project root and runs the
+      // turn under policy "plan", so tools read and cannot write. Saying "they will
+      // refuse" would invent a failure the server does not produce.
+      const dir = chatToolDirectory();
+      return {
+        reason: "tools-readonly",
+        tone: "info",
+        hint: `Workspace + MCP tools are on and read-only in Chat: they will read ${dir || "the configured default project directory"} and cannot write to it. Turn the tools off above for a plain reply.`,
+      };
+    }
+    return { reason: "ready", tone: "ok", hint: `Ready: Enter sends, Shift+Enter adds a line. ${model} will answer with the persona above.` };
+  }
+
+  function updateChatComposer() {
+    const line = document.getElementById("chatComposerHint");
+    const send = document.getElementById("chatSendBtn");
+    const stop = document.getElementById("chatStopBtn");
+    const clear = document.getElementById("chatClearBtn");
+    const state = chatComposerState();
+    const signature = `${state.reason}|${chatModelId()}`;
+    // A live region that is rewritten on every token announces the same sentence
+    // forever, so the text is only written when the reason or the model changed.
+    if (line && signature !== chatHintSignature) {
+      chatHintSignature = signature;
+      line.dataset.reason = state.reason;
+      line.textContent = state.hint;
+    }
+    if (send) send.disabled = Boolean(chatSendReason());
+    if (stop) stop.style.display = chatBusy ? "inline-flex" : "none";
+    if (clear) clear.disabled = !chatHistory.length;
+    return state;
+  }
+
+  function chatNearBottom(box) {
+    if (!box) return true;
+    return box.scrollHeight - box.scrollTop - box.clientHeight <= CHAT_PIN_SLACK;
+  }
+
+  function updateChatTranscriptBar() {
+    const summary = document.getElementById("chatTurnSummary");
+    const jump = document.getElementById("chatJumpLatest");
+    const box = document.getElementById("chatMessages");
+    const replies = chatHistory.filter(m => m.role === "assistant" && (m.content || "").trim()).length;
+    if (summary) {
+      summary.textContent = !chatHistory.length
+        ? "No messages yet"
+        : `${chatHistory.length} message${chatHistory.length === 1 ? "" : "s"} · ${replies} repl${replies === 1 ? "y" : "ies"}`;
+    }
+    if (jump) jump.hidden = chatNearBottom(box);
+    if (box) box.setAttribute("aria-busy", chatBusy ? "true" : "false");
+  }
+
+  function jumpToLatestChatTurn() {
+    const box = document.getElementById("chatMessages");
+    if (!box) return null;
+    box.scrollTop = box.scrollHeight;
+    updateChatTranscriptBar();
+    const last = box.querySelector('[data-role="assistant"]:last-of-type') || box.lastElementChild;
+    if (last) {
+      last.setAttribute("tabindex", "-1");
+      last.focus({ preventScroll: true });
+    }
+    return box;
+  }
+
   function renderChatMessages() {
     const box = document.getElementById("chatMessages");
-    if (!chatHistory.length) { box.innerHTML = `<div style="color:var(--text-faint); text-align:center; margin-top:40px;">Session cleared.</div>`; return; }
-    box.innerHTML = chatHistory.map(m => {
-      if (m.role === "user") return `<div class="msg user">${renderMarkdown(m.content)}</div>`;
+    if (!chatHistory.length) {
+      box.innerHTML = `<div style="color:var(--text-faint); text-align:center; margin-top:40px;">Nothing has been said yet. Type below; the reply and its reasoning appear here.</div>`;
+      updateChatTranscriptBar();
+      updateChatComposer();
+      return;
+    }
+    // Was the reader at the bottom before this render? A pane that always jumps turns
+    // reading back through a long answer into a tug of war with the stream.
+    const pinned = chatNearBottom(box);
+    box.innerHTML = chatHistory.map((m, index) => {
+      const role = CHAT_ROLES[m.role] || CHAT_ROLES.assistant;
+      const head = `<div class="chat-turn-head">`
+        + `<span class="chat-turn-role">${escapeHtml(role.label)}</span>`
+        + (m.role === "assistant" && m.model ? `<code>${escapeHtml(m.model)}</code>` : "")
+        + `<span class="chat-turn-index">${index + 1}</span>`
+        + `</div>`;
+      const streaming = m.role === "assistant" && !m.usage ? ' data-streaming="true"' : "";
+      if (m.role === "user") {
+        return `<div class="msg user" data-role="user">${head}${renderMarkdown(m.content)}</div>`;
+      }
       const think = m.reasoning ? `<details class="think-box" ${!m.content?'open':''}><summary>Reasoning Trace</summary><pre>${escapeHtml(m.reasoning)}</pre></details>` : "";
       const toolsHtml = (m.tools && m.tools.length) ? `<div style="display:flex; flex-direction:column; gap:5px; margin-bottom:8px;">` + m.tools.map(t => `<details class="think-box" style="margin:0; border-color:${t.ok ? 'rgba(56,189,248,0.35)' : 'rgba(244,63,94,0.4)'};"><summary style="display:flex; align-items:center; gap:6px;">${t.ok ? UI_ICONS.check : UI_ICONS.warn} <code>${escapeHtml(t.tool)}</code> <span style="color:var(--text-faint); font-weight:400;">${escapeHtml(JSON.stringify(t.args || {})).slice(0, 72)} • ${t.elapsed_ms}ms</span></summary><pre>${escapeHtml(t.preview || '')}</pre></details>`).join("") + `</div>` : "";
       const meta = m.usage ? `<div class="msg-meta"><span>${escapeHtml(m.model)}</span><span>•</span><span>${m.usage.decode_tps} tok/s</span><span>•</span><span>${m.usage.completion_tokens} tok</span></div>` : `<div class="msg-meta"><span>${escapeHtml(m.model)} • streaming...</span></div>`;
-      return `<div class="msg assistant">${think}${toolsHtml}${renderMarkdown(m.content || ((m.reasoning || (m.tools && m.tools.length)) ? "" : "..."))}${meta}</div>`;
+      return `<div class="msg assistant" data-role="assistant"${streaming}>${head}${think}${toolsHtml}${renderMarkdown(m.content || ((m.reasoning || (m.tools && m.tools.length)) ? "" : "..."))}${meta}</div>`;
     }).join("");
-    box.scrollTop = box.scrollHeight;
+    if (pinned) box.scrollTop = box.scrollHeight;
+    updateChatTranscriptBar();
+    updateChatComposer();
+    return box;
   }
-  function clearChat() { chatHistory = []; renderChatMessages(); }
+
+  function clearChat() {
+    if (!chatHistory.length) {
+      updateChatComposer();
+      return null;
+    }
+    // Undoable, because Clear sits one stray click away from a long conversation and
+    // nothing here is recoverable from the server.
+    const kept = chatHistory.slice();
+    chatHistory = [];
+    renderChatMessages();
+    return presentInto("chatState", {
+      kind: "recovery",
+      title: "Transcript cleared",
+      cause: "you pressed Clear on this pane",
+      context: `${kept.length} message(s) were removed from this pane only; they were never sent anywhere else and Undo puts them back.`,
+      actions: [
+        { label: "Undo", run: () => { chatHistory = kept.slice(); clearPresentation("chatState", { focus: "chatInput" }); renderChatMessages(); }, title: "Put the conversation back" },
+        { label: "Dismiss", run: () => clearPresentation("chatState", { focus: "chatInput" }), title: "Keep it cleared and return to the composer" },
+      ],
+    });
+  }
   function sendChat() {
     const input = document.getElementById("chatInput"), text = input.value.trim();
-    if (!text) return; input.value = "";
-    sendChatRequest(text);
+    const blocked = chatSendReason();
+    if (blocked) {
+      // Say why, next to the composer, and leave the cursor where the reader is
+      // typing: a disabled button with no reason is a dead control.
+      updateChatComposer();
+      if (input) input.focus();
+      return null;
+    }
+    if (!text) { if (input) input.focus(); return null; }
+    input.value = "";
+    return sendChatRequest(text);
   }
 
   function sendChatRequest(text) {
@@ -7918,8 +8142,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     chatHistory.push({ role: "user", content: text });
     const apiMessages = [{ role: "system", content: document.getElementById("chatPersona").value }, ...chatHistory.map(m => ({ role: m.role, content: m.content }))];
     const asstMsg = { role: "assistant", model, content: "", reasoning: "", tools: [], usage: null };
-    chatHistory.push(asstMsg); renderChatMessages();
-    document.getElementById("chatSendBtn").disabled = true; document.getElementById("chatStopBtn").style.display = "inline-flex";
+    chatHistory.push(asstMsg);
+    chatBusy = true;
+    renderChatMessages();
     consumeSSE("/api/chat/stream", {
       model,
       messages: apiMessages,
@@ -7942,7 +8167,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         renderChatMessages();
         presentChatError(d.message, () => sendChatRequest(text));
       }
-    }, () => { document.getElementById("chatSendBtn").disabled = false; document.getElementById("chatStopBtn").style.display = "none"; });
+    }, () => { chatBusy = false; renderChatMessages(); });
   }
 
   // ================= AUTONOMOUS AGENTIC HARNESS (v5.0) =================
@@ -8024,10 +8249,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function syncProjectDirInputs(val) {
     const clean = (val || "").trim();
     if (!clean) return;
+    // Clearing the directory is what turns the tools row into a warning, so the
+    // composer is refreshed after the inputs are synced, not only on a model change.
     for (const id of ["harnessWorkspaceInput", "sdlcWorkspaceInput", "cgWorkspaceInput", "startWorkspaceInput"]) {
       const el = document.getElementById(id);
       if (el && el.value !== clean) el.value = clean;
     }
+    updateChatComposer();
   }
 
   function renderRecentDirsSelect(recentDirs, currentDir) {
@@ -8811,7 +9039,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   document.getElementById("harnessPromptInput").addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); executeHarnessSelectedWorkflow(); }
   });
+  // Enter sends and Shift+Enter does not: the composer's placeholder says exactly this,
+  // and it is the only keydown handler that sends.
   document.getElementById("chatInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+  for (const id of ["chatModel", "chatPersona", "chatToolsEnabled"]) {
+    const node = document.getElementById(id);
+    if (node) node.addEventListener("change", () => updateChatComposer());
+  }
+  document.getElementById("chatMessages").addEventListener("scroll", () => updateChatTranscriptBar(), { passive: true });
+  renderChatMessages();
   document.getElementById("hallHumanInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitHallComposer(); } });
 
   // ================= UNIVERSAL CLOUD + CUSTOM MCP HUB (v6.0) =================

@@ -26,25 +26,25 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "c2c2c50ae6c280dd5a7309767120e3770dff74a5faeeae7ea0682fea4523f349",
-      "source_manifest_sha256": "ba483b58841cdc4667169bd81b8779b345eec36f1516ab6558ab025d5596fc4d",
-      "control_inventory_sha256": "77124be4205ef54d1a4969c649d3d3625a0ef5b5f8f4b878500d45ee0dab26c1",
-      "route_map_sha256": "2085fdcc288fd1efee2f13721956bef7e17f106bd5460d19eecc1ecbba815f9e",
-      "authorization_trace_sha256": "b1c2e873963e0eb55b82e445d079637bbe71118c60932d8492663a050d6bdaa0",
-      "frontend_sha256": "9570e726f3c320c2c50adcaf795deb21728edb168b211527ef22014a62c5e5f4",
+      "source_manifest_sha256": "468d589a4c7e9def08f2a2ed1be38e34a561fcc32d90c0ef2809effa23648fa6",
+      "control_inventory_sha256": "955403780f91f26d7b26636f12be6ced8c4176b9a545131697617a64bd853dfb",
+      "route_map_sha256": "302d322d6a25cdf61698c640d140ac4c59643060c88f9f036f1c80ae76ffde37",
+      "authorization_trace_sha256": "904eaa3db27eaacb1f3af2b7324b0a8337b5bf4465dbdc12081bdef7715a8f30",
+      "frontend_sha256": "9dd929b331e33b813a8b7da5635314b858db8434274758a53d8dc005cebe2731",
       "screenshot_manifest_sha256": "69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92",
       "screenshot_index_sha256": "de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
-      "route_map_generator_sha256": "b60f8e88e6dba6f31dea75b6c79ce18b45c5bb221f84227d915be9f6b97d5c23"
+      "route_map_generator_sha256": "923981fc78ff0f844e67691bfa966963f3959be1b9650eaf49f3b58b0a14d555"
     },
     "changed_inputs": null
   },
   "inputs": {
     "ledger_sha256": "e66cd249c4e2376c4e1e68a955b35707793140273a30cb866a90f21fc53e991c",
-    "source_manifest_sha256": "ba483b58841cdc4667169bd81b8779b345eec36f1516ab6558ab025d5596fc4d",
-    "control_inventory_sha256": "77124be4205ef54d1a4969c649d3d3625a0ef5b5f8f4b878500d45ee0dab26c1",
-    "route_map_sha256": "2085fdcc288fd1efee2f13721956bef7e17f106bd5460d19eecc1ecbba815f9e",
-    "authorization_trace_sha256": "b1c2e873963e0eb55b82e445d079637bbe71118c60932d8492663a050d6bdaa0",
-    "frontend_sha256": "9570e726f3c320c2c50adcaf795deb21728edb168b211527ef22014a62c5e5f4"
+    "source_manifest_sha256": "468d589a4c7e9def08f2a2ed1be38e34a561fcc32d90c0ef2809effa23648fa6",
+    "control_inventory_sha256": "955403780f91f26d7b26636f12be6ced8c4176b9a545131697617a64bd853dfb",
+    "route_map_sha256": "302d322d6a25cdf61698c640d140ac4c59643060c88f9f036f1c80ae76ffde37",
+    "authorization_trace_sha256": "904eaa3db27eaacb1f3af2b7324b0a8337b5bf4465dbdc12081bdef7715a8f30",
+    "frontend_sha256": "9dd929b331e33b813a8b7da5635314b858db8434274758a53d8dc005cebe2731"
   },
   "approval_request": [
     {
@@ -55,7 +55,7 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "176 markup controls (101 chrome, 75 panes) plus 30 rendered by script"
+      "evidence": "177 markup controls (101 chrome, 76 panes) plus 30 rendered by script"
     },
     {
       "id": 3,
@@ -76,9 +76,9 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 176,
+    "markup_controls": 177,
     "chrome_controls": 101,
-    "pane_controls": 75,
+    "pane_controls": 76,
     "script_rendered_controls": 30,
     "routes": 115,
     "routes_with_resolved_or_possible_caller": 57,
@@ -88,8 +88,8 @@
     "route_map_unresolved_caller_edges": 0,
     "route_map_unresolved_method_edges": 0,
     "state_changing_routes_traced": 37,
-    "pane_routes_reached": 69,
-    "pane_routes_excluded": 42,
+    "pane_routes_reached": 28,
+    "pane_routes_excluded": 34,
     "route_walk_depth": 2,
     "screenshots_captured": 6,
     "screenshots_planned": 6
@@ -225,109 +225,6 @@
       ],
       "routes_reached": [
         {
-          "method": "DELETE",
-          "path": "/api/combos/{alias}",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "removeCombo",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "removeCombo"
-          ]
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/harness/sessions/{session_id}",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "deleteHarnessSession",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "deleteHarnessSession"
-          ]
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/mcp/servers/{alias}",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "deleteMcpServer",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "deleteMcpServer"
-          ]
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/opencontext/docs/{doc_id}",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "deleteOpenContextDoc",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "deleteOpenContextDoc"
-          ]
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/providers/{alias}",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "removeProvider",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "removeProvider"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/api/codegraph/analyze",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "refreshCodeGraphOverview",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "refreshCodeGraphOverview"
-          ]
-        },
-        {
           "method": "GET",
           "path": "/api/hall/sessions",
           "certainty": "certain",
@@ -338,32 +235,6 @@
             "launchTaskFromStart",
             "switchTab",
             "refreshHallSessions"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/api/hall/sessions/{session_id}",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "selectHallSession",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "selectHallSession"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/api/harness/external-configs",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "openExternalHarnessModal",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "openExternalHarnessModal"
           ]
         },
         {
@@ -379,97 +250,6 @@
         },
         {
           "method": "GET",
-          "path": "/api/harness/sessions/{session_id}",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "selectHarnessSession",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "selectHarnessSession"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/api/harness/sessions/{session_id}/diff",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "openHarnessDiffModal",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "openHarnessDiffModal"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/api/harness/sessions/{session_id}/events",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "harnessFetchEventPage",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "harnessFetchEventPage"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/api/harness/sessions/{session_id}/events/stream",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "openHarnessEventStream",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "openHarnessEventStream"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/api/harness/sessions/{session_id}/sdlc",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "refreshSdlcBoard",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "refreshSdlcBoard"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/api/harness/sessions/{session_id}/state",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "openHarnessEventStream",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "openHarnessEventStream"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/api/mcp/servers",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "loadMcpServers",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "loadMcpServers"
-          ]
-        },
-        {
-          "method": "GET",
           "path": "/api/onboarding/preflight",
           "certainty": "certain",
           "state_changing": false,
@@ -477,45 +257,6 @@
           "handler": "refreshOnboarding",
           "via": [
             "refreshOnboarding"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/api/opencontext/docs",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "loadOpenContextDocs",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "loadOpenContextDocs"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/api/opencontext/lint",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "runOpenContextLintUI",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "runOpenContextLintUI"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/api/opencontext/search",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "searchOpenContextUI",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "searchOpenContextUI"
           ]
         },
         {
@@ -532,19 +273,6 @@
         },
         {
           "method": "GET",
-          "path": "/api/skills",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "loadSkills",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "loadSkills"
-          ]
-        },
-        {
-          "method": "GET",
           "path": "/api/telemetry",
           "certainty": "certain",
           "state_changing": false,
@@ -552,325 +280,6 @@
           "handler": "refreshTelemetry",
           "via": [
             "refreshTelemetry"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/api/workspace/files",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "openSpawnModal",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "openSpawnModal"
-          ]
-        },
-        {
-          "method": "PATCH",
-          "path": "/api/harness/sessions/{session_id}",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "patchActiveHarnessSettings",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "patchActiveHarnessSettings"
-          ]
-        },
-        {
-          "method": "PATCH",
-          "path": "/api/mcp/servers/{alias}",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "toggleMcpServerEnabled",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "toggleMcpServerEnabled"
-          ]
-        },
-        {
-          "method": "PATCH",
-          "path": "/api/opencontext/docs/{doc_id}",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "togglePinOpenContextDoc",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "togglePinOpenContextDoc"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/cache/clear-ssd",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "clearSsdCache",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "clearSsdCache"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/codegraph/query",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "runCodeGraphPlayground",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "runCodeGraphPlayground"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/combos",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "saveCombo",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "saveCombo"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/hall/sessions",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "confirmSpawnSession",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "confirmSpawnSession"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/hall/sessions/{session_id}/message",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "postHumanHallMessage",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "postHumanHallMessage"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/harness/abort/{session_id}",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "abortHarnessRun",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "abortHarnessRun"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/harness/approve",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "resolveHarnessApproval",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "resolveHarnessApproval"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/harness/sessions/{session_id}/apply",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "applyHarnessWorktree",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "applyHarnessWorktree"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/harness/sessions/{session_id}/compact",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "compactActiveHarness",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "compactActiveHarness"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/mcp/import-json",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "importMcpJson",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "importMcpJson"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/mcp/servers",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "saveMcpServer",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "saveMcpServer"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/mcp/servers/{alias}/call",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "runMcpPlayground",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "runMcpPlayground"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/mcp/servers/{alias}/sync",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "syncMcpServer",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "syncMcpServer"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/models/unload-all",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "unloadAllModels",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "unloadAllModels"
           ]
         },
         {
@@ -886,8 +295,8 @@
           ],
           "handler": "modelAction",
           "via": [
-            "launchTaskFromStart",
-            "switchTab",
+            "refreshTelemetry",
+            "renderTelemetry",
             "modelAction"
           ]
         },
@@ -904,81 +313,9 @@
           ],
           "handler": "modelAction",
           "via": [
-            "launchTaskFromStart",
-            "switchTab",
+            "refreshTelemetry",
+            "renderTelemetry",
             "modelAction"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/opencontext/docs",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "saveOpenContextDoc",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "saveOpenContextDoc"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/providers",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "saveProvider",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "saveProvider"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/providers/fetch-models",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "fetchRemoteModels",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "fetchRemoteModels"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/skills/install",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "installSkill",
-          "via": [
-            "launchTaskFromStart",
-            "switchTab",
-            "installSkill"
           ]
         },
         {
@@ -999,7 +336,7 @@
           ]
         }
       ],
-      "routes_excluded_by_entry_point": 8
+      "routes_excluded_by_entry_point": 0
     },
     {
       "label": "Harness",
@@ -1879,9 +1216,9 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 9,
+      "control_count": 10,
       "counts": {
-        "button": 3,
+        "button": 4,
         "input": 2,
         "select": 3,
         "textarea": 1
@@ -1924,10 +1261,17 @@
         },
         {
           "tag": "button",
-          "id": null,
+          "id": "chatClearBtn",
           "text": "Clear",
           "onclick": "clearChat()",
           "handler": "clearChat"
+        },
+        {
+          "tag": "button",
+          "id": "chatJumpLatest",
+          "text": "Jump to latest ↓",
+          "onclick": "jumpToLatestChatTurn()",
+          "handler": "jumpToLatestChatTurn"
         },
         {
           "tag": "textarea",
@@ -1953,6 +1297,7 @@
       ],
       "declared_handlers": [
         "clearChat",
+        "jumpToLatestChatTurn",
         "sendChat",
         "stopActiveStream"
       ],
