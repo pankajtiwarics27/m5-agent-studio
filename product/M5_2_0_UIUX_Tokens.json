@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "807e50d259441dc7bd6ac689410cdac5bd34969ab3a2841b8e4635f3615caac4",
+    "style_block_sha256": "fcd2919c0057caf9dcc26010d887f95e793d85edd83e8a8468e6650e9600b801",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -37,7 +37,7 @@
   "totals": {
     "tokens": 45,
     "groups": 7,
-    "references": 759,
+    "references": 781,
     "theme_overrides": 18,
     "density_overrides": 5,
     "contrast_pairs": 20,
@@ -133,7 +133,7 @@
         "light": "#ffffff"
       },
       "density_override": null,
-      "references": 45
+      "references": 47
     },
     {
       "name": "--bg-hover",
@@ -163,7 +163,7 @@
         "light": "#d9dcd8"
       },
       "density_override": null,
-      "references": 110
+      "references": 112
     },
     {
       "name": "--border-hi",
@@ -183,7 +183,7 @@
         "light": "#202326"
       },
       "density_override": null,
-      "references": 49
+      "references": 50
     },
     {
       "name": "--text-dim",
@@ -193,7 +193,7 @@
         "light": "#555c62"
       },
       "density_override": null,
-      "references": 88
+      "references": 92
     },
     {
       "name": "--text-faint",
@@ -203,7 +203,7 @@
         "light": "#687077"
       },
       "density_override": null,
-      "references": 57
+      "references": 62
     },
     {
       "name": "--accent",
@@ -233,7 +233,7 @@
         "light": "#276e82"
       },
       "density_override": null,
-      "references": 12
+      "references": 13
     },
     {
       "name": "--emerald",
@@ -253,7 +253,7 @@
         "light": "#80580e"
       },
       "density_override": null,
-      "references": 23
+      "references": 27
     },
     {
       "name": "--rose",
@@ -491,7 +491,7 @@
       "value": "\"JetBrains Mono\", \"SFMono-Regular\", Consolas, \"Liberation Mono\", monospace",
       "theme_overrides": {},
       "density_override": null,
-      "references": 78
+      "references": 81
     },
     {
       "name": "--header-height",

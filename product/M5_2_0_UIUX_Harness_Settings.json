@@ -1,0 +1,194 @@
+{
+  "schema_version": "1.0.0",
+  "story": "UIUX-P3-01",
+  "statement": "The Harness prints what Run will do before it is pressed - the project directory and whether it is an isolated worktree, the execution policy, the lead model and the sub-agent critic, and the workflow with the three settings that used to hide inside a collapsed group - read from the controls the run payload reads; the collapsed group states its own contents and says in words when one was changed; Run's disabled state and the sentence beside it come from one predicate, so a missing task is a sentence rather than silence and a second run cannot start while one is in flight; and when Chat hands a conversation over, a banner says what it carried and where this run departs from it, and goes when the task it describes is consumed.",
+  "source": {
+    "frontend": "static/index.html",
+    "server": "app.py"
+  },
+  "reasons": [
+    "running",
+    "board",
+    "no-task",
+    "ready"
+  ],
+  "plan_rows": [
+    "directory",
+    "policy",
+    "models",
+    "workflow"
+  ],
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/api/workspace/directory",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/harness/sessions/{session_id}",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/run",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/gsd-wave",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sdlc/run",
+      "mounted": true
+    }
+  ],
+  "frontend": {
+    "functions": {
+      "harnessRunPlan": true,
+      "renderHarnessRunPlan": true,
+      "harnessRunState": true,
+      "updateHarnessRunControl": true,
+      "renderHarnessIncomingBrief": true,
+      "clearHarnessIncomingBrief": true,
+      "fitHarnessComposer": true
+    },
+    "plan": {
+      "covers_the_run_payload": true,
+      "watches_the_same_controls": true,
+      "one_row_per_decision": true,
+      "a_row_cannot_be_empty": true,
+      "directory_says_which_mode": true,
+      "policy_is_the_option_label": true,
+      "models_name_the_critic": true,
+      "workflow_carries_the_advanced_values": true,
+      "changed_is_a_word": true,
+      "reads_no_session_state": true,
+      "no_network": true,
+      "written_only_on_change": true,
+      "rows_carry_keys_for_tests": true,
+      "changed_is_not_only_colour": true
+    },
+    "advanced": {
+      "is_a_details_group": true,
+      "summary_names_its_contents": true,
+      "every_setting_declares_its_default": true,
+      "declared_default_is_the_selected_option": true,
+      "defaults_are_the_planned_ids": true,
+      "summary_is_written_by_the_plan": true,
+      "changed_is_marked_in_words": true
+    },
+    "run_control": {
+      "one_predicate": true,
+      "every_reason_declared": true,
+      "the_hint_is_that_sentence": true,
+      "the_hint_is_a_live_region": true,
+      "the_composer_is_described_by_it": true,
+      "no_second_run_while_running": true,
+      "the_board_needs_no_task": true,
+      "no_task_is_not_ready": true,
+      "the_dispatcher_asks_first": true,
+      "an_empty_task_is_visible_not_silent": true,
+      "every_path_still_dispatches": true,
+      "state_follows_the_run": true,
+      "state_follows_the_mode": true,
+      "wire_covers_the_controls": true
+    },
+    "brief": {
+      "arrives_hidden": true,
+      "appears_only_with_a_brief": true,
+      "counts_what_it_carried": true,
+      "compares_the_model": true,
+      "compares_the_directory": true,
+      "says_nothing_runs": true,
+      "says_when_nothing_differs": true,
+      "written_only_on_change": true,
+      "handoff_sets_it": true,
+      "a_run_consumes_it": true,
+      "a_fresh_draft_clears_it": true,
+      "an_emptied_box_clears_it": true,
+      "clearing_is_idempotent": true
+    },
+    "composer": {
+      "fits_the_task_it_holds": true,
+      "has_a_floor_and_a_ceiling": true,
+      "follows_the_text": true,
+      "rests_after_a_run": true,
+      "manual_resize_is_off": true
+    },
+    "preserved": {
+      "harnessWorkspaceInput": true,
+      "harnessRecentDirsSelect": true,
+      "harnessUseWorktree": true,
+      "harnessLeadModel": true,
+      "harnessCriticModel": true,
+      "harnessPolicy": true,
+      "harnessWorkflowMode": true,
+      "harnessRunBtn": true,
+      "harnessSessionActionSelect": true,
+      "harnessAbortBtn": true,
+      "harnessAdvanced": true
+    },
+    "labelling": {
+      "harnessLeadModel": true,
+      "harnessCriticModel": true,
+      "harnessPolicy": true,
+      "harnessEfficiencyMode": true,
+      "harnessReasoning": true,
+      "harnessMaxSteps": true,
+      "harnessWorkflowMode": true,
+      "harnessRecentDirsSelect": true,
+      "harnessSessionActionSelect": true,
+      "harnessPromptInput": true
+    },
+    "styles": {
+      "plan": true,
+      "plan_rows": true,
+      "hint": true,
+      "hint_tones": true,
+      "advanced_summary": true,
+      "brief": true,
+      "long_paths_wrap": true
+    },
+    "ids_in_the_payload": [
+      "harnessCriticModel",
+      "harnessEfficiencyMode",
+      "harnessLeadModel",
+      "harnessMaxSteps",
+      "harnessPolicy",
+      "harnessReasoning",
+      "harnessUseWorktree",
+      "harnessWorkflowMode",
+      "harnessWorkspaceInput"
+    ],
+    "ids_the_plan_reads": [
+      "harnessCriticModel",
+      "harnessEfficiencyMode",
+      "harnessLeadModel",
+      "harnessMaxSteps",
+      "harnessPolicy",
+      "harnessReasoning",
+      "harnessUseWorktree",
+      "harnessWorkflowMode",
+      "harnessWorkspaceInput"
+    ]
+  },
+  "totals": {
+    "reasons": 4,
+    "plan_rows": 4,
+    "preserved_controls": 11,
+    "named_controls": 10,
+    "checks": 81,
+    "findings": 0
+  },
+  "findings": [],
+  "limits": [
+    "the plan describes the payload, not the server's reading of it: an empty directory is sent empty and the run falls back to the configured project root, which the row states rather than guessing",
+    "the plan covers the turn path's payload in full and the GSD and SDLC paths' extra fields (wave plan, story count) stay in their own surfaces; the nine controls they share with the turn are the ones the plan prints",
+    "the HARNESS_POLICY_EFFECT table this story first introduced was removed: the selected option's own label is the description, so there is exactly one sentence about what a policy permits",
+    "the advanced settings are summarised in the workflow row rather than given a fifth row, because they shape the same decision and a longer plan is a plan a reader skips",
+    "the brief banner is a carry, not a promise: it compares the model and the directory the reply was sent with against the plan as it stands now, and says 'changes' when they differ - it never claims the conversation will fit"
+  ]
+}

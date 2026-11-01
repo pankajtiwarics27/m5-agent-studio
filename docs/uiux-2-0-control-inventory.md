@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `ff264c2354f6b0c292f9074c4fb7e2c2511f8c65c02580011092a007040157a9`.
+* Frontend digest: `913aa2832030f7e9ee984d21b181e9344f0d663291d4a6501cbf674f095465fb`.
 * Panes: 6 · controls in panes: 77 · controls in the
   shared chrome: 101 · script-rendered: 30.
 
@@ -73,7 +73,7 @@ Section `pane-harness`, 17 interactive elements.
 | 12 | select | harnessMaxSteps | — | 6 steps 10 steps 16 steps 24 steps | — |
 | 13 | select | harnessSessionActionSelect | — | Session actions | runHarnessSessionAction(this) |
 | 14 | button | harnessAbortBtn | — | Abort | abortHarnessRun() |
-| 15 | textarea | harnessPromptInput | — | Describe an engineering task, 3-Wave Spec, or full product build for your Project Directory... | — |
+| 15 | textarea | harnessPromptInput | — | Your task for the Harness | — |
 | 16 | select | harnessWorkflowMode | — | Harness workflow mode | syncHarnessWorkflowModeUI() |
 | 17 | button | harnessRunBtn | — | Run | executeHarnessSelectedWorkflow() |
 
