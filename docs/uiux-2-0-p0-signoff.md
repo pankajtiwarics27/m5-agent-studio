@@ -8,7 +8,7 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 177 markup controls (101 chrome, 76 panes) · 30 rendered by script.
+* 6 panes · 21 preserved capabilities · 178 markup controls (101 chrome, 77 panes) · 30 rendered by script.
 * 115 routes exist, 57 with a resolved or possible caller, 58 with none observed and 0 unknown due to unresolved edges; 37 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
@@ -28,7 +28,7 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 177 markup controls (101 chrome, 76 panes) plus 30 rendered by script |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 178 markup controls (101 chrome, 77 panes) plus 30 rendered by script |
 | 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 115 routes exist; 57 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 37 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
@@ -256,7 +256,7 @@ A single streaming conversation with the selected model.
 | Active model and persona selection | Chat primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | conversation interface | Chat primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 
-**Controls — 10 in the markup:**
+**Controls — 11 in the markup:**
 
 | Tag | Id | Label | Handler |
 |---|---|---|---|
@@ -266,15 +266,19 @@ A single streaming conversation with the selected model.
 | input | chatToolsEnabled | — | — |
 | input | chatUnload | — | — |
 | button | chatClearBtn | Clear | clearChat() |
+| button | chatHandoffBtn | Open in Harness | handOffChatToHarness() |
 | button | chatJumpLatest | Jump to latest ↓ | jumpToLatestChatTurn() |
 | textarea | chatInput | — | — |
 | button | chatStopBtn | Stop | stopActiveStream() |
 | button | chatSendBtn | Send | sendChat() |
 
-**Routes reached from this pane's controls — 1, walking at most 2 calls; 7 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
+**Routes reached from this pane's controls — 4, walking at most 2 calls; 7 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
 
 | Method | Route | Certainty | State-changing | Walk | Gates that can refuse it |
 |---|---|---|---|---|---|
+| GET | `/api/hall/sessions` | certain | no | `handOffChatToHarness` → `switchTab` → `refreshHallSessions` | — |
+| GET | `/api/harness/sessions` | certain | no | `handOffChatToHarness` → `switchTab` → `loadHarnessSessions` | — |
+| GET | `/api/onboarding/preflight` | certain | no | `handOffChatToHarness` → `switchTab` → `refreshOnboarding` | — |
 | POST | `/api/chat/stream` | certain | yes | `sendChat` → `sendChatRequest` → `consumeSSE` | `host_allowlist`, `origin_check`, `bearer_token`, `rate_limit`, `body_size_limit` |
 
 ## Shared chrome
@@ -341,12 +345,12 @@ provenance; a matching snapshot cannot clear separate review holds.
 
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
-| `ledger_content_sha256` | `cc2138d4704bbd19ef4bcccaa69fa000ba029d6aeeff5f8ea14fd804070a2967` | `not recorded` |
-| `source_manifest_sha256` | `94aa7df05a3b3e1ad883ee7b3dcc7286c55d65905a541acaff842a21e61b46dd` | `not recorded` |
-| `control_inventory_sha256` | `b93f062bf38ff7de3f9a643fe671c94028fbfc3e344dddcb4a784f53c11179c6` | `not recorded` |
-| `route_map_sha256` | `fa670c64d4e1b93ef4e922e3b902762d3680974e5c6390b80288c385c4e9c2ca` | `not recorded` |
-| `authorization_trace_sha256` | `d865a1261fd0ad3e062b8e7b58e05ee7ebc5a4884ec6556f64afe327806edda3` | `not recorded` |
-| `frontend_sha256` | `436fd88fa66ba24d099fc811c9bfbb5cb2f4f227a62fe46d41d117d75392d306` | `not recorded` |
+| `ledger_content_sha256` | `a0e88eb7a422551b0a0c485167b23a55e7cf0a1310d78c61b849413314b87853` | `not recorded` |
+| `source_manifest_sha256` | `e37b2c56b7824174e837a71706aa71d2b4cbdbb232967dbf0c4a98e6cbe92259` | `not recorded` |
+| `control_inventory_sha256` | `daeeb52b8e1a8e594a01a20c81417077dcef221a435c6373f92805b1bb12a38d` | `not recorded` |
+| `route_map_sha256` | `7fb0d7bdbaf903cd7f967fd5de76faf6e75f0f8489685119e8f13a70cd9498dc` | `not recorded` |
+| `authorization_trace_sha256` | `f7ca0fba056cdba87995a512b4c1318b941ac57321bb5342946fc74704133614` | `not recorded` |
+| `frontend_sha256` | `7b99848ef5a6155c1cbb274910d95ef95684a775badaca2340a2ef5c695bcd00` | `not recorded` |
 | `screenshot_manifest_sha256` | `69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92` | `not recorded` |
 | `screenshot_index_sha256` | `de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

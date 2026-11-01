@@ -1,0 +1,125 @@
+{
+  "schema_version": "1.0.0",
+  "story": "UIUX-P2-06",
+  "statement": "Chat hands a conversation to the Harness explicitly: one button that carries the last task, the conversation's counts, the context the reply was sent with and every tool call with its status, step, time and clipped output into the Harness composer - where the workspace, the policy and the approval surface live - and then stops, without a request, without a run and without clearing anything; the pane leaves a receipt with the counts and a way back to Chat, and a handoff that cannot happen says so and keeps the transcript.",
+  "source": {
+    "frontend": "static/index.html",
+    "server": "app.py",
+    "routes": []
+  },
+  "reasons": [
+    "nothing",
+    "streaming",
+    "ready",
+    "handed"
+  ],
+  "brief": {
+    "carries": [
+      "the last user task",
+      "message and reply counts",
+      "tool-call and failure counts",
+      "the recorded context line",
+      "every tool call with its status, step, time and 200-character output",
+      "a pointer to the transcript"
+    ],
+    "bounds": {
+      "tool_calls": 8,
+      "output_characters": 200,
+      "server_output_cap": 500
+    }
+  },
+  "frontend": {
+    "functions": {
+      "chatHandoffStats": true,
+      "chatHandoffBrief": true,
+      "chatHandoffReason": true,
+      "updateChatHandoff": true,
+      "handOffChatToHarness": true
+    },
+    "control": {
+      "is_a_button": true,
+      "type_is_button": true,
+      "starts_disabled": true,
+      "described_by_the_sentence": true,
+      "has_a_title": true,
+      "handler_wired": true,
+      "sentence_is_a_live_region": true,
+      "sentence_near_the_button": true
+    },
+    "safety": {
+      "no_network": true,
+      "no_run": true,
+      "no_clear": true,
+      "every_exit_is_visible": true,
+      "failure_is_presented": true,
+      "failure_keeps_the_transcript": true,
+      "failure_offers_a_retry": true,
+      "failure_forgets_the_carry": true
+    },
+    "carry": {
+      "fills_the_harness_composer": true,
+      "focuses_it": true,
+      "switches_to_the_harness": true,
+      "returns_what_it_carried": true,
+      "no_task_no_handoff": true
+    },
+    "brief": {
+      "task_is_the_last_user_message": true,
+      "counts_messages_and_replies": true,
+      "counts_calls_and_failures": true,
+      "uses_the_recorded_context": true,
+      "prints_the_context_line": true,
+      "says_nothing_ran": true,
+      "statuses_are_words": true,
+      "says_step_and_time": true,
+      "bounds_the_calls": true,
+      "admits_the_bound": true,
+      "clips_the_outputs": true,
+      "admits_the_clip": true,
+      "admits_the_server_cap": true,
+      "points_at_the_transcript": true
+    },
+    "sentence": {
+      "one_predicate": true,
+      "button_reads_it": true,
+      "every_reason_declared": true,
+      "reason_counts_what_it_carries": true,
+      "waits_while_streaming": true,
+      "remembers_what_was_handed": true,
+      "written_only_on_change": true,
+      "one_hook_from_the_composer": true
+    },
+    "receipt": {
+      "is_presented_not_written": true,
+      "cause_counts_the_carry": true,
+      "kept_state_is_stated": true,
+      "nothing_has_run_is_stated": true,
+      "way_back_to_chat": true,
+      "way_back_focuses_the_composer": true,
+      "way_back_is_its_own_action": true,
+      "mark_is_set": true
+    },
+    "transcript": {
+      "clear_resets_the_mark": true,
+      "undo_resets_the_mark": true
+    },
+    "styles": {
+      "sentence": true,
+      "tones": true,
+      "button": true,
+      "narrow_safe": true
+    }
+  },
+  "totals": {
+    "reasons": 4,
+    "checks": 53,
+    "findings": 0
+  },
+  "findings": [],
+  "limits": [
+    "the handoff is a local carry. It reads the turns the pane already holds and writes them into another pane's composer; it does not persist a draft, so a reload loses the brief - the transcript in Chat is the durable copy, and the receipt says so",
+    "the Harness decides everything that matters after the carry: workspace, workflow mode, execution policy and approvals. The handoff cannot set those, and the brief says nothing has run",
+    "the brief clips tool output at 200 characters although the server sends up to 500, so the pane says the rest is in the transcript rather than pretending it carried the whole thing",
+    "the walk writes a conversation for the carry cases because this host has no model runtime; the harness composer it fills is the real one, and the walk proves the carry posts nothing"
+  ]
+}

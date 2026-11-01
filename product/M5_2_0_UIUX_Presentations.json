@@ -52,7 +52,7 @@
         "Re-check",
         "Providers"
       ],
-      "line": 2764
+      "line": 2774
     },
     {
       "container": "startRecentState",
@@ -65,7 +65,7 @@
         "Start a session",
         "Open Harness"
       ],
-      "line": 2823
+      "line": 2833
     },
     {
       "container": "startRecentState",
@@ -78,7 +78,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 2898
+      "line": 2908
     },
     {
       "container": "startHealthState",
@@ -91,7 +91,7 @@
         "Re-check",
         "Monitor rail"
       ],
-      "line": 2992
+      "line": 3002
     },
     {
       "container": "startWorkspaceState",
@@ -104,7 +104,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 3076
+      "line": 3086
     },
     {
       "container": "hallStream",
@@ -118,7 +118,7 @@
         "Ask one model",
         "Configure providers"
       ],
-      "line": 3373
+      "line": 3383
     },
     {
       "container": "debateSynthesisArea",
@@ -130,7 +130,7 @@
       "actions": [
         "Start Compare"
       ],
-      "line": 3387
+      "line": 3397
     },
     {
       "container": "chatState",
@@ -143,7 +143,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 3397
+      "line": 3407
     },
     {
       "container": "harnessStreamState",
@@ -156,7 +156,33 @@
         "Reconnect now",
         "Reload from snapshot"
       ],
-      "line": 3411
+      "line": 3421
+    },
+    {
+      "container": "chatState",
+      "pane": "Chat",
+      "kind": "error",
+      "title": "The handoff did not happen",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Retry",
+        "Dismiss"
+      ],
+      "line": 4667
+    },
+    {
+      "container": "chatState",
+      "pane": "Chat",
+      "kind": "recovery",
+      "title": "Handed to the Harness",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Back to Chat",
+        "Open Harness"
+      ],
+      "line": 4684
     },
     {
       "container": "chatState",
@@ -169,7 +195,7 @@
         "Undo",
         "Dismiss"
       ],
-      "line": 4596
+      "line": 4774
     }
   ],
   "containers": [
@@ -224,27 +250,27 @@
   ],
   "remaining_raw_writers": [
     {
-      "line": 3685,
+      "line": 3695,
       "handler": "installSkill"
     },
     {
-      "line": 5390,
+      "line": 5568,
       "handler": "openHarnessDiffModal"
     },
     {
-      "line": 5874,
+      "line": 6052,
       "handler": "runMcpPlayground"
     }
   ],
   "totals": {
     "kinds": 3,
-    "surfaces": 10,
+    "surfaces": 12,
     "containers": 8,
     "wired_containers": 8,
     "by_kind": {
       "empty": 3,
-      "error": 5,
-      "recovery": 2
+      "error": 6,
+      "recovery": 3
     },
     "remaining_raw_writers": 3,
     "findings": 0

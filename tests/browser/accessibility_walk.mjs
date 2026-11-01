@@ -35,6 +35,23 @@ async function puppeteerModule() {
   return module.default || module;
 }
 
+// openOverlay() focuses in the frame after the class lands, because a display:none
+// element cannot take focus. A walk that reads activeElement the instant .open appears
+// is reading the focus that was there before: on a loaded runner the evaluation wins the
+// race and the check fails for a reason that has nothing to do with the product.
+async function waitForFocus(page, id, timeout = 5000) {
+  try {
+    await page.waitForFunction(
+      (want) => document.activeElement && document.activeElement.id === want,
+      { timeout },
+      id,
+    );
+  } catch (_error) {
+    // Nothing to say here: the check that follows reports what the focus actually was,
+    // which is a better failure message than a timeout from the wait.
+  }
+}
+
 function check(name, passed, detail = "") {
   if (!passed) throw new Error(`${name} failed${detail ? `: ${detail}` : ""}`);
   return { name, passed: true, detail };
@@ -104,6 +121,7 @@ async function main() {
     await page.keyboard.press("k");
     await page.keyboard.up("Control");
     await page.waitForFunction(() => document.getElementById("cmdPaletteModal").classList.contains("open"));
+    await waitForFocus(page, "cmdSearchInput");
     let palette = await page.evaluate(() => {
       const modal = document.querySelector("#cmdPaletteModal [role=dialog]");
       const input = document.getElementById("cmdSearchInput");
@@ -165,6 +183,7 @@ async function main() {
     await new Promise((resolve) => setTimeout(resolve, 100));
     await page.evaluate(() => window.openMcpModal());
     await page.waitForFunction(() => document.getElementById("contextModal").classList.contains("open") && document.getElementById("mcpModal").classList.contains("open"));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     const modalSemantics = await page.evaluate(() => [...document.querySelectorAll(".modal-backdrop.open [role=dialog]")]
       .every((dialog) => dialog.getAttribute("aria-modal") === "true" && dialog.getAttribute("aria-label")));
     results.push(check("every open overlay exposes a named modal dialog", modalSemantics));
