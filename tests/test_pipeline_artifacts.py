@@ -155,7 +155,7 @@ def test_an_empty_seat_drawn_as_a_quiet_one_is_a_finding(sources):
 def test_a_stopped_run_drawn_as_a_finished_one_is_a_finding(sources):
     broken = sources(
         html_transform=lambda html: html.replace(
-            "councilRun.stopped = ![1,2,3,4].every(n => stageBuffers[n] && stageBuffers[n].u);",
+            "councilRun.stopped = !allDone;",
             "councilRun.stopped = false;",
             1,
         )
@@ -276,7 +276,9 @@ def test_a_rows_that_churn_on_every_token_is_a_finding(sources):
 
 
 def test_a_stale_run_inherited_by_the_next_one_is_a_finding(sources):
-    broken = sources(html_transform=lambda html: html.replace("\n    stageRowSignature = {};", "", 1))
+    # Every place that starts a view from scratch resets the rows; removing all of them is what
+    # "inheriting the last run" looks like.
+    broken = sources(html_transform=lambda html: html.replace("\n    stageRowSignature = {};", "", -1))
     assert "a new run clears the rows instead of inheriting them" in _checks(broken)
 
 
@@ -350,10 +352,12 @@ def test_the_council_route_still_saves_after_the_last_stage():
 
 
 def test_the_pane_still_posts_only_what_it_posted():
+    """P3-07 moved the run start out of `runCouncil`; the rule travels with the code."""
     html = FRONTEND.read_text(encoding="utf-8")
-    council = inventory.function_body(html, "runCouncil")
-    assert "/api/council/stream" in council
-    assert "fetch(" not in council
+    start = inventory.function_body(html, "startPipelineRun")
+    assert "/api/council/stream" in start
+    assert "fetch(" not in start
+    assert "/api/council/stream" not in inventory.function_body(html, "runCouncil")
 
 
 def test_the_media_set_is_from_the_walk():

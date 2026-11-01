@@ -425,7 +425,7 @@
   .council-artifacts[hidden] { display: none; }
   .council-artifacts[data-state="partial"] { border-left-color: var(--amber); }
   .council-artifacts[data-state="failed"] { border-left-color: var(--rose); }
-  .council-artifacts[data-state="recovered"] { border-left-color: var(--indigo, var(--accent)); }
+  .council-artifacts[data-state="recovered"] { border-left-color: var(--cyan); }
   .council-artifacts strong { color: var(--text); }
   .council-artifacts .council-artifacts-note { display: block; margin-top: 3px; font-size: 11.2px; color: var(--text-faint); }
   .debate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px; margin-bottom: 14px; }
@@ -4920,7 +4920,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       // "so far" is only true while there is still a stream to add to it. Once the run is over -
       // stopped, failed or recovered - the seat stopped where it stopped, and the row says so.
       const over = Boolean(councilRun && (councilRun.stopped || councilRun.endReason));
-      const label = over ? `${seat.short} stopped after` : "produced so far";
+      const label = over ? `${String(seat.short)} stopped after` : "produced so far";
       host.innerHTML = `<span class="stage-artifact-key">${escapeHtml(label)}</span><span class="stage-artifact-size">${escapeHtml(String(chars))} chars</span>`
         + (reasoning ? `<span>· ${escapeHtml(String(reasoning))} chars of reasoning</span>` : "");
       return;
@@ -4974,7 +4974,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const headlineHtml = recovered
       ? `<strong>Showing ${escapeHtml(done)}</strong> · ${escapeHtml(volume)}${escapeHtml(carried)}. `
       : (councilRun.stopped && !allDone
-        ? `<strong>${endedWord} after ${escapeHtml(done)}.</strong> ${escapeHtml(volume)}${escapeHtml(carried)}. `
+        ? `<strong>${escapeHtml(endedWord)} after ${escapeHtml(done)}.</strong> ${escapeHtml(volume)}${escapeHtml(carried)}. `
         : `<strong>${escapeHtml(done.charAt(0).toUpperCase() + done.slice(1))}</strong> · ${escapeHtml(volume)}${escapeHtml(carried)}. `);
     const notes = [];
     if (!recovered && councilRun.attempt > 1) {
