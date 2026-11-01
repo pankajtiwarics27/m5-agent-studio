@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 18,
+  "revision": 19,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -100,17 +100,15 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": "UIUX-P3-03",
-    "active_stories": [
-      "UIUX-P3-03"
-    ],
-    "last_completed_story": "UIUX-P3-02",
-    "next_recommended_story": "UIUX-P3-03",
-    "last_checkpoint": "2026-11-01T05:48:18Z",
-    "last_session_id": "arena/95c8a2aa-m5-agent-studio",
+    "active_story": null,
+    "active_stories": [],
+    "last_completed_story": "UIUX-P3-03",
+    "next_recommended_story": "UIUX-P3-04",
+    "last_checkpoint": "2026-11-01T06:35:00Z",
+    "last_session_id": "arena/3101062f-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "21108aac85da50bc447f355837eb1499f2b96892",
+    "last_verified_commit": "e7ff3d62e9b1291c32789c5014fc713e2357df57",
     "last_updated": "2026-11-01",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -275,11 +273,11 @@
         "UIUX-P3-07"
       ],
       "total": 7,
-      "done": 2,
-      "in_progress": 1,
+      "done": 3,
+      "in_progress": 0,
       "blocked": 0,
       "not_started": 4,
-      "percent_complete": 29
+      "percent_complete": 43
     },
     {
       "id": "P4",
@@ -342,11 +340,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 19,
-    "in_progress": 1,
+    "done": 20,
+    "in_progress": 0,
     "blocked": 0,
     "not_started": 20,
-    "percent_complete": 48
+    "percent_complete": 50
   },
   "stories": [
     {
@@ -4023,8 +4021,8 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Approval requests are rendered in durable replay and in live Harness/GSD/SDLC paths. Durable replay exposes controls only for a currently pending approval, but cards showed only a tool/argument preview, live workflow cards hard-coded “Standard Policy”, and rejection/timeout outcomes were not clearly distinguished. The server remains authoritative for session-scoped, replay-protected approval resolution and one-use grant creation.",
-      "target_behavior": "Harness approval safety and permission UX with no loss of existing functionality.",
+      "current_behavior": "Approving a Harness tool call is not \"run it once\": POST /api/harness/approve resolves the gate and _persist_approval_grant_outcome() records a scoped grant under the approval's own id - one use, the exact arguments, issued_by=operator_approval, ten minutes by default - and check_revocation_denials() is what refuses it after a revocation. The pane said none of it. An approval arrived as one of four different cards (the streamed card, appendWorkflowApprovalCard, updateWorkflowApprovalCard and the GSD/Turn path), three of which printed a hardcoded \"Standard Policy\" badge whatever policy was in force; the streamed card posted activeHarnessId as the session while the other two posted d.session_id; no card stated the capability or the resource scope the decision would record, none said how long the record lasted, expiry was drawn only after the fact, and nothing could list or revoke what an approval had left behind even though the grants routes existed.",
+      "target_behavior": "An approval states the permission it records before the click - the policy asking, the tool, the exact arguments, the capability and resource, the one-use limit and the minute it expires - and the decision is sent with the session that owns it; refusing says what it does instead; an offer nobody answered reads as expired with the next step; and the session's permissions, revocation rules, history and pending approvals are inspectable and revocable from the pane, with a revocation that says the rule it creates outlives the grant, because it does.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
         "Trace relevant DOM, JS handlers, API and backend state transitions",
@@ -4066,86 +4064,152 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P3-03 (Harness approval safety and permission UX). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 85,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
-        "started_at": "2026-11-01T05:47:49Z",
-        "updated_at": "2026-11-01T06:31:03Z",
-        "completed_at": null,
-        "owner_session": "arena/95c8a2aa-m5-agent-studio",
-        "commit_sha": null,
+        "started_at": "2026-11-01T05:15:00Z",
+        "updated_at": "2026-11-01T06:35:00Z",
+        "completed_at": "2026-11-01T06:35:00Z",
+        "owner_session": "arena/3101062f-m5-agent-studio",
+        "commit_sha": "e7ff3d62e9b1291c32789c5014fc713e2357df57",
         "changed_files": [
-          "docs/media/uiux-p3-03/approval-after.png",
-          "docs/media/uiux-p3-03/approval-before.png",
-          "docs/uiux-2-0-authorization-trace.md",
-          "docs/uiux-2-0-control-inventory.md",
-          "docs/uiux-2-0-overlays.md",
-          "docs/uiux-2-0-p0-signoff.md",
-          "docs/uiux-2-0-presentations.md",
-          "docs/uiux-2-0-route-map.md",
-          "docs/uiux-2-0-status-and-evidence.md",
-          "docs/uiux-2-0-tokens.md",
-          "docs/uiux-p3-03-approval-evidence.md",
-          "product/M5_2_0_UIUX_Authorization_Trace.json",
-          "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
+          "static/index.html",
+          "scripts/uiux_harness_permissions_inventory.py",
+          "scripts/harness_permissions_walk.mjs",
+          "scripts/harness_permissions_seed.py",
+          "scripts/overlay_walk.mjs",
+          "tests/test_harness_permissions.py",
+          "tests/test_overlays.py",
+          "tests/test_uiux_accessible_overlays.py",
+          "tests/test_uiux_preservation_signoff.py",
+          "tests/test_screenshot_capture_browser.py",
+          "docs/uiux-2-0-harness-permissions.md",
+          "docs/uiux-2-0-program.md",
+          "docs/README.md",
+          "docs/media/harness-permissions/README.md",
+          "docs/media/harness-permissions/approval-card.png",
+          "docs/media/harness-permissions/expired.png",
+          "docs/media/harness-permissions/permissions-open.png",
+          "docs/media/harness-permissions/revoked.png",
+          "product/M5_2_0_UIUX_Harness_Permissions.json",
           "product/M5_2_0_UIUX_Control_Inventory.json",
-          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
           "product/M5_2_0_UIUX_Overlays.json",
           "product/M5_2_0_UIUX_Presentations.json",
-          "product/M5_2_0_UIUX_Preservation_Signoff.json",
-          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Onboarding.json",
           "product/M5_2_0_UIUX_Source_Manifest.json",
-          "product/M5_2_0_UIUX_Status_Components.json",
-          "product/M5_2_0_UIUX_Tokens.json",
-          "static/index.html",
-          "studio.py",
-          "tests/browser/accessibility_walk.mjs",
-          "tests/test_harness_approval_ui.py",
-          "tests/test_screenshot_capture_browser.py"
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-tokens.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-start.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/product-roadmap-status.md",
+          "studio.py"
         ],
         "evidence": [
-          "Claimed before implementation at 21108aac85da50bc447f355837eb1499f2b96892 after python3 scripts/uiux_coordination.py --github --json reported UIUX-P3-03 as the sole eligible story, the source pin as an ancestor, a clean checkout at current main, and no open pull requests or marked blocker issues. No implementation changes have started.",
-          "Post-claim coordination recheck on 2026-11-01 found main current at 21108aac, PR #148 as the only open PR, and no competing claim or blocking issue; the expected active-story/open-PR holds remain.",
-          "Traced durable approval replay plus the live Harness, GSD and SDLC card paths, the current /state pending snapshot, /api/harness/approve, and grant/session/replay/timeout behavior. No backend authorization, endpoint, event payload, task state, grant, sandbox, action-admission, workspace, or recovery semantics were changed.",
-          "Captured before and after approval-card views using the pinned browser against a disposable demo and synthetic DOM-only run_bash preview. No approval endpoint, tool, model/provider, user workspace, or real credential was used; these images are presentation evidence only, not authorization evidence.",
-          "Regenerated source manifest, control inventory, route map, authorization trace, overlay/presentation/onboarding/status/token inventories, and preservation package after the frontend change. Preservation package remains historical-approval-unbound; the owner approval record and P0 attribution were not edited.",
-          "The regenerated preservation sign-off now maps Harness GET /api/harness/sessions/{session_id}/state and POST /api/harness/approve to the approval journey; inventory reports 185 markup controls and 22 script-rendered controls with no route-map findings."
+          "Four paths could raise an approval and each drew its own card; three printed the same hardcoded `Standard Policy` badge whatever policy was in force. `renderHarnessApprovalCardHtml()` is now the only builder and all four paths draw with it, and the policy it prints is the option's own label from `#harnessPolicy` (`harnessPolicyLabel()`), so the card and the select cannot describe one policy two ways. The inventory fails if a second headline, a second decision control or a policy literal comes back.",
+          "The card states what the click records, in the units the store uses: tool, exact arguments, capability (`scoped_grants.resolve_tool_capabilities()`), resource, and `one use · 10 minutes after you decide`. The capability line is a client table that this story's inventory imports the real function to check - 18 tools and the `mcp__*` rule - so the copy is verified rather than trusted, and the ttl it prints is compared with `SG_DEFAULT_GRANT_TTL_SECONDS`. The resource line names the path argument it can see and says where the server will resolve it; the surface prints the canonical `path:<worktree>:<rel>` from the record, so the pane never invents a scope it did not receive.",
+          "The old streamed card posted `activeHarnessId` and the workflow cards posted `d.session_id`, which is how a stale card could earn a 403. Every path now passes the session it drew with, `resolveHarnessApproval()` falls back to the selected session only when the card carried none, and the walk captures the `POST /api/harness/approve` body to prove `session_id` is the seeded session.",
+          "Expiry is stated while the offer is live: the card counts down from the request (`expires in 9 min`, then seconds), one interval drives every live card and clears itself when the last one is gone, and an offer whose slot is gone reads `Expired — re-run the turn` with `Re-run the turn to reach the gate again` - not as a refusal, because nothing was refused. A decided card keeps its arguments: the resolved event carries only `{approval_id, decision, note, step}`, so the request is filed in `harnessApprovalRequests` when it is first drawn and the decided card is redrawn from it.",
+          "The permissions surface (`#harnessGrantsModal`, opened by `#harnessPermissionBadge` in the session strip and by `Permissions & Revocations` in the session actions) lists what the session holds with tool, capability, canonical resource, limit, expiry, `issued_by` and note; the revocation rules that refuse matching actions; the history of grants that ended and how; and the approvals still waiting (with a link to the card) or expired. A failed read says it failed instead of drawing an empty session, a slow read is dropped when the reader has selected another session, and the badge says `No permissions` in words.",
+          "Revoking is two steps and says what it does: that the grant stops, that a revocation rule refuses the capability on the scope for the rest of the session, that matching running commands are stopped too, and that neither can be undone from here. That last sentence is the one the story had to get right - the store permits issuing a fresh grant after a revocation (verified against the live API before this story), so only `check_revocation_denials()` stops the action, and the confirmation says so rather than offering an undo that does not exist.",
+          "The walk could not ask the API for an approval, because no route mints one: `_PENDING_APPROVALS` is in-process state written only when a running turn reaches the gate, and the demo has no runtime. `scripts/harness_permissions_seed.py` therefore boots the ordinary isolated demo environment and calls the app's own `_create_pending_tool_approval()` twice and lets one slot lapse the way the runtime does. The approvals, grants and events are the server's own records; only the arrival is staged, and the fixture says so in its own docstring.",
+          "origin/main moved to 21108aa (#145, UIUX-P3-01's settings work) while this pull request was open, so the branch was merged with main and every generated artifact was re-derived on the merged tree rather than kept from either side; the four captures and both browser walks were re-run against the merged frontend, not carried over."
         ],
         "test_results": [
           {
-            "command": ".venv/bin/python -m pytest -q tests/test_uiux_roadmap.py tests/test_uiux_preservation_signoff.py",
+            "command": ".venv/bin/python -m pytest -q",
             "exit_code": 0,
-            "result": "52 passed (Python 3.11.2, pytest 9.2.0); claim counters, dependencies, session state and preservation-signoff invariants verified."
+            "result": "2085 passed, 26 skipped in 178.94s on the merged ledger tree (origin/main 21108aa, the P3-01 work from #145, merged into this branch); before the three dialog-count and sign-off fixes the same suite was 2081 passed with those three cases failing, which is how the count went from nine dialogs to ten"
           },
           {
-            "command": "STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js LD_LIBRARY_PATH=/tmp/chromium-libs/lib STUDIO_SCREENSHOT_CHROME_ARGS=\"--no-zygote --single-process --disable-gpu\" M5_REQUIRE_BROWSER_TESTS=1 .venv/bin/pytest -q",
+            "command": "LD_LIBRARY_PATH=/tmp:/tmp/chromium-libs/lib STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=/home/user/m5-agent-studio/tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js STUDIO_SCREENSHOT_CHROME_ARGS=\"--disable-gpu\" M5_REQUIRE_BROWSER_TESTS=1 .venv/bin/python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py",
             "exit_code": 0,
-            "result": "2078 passed, 1 skipped (live sandbox requires explicit opt-in), 1 Starlette deprecation warning in 256.50s. Python 3.11 / pytest 9.2.0; required browser tests ran with pinned Chromium 153 and Puppeteer Core 25.16.0."
+            "result": "30 passed in 87.97s on the merged tree: the six-pane captures still validate, the overlay walk reports 80 passing and 2 blocked (the diff dialog and this story's permissions surface, both on the Harness-session prerequisite), and the seeded store is unchanged by the walks"
           },
           {
-            "command": ".venv/bin/ruff check . && .venv/bin/mypy",
+            "command": "STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=$PWD/tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js LD_LIBRARY_PATH=/tmp:/tmp/chromium-libs/lib node scripts/harness_permissions_walk.mjs --screenshots docs/media/harness-permissions",
             "exit_code": 0,
-            "result": "Ruff passed; mypy reported no issues in 58 source files."
+            "result": "24/24 checks passed, 0 page errors, re-run on the merged frontend and re-captured into docs/media/harness-permissions: the card's policy, capability, resource, limit and countdown; the expired card; a refusal recording no permission; approving recording exactly one; the surface's row, policy revision and expired offer; the two-step revoke; and the trajectory drawing approval/decision and security/grant_revoked"
           },
           {
-            "command": ".venv/bin/python scripts/check_frontend_syntax.py && .venv/bin/python scripts/demo_tour.py --check && .venv/bin/python scripts/validate_screenshots.py && .venv/bin/python scripts/validate_docs.py && .venv/bin/python scripts/uiux_preservation_signoff.py --check",
+            "command": ".venv/bin/python scripts/uiux_harness_permissions_inventory.py --check",
             "exit_code": 0,
-            "result": "Frontend syntax OK; demo transcript current; standard baseline screenshots 6/6 validated; documentation validation passed (5 required pages, 154 files scanned); preservation package current and historical-approval-unbound."
+            "result": "harness permissions OK: 124 checks, 18 capability mappings, 0 findings"
+          },
+          {
+            "command": ".venv/bin/python -m ruff check .",
+            "exit_code": 0,
+            "result": "All checks passed!"
+          },
+          {
+            "command": ".venv/bin/mypy",
+            "exit_code": 0,
+            "result": "Success: no issues found in 58 source files"
+          },
+          {
+            "command": ".venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "JavaScript syntax OK (1 inline block(s))"
+          },
+          {
+            "command": ".venv/bin/python scripts/verify_baseline.py (after git fetch --unshallow origin)",
+            "exit_code": 0,
+            "result": "Baseline verified: 7904892d759bb66b817bb17b6f4f377874bd6e25"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py; .venv/bin/python scripts/demo_tour.py --check; .venv/bin/python scripts/validate_screenshots.py; .venv/bin/python scripts/validate_security_signoff.py",
+            "exit_code": 0,
+            "result": "Documentation validation passed (5 required pages, 155 files scanned); demo transcript up to date; screenshots validated 6 of 6; security sign-off consistent (state=deferred, decision=pending)"
+          },
+          {
+            "command": "every scripts/uiux_*.py --check except uiux_coordination.py, with uiux_source_manifest.py, build_studio.py, generate_roadmap_status.py and uiux_preservation_signoff.py last",
+            "exit_code": 0,
+            "result": "all 16 inventories OK (control inventory 185 markup + 29 script-rendered, route map 56 call sites, tokens 45 in 7 groups, overlays 10 dialogs, presentations 12 call sites, harness settings 81 checks, harness timeline 81 checks, harness permissions 124 checks), source manifest 48 files/6 tabs/115 routes, studio.py built, roadmap dashboard and sign-off up to date"
           }
         ],
         "visual_evidence": [
-          "docs/media/uiux-p3-03/approval-before.png — original pending-card presentation, captured before implementation with synthetic DOM-only data in the isolated demo.",
-          "docs/media/uiux-p3-03/approval-after.png — updated disclosure/control presentation, captured after implementation with the same synthetic DOM-only data in the isolated demo.",
-          "docs/uiux-p3-03-approval-evidence.md documents screenshot provenance and the reason these focused synthetic views are not inserted into the provider-backed baseline screenshot manifest."
+          {
+            "file": "docs/media/harness-permissions/approval-card.png",
+            "shows": "An approval before any decision at 1440x900: the policy in force (`Standard (Ask before Bash)`, the option's own label), `step 3`, `run_bash` with the exact command, `Capability code_execution, workspace_read, workspace_write`, `Resource this session's worktree, and nothing outside it`, `Limit one use · 10 minutes after you decide`, the expiry clock with a live countdown, the sentence that approving records a one-use permission for this exact call and is not a standing allow, and the two decision controls."
+          },
+          {
+            "file": "docs/media/harness-permissions/expired.png",
+            "shows": "An offer nobody answered: the card is drawn at 0.82 opacity with no decision buttons, and says `This request was never decided — the run it belonged to ended. Re-run the turn to reach the gate again; nothing was granted.`"
+          },
+          {
+            "file": "docs/media/harness-permissions/permissions-open.png",
+            "shows": "The permissions surface opened from the badge: `hns-c5a74e19 · policy Standard (Ask before Bash) · revision 1`, the grant the approval recorded under the approval id itself with its canonical `workspace:/tmp/m5-demo-.../workspace` scope, `one use · exact arguments only`, `9 min left` and `operator_approval`, and the expired offer beneath it."
+          },
+          {
+            "file": "docs/media/harness-permissions/revoked.png",
+            "shows": "The same surface after a two-step revoke: `This session holds no permission. 1 revocation rule refuses matching actions anyway.`, the rule `blocks code_execution, workspace_write` on that workspace for the rest of the session, and the grant in the history as `revoked — operator_revoked` with no countdown left to mislead."
+          }
         ],
         "known_regressions": [],
         "decisions": [
-          "Keep the existing approval and state endpoints unchanged. Before a decision POST, the client rechecks the originating session and pending approval against the existing authoritative state snapshot, then leaves refused/unconfirmed controls disabled until resync. Approval still does not bypass server policy, action admission, or sandbox checks."
+          "One card builder, four call sites. The alternative - keeping four renderers and adding the missing sentences to each - is what let three of them print a policy badge that was not the policy in force.",
+          "The capability line is a client table checked against `scoped_grants.resolve_tool_capabilities()` by the inventory rather than a value read from the server, because the server records the grant only after the decision. The resource line names the argument and says where it will be resolved, because the pane cannot canonicalise a path the way the server does and should not pretend to.",
+          "The ttl printed on the card is `SG_DEFAULT_GRANT_TTL_SECONDS`; the pane does not offer a per-decision ttl. A duration chosen in the browser would be a second policy beside the one the server stamps.",
+          "The rights surface offers revocation per grant, not by capability or scope. `POST /grants/revoke` supports the second form, and exposing it would create a rule that refuses actions no card on screen names.",
+          "The revocation confirmation says the rule cannot be undone from here, because the store keeps revocation rules for the life of the session and re-issuing the capability does not clear one. The pane does not offer an undo the server does not have.",
+          "The walk seeds its approvals with `scripts/harness_permissions_seed.py` rather than adding a route: the story's contract is that no endpoint is added, and a dev-only mint endpoint would be a privilege the product does not have.",
+          "Three test files had nine written into them; they are updated to ten rather than made to accept any number, because a count that cannot fail cannot catch an overlay that stops being tracked. The sign-off test's two route totals are re-derived from the route map, because they move whenever a call site is added and were pinning the previous frontend.",
+          "The approve route, the grant store, the revoke semantics and the denial checks are untouched. The unshallowed clone was needed for `verify_baseline.py`; that is an environment step, not a code change."
         ],
         "blockers": [],
-        "handoff_note": "Implementation and regression evidence are prepared on the active session branch and in draft PR #148. Story remains in_progress; this session has not self-certified completion or changed owner approval. Independent owner review is still required before the story can be marked done.",
-        "next_action": "Request independent review of PR #148, especially the authorization-copy accuracy, fresh-snapshot gate, and generated preservation artifacts; address review findings and obtain owner approval before changing status to done.",
-        "readme_updated": false
+        "handoff_note": "UIUX-P3-03 is the approval saying what it is. An approval in the Harness records a scoped, one-use grant under its own id, and the pane now says so before the click: one card for all four paths, naming the policy asking (the option's own label), the tool, the exact arguments, the capability and resource the decision records, the one-use limit and the minute it expires, with a countdown, the sentence that it is not a standing allow, and what refusing does instead. The decision is posted with the session that owns it. What an approval leaves behind is inspectable and revocable from `#harnessPermissionBadge`: the surface lists held permissions, revocation rules, history and pending or expired approvals, and a revoke takes two steps and admits that the rule outlives the grant. No endpoint was added. Next: UIUX-P3-04 (Harness verification diff and artifacts) - read `docs/uiux-2-0-harness-permissions.md` and `docs/uiux-2-0-harness-timeline.md`, and keep `security/*` events drawn: the revocation this story performs appears in the trajectory only because P3-02's fallback card kept it.",
+        "next_action": "Implement UIUX-P3-04 (Harness verification diff and artifacts), building on the approval and permission records this story made inspectable.",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",

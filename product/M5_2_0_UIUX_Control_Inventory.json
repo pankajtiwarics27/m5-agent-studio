@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "603a29493780f6b867268ef3b87c25a37b0bc3ddfb5f60979e0b216eeff666dd",
+  "frontend_sha256": "7a74804e8b2a3503c504358bf0d2a58e278cd12271fd61f2509b397bbc678e34",
   "panes": [
     {
       "dom_id": "start",
@@ -112,48 +112,17 @@
     {
       "dom_id": "harness",
       "section_id": "pane-harness",
-      "control_count": 24,
+      "control_count": 22,
       "counts": {
-        "button": 10,
-        "input": 3,
+        "button": 9,
+        "input": 2,
         "select": 9,
         "summary": 1,
         "textarea": 1
       },
-      "controls_without_id": 6,
+      "controls_without_id": 3,
       "controls_without_label": 0,
       "controls": [
-        {
-          "tag": "button",
-          "type": "button",
-          "class": "btn btn-emerald btn-xs",
-          "aria-label": "Approve this tool call once",
-          "onclick": "resolveHarnessApproval(this)",
-          "data": {
-            "data-decision": "approve"
-          },
-          "text": "✓ Approve this call once"
-        },
-        {
-          "tag": "button",
-          "type": "button",
-          "class": "btn btn-danger btn-xs",
-          "aria-label": "Reject this tool call and do not run it",
-          "onclick": "resolveHarnessApproval(this)",
-          "data": {
-            "data-decision": "reject"
-          },
-          "text": "× Reject — do not run"
-        },
-        {
-          "tag": "input",
-          "type": "text",
-          "aria-label": "Optional note for rejecting this approval",
-          "placeholder": "Optional rejection note",
-          "data": {
-            "data-approval-note": ""
-          }
-        },
         {
           "tag": "button",
           "class": "btn",
@@ -236,7 +205,7 @@
           "id": "harnessSessionActionSelect",
           "aria-label": "Session actions",
           "onchange": "runHarnessSessionAction(this)",
-          "text": "Session Actions… Inspect Git Status & Diff Compact Session Context (≤2 KB) Open Agile SDLC Product Board"
+          "text": "Session Actions… Inspect Git Status & Diff Permissions & Revocations Compact Session Context (≤2 KB) Open Agile SDLC Product Board"
         },
         {
           "tag": "button",
@@ -244,6 +213,18 @@
           "class": "btn btn-danger",
           "onclick": "abortHarnessRun()",
           "text": "Abort"
+        },
+        {
+          "tag": "button",
+          "id": "harnessPermissionBadge",
+          "type": "button",
+          "class": "harness-perm-badge",
+          "title": "Permissions this session holds, and the way to take them back",
+          "onclick": "openHarnessGrants()",
+          "data": {
+            "data-count": "0"
+          },
+          "text": "No permissions"
         },
         {
           "tag": "button",
@@ -665,9 +646,9 @@
     }
   ],
   "chrome": {
-    "control_count": 101,
+    "control_count": 103,
     "counts": {
-      "button": 54,
+      "button": 56,
       "input": 29,
       "select": 12,
       "summary": 1,
@@ -1066,6 +1047,18 @@
       {
         "tag": "button",
         "class": "btn btn-xs",
+        "onclick": "refreshHarnessGrants()",
+        "text": "Refresh"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "closeHarnessGrants()",
+        "text": "Close"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
         "onclick": "closeProvidersModal()",
         "text": "Close"
       },
@@ -1345,14 +1338,16 @@
   "totals": {
     "panes": 6,
     "markup_controls": 185,
-    "pane_controls": 84,
-    "chrome_controls": 101,
-    "script_rendered_controls": 22,
+    "pane_controls": 82,
+    "chrome_controls": 103,
+    "script_rendered_controls": 29,
     "script_rendered_by_function": {
       "ensureStageCardMounted": 1,
       "openSpawnModal": 1,
       "refreshOnboarding": 1,
       "renderCommandPaletteList": 1,
+      "renderHarnessApprovalCardHtml": 3,
+      "renderHarnessGrants": 4,
       "renderHarnessSidebar": 1,
       "renderHarnessTimeline": 1,
       "renderMarkdown": 1,
