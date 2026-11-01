@@ -12,23 +12,23 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "a80bce0731b6c7b0c4c64426c16b2cc84f417bacddc77d118a3d5da42240e73e",
-      "bytes": 579699,
-      "lines": 10012
+      "sha256": "c8f1bdfea7003497582aa6da1595b5f2f3f0a2838d9a0edaf76582fdc1533768",
+      "bytes": 605347,
+      "lines": 10515
     },
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "e3dd15bef236555d4cb3fca12eac003a55e099b48bbefa20e313489af652f129",
-      "bytes": 1004849,
-      "lines": 21689
+      "sha256": "256be0ab320b2e2db4f9d7d8f74913077f5ffcef2f659955e5f69a36fc30b2f0",
+      "bytes": 1005045,
+      "lines": 21692
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "7c4547faa60b1196fc0162dc57b5df3ebf9068fa9abe6155091bfe7add19873b",
-      "bytes": 3317349,
-      "lines": 73041
+      "sha256": "31ac553982f950000e00b5a540bc7df617a71ad68eea967b03c1ef724ebbc607",
+      "bytes": 3343193,
+      "lines": 73547
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -348,8 +348,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "a80bce0731b6c7b0c4c64426c16b2cc84f417bacddc77d118a3d5da42240e73e",
-    "lines": 10012,
+    "sha256": "c8f1bdfea7003497582aa6da1595b5f2f3f0a2838d9a0edaf76582fdc1533768",
+    "lines": 10515,
     "tab_count": 6,
     "tabs": [
       {
@@ -395,8 +395,8 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 63,
-    "api_literal_count": 53,
+    "fetch_call_count": 64,
+    "api_literal_count": 54,
     "api_literals": [
       "/api/cache/clear-ssd",
       "/api/chat/stream",
@@ -436,6 +436,7 @@
       "/api/mcp/servers/{param}/call",
       "/api/mcp/servers/{param}/sync",
       "/api/models/unload-all",
+      "/api/models/{param}/load",
       "/api/models/{param}/{param}",
       "/api/onboarding/preflight",
       "/api/onboarding/preflight?probe=local",
@@ -455,7 +456,7 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "e3dd15bef236555d4cb3fca12eac003a55e099b48bbefa20e313489af652f129",
+    "sha256": "256be0ab320b2e2db4f9d7d8f74913077f5ffcef2f659955e5f69a36fc30b2f0",
     "route_count": 115,
     "by_method": {
       "DELETE": 5,

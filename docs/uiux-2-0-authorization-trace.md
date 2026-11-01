@@ -5,7 +5,7 @@ It is the `UIUX-P0-04` artifact: for state-changing route candidates resolved by
 what can refuse them and what durable state they touch, derived from `app.py` and the route map.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4`.
-* `app.py` digest: `e3dd15bef236555d…` · route map digest: `a9655ae590394e5c…`.
+* `app.py` digest: `256be0ab320b2e2d…` · route map digest: `7db399ab46512983…`.
 * 46 resolved state-changing route candidates, out of 77 in `app.py`; 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * 20 reference an authority subsystem, 39 a durable-state subsystem, 3 contain a SQL write, and 23 can leave the machine.
 
@@ -93,7 +93,7 @@ Routes outside the protected prefixes: `GET /healthz`, `GET /` — the shell and
 | POST | `/api/mcp/servers/{alias}/call` | `api_call_mcp_server_tool` | runMcpPlayground | json | 400 401 403 409 413 | — | side_effect_ledger | — | — |
 | POST | `/api/mcp/servers/{alias}/sync` | `api_sync_mcp_server` | syncMcpServer | json | 400 401 403 404 413 | — | — | — | outbound http |
 | POST | `/api/models/unload-all` | `api_unload_all` | unloadAllModels | json | 400 401 403 413 | — | — | — | outbound http |
-| POST | `/api/models/{model_id:path}/load` | `api_load_model` | modelAction | json | 400 401 403 413 | — | — | — | outbound http |
+| POST | `/api/models/{model_id:path}/load` | `api_load_model` | councilSeatAction, modelAction | json | 400 401 403 413 | — | — | — | outbound http |
 | POST | `/api/models/{model_id:path}/unload` | `api_unload_model` | modelAction | json | 400 401 403 413 | — | — | — | outbound http |
 | POST | `/api/opencontext/docs` | `api_save_opencontext` | saveOpenContextDoc | json | 400 401 403 413 | — | context_store | — | — |
 | DELETE | `/api/opencontext/docs/{doc_id}` | `api_delete_opencontext` | deleteOpenContextDoc | json | 400 401 403 413 | — | context_store | — | — |

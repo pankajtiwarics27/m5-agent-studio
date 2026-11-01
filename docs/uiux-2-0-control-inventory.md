@@ -6,8 +6,8 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `a80bce0731b6c7b0c4c64426c16b2cc84f417bacddc77d118a3d5da42240e73e`.
-* Panes: 6 · controls in panes: 83 · controls in the
+* Frontend digest: `c8f1bdfea7003497582aa6da1595b5f2f3f0a2838d9a0edaf76582fdc1533768`.
+* Panes: 6 · controls in panes: 84 · controls in the
   shared chrome: 106 · script-rendered: 33.
 
 ## What this page is, and is not
@@ -23,7 +23,7 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 |---|---|---|---|---|---|
 | start | `pane-start` | 11 | 5 | 0 | button 8, input 2, select 1 |
 | harness | `pane-harness` | 23 | 4 | 0 | button 10, input 2, select 9, summary 1, textarea 1 |
-| hall | `pane-hall` | 17 | 4 | 0 | button 6, select 8, summary 2, textarea 1 |
+| hall | `pane-hall` | 18 | 4 | 0 | button 7, select 8, summary 2, textarea 1 |
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
 | debate | `pane-debate` | 5 | 0 | 0 | button 2, input 1, select 1, textarea 1 |
 | chat | `pane-chat` | 11 | 0 | 0 | button 5, input 2, select 3, textarea 1 |
@@ -31,8 +31,8 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 
 ## What the numbers already say
 
-* 189 controls are in the markup and 33 more are built by script — a checklist written from the markup alone would miss 15% of the interactive surface.
-* The shared chrome carries 106 controls; all six panes together carry 83. Most of the clicking happens in the shell, not inside a tab.
+* 190 controls are in the markup and 33 more are built by script — a checklist written from the markup alone would miss 15% of the interactive surface.
+* The shared chrome carries 106 controls; all six panes together carry 84. Most of the clicking happens in the shell, not inside a tab.
 * 58 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
@@ -85,7 +85,7 @@ Section `pane-harness`, 23 interactive elements.
 
 ## Pane `hall`
 
-Section `pane-hall`, 17 interactive elements.
+Section `pane-hall`, 18 interactive elements.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
@@ -93,19 +93,20 @@ Section `pane-hall`, 17 interactive elements.
 | 2 | button | hallFullRoundBtn | — | Run full round | runHallFullRound() |
 | 3 | button | hallConcludeBtn | — | Finish and pin summary | summonConclusion() |
 | 4 | summary | — | — | Council role models | — |
-| 5 | select | hallSeatArch | — | — | — |
-| 6 | select | hallSeatCoder | — | — | — |
-| 7 | select | hallSeatCritic | — | — | — |
-| 8 | select | hallSeatJudge | — | — | — |
-| 9 | select | hallReasoningSelect | — | Reasoning: Off Reasoning: Low Reasoning: Medium | — |
-| 10 | button | hallStopBtn | — | Stop | stopActiveStream() |
-| 11 | summary | — | — | Ask one model | — |
-| 12 | select | hallRoleSelect | — | 1. Architect / Strategist 2. Builder / Deep Analyst 3. Adversarial Critic 4. Lead Arbiter | — |
-| 13 | select | hallModelSelect | — | — | — |
-| 14 | button | hallSummonBtn | — | Ask one model | summonSingleAgent() |
-| 15 | textarea | hallHumanInput | — | Ask a question or steer the Council as Human Operative (Enter = Send)... | — |
-| 16 | select | hallSendModeSelect | — | Council message action | — |
-| 17 | button | — | — | Send | submitHallComposer() |
+| 5 | button | councilReadinessRefresh | button | Check again | refreshCouncilReadiness() |
+| 6 | select | hallSeatArch | — | — | — |
+| 7 | select | hallSeatCoder | — | — | — |
+| 8 | select | hallSeatCritic | — | — | — |
+| 9 | select | hallSeatJudge | — | — | — |
+| 10 | select | hallReasoningSelect | — | Reasoning: Off Reasoning: Low Reasoning: Medium | — |
+| 11 | button | hallStopBtn | — | Stop | stopActiveStream() |
+| 12 | summary | — | — | Ask one model | — |
+| 13 | select | hallRoleSelect | — | 1. Architect / Strategist 2. Builder / Deep Analyst 3. Adversarial Critic 4. Lead Arbiter | — |
+| 14 | select | hallModelSelect | — | — | — |
+| 15 | button | hallSummonBtn | — | Ask one model | summonSingleAgent() |
+| 16 | textarea | hallHumanInput | — | Ask a question or steer the Council as Human Operative (Enter = Send)... | — |
+| 17 | select | hallSendModeSelect | — | Council message action | — |
+| 18 | button | — | — | Send | submitHallComposer() |
 
 ## Pane `council`
 

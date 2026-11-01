@@ -52,7 +52,7 @@
         "Re-check",
         "Providers"
       ],
-      "line": 3104
+      "line": 3165
     },
     {
       "container": "startRecentState",
@@ -65,7 +65,7 @@
         "Start a session",
         "Open Harness"
       ],
-      "line": 3163
+      "line": 3224
     },
     {
       "container": "startRecentState",
@@ -78,7 +78,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 3238
+      "line": 3299
     },
     {
       "container": "startHealthState",
@@ -91,7 +91,7 @@
         "Re-check",
         "Monitor rail"
       ],
-      "line": 3332
+      "line": 3393
     },
     {
       "container": "startWorkspaceState",
@@ -104,7 +104,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 3416
+      "line": 3477
     },
     {
       "container": "hallStream",
@@ -118,7 +118,7 @@
         "Ask one model",
         "Configure providers"
       ],
-      "line": 3737
+      "line": 3798
     },
     {
       "container": "debateSynthesisArea",
@@ -130,7 +130,7 @@
       "actions": [
         "Start Compare"
       ],
-      "line": 3751
+      "line": 3812
     },
     {
       "container": "chatState",
@@ -143,7 +143,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 3761
+      "line": 3822
     },
     {
       "container": "harnessStreamState",
@@ -156,7 +156,21 @@
         "Reconnect now",
         "Reload from snapshot"
       ],
-      "line": 3775
+      "line": 3836
+    },
+    {
+      "container": "hallSummonState",
+      "pane": "Council",
+      "kind": "error",
+      "title": "`Seat ${failure.seat} (${failure.role}) did not answer`",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Retry the round",
+        "Check readiness",
+        "Ask one model"
+      ],
+      "line": 4694
     },
     {
       "container": "chatState",
@@ -169,7 +183,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 6096
+      "line": 6597
     },
     {
       "container": "chatState",
@@ -182,7 +196,7 @@
         "Back to Chat",
         "Open Harness"
       ],
-      "line": 6122
+      "line": 6623
     },
     {
       "container": "chatState",
@@ -195,7 +209,7 @@
         "Undo",
         "Dismiss"
       ],
-      "line": 6246
+      "line": 6747
     }
   ],
   "containers": [
@@ -209,6 +223,12 @@
       "id": "hallStream",
       "pane": "Council",
       "meaning": "no round yet",
+      "wired": true
+    },
+    {
+      "id": "hallSummonState",
+      "pane": "Council",
+      "meaning": "a seat that failed to answer",
       "wired": true
     },
     {
@@ -250,26 +270,26 @@
   ],
   "remaining_raw_writers": [
     {
-      "line": 4048,
+      "line": 4111,
       "handler": "installSkill"
     },
     {
-      "line": 7845,
+      "line": 8346,
       "handler": "openHarnessDiffModal"
     },
     {
-      "line": 9488,
+      "line": 9989,
       "handler": "runMcpPlayground"
     }
   ],
   "totals": {
     "kinds": 3,
-    "surfaces": 12,
-    "containers": 8,
-    "wired_containers": 8,
+    "surfaces": 13,
+    "containers": 9,
+    "wired_containers": 9,
     "by_kind": {
       "empty": 3,
-      "error": 6,
+      "error": 7,
       "recovery": 3
     },
     "remaining_raw_writers": 3,

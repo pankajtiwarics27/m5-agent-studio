@@ -908,6 +908,38 @@ body[data-density="compact"] .harness-advanced-fields { padding-top: var(--space
 body[data-density="compact"] .council-settings { padding-block: var(--strip-pad-y); }
 @media (max-width: 880px) { .council-seat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
+/* ── Council participants and readiness (UIUX-P4-01) ─────────────────────────
+   A seat is a role, not only a dropdown. Under each picker the pane says what the
+   seat is for, and whether the thing it points at can answer right now - read from
+   /api/telemetry (what the local runtime reports) and /api/providers (which cloud
+   aliases exist and which hold a key), never inferred from the picker alone. A seat
+   that cannot run says which read says so and offers the one action that exists. */
+.seat-cell { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.seat-purpose { margin: 0; font-size: var(--text-2xs); line-height: var(--lh-base); color: var(--text-faint); }
+.seat-readiness {
+  display: flex; align-items: flex-start; gap: var(--space-2); flex-wrap: wrap;
+  font-size: var(--text-2xs); line-height: var(--lh-base); color: var(--text-faint);
+}
+.seat-readiness-text { flex: 1 1 120px; min-width: 0; }
+.seat-readiness[data-state="ready"] .seat-readiness-text { color: var(--text-dim); }
+.readiness-summary {
+  display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap;
+  padding: var(--space-2) 0 0; font-size: var(--text-xs); color: var(--text-dim);
+}
+/* The count is a short pill; the sentence beside it wraps, because a status pill that
+   runs off the pane is a sentence nobody can read. */
+#councilReadinessSummary { flex: 1 1 260px; min-width: 0; line-height: var(--lh-base); }
+.readiness-basis { font-size: var(--text-2xs); color: var(--text-faint); padding-top: var(--space-1); }
+/* The seat tag and the demo badge join the author on one line, and the line wraps
+   instead of squeezing the author into a column of single words. */
+.voice-head { flex-wrap: wrap; row-gap: var(--space-1); }
+.voice-head strong { min-width: 0; }
+.role-tag {
+  font: var(--weight-semibold) var(--text-2xs)/var(--lh-tight) var(--sans);
+  color: var(--text-dim); border: 1px solid var(--border-hi); border-radius: var(--radius-sm);
+  padding: 1px var(--space-2); white-space: nowrap;
+}
+
 
 .hall-main, .harness-main { background: var(--bg); }
 .chronicle-item.active { background: var(--bg-card); border-color: var(--border-hi); box-shadow: inset -2px 0 0 var(--accent); }
@@ -2125,11 +2157,37 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
           <details class="council-settings" id="hallSeatsSettings" open>
             <summary>Council role models</summary>
+            <div class="readiness-summary">
+              <span id="councilReadinessCount" class="status" data-tone="neutral">—</span>
+              <span id="councilReadinessSummary" role="status" aria-live="polite">Reading what each seat can reach…</span>
+              <button id="councilReadinessRefresh" type="button" class="btn btn-xs" onclick="refreshCouncilReadiness()" title="Read /api/telemetry and /api/providers again">Check again</button>
+            </div>
+            <div class="readiness-basis" id="councilReadinessBasis"></div>
             <div class="council-seat-grid">
-              <div><label class="field-lbl" for="hallSeatArch">1. Architect / Thesis</label><select id="hallSeatArch"></select></div>
-              <div><label class="field-lbl" for="hallSeatCoder">2. Builder / Analyst</label><select id="hallSeatCoder"></select></div>
-              <div><label class="field-lbl" for="hallSeatCritic">3. Red-Team Critic</label><select id="hallSeatCritic"></select></div>
-              <div><label class="field-lbl" for="hallSeatJudge">4. Lead Arbiter</label><select id="hallSeatJudge"></select></div>
+              <div class="seat-cell">
+                <label class="field-lbl" for="hallSeatArch">1. Architect / Thesis</label>
+                <select id="hallSeatArch" aria-describedby="hallSeatArchState"></select>
+                <p class="seat-purpose">Frames the matter and argues the thesis.</p>
+                <div class="seat-readiness" id="hallSeatArchState" data-state="unknown"></div>
+              </div>
+              <div class="seat-cell">
+                <label class="field-lbl" for="hallSeatCoder">2. Builder / Analyst</label>
+                <select id="hallSeatCoder" aria-describedby="hallSeatCoderState"></select>
+                <p class="seat-purpose">Builds code, data or mechanisms on it.</p>
+                <div class="seat-readiness" id="hallSeatCoderState" data-state="unknown"></div>
+              </div>
+              <div class="seat-cell">
+                <label class="field-lbl" for="hallSeatCritic">3. Red-Team Critic</label>
+                <select id="hallSeatCritic" aria-describedby="hallSeatCriticState"></select>
+                <p class="seat-purpose">Attacks both from another model family.</p>
+                <div class="seat-readiness" id="hallSeatCriticState" data-state="unknown"></div>
+              </div>
+              <div class="seat-cell">
+                <label class="field-lbl" for="hallSeatJudge">4. Lead Arbiter</label>
+                <select id="hallSeatJudge" aria-describedby="hallSeatJudgeState"></select>
+                <p class="seat-purpose">Weighs clash and pins the verdict.</p>
+                <div class="seat-readiness" id="hallSeatJudgeState" data-state="unknown"></div>
+              </div>
             </div>
           </details>
           <div class="summon-bar">
@@ -2152,10 +2210,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
                   <option value="judge">4. Lead Arbiter</option>
                 </select>
               </div>
-              <div><label class="field-lbl" for="hallModelSelect">Model</label><select id="hallModelSelect"></select></div>
+              <div><label class="field-lbl" for="hallModelSelect">Model</label><select id="hallModelSelect" aria-describedby="hallSingleState"></select></div>
+              <div class="seat-readiness" id="hallSingleState" data-state="unknown"></div>
               <button id="hallSummonBtn" class="btn btn-xs" onclick="summonSingleAgent()" title="Summon only this single selected voice">Ask one model</button>
             </div>
           </details>
+
+          <div id="hallSummonState"></div>
 
           <div id="hallStream" class="hall-stream"></div>
 
@@ -3498,7 +3559,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     });
     document.querySelectorAll(".pane").forEach(p => p.classList.toggle("active", p.id === `pane-${tab}`));
     if (options.focus && selected) selected.focus();
-    if (tab === "hall") refreshHallSessions();
+    if (tab === "hall") { refreshHallSessions(); renderCouncilReadiness(); }
     if (tab === "harness") loadHarnessSessions();
     if (tab === "start") {
       refreshOnboarding();
@@ -3832,8 +3893,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       providerPresets = d.presets || {};
       configuredProviders = d.providers || [];
       configuredCombos = d.combos || [];
+      councilProvidersReadAt = Date.now();
       document.getElementById("providersCountBadge").textContent = configuredProviders.length;
       renderProvidersModal();
+      renderCouncilReadiness();
     } catch (e) {}
   }
 
@@ -4105,6 +4168,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function renderActiveHall(liveCardHtml = "") {
     if (!activeHallData) return;
     const s = activeHallData;
+    // The failure block belongs to the round that failed, not to the session: reading the
+    // session again (or streaming a seat) means that round is no longer the last word.
+    clearPresentation("hallSummonState");
     document.getElementById("hallTitle").textContent = s.title;
     const badge = document.getElementById("hallStatusBadge");
     setStatus(badge, s.status === "active" ? "ok" : "warn", s.status.toUpperCase());
@@ -4122,9 +4188,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     } else {
     stream.innerHTML = (s.messages || []).map(m => {
       const u = m.usage || {};
-      const meta = u.decode_tps ? `<span class="badge green">${u.decode_tps} tok/s • ${u.completion_tokens || 0} tok</span>` : "";
+      // A reply the demo path wrote is not the named model's, and it earns no tok/s
+      // badge: its usage line carries `demo`, so the card says what produced it.
+      const meta = u.demo
+        ? `<span class="status" data-tone="warn" title="The local runtime did not answer, so the server wrote this reply itself. It is not the named model's output, and it carries no tok/s figure.">Demo reply · the runtime is offline</span>`
+        : u.decode_tps ? `<span class="badge green">${u.decode_tps} tok/s • ${u.completion_tokens || 0} tok</span>` : "";
+      const role = COUNCIL_ROLES[m.role_key];
+      const seatTag = role ? `<span class="role-tag" data-seat="${role.seat}">Seat ${role.seat} · ${escapeHtml(role.label)}</span>` : "";
       const think = m.reasoning ? `<details class="think-box"><summary>Reasoning Trace</summary><pre>${escapeHtml(m.reasoning)}</pre></details>` : "";
-      return `<div class="voice-card ${escapeHtml(m.role_key || 'human')}"><div class="voice-head"><strong>${escapeHtml(m.author)}</strong>${meta}</div>${think}${renderMarkdown(m.content)}</div>`;
+      return `<div class="voice-card ${escapeHtml(m.role_key || 'human')}"><div class="voice-head">${seatTag}<strong>${escapeHtml(m.author)}</strong>${meta}</div>${think}${renderMarkdown(m.content)}</div>`;
     }).join("") + liveCardHtml;
     stream.scrollTop = stream.scrollHeight;
     }
@@ -4181,7 +4253,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           renderActiveHall(`<div class="voice-card ${escapeHtml(roleKey)}"><div class="voice-head"><strong>${escapeHtml(liveAuthor)}</strong><span class="badge cyan">Streaming...</span></div>${thinkBlock}${renderMarkdown(liveC)}</div>`);
         },
         async summon_done() { await selectHallSession(activeHallId); resolve(); },
-        error(d) { showToast("Summon error: " + d.message, "err"); reject(new Error(d.message)); }
+        error(d) {
+          showToast("Summon error: " + d.message, "err");
+          const seat = COUNCIL_ROLES[roleKey] || { seat: 0, label: roleKey };
+          renderActiveHall();  // the server's transcript, so the "Connecting..." card goes
+          presentHallSummonFailure({ seat: seat.seat, role: seat.label, model: modelId, message: d.message });
+          reject(new Error(d.message));
+        }
       }, () => {
         document.getElementById("hallSummonBtn").disabled = false;
         document.getElementById("hallFullRoundBtn").disabled = false;
@@ -4206,19 +4284,438 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const judgeMod = (document.getElementById("hallSeatJudge") || {}).value || document.getElementById("hallModelSelect").value;
     await summonAgentPromise("judge", judgeMod, document.getElementById("hallReasoningSelect").value, true);
   }
+  /* ── UIUX-P4-01: council participants and resource readiness ────────────────
+     A seat is a role, and a role that cannot run should say so before four seats have
+     been dispatched. The role names below are the server's own (AGENT_ROLES in app.py),
+     and every "can it run" answer is read from something the server reported:
+     /api/telemetry (what the local runtime lists, what it says is resident, and the
+     unified-memory ceiling) and /api/providers (which cloud aliases exist and which
+     hold a key). Nothing here is inferred from the picker, because the picker says what
+     was chosen, not what can answer.
+
+     Two facts the pane did not state before, and now does:
+       * a local seat whose runtime is not answering is answered by the server's canned
+         demo text (`_stream_omlx_completion`), not by the model named in the picker;
+       * a reply that came from that path is labelled a demo reply, and is not given a
+         tok/s badge it did not earn (its usage line carries `demo: true`).
+  */
+  const COUNCIL_ROLES = {
+    architect: { seat: 1, label: "Staff Architect" },
+    coder: { seat: 2, label: "Fast Coder / Analyst" },
+    critic: { seat: 3, label: "Adversarial Critic" },
+    judge: { seat: 4, label: "Lead Arbiter" },
+  };
+  const COUNCIL_SEATS = [
+    { key: "architect", select: "hallSeatArch", stateId: "hallSeatArchState" },
+    { key: "coder", select: "hallSeatCoder", stateId: "hallSeatCoderState" },
+    { key: "critic", select: "hallSeatCritic", stateId: "hallSeatCriticState" },
+    { key: "judge", select: "hallSeatJudge", stateId: "hallSeatJudgeState" },
+  ];
+  // The seat's own picker, then the Pipeline's picker for the same seat, then the
+  // catalogue default - the same chain `runHallFullRound` posts, in one place, because a
+  // row that resolved the model differently from the round would describe another seat.
+  const COUNCIL_SEAT_FALLBACK = {
+    architect: { pipeline: "c-arch", prefer: "27b", index: 0 },
+    coder: { pipeline: "c-coder", prefer: "35b", index: 1 },
+    critic: { pipeline: "c-critic", prefer: "gemma", index: 2 },
+  };
+  let councilTelemetryReadAt = 0;
+  let councilProvidersReadAt = 0;
+
+  function councilValue(elementId) {
+    const element = document.getElementById(elementId);
+    return element ? element.value || "" : "";
+  }
+
+  function councilSeatPlan() {
+    const architect = councilValue("hallSeatArch")
+      || councilValue("c-arch")
+      || pickPreferred(unifiedCatalog, "27b", 0);
+    const chosen = {
+      architect,
+      coder: councilValue("hallSeatCoder") || councilValue("c-coder") || pickPreferred(unifiedCatalog, "35b", 1),
+      critic: councilValue("hallSeatCritic") || councilValue("c-critic") || pickPreferred(unifiedCatalog, "gemma", 2),
+      judge: councilValue("hallSeatJudge") || councilValue("c-judge") || architect,
+    };
+    return COUNCIL_SEATS.map(seat => Object.assign({}, seat, {
+      seat: COUNCIL_ROLES[seat.key].seat,
+      role: COUNCIL_ROLES[seat.key].label,
+      model: chosen[seat.key],
+    }));
+  }
+
+  // Mirrors `parse_model_route` in app.py: `combo/<alias>`, `omlx::<id>`,
+  // `<configured alias>::<id>`, `<configured alias>/<id>`, and everything else local.
+  // A `provider::model` naming an absent alias is the one shape the server refuses
+  // outright, so the row must say that rather than showing a green pill.
+  function councilRouteOf(model) {
+    if (!model) return { kind: "none" };
+    if (model.startsWith("combo/")) {
+      const alias = model.slice("combo/".length);
+      const combo = configuredCombos.find(entry => entry.alias === alias || entry.model_id === model);
+      return combo ? { kind: "combo", combo, alias } : { kind: "combo-missing", alias };
+    }
+    const provider = alias => configuredProviders.find(entry => entry.alias === alias) || null;
+    const cut = model.includes("::") ? model.indexOf("::") : model.indexOf("/");
+    if (cut > 0) {
+      const head = model.slice(0, cut);
+      const remote = model.slice(cut + (model.includes("::") ? 2 : 1));
+      if (head === "omlx") return { kind: "local", model: remote };
+      const configured = provider(head);
+      if (configured) return { kind: "cloud", provider: configured, model: remote };
+      if (model.includes("::")) return { kind: "unconfigured", alias: head, model: remote };
+    }
+    return { kind: "local", model };
+  }
+
+  function councilGigabytes(value) {
+    const number = Number(value || 0);
+    return number > 0 ? `${number.toFixed(2).replace(/\.00$/, "")} GB` : "";
+  }
+
+  /* What one seat would do if the round were pressed now. The returned state is one
+     of: ready, demo, needs-load, needs-memory, loading, needs-key, not-configured,
+     unknown-model, no-model, unverified. */
+  function councilSeatReadiness(model, depth = 0) {
+    if (!model) {
+      return {
+        state: "no-model", tone: "warn", tag: "NO MODEL",
+        text: "No model is chosen, so the round has nothing to send for this seat.",
+        action: { id: "choose", label: "Choose a model", title: "Move focus to this seat's picker" },
+      };
+    }
+    const telemetry = lastTelemetry;
+    if (!telemetry) {
+      return {
+        state: "unverified", tone: "neutral", tag: "UNVERIFIED",
+        text: `GET /api/telemetry has not answered, so this row claims nothing about ${model}.`,
+        action: { id: "check", label: "Check again", title: "Read /api/telemetry and /api/providers again" },
+      };
+    }
+    const route = councilRouteOf(model);
+    if (route.kind === "unconfigured") {
+      return {
+        state: "not-configured", tone: "danger", tag: "NOT CONFIGURED",
+        text: `No enabled provider named "${route.alias}" is saved, and the server refuses this seat.`,
+        action: { id: "providers", label: "Open providers", title: "Open the cloud providers panel" },
+      };
+    }
+    if (route.kind === "combo-missing") {
+      return {
+        state: "not-configured", tone: "danger", tag: "NOT CONFIGURED",
+        text: `No fallback combo named "${route.alias}" is saved, and the server refuses this seat.`,
+        action: { id: "providers", label: "Open providers", title: "Open the cloud providers panel" },
+      };
+    }
+    if (route.kind === "combo") {
+      // A combo is not ready because it exists: it is ready because one of its targets can
+      // answer. Each target is judged by this same function, so a combo of local models on a
+      // machine whose runtime is down is demo text, not a green pill.
+      const targets = route.combo.targets || [];
+      if (!targets.length) {
+        return {
+          state: "not-configured", tone: "danger", tag: "NO TARGETS",
+          text: `Fallback combo "${route.alias}" has no targets, so the seat has nowhere to go.`,
+          action: { id: "providers", label: "Open providers", title: "Open the cloud providers panel" },
+        };
+      }
+      const verdicts = depth >= 2 ? [] : targets.map(target => councilSeatReadiness(target, depth + 1));
+      const ready = verdicts.filter(verdict => verdict.state === "ready").length;
+      // A target that has to be loaded first still answers, so a combo that reaches one is
+      // not "nothing can answer" - saying that would be the same lie as a green pill for a
+      // seat whose runtime is down.
+      const loadable = verdicts.filter(verdict => ["needs-load", "needs-memory", "loading"].includes(verdict.state)).length;
+      const demo = verdicts.filter(verdict => verdict.state === "demo").length;
+      if (ready) {
+        return {
+          state: "ready", tone: "ok", tag: "READY",
+          text: `Combo "${route.alias}": ${ready} of ${targets.length} targets can answer.`,
+          action: null,
+        };
+      }
+      if (loadable) {
+        return {
+          state: "needs-load", tone: "warn", tag: "NEEDS LOAD",
+          text: `Combo "${route.alias}": ${loadable} of ${targets.length} targets answer once a model is loaded.`,
+          action: { id: "check", label: "Check again", title: "Read /api/telemetry again" },
+        };
+      }
+      if (demo) {
+        return {
+          state: "demo", tone: "warn", tag: "DEMO TEXT",
+          text: `Combo "${route.alias}" targets local models and the runtime is not answering, so this seat gets demo text.`,
+          action: { id: "check", label: "Check again", title: "Read /api/telemetry again" },
+        };
+      }
+      const first = verdicts[0];
+      return {
+        state: "not-configured", tone: "danger", tag: "NO TARGET",
+        text: `No target in combo "${route.alias}" can answer: ${first ? first.text : "the targets were not judged"}`,
+        action: { id: "providers", label: "Open providers", title: "Open the cloud providers panel" },
+      };
+    }
+    if (route.kind === "cloud") {
+      const provider = route.provider;
+      if (!provider.has_key) {
+        return {
+          state: "needs-key", tone: "danger", tag: "NEEDS KEY",
+          text: `"${provider.alias}" holds no API key, so this seat would fail when it is dispatched.`,
+          action: { id: "providers", label: "Open providers", title: "Add the key for this alias" },
+        };
+      }
+      return {
+        state: "ready", tone: "ok", tag: "READY",
+        text: `Cloud seat via "${provider.alias}", no local memory.`,
+        action: null,
+      };
+    }
+    // A local seat is answered by this machine's runtime or by the demo path, and the
+    // difference is the one thing the pane could never be asked before it was pressed.
+    if (!telemetry.omlx_online) {
+      return {
+        state: "demo", tone: "warn", tag: "DEMO TEXT",
+        text: `The local runtime is not answering, so this seat gets the server's demo text, not ${route.model}.`,
+        action: { id: "check", label: "Check again", title: "Read /api/telemetry again" },
+      };
+    }
+    const known = (telemetry.models || []).find(entry => entry.id === route.model);
+    if (!known) {
+      return {
+        state: "unknown-model", tone: "warn", tag: "NOT LISTED",
+        text: `The runtime does not list ${route.model}; the seat fails unless it can load it on demand.`,
+        action: { id: "choose", label: "Pick another model", title: "Move focus to this seat's picker" },
+      };
+    }
+    if (known.is_loading) {
+      return {
+        state: "loading", tone: "busy", tag: "LOADING",
+        text: `Loading into memory now.`,
+        action: { id: "check", label: "Check again", title: "Read /api/telemetry again" },
+      };
+    }
+    if (known.loaded) {
+      const size = councilGigabytes(known.size_gb);
+      return {
+        state: "ready", tone: "ok", tag: "READY",
+        text: `Resident${size ? `, ${size}` : ""}.`,
+        action: null,
+      };
+    }
+    const size = Number(known.size_gb || 0);
+    const ceiling = Number((telemetry.omlx || {}).ceiling_gb || 0);
+    const used = Number((telemetry.omlx || {}).used_gb || 0);
+    const free = Math.max(0, ceiling - used);
+    const sizeText = councilGigabytes(size);
+    if (size && ceiling && free < size) {
+      return {
+        state: "needs-memory", tone: "warn", tag: "NEEDS MEMORY",
+        text: `Needs ${sizeText}; ${councilGigabytes(free)} of the ${councilGigabytes(ceiling)} ceiling is free, so the runtime decides what gives way.`,
+        action: { id: "load", label: "Load now", title: `Ask the runtime to load ${route.model}` },
+      };
+    }
+    return {
+      state: "needs-load", tone: "warn", tag: "NEEDS LOAD",
+      text: `Not resident: ${sizeText || "an unreported size"} loads on the first token.`,
+      action: { id: "load", label: "Load now", title: `Ask the runtime to load ${route.model}` },
+    };
+  }
+
+  function councilTargetModel(key) {
+    if (key === "single") return councilValue("hallModelSelect");
+    const seat = councilSeatPlan().find(entry => entry.key === key);
+    return seat ? seat.model : "";
+  }
+
+  function councilTargetSelect(key) {
+    return key === "single" ? "hallModelSelect" : (COUNCIL_SEATS.find(seat => seat.key === key) || {}).select || "";
+  }
+
+  async function councilSeatAction(key, action) {
+    if (action === "providers") { openProvidersModal(); return; }
+    if (action === "choose") {
+      const select = document.getElementById(councilTargetSelect(key));
+      if (select) select.focus();
+      return;
+    }
+    if (action === "check") { await refreshCouncilReadiness(); return; }
+    if (action === "load") {
+      const route = councilRouteOf(councilTargetModel(key));
+      const model = route.model || councilTargetModel(key);
+      try {
+        const response = await fetch(`/api/models/${encodeURIComponent(model)}/load`, { method: "POST" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        showToast(`Asked the runtime to load ${model}.`, "ok");
+      } catch (error) {
+        showToast(`The load request for ${model} failed: ${error.message}`, "err");
+      }
+      await refreshCouncilReadiness();
+      return;
+    }
+    await refreshCouncilReadiness();
+  }
+
+  function councilSeatRow(container, key, verdict) {
+    // The pane re-renders on every telemetry poll. Rewriting a row that says the same thing
+    // would throw away the focus a keyboard user put on its action, so a row is only redrawn
+    // when what it says changes - and focus follows the button across that redraw.
+    const signature = [verdict.state, verdict.tone, verdict.tag, verdict.text, verdict.action ? verdict.action.id : "", verdict.action ? verdict.action.label : ""].join("\u0000");
+    if (container.dataset.signature === signature) return;
+    const hadFocus = container.contains(document.activeElement);
+    container.dataset.signature = signature;
+    container.dataset.state = verdict.state;
+    container.dataset.seat = key;
+    container.replaceChildren();
+    const pill = document.createElement("span");
+    pill.className = "status";
+    setStatus(pill, verdict.tone, verdict.tag);
+    const text = document.createElement("span");
+    text.className = "seat-readiness-text";
+    text.textContent = verdict.text;
+    container.append(pill, text);
+    if (verdict.action) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "btn btn-xs";
+      button.id = `${container.id}Action`;
+      button.dataset.action = verdict.action.id;
+      button.dataset.seat = key;
+      button.textContent = verdict.action.label;
+      button.title = verdict.action.title || verdict.action.label;
+      button.addEventListener("click", () => councilSeatAction(key, verdict.action.id));
+      container.append(button);
+    }
+    if (hadFocus) {
+      const next = container.querySelector("button");
+      if (next) next.focus();
+      else {
+        container.tabIndex = -1;
+        container.focus();
+      }
+    }
+  }
+
+  function renderCouncilReadiness() {
+    const summary = document.getElementById("councilReadinessSummary");
+    if (!summary) return;
+    const plan = councilSeatPlan();
+    const counts = { ready: 0, demo: 0, blocked: 0, unverified: 0 };
+    plan.forEach(seat => {
+      const container = document.getElementById(seat.stateId);
+      const verdict = councilSeatReadiness(seat.model);
+      if (container) councilSeatRow(container, seat.key, verdict);
+      if (verdict.state === "ready") counts.ready += 1;
+      else if (verdict.state === "demo") counts.demo += 1;
+      else if (verdict.state === "unverified") counts.unverified += 1;
+      else counts.blocked += 1;
+    });
+    const single = document.getElementById("hallSingleState");
+    if (single) {
+      const roleKey = councilValue("hallRoleSelect") || "architect";
+      const role = COUNCIL_ROLES[roleKey] || COUNCIL_ROLES.architect;
+      const verdict = councilSeatReadiness(councilValue("hallModelSelect"));
+      councilSeatRow(single, "single", Object.assign({}, verdict, {
+        text: `${role.label}: ${verdict.text}`,
+      }));
+    }
+
+    const total = plan.length;
+    let tone = "ok";
+    let sentence = `All ${total} seats can answer now.`;
+    if (!lastTelemetry) {
+      tone = "danger";
+      sentence = "Readiness is unread: GET /api/telemetry has not answered, so no seat is claimed ready.";
+    } else if (counts.unverified) {
+      tone = "neutral";
+      sentence = `${counts.unverified} of ${total} seats are unverified.`;
+    } else if (counts.ready === total) {
+      sentence = `All ${total} seats can answer now.`;
+    } else if (!counts.ready && counts.demo) {
+      tone = "warn";
+      sentence = `${counts.demo} of ${total} seats would answer with the server's demo text: the local runtime is not answering.`;
+    } else if (!counts.ready) {
+      tone = "danger";
+      sentence = `None of the ${total} seats can answer as picked; each row says which read says so.`;
+    } else {
+      tone = "warn";
+      sentence = `${counts.ready} of ${total} seats can answer now; the other ${total - counts.ready} cannot, and each row says why.`;
+    }
+    // The "the round runs anyway" note is only true where a seat would actually fail: a
+    // demo seat answers, it just does not answer as the model it names.
+    const wouldFail = total - counts.ready - counts.demo - counts.unverified;
+    const sentenceWithRound = wouldFail > 0
+      ? `${sentence} The round still runs all four seats in order and stops at the first seat that fails.`
+      : sentence;
+    const count = document.getElementById("councilReadinessCount");
+    if (count) setStatus(count, tone, `${counts.ready}/${total} READY`, sentenceWithRound);
+    summary.textContent = sentenceWithRound;
+    const round = document.getElementById("hallFullRoundBtn");
+    if (round) round.title = `${sentence} Seat 1 → Seat 4, in order.`;
+
+    const basis = document.getElementById("councilReadinessBasis");
+    if (basis) {
+      const seconds = at => Math.max(0, Math.round((Date.now() - at) / 1000));
+      const telemetryBasis = councilTelemetryReadAt
+        ? `telemetry ${seconds(councilTelemetryReadAt)} s old (${lastTelemetry && lastTelemetry.omlx_online ? "the live local runtime" : "the server's simulated demo payload"})`
+        : "telemetry not read";
+      const providersBasis = councilProvidersReadAt
+        ? `providers ${seconds(councilProvidersReadAt)} s old (${configuredProviders.length} cloud aliases, ${configuredCombos.length} fallback combos)`
+        : "providers not read";
+      if (!lastTelemetry) {
+        evidenceNote(basis, "unavailable", "No read answered, so every row above is blank on purpose rather than assumed ready.");
+      } else {
+        evidenceNote(basis, "derived", `GET /api/telemetry and GET /api/providers: ${telemetryBasis}; ${providersBasis}. What each seat would do is derived from those reads, not from the picker.`);
+      }
+    }
+  }
+
+  async function refreshCouncilReadiness() {
+    await Promise.all([loadProviders(), refreshTelemetry()]);
+    renderCouncilReadiness();
+  }
+
+  function wireCouncilReadiness() {
+    COUNCIL_SEATS.forEach(seat => {
+      const select = document.getElementById(seat.select);
+      if (select) select.addEventListener("change", renderCouncilReadiness);
+    });
+    ["hallModelSelect", "hallRoleSelect"].forEach(id => {
+      const element = document.getElementById(id);
+      if (element) element.addEventListener("change", renderCouncilReadiness);
+    });
+    // No timer of its own: the telemetry poll re-renders these rows every two seconds and
+    // the basis line says how old the reads are, so a stale "ready" is never shown as fresh.
+  }
+  /* ── end UIUX-P4-01 ──────────────────────────────────────────────────────── */
+
+  /* A seat that fails used to leave its card saying "Connecting..." for as long as the page
+     was open, with the provider's message in a four-second toast. The transcript is the
+     server's, so the fix is to redraw it and state the failure where the next action is. */
+  function presentHallSummonFailure(failure) {
+    return presentInto("hallSummonState", {
+      kind: "error",
+      title: `Seat ${failure.seat} (${failure.role}) did not answer`,
+      cause: failure.message,
+      context: `Nothing was saved for ${failure.model}: the log keeps the voices that finished, and the round stopped at this seat.`,
+      actions: [
+        { label: "Retry the round", run: () => runHallFullRound(), title: "Dispatch all four seats again, in order" },
+        { label: "Check readiness", run: () => refreshCouncilReadiness(), title: "Read /api/telemetry and /api/providers again" },
+        { label: "Ask one model", run: () => summonSingleAgent(), title: "Send one seat on its own" },
+      ],
+    });
+  }
+
   async function runHallFullRound(pinFinal = false) {
     if (!activeHallId) { openSpawnModal(); return; }
     const rm = document.getElementById("hallReasoningSelect").value;
-    const mArch   = (document.getElementById("hallSeatArch")   || {}).value || document.getElementById("c-arch").value   || pickPreferred(unifiedCatalog, "27b", 0);
-    const mCoder  = (document.getElementById("hallSeatCoder")  || {}).value || document.getElementById("c-coder").value  || pickPreferred(unifiedCatalog, "35b", 1);
-    const mCritic = (document.getElementById("hallSeatCritic") || {}).value || document.getElementById("c-critic").value || pickPreferred(unifiedCatalog, "gemma", 2);
-    const mJudge  = (document.getElementById("hallSeatJudge")  || {}).value || document.getElementById("c-judge").value  || mArch;
-    const plan = [
-      ["architect", mArch,   rm,    false],
-      ["coder",     mCoder,  "off", false],
-      ["critic",    mCritic, "off", false],
-      ["judge",     mJudge,  rm,    pinFinal],
-    ];
+    // The round and the readiness rows above it resolve the seat models through the
+    // same function, so a row cannot describe a model the round does not post.
+    const plan = councilSeatPlan().map(seat => [
+      seat.key,
+      seat.model,
+      seat.key === "architect" || seat.key === "judge" ? rm : "off",
+      seat.key === "judge" ? pinFinal : false,
+    ]);
+    renderCouncilReadiness();
     for (const [rk, mod, rmode, pinIt] of plan) {
       try { await summonAgentPromise(rk, mod, rmode, pinIt); } catch (e) { break; }
     }
@@ -4704,7 +5201,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       // The card must not keep showing a payload that is no longer being refreshed.
       lastTelemetry = null;
       startHealthReadAt = 0;
+      councilTelemetryReadAt = 0;
       renderStartHealth();
+      renderCouncilReadiness();
       const pill = document.getElementById("connPill");
       pill.className = "status-pill demo";
       document.getElementById("connText").textContent = "Backend Offline";
@@ -4714,7 +5213,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function renderTelemetry(d) {
     lastTelemetry = d;
     startHealthReadAt = Date.now();
+    councilTelemetryReadAt = startHealthReadAt;
     renderStartHealth();
+    renderCouncilReadiness();
     updateChatComposer();
     const pill = document.getElementById("connPill");
     pill.className = d.omlx_online ? "status-pill" : "status-pill demo";
@@ -10001,6 +10502,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   loadStartRecent();
   renderStartWorkspace();
   renderStartHealth();
+  wireCouncilReadiness();
+  renderCouncilReadiness();
   loadSkills();
   loadMcpServers();
   loadHarnessSessions();

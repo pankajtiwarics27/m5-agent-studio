@@ -27,7 +27,7 @@ That is the whole point of the evidence component: a number without its basis is
 
 ## One workspace, two panes
 
-Start reads the configured directory from the session payload and writes it through `POST /api/workspace/directory` (app.py:4803) — the same handler the Harness uses, which is why the Harness's own input updates when Start's does (`syncProjectDirInputs` owns the list of inputs that are the same setting).
+Start reads the configured directory from the session payload and writes it through `POST /api/workspace/directory` (app.py:4806) — the same handler the Harness uses, which is why the Harness's own input updates when Start's does (`syncProjectDirInputs` owns the list of inputs that are the same setting).
 
 After a change the pane re-reads the preflight, because a checklist that keeps saying the workspace is unwritable after it was set is worse than no checklist. A failure is not a toast: it is the error presentation, naming the cause and *which directory is still in force*, with Retry and a path to the Harness.
 
