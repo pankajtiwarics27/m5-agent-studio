@@ -1,0 +1,197 @@
+{
+  "story": "UIUX-P3-07",
+  "title": "Pipeline retry, failure and checkpoint recovery",
+  "generated_by": "scripts/uiux_pipeline_recovery_inventory.py",
+  "states": [
+    "failed",
+    "stopped",
+    "dropped",
+    "recovered",
+    "recorded",
+    "checkpoint"
+  ],
+  "copies": {
+    "server_record": "GET /api/history/export -> tables.runs[].payload_json (redacted)",
+    "browser_checkpoint": "localStorage m5_pipeline_checkpoint, capped at 60000 characters",
+    "nothing": "a failed or stopped run before anything is kept"
+  },
+  "stream_events": [
+    "skills_applied",
+    "stage_start",
+    "token",
+    "unloading",
+    "stage_done",
+    "council_done",
+    "error"
+  ],
+  "checks": [
+    {
+      "check": "one recovery surface, between the run line and the seats",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the surface is a labelled group that starts hidden",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every function the surface needs exists once",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the block is built by the one presentation builder, not hand-written markup",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the block is drawn on boot, so a kept run survives a reload",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every state the block can draw carries a title, a cause, a Kept: line and an action",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "all six states are drawn from the same builder",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a state with nothing to say draws nothing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the browser's copy is named, capped and never called the server's",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a seat that had to be cut to fit the store says so",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the salvage is written before the page can go away, and cleared when the run is on record",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the server's record is read through the export the repository already mounts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pane says the export redacts credentials",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a run that was not saved is never given a record",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Retry posts the payload that failed instead of re-reading the controls",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Retry says the server has no single-seat entry point",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the run line says which attempt it is drawing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a recovered view says nothing was re-run, and that restoring re-runs nothing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a restored card is marked, and a partial seat is not drawn as if it finished",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "restoring re-runs nothing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a failure, a stop and a dropped stream are three different states",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the failed seat is the seat that was streaming",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the run line calls a failure a failure",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a failure is not drawn as a stop, or a stop as a failure",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the cause is the server's message, not a summary of it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "nothing in the block writes unescaped markup",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the actions are reachable by id, so a keyboard user and a test find the same button",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "removing a block hands focus somewhere rather than dropping it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the story adds no endpoint: every route it calls was already mounted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the council route speaks the same seven events",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the run record still carries what it carried",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the routes this story must leave alone are still mounted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the shared stream reader still distinguishes a stop from a drop",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "check_count": 33,
+  "findings": [],
+  "status": "clean"
+}
