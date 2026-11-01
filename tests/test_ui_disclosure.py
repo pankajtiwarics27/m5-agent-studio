@@ -44,7 +44,10 @@ def test_harness_run_settings_summary_is_live_and_names_the_group():
 
     assert parser.attrs["harnessAdvancedSummary"]
     assert ("details", "harnessAdvanced") in parser.parents["harnessAdvancedSummary"]
-    assert "Run settings" in source
+    assert (
+        '<summary><span>Run settings</span>'
+        '<span id="harnessAdvancedSummary" class="harness-advanced-summary"></span></summary>'
+    ) in source
     assert "function harnessRunPlan()" in source
     assert 'summary.dataset.changed = plan.changed ? "true" : "false"' in source
 
