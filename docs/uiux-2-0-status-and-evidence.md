@@ -45,21 +45,21 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| `#sdlcProgressBadge` | `neutral` | no | 1673 |
-| `#onboardingSummary` | `neutral` | yes | 1820 |
-| `#startRecentSummary` | `neutral` | yes | 1860 |
-| `#startHealthSummary` | `neutral` | yes | 1887 |
-| `#startWorkspaceSummary` | `neutral` | yes | 1905 |
-| `#harnessActiveStatusBadge` | `info` | yes | 2029 |
-| `#hallStatusBadge` | `warn` | yes | 2105 |
-| (unnamed) | `ok` | no | 2320 |
-| `#dockerStateBadge` | `neutral` | no | 2367 |
+| `#sdlcProgressBadge` | `neutral` | no | 1684 |
+| `#onboardingSummary` | `neutral` | yes | 1831 |
+| `#startRecentSummary` | `neutral` | yes | 1871 |
+| `#startHealthSummary` | `neutral` | yes | 1898 |
+| `#startWorkspaceSummary` | `neutral` | yes | 1916 |
+| `#harnessActiveStatusBadge` | `info` | yes | 2040 |
+| `#hallStatusBadge` | `warn` | yes | 2116 |
+| (unnamed) | `ok` | no | 2333 |
+| `#dockerStateBadge` | `neutral` | no | 2380 |
 
 ## Writers
 
 | Measure | Count |
 |---|---|
-| `setStatus()` call sites | 22 |
+| `setStatus()` call sites | 24 |
 | `evidenceNote()` call sites | 2 |
 | Evidence blocks in markup | 2 |
 | Legacy `className = "badge …"` writers | 0 |

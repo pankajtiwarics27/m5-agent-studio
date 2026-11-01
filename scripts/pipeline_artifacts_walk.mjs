@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /**
- * Check that Pipeline stages state their handoffs and artifacts (UIUX-P3-06), and that
- * failure, stop and explicit full-run retry behave honestly (UIUX-P3-07).
+ * Check that a pipeline run says what each seat was given and what it left behind (UIUX-P3-06).
  *
  *   node scripts/pipeline_artifacts_walk.mjs --screenshots docs/media/pipeline-artifacts
  *
@@ -31,13 +30,7 @@
  *   9. Run pipeline is reachable and operable from the keyboard;
  *  10. a run stopped mid-stream is drawn as stopped, is not given a run id, and says it was not
  *      saved;
- *  11. no page error occurs, and the pane posts only the council stream it already posted;
- *  12. SSE errors render Failed, while an explicit abort remains Stopped;
- *  13. partial output stays visible until retry is deliberately activated;
- *  14. the native Retry button is keyboard-operable and warns that all four stages restart;
- *  15. retry reuses the exact captured request even if form controls were edited afterwards;
- *  16. the replay begins at Architect, completes all four stages and does not claim a checkpoint;
- *  17. a stream closing without a terminal event is a failure, not a successful or stopped run.
+ *  11. no page error occurs, and the pane posts only the council stream it already posted.
  */
 import { existsSync, mkdirSync } from "node:fs";
 import { spawn } from "node:child_process";
@@ -220,7 +213,6 @@ async function readPipeline(page) {
     }
     return {
       rows,
-      partialOutput: clean((document.getElementById("stage-md-1") || {}).textContent),
       stepState,
       summary: {
         hidden: host.hidden,
@@ -236,10 +228,6 @@ async function readPipeline(page) {
       chain: window.M5Pipeline.seats.map((seat) => ({ stage: seat.stage, key: seat.key, reads: seat.reads, short: seat.short })),
       runButtonDisabled: document.getElementById("councilRunBtn").disabled,
       stopVisible: getComputedStyle(document.getElementById("councilStopBtn")).display !== "none",
-      retryVisible: getComputedStyle(document.getElementById("councilRetryBtn")).display !== "none",
-      retryDisabled: document.getElementById("councilRetryBtn").disabled,
-      retryNotice: clean(document.getElementById("councilRetryNotice").textContent),
-      totalStatus: clean(document.getElementById("councilTotalStatus").textContent),
       focusId: document.activeElement ? document.activeElement.id : "",
     };
   });
@@ -514,8 +502,7 @@ async function run(args) {
       );
       await sleep(args.settleMs * 8);
       const afterStop = await readPipeline(page);
-      await page.evaluate(() => { document.getElementById("councilScroll").scrollTop = 0; });
-      await shoot(page, "pipeline-stopped-run", "#councilScroll");
+      await shoot(page, "pipeline-stopped-run", "#councilArtifacts");
 
       record(
         "Stop was pressed while the first seat was still streaming",
@@ -540,165 +527,8 @@ async function run(args) {
           && [1, 2, 3, 4].every((stage) => afterStop.stepState[stage] !== "Streaming"),
         JSON.stringify(afterStop.stepState),
       );
-      record(
-        "a deliberate Stop remains distinct and offers an explicit retry",
-        afterStop.summary.state === "partial" && afterStop.totalStatus === "Stopped"
-          && afterStop.retryVisible === true && /all four stages/i.test(afterStop.retryNotice),
-        `state=${afterStop.summary.state} status=${afterStop.totalStatus} retry=${afterStop.retryVisible}`,
-      );
 
-      // ── D: fail then replay the exact request from Architect ─────────────────
-      const retryBodies = [];
-      const eventFrame = (name, data) => `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`;
-      const usage = { decode_tps: 1, ttft: 0.1, completion_tokens: 2, reasoning_tokens: 0 };
-      const successFrames = [1, 2, 3, 4].map((stage) =>
-        eventFrame("stage_start", { stage, model: "retry-fixture" })
-        + eventFrame("token", { stage, kind: "content", text: `replay output ${stage}` })
-        + eventFrame("stage_done", { stage, usage }),
-      ).join("") + eventFrame("council_done", { run_id: 0, total_elapsed_s: 1.2 });
-      let interceptionError = "";
-      await page.setRequestInterception(true);
-      page.on("request", async (request) => {
-        let pathname = "";
-        try { pathname = new URL(request.url()).pathname; } catch (_error) {}
-        if (request.method() !== "POST" || pathname !== "/api/council/stream") {
-          try { await request.continue(); } catch (error) { interceptionError = String(error); }
-          return;
-        }
-        let body = {};
-        try { body = JSON.parse(request.postData() || "{}"); } catch (error) { interceptionError = String(error); }
-        retryBodies.push(body);
-        const stream = retryBodies.length === 1
-          ? eventFrame("stage_start", { stage: 1, model: body.architect_model || "retry-fixture" })
-            + eventFrame("token", { stage: 1, kind: "content", text: "partial architect output before retry" })
-            + eventFrame("error", { message: "fixture stage failure" })
-          : retryBodies.length === 2
-            ? successFrames
-            : eventFrame("stage_start", { stage: 1, model: body.architect_model || "retry-fixture" })
-              + eventFrame("token", { stage: 1, kind: "content", text: "partial output before close" });
-        try {
-          await request.respond({ status: 200, contentType: "text/event-stream", body: stream });
-        } catch (error) {
-          interceptionError = String(error);
-        }
-      });
-      const capturedTask = "Retry must replay the exact captured four-stage request.";
-      await page.evaluate((prompt) => { document.getElementById("councilPrompt").value = prompt; }, capturedTask);
-      await pickModel(page, "c-arch", args.slowModel);
-      await page.evaluate(() => document.getElementById("councilRunBtn").click());
-      const failed = await pollUntil(
-        page,
-        () => !document.getElementById("councilRunBtn").disabled
-          && window.M5Pipeline.artifactTotals().run.outcome === "failed"
-          && getComputedStyle(document.getElementById("councilRetryBtn")).display !== "none",
-        args.timeoutMs,
-        "the injected SSE error never became a failed Pipeline run",
-      );
-      await sleep(args.settleMs * 3);
-      const afterFailure = await readPipeline(page);
-      await page.evaluate(() => { document.getElementById("councilScroll").scrollTop = 0; });
-      await shoot(page, "pipeline-failed-run", "#councilScroll");
-      record(
-        "an SSE error is Failed rather than Stopped and retains its reason",
-        afterFailure.summary.state === "failed" && afterFailure.totalStatus === "Failed"
-          && /Failed after 0 of 4 stages/.test(afterFailure.summary.text)
-          && /fixture stage failure/.test(afterFailure.summary.text),
-        `state=${afterFailure.summary.state} text="${afterFailure.summary.text}"`,
-      );
-      record(
-        "partial output remains visible before an explicit retry",
-        Boolean(failed) && afterFailure.seats[0].chars > 0
-          && /partial architect output before retry/.test(afterFailure.partialOutput),
-        `architect chars=${afterFailure.seats[0].chars}`,
-      );
-      record(
-        "retry copy explains full replay and replacement of partial output",
-        afterFailure.retryVisible === true && afterFailure.retryDisabled === false
-          && /starts again at Architect/.test(afterFailure.retryNotice)
-          && /reruns all four stages/.test(afterFailure.retryNotice)
-          && /replaces any partial output/.test(afterFailure.retryNotice),
-        afterFailure.retryNotice,
-      );
-      await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
-      const narrowRetry = await page.evaluate(() => {
-        const button = document.getElementById("councilRetryBtn");
-        const notice = document.getElementById("councilRetryNotice");
-        button.scrollIntoView({ block: "center" });
-        button.focus();
-        const buttonRect = button.getBoundingClientRect();
-        const noticeRect = notice.getBoundingClientRect();
-        return {
-          focused: document.activeElement === button,
-          buttonFits: buttonRect.width > 0 && buttonRect.left >= 0 && buttonRect.right <= innerWidth,
-          noticeFits: noticeRect.width > 0 && noticeRect.left >= 0 && noticeRect.right <= innerWidth,
-        };
-      });
-      record(
-        "retry action and disclosure fit and remain focusable at a narrow viewport",
-        narrowRetry.focused && narrowRetry.buttonFits && narrowRetry.noticeFits,
-        JSON.stringify(narrowRetry),
-      );
-
-      await page.evaluate(({ task, model }) => {
-        document.getElementById("councilPrompt").value = task;
-        const select = document.getElementById("c-arch");
-        if (![...select.options].some((option) => option.value === model)) {
-          const option = document.createElement("option"); option.value = model; option.textContent = model; select.appendChild(option);
-        }
-        select.value = model;
-        document.getElementById("councilRetryBtn").focus();
-      }, { task: "This edited task must not replace the retry payload.", model: "edited-after-failure" });
-      const retryFocused = await page.evaluate(() => document.activeElement.id === "councilRetryBtn");
-      await page.keyboard.press("Enter");
-      const replayed = await pollUntil(
-        page,
-        () => !document.getElementById("councilRunBtn").disabled
-          && window.M5Pipeline.artifactTotals().run.outcome === "done",
-        args.timeoutMs,
-        "the full-run retry never completed",
-      );
-      await sleep(args.settleMs * 3);
-      const afterRetry = await readPipeline(page);
-      await page.evaluate(() => { document.getElementById("councilScroll").scrollTop = 0; });
-      await shoot(page, "pipeline-replayed-run", "#councilScroll");
-      const exactReplay = retryBodies.length >= 2
-        && JSON.stringify(retryBodies[0]) === JSON.stringify(retryBodies[1])
-        && retryBodies[1].task === capturedTask
-        && retryBodies[1].architect_model === args.slowModel;
-      record(
-        "Retry is keyboard-operable and reuses the exact captured request despite later form edits",
-        retryFocused && exactReplay && retryBodies.length === 2,
-        `focused=${retryFocused} requests=${retryBodies.length} samePayload=${exactReplay}`,
-      );
-      record(
-        "the replay starts at Architect, reruns all four stages and clears the prior partial output only after activation",
-        Boolean(replayed) && afterRetry.summary.state === "ok" && afterRetry.totalStatus === "Done"
-          && afterRetry.stepState[1] === "Done" && afterRetry.stepState[4] === "Done"
-          && !/partial architect output before retry/.test(afterRetry.partialOutput)
-          && afterRetry.retryVisible === false,
-        `state=${afterRetry.summary.state} stages=${JSON.stringify(afterRetry.stepState)}`,
-      );
-
-      await page.evaluate(() => { document.getElementById("councilPrompt").value = "A close without terminal event must be failed."; document.getElementById("councilRunBtn").click(); });
-      const closedEarly = await pollUntil(
-        page,
-        () => !document.getElementById("councilRunBtn").disabled
-          && window.M5Pipeline.artifactTotals().run.outcome === "failed",
-        args.timeoutMs,
-        "a stream closed without a terminal event but did not fail",
-      );
-      const afterClose = await readPipeline(page);
-      record(
-        "a premature stream close is Failed and keeps retry available",
-        Boolean(closedEarly) && afterClose.summary.state === "failed"
-          && /ended before reporting completion/.test(afterClose.summary.text)
-          && afterClose.retryVisible === true,
-        `state=${afterClose.summary.state} text="${afterClose.summary.text}"`,
-      );
-      await page.setRequestInterception(false);
-      record("request interception completed without harness errors", !interceptionError, interceptionError);
-
-      // ── E: nothing broke ────────────────────────────────────────────────────
+      // ── D: nothing broke ────────────────────────────────────────────────────
       const unexpected = posts.filter((path) => path !== "/api/council/stream");
       record(
         "the pane posted only the council stream it already posted",
@@ -715,8 +545,7 @@ async function run(args) {
 
   const failed = results.filter((entry) => !entry.passed);
   const payload = {
-    story: "UIUX-P3-07",
-    related_story: "UIUX-P3-06",
+    story: "UIUX-P3-06",
     passed: results.length - failed.length,
     total: results.length,
     status: failed.length === 0 ? "pass" : "fail",

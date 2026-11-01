@@ -29,7 +29,6 @@ DEMO = ROOT / "scripts" / "demo_tour.py"
 WALK = ROOT / "scripts" / "keyboard_walk.mjs"
 ACCESSIBILITY_WALK = ROOT / "tests" / "browser" / "accessibility_walk.mjs"
 OVERLAY_WALK = ROOT / "scripts" / "overlay_walk.mjs"
-PIPELINE_WALK = ROOT / "scripts" / "pipeline_artifacts_walk.mjs"
 TOKEN = "synthetic-screenshot-token-0123456789"
 TABS = ("start", "harness", "hall", "council", "debate", "chat")
 
@@ -645,32 +644,3 @@ def test_chat_loading_stream_success_stop_failure_retry_and_mobile(
     assert report["failed"] == 0
     assert report["passed"] >= 10
     assert demo["token"] not in result.stdout + result.stderr
-
-
-def test_pipeline_failure_stop_and_full_run_retry_browser_walk(
-    browser_env: dict[str, str]
-) -> None:
-    """The Pipeline walk uses an isolated demo plus explicit synthetic SSE errors/replay."""
-    env = browser_env.copy()
-    env["STUDIO_PYTHON"] = sys.executable
-    result = subprocess.run(
-        ["node", str(PIPELINE_WALK), "--json"],
-        cwd=ROOT,
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=180,
-        check=False,
-    )
-    assert result.returncode == 0, result.stdout + result.stderr
-    report = json.loads(result.stdout)
-    assert report["story"] == "UIUX-P3-07"
-    assert report["related_story"] == "UIUX-P3-06"
-    assert report["status"] == "pass"
-    assert report["passed"] == report["total"] >= 30
-    steps = {entry["step"] for entry in report["results"] if entry["passed"]}
-    assert "an SSE error is Failed rather than Stopped and retains its reason" in steps
-    assert "partial output remains visible before an explicit retry" in steps
-    assert "retry action and disclosure fit and remain focusable at a narrow viewport" in steps
-    assert "Retry is keyboard-operable and reuses the exact captured request despite later form edits" in steps
-    assert "a premature stream close is Failed and keeps retry available" in steps

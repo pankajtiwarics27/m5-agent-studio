@@ -34,7 +34,7 @@
       "tab": "council",
       "title": "Pipeline",
       "file": "pipeline.png",
-      "purpose": "The four-stage Pipeline view and run action; failure, stop and full-run retry states are demonstrated by the UIUX-P3-07 pipeline walk captures."
+      "purpose": "The four-stage pipeline view for a single request."
     },
     {
       "id": "debate",

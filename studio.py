@@ -4038,10 +4038,21 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .stage-artifact[data-empty="true"] { color: #fda4af; }
   .stage-artifact .stage-artifact-key { color: var(--text-faint); font-size: 10.6px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
   .stage-artifact .stage-artifact-size { font-family: var(--mono); color: var(--text); }
+  .pipeline-recovery { margin: 0 0 13px; }
+  .pipeline-recovery[hidden] { display: none; }
+  .pipeline-recovery .presentation { margin: 0; }
+  .stage-output-card[data-recovered="true"] .stage-output-head strong::after {
+    content: " · recovered";
+    color: var(--text-faint);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
   .council-artifacts { margin: 0 0 13px; padding: 11px 14px; border: 1px solid var(--border); border-left: 3px solid var(--emerald); border-radius: var(--radius-sm); background: var(--bg-card); font-size: 12px; line-height: 1.55; color: var(--text-dim); }
   .council-artifacts[hidden] { display: none; }
   .council-artifacts[data-state="partial"] { border-left-color: var(--amber); }
   .council-artifacts[data-state="failed"] { border-left-color: var(--rose); }
+  .council-artifacts[data-state="recovered"] { border-left-color: var(--cyan); }
   .council-artifacts strong { color: var(--text); }
   .council-artifacts .council-artifacts-note { display: block; margin-top: 3px; font-size: 11.2px; color: var(--text-faint); }
   .debate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px; margin-bottom: 14px; }
@@ -5821,11 +5832,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             </div>
             <div style="display:flex; gap:8px;">
               <button id="councilStopBtn" class="btn btn-danger" style="display:none;" onclick="stopActiveStream()">Stop</button>
-              <button id="councilRetryBtn" type="button" class="btn" style="display:none;" aria-describedby="councilRetryNotice" onclick="retryCouncil()">Retry from start</button>
               <button id="councilRunBtn" class="btn btn-primary" onclick="runCouncil()">Run pipeline</button>
             </div>
           </div>
-          <p id="councilRetryNotice" role="status" aria-live="polite" style="display:none; margin:8px 0 0; color:var(--text-dim); font-size:12px;">A retry starts at Architect and reruns all four stages. It replaces the partial output currently shown.</p>
         </div>
 
         <div id="skillsAppliedNotice" style="display:none; margin-bottom:12px;"></div>
@@ -5856,6 +5865,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
              seat left behind, how many handoffs happened, and whether the server
              actually saved it. Filled by renderCouncilArtifacts(). -->
         <div id="councilArtifacts" class="council-artifacts" role="status" aria-live="polite" hidden></div>
+        <!-- A run that failed, was stopped, was dropped, or was recovered from a copy.
+             Built with presentInto(), so it cannot ship without a cause, a Kept: line
+             and at least one action - which is what "Error: HTTP 500" never had. -->
+        <div id="pipelineRecovery" class="pipeline-recovery" role="group" aria-label="Pipeline recovery" hidden></div>
         <div id="councilStagesContainer"></div>
       </div>
     </section>
@@ -6416,11 +6429,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   let stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null}, 2:{c:"",r:"",rCount:0,m:"",u:null}, 3:{c:"",r:"",rCount:0,m:"",u:null}, 4:{c:"",r:"",rCount:0,m:"",u:null} };
   let rafPending = false;
-  // The last pipeline run: what it was asked, its terminal outcome, and whether the server
-  // confirmed a saved id. Retry keeps this exact request payload so edited form controls do
-  // not silently change what the operator is retrying.
+  // The last pipeline run: what it was asked, whether it finished, whether the server
+  // said it saved it. The stage rows are derived from `stageBuffers`; this only holds
+  // the facts that are not in a buffer.
   let councilRun = null;
-  let lastCouncilPayload = null;
   let stageRowSignature = {};
 
   function escapeHtml(s) { return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
@@ -7433,12 +7445,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (!expanded && returnFocus === true && btn) btn.focus({ preventScroll: true });
   }
   function setCouncilPreset(txt) { document.getElementById("councilPrompt").value = txt; }
-  function stopActiveStream(reason = "operator") {
-    if (activeAbort) {
-      activeAbort.abortReason = reason;
-      activeAbort.abort();
-      activeAbort = null;
-    }
+  function stopActiveStream() {
+    if (activeAbort) { activeAbort.abort(); activeAbort = null; }
     // Chat stays locked until its stream finalizer marks the Stop result. Releasing the
     // composer here would let another send race the old reader's finalizer.
   }
@@ -8409,7 +8417,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   async function clearSsdCache() { await fetch("/api/cache/clear-ssd", { method: "POST" }); refreshTelemetry(); }
 
   async function consumeSSE(url, payload, handlers, onFinally) {
-    stopActiveStream("superseded");
+    stopActiveStream();
     const controller = new AbortController();
     activeAbort = controller;
     let receivedTerminalEvent = false;
@@ -8430,20 +8438,18 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             if (line.startsWith("event:")) ev = line.slice(6).trim();
             else if (line.startsWith("data:")) dataStr += line.slice(5).trim();
           }
-          if (ev === "done" || ev === "error" || ev === "council_done") receivedTerminalEvent = true;
+          if (ev === "done" || ev === "error") receivedTerminalEvent = true;
           if (dataStr && handlers[ev]) await handlers[ev](JSON.parse(dataStr));
         }
       }
       if (controller.signal.aborted && !receivedTerminalEvent && handlers.stopped) {
-        await handlers.stopped({ reason: controller.abortReason || "operator" });
+        await handlers.stopped();
       } else if (!controller.signal.aborted && !receivedTerminalEvent && handlers.closed) {
-        await handlers.closed({ message: "The stream ended before reporting completion." });
+        await handlers.closed();
       }
     } catch (e) {
       if (e.name === "AbortError") {
-        if (!receivedTerminalEvent && handlers.stopped) {
-          await handlers.stopped({ reason: controller.abortReason || "operator" });
-        }
+        if (!receivedTerminalEvent && handlers.stopped) await handlers.stopped();
       } else if (handlers.error) {
         await handlers.error({ message: e.message });
       }
@@ -8538,7 +8544,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     host.dataset.empty = empty ? "true" : "false";
     host.dataset.chars = String(chars);
     if (!usage) {
-      host.innerHTML = `<span class="stage-artifact-key">produced so far</span><span class="stage-artifact-size">${escapeHtml(String(chars))} chars</span>`
+      // "so far" is only true while there is still a stream to add to it. Once the run is over -
+      // stopped, failed or recovered - the seat stopped where it stopped, and the row says so.
+      const over = Boolean(councilRun && (councilRun.stopped || councilRun.endReason));
+      const label = over ? `${String(seat.short)} stopped after` : "produced so far";
+      host.innerHTML = `<span class="stage-artifact-key">${escapeHtml(label)}</span><span class="stage-artifact-size">${escapeHtml(String(chars))} chars</span>`
         + (reasoning ? `<span>· ${escapeHtml(String(reasoning))} chars of reasoning</span>` : "");
       return;
     }
@@ -8559,32 +8569,6 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // The run, stated once: how much each seat left behind, how many handoffs happened,
   // and whether the server actually saved it. `save_run()` returns 0 when it cannot
   // write, so a zero is drawn as "not saved" rather than as a run id.
-  function syncCouncilRetryControls() {
-    const button = document.getElementById("councilRetryBtn");
-    const notice = document.getElementById("councilRetryNotice");
-    const canRetry = Boolean(councilRun && lastCouncilPayload && ["failed", "stopped"].includes(councilRun.outcome));
-    if (button) {
-      button.style.display = canRetry ? "inline-flex" : "none";
-      button.disabled = !canRetry;
-    }
-    if (notice) {
-      notice.style.display = canRetry ? "block" : "none";
-      notice.textContent = "Retry starts again at Architect and reruns all four stages with the same task and settings. It replaces any partial output currently shown.";
-    }
-  }
-
-  function setCouncilOutcome(outcome, detail = "") {
-    if (!councilRun) return;
-    councilRun.outcome = outcome;
-    councilRun.error = outcome === "failed" ? String(detail || "The stream ended without a completion event.") : null;
-    councilRun.stopped = outcome === "stopped";
-    councilRun.stopReason = outcome === "stopped" ? String(detail || "") : "";
-    const status = document.getElementById("councilTotalStatus");
-    if (status) status.textContent = outcome === "failed" ? "Failed" : outcome === "stopped" ? "Stopped" : outcome === "done" ? "Done" : "Running";
-    syncCouncilRetryControls();
-    renderCouncilArtifacts();
-  }
-
   function renderCouncilArtifacts() {
     const host = document.getElementById("councilArtifacts");
     if (!host) return;
@@ -8592,7 +8576,6 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       host.hidden = true;
       host.innerHTML = "";
       host.removeAttribute("data-state");
-      syncCouncilRetryControls();
       return;
     }
     const seats = PIPELINE_SEATS.map(seat => {
@@ -8605,32 +8588,53 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const totalChars = seats.reduce((total, entry) => total + entry.chars, 0);
     const handoffs = seats.filter(entry => entry.seat.reads.length && entry.chars > 0).length;
     const allDone = finished.length === PIPELINE_SEATS.length;
-    const outcome = councilRun.outcome || (councilRun.error ? "failed" : (councilRun.stopped ? "stopped" : "done"));
-    const state = outcome === "failed" ? "failed" : outcome === "stopped" ? "partial" : outcome === "running" ? "running" : "ok";
+    // A recovered view is neither a stopped run nor a finished one: it is a copy, and the line
+    // above the seats has to say so before a reader mistakes it for a live run.
+    const recovered = councilRun.recoveredFrom || "";
+    const state = recovered ? "recovered" : (councilRun.error ? "failed" : (councilRun.stopped && !allDone ? "partial" : "ok"));
     const done = `${String(finished.length)} of ${String(PIPELINE_SEATS.length)} stages finished`;
     const volume = `${String(totalChars)} chars of output across ${String(produced.length)} seat${String(produced.length === 1 ? "" : "s")}`;
     const carried = handoffs ? `, and ${String(handoffs)} handoff${String(handoffs === 1 ? "" : "s")} carried content forward` : "";
-    const label = outcome === "failed" ? "Failed" : outcome === "stopped" ? "Stopped" : outcome === "running" ? "Running" : "Completed";
-    const headlineHtml = `<strong>${escapeHtml(label)} after ${escapeHtml(done)}.</strong> ${escapeHtml(volume)}${escapeHtml(carried)}. `;
+    // What the run is called is what happened to it: a failure is not a stop, and a stream that
+    // ended without a result is neither.
+    const endedWord = councilRun.endReason === "failed" ? "Failed" : (councilRun.endReason === "dropped" ? "Ended" : "Stopped");
+    const headlineHtml = recovered
+      ? `<strong>Showing ${escapeHtml(done)}</strong> · ${escapeHtml(volume)}${escapeHtml(carried)}. `
+      : (councilRun.stopped && !allDone
+        ? `<strong>${escapeHtml(endedWord)} after ${escapeHtml(done)}.</strong> ${escapeHtml(volume)}${escapeHtml(carried)}. `
+        : `<strong>${escapeHtml(done.charAt(0).toUpperCase() + done.slice(1))}</strong> · ${escapeHtml(volume)}${escapeHtml(carried)}. `);
     const notes = [];
+    if (!recovered && councilRun.attempt > 1) {
+      // A retry re-runs every seat, so the line says which attempt this is: a second run that
+      // drew itself like the first would hide the fact that the first one failed.
+      notes.push(`Attempt ${escapeHtml(String(Number(councilRun.attempt)))} of this task: retry re-runs all four seats.`);
+    }
+    if (recovered) {
+      notes.push(recovered === "saved-run"
+        ? `Read back from the server's export of run #${String(Number(councilRun.savedRunId))}; nothing was re-run.`
+        : "Read back from this browser's checkpoint; nothing was re-run, and this is not the server's record.");
+    }
     if (empty.length) {
       const emptyNamesHtml = empty.map(entry => escapeHtml(entry.seat.short)).join(", ");
       notes.push(`${emptyNamesHtml} finished with no output, so the seat after it was handed an empty section.`);
     }
-    if (outcome === "failed") {
-      notes.push(`The pipeline failed: ${escapeHtml(String(councilRun.error || "The stream ended before completion."))}`);
-      notes.push("The stream did not confirm a saved run id; these partial artifacts remain on this screen only.");
+    if (councilRun.error && !recovered) {
+      notes.push(`The run stopped on an error: ${escapeHtml(String(councilRun.error))}`);
     }
-    if (outcome === "stopped") {
-      notes.push(councilRun.stopReason ? escapeHtml(councilRun.stopReason) : "Stopped by the operator.");
-      notes.push("A stopped pipeline is not saved: the server writes a run only after all four stages return, so what is above exists only on this screen.");
-    }
-    if (outcome === "done" && councilRun.savedRunId > 0) {
+    if (recovered) {
+      // nothing further: the line above already says where this came from
+    } else if (councilRun.stopped && !allDone) {
+      notes.push(councilRun.endReason === "failed" || councilRun.endReason === "dropped"
+        ? "A failed run is not saved: the server writes a run only after all four stages return, so what is above exists only on this screen."
+        : "A stopped pipeline is not saved: the server writes a run only after all four stages return, so what is above exists only on this screen.");
+    } else if (councilRun.savedRunId > 0) {
       notes.push(`The server reported this run saved as #${String(Number(councilRun.savedRunId))}${councilRun.totalS !== null ? ` in ${String(Number(councilRun.totalS))}s` : ""}.`);
-    } else if (outcome === "done" && allDone) {
+    } else if (allDone) {
       notes.push("The server did not report a saved run id, so these artifacts exist only on this screen.");
     }
-    notes.push("Each stage reads what the seats before it produced; the sizes above count this pane's own stream, not the prompt the server assembles around them.");
+    notes.push(recovered
+      ? "The sizes are the characters this copy carries; a recovered view has no prompt to count."
+      : "Each stage reads what the seats before it produced; the sizes above count this pane's own stream, not the prompt the server assembles around them.");
     const notesHtml = notes.join(" ");
     const html = `${headlineHtml}<span class="council-artifacts-note">${notesHtml}</span>`;
     host.hidden = false;
@@ -8666,6 +8670,500 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     // A finished seat that produced nothing is `0 ch`; a seat that has not started is blank.
     if (chars) chars.textContent = (buffer.c || buffer.u) ? `${(buffer.c || "").length} ch` : "";
   }
+
+  /* ── UIUX-P3-07: a pipeline that fails is a state with a way back ───────────
+     A run that failed used to be a toast: `Council error: HTTP 503` for four seconds, then
+     nothing. The stage it died on was not named, the output that had survived was not named,
+     and the only way to try again was to retype the task - which may not have been the task
+     that failed. Worse, there was no record of it at all: `save_run()` writes a run after the
+     fourth seat returns, so a failure leaves nothing to come back to, and the pane threw away
+     the only copy of what the first seats had produced when the page reloaded.
+
+     Three copies exist, and this block keeps them apart instead of blurring them:
+
+     * **the server's record** - a run that finished, saved by `save_run()` and readable back
+       through the export the repository already mounts (`GET /api/history/export`, which
+       redacts anything that looks like a credential). No new route was added for this;
+     * **this browser's checkpoint** - written when a run fails or is stopped, so a reload does
+       not lose the salvage. It is `localStorage`, it is bounded, and the surface says so: it is
+       not the server's record and clearing site data loses it;
+     * **nothing** - a run that failed or was stopped, before anyone kept anything.
+
+     Retry re-posts the payload that failed, byte for byte, rather than re-reading the controls:
+     the form may have been edited since, and a "retry" that quietly runs something else is a
+     different run wearing the same button. The server has no way to run one seat alone, so the
+     block says that retry re-runs all four seats - a retry that claimed to resume at seat 3
+     would be the lie this story exists to remove. */
+
+  const PIPELINE_CHECKPOINT_KEY = "m5_pipeline_checkpoint";
+  const PIPELINE_CHECKPOINT_MAX_CHARS = 60000;
+  const PIPELINE_END_REASONS = {
+    failed: "the server reported an error",
+    stopped: "you stopped it",
+    dropped: "the stream ended without the run's final event - the connection dropped or the server stopped",
+    recovered: "it was recovered from a copy",
+  };
+
+  function pipelinePayload(task) {
+    return {
+      task,
+      architect_model: document.getElementById("c-arch").value,
+      coder_model: document.getElementById("c-coder").value,
+      critic_model: document.getElementById("c-critic").value,
+      judge_model: document.getElementById("c-judge").value,
+      auto_unload: document.getElementById("c-unload").checked,
+      reasoning_mode: document.getElementById("c-reasoning").value,
+      skills: [...selectedSkills],
+    };
+  }
+
+  // What the pane is holding right now, seat by seat. This is the only copy of a failed run
+  // there is, which is why it is written down before the page can go away.
+  function pipelineStagesSnapshot() {
+    return PIPELINE_SEATS.map(seat => {
+      const buffer = stageBuffers[seat.stage] || {};
+      return {
+        stage: seat.stage,
+        key: seat.key,
+        model: buffer.m || "",
+        content: typeof buffer.c === "string" ? buffer.c : "",
+        reasoning: typeof buffer.r === "string" ? buffer.r : "",
+        usage: buffer.u || null,
+      };
+    });
+  }
+
+  function pipelineSeatsWithOutput(stages) {
+    return (stages || []).filter(stage => (stage.content || "").length > 0);
+  }
+
+  function pipelineCharsOf(stages) {
+    return (stages || []).reduce((total, stage) => total + (stage.content || "").length, 0);
+  }
+
+  // The browser's store is not infinite and a pipeline can produce a lot of text, so the
+  // checkpoint keeps whole seats while they fit and says when a seat had to be cut.
+  function pipelineCheckpointBuild(reason) {
+    if (!councilRun || !councilRun.payload) return null;
+    const stages = pipelineStagesSnapshot();
+    let budget = PIPELINE_CHECKPOINT_MAX_CHARS;
+    let truncated = false;
+    const kept = stages.map(stage => {
+      const content = stage.content || "";
+      const keptText = content.length > budget ? content.slice(0, budget) : content;
+      if (keptText.length < content.length) truncated = true;
+      budget -= keptText.length;
+      return { ...stage, content: keptText, truncated: keptText.length < content.length };
+    });
+    return {
+      version: 1,
+      reason: reason || councilRun.endReason || "",
+      task: councilRun.task || "",
+      payload: councilRun.payload,
+      failedStage: councilRun.failedStage || null,
+      error: councilRun.error || null,
+      stages: kept,
+      truncation: { truncated, cap_chars: PIPELINE_CHECKPOINT_MAX_CHARS },
+      kept_at: new Date().toISOString(),
+    };
+  }
+
+  function pipelineCheckpointWrite(reason) {
+    const checkpoint = pipelineCheckpointBuild(reason);
+    if (!checkpoint) return false;
+    try {
+      localStorage.setItem(PIPELINE_CHECKPOINT_KEY, JSON.stringify(checkpoint));
+      return true;
+    } catch (_error) {
+      // A browser that refuses storage (private mode, quota) is stated, not swallowed.
+      return false;
+    }
+  }
+
+  function pipelineCheckpointRead() {
+    let raw = null;
+    try {
+      raw = localStorage.getItem(PIPELINE_CHECKPOINT_KEY);
+    } catch (_error) {
+      return null;
+    }
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.stages)) return null;
+      return parsed;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function pipelineCheckpointClear() {
+    try {
+      localStorage.removeItem(PIPELINE_CHECKPOINT_KEY);
+    } catch (_error) {
+      // nothing to do: the block will say it could not be removed if it mattered
+    }
+  }
+
+  // What happened to the run on screen, in the runtime's own words rather than in ours.
+  function pipelineEndState() {
+    if (!councilRun) return null;
+    if (!councilRun.endReason) return null;
+    return {
+      reason: councilRun.endReason,
+      seat: councilRun.failedStage ? pipelineSeat(councilRun.failedStage) : null,
+      message: councilRun.error || "",
+      stages: pipelineStagesSnapshot(),
+    };
+  }
+
+  function pipelineSeatsSentence(stages) {
+    const produced = pipelineSeatsWithOutput(stages);
+    if (!produced.length) return "no seat produced any output";
+    const chars = pipelineCharsOf(stages);
+    const names = produced.map(stage => {
+      const seat = pipelineSeat(stage.stage);
+      return seat ? seat.short : `seat ${stage.stage}`;
+    });
+    return `${chars} characters from ${names.join(", ")}`;
+  }
+
+  // A recovered view is drawn seat by seat from the copy, and says where the copy came from
+  // every time it is on screen - a restored run must never pass for a live one.
+  function applyRecoveredStages(stages, meta) {
+    if (!Array.isArray(stages) || !stages.length) return false;
+    document.getElementById("councilStagesContainer").innerHTML = "";
+    stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null}, 2:{c:"",r:"",rCount:0,m:"",u:null}, 3:{c:"",r:"",rCount:0,m:"",u:null}, 4:{c:"",r:"",rCount:0,m:"",u:null} };
+    stageRowSignature = {};
+    stages.forEach(stage => {
+      const seat = pipelineSeat(stage.stage);
+      if (!seat) return;
+      const buffer = stageBuffers[seat.stage];
+      buffer.c = stage.content || "";
+      buffer.r = stage.reasoning || "";
+      buffer.m = stage.model || "";
+      buffer.u = stage.usage || null;
+    });
+    const payload = meta.payload || {};
+    const task = meta.task || payload.task || "";
+    councilRun = {
+      task,
+      taskChars: task.length,
+      payload: Object.keys(payload).length ? payload : null,
+      attempt: meta.attempt || 1,
+      stopped: true,
+      endReason: "recovered",
+      recoveredFrom: meta.recoveredFrom || "checkpoint",
+      recoveredAt: meta.recoveredAt || "",
+      truncated: Boolean(meta.truncated),
+      savedRunId: Number(meta.savedRunId || 0),
+      totalS: meta.totalS === undefined ? null : meta.totalS,
+      error: meta.error || null,
+      failedStage: meta.failedStage || null,
+    };
+    [1,2,3,4].forEach(n => { document.getElementById(`st-state-${n}`).textContent = "Idle"; document.getElementById(`st-tps-${n}`).textContent = ""; const ch = document.getElementById(`st-chars-${n}`); if (ch) ch.textContent = ""; });
+    document.querySelectorAll(".step-card").forEach(el => el.classList.remove("running", "done"));
+    PIPELINE_SEATS.forEach(seat => {
+      const buffer = stageBuffers[seat.stage];
+      if (!buffer.c && !buffer.u) return;
+      document.getElementById(`step-card-${seat.stage}`).classList.add("done");
+      document.getElementById(`st-state-${seat.stage}`).textContent = "Recovered";
+      if (buffer.u) document.getElementById(`st-tps-${seat.stage}`).textContent = `${buffer.u.decode_tps} t/s`;
+      ensureStageCardMounted(seat.stage);
+      const card = document.getElementById(`stage-dom-${seat.stage}`);
+      if (card) card.dataset.recovered = "true";
+      const pill = document.getElementById(`stage-pill-${seat.stage}`);
+      if (pill && !buffer.u) setStatus(pill, "warn", "Recovered · partial");
+    });
+    scheduleStageUpdate();
+    renderCouncilArtifacts();
+    return true;
+  }
+
+  function restorePipelineCheckpoint() {
+    const checkpoint = pipelineCheckpointRead();
+    if (!checkpoint) return false;
+    const restored = applyRecoveredStages(checkpoint.stages, {
+      recoveredFrom: "checkpoint",
+      recoveredAt: checkpoint.kept_at,
+      truncated: checkpoint.truncation && checkpoint.truncation.truncated,
+      failedStage: checkpoint.failedStage,
+      error: checkpoint.error,
+      payload: checkpoint.payload,
+      task: checkpoint.task,
+    });
+    if (restored) {
+      // The prompt is part of the recovered run: restoring the output without the task would
+      // show four answers to a question the pane no longer knows.
+      const prompt = document.getElementById("councilPrompt");
+      if (prompt && checkpoint.task) prompt.value = checkpoint.task;
+      showToast("Restored from this browser's checkpoint - not a server record", "ok");
+    }
+    renderPipelineRecovery();
+    return restored;
+  }
+
+  function discardPipelineCheckpoint() {
+    pipelineCheckpointClear();
+    renderPipelineRecovery();
+    const host = document.getElementById("pipelineRecovery");
+    if (host) {
+      if (!host.hasAttribute("tabindex")) host.setAttribute("tabindex", "-1");
+      host.focus();
+    }
+  }
+
+  // The server's own record, read through the export the repository already mounts. Nothing is
+  // invented here: the run id, its task and its seats are the row `save_run()` wrote, and the
+  // export is the same one an operator can download.
+  async function reloadSavedPipelineRun(runId) {
+    const id = Number(runId || (councilRun && councilRun.savedRunId) || 0);
+    if (!id) {
+      showToast("This run was not saved, so there is no record to reload", "warn");
+      return false;
+    }
+    try {
+      const response = await fetch("/api/history/export");
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const bundle = await response.json();
+      const rows = (bundle.tables && bundle.tables.runs) || [];
+      const row = rows.find(entry => Number(entry.id) === id);
+      if (!row) throw new Error(`run #${id} is not in this export`);
+      if (row.mode && row.mode !== "council") throw new Error(`run #${id} is a ${row.mode} run, not a pipeline run`);
+      const record = typeof row.payload_json === "string" ? JSON.parse(row.payload_json) : row.payload_json;
+      const stages = ((record && record.stages) || []).map(stage => ({
+        stage: Number(stage.stage),
+        key: stage.key || "",
+        model: stage.model || "",
+        content: typeof stage.content === "string" ? stage.content : "",
+        reasoning: typeof stage.reasoning === "string" ? stage.reasoning : "",
+        usage: stage.usage || null,
+      }));
+      if (!stages.length) throw new Error(`run #${id} holds no seats`);
+      applyRecoveredStages(stages, {
+        recoveredFrom: "saved-run",
+        recoveredAt: row.created_at || "",
+        savedRunId: id,
+        totalS: record.total_elapsed_s === undefined ? null : record.total_elapsed_s,
+        task: record.task || "",
+      });
+      renderPipelineRecovery();
+      showToast(`Reloaded run #${id} from the server's export`, "ok");
+      return true;
+    } catch (error) {
+      pipelineRecoveryNote = `the export could not be read: ${error.message}`;
+      renderPipelineRecovery();
+      showToast(`Could not reload run #${id}: ${error.message}`, "err");
+      return false;
+    }
+  }
+
+  let pipelineRecoveryNote = "";
+
+  // One spec, built from what actually happened. `presentInto` refuses a spec without a title,
+  // a cause, a Kept: line and an action, so no branch below can degrade into a bare message.
+  function pipelineRecoverySpec() {
+    const host = document.getElementById("pipelineRecovery");
+    const seatName = stage => (pipelineSeat(stage) || {}).short || "the first seat";
+    const failure = pipelineEndState();
+    const checkpoint = pipelineCheckpointRead();
+    const note = pipelineRecoveryNote ? ` ${pipelineRecoveryNote}.` : "";
+
+    if (failure && (failure.reason === "failed" || failure.reason === "dropped" || failure.reason === "stopped")) {
+      const kept = pipelineSeatsSentence(failure.stages);
+      const where = failure.seat ? `${failure.seat.short} (seat ${failure.seat.stage})` : "before the first seat reported";
+      const stopped = failure.reason === "stopped";
+      const cause = stopped
+        ? `you stopped the run at ${where}`
+        : (failure.message ? `${PIPELINE_END_REASONS[failure.reason]}: ${failure.message}` : PIPELINE_END_REASONS[failure.reason]);
+      const record = stopped
+        ? "Stopped runs are not saved: the server writes a run only after the fourth seat returns."
+        : "The server writes a run only after the fourth seat returns, so nothing about this run is on record.";
+      const copy = checkpoint && checkpoint.payload
+        ? " The pane also kept a copy of what survived in this browser; it survives a reload and is not the server's record."
+        : "";
+      return {
+        kind: stopped ? "recovery" : "error",
+        state: failure.reason,
+        title: stopped ? `Stopped at ${where}` : (failure.reason === "dropped" ? "The stream ended without a result" : `The run failed at ${where}`),
+        cause: `${cause}.${note}`,
+        context: `${kept}. ${record}${copy}`,
+        actions: [
+          { id: "retry", label: "Retry the run", title: "Post the payload that failed again", run: () => retryPipelineRun() },
+          {
+            id: "forget",
+            label: "Forget the kept copy",
+            disabled: !copy,
+            reason: copy ? "" : "no copy was kept for this run",
+            run: () => discardPipelineCheckpoint(),
+          },
+        ],
+      };
+    }
+
+    if (failure && failure.reason === "recovered") {
+      const fromServer = councilRun.recoveredFrom === "saved-run";
+      const kept = pipelineSeatsSentence(failure.stages);
+      const cause = fromServer
+        ? `read back from the server's export of run #${councilRun.savedRunId}`
+        : `read back from this browser's checkpoint${councilRun.recoveredAt ? ` kept ${councilRun.recoveredAt}` : ""}`;
+      const truncation = councilRun.truncated ? " One seat was cut to fit the browser's storage, and its text is short here." : "";
+      const record = fromServer
+        ? " The export redacts anything that looks like a credential; the text is the server's record of the run."
+        : " This is not the server's record: clearing this browser's site data loses it.";
+      return {
+        kind: "recovery",
+        state: "recovered",
+        title: fromServer ? "Showing a run the server saved" : "Showing a run this browser kept",
+        cause: `${cause}.${note}`,
+        context: `${kept}.${truncation}${record}`,
+        actions: [
+          { id: "retry", label: "Run it again", title: "Post the recorded payload again - all four seats re-run", run: () => retryPipelineRun(), disabled: !councilRun.payload, reason: councilRun.payload ? "" : "this copy carries no payload" },
+          { id: "reload-saved", label: "Reload from the server", title: "Read this run back from GET /api/history/export", run: () => reloadSavedPipelineRun(councilRun.savedRunId), disabled: !councilRun.savedRunId, reason: councilRun.savedRunId ? "" : "this copy was never saved as a run" },
+          { id: "forget", label: fromServer ? "Clear this view" : "Forget the kept copy", run: () => (fromServer ? clearPipelineView() : discardPipelineCheckpoint()) },
+        ],
+      };
+    }
+
+    // A run that finished and was saved: the artifacts are durable, and this is the one place
+    // that says so and offers the read-back.
+    if (councilRun && councilRun.savedRunId > 0 && !councilRun.stopped) {
+      const chars = pipelineCharsOf(pipelineStagesSnapshot());
+      return {
+        kind: "recovery",
+        state: "recorded",
+        title: `This run is on record as #${councilRun.savedRunId}`,
+        cause: `the server saved it after the fourth seat returned${councilRun.totalS !== null ? `, in ${councilRun.totalS}s` : ""}.${note}`,
+        context: `${chars} characters across four seats, readable back through GET /api/history/export - the same bundle an operator can download, with credentials redacted.`,
+        actions: [
+          { id: "reload-saved", label: "Reload from the server", title: "Read this run back from GET /api/history/export", run: () => reloadSavedPipelineRun(councilRun.savedRunId) },
+          { id: "forget", label: "Clear this view", run: () => clearPipelineView() },
+        ],
+      };
+    }
+
+    // A copy from an earlier page load, with no run on screen: the salvage survives the reload,
+    // and the pane says where it came from before offering it.
+    if (checkpoint) {
+      const kept = pipelineSeatsSentence(checkpoint.stages);
+      const where = checkpoint.failedStage ? `${seatName(checkpoint.failedStage)} (seat ${checkpoint.failedStage})` : "before the first seat reported";
+      const finished = checkpoint.reason === "done";
+      const outcome = finished
+        ? "it finished, and the server did not report a saved run id"
+        : `it ${checkpoint.reason === "stopped" ? "was stopped" : "failed"} at ${where}${checkpoint.error ? `: ${checkpoint.error}` : ""}`;
+      return {
+        kind: "recovery",
+        state: "checkpoint",
+        title: finished ? "A finished run was kept in this browser" : "A run of this task was kept in this browser",
+        cause: `${outcome}${checkpoint.kept_at ? `, kept ${checkpoint.kept_at}` : ""}.${note}`,
+        context: `${kept}, held in this browser's storage - not the server's record. Restoring puts it back on this screen; it does not re-run anything.`,
+        actions: [
+          { id: "restore", label: "Restore it into this pane", title: "Draw the kept seats without running anything", run: () => restorePipelineCheckpoint() },
+          { id: "retry", label: "Run it again", title: "Post the recorded payload - all four seats re-run", run: () => retryPipelineRun(checkpoint), disabled: !(checkpoint && checkpoint.payload), reason: checkpoint && checkpoint.payload ? "" : "this copy carries no payload" },
+          { id: "forget", label: "Forget it", run: () => discardPipelineCheckpoint() },
+        ],
+      };
+    }
+
+    return null;
+  }
+
+  function clearPipelineView() {
+    document.getElementById("councilStagesContainer").innerHTML = "";
+    stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null}, 2:{c:"",r:"",rCount:0,m:"",u:null}, 3:{c:"",r:"",rCount:0,m:"",u:null}, 4:{c:"",r:"",rCount:0,m:"",u:null} };
+    stageRowSignature = {};
+    councilRun = null;
+    [1,2,3,4].forEach(n => { document.getElementById(`st-state-${n}`).textContent = "Idle"; document.getElementById(`st-tps-${n}`).textContent = ""; const ch = document.getElementById(`st-chars-${n}`); if (ch) ch.textContent = ""; });
+    document.querySelectorAll(".step-card").forEach(el => el.classList.remove("running", "done"));
+    document.getElementById("councilTotalStatus").textContent = "Ready";
+    document.getElementById("councilTotalTime").textContent = "";
+    renderCouncilArtifacts();
+    renderPipelineRecovery();
+    const host = document.getElementById("pipelineRecovery");
+    if (host && !host.hidden) {
+      if (!host.hasAttribute("tabindex")) host.setAttribute("tabindex", "-1");
+      host.focus();
+    }
+  }
+
+  function renderPipelineRecovery() {
+    const host = document.getElementById("pipelineRecovery");
+    if (!host) return;
+    const spec = pipelineRecoverySpec();
+    if (!spec) {
+      if (host.firstChild) host.innerHTML = "";
+      host.hidden = true;
+      delete host.dataset.state;
+      return;
+    }
+    const box = presentInto(host, {
+      kind: spec.kind,
+      title: spec.title,
+      cause: spec.cause,
+      context: spec.context,
+      actions: spec.actions,
+    });
+    host.hidden = false;
+    host.dataset.state = spec.state;
+    if (box) {
+      spec.actions.forEach((action, index) => {
+        const button = box.querySelectorAll(".presentation-actions .btn")[index];
+        if (button && action.id) button.dataset.actionId = action.id;
+      });
+    }
+  }
+
+  // Retry posts the payload the run was started with - not the controls as they are now.
+  function retryPipelineRun(source) {
+    const from = source && source.payload ? source.payload : (councilRun && councilRun.payload);
+    if (!from || !from.task) {
+      showToast("There is no recorded payload to retry", "warn");
+      return false;
+    }
+    const payload = JSON.parse(JSON.stringify(from));
+    const attempt = ((councilRun && councilRun.attempt) || 1) + 1;
+    ["c-arch", "c-coder", "c-critic", "c-judge"].forEach((id, index) => {
+      const seat = PIPELINE_SEATS[index];
+      const select = document.getElementById(id);
+      if (select && payload[`${seat.key}_model`]) {
+        if (![...select.options].some(option => option.value === payload[`${seat.key}_model`])) {
+          const option = document.createElement("option");
+          option.value = payload[`${seat.key}_model`];
+          option.textContent = payload[`${seat.key}_model`];
+          select.appendChild(option);
+        }
+        select.value = payload[`${seat.key}_model`];
+      }
+    });
+    const prompt = document.getElementById("councilPrompt");
+    if (prompt) prompt.value = payload.task;
+    startPipelineRun(payload, { task: payload.task, attempt });
+    showToast(attempt > 1 ? `Retry ${attempt}: all four seats run again` : "All four seats run again", "info");
+    return true;
+  }
+
+  window.M5PipelineRecovery = {
+    reasons: PIPELINE_END_REASONS,
+    end: pipelineEndState,
+    spec: pipelineRecoverySpec,
+    render: renderPipelineRecovery,
+    retry: retryPipelineRun,
+    restore: restorePipelineCheckpoint,
+    discard: discardPipelineCheckpoint,
+    reloadSaved: reloadSavedPipelineRun,
+    clear: clearPipelineView,
+    handlers: pipelineStreamHandlers,
+    finalize: pipelineStreamFinalizer,
+    checkpoint: {
+      key: PIPELINE_CHECKPOINT_KEY,
+      cap: PIPELINE_CHECKPOINT_MAX_CHARS,
+      build: pipelineCheckpointBuild,
+      write: pipelineCheckpointWrite,
+      read: pipelineCheckpointRead,
+      clear: pipelineCheckpointClear,
+    },
+    state: () => councilRun,
+  };
 
   function ensureStageCardMounted(s) {
     const container = document.getElementById("councilStagesContainer");
@@ -8717,84 +9215,126 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       renderCouncilArtifacts();
     });
   }
-  function runCouncil(requestPayload = null) {
-    const payload = requestPayload
-      ? JSON.parse(JSON.stringify(requestPayload))
-      : {
-        task: document.getElementById("councilPrompt").value.trim(),
-        architect_model: document.getElementById("c-arch").value,
-        coder_model: document.getElementById("c-coder").value,
-        critic_model: document.getElementById("c-critic").value,
-        judge_model: document.getElementById("c-judge").value,
-        auto_unload: document.getElementById("c-unload").checked,
-        reasoning_mode: document.getElementById("c-reasoning").value,
-        skills: [...selectedSkills],
-      };
-    payload.task = String(payload.task || "").trim();
-    if (!payload.task) return;
-    lastCouncilPayload = JSON.parse(JSON.stringify(payload));
+  function runCouncil() {
+    const task = document.getElementById("councilPrompt").value.trim();
+    if (!task) return;
+    startPipelineRun(pipelinePayload(task), { task, attempt: 1 });
+  }
+
+  // One entry point for a run, whether it came from the button or from a retry: the payload is
+  // an argument, so a retry posts what failed rather than whatever the controls say now.
+  function startPipelineRun(payload, options) {
+    const task = (options && options.task) || payload.task || "";
     document.getElementById("councilStagesContainer").innerHTML = "";
     stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null}, 2:{c:"",r:"",rCount:0,m:"",u:null}, 3:{c:"",r:"",rCount:0,m:"",u:null}, 4:{c:"",r:"",rCount:0,m:"",u:null} };
     stageRowSignature = {};
+    pipelineRecoveryNote = "";
     // The task is the first thing every seat reads, and its size is the one number on
     // this screen that is known before a token arrives.
-    councilRun = { taskChars: payload.task.length, stopped: false, savedRunId: 0, totalS: null, error: null, outcome: "running", stopReason: "" };
+    councilRun = {
+      task,
+      taskChars: task.length,
+      payload,
+      attempt: (options && options.attempt) || 1,
+      stopped: false,
+      savedRunId: 0,
+      totalS: null,
+      error: null,
+      failedStage: null,
+      activeStage: null,
+      endReason: null,
+    };
+    renderCouncilArtifacts();
+    renderPipelineRecovery();
     document.getElementById("councilTotalStatus").textContent = "Running";
     document.getElementById("councilTotalTime").textContent = "";
-    syncCouncilRetryControls();
-    renderCouncilArtifacts();
     [1,2,3,4].forEach(n => { document.getElementById(`st-state-${n}`).textContent = "Queued"; document.getElementById(`st-tps-${n}`).textContent = ""; const ch = document.getElementById(`st-chars-${n}`); if (ch) ch.textContent = ""; });
     document.querySelectorAll(".step-card").forEach(el => el.classList.remove("running", "done"));
     document.getElementById("councilRunBtn").disabled = true; document.getElementById("councilStopBtn").style.display = "inline-flex";
-    consumeSSE("/api/council/stream", payload, {
-      stage_start(d) { stageBuffers[d.stage].m = d.model; document.getElementById(`step-card-${d.stage}`).classList.add("running"); document.getElementById(`st-state-${d.stage}`).textContent = "Streaming"; scheduleStageUpdate(); },
+    consumeSSE("/api/council/stream", payload, pipelineStreamHandlers(), pipelineStreamFinalizer);
+  }
+
+  // The handlers and the finalizer are named rather than inline so the same wiring can be driven
+  // by a stream the walk controls: the state a run is left in is decided here, not in the route.
+  function pipelineStreamHandlers() {
+    return {
+      stage_start(d) { stageBuffers[d.stage].m = d.model; if (councilRun) councilRun.activeStage = Number(d.stage); document.getElementById(`step-card-${d.stage}`).classList.add("running"); document.getElementById(`st-state-${d.stage}`).textContent = "Streaming"; scheduleStageUpdate(); },
       token(d) { if (d.kind === "reasoning") { stageBuffers[d.stage].r += d.text; stageBuffers[d.stage].rCount++; } else stageBuffers[d.stage].c += d.text; scheduleStageUpdate(); },
       stage_done(d) { stageBuffers[d.stage].u = d.usage; document.getElementById(`step-card-${d.stage}`).classList.remove("running"); document.getElementById(`step-card-${d.stage}`).classList.add("done"); document.getElementById(`st-state-${d.stage}`).textContent = "Done"; document.getElementById(`st-tps-${d.stage}`).textContent = `${d.usage.decode_tps} t/s`; scheduleStageUpdate(); },
       unloading(d) { document.getElementById(`st-state-${d.stage}`).textContent = "Unloaded"; },
       council_done(d) {
+        document.getElementById("councilTotalStatus").textContent = "Done";
         document.getElementById("councilTotalTime").textContent = `${d.total_elapsed_s}s`;
         if (councilRun) {
           // `run_id` is 0 when save_run() could not write; drawn as "not saved".
           councilRun.savedRunId = Number(d.run_id || 0);
           councilRun.totalS = d.total_elapsed_s;
+          renderCouncilArtifacts();
         }
-        setCouncilOutcome("done");
       },
       error(d) {
-        const message = String((d && d.message) || "The server reported a pipeline error.");
-        showToast("Pipeline error: " + message, "err");
-        setCouncilOutcome("failed", message);
+        // The route reports a failing seat and the transport reports a dead connection through
+        // the same handler; both are failures, and the seat that was streaming is the one the
+        // run died on.
+        showToast("Council error: " + d.message, "err");
+        if (councilRun) {
+          councilRun.error = d.message;
+          councilRun.failedStage = councilRun.activeStage;
+          councilRun.endReason = "failed";
+        }
+        renderPipelineRecovery();
       },
-      closed(d) {
-        setCouncilOutcome("failed", String((d && d.message) || "The stream ended before reporting completion."));
+      stopped() {
+        if (!councilRun) return;
+        councilRun.endReason = "stopped";
+        councilRun.failedStage = councilRun.activeStage;
+        renderPipelineRecovery();
       },
-      stopped(d) {
-        const reason = d && d.reason === "superseded"
-          ? "The stream was interrupted when another Studio request started."
-          : "";
-        setCouncilOutcome("stopped", reason);
+      closed() {
+        if (!councilRun || councilRun.endReason) return;
+        councilRun.endReason = "dropped";
+        councilRun.failedStage = councilRun.activeStage;
+        renderPipelineRecovery();
       },
-    }, () => {
-      document.getElementById("councilRunBtn").disabled = false;
-      document.getElementById("councilStopBtn").style.display = "none";
-      if (councilRun && councilRun.outcome === "running") {
-        setCouncilOutcome("failed", "The stream ended without a completion event.");
-      }
-      if (councilRun) {
-        const terminal = councilRun.outcome;
-        [1,2,3,4].forEach(n => {
-          const state = document.getElementById(`st-state-${n}`);
-          if (state && state.textContent === "Streaming") state.textContent = terminal === "failed" ? "Failed" : "Stopped";
-        });
-        syncCouncilRetryControls();
-        renderCouncilArtifacts();
-      }
-    });
+    };
   }
 
-  function retryCouncil() {
-    if (!lastCouncilPayload || !councilRun || !["failed", "stopped"].includes(councilRun.outcome)) return;
-    runCouncil(lastCouncilPayload);
+  function pipelineStreamFinalizer() {
+    document.getElementById("councilRunBtn").disabled = false;
+    document.getElementById("councilStopBtn").style.display = "none";
+    if (!councilRun) return;
+    const allDone = [1,2,3,4].every(n => stageBuffers[n] && stageBuffers[n].u);
+    // The finalizer runs on success, on Stop and on a dropped connection. Only the first
+    // leaves four finished stages, so that is the only case that is not a stop.
+    councilRun.stopped = !allDone;
+    if (allDone) {
+      councilRun.endReason = "done";
+      councilRun.activeStage = null;
+      // A saved run is on record, so a salvage copy would only be a stale second truth. A run
+      // that finished unsaved has no record at all, and this pane is holding the only copy.
+      if (councilRun.savedRunId) pipelineCheckpointClear();
+      else pipelineCheckpointWrite("done");
+    } else if (!councilRun.endReason) {
+      councilRun.endReason = "dropped";
+      councilRun.failedStage = councilRun.failedStage || councilRun.activeStage;
+    }
+    if (!allDone) {
+      // A seat whose `stage_done` never arrived kept saying "Streaming" after the stream ended.
+      // The run is over; the card must say what the seat was left doing.
+      [1,2,3,4].forEach(n => {
+        const state = document.getElementById(`st-state-${n}`);
+        if (state && state.textContent === "Streaming") state.textContent = "Stopped";
+        const pill = document.getElementById(`stage-pill-${n}`);
+        // A card mounted for a seat that never reported usage keeps its "Connecting..." default:
+        // after the run ends that reads as still connecting, which is the opposite of true.
+        if (pill && !stageBuffers[n].u) setStatus(pill, "warn", "Stopped mid-seat");
+      });
+      // The only copy of what survived is this one, so it is written before the page can go.
+      const kept = pipelineCheckpointWrite(councilRun.endReason);
+      if (!kept) pipelineRecoveryNote = "this browser refused to keep a copy, so it is gone when the page reloads";
+    }
+    renderCouncilArtifacts();
+    renderPipelineRecovery();
   }
 
   function syncDebateArbiter() {
@@ -13079,6 +13619,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   applyShortcutHints();
   presentDebateEmpty();
   presentHallEmpty();
+  // A checkpoint outlives the page it was written on: drawing it here is what makes a failed
+  // run recoverable after a reload, rather than a thing the reader had to be watching for.
+  renderPipelineRecovery();
   loadOpenContextDocs();
   loadProviders();
   refreshOnboarding();
