@@ -261,7 +261,10 @@ def test_a_critic_that_silently_gains_skills_is_a_finding(sources):
             1,
         )
     )
-    assert "the per-stage inputs the stream cannot carry are not claimed on the page" in _checks(broken)
+    # UIUX-P4-02 moved the rule from "never claim skills" to "claim them only from the stream":
+    # a critic that gains the playbook under a stream that says it was not given one is the same
+    # finding under the new name.
+    assert "the per-stage inputs are claimed only from the stream that now carries them" in _checks(broken)
 
 
 def test_a_rows_that_churn_on_every_token_is_a_finding(sources):

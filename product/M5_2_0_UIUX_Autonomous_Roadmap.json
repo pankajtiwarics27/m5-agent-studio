@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 24,
+  "revision": 25,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,13 +102,13 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P4-01",
-    "next_recommended_story": "UIUX-P4-02",
-    "last_checkpoint": "2026-11-02T21:40:00Z",
-    "last_session_id": "arena/468fb393-m5-agent-studio",
+    "last_completed_story": "UIUX-P4-02",
+    "next_recommended_story": "UIUX-P4-03",
+    "last_checkpoint": "2026-11-02T23:40:00Z",
+    "last_session_id": "arena/433f4aa7-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "37d9cd85925a76c069dce8bb68b6ef18c4f25edd",
+    "last_verified_commit": "c9bf8f904388392ab68b55d47656aaa40e94bf8a",
     "last_updated": "2026-11-02",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -122,7 +122,9 @@
       "UIUX-P0-05 cannot be closed in this environment: the six baseline screenshots need Chrome/Chromium and puppeteer-core, neither of which is vendored. The test-results half is capturable here; the visual half needs a machine with a browser, and the owner has said they will capture there.",
       "Two sessions are closing UI/UX stories against the same static/index.html at the same time. P3-01 and the P2-04 work merged without a source conflict because they own different panes, but every generated artifact conflicted: resolve those by regenerating from the merged source rather than by choosing a side, and re-run the full suite on the merged tree, because each story's own numbers describe its own commit.",
       "The demo path's fabricated tok/s figures still reach `perf_samples`: `_stream_omlx_completion` yields 29.5/42.1 for text it wrote itself, `record_perf` stores them, and the throughput card and leaderboard count them. UIUX-P4-01 labels the reply and declines the badge, but it did not change the write, because that is a runtime-program defect and belongs to the M5 stories, not to a UI pull request.",
-      "`syncUnifiedSelectors` offers only resident local models, so loading a model rebuilds the catalogue and can re-pick a seat whose model was not in it. The Council readiness row always describes what the round would post, but an operator's earlier pick can change under them; the fix belongs to the model selector, and is recorded rather than patched inside a story about roles and readiness."
+      "`syncUnifiedSelectors` offers only resident local models, so loading a model rebuilds the catalogue and can re-pick a seat whose model was not in it. The Council readiness row always describes what the round would post, but an operator's earlier pick can change under them; the fix belongs to the model selector, and is recorded rather than patched inside a story about roles and readiness.",
+      "A pipeline view restored from the browser's checkpoint carries no contract: the checkpoint payload records what each seat produced, not what it was allowed, so the deliberation evidence table's `Allowed` column is empty after a reload. Widening that payload belongs to the recovery story that owns the format.",
+      "`record_perf` still stores the demo path's fabricated 29.5/42.1 tok/s in `perf_samples`; P4-02 removed every drawing of that figure from the Council pane, but the write is the runtime program's to remove."
     ]
   },
   "tab_registry": [
@@ -295,11 +297,11 @@
         "UIUX-P4-06"
       ],
       "total": 6,
-      "done": 1,
+      "done": 2,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 5,
-      "percent_complete": 17
+      "not_started": 4,
+      "percent_complete": 33
     },
     {
       "id": "P5",
@@ -342,11 +344,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 25,
+    "done": 26,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 15,
-    "percent_complete": 62
+    "not_started": 14,
+    "percent_complete": 65
   },
   "stories": [
     {
@@ -5145,23 +5147,97 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P4-02 (Council deliberation stages and evidence). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
-        "known_regressions": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-02T22:00:00Z",
+        "updated_at": "2026-11-02T23:40:00Z",
+        "completed_at": "2026-11-02T23:40:00Z",
+        "owner_session": "arena/433f4aa7-m5-agent-studio",
+        "commit_sha": "fcbfcd3d702ea820add0204f0bd5a79f60e0c407",
+        "changed_files": [
+          "app.py",
+          "docs/README.md",
+          "docs/media/council-deliberation/README.md",
+          "docs/media/council-deliberation/council-deliberation-capped.png",
+          "docs/media/council-deliberation/council-deliberation-evidence.png",
+          "docs/media/council-deliberation/council-deliberation-light.png",
+          "docs/media/council-deliberation/council-deliberation-narrow.png",
+          "docs/media/council-deliberation/council-deliberation-offline.png",
+          "docs/subsystem-dependency-inventory.md",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-council-deliberation.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-pipeline-artifacts.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-program.md",
+          "docs/uiux-2-0-recent-work.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-tokens.md",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Council_Deliberation.json",
+          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Pipeline_Artifacts.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Recent_Work.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "scripts/council_deliberation_walk.mjs",
+          "scripts/council_readiness_seed.py",
+          "scripts/uiux_council_deliberation_inventory.py",
+          "scripts/uiux_pipeline_artifacts_inventory.py",
+          "static/index.html",
+          "studio.py",
+          "tests/test_council_deliberation.py",
+          "tests/test_pipeline_artifacts.py",
+          "workflow_orchestration.py"
+        ],
+        "evidence": [
+          "A council stage card drew a state, a tok/s and a character count and never said the ceiling the count was measured against, so a seat that spent its whole token budget read exactly like one that answered in three hundred tokens. The reasoning control offered three modes for \"the run\" while `api_council_stream` gave them to seats 1 and 4 only, the Critic was deliberately written without the skill playbook and nothing said so, and the handoff row counted `content` alone while `WorkflowOrchestrator.run_stages` hands the next seat `result.content or result.reasoning` - so a seat that answered in thinking only read as `0 chars`, exactly like a seat that answered nothing.",
+          "`stage_start` now publishes the contract a seat runs under - `max_tokens`, `reasoning_mode`, and the application's own `meta` (`skills`) through a new `WorkflowStage.meta` - and every stage card draws it in a `.stage-contract` row: budget, reasoning mode, skills decision, plus a verdict chip when the reply was cut or written by the server. The pane keeps that from the event (`stageBuffers[stage].k`) and holds no copy: an inventory check fails if a budget literal appears in `static/index.html`.",
+          "What a seat carries forward is now `content or reasoning` on all four surfaces that describe it - the handoff row, the artifact row, the run line and the evidence table - so an empty output that handed on a reasoning trace reads as exactly that, and an empty section is only claimed when there was nothing to hand on. The reasoning select says which seats it reaches, and the route and the label name the same two.",
+          "`#deliberationEvidence` states one row per seat - allowed, given, produced, carried, verdict - drawn with the cards from the same run, redrawn only when a value in it changes, keeping the focus on its one control across the redraw, and **Copy evidence** writes the same table as markdown. Six verdicts and none drawn as another: `answered`, `capped` (the runtime's own length limit and this run's budget are named separately), `demo text`, `no output`, `streaming`, `not run`.",
+          "The Council pane no longer prints a throughput figure for demo text anywhere: the stage card's pill, the stepper's meta and the artifact row all say what the reply was instead of the 29.5/42.1 tok/s the demo path fabricated. The numbers still reach `perf_samples` (see the P4-01 open risk) - this story removed the drawing, not the write, and says so.",
+          "The fixture can now produce the states the story is about: `scripts/council_readiness_seed.py` gained `--cap-model` (a reply ending in `finish_reason: \"length\"`) and `--reasoning-model` (a reply streamed as `reasoning_content` only). `scripts/council_deliberation_walk.mjs` drives the real `/api/council/stream` against it, reads the contract rows, the handoff rows and the table out of the DOM, puts focus on the copy control and lets a whole run redraw the table under it, then repeats on the offline fixture (14 checks).",
+          "No endpoint was added and the stream's seven events are unchanged: the evidence is read from what the route already sent. `scripts/uiux_pipeline_artifacts_inventory.py` (P3-06) was widened, not silenced - its rule now reads the `stage_start` fields that carry the skills decision instead of forbidding the claim outright.",
+          "The tree this closes is fcbfcd3d702ea820add0204f0bd5a79f60e0c407: recorded here rather than in that commit, because a commit cannot carry its own sha."
+        ],
+        "test_results": [
+          "python3 scripts/uiux_council_deliberation_inventory.py --check -> 25 checks, 0 findings, clean",
+          "node scripts/council_deliberation_walk.mjs --screenshots docs/media/council-deliberation -> 14/14 checks passed (chromium 153 via @sparticuz/chromium + puppeteer-core 25.16, STUDIO_PYTHON=.venv/bin/python; a stand-in oMLX runtime that cuts one seat and answers another in reasoning only, plus the same fixture offline)",
+          "node scripts/council_readiness_walk.mjs -> 23/23 (the P4-01 walk, re-run because this story touches the same pane and the same fixture); node scripts/pipeline_artifacts_walk.mjs -> 22/22 (its demo-reply artifact check was updated: P4-02 removed the fabricated rate from that row); node scripts/pipeline_recovery_walk.mjs -> 27/27",
+          "python3 -m pytest -q tests/test_council_deliberation.py -> 25 passed",
+          "python3 -m pytest -q (full suite) -> 2261 passed, 26 skipped; python3 -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py (browser env) -> 30 passed",
+          "python3 -m ruff check . -> All checks passed; python3 -m mypy -> Success: no issues found in 58 source files; python3 scripts/check_frontend_syntax.py -> JavaScript syntax OK; python3 scripts/validate_docs.py -> 5 required pages, 168 files scanned; python3 scripts/demo_tour.py --check -> up to date; python3 scripts/validate_screenshots.py -> 6 of 6 captured and consistent; python3 scripts/build_studio.py -> 3,367,670 bytes, and the route matrix, subsystem inventory and roadmap status reproduce with no diff"
+        ],
+        "visual_evidence": [
+          "docs/media/council-deliberation/council-deliberation-evidence.png",
+          "docs/media/council-deliberation/council-deliberation-capped.png",
+          "docs/media/council-deliberation/council-deliberation-narrow.png",
+          "docs/media/council-deliberation/council-deliberation-light.png",
+          "docs/media/council-deliberation/council-deliberation-offline.png"
+        ],
+        "known_regressions": [
+          "A pipeline view restored from the browser's checkpoint has no contract: the checkpoint stores what each seat produced (content, reasoning, usage), not what it was allowed, so the `Allowed` column reads `-` after a reload. Absence is drawn as absence rather than filled in, but the fix is to widen the checkpoint payload, which belongs to the recovery story that owns that format."
+        ],
+        "decisions": [
+          "The contract is published by the server on `stage_start` rather than mirrored in the pane. P3-06 mirrored the chain and checked the mirror against the route; a budget checked that way can still be a copy, so `WorkflowStage.meta` lets the route state the skills decision and the orchestrator publish the budget and the reasoning mode with the event.",
+          "`capped` is two verdicts in one id: the runtime's own `finish_reason: \"length\"` and a seat that spent this run's budget. The chip names which, because only the second is a number on the screen, and both mean the next seat read a cut reply.",
+          "Demo text is not given a throughput figure anywhere in this pane, including the stepper that used to print one. The fabricated rate is still written to `perf_samples` by `record_perf`; removing the drawing is this story's scope, the write is the runtime program's (already an open risk from P4-01).",
+          "The P3-06 inventory rule that forbade any per-stage skills claim was replaced by the rule it was standing in for: claim it only from the stream. The finding it raises when the Critic gains the playbook is unchanged.",
+          "The walk stubs `navigator.clipboard`, because a headless window is not focused and the real clipboard refuses writes from an unfocused document; the check is that the pane's own control writes the table it draws and says so, not that Chromium's clipboard works."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "P4-02 closed. The Council pane now states each seat's contract (budget, reasoning mode, skills) from `stage_start`, carries `content or reasoning` consistently across the card, the run line and the table, and draws one evidence table per run with copy-as-markdown. Next: UIUX-P4-03 (Council consensus disagreement and results) - the deliberation is now auditable, and the results surface is where consensus and disagreement have to be stated rather than implied.",
+        "next_action": "Start UIUX-P4-03 from this commit; the evidence table and the contract row are the surfaces it should build on.",
         "readme_updated": false
       },
       "required_evidence": [

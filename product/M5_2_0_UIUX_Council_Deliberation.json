@@ -1,0 +1,202 @@
+{
+  "story": "UIUX-P4-02",
+  "title": "Council deliberation stages and evidence",
+  "generated_by": "scripts/uiux_council_deliberation_inventory.py",
+  "seats": [
+    {
+      "seat": 1,
+      "route_key": "architect",
+      "skills": true,
+      "reasoning_mode": true
+    },
+    {
+      "seat": 2,
+      "route_key": "coder",
+      "skills": true,
+      "reasoning_mode": false
+    },
+    {
+      "seat": 3,
+      "route_key": "critic",
+      "skills": false,
+      "reasoning_mode": false
+    },
+    {
+      "seat": 4,
+      "route_key": "judge",
+      "skills": true,
+      "reasoning_mode": true
+    }
+  ],
+  "contract": {
+    "published_on": "stage_start",
+    "fields": [
+      "max_tokens",
+      "reasoning_mode",
+      "skills"
+    ],
+    "server_owned": true,
+    "budgets_in_the_frontend": []
+  },
+  "verdicts": [
+    "done",
+    "capped",
+    "demo",
+    "no-output",
+    "streaming",
+    "not-run"
+  ],
+  "evidence_table": {
+    "columns": [
+      "Seat",
+      "Model",
+      "Allowed",
+      "Given",
+      "Produced",
+      "Carried",
+      "Verdict"
+    ],
+    "rows": 4,
+    "markdown": true
+  },
+  "carried": "the orchestrator passes `content or reasoning`; the pane counts what it was handed",
+  "stream_events": [
+    "skills_applied",
+    "stage_start",
+    "token",
+    "unloading",
+    "stage_done",
+    "council_done",
+    "error"
+  ],
+  "checks": [
+    {
+      "check": "the orchestrator publishes the contract a stage runs under",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the council route hands the skills decision to the stream, seat by seat",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the reasoning mode reaches the two seats the control promises",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pane keeps the contract from the event, and holds no copy of a budget",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every stage card carries a contract row, hidden until the seat starts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "an absent contract is drawn as absent, not as a default",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the contract row is redrawn with the card, and its values are part of what triggers a redraw",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the row states the budget, the reasoning mode and the skills decision",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "six verdicts, and a cut reply is not drawn as an answer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a demo reply is drawn as demo text, and is given no figure it did not earn",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the verdicts on the page are the verdicts the classifier returns",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "what a seat carries forward is its output or its reasoning",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the handoff row names a predecessor that handed on thinking instead of an output",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "an empty output with a reasoning trace is not called an empty handoff",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the run line counts a handoff only when something was carried",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the evidence table states one row per seat, with the seven columns",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the table is drawn with the cards, from the same run",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the table is not rewritten while nothing in it has changed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a redraw under the copy control keeps the focus on it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Copy evidence writes the same table as markdown",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every value the table draws is escaped",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pane posts nothing new: the evidence is read from the stream it already had",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the council route still speaks the same seven events",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk exercises every verdict, and the doc points at it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the ledger marks this story done with evidence",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "check_count": 25,
+  "findings": [],
+  "status": "clean"
+}

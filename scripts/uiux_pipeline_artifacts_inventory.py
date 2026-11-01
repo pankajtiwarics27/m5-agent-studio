@@ -47,6 +47,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 FRONTEND = PROJECT_ROOT / "static" / "index.html"
 APP = PROJECT_ROOT / "app.py"
+ORCHESTRATION = PROJECT_ROOT / "workflow_orchestration.py"
 JSON_PATH = PROJECT_ROOT / "product" / "M5_2_0_UIUX_Pipeline_Artifacts.json"
 DOC_PATH = PROJECT_ROOT / "docs" / "uiux-2-0-pipeline-artifacts.md"
 
@@ -304,6 +305,7 @@ def unescaped_interpolations(source: str) -> list[str]:
 def build_inventory() -> dict:
     html = FRONTEND.read_text(encoding="utf-8")
     server = APP.read_text(encoding="utf-8")
+    orchestration_body = ORCHESTRATION.read_text(encoding="utf-8")
 
     chain_pane = pane_chain(html)
     chain_server = server_chain(server)
@@ -532,14 +534,21 @@ def build_inventory() -> dict:
         for match in [re.search(r"WorkflowStage\((\d+),", line)]
         if match
     }
+    # UIUX-P4-02 widened `stage_start` with the facts this story could not carry: a seat's
+    # budget, the reasoning mode it was given and whether it was handed the skill playbook. The
+    # rule is unchanged in spirit - a per-stage claim must be the server's, not a mirror - so it
+    # now reads the widened event instead of forbidding the claim outright.
+    contract_from_stream = all(f'"{field}"' in orchestration_body for field in ("max_tokens", "reasoning_mode")) and "stage.meta" in orchestration_body
+    skills_from_stream = "stageBuffers[d.stage].k" in html and "d.skills" in html
     check(
-        "the per-stage inputs the stream cannot carry are not claimed on the page",
+        "the per-stage inputs are claimed only from the stream that now carries them",
         "skill_block" not in stage_lines.get(3, "missing")
         and "skill_block" in stage_lines.get(1, "")
         and "skill_block" in stage_lines.get(4, "")
-        and "skill" not in section.lower(),
-        "the critic is the one seat without skills; a per-stage skills claim the stream cannot "
-        "support would be an invention",
+        and contract_from_stream
+        and skills_from_stream,
+        "the critic is the one seat without skills, the route says so on `stage_start`, and the "
+        "pane must read that event rather than mirror the route's configuration",
     )
     check(
         "the routes this story must leave alone are still mounted",
