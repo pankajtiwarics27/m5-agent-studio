@@ -131,4 +131,17 @@ jobs:
           } >> "$GITHUB_ENV"
           LD_LIBRARY_PATH="$RUNNER_TEMP/m5-browser/libs/lib" "$chrome" --version
       - name: Run browser-backed screenshot and keyboard safety regressions
-        run: python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py --tb=short
+        # Failing tests are echoed as check annotations, as the test job does: this job
+        # has no other readable output when its log is not reachable from where it is
+        # being triaged, and a red browser run that names no test is a dead end.
+        run: |
+          set +e
+          python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py --tb=short > "${RUNNER_TEMP:-/tmp}/browser.log" 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            grep -E '^(FAILED|ERROR)' "${RUNNER_TEMP:-/tmp}/browser.log" | head -25 | while IFS= read -r line; do
+              echo "::error title=Browser regression::${line}"
+            done
+          fi
+          tail -n 60 "${RUNNER_TEMP:-/tmp}/browser.log"
+          exit "$status"
