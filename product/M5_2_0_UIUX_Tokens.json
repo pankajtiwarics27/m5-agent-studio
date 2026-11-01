@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "c383707ec36cac2432e745b0f7f223e2c874ad8cd676f01e2a0fc1abf83b893e",
+    "style_block_sha256": "ba1217f67e21b04f497ebe1c1bc9a582916a1ad0d139a469dfcdbea3fb504d27",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -37,7 +37,7 @@
   "totals": {
     "tokens": 45,
     "groups": 7,
-    "references": 827,
+    "references": 868,
     "theme_overrides": 18,
     "density_overrides": 5,
     "contrast_pairs": 20,
@@ -133,7 +133,7 @@
         "light": "#ffffff"
       },
       "density_override": null,
-      "references": 51
+      "references": 53
     },
     {
       "name": "--bg-hover",
@@ -163,7 +163,7 @@
         "light": "#d9dcd8"
       },
       "density_override": null,
-      "references": 119
+      "references": 124
     },
     {
       "name": "--border-hi",
@@ -183,7 +183,7 @@
         "light": "#202326"
       },
       "density_override": null,
-      "references": 52
+      "references": 56
     },
     {
       "name": "--text-dim",
@@ -193,7 +193,7 @@
         "light": "#555c62"
       },
       "density_override": null,
-      "references": 101
+      "references": 114
     },
     {
       "name": "--text-faint",
@@ -203,7 +203,7 @@
         "light": "#687077"
       },
       "density_override": null,
-      "references": 72
+      "references": 82
     },
     {
       "name": "--accent",
@@ -243,7 +243,7 @@
         "light": "#286e50"
       },
       "density_override": null,
-      "references": 20
+      "references": 23
     },
     {
       "name": "--amber",
@@ -253,7 +253,7 @@
         "light": "#80580e"
       },
       "density_override": null,
-      "references": 30
+      "references": 32
     },
     {
       "name": "--rose",
@@ -263,7 +263,7 @@
         "light": "#a4313a"
       },
       "density_override": null,
-      "references": 20
+      "references": 22
     },
     {
       "name": "--purple",

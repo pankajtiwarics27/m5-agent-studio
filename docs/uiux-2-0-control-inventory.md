@@ -6,9 +6,9 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `7a74804e8b2a3503c504358bf0d2a58e278cd12271fd61f2509b397bbc678e34`.
+* Frontend digest: `46d37ca1e8b244dace04d6bcc48d8679c8fb15e670cd84e24dd50ba5bb36315a`.
 * Panes: 6 · controls in panes: 82 · controls in the
-  shared chrome: 103 · script-rendered: 29.
+  shared chrome: 106 · script-rendered: 32.
 
 ## What this page is, and is not
 
@@ -27,13 +27,13 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
 | debate | `pane-debate` | 5 | 0 | 0 | button 2, input 1, select 1, textarea 1 |
 | chat | `pane-chat` | 11 | 0 | 0 | button 5, input 2, select 3, textarea 1 |
-| (chrome) | outside the panes | 103 | 40 | 0 | button 56, input 29, select 12, summary 1, textarea 5 |
+| (chrome) | outside the panes | 106 | 43 | 0 | button 59, input 29, select 12, summary 1, textarea 5 |
 
 ## What the numbers already say
 
-* 185 controls are in the markup and 29 more are built by script — a checklist written from the markup alone would miss 14% of the interactive surface.
-* The shared chrome carries 103 controls; all six panes together carry 82. Most of the clicking happens in the shell, not inside a tab.
-* 54 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
+* 188 controls are in the markup and 32 more are built by script — a checklist written from the markup alone would miss 15% of the interactive surface.
+* The shared chrome carries 106 controls; all six panes together carry 82. Most of the clicking happens in the shell, not inside a tab.
+* 57 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
 
@@ -161,7 +161,7 @@ Section `pane-chat`, 11 interactive elements.
 
 ## Shared chrome
 
-103 interactive elements outside every pane (tab bar,
+106 interactive elements outside every pane (tab bar,
 top bar and monitor rail). These are reachable from all six tabs, which is why they are not
 attributed to one.
 
@@ -222,64 +222,68 @@ attributed to one.
 | 53 | button | — | — | Copy Commands | copyPreText('extOpenHarness', this) |
 | 54 | button | applyWorktreeBtn | — | Apply Worktree to Main Workspace | applyHarnessWorktree() |
 | 55 | button | — | — | Refresh | openHarnessDiffModal() |
-| 56 | button | — | — | Close | closeHarnessDiffModal() |
-| 57 | button | — | — | Refresh | refreshHarnessGrants() |
-| 58 | button | — | — | Close | closeHarnessGrants() |
-| 59 | button | — | — | Close | closeProvidersModal() |
-| 60 | input | provAlias | text | openrouter | — |
-| 61 | input | provName | text | OpenRouter | — |
-| 62 | select | provWire | — | OpenAI Compatible (/chat/completions) Anthropic Native (/v1/messages SSE) | — |
-| 63 | input | provUrl | text | https://openrouter.ai/api/v1 | — |
-| 64 | input | provKey | password | sk-... (optional for Pollinations / OmniRoute) | — |
-| 65 | button | fetchModelsBtn | — | Fetch Live Models from Endpoint | fetchRemoteModels() |
-| 66 | textarea | provModels | — | claude-sonnet-4-5, gemini-2.5-pro, qwen/qwen3-coder:free | — |
-| 67 | button | — | — | Save & Enable Provider | saveProvider() |
-| 68 | input | comboAlias | text | — | — |
-| 69 | input | comboName | text | — | — |
-| 70 | input | comboTargets | text | openrouter::qwen/qwen3-coder:free, Qwen3.8-27B-oQ4e-mtp | — |
-| 71 | button | — | — | Save Combo | saveCombo() |
-| 72 | button | — | — | Rescan | loadSkills() |
-| 73 | button | — | — | Close | closeSkillsModal() |
-| 74 | input | skillInstallInput | text | — | — |
-| 75 | button | skillInstallBtn | — | Install | installSkill() |
-| 76 | button | — | — | Refresh | refreshSdlcBoard() |
-| 77 | button | — | — | Close | closeSdlcModal() |
-| 78 | input | sdlcWorkspaceInput | text | ~/Projects/my-new-app | syncProjectDirInputs(this.value) |
-| 79 | button | — | button | Set Directory | saveWorkspaceDirectory(document.getElementById('sdlcWorkspaceInput').value) |
-| 80 | textarea | sdlcVisionInput | — | e.g. Build a modern full-stack E-Commerce storefront with live search, filterable catalog, slide-over cart drawer, promo codes, SQLite order persistence, and unit/E2E tests — OR an end-to-end HTML5 Canvas survival roguelike game with wave progression, upgrades, spatial audio, and 60fps loop. | — |
-| 81 | select | sdlcMaxStories | — | 3 stories 5 stories 8 stories | — |
-| 82 | select | sdlcRunModeSelect | — | SDLC execution mode | — |
-| 83 | button | — | — | Launch SDLC | startSdlcSelectedMode() |
-| 84 | button | — | — | Research | switchSdlcArtifact('RESEARCH.md') |
-| 85 | button | — | — | PRD | switchSdlcArtifact('PRD.md') |
-| 86 | button | — | — | Arch | switchSdlcArtifact('ARCHITECTURE.md') |
-| 87 | button | — | — | Feedback | switchSdlcArtifact('FEEDBACK_LOG.md') |
-| 88 | input | sdlcFeedbackAutoImpl | checkbox | — | — |
-| 89 | input | sdlcFeedbackInput | text | e.g. Checkout feels clunky — research 1-page Stripe/Shopify cart drawers & add instant validation | — |
-| 90 | input | sdlcInspirationQuery | text | e.g. modern ecommerce slide-over cart ux | — |
-| 91 | button | — | — | Research & Iterate | submitSdlcFeedback() |
-| 92 | button | — | — | Close | closeSpawnModal() |
-| 93 | textarea | spawnRequestInput | — | Design an event-sourced local-first task queue on macOS with crash-safe SQLite WAL persistence, zero-polling wakeups, and backpressure. | — |
-| 94 | button | — | — | Cancel | closeSpawnModal() |
-| 95 | button | — | — | Open Empty Room | confirmSpawnSession(false) |
-| 96 | button | — | — | Spawn & Convene 4-LLM Council | confirmSpawnSession(true) |
-| 97 | select | integrationsQuickMenu | — | Open studio tools and integrations | openIntegrationFromMenu(this) |
-| 98 | button | monitorToggleBtn | — | Telemetry | toggleMonitorRail() |
-| 99 | button | — | — | Unload models | unloadAllModels() |
-| 100 | select | omlxLoadModelPicker | — | Select local model to load | toggleCustomLoadInput(this.value) |
-| 101 | button | — | button | Load | loadSelectedOmlxModel() |
-| 102 | input | omlxCustomModelInput | text | Enter local oMLX or HF model ID… | — |
-| 103 | button | — | — | Clear SSD | clearSsdCache() |
+| 56 | button | — | — | Verification & artifacts | openHarnessEvidenceModal() |
+| 57 | button | — | — | Close | closeHarnessDiffModal() |
+| 58 | button | — | — | Refresh | refreshHarnessEvidence() |
+| 59 | button | — | — | Close | closeHarnessEvidenceModal() |
+| 60 | button | — | — | Refresh | refreshHarnessGrants() |
+| 61 | button | — | — | Close | closeHarnessGrants() |
+| 62 | button | — | — | Close | closeProvidersModal() |
+| 63 | input | provAlias | text | openrouter | — |
+| 64 | input | provName | text | OpenRouter | — |
+| 65 | select | provWire | — | OpenAI Compatible (/chat/completions) Anthropic Native (/v1/messages SSE) | — |
+| 66 | input | provUrl | text | https://openrouter.ai/api/v1 | — |
+| 67 | input | provKey | password | sk-... (optional for Pollinations / OmniRoute) | — |
+| 68 | button | fetchModelsBtn | — | Fetch Live Models from Endpoint | fetchRemoteModels() |
+| 69 | textarea | provModels | — | claude-sonnet-4-5, gemini-2.5-pro, qwen/qwen3-coder:free | — |
+| 70 | button | — | — | Save & Enable Provider | saveProvider() |
+| 71 | input | comboAlias | text | — | — |
+| 72 | input | comboName | text | — | — |
+| 73 | input | comboTargets | text | openrouter::qwen/qwen3-coder:free, Qwen3.8-27B-oQ4e-mtp | — |
+| 74 | button | — | — | Save Combo | saveCombo() |
+| 75 | button | — | — | Rescan | loadSkills() |
+| 76 | button | — | — | Close | closeSkillsModal() |
+| 77 | input | skillInstallInput | text | — | — |
+| 78 | button | skillInstallBtn | — | Install | installSkill() |
+| 79 | button | — | — | Refresh | refreshSdlcBoard() |
+| 80 | button | — | — | Close | closeSdlcModal() |
+| 81 | input | sdlcWorkspaceInput | text | ~/Projects/my-new-app | syncProjectDirInputs(this.value) |
+| 82 | button | — | button | Set Directory | saveWorkspaceDirectory(document.getElementById('sdlcWorkspaceInput').value) |
+| 83 | textarea | sdlcVisionInput | — | e.g. Build a modern full-stack E-Commerce storefront with live search, filterable catalog, slide-over cart drawer, promo codes, SQLite order persistence, and unit/E2E tests — OR an end-to-end HTML5 Canvas survival roguelike game with wave progression, upgrades, spatial audio, and 60fps loop. | — |
+| 84 | select | sdlcMaxStories | — | 3 stories 5 stories 8 stories | — |
+| 85 | select | sdlcRunModeSelect | — | SDLC execution mode | — |
+| 86 | button | — | — | Launch SDLC | startSdlcSelectedMode() |
+| 87 | button | — | — | Research | switchSdlcArtifact('RESEARCH.md') |
+| 88 | button | — | — | PRD | switchSdlcArtifact('PRD.md') |
+| 89 | button | — | — | Arch | switchSdlcArtifact('ARCHITECTURE.md') |
+| 90 | button | — | — | Feedback | switchSdlcArtifact('FEEDBACK_LOG.md') |
+| 91 | input | sdlcFeedbackAutoImpl | checkbox | — | — |
+| 92 | input | sdlcFeedbackInput | text | e.g. Checkout feels clunky — research 1-page Stripe/Shopify cart drawers & add instant validation | — |
+| 93 | input | sdlcInspirationQuery | text | e.g. modern ecommerce slide-over cart ux | — |
+| 94 | button | — | — | Research & Iterate | submitSdlcFeedback() |
+| 95 | button | — | — | Close | closeSpawnModal() |
+| 96 | textarea | spawnRequestInput | — | Design an event-sourced local-first task queue on macOS with crash-safe SQLite WAL persistence, zero-polling wakeups, and backpressure. | — |
+| 97 | button | — | — | Cancel | closeSpawnModal() |
+| 98 | button | — | — | Open Empty Room | confirmSpawnSession(false) |
+| 99 | button | — | — | Spawn & Convene 4-LLM Council | confirmSpawnSession(true) |
+| 100 | select | integrationsQuickMenu | — | Open studio tools and integrations | openIntegrationFromMenu(this) |
+| 101 | button | monitorToggleBtn | — | Telemetry | toggleMonitorRail() |
+| 102 | button | — | — | Unload models | unloadAllModels() |
+| 103 | select | omlxLoadModelPicker | — | Select local model to load | toggleCustomLoadInput(this.value) |
+| 104 | button | — | button | Load | loadSelectedOmlxModel() |
+| 105 | input | omlxCustomModelInput | text | Enter local oMLX or HF model ID… | — |
+| 106 | button | — | — | Clear SSD | clearSsdCache() |
 
 ## Controls built by script
 
-29 interactive tags appear as template strings inside the
+32 interactive tags appear as template strings inside the
 inline script rather than in the markup. They are attributed to the nearest preceding function
 and are **not** in the tables above:
 
 | Function | Controls rendered |
 |---|---|
 | `ensureStageCardMounted` | 1 |
+| `harnessEvidenceChangeHtml` | 1 |
 | `openSpawnModal` | 1 |
 | `refreshOnboarding` | 1 |
 | `renderCommandPaletteList` | 1 |
@@ -287,6 +291,7 @@ and are **not** in the tables above:
 | `renderHarnessGrants` | 4 |
 | `renderHarnessSidebar` | 1 |
 | `renderHarnessTimeline` | 1 |
+| `renderHarnessVerdictCardHtml` | 2 |
 | `renderMarkdown` | 1 |
 | `renderMcpUI` | 7 |
 | `renderOpenContextDocs` | 3 |

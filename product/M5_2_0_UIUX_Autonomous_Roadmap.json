@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 19,
+  "revision": 20,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,10 +102,10 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P3-03",
-    "next_recommended_story": "UIUX-P3-04",
-    "last_checkpoint": "2026-11-01T06:35:00Z",
-    "last_session_id": "arena/3101062f-m5-agent-studio",
+    "last_completed_story": "UIUX-P3-04",
+    "next_recommended_story": "UIUX-P3-05",
+    "last_checkpoint": "2026-11-01T07:40:00Z",
+    "last_session_id": "arena/85ee4fee-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
     "last_verified_commit": "e7ff3d62e9b1291c32789c5014fc713e2357df57",
@@ -273,11 +273,11 @@
         "UIUX-P3-07"
       ],
       "total": 7,
-      "done": 3,
+      "done": 4,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 4,
-      "percent_complete": 43
+      "not_started": 3,
+      "percent_complete": 57
     },
     {
       "id": "P4",
@@ -340,11 +340,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 20,
+    "done": 21,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 20,
-    "percent_complete": 50
+    "not_started": 19,
+    "percent_complete": 52
   },
   "stories": [
     {
@@ -4286,24 +4286,157 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P3-04 (Harness verification diff and artifacts). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-01T06:15:00Z",
+        "updated_at": "2026-11-01T07:40:00Z",
+        "completed_at": "2026-11-01T07:40:00Z",
+        "owner_session": "arena/85ee4fee-m5-agent-studio",
+        "commit_sha": "0a3361cfd38b35112f1ef6da23363aec8ba148f5",
+        "changed_files": [
+          "static/index.html",
+          "scripts/uiux_harness_evidence_inventory.py",
+          "scripts/harness_evidence_walk.mjs",
+          "scripts/harness_evidence_seed.py",
+          "scripts/overlay_walk.mjs",
+          "tests/test_harness_evidence.py",
+          "tests/test_overlays.py",
+          "tests/test_uiux_accessible_overlays.py",
+          "tests/test_screenshot_capture_browser.py",
+          "docs/uiux-2-0-harness-evidence.md",
+          "docs/uiux-2-0-program.md",
+          "docs/README.md",
+          "docs/media/harness-evidence/README.md",
+          "docs/media/harness-evidence/no-verdict.png",
+          "docs/media/harness-evidence/rejected-card.png",
+          "docs/media/harness-evidence/rejected-record.png",
+          "docs/media/harness-evidence/verdict-card.png",
+          "docs/media/harness-evidence/verdict-record.png",
+          "product/M5_2_0_UIUX_Harness_Evidence.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Harness_Permissions.json",
+          "product/M5_2_0_UIUX_Harness_Timeline.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-tokens.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-start.md",
+          "docs/uiux-2-0-harness-permissions.md",
+          "docs/uiux-2-0-harness-timeline.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/product-roadmap-status.md",
+          "studio.py"
+        ],
+        "evidence": [
+          "A verdict used to be a label. `turn/verified` drew `Completion verified (spec_sha256…)` - the digest of a contract the reader could not see - and `turn/verification_failed` drew a failure code and a reason, while the transcript, the exit code, the revision, the classification and the acceptance coverage that decided it stayed in the log. A third outcome, `turn/stagnation_paused`, was not drawn as a verdict at all. `renderHarnessVerdictCardHtml()` now draws all three from the report the runtime persisted (`TaskVerificationReport.to_dict()` is the event payload): the contract digest, the command with its exit code and classification, the revision the result is tied to and whether it moved, the modified files, the patch digest, the environment, the failing tests with their kind, the covered and uncovered criteria, and the output behind a disclosure. The inventory fails if a second verdict renderer appears or the one-line label comes back.",
+          "The card never invents a value the record does not hold: a report with no captured revision says `no revision captured`, one whose command never executed says `the verification command never ran`, and the card ends with `A verdict is the runtime's record of one turn: this card draws it, and re-runs nothing`. The inventory breaks both fallbacks in a copy of the source to prove they are checked.",
+          "The record behind the card is `#harnessEvidenceModal`, reached from the session actions (`Verification & Artifacts`), the command palette, every verdict card and the diff dialog. It reads only routes that already existed - `GET …/task` and `GET …/diff` - and draws six sections: the verdict (code, facts, failures, evidence refs, transcript digest, output), the contract (command, first stage, required output markers, required and modified files, protected digests, baseline digests, the rules in force, known failures, declared criteria), the observation (exit code, classification, pre-existing failures classified as pre-existing, output digest, and the coverage the transcript actually demonstrated), the change (branch, status, per-file +n/-m), the artifacts (checkpoints, the latest checkpoint's evidence refs, the artifact lineage, the revision a re-run would be tied to), and four statements of what the surface does not prove. No endpoint was added; the inventory fails on an invented or unmounted verification route.",
+          "Coverage is drawn as what the transcript printed, not as what the contract hoped: `evaluate_acceptance_coverage()` counts a test id only when it appears in the output and is not among the classified failures, so an uncovered criterion is drawn `NOT COVERED` and counted (`1 declared criterion(s) were not covered by an observed test`). The contract section draws the same criteria as `declared` with no verdict mark, because the contract is the gate and the observation is what happened when it was applied - a first pass drew them as uncovered there and the walk caught the contradiction.",
+          "Three absences are drawn as absences, proved in the walk: no verdict in the log (`No verdict is recorded in this session's log yet`), no contract on the session (`This session has no verification contract, so completion was not gated by one`), and an unreadable diff (`The workspace diff could not be read`). None is drawn as a pass; the walk selects a seeded session that has a contract and no verdict and asserts both that no card is drawn and that the record's verdict block carries no tone.",
+          "The change is counted once. `harnessDiffFiles()` parses the unified diff, skipping `diff --git`, `+++`, `---` and `@@` so a hunk header cannot be read as an addition, and both the record and `#harnessDiffModal` count with it - the dialog now shows `1 file(s) · +1 −1 · on master` above the diff and says `This is the worktree as it is now. It is not frozen at any verdict`. The parser is exercised against output real `git` produced in a temporary repository, not a hand-written sample.",
+          "The fixture cannot fake a verdict: only `TaskStateMachine.verify_task_completion()` produces a report, and the demo has no model runtime. `scripts/harness_evidence_seed.py` therefore builds two git workspaces, sets a real `TaskVerificationSpec` on each session, and lets that verifier decide - one workspace passes its test, one fails it - then appends the reports with `_append_harness_event()`, the writer a turn uses, and records a checkpoint with the store's own `save_checkpoint()`. What is staged is the `turn/start` and `turn/end` bookends; the revision, environment, exit code, transcript digest, classified failures and coverage are the verifier's.",
+          "The diff, apply and task contracts are unchanged and checked: `_compute_git_diff()` still redacts (`combined = redact_text(`), bounds the payload at 50 000 characters and previews untracked files, `/apply` still refuses a read-only policy and reports a quarantined workspace, and `/task` still returns the spec, the evidence preview, the checkpoints and the lineage - the inventory fails if any of those checks stop seeing what they look for, and a test breaks each one in a copy of `app.py`."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "2118 passed, 26 skipped on the story tree (branch arena/85ee4fee-m5-agent-studio over origin/main 6883c2a); the 26 skips are the live container-runtime opt-in and the browser regressions, which this story runs in their own invocation below"
+          },
+          {
+            "command": "LD_LIBRARY_PATH=/tmp:/tmp/chromium-libs/lib STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=$PWD/tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js STUDIO_SCREENSHOT_CHROME_ARGS=\"--disable-gpu\" .venv/bin/python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py",
+            "exit_code": 0,
+            "result": "30 passed in 88.29s: the six-pane captures still validate, the overlay walk now reports 81 passing and 3 blocked (the diff dialog, P3-03's permissions surface and this story's record, each on the Harness-session prerequisite), and the seeded store is unchanged by the walks"
+          },
+          {
+            "command": "STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=$PWD/tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js LD_LIBRARY_PATH=/tmp:/tmp/chromium-libs/lib STUDIO_SCREENSHOT_CHROME_ARGS=\"--disable-gpu\" STUDIO_PYTHON=$PWD/.venv/bin/python node scripts/harness_evidence_walk.mjs --screenshots docs/media/harness-evidence",
+            "exit_code": 0,
+            "result": "29/29 checks passed, 0 page errors, five captures written to docs/media/harness-evidence: the verified card and its record, the rejected card and its record, and the session with no verdict. The walk started its own seed fixture, read both verdicts from the trajectory, opened the record from the card, the session actions and the keyboard (Escape returned focus to the card's own button), followed the change into the diff dialog, and asserted the absent verdict draws no card and no tone."
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_harness_evidence_inventory.py --check",
+            "exit_code": 0,
+            "result": "harness evidence OK: 116 checks, 6 record sections, 0 findings"
+          },
+          {
+            "command": ".venv/bin/python -m ruff check .",
+            "exit_code": 0,
+            "result": "All checks passed!"
+          },
+          {
+            "command": ".venv/bin/mypy",
+            "exit_code": 0,
+            "result": "Success: no issues found in 58 source files"
+          },
+          {
+            "command": ".venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "JavaScript syntax OK (1 inline block(s))"
+          },
+          {
+            "command": ".venv/bin/python scripts/verify_baseline.py (after git fetch --unshallow origin)",
+            "exit_code": 0,
+            "result": "Baseline verified: 7904892d759bb66b817bb17b6f4f377874bd6e25"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py; .venv/bin/python scripts/demo_tour.py --check; .venv/bin/python scripts/validate_screenshots.py; .venv/bin/python scripts/validate_security_signoff.py",
+            "exit_code": 0,
+            "result": "Documentation validation passed (5 required pages, 157 files scanned); demo transcript up to date; screenshots validated 6 of 6; security sign-off record consistent (state=deferred, decision=pending, 12 boundaries, 7 findings)"
+          },
+          {
+            "command": "every scripts/uiux_*.py --check, with uiux_source_manifest.py, build_studio.py, generate_roadmap_status.py and uiux_preservation_signoff.py last",
+            "exit_code": 0,
+            "result": "all 17 inventories OK (control inventory 188 markup + 32 script-rendered, route map 58 call sites, authorization trace 38 routes, tokens 45 in 7 groups, overlays 11 dialogs, presentations 12 call sites, harness settings 81, harness timeline 81, harness permissions 124, harness evidence 116, chat handoff 53, recent work 8, start health 3 bases/2 routes), source manifest 48 files/6 tabs/115 routes pinned 73bc5e41, studio.py built (3,229,506 bytes), roadmap dashboard and the P0-06 sign-off package up to date"
+          }
+        ],
+        "visual_evidence": [
+          {
+            "file": "docs/media/harness-evidence/verdict-card.png",
+            "shows": "A verified turn as one card at 1440x900: `Completion verified`, the claim sentence, and the facts the verdict rests on - `Contract spec 93ddcca159a8…`, `Command exit 0 · passed`, `Revision 442794aaab… · 1 uncommitted`, `Files 2 modified: src/total.py, tests/test_total.py`, `Patch sha256 b0441966b811…`, `Environment python 3.11.2 on Linux x86_64` - with the covered criterion, the output behind a disclosure, and the two controls that open the record and the diff."
+          },
+          {
+            "file": "docs/media/harness-evidence/verdict-record.png",
+            "shows": "The record behind it: `hns-… · Completion verified · spec 93ddcca159a8… · branch master`, then the verdict block with its evidence refs (`patch_verification`, `test_verification`) and transcript digest, the contract (`Test command … -m pytest -v tests`, `Required modified src/total.py`, the rules in force, `none declared before this run`), the declared criterion marked `DECLARED`, and the observation beginning with `Exit code 0` and `Classification passed`."
+          },
+          {
+            "file": "docs/media/harness-evidence/rejected-card.png",
+            "shows": "A rejected turn, drawn as a rejection: `Completion rejected` in the danger tone, the claim that the evidence did not support the run, `verification_test_failed_introduced — Authoritative test command exited with code 1 (classification=introduced; failures: tests/test_total.py::test_total_sums_a_list)`, then `Command exit 1 · introduced`, the revision, the files and the patch, and the failing test row marked `INTRODUCED assert 7 == 6`."
+          },
+          {
+            "file": "docs/media/harness-evidence/rejected-record.png",
+            "shows": "The rejection's record: the verdict block with the failure code and the classification, and the observation stating the criterion the transcript did not cover - `NOT COVERED total() sums a list tests/test_total.py::test_total_sums_a_list`, with `1 declared criterion(s) were not covered by an observed test, so this record does not claim them.`"
+          },
+          {
+            "file": "docs/media/harness-evidence/no-verdict.png",
+            "shows": "A session that has a contract and no verdict: `No verdict is recorded in this session's log yet, so there is no completion claim to check. The contract and the change below are the two things a verdict would be drawn from, and neither is a result.` - with the contract still listed and no tone anywhere."
+          }
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "The surface reads `GET …/task` and `GET …/diff` and adds no route. Both carried everything the story needed - the contract and the read-only evidence preview were already in the task view, and the diff was already in the diff route - so the story is a pane change, and the inventory fails if a verification endpoint appears that the server does not mount.",
+          "The verdict is drawn from the durable event payload rather than from a new record: `turn/verified`, `turn/verification_failed` and `turn/stagnation_paused` already carry `TaskVerificationReport.to_dict()`, so the card reads the same fields the log holds and a resync repaints it without a second source of truth.",
+          "A declared acceptance criterion is drawn as `declared` in the contract section and as `covered`/`not covered` only in the observation, because a contract is a promise and coverage is a measurement. The first implementation judged coverage in both places; the walk showed the same criterion reading `NOT COVERED` in the contract and `covered` in the observation, and the renderer was split rather than the wording patched.",
+          "The diff dialog gained a per-file summary and an honesty note instead of a second diff view: one parser (`harnessDiffFiles()`) counts the change for both the dialog and the record, so the two cannot disagree about how many files moved.",
+          "The walk's verdicts are produced by the product's own verifier on two real git workspaces, because a hand-written report would prove only that the pane can render JSON. What is staged is the turn's arrival; the reports are `TaskStateMachine.verify_task_completion()`'s own output."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
-        "readme_updated": false
+        "handoff_note": "P3-04 closes the Harness verification layer: a verdict is a claim about evidence, and the pane draws both the claim and the record behind it. The overlay walk now reports 81 passing and 3 blocked (the diff dialog, P3-03's permissions surface and this story's record, each on the Harness-session prerequisite), and tests that pinned 10 dialogs and 80/2 were updated rather than loosened.",
+        "next_action": "None - the story is done; the phase continues with UIUX-P3-05",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",
