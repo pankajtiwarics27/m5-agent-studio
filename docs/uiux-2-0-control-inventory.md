@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `018f64576b66a884d778cd744ec7e47cbbef5be945f2a1bfe79c42e8da77b633`.
+* Frontend digest: `025aea0d33f075116e2660b9936a3f42305f97b2ff1dcf6a76415890ce0a5a02`.
 * Panes: 6 · controls in panes: 77 · controls in the
   shared chrome: 101 · script-rendered: 30.
 
@@ -67,13 +67,13 @@ Section `pane-harness`, 17 interactive elements.
 | 6 | select | harnessLeadModel | — | — | handleModelSelectChange(this, patchActiveHarnessSettings) |
 | 7 | select | harnessCriticModel | — | — | handleModelSelectChange(this, patchActiveHarnessSettings) |
 | 8 | select | harnessPolicy | — | Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only) | patchActiveHarnessSettings() |
-| 9 | summary | — | — | Run settingsDiscipline: Ponytail + Concise · Think: Low · Max: 10 steps | — |
+| 9 | summary | — | — | Run settings | — |
 | 10 | select | harnessEfficiencyMode | — | Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose | — |
 | 11 | select | harnessReasoning | — | Off (Fastest) Low Medium xHigh | — |
 | 12 | select | harnessMaxSteps | — | 6 steps 10 steps 16 steps 24 steps | — |
 | 13 | select | harnessSessionActionSelect | — | Session actions | runHarnessSessionAction(this) |
 | 14 | button | harnessAbortBtn | — | Abort | abortHarnessRun() |
-| 15 | textarea | harnessPromptInput | — | Describe an engineering task, 3-Wave Spec, or full product build for your Project Directory... | — |
+| 15 | textarea | harnessPromptInput | — | Your task for the Harness | — |
 | 16 | select | harnessWorkflowMode | — | Harness workflow mode | syncHarnessWorkflowModeUI() |
 | 17 | button | harnessRunBtn | — | Run | executeHarnessSelectedWorkflow() |
 

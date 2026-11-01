@@ -25,26 +25,26 @@
     "current_inputs_match_approval": null,
     "approved_inputs": null,
     "current_inputs": {
-      "ledger_content_sha256": "8b1297aad2b9a4c97fd0187ee3c66c0d83b1c1d379a026a8286e3c66b8a754d6",
-      "source_manifest_sha256": "838a55989d72c3bc3226f8ac1eb1e812a5b1157601cf92b72364057a53ae6de3",
-      "control_inventory_sha256": "a1320bf58465b389eb60f8f8bc57c387220231086a73a3af0fb712d6cfc94636",
-      "route_map_sha256": "c126ff91743b2f9af1e5953297a7e9806a2bafe611663b15b2b537a8defb066f",
-      "authorization_trace_sha256": "4b86e3a0c3eeb9b44bd23518d05806f1d5ae92fc3fc9f9c934ddc2463ba18342",
-      "frontend_sha256": "018f64576b66a884d778cd744ec7e47cbbef5be945f2a1bfe79c42e8da77b633",
+      "ledger_content_sha256": "1170c36ab18ae199ce5153cb54172bcfc0fca9cecd7932d4c6c79fee30fa62db",
+      "source_manifest_sha256": "bcded52e8dacf48aa5b03edcbf1614d49fb385d5013a5eb7ed396b08b6879295",
+      "control_inventory_sha256": "a5e55565195fbbf7f1d3a0b421d0e0d395d3dbb6f6408edbf730d680d2ae2a48",
+      "route_map_sha256": "206d067b619b5b2423a4e5dcb7159c8acd790860f2e8a66c300967decd099e1e",
+      "authorization_trace_sha256": "fbc054f21549eff61b3179a9b70b67c1f9511f90928c156958a6b218628a5af0",
+      "frontend_sha256": "025aea0d33f075116e2660b9936a3f42305f97b2ff1dcf6a76415890ce0a5a02",
       "screenshot_manifest_sha256": "cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57",
-      "screenshot_index_sha256": "c9651e1cd604b17d6d74d7b245bdeef2d805cb3446f373f110958621c2ad9c2c",
+      "screenshot_index_sha256": "465a88dc9a1c8a8ca58a35200c5bfb83ca51d378606597588f1f325b9aca3313",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
       "route_map_generator_sha256": "923981fc78ff0f844e67691bfa966963f3959be1b9650eaf49f3b58b0a14d555"
     },
     "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "38a244c47dde20f33fee897b846e86ce8dde84d61e3bd404305e01bf10f1d8e6",
-    "source_manifest_sha256": "838a55989d72c3bc3226f8ac1eb1e812a5b1157601cf92b72364057a53ae6de3",
-    "control_inventory_sha256": "a1320bf58465b389eb60f8f8bc57c387220231086a73a3af0fb712d6cfc94636",
-    "route_map_sha256": "c126ff91743b2f9af1e5953297a7e9806a2bafe611663b15b2b537a8defb066f",
-    "authorization_trace_sha256": "4b86e3a0c3eeb9b44bd23518d05806f1d5ae92fc3fc9f9c934ddc2463ba18342",
-    "frontend_sha256": "018f64576b66a884d778cd744ec7e47cbbef5be945f2a1bfe79c42e8da77b633"
+    "ledger_sha256": "2cc4343110c59d09c566580faee826a1fc77bf1a7be71e26c47b17aaa5a4f984",
+    "source_manifest_sha256": "bcded52e8dacf48aa5b03edcbf1614d49fb385d5013a5eb7ed396b08b6879295",
+    "control_inventory_sha256": "a5e55565195fbbf7f1d3a0b421d0e0d395d3dbb6f6408edbf730d680d2ae2a48",
+    "route_map_sha256": "206d067b619b5b2423a4e5dcb7159c8acd790860f2e8a66c300967decd099e1e",
+    "authorization_trace_sha256": "fbc054f21549eff61b3179a9b70b67c1f9511f90928c156958a6b218628a5af0",
+    "frontend_sha256": "025aea0d33f075116e2660b9936a3f42305f97b2ff1dcf6a76415890ce0a5a02"
   },
   "approval_request": [
     {
@@ -347,22 +347,22 @@
       "preserved_capabilities": [
         {
           "capability": "Session creation",
-          "target": "New session remains a client-side draft; the existing Run flow still creates the durable session.",
+          "target": "Harness primary view or progressive-disclosure inspector",
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         },
         {
           "capability": "workspace",
-          "target": "Project directory, recent directories, optional worktree isolation, and session history remain in the sidebar.",
+          "target": "Harness primary view or progressive-disclosure inspector",
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         },
         {
           "capability": "policy",
-          "target": "Execution policy stays visible and keyboard-reachable without opening Run settings.",
+          "target": "Harness primary view or progressive-disclosure inspector",
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         },
         {
           "capability": "lead/critic",
-          "target": "Lead and critic selectors stay visible; Discipline, Think, and Max Steps are summarized in Run settings.",
+          "target": "Harness primary view or progressive-disclosure inspector",
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         },
         {
@@ -469,7 +469,7 @@
         {
           "tag": "summary",
           "id": null,
-          "text": "Run settingsDiscipline: Ponytail + Concise · Think: Low · Max: 10 steps",
+          "text": "Run settings",
           "onclick": null,
           "handler": null
         },

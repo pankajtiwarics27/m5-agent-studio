@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "018f64576b66a884d778cd744ec7e47cbbef5be945f2a1bfe79c42e8da77b633",
-      "bytes": 392204,
-      "lines": 6689
+      "sha256": "025aea0d33f075116e2660b9936a3f42305f97b2ff1dcf6a76415890ce0a5a02",
+      "bytes": 406443,
+      "lines": 6986
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "0a8b9f9ab85cfc675bf28326aa7b08be43405f7175ee503fd64cb6393b08afa6",
-      "bytes": 3129854,
-      "lines": 69718
+      "sha256": "a6b86efcbcf3c775c6750a03a83bfad11877536565e640cdeec2a35363c9ad29",
+      "bytes": 3144093,
+      "lines": 70015
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -299,9 +299,9 @@
     {
       "path": "tests/browser/accessibility_walk.mjs",
       "role": "browser accessibility walk with the current-main Chat handoff checks",
-      "sha256": "ade6609e8121f1d88f0d775cc50427df2381d7460fe790460149aa6c29423c17",
-      "bytes": 17713,
-      "lines": 325
+      "sha256": "d6925149e9dde36baf500a337952b887dcaecf1af76f9dee2cc057ff7c7dd7c5",
+      "bytes": 18108,
+      "lines": 330
     },
     {
       "path": "tests/test_presentations.py",
@@ -348,8 +348,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "018f64576b66a884d778cd744ec7e47cbbef5be945f2a1bfe79c42e8da77b633",
-    "lines": 6689,
+    "sha256": "025aea0d33f075116e2660b9936a3f42305f97b2ff1dcf6a76415890ce0a5a02",
+    "lines": 6986,
     "tab_count": 6,
     "tabs": [
       {

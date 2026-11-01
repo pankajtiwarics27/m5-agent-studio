@@ -120,18 +120,21 @@ async function main() {
     const initialRunSettings = await page.evaluate(() => {
       const details = document.getElementById("harnessAdvanced");
       const summary = details?.querySelector("summary");
+      const valueSummary = summary?.querySelector("#harnessAdvancedSummary");
       return {
         collapsed: details ? !details.open : false,
-        label: summary?.textContent.replace(/\s+/g, " ").trim() || "",
+        label: summary?.querySelector("span")?.textContent.trim() || "",
+        values: valueSummary?.textContent.replace(/\s+/g, " ").trim() || "",
+        changed: valueSummary?.dataset.changed || "",
         discipline: document.getElementById("harnessEfficiencyMode")?.value,
         reasoning: document.getElementById("harnessReasoning")?.value,
         steps: document.getElementById("harnessMaxSteps")?.value,
       };
     });
     results.push(check("Harness Run settings summarize current values while collapsed",
-      initialRunSettings.collapsed && initialRunSettings.label.includes("Run settings") &&
-      initialRunSettings.label.includes("Discipline: Ponytail + Concise") &&
-      initialRunSettings.label.includes("Think: Low") && initialRunSettings.label.includes("Max: 10 steps") &&
+      initialRunSettings.collapsed && initialRunSettings.label === "Run settings" &&
+      initialRunSettings.values.includes("Ponytail + Concise") && initialRunSettings.values.includes("Low") &&
+      initialRunSettings.values.includes("10 steps") && initialRunSettings.changed === "false" &&
       initialRunSettings.discipline === "ponytail+concise" && initialRunSettings.reasoning === "low" &&
       initialRunSettings.steps === "10", JSON.stringify(initialRunSettings)));
 
@@ -162,12 +165,14 @@ async function main() {
     await page.select("#harnessReasoning", "medium");
     await page.select("#harnessMaxSteps", "16");
     const updatedRunSettings = await page.evaluate(() => ({
-      label: document.getElementById("harnessAdvancedSummary").textContent,
+      values: document.getElementById("harnessAdvancedSummary").textContent,
+      changed: document.getElementById("harnessAdvancedSummary").dataset.changed,
       reasoning: document.getElementById("harnessReasoning").value,
       steps: document.getElementById("harnessMaxSteps").value,
     }));
     results.push(check("Run settings summary follows changed controls without altering their values",
-      updatedRunSettings.label.includes("Think: Medium") && updatedRunSettings.label.includes("Max: 16 steps") &&
+      updatedRunSettings.values.includes("Medium") && updatedRunSettings.values.includes("16 steps") &&
+      updatedRunSettings.values.includes("changed") && updatedRunSettings.changed === "true" &&
       updatedRunSettings.reasoning === "medium" && updatedRunSettings.steps === "16",
       JSON.stringify(updatedRunSettings)));
 

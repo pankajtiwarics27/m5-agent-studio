@@ -89,10 +89,10 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 
 | Capability | Target | What must not change |
 |---|---|---|
-| Session creation | New session remains a client-side draft; the existing Run flow still creates the durable session. | existing endpoint, permission semantics, durable state and error behavior |
-| workspace | Project directory, recent directories, optional worktree isolation, and session history remain in the sidebar. | existing endpoint, permission semantics, durable state and error behavior |
-| policy | Execution policy stays visible and keyboard-reachable without opening Run settings. | existing endpoint, permission semantics, durable state and error behavior |
-| lead/critic | Lead and critic selectors stay visible; Discipline, Think, and Max Steps are summarized in Run settings. | existing endpoint, permission semantics, durable state and error behavior |
+| Session creation | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
+| workspace | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
+| policy | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
+| lead/critic | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | streamed tool events | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | approvals | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | diffs | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
@@ -113,7 +113,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | select | harnessLeadModel | — | — |
 | select | harnessCriticModel | — | — |
 | select | harnessPolicy | Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only) | — |
-| summary | — | Run settingsDiscipline: Ponytail + Concise · Think: Low · Max: 10 steps | — |
+| summary | — | Run settings | — |
 | select | harnessEfficiencyMode | Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose | — |
 | select | harnessReasoning | Off (Fastest) Low Medium xHigh | — |
 | select | harnessMaxSteps | 6 steps 10 steps 16 steps 24 steps | — |
@@ -345,14 +345,14 @@ provenance; a matching snapshot cannot clear separate review holds.
 
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
-| `ledger_content_sha256` | `8b1297aad2b9a4c97fd0187ee3c66c0d83b1c1d379a026a8286e3c66b8a754d6` | `not recorded` |
-| `source_manifest_sha256` | `838a55989d72c3bc3226f8ac1eb1e812a5b1157601cf92b72364057a53ae6de3` | `not recorded` |
-| `control_inventory_sha256` | `a1320bf58465b389eb60f8f8bc57c387220231086a73a3af0fb712d6cfc94636` | `not recorded` |
-| `route_map_sha256` | `c126ff91743b2f9af1e5953297a7e9806a2bafe611663b15b2b537a8defb066f` | `not recorded` |
-| `authorization_trace_sha256` | `4b86e3a0c3eeb9b44bd23518d05806f1d5ae92fc3fc9f9c934ddc2463ba18342` | `not recorded` |
-| `frontend_sha256` | `018f64576b66a884d778cd744ec7e47cbbef5be945f2a1bfe79c42e8da77b633` | `not recorded` |
+| `ledger_content_sha256` | `1170c36ab18ae199ce5153cb54172bcfc0fca9cecd7932d4c6c79fee30fa62db` | `not recorded` |
+| `source_manifest_sha256` | `bcded52e8dacf48aa5b03edcbf1614d49fb385d5013a5eb7ed396b08b6879295` | `not recorded` |
+| `control_inventory_sha256` | `a5e55565195fbbf7f1d3a0b421d0e0d395d3dbb6f6408edbf730d680d2ae2a48` | `not recorded` |
+| `route_map_sha256` | `206d067b619b5b2423a4e5dcb7159c8acd790860f2e8a66c300967decd099e1e` | `not recorded` |
+| `authorization_trace_sha256` | `fbc054f21549eff61b3179a9b70b67c1f9511f90928c156958a6b218628a5af0` | `not recorded` |
+| `frontend_sha256` | `025aea0d33f075116e2660b9936a3f42305f97b2ff1dcf6a76415890ce0a5a02` | `not recorded` |
 | `screenshot_manifest_sha256` | `cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57` | `not recorded` |
-| `screenshot_index_sha256` | `c9651e1cd604b17d6d74d7b245bdeef2d805cb3446f373f110958621c2ad9c2c` | `not recorded` |
+| `screenshot_index_sha256` | `465a88dc9a1c8a8ca58a35200c5bfb83ca51d378606597588f1f325b9aca3313` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |
 | `route_map_generator_sha256` | `923981fc78ff0f844e67691bfa966963f3959be1b9650eaf49f3b58b0a14d555` | `not recorded` |
 
