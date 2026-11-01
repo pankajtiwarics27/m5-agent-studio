@@ -37,6 +37,31 @@ def test_harness_disclosure_keeps_essential_and_stop_controls_visible():
     assert parser.attrs["densityToggleBtn"]["aria-pressed"] == "false"
 
 
+def test_harness_run_settings_summary_tracks_every_advanced_value():
+    parser = Elements()
+    source = (Path(__file__).resolve().parents[1] / "static/index.html").read_text()
+    parser.feed(source)
+
+    assert parser.attrs["harnessAdvancedSummary"]
+    assert ("details", "harnessAdvanced") in parser.parents["harnessAdvancedSummary"]
+    assert "Discipline: Ponytail + Concise · Think: Low · Max: 10 steps" in source
+    assert "function syncHarnessAdvancedSummary()" in source
+    assert "selectedOptions?.[0]?.textContent.trim()" in source
+    assert 'for (const id of ["harnessEfficiencyMode", "harnessReasoning", "harnessMaxSteps"])' in source
+    assert 'setting.addEventListener("change", syncHarnessAdvancedSummary)' in source
+    for setting in ("harnessEfficiencyMode", "harnessReasoning", "harnessMaxSteps"):
+        assert f'document.getElementById("{setting}")' in source
+
+    # The summary is presentation-only: the existing run payloads still read the
+    # selected controls directly, with the same names and numeric step conversion.
+    for payload_field in (
+        'reasoning_mode: document.getElementById("harnessReasoning").value',
+        'efficiency_mode: document.getElementById("harnessEfficiencyMode").value',
+        'max_steps: parseInt(document.getElementById("harnessMaxSteps").value, 10)',
+    ):
+        assert payload_field in source
+
+
 def test_council_disclosure_keeps_round_and_stop_available():
     parser = Elements()
     parser.feed((Path(__file__).resolve().parents[1] / "static/index.html").read_text())

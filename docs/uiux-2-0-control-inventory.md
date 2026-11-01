@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `ff264c2354f6b0c292f9074c4fb7e2c2511f8c65c02580011092a007040157a9`.
+* Frontend digest: `018f64576b66a884d778cd744ec7e47cbbef5be945f2a1bfe79c42e8da77b633`.
 * Panes: 6 · controls in panes: 77 · controls in the
   shared chrome: 101 · script-rendered: 30.
 
@@ -67,7 +67,7 @@ Section `pane-harness`, 17 interactive elements.
 | 6 | select | harnessLeadModel | — | — | handleModelSelectChange(this, patchActiveHarnessSettings) |
 | 7 | select | harnessCriticModel | — | — | handleModelSelectChange(this, patchActiveHarnessSettings) |
 | 8 | select | harnessPolicy | — | Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only) | patchActiveHarnessSettings() |
-| 9 | summary | — | — | Advanced settings | — |
+| 9 | summary | — | — | Run settingsDiscipline: Ponytail + Concise · Think: Low · Max: 10 steps | — |
 | 10 | select | harnessEfficiencyMode | — | Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose | — |
 | 11 | select | harnessReasoning | — | Off (Fastest) Low Medium xHigh | — |
 | 12 | select | harnessMaxSteps | — | 6 steps 10 steps 16 steps 24 steps | — |

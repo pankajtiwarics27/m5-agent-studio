@@ -694,7 +694,8 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .hall-composer { flex-wrap: wrap; }
 .hall-composer textarea { flex: 1 1 200px !important; min-width: 0; }
 .harness-advanced { flex: 1 1 100%; color: var(--text-dim); }
-.harness-advanced summary { cursor: pointer; width: fit-content; padding: 4px 0; font-weight: 600; }
+.harness-advanced summary { cursor: pointer; width: fit-content; max-width: 100%; padding: 4px 0; font-weight: 600; }
+.harness-advanced-summary { margin-left: 8px; color: var(--text-dim); font-size: 11.2px; font-weight: 500; }
 .harness-advanced-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding-top: 8px; }
 body[data-density="compact"] .harness-bar { padding-block: var(--strip-pad-y); gap: var(--space-1) var(--space-3); }
 body[data-density="compact"] .harness-advanced-fields { padding-top: var(--space-1); }
@@ -1727,7 +1728,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
               </select>
             </div>
             <details class="harness-advanced" id="harnessAdvanced">
-              <summary>Advanced settings</summary>
+              <summary><span>Run settings</span><span id="harnessAdvancedSummary" class="harness-advanced-summary">Discipline: Ponytail + Concise · Think: Low · Max: 10 steps</span></summary>
               <div class="harness-advanced-fields">
             <div style="display:flex; flex-direction:column;">
               <label class="field-lbl" style="margin-bottom:2px;" for="harnessEfficiencyMode">Discipline</label>
@@ -3999,6 +4000,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (v === "diff") openHarnessDiffModal();
     else if (v === "compact") compactActiveHarness();
     else if (v === "sdlc") openSdlcModal();
+  }
+
+  function syncHarnessAdvancedSummary() {
+    const summary = document.getElementById("harnessAdvancedSummary");
+    if (!summary) return;
+    const selectedLabel = id => document.getElementById(id)?.selectedOptions?.[0]?.textContent.trim() || "Unavailable";
+    summary.textContent = [
+      `Discipline: ${selectedLabel("harnessEfficiencyMode")}`,
+      `Think: ${selectedLabel("harnessReasoning")}`,
+      `Max: ${selectedLabel("harnessMaxSteps")}`,
+    ].join(" · ");
   }
 
   function syncHarnessWorkflowModeUI() {
@@ -6607,6 +6619,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     window.matchMedia("(max-width: 1100px)").addEventListener("change", syncTabOrientation);
   } catch (_) { /* older engines: the initial orientation still applies */ }
   try { applyDensity(localStorage.getItem("m5_ui_density") === "compact"); } catch (_) { applyDensity(false); }
+  for (const id of ["harnessEfficiencyMode", "harnessReasoning", "harnessMaxSteps"]) {
+    const setting = document.getElementById(id);
+    if (setting) setting.addEventListener("change", syncHarnessAdvancedSummary);
+  }
+  syncHarnessAdvancedSummary();
   const advanced = document.getElementById("harnessAdvanced");
   try { advanced.open = sessionStorage.getItem("m5_harness_advanced") === "open"; } catch (_) {}
   advanced.addEventListener("toggle", () => {

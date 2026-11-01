@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "807e50d259441dc7bd6ac689410cdac5bd34969ab3a2841b8e4635f3615caac4",
+    "style_block_sha256": "6cb3abcbac7b83ba29b413f1bf15a3e222ca45c35e4a7ae955e6cc37848954d4",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -37,7 +37,7 @@
   "totals": {
     "tokens": 45,
     "groups": 7,
-    "references": 759,
+    "references": 760,
     "theme_overrides": 18,
     "density_overrides": 5,
     "contrast_pairs": 20,
@@ -193,7 +193,7 @@
         "light": "#555c62"
       },
       "density_override": null,
-      "references": 88
+      "references": 89
     },
     {
       "name": "--text-faint",
