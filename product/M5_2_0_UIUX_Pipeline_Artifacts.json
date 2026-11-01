@@ -1,0 +1,217 @@
+{
+  "story": "UIUX-P3-06",
+  "title": "Pipeline stages: dependencies and artifacts",
+  "generated_by": "scripts/uiux_pipeline_artifacts_inventory.py",
+  "chain": {
+    "declared_in_pane": {
+      "1": [],
+      "2": [
+        "architect"
+      ],
+      "3": [
+        "architect",
+        "coder"
+      ],
+      "4": [
+        "architect",
+        "coder",
+        "critic"
+      ]
+    },
+    "declared_in_server": {
+      "1": [],
+      "2": [
+        "architect"
+      ],
+      "3": [
+        "architect",
+        "coder"
+      ],
+      "4": [
+        "architect",
+        "coder",
+        "critic"
+      ]
+    },
+    "keys": {
+      "1": "architect",
+      "2": "coder",
+      "3": "critic",
+      "4": "judge"
+    }
+  },
+  "rows": {
+    "handoff_fields": [
+      "reads",
+      "upstream chars",
+      "feeds"
+    ],
+    "artifact_fields": [
+      "chars",
+      "tokens",
+      "tok/s",
+      "reasoning",
+      "empty"
+    ],
+    "run_fields": [
+      "seats finished",
+      "total chars",
+      "handoffs",
+      "saved run id or not saved"
+    ]
+  },
+  "stream_events": [
+    "skills_applied",
+    "stage_start",
+    "token",
+    "unloading",
+    "stage_done",
+    "council_done",
+    "error"
+  ],
+  "checks": [
+    {
+      "check": "the pipeline chain is declared once, as four seats",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pane's chain is the server's chain",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the chain the pane mirrors is read from the lambdas, not asserted about them",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every stage card carries a handoff row and an artifact row",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the handoff row names what the seat reads and what it feeds",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the handoff row measures the upstream it was handed, not the task",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the tail seat says it ends the run instead of pointing nowhere",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the rows are redrawn on the stream's frame, guarded against churn",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the artifact row states the output it produced, in the pane's own units",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "an empty seat is drawn as empty, not as a quiet one",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the reasoning a seat kept is stated with its size",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the collapsed card states the artifact size too",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the run is stated once, above the cards, as a live region",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the run line says how many seats finished, how much was produced and how many handoffs landed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a stopped run is stated as stopped",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a stopped run says it was not saved, and a saved one is named by the id the server gave",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "an error is stated, and it is not turned into a stop",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the sizes are the pane's own stream, said so on the page",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "there is one renderer for a stage's markdown",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every value the rows draw is escaped",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a new run clears the rows instead of inheriting them",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "no run means no run line",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the story adds no endpoint",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the council route speaks the same seven events",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the run record still carries what it carried",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the per-stage inputs the stream cannot carry are not claimed on the page",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the routes this story must leave alone are still mounted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pane draws the chain from the stream and posts only the council route",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "check_count": 28,
+  "findings": [],
+  "status": "clean"
+}

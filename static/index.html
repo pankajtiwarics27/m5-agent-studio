@@ -396,6 +396,27 @@
   .stage-output-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
   .stage-output-head { padding: 9px 14px; background: rgba(255,255,255,0.025); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   .stage-output-body { padding: 14px 17px; }
+  /* ── What each stage was given, and what it left behind ────────────────────
+     The four seats are a chain: the builder is handed the architect's spec, the
+     critic is handed both, the judge is handed all three. That chain lived only in
+     the server's input lambdas, and the pane drew four cards with a state and a
+     tok/s that never said who fed whom. These rows say it, with the size of the
+     handoff measured from what this pane actually streamed. */
+  .step-chars { font-family: var(--mono); font-size: 10.4px; color: var(--text-faint); }
+  .stage-handoff { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 7px 14px; border-bottom: 1px solid var(--border); background: rgba(99,102,241,0.05); font-size: 11.4px; color: var(--text-dim); }
+  .stage-handoff .stage-edge { color: var(--text-faint); font-size: 10.6px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .stage-handoff .stage-size { font-family: var(--mono); color: var(--text); }
+  .stage-empty-output { color: var(--text-faint); font-size: 13px; font-style: italic; }
+  .stage-artifact { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 8px 14px; border-top: 1px solid var(--border); background: rgba(255,255,255,0.02); font-size: 11.4px; color: var(--text-dim); }
+  .stage-artifact[data-empty="true"] { color: #fda4af; }
+  .stage-artifact .stage-artifact-key { color: var(--text-faint); font-size: 10.6px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .stage-artifact .stage-artifact-size { font-family: var(--mono); color: var(--text); }
+  .council-artifacts { margin: 0 0 13px; padding: 11px 14px; border: 1px solid var(--border); border-left: 3px solid var(--emerald); border-radius: var(--radius-sm); background: var(--bg-card); font-size: 12px; line-height: 1.55; color: var(--text-dim); }
+  .council-artifacts[hidden] { display: none; }
+  .council-artifacts[data-state="partial"] { border-left-color: var(--amber); }
+  .council-artifacts[data-state="failed"] { border-left-color: var(--rose); }
+  .council-artifacts strong { color: var(--text); }
+  .council-artifacts .council-artifacts-note { display: block; margin-top: 3px; font-size: 11.2px; color: var(--text-faint); }
   .debate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px; margin-bottom: 14px; }
 
   .chat-header-bar { padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--bg-elev); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -2187,21 +2208,25 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           </button>
           <button type="button" class="step-card" id="step-card-1" aria-pressed="false" onclick="selectStageFilter(1)">
             <span class="step-num">1 • ARCHITECT</span><span class="step-title">Spec</span>
-            <span class="step-meta"><span id="st-state-1">Idle</span><span id="st-tps-1"></span></span>
+            <span class="step-meta"><span id="st-state-1">Idle</span><span id="st-tps-1"></span><span id="st-chars-1" class="step-chars"></span></span>
           </button>
           <button type="button" class="step-card" id="step-card-2" aria-pressed="false" onclick="selectStageFilter(2)">
             <span class="step-num">2 • CODER</span><span class="step-title">Draft</span>
-            <span class="step-meta"><span id="st-state-2">Idle</span><span id="st-tps-2"></span></span>
+            <span class="step-meta"><span id="st-state-2">Idle</span><span id="st-tps-2"></span><span id="st-chars-2" class="step-chars"></span></span>
           </button>
           <button type="button" class="step-card" id="step-card-3" aria-pressed="false" onclick="selectStageFilter(3)">
             <span class="step-num">3 • CRITIC</span><span class="step-title">Audit</span>
-            <span class="step-meta"><span id="st-state-3">Idle</span><span id="st-tps-3"></span></span>
+            <span class="step-meta"><span id="st-state-3">Idle</span><span id="st-tps-3"></span><span id="st-chars-3" class="step-chars"></span></span>
           </button>
           <button type="button" class="step-card" id="step-card-4" aria-pressed="false" onclick="selectStageFilter(4)">
             <span class="step-num">4 • JUDGE</span><span class="step-title">Final</span>
-            <span class="step-meta"><span id="st-state-4">Idle</span><span id="st-tps-4"></span></span>
+            <span class="step-meta"><span id="st-state-4">Idle</span><span id="st-tps-4"></span><span id="st-chars-4" class="step-chars"></span></span>
           </button>
         </div>
+        <!-- What this run produced, stated before the stage cards: how much each
+             seat left behind, how many handoffs happened, and whether the server
+             actually saved it. Filled by renderCouncilArtifacts(). -->
+        <div id="councilArtifacts" class="council-artifacts" role="status" aria-live="polite" hidden></div>
         <div id="councilStagesContainer"></div>
       </div>
     </section>
@@ -2762,6 +2787,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   let stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null}, 2:{c:"",r:"",rCount:0,m:"",u:null}, 3:{c:"",r:"",rCount:0,m:"",u:null}, 4:{c:"",r:"",rCount:0,m:"",u:null} };
   let rafPending = false;
+  // The last pipeline run: what it was asked, whether it finished, whether the server
+  // said it saved it. The stage rows are derived from `stageBuffers`; this only holds
+  // the facts that are not in a buffer.
+  let councilRun = null;
+  let stageRowSignature = {};
 
   function escapeHtml(s) { return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
   function formatInline(s) {
@@ -4790,13 +4820,195 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   // ================= AUTO 4-STAGE, DEBATE & CHAT =================
   const STAGE_TITLES = { 1: "Stage 1 • Architect Spec", 2: "Stage 2 • Fast Coder Draft", 3: "Stage 3 • Adversarial Critique", 4: "Stage 4 • Lead Judge Final" };
+
+  // ── UIUX-P3-06: the pipeline is a chain, and the pane draws the links ──────
+  // Each seat is handed the seats before it: the builder gets the architect's spec, the
+  // critic gets both, the judge gets all three. That chain exists only in
+  // `api_council_stream`'s input lambdas, so the pane knew which stage was streaming and
+  // never knew what it had been given - four cards with a state and a tok/s, and no way
+  // to tell a handoff from a fresh prompt, or an empty seat from a quiet one.
+  //
+  // `PIPELINE_SEATS` mirrors those lambdas, and the inventory derives the chain from
+  // `app.py` (which `c['<key>']` each stage's input reads) and fails if the two disagree:
+  // the copy is checked, not trusted. Every size below is measured from what this pane
+  // streamed, so a handoff is a count of characters, not a claim about a prompt.
+  const PIPELINE_SEATS = [
+    { stage: 1, key: "architect", label: "the Architect's spec", short: "Architect", reads: [] },
+    { stage: 2, key: "coder", label: "the Builder's draft", short: "Builder", reads: ["architect"] },
+    { stage: 3, key: "critic", label: "the Critic's audit", short: "Critic", reads: ["architect", "coder"] },
+    { stage: 4, key: "judge", label: "the Judge's final", short: "Judge", reads: ["architect", "coder", "critic"] },
+  ];
+
+  function pipelineSeat(stage) {
+    return PIPELINE_SEATS.find(seat => seat.stage === Number(stage)) || null;
+  }
+
+  function pipelineSeatByKey(key) {
+    return PIPELINE_SEATS.find(seat => seat.key === key) || null;
+  }
+
+  function pipelineChars(stage) {
+    const buffer = stageBuffers[Number(stage)];
+    return buffer && typeof buffer.c === "string" ? buffer.c.length : 0;
+  }
+
+  // What a seat consumed: the task plus the seats its input lambda reads. `chars` counts
+  // only the upstream content this pane streamed - the template that frames it is the
+  // server's and is not guessed at.
+  function pipelineHandoff(seat) {
+    const upstream = (seat.reads || []).map(key => {
+      const source = pipelineSeatByKey(key);
+      return { key, label: source ? source.label : key, chars: pipelineChars(source ? source.stage : 0) };
+    });
+    const chars = upstream.reduce((total, entry) => total + entry.chars, 0);
+    const next = PIPELINE_SEATS.find(candidate => (candidate.reads || []).includes(seat.key)) || null;
+    return { upstream, chars, taskChars: councilRun ? councilRun.taskChars : 0, feeds: next };
+  }
+
+  function pipelineUpstreamList(seat) {
+    const handoff = pipelineHandoff(seat);
+    if (!handoff.upstream.length) return "the task";
+    if (handoff.upstream.length === 1) return `the task + ${handoff.upstream[0].label}`;
+    if (handoff.upstream.length === 2) return `the task + ${handoff.upstream[0].label} and ${handoff.upstream[1].label}`;
+    const named = handoff.upstream.map(entry => entry.label);
+    return `the task + ${named.slice(0, -1).join(", ")} and ${named[named.length - 1]}`;
+  }
+
+  function renderStageHandoff(stage) {
+    const seat = pipelineSeat(stage);
+    const host = document.getElementById(`stage-handoff-${stage}`);
+    if (!seat || !host) return;
+    const handoff = pipelineHandoff(seat);
+    const fromHtml = handoff.upstream.length
+      ? `<span>reads</span><span>${escapeHtml(pipelineUpstreamList(seat))}</span><span class="stage-edge">upstream</span><span class="stage-size">${escapeHtml(String(handoff.chars))} chars</span>`
+      : `<span>reads</span><span>the task</span><span class="stage-size">${escapeHtml(String(handoff.taskChars))} chars</span>`;
+    const feedsHtml = handoff.feeds
+      ? `<span class="stage-edge">feeds</span><span>${escapeHtml(handoff.feeds.short)}</span>`
+      : `<span class="stage-edge">ends the run</span>`;
+    host.innerHTML = `${fromHtml}${feedsHtml}`;
+    host.dataset.upstream = String(handoff.chars);
+    host.dataset.taskChars = String(handoff.taskChars);
+  }
+
+  function renderStageArtifact(stage) {
+    const seat = pipelineSeat(stage);
+    const host = document.getElementById(`stage-artifact-${stage}`);
+    if (!seat || !host) return;
+    const buffer = stageBuffers[Number(stage)] || {};
+    const chars = typeof buffer.c === "string" ? buffer.c.length : 0;
+    const reasoning = typeof buffer.r === "string" ? buffer.r.length : 0;
+    const usage = buffer.u || null;
+    const empty = Boolean(usage) && chars === 0;
+    host.dataset.empty = empty ? "true" : "false";
+    host.dataset.chars = String(chars);
+    if (!usage) {
+      host.innerHTML = `<span class="stage-artifact-key">produced so far</span><span class="stage-artifact-size">${escapeHtml(String(chars))} chars</span>`
+        + (reasoning ? `<span>· ${escapeHtml(String(reasoning))} chars of reasoning</span>` : "");
+      return;
+    }
+    if (empty) {
+      host.innerHTML = `<span class="stage-artifact-key">produced nothing</span>`
+        + `<span>the seat finished with an empty output, so the next one is handed an empty ${escapeHtml(seat.label.replace(/^the /, "").replace(/'s .*$/, ""))} section</span>`;
+      return;
+    }
+    const tokens = Number(usage.completion_tokens || 0);
+    const reasoningTokens = Number(usage.reasoning_tokens || 0);
+    host.innerHTML = `<span class="stage-artifact-key">${escapeHtml(seat.short)} produced</span>`
+      + `<span class="stage-artifact-size">${escapeHtml(String(chars))} chars</span>`
+      + `<span>· ${escapeHtml(String(tokens))} tokens</span>`
+      + `<span>· ${escapeHtml(String(usage.decode_tps))} tok/s</span>`
+      + (reasoning ? `<span>· ${escapeHtml(String(reasoning))} chars of reasoning kept${reasoningTokens ? ` (${escapeHtml(String(reasoningTokens))} reasoning tokens)` : ""}</span>` : "");
+  }
+
+  // The run, stated once: how much each seat left behind, how many handoffs happened,
+  // and whether the server actually saved it. `save_run()` returns 0 when it cannot
+  // write, so a zero is drawn as "not saved" rather than as a run id.
+  function renderCouncilArtifacts() {
+    const host = document.getElementById("councilArtifacts");
+    if (!host) return;
+    if (!councilRun) {
+      host.hidden = true;
+      host.innerHTML = "";
+      host.removeAttribute("data-state");
+      return;
+    }
+    const seats = PIPELINE_SEATS.map(seat => {
+      const buffer = stageBuffers[seat.stage] || {};
+      return { seat, chars: typeof buffer.c === "string" ? buffer.c.length : 0, usage: buffer.u || null };
+    });
+    const finished = seats.filter(entry => entry.usage);
+    const produced = seats.filter(entry => entry.chars > 0);
+    const empty = seats.filter(entry => entry.usage && entry.chars === 0);
+    const totalChars = seats.reduce((total, entry) => total + entry.chars, 0);
+    const handoffs = seats.filter(entry => entry.seat.reads.length && entry.chars > 0).length;
+    const allDone = finished.length === PIPELINE_SEATS.length;
+    const state = councilRun.error ? "failed" : (councilRun.stopped && !allDone ? "partial" : "ok");
+    const done = `${String(finished.length)} of ${String(PIPELINE_SEATS.length)} stages finished`;
+    const volume = `${String(totalChars)} chars of output across ${String(produced.length)} seat${String(produced.length === 1 ? "" : "s")}`;
+    const carried = handoffs ? `, and ${String(handoffs)} handoff${String(handoffs === 1 ? "" : "s")} carried content forward` : "";
+    const headlineHtml = councilRun.stopped && !allDone
+      ? `<strong>Stopped after ${escapeHtml(done)}.</strong> ${escapeHtml(volume)}${escapeHtml(carried)}. `
+      : `<strong>${escapeHtml(done.charAt(0).toUpperCase() + done.slice(1))}</strong> · ${escapeHtml(volume)}${escapeHtml(carried)}. `;
+    const notes = [];
+    if (empty.length) {
+      const emptyNamesHtml = empty.map(entry => escapeHtml(entry.seat.short)).join(", ");
+      notes.push(`${emptyNamesHtml} finished with no output, so the seat after it was handed an empty section.`);
+    }
+    if (councilRun.error) {
+      notes.push(`The run stopped on an error: ${escapeHtml(String(councilRun.error))}`);
+    }
+    if (councilRun.stopped && !allDone) {
+      notes.push("A stopped pipeline is not saved: the server writes a run only after all four stages return, so what is above exists only on this screen.");
+    } else if (councilRun.savedRunId > 0) {
+      notes.push(`The server reported this run saved as #${String(Number(councilRun.savedRunId))}${councilRun.totalS !== null ? ` in ${String(Number(councilRun.totalS))}s` : ""}.`);
+    } else if (allDone) {
+      notes.push("The server did not report a saved run id, so these artifacts exist only on this screen.");
+    }
+    notes.push("Each stage reads what the seats before it produced; the sizes above count this pane's own stream, not the prompt the server assembles around them.");
+    const notesHtml = notes.join(" ");
+    const html = `${headlineHtml}<span class="council-artifacts-note">${notesHtml}</span>`;
+    host.hidden = false;
+    host.dataset.state = state;
+    host.dataset.totalChars = String(totalChars);
+    host.dataset.handoffs = String(handoffs);
+    if (host.dataset.signature === html) return;
+    host.dataset.signature = html;
+    host.innerHTML = html;
+  }
+
+  window.M5Pipeline = {
+    seats: PIPELINE_SEATS,
+    handoff: pipelineHandoff,
+    upstreamList: pipelineUpstreamList,
+    artifactTotals: () => ({
+      seats: PIPELINE_SEATS.map(seat => ({ stage: seat.stage, chars: pipelineChars(seat.stage) })),
+      run: councilRun,
+    }),
+    render: renderCouncilArtifacts,
+  };
+  // A token arrives many times a second and a stage's numbers change on almost every
+  // one of them, but the strings only change when a count does. Compare the smallest
+  // signature that captures the row's content and skip the innerHTML rewrite otherwise.
+  function updateStageRows(stage) {
+    const buffer = stageBuffers[Number(stage)] || {};
+    const signature = `${(buffer.c || "").length}|${(buffer.r || "").length}|${buffer.u ? 1 : 0}|${councilRun ? councilRun.taskChars : 0}`;
+    if (stageRowSignature[stage] === signature) return;
+    stageRowSignature[stage] = signature;
+    renderStageHandoff(stage);
+    renderStageArtifact(stage);
+    const chars = document.getElementById(`st-chars-${stage}`);
+    // A finished seat that produced nothing is `0 ch`; a seat that has not started is blank.
+    if (chars) chars.textContent = (buffer.c || buffer.u) ? `${(buffer.c || "").length} ch` : "";
+  }
+
   function ensureStageCardMounted(s) {
     const container = document.getElementById("councilStagesContainer");
     let card = document.getElementById(`stage-dom-${s}`);
     if (!card) {
       card = document.createElement("div"); card.id = `stage-dom-${s}`; card.className = "stage-output-card";
-      card.innerHTML = `<div class="stage-output-head"><div><strong>${STAGE_TITLES[s]}</strong> <span id="stage-mod-${s}" class="mono" style="color:var(--text-dim); font-size:12px; margin-left:8px;"></span></div><div style="display:flex; gap:8px; align-items:center;"><span id="stage-pill-${s}" class="badge cyan">Connecting...</span><button class="btn btn-xs" onclick="copyStageMarkdown(${s}, this)">Copy MD</button></div></div><div class="stage-output-body"><details id="stage-think-${s}" class="think-box" style="display:none;"><summary><span id="stage-think-lbl-${s}">Reasoning</span></summary><pre id="stage-think-pre-${s}"></pre></details><div id="stage-md-${s}"></div></div>`;
+      card.innerHTML = `<div class="stage-output-head"><div><strong>${STAGE_TITLES[s]}</strong> <span id="stage-mod-${s}" class="mono" style="color:var(--text-dim); font-size:12px; margin-left:8px;"></span></div><div style="display:flex; gap:8px; align-items:center;"><span id="stage-pill-${s}" class="badge cyan">Connecting...</span><button class="btn btn-xs" onclick="copyStageMarkdown(${s}, this)">Copy MD</button></div></div><div id="stage-handoff-${s}" class="stage-handoff"></div><div class="stage-output-body"><details id="stage-think-${s}" class="think-box" style="display:none;"><summary><span id="stage-think-lbl-${s}">Reasoning</span></summary><pre id="stage-think-pre-${s}"></pre></details><div id="stage-md-${s}"></div></div><div id="stage-artifact-${s}" class="stage-artifact"></div>`;
       container.appendChild(card);
+      renderStageHandoff(s);
     }
     for (let k = 1; k <= 4; k++) { const c = document.getElementById(`stage-dom-${k}`); if (c) c.style.display = (stageFilter === 0 || stageFilter === k) ? "block" : "none"; }
   }
@@ -4826,9 +5038,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           if (!st.c && !thinkEl.dataset.autoClosed) thinkEl.open = true;
           else if (st.c && !thinkEl.dataset.autoClosed) { thinkEl.open = false; thinkEl.dataset.autoClosed = "1"; }
         }
-        document.getElementById(`stage-md-${k}`).innerHTML = st.c ? renderMarkdown(st.c) : `<div style="color:var(--text-faint); font-size:13px;">Streaming...</div>`;
+        // A finished seat with no output is not still streaming: it produced nothing, and the
+        // row under it says what the next seat was handed.
+        document.getElementById(`stage-md-${k}`).innerHTML = st.c
+          ? renderMarkdown(st.c)
+          : (st.u
+            ? `<div class="stage-empty-output">This seat finished with no output.</div>`
+            : `<div style="color:var(--text-faint); font-size:13px;">Streaming...</div>`);
         if (st.u) { const pill = document.getElementById(`stage-pill-${k}`); setStatus(pill, "ok", `${st.u.decode_tps} tok/s • TTFT ${st.u.ttft}s • ${st.u.completion_tokens} tok`); }
+        updateStageRows(k);
       }
+      renderCouncilArtifacts();
     });
   }
   function runCouncil() {
@@ -4836,7 +5056,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (!task) return;
     document.getElementById("councilStagesContainer").innerHTML = "";
     stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null}, 2:{c:"",r:"",rCount:0,m:"",u:null}, 3:{c:"",r:"",rCount:0,m:"",u:null}, 4:{c:"",r:"",rCount:0,m:"",u:null} };
-    [1,2,3,4].forEach(n => { document.getElementById(`st-state-${n}`).textContent = "Queued"; document.getElementById(`st-tps-${n}`).textContent = ""; });
+    stageRowSignature = {};
+    // The task is the first thing every seat reads, and its size is the one number on
+    // this screen that is known before a token arrives.
+    councilRun = { taskChars: task.length, stopped: false, savedRunId: 0, totalS: null, error: null };
+    renderCouncilArtifacts();
+    [1,2,3,4].forEach(n => { document.getElementById(`st-state-${n}`).textContent = "Queued"; document.getElementById(`st-tps-${n}`).textContent = ""; const ch = document.getElementById(`st-chars-${n}`); if (ch) ch.textContent = ""; });
     document.querySelectorAll(".step-card").forEach(el => el.classList.remove("running", "done"));
     document.getElementById("councilRunBtn").disabled = true; document.getElementById("councilStopBtn").style.display = "inline-flex";
     consumeSSE("/api/council/stream", {
@@ -4848,9 +5073,35 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       token(d) { if (d.kind === "reasoning") { stageBuffers[d.stage].r += d.text; stageBuffers[d.stage].rCount++; } else stageBuffers[d.stage].c += d.text; scheduleStageUpdate(); },
       stage_done(d) { stageBuffers[d.stage].u = d.usage; document.getElementById(`step-card-${d.stage}`).classList.remove("running"); document.getElementById(`step-card-${d.stage}`).classList.add("done"); document.getElementById(`st-state-${d.stage}`).textContent = "Done"; document.getElementById(`st-tps-${d.stage}`).textContent = `${d.usage.decode_tps} t/s`; scheduleStageUpdate(); },
       unloading(d) { document.getElementById(`st-state-${d.stage}`).textContent = "Unloaded"; },
-      council_done(d) { document.getElementById("councilTotalStatus").textContent = "Done"; document.getElementById("councilTotalTime").textContent = `${d.total_elapsed_s}s`; },
-      error(d) { showToast("Council error: " + d.message, "err"); }
-    }, () => { document.getElementById("councilRunBtn").disabled = false; document.getElementById("councilStopBtn").style.display = "none"; });
+      council_done(d) {
+        document.getElementById("councilTotalStatus").textContent = "Done";
+        document.getElementById("councilTotalTime").textContent = `${d.total_elapsed_s}s`;
+        if (councilRun) {
+          // `run_id` is 0 when save_run() could not write; drawn as "not saved".
+          councilRun.savedRunId = Number(d.run_id || 0);
+          councilRun.totalS = d.total_elapsed_s;
+          renderCouncilArtifacts();
+        }
+      },
+      error(d) { showToast("Council error: " + d.message, "err"); if (councilRun) { councilRun.error = d.message; renderCouncilArtifacts(); } }
+    }, () => {
+      document.getElementById("councilRunBtn").disabled = false;
+      document.getElementById("councilStopBtn").style.display = "none";
+      // The finalizer runs on success, on Stop and on a dropped connection. Only the
+      // first leaves four finished stages, so that is the only case that is not a stop.
+      if (councilRun) {
+        councilRun.stopped = ![1,2,3,4].every(n => stageBuffers[n] && stageBuffers[n].u);
+        if (councilRun.stopped) {
+          // A seat whose `stage_done` never arrived kept saying "Streaming" after the stream
+          // ended. The run is over; the card must say what the seat was left doing.
+          [1,2,3,4].forEach(n => {
+            const state = document.getElementById(`st-state-${n}`);
+            if (state && state.textContent === "Streaming") state.textContent = "Stopped";
+          });
+        }
+        renderCouncilArtifacts();
+      }
+    });
   }
 
   function syncDebateArbiter() {
