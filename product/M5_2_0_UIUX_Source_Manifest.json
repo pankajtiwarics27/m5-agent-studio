@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "46d37ca1e8b244dace04d6bcc48d8679c8fb15e670cd84e24dd50ba5bb36315a",
-      "bytes": 491856,
-      "lines": 8369
+      "sha256": "7beb89bfd6a648b9086bbe3d749bfc85cf136cf02ce54afa585dc230b2707961",
+      "bytes": 530915,
+      "lines": 9079
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "953504196a2a0b181d3a5061a9382d12ecfcd02f835e1ed317520fd9deef92b5",
-      "bytes": 3229506,
-      "lines": 71398
+      "sha256": "e63901f1af22ce5b774843182fea2bc8c1c96410d1c1d3108ed189f33b025f80",
+      "bytes": 3268565,
+      "lines": 72108
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -348,8 +348,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "46d37ca1e8b244dace04d6bcc48d8679c8fb15e670cd84e24dd50ba5bb36315a",
-    "lines": 8369,
+    "sha256": "7beb89bfd6a648b9086bbe3d749bfc85cf136cf02ce54afa585dc230b2707961",
+    "lines": 9079,
     "tab_count": 6,
     "tabs": [
       {
@@ -395,8 +395,8 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 58,
-    "api_literal_count": 51,
+    "fetch_call_count": 61,
+    "api_literal_count": 52,
     "api_literals": [
       "/api/cache/clear-ssd",
       "/api/chat/stream",
@@ -428,6 +428,7 @@
       "/api/harness/sessions/{param}/sdlc",
       "/api/harness/sessions/{param}/state",
       "/api/harness/sessions/{param}/task",
+      "/api/harness/sessions/{param}/{param}",
       "/api/mcp/import-json",
       "/api/mcp/servers",
       "/api/mcp/servers/{param}",

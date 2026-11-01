@@ -24,18 +24,18 @@ is a bug in the caller, and the `error` kind is already how bugs are shown.
 
 | Container | Pane | Kind | Actions | Line |
 |---|---|---|---|---|
-| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 3014 |
-| `#startRecentState` | Start | `empty` | `Start a session`, `Open Harness` | 3073 |
-| `#startRecentState` | Start | `error` | `Retry`, `Open Harness` | 3148 |
-| `#startHealthState` | Start | `error` | `Re-check`, `Monitor rail` | 3242 |
-| `#startWorkspaceState` | Start | `error` | `Retry`, `Open Harness` | 3326 |
-| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 3623 |
-| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 3637 |
-| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 3647 |
-| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 3661 |
-| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 5170 |
-| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 5196 |
-| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 5320 |
+| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 3054 |
+| `#startRecentState` | Start | `empty` | `Start a session`, `Open Harness` | 3113 |
+| `#startRecentState` | Start | `error` | `Retry`, `Open Harness` | 3188 |
+| `#startHealthState` | Start | `error` | `Re-check`, `Monitor rail` | 3282 |
+| `#startWorkspaceState` | Start | `error` | `Retry`, `Open Harness` | 3366 |
+| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 3687 |
+| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 3701 |
+| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 3711 |
+| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 3725 |
+| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 5234 |
+| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 5260 |
+| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 5384 |
 
 12 call sites across 8 of 8 containers: 3 empty, 6 error, 3 recovery.
 
@@ -61,9 +61,9 @@ should not quietly become a pane rewrite:
 
 | Handler | Line |
 |---|---|
-| `installSkill()` | 3934 |
-| `openHarnessDiffModal()` | 6831 |
-| `runMcpPlayground()` | 7848 |
+| `installSkill()` | 3998 |
+| `openHarnessDiffModal()` | 6915 |
+| `runMcpPlayground()` | 8558 |
 
 ## Checks and limits
 
