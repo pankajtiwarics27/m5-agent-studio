@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "36d01245ff34319ff671c1e3cac1cfaf2d34ed4e3042537c79bec2f0a7942713",
-      "bytes": 426725,
-      "lines": 7300
+      "sha256": "7a74804e8b2a3503c504358bf0d2a58e278cd12271fd61f2509b397bbc678e34",
+      "bytes": 453124,
+      "lines": 7743
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "ff55a25f2b30e13ac4e42d7fde950057116abc02c34983ccc1b5e8c369a4c11e",
-      "bytes": 3164375,
-      "lines": 70329
+      "sha256": "619cd106daf5d7d21a3b9d8c7b5c01d96557dc807bc593ae9ec69b1a58d45e2f",
+      "bytes": 3190774,
+      "lines": 70772
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -327,9 +327,9 @@
     {
       "path": "tests/test_screenshot_capture_browser.py",
       "role": "runs browser-backed UI and screenshot safety regressions",
-      "sha256": "24f993d8baa7e6f10977b2a01dd296a7d4d2ff84019759c927ad7d31c18245b7",
-      "bytes": 24876,
-      "lines": 642
+      "sha256": "35b900ce697767a9575fb39b69d4dfef12d63d6b3ee3bf6e0aa72dbdff1731d7",
+      "bytes": 25140,
+      "lines": 645
     },
     {
       "path": "tests/test_uiux_source_manifest.py",
@@ -348,8 +348,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "36d01245ff34319ff671c1e3cac1cfaf2d34ed4e3042537c79bec2f0a7942713",
-    "lines": 7300,
+    "sha256": "7a74804e8b2a3503c504358bf0d2a58e278cd12271fd61f2509b397bbc678e34",
+    "lines": 7743,
     "tab_count": 6,
     "tabs": [
       {
@@ -395,8 +395,8 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 54,
-    "api_literal_count": 48,
+    "fetch_call_count": 56,
+    "api_literal_count": 50,
     "api_literals": [
       "/api/cache/clear-ssd",
       "/api/chat/stream",
@@ -423,6 +423,8 @@
       "/api/harness/sessions/{param}/compact",
       "/api/harness/sessions/{param}/diff",
       "/api/harness/sessions/{param}/events/stream?cursor={param}",
+      "/api/harness/sessions/{param}/grants",
+      "/api/harness/sessions/{param}/grants/revoke",
       "/api/harness/sessions/{param}/sdlc",
       "/api/harness/sessions/{param}/state",
       "/api/mcp/import-json",

@@ -104,7 +104,7 @@
     "active_stories": [],
     "last_completed_story": "UIUX-P3-03",
     "next_recommended_story": "UIUX-P3-04",
-    "last_checkpoint": "2026-11-01T06:05:00Z",
+    "last_checkpoint": "2026-11-01T06:35:00Z",
     "last_session_id": "arena/3101062f-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
@@ -4068,8 +4068,8 @@
         "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-11-01T05:15:00Z",
-        "updated_at": "2026-11-01T06:05:00Z",
-        "completed_at": "2026-11-01T06:05:00Z",
+        "updated_at": "2026-11-01T06:35:00Z",
+        "completed_at": "2026-11-01T06:35:00Z",
         "owner_session": "arena/3101062f-m5-agent-studio",
         "commit_sha": "e7ff3d62e9b1291c32789c5014fc713e2357df57",
         "changed_files": [
@@ -4122,23 +4122,24 @@
           "Expiry is stated while the offer is live: the card counts down from the request (`expires in 9 min`, then seconds), one interval drives every live card and clears itself when the last one is gone, and an offer whose slot is gone reads `Expired — re-run the turn` with `Re-run the turn to reach the gate again` - not as a refusal, because nothing was refused. A decided card keeps its arguments: the resolved event carries only `{approval_id, decision, note, step}`, so the request is filed in `harnessApprovalRequests` when it is first drawn and the decided card is redrawn from it.",
           "The permissions surface (`#harnessGrantsModal`, opened by `#harnessPermissionBadge` in the session strip and by `Permissions & Revocations` in the session actions) lists what the session holds with tool, capability, canonical resource, limit, expiry, `issued_by` and note; the revocation rules that refuse matching actions; the history of grants that ended and how; and the approvals still waiting (with a link to the card) or expired. A failed read says it failed instead of drawing an empty session, a slow read is dropped when the reader has selected another session, and the badge says `No permissions` in words.",
           "Revoking is two steps and says what it does: that the grant stops, that a revocation rule refuses the capability on the scope for the rest of the session, that matching running commands are stopped too, and that neither can be undone from here. That last sentence is the one the story had to get right - the store permits issuing a fresh grant after a revocation (verified against the live API before this story), so only `check_revocation_denials()` stops the action, and the confirmation says so rather than offering an undo that does not exist.",
-          "The walk could not ask the API for an approval, because no route mints one: `_PENDING_APPROVALS` is in-process state written only when a running turn reaches the gate, and the demo has no runtime. `scripts/harness_permissions_seed.py` therefore boots the ordinary isolated demo environment and calls the app's own `_create_pending_tool_approval()` twice and lets one slot lapse the way the runtime does. The approvals, grants and events are the server's own records; only the arrival is staged, and the fixture says so in its own docstring."
+          "The walk could not ask the API for an approval, because no route mints one: `_PENDING_APPROVALS` is in-process state written only when a running turn reaches the gate, and the demo has no runtime. `scripts/harness_permissions_seed.py` therefore boots the ordinary isolated demo environment and calls the app's own `_create_pending_tool_approval()` twice and lets one slot lapse the way the runtime does. The approvals, grants and events are the server's own records; only the arrival is staged, and the fixture says so in its own docstring.",
+          "origin/main moved to 21108aa (#145, UIUX-P3-01's settings work) while this pull request was open, so the branch was merged with main and every generated artifact was re-derived on the merged tree rather than kept from either side; the four captures and both browser walks were re-run against the merged frontend, not carried over."
         ],
         "test_results": [
           {
             "command": ".venv/bin/python -m pytest -q",
             "exit_code": 0,
-            "result": "2084 passed, 26 skipped in 176.44s on the ledger tree; the same suite before the three dialog-count and sign-off fixes was 2081 passed with those three cases failing, which is how the count went from nine dialogs to ten"
+            "result": "2085 passed, 26 skipped in 178.94s on the merged ledger tree (origin/main 21108aa, the P3-01 work from #145, merged into this branch); before the three dialog-count and sign-off fixes the same suite was 2081 passed with those three cases failing, which is how the count went from nine dialogs to ten"
           },
           {
             "command": "LD_LIBRARY_PATH=/tmp:/tmp/chromium-libs/lib STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=/home/user/m5-agent-studio/tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js STUDIO_SCREENSHOT_CHROME_ARGS=\"--disable-gpu\" M5_REQUIRE_BROWSER_TESTS=1 .venv/bin/python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py",
             "exit_code": 0,
-            "result": "30 passed in 87.30s: the six-pane captures still validate, the overlay walk reports 80 passing and 2 blocked (the diff dialog and this story's permissions surface, both on the Harness-session prerequisite), and the seeded store is unchanged by the walks"
+            "result": "30 passed in 87.97s on the merged tree: the six-pane captures still validate, the overlay walk reports 80 passing and 2 blocked (the diff dialog and this story's permissions surface, both on the Harness-session prerequisite), and the seeded store is unchanged by the walks"
           },
           {
             "command": "STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=$PWD/tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js LD_LIBRARY_PATH=/tmp:/tmp/chromium-libs/lib node scripts/harness_permissions_walk.mjs --screenshots docs/media/harness-permissions",
             "exit_code": 0,
-            "result": "24/24 checks passed, 0 page errors, against scripts/harness_permissions_seed.py: the card's policy, capability, resource, limit and countdown; the expired card; a refusal recording no permission; approving recording exactly one; the surface's row, policy revision and expired offer; the two-step revoke; and the trajectory drawing approval/decision and security/grant_revoked"
+            "result": "24/24 checks passed, 0 page errors, re-run on the merged frontend and re-captured into docs/media/harness-permissions: the card's policy, capability, resource, limit and countdown; the expired card; a refusal recording no permission; approving recording exactly one; the surface's row, policy revision and expired offer; the two-step revoke; and the trajectory drawing approval/decision and security/grant_revoked"
           },
           {
             "command": ".venv/bin/python scripts/uiux_harness_permissions_inventory.py --check",
