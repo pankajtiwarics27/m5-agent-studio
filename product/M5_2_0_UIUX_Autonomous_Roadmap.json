@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 14,
+  "revision": 15,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,14 +102,14 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P2-04",
-    "next_recommended_story": "UIUX-P2-05",
-    "last_checkpoint": "2026-11-01T23:40:00Z",
-    "last_session_id": "arena/769ff32c-m5-agent-studio",
+    "last_completed_story": "UIUX-P2-05",
+    "next_recommended_story": "UIUX-P2-06",
+    "last_checkpoint": "2026-11-02T01:15:00Z",
+    "last_session_id": "arena/2b13611d-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "6689ce1dfb5713350c12d364abe99926fc7a7df2",
-    "last_updated": "2026-11-01",
+    "last_verified_commit": "d740018847d6b40c30bed0a693fdea892a33a178",
+    "last_updated": "2026-11-02",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
       "Tab labels in this ledger (Start, Harness, Council, Pipeline, Compare, Chat) are NOT the DOM ids in static/index.html (start, harness, hall, council, debate, chat): 'Council' is data-tab=hall and 'Pipeline' is data-tab=council, while data-tab=council is the Pipeline pane. tab_registry records the mapping and tests/test_uiux_roadmap.py fails if it drifts. A session that greps for a 'pipeline' tab will not find one.",
@@ -251,11 +251,11 @@
         "UIUX-P2-06"
       ],
       "total": 6,
-      "done": 4,
+      "done": 5,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 2,
-      "percent_complete": 67
+      "not_started": 1,
+      "percent_complete": 83
     },
     {
       "id": "P3",
@@ -339,11 +339,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 15,
+    "done": 16,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 25,
-    "percent_complete": 38
+    "not_started": 24,
+    "percent_complete": 40
   },
   "stories": [
     {
@@ -3140,8 +3140,8 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "Chat model context streaming and tool transparency with no loss of existing functionality.",
+      "current_behavior": "Before this story the transcript showed a reply and nothing about the request behind it: no model context, tool calls as a tinted box with 72 characters of JSON, and a streaming turn that said only \"streaming...\".",
+      "target_behavior": "Every answer prints the context it was sent, built once from the request's own values; every tool call prints a status word, its step, its time and its argument size with the whole arguments one disclosure below; and a streaming turn reports measured elapsed and first-token time, frozen when the stream ends.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
         "Trace relevant DOM, JS handlers, API and backend state transitions",
@@ -3183,24 +3183,143 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P2-05 (Chat model context streaming and tool transparency). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-01T23:40:00Z",
+        "updated_at": "2026-11-02T01:15:00Z",
+        "completed_at": "2026-11-02T01:15:00Z",
+        "owner_session": "arena/2b13611d-m5-agent-studio",
+        "commit_sha": "d740018847d6b40c30bed0a693fdea892a33a178",
+        "changed_files": [
+          "static/index.html",
+          "studio.py",
+          "scripts/uiux_chat_context_inventory.py",
+          "scripts/chat_context_walk.mjs",
+          "tests/test_chat_context.py",
+          "docs/uiux-2-0-chat-context.md",
+          "docs/uiux-2-0-program.md",
+          "docs/README.md",
+          "docs/media/chat/README.md",
+          "docs/media/chat/context-tools.png",
+          "docs/media/chat/streaming.png",
+          "docs/media/chat/sent-context.png",
+          "docs/media/chat/narrow-context.png",
+          "product/M5_2_0_UIUX_Chat_Context.json",
+          "product/M5_2_0_UIUX_Chat.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "A reply was the product of a request the pane never showed. #chatModel, #chatReasoning, the tools checkbox, the active skill set and the message list all went to POST /api/chat/stream, and none of it was printed, so \"why did it answer like that?\" had no answer in the pane. chatContextSnapshot() is now called once, when the request is built, stored on the turn as m.context, and printed as \"Context: model <id> · <persona> · reasoning <mode> · tools on (read-only)|tools off · N skills · N messages sent · <directory>\". Recomputing it at render time would describe the composer as it is now, not the request that went out, so the inventory fails on any chatContextSnapshot() call inside renderChatMessages().",
+          "Two different facts were being collapsed into one. The workspace field is usually empty, and the server then reads WORKSPACE_ROOT. Printing only what was sent would leave the reader guessing which directory the tools touched; printing only the effective one would hide that nothing was sent. The snapshot carries workspace (literally sent, possibly \"\") and workspace_effective (what the server will read), and the walk proves both: a written turn shows \"the configured default project directory\", and a real send records workspace \"/tmp/m5-demo-.../workspace\" -> reads the same path.",
+          "The line leads with the model because the turn header names the model that answered. They agree today; if the server ever falls back they would not, and the context line is the record of what was asked for.",
+          "A tool call was a border colour and 72 characters of JSON. app.py yields chat_tool with step, tool, args, ok, elapsed_ms and a preview capped at 500 characters; the pane drew a tinted box and JSON.stringify(t.args).slice(0,72), so the rest of the arguments was unreachable and a failed call looked like a slightly redder successful one. Each row now prints a status word (OK/FAILED) with a tone, data-tool-status, the tool, \"step N · N ms · N B of arguments\", and a disclosure holding the whole argument object and the output, labelled with the server cap.",
+          "The summary is the part a reader who opens nothing sees. \"2 tool calls · 1 failed · 127 ms\" is computed from the same list the rows are drawn from, so the count and the rows cannot disagree.",
+          "The streaming clock is measured and it stops. sendChatRequest() records timing.startedAt before the fetch and stamps firstTokenAt inside the token() handler; the finished turn freezes endedAt in done(). Before a token arrives the turn says \"waiting for the first token\" rather than a zero. There is no timer: the numbers are a snapshot per render, which is why they freeze instead of ticking, and the page says so.",
+          "Two rules the first draft got wrong, caught by the walk rather than by review. A turn drawn with no usage but no send flag read aria-busy=\"false\", so the transcript announced itself idle while an answer was arriving: busy now follows chatHistory.some(m => m.role === \"assistant\" && !m.usage) as well as the pane's own flag. And the context line omitted the model while claiming to record the request: the walk asserts the model appears before any other field.",
+          "The pane and the route are checked against each other. The inventory reads the chat_tool dict out of app.py and the preview cap, and fails if the pane reads a field the route does not send (tool.duration_ms, in the negative test), if the route stops sending elapsed_ms, or if the cap changes while the pane still says 500.",
+          "The walk writes what it cannot stream. This host has no model runtime, so scripts/chat_context_walk.mjs writes one turn of the shape sendChatRequest() builds - a passing and a failing tool call, both timings, a reasoning trace - and holds the pane against it byte for byte (arguments 45 B and 35 B, elapsed 120 ms and 7 ms, summary 127 ms), then shows a turn before its first token, then sends one real message and checks the context recorded on that turn against the composer it was sent from.",
+          "The four captures are the pipeline's, not hand-made: this environment has no system browser, so they were taken with Chromium 153 from the npm package @sparticuz/chromium (its al2023 NSS layer) driven by puppeteer-core 23, through scripts/chat_context_walk.mjs --screenshots docs/media/chat.",
+          "The acceptance criteria are the reviewer's call. This story records what was run and what was seen; the artifacts prove freshness, not owner review (issue #126 still reports historical-approval-unbound, which is the owner's to resolve)."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q (STUDIO_SCREENSHOT_CHROME + STUDIO_PUPPETEER_CORE set)",
+            "exit_code": 0,
+            "result": "1970 passed, 1 skipped (tests/test_live_sandbox.py: requires explicit live container-runtime opt-in)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest tests/test_chat_context.py -q",
+            "exit_code": 0,
+            "result": "43 passed - 22 positive rules, 21 negative tests that each break a copy of the markup or app.py and require the matching finding"
+          },
+          {
+            "command": ".venv/bin/python -m pytest tests/test_chat_composer.py -q",
+            "exit_code": 0,
+            "result": "38 passed (P2-04 rules unchanged)"
+          },
+          {
+            "command": ".venv/bin/python -m pytest tests/test_screenshot_capture_browser.py -q (browser env set)",
+            "exit_code": 0,
+            "result": "29 passed - the browser safety regressions still hold after the transcript changes"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_chat_context_inventory.py --check",
+            "exit_code": 0,
+            "result": "chat context OK: 8 context fields, 6 chat_tool fields, 0 findings"
+          },
+          {
+            "command": "node scripts/chat_context_walk.mjs --base-url http://127.0.0.1:54231 --token <demo token>",
+            "exit_code": 0,
+            "result": "19 of 19 checks passed (captures written to docs/media/chat)"
+          },
+          {
+            "command": "node scripts/chat_walk.mjs --base-url http://127.0.0.1:54231 --token <demo token>",
+            "exit_code": 0,
+            "result": "21 of 21 checks passed - the P2-04 walk still passes against the new transcript"
+          },
+          {
+            "command": "for f in scripts/uiux_*.py; .venv/bin/python \"$f\" --check",
+            "exit_code": 0,
+            "result": "all regenerate-and-check artifacts current; route map 54 call sites / 61 exact + 1 dynamic URLs, authorization trace 37 state-changing routes, sign-off 21 capabilities across 6 panes (historical-approval-unbound, issue #126)"
+          },
+          {
+            "command": ".venv/bin/ruff check . ; .venv/bin/mypy ; .venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "ruff clean, mypy Success: no issues found in 58 source files, JavaScript syntax OK (1 inline block(s))"
+          },
+          {
+            "command": ".venv/bin/python scripts/validate_docs.py ; scripts/demo_tour.py --check ; scripts/validate_screenshots.py ; scripts/validate_security_signoff.py",
+            "exit_code": 0,
+            "result": "5 required pages / 147 files; demo transcript current; 6 of 6 screenshots captured and consistent; security sign-off consistent (deferred, 12 boundaries, 7 findings)"
+          },
+          {
+            "command": ".venv/bin/python scripts/build_studio.py ; scripts/generate_roadmap_status.py --check",
+            "exit_code": 0,
+            "result": "studio.py 3,113,716 bytes; roadmap status current"
+          }
+        ],
+        "visual_evidence": [
+          {
+            "file": "docs/media/chat/context-tools.png",
+            "shows": "One answer with its context line, Reasoning Trace · 49 chars, 2 tool calls · 1 failed · 127 ms, an OK row and a FAILED row each with step, time and argument size, and 1.8s · first token 0.41s · 41.2 tok/s · 320 tok below the answer."
+          },
+          {
+            "file": "docs/media/chat/streaming.png",
+            "shows": "A turn in flight reading streaming… · 1.2s · waiting for the first token · 128 chars under its own context line, with the finished turn above it still showing its own frozen figures."
+          },
+          {
+            "file": "docs/media/chat/sent-context.png",
+            "shows": "A real send (say READY) answered by the scripted runtime, with the context recorded on that turn: model demo-local-model, the persona, and the workspace the server read."
+          },
+          {
+            "file": "docs/media/chat/narrow-context.png",
+            "shows": "The same surface at 900px: no horizontal overflow, the context line and tool rows intact."
+          }
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "The context is captured at send time and stored on the turn, not recomputed. A render-time snapshot is the defect, not a cheap alternative: it would describe the composer as it is now.",
+          "Two workspace fields instead of one sentence. What was sent and what will be read are different facts, and a line that prints only one of them is either misleading or empty.",
+          "The model leads the context line even though the header already names the model: the header names the model that answered, the line records the model that was asked, and a copied line has to stand on its own.",
+          "Status is a word with a tone, never a colour. Colour alone is not a status for a reader who cannot see it, and a failed call must not look like a successful one that is slightly redder.",
+          "The summary, not the disclosures, is the contract with a reader in a hurry: it counts calls, failures and milliseconds from the list the rows are drawn from.",
+          "The clock is measured and frozen, with no timer. A number that keeps moving without a render is invented, and a turn that keeps counting after its stream stopped is wrong; the page states that the figures freeze when nothing is arriving.",
+          "busy follows a turn without usage, not only the pane's send flag: the first draft announced an arriving answer as idle, which the walk caught.",
+          "The walk writes a turn for the tool cases and sends one real message. The demo has no model runtime, so the tool calls cannot be provoked; the written turn uses the same helpers and shape the live path uses, and the real send proves the context line on an actual request. The distinction is stated in the docs and the media README rather than blurred."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
-        "readme_updated": false
+        "handoff_note": "UIUX-P2-05 is complete and merged-ready: the Chat pane records and prints the context each reply was sent, tool calls carry a status word, their step, time and argument size with the whole arguments one disclosure below, and the streaming turn reports measured time to first token and freezes when it ends. Gates: 1970 passed / 1 skipped, 43 chat-context rules (22 positive, 21 negative), 19 walk checks, the P2-04 walk still 21/21, 29 browser regressions, every regenerated artifact current, ruff/mypy/frontend syntax clean, 4 captures in docs/media/chat. UIUX-P2-06 (Chat-to-Harness explicit handoff and recovery) is next and depends only on this story: it should carry the same discipline - the context and the tool arguments are already on the turn, so the handoff can hand over what actually happened (the model, the directory, the calls that failed) rather than a summary the pane invents, and the recovery surface must say what the Harness kept.",
+        "next_action": "Implement UIUX-P2-06: carry the Chat turn - its recorded context and its tool calls - into a Harness task, with an explicit handoff and a recovery path that says what was kept",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",

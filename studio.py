@@ -4046,6 +4046,16 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .chat-composer-hint[data-reason="no-model"], .chat-composer-hint[data-reason="runtime-offline"] { color: var(--amber); }
   .chat-composer-hint[data-reason="tools-readonly"] { color: var(--text-dim); }
   .chat-composer-hint code { font-family: var(--mono); font-size: 11px; color: var(--text); }
+  /* What the reply was given: one line, from the same values that built the request. */
+  .chat-context { font-size: 11.2px; color: var(--text-faint); margin: 0 0 8px; line-height: 1.5; }
+  .chat-context code { font-family: var(--mono); font-size: 10.8px; color: var(--text-dim); }
+  .chat-tools-summary { font-family: var(--mono); font-size: 10.8px; color: var(--text-dim); margin-bottom: 5px; }
+  .chat-tool-status { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.05em; border-radius: 4px; padding: 1px 5px; border: 1px solid var(--border-hi); color: var(--text-dim); }
+  .chat-tool-status[data-tone="ok"] { color: var(--emerald); border-color: var(--emerald); }
+  .chat-tool-status[data-tone="danger"] { color: var(--rose); border-color: var(--rose); }
+  .chat-tool-meta { color: var(--text-faint); font-weight: 400; }
+  .chat-tool-body { padding: 2px 0 4px; }
+  .chat-tool-label { font-family: var(--mono); font-size: 9.8px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); margin: 6px 0 2px; }
 
   /* Markdown */
   .md { font-size: 14px; line-height: 1.62; color: var(--text); word-wrap: break-word; }
@@ -8048,7 +8058,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         : `${chatHistory.length} message${chatHistory.length === 1 ? "" : "s"} · ${replies} repl${replies === 1 ? "y" : "ies"}`;
     }
     if (jump) jump.hidden = chatNearBottom(box);
-    if (box) box.setAttribute("aria-busy", chatBusy ? "true" : "false");
+    // Busy means a turn is still arriving, not merely that this pane sent one: a turn
+    // without usage is still streaming, whether or not the send flag is set.
+    const streaming = chatHistory.some(m => m.role === "assistant" && !m.usage);
+    if (box) box.setAttribute("aria-busy", chatBusy || streaming ? "true" : "false");
   }
 
   function jumpToLatestChatTurn() {
@@ -8062,6 +8075,89 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       last.focus({ preventScroll: true });
     }
     return box;
+  }
+
+  /* ── What the reply was given, and what it did ─────────────────────────────
+     A reply is the product of a request the reader cannot see: a persona, a reasoning
+     mode, tools on or off with a directory, the skills that were active, and however
+     many messages went with it. And when the model calls tools, the old transcript said
+     so with a border colour and a JSON blob cut off at 72 characters.
+
+     So each answer now records the context it was sent (`chatContextSnapshot()`, built
+     from the same helpers that build the request) and prints it on one line; each tool
+     call prints a status word, its step, its elapsed time and the size of its arguments,
+     with the arguments and the server's (500-character) output one disclosure below; and
+     while a reply streams the turn says how long it has been going and when the first
+     token arrived - measured, not guessed. */
+
+  function chatPersonaLabel() {
+    const sel = document.getElementById("chatPersona");
+    if (!sel || sel.selectedIndex < 0) return "persona";
+    const text = (sel.options[sel.selectedIndex].textContent || "").trim();
+    return text || "persona";
+  }
+
+  function chatContextSnapshot(model, messageCount, workspaceSent) {
+    return {
+      model,
+      persona: chatPersonaLabel(),
+      reasoning: (document.getElementById("chatReasoning") || {}).value || "off",
+      tools: chatToolsOn(),
+      // What was literally sent (possibly nothing) and what the server will read when
+      // nothing was sent. Two fields, because they are two different facts.
+      workspace: workspaceSent || "",
+      workspace_effective: workspaceSent || "the configured default project directory",
+      skills: selectedSkills.size,
+      messages: messageCount,
+    };
+  }
+
+  function chatContextLine(ctx) {
+    if (!ctx) return "";
+    // The request's model first: the header names the model that answered, which is not
+    // necessarily the one that was asked, and a copied line has to stand on its own.
+    const bits = [`model ${ctx.model}`, ctx.persona, `reasoning ${ctx.reasoning}`, ctx.tools ? "tools on (read-only)" : "tools off"];
+    if (ctx.skills) bits.push(`${ctx.skills} skill${ctx.skills === 1 ? "" : "s"}`);
+    bits.push(`${ctx.messages} message${ctx.messages === 1 ? "" : "s"} sent`);
+    bits.push(ctx.workspace_effective);
+    return bits.join(" · ");
+  }
+
+  function chatToolSummary(tools) {
+    const failed = tools.filter(t => !t.ok).length;
+    const ms = tools.reduce((sum, t) => sum + (Number(t.elapsed_ms) || 0), 0);
+    const calls = `${tools.length} tool call${tools.length === 1 ? "" : "s"}`;
+    return `${calls} · ${failed ? `${failed} failed` : "all ok"} · ${ms} ms`;
+  }
+
+  function renderChatTool(tool) {
+    // The status is a word, not a border colour: colour alone is not a status.
+    const status = tool.ok ? "OK" : "FAILED";
+    const args = JSON.stringify(tool.args || {}, null, 1);
+    const step = Number(tool.step) || 1;
+    const elapsed = Number(tool.elapsed_ms) || 0;
+    return `<details class="think-box chat-tool" data-tool-status="${tool.ok ? "ok" : "failed"}" style="margin:0;">`
+      + `<summary style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">`
+      + `<span class="chat-tool-status" data-tone="${tool.ok ? "ok" : "danger"}">${status}</span>`
+      + `<code>${escapeHtml(tool.tool)}</code>`
+      + `<span class="chat-tool-meta">step ${step} · ${elapsed} ms · ${args.length} B of arguments</span>`
+      + `</summary>`
+      + `<div class="chat-tool-body">`
+      + `<div class="chat-tool-label">Arguments</div><pre>${escapeHtml(args)}</pre>`
+      + `<div class="chat-tool-label">${tool.ok ? "Output" : "Error output"} (the server sends the first 500 characters)</div>`
+      + `<pre>${escapeHtml(tool.preview || "(no output)")}</pre>`
+      + `</div></details>`;
+  }
+
+  function chatStreamingMeta(m) {
+    // A snapshot taken at each render, not a ticking clock: the pane has no timer, and a
+    // number that silently freezes when the stream stalls would be worse than none.
+    const timing = m.timing || {};
+    const now = performance.now();
+    const elapsed = timing.startedAt ? (now - timing.startedAt) / 1000 : 0;
+    const ttft = timing.firstTokenAt && timing.startedAt ? (timing.firstTokenAt - timing.startedAt) / 1000 : null;
+    const chars = (m.content || "").length;
+    return `streaming… · ${elapsed.toFixed(1)}s · ${ttft === null ? "waiting for the first token" : `first token ${ttft.toFixed(2)}s`} · ${chars} chars`;
   }
 
   function renderChatMessages() {
@@ -8086,10 +8182,27 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       if (m.role === "user") {
         return `<div class="msg user" data-role="user">${head}${renderMarkdown(m.content)}</div>`;
       }
-      const think = m.reasoning ? `<details class="think-box" ${!m.content?'open':''}><summary>Reasoning Trace</summary><pre>${escapeHtml(m.reasoning)}</pre></details>` : "";
-      const toolsHtml = (m.tools && m.tools.length) ? `<div style="display:flex; flex-direction:column; gap:5px; margin-bottom:8px;">` + m.tools.map(t => `<details class="think-box" style="margin:0; border-color:${t.ok ? 'rgba(56,189,248,0.35)' : 'rgba(244,63,94,0.4)'};"><summary style="display:flex; align-items:center; gap:6px;">${t.ok ? UI_ICONS.check : UI_ICONS.warn} <code>${escapeHtml(t.tool)}</code> <span style="color:var(--text-faint); font-weight:400;">${escapeHtml(JSON.stringify(t.args || {})).slice(0, 72)} • ${t.elapsed_ms}ms</span></summary><pre>${escapeHtml(t.preview || '')}</pre></details>`).join("") + `</div>` : "";
-      const meta = m.usage ? `<div class="msg-meta"><span>${escapeHtml(m.model)}</span><span>•</span><span>${m.usage.decode_tps} tok/s</span><span>•</span><span>${m.usage.completion_tokens} tok</span></div>` : `<div class="msg-meta"><span>${escapeHtml(m.model)} • streaming...</span></div>`;
-      return `<div class="msg assistant" data-role="assistant"${streaming}>${head}${think}${toolsHtml}${renderMarkdown(m.content || ((m.reasoning || (m.tools && m.tools.length)) ? "" : "..."))}${meta}</div>`;
+      const contextLine = m.context ? chatContextLine(m.context) : "";
+      const context = contextLine
+        ? `<div class="chat-context" data-context="sent" title="${escapeHtml(contextLine)}">Context: ${escapeHtml(contextLine)}</div>`
+        : "";
+      const think = m.reasoning
+        ? `<details class="think-box" ${!m.content ? "open" : ""}><summary>Reasoning Trace · ${m.reasoning.length} chars</summary><pre>${escapeHtml(m.reasoning)}</pre></details>`
+        : "";
+      const toolsHtml = (m.tools && m.tools.length)
+        ? `<div class="chat-tools" style="display:flex; flex-direction:column; gap:5px; margin-bottom:8px;">`
+          + `<div class="chat-tools-summary">${chatToolSummary(m.tools)}</div>`
+          + m.tools.map(renderChatTool).join("")
+          + `</div>`
+        : "";
+      const meta = m.usage
+        ? `<div class="msg-meta">`
+          + `<span>${escapeHtml(m.model)}</span><span>•</span>`
+          + (m.timing && m.timing.startedAt ? `<span>${(((m.timing.endedAt || performance.now()) - m.timing.startedAt) / 1000).toFixed(1)}s</span><span>•</span>` : "")
+          + (m.timing && m.timing.firstTokenAt ? `<span>first token ${((m.timing.firstTokenAt - m.timing.startedAt) / 1000).toFixed(2)}s</span><span>•</span>` : "")
+          + `<span>${m.usage.decode_tps} tok/s</span><span>•</span><span>${m.usage.completion_tokens} tok</span></div>`
+        : `<div class="msg-meta"><span>${escapeHtml(m.model)}</span><span>•</span><span>${chatStreamingMeta(m)}</span></div>`;
+      return `<div class="msg assistant" data-role="assistant"${streaming}>${head}${context}${think}${toolsHtml}${renderMarkdown(m.content || ((m.reasoning || (m.tools && m.tools.length)) ? "" : "..."))}${meta}</div>`;
     }).join("");
     if (pinned) box.scrollTop = box.scrollHeight;
     updateChatTranscriptBar();
@@ -8141,23 +8254,46 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const workspaceDir = wsInput ? wsInput.value.trim() : "";
     chatHistory.push({ role: "user", content: text });
     const apiMessages = [{ role: "system", content: document.getElementById("chatPersona").value }, ...chatHistory.map(m => ({ role: m.role, content: m.content }))];
-    const asstMsg = { role: "assistant", model, content: "", reasoning: "", tools: [], usage: null };
+    // What this reply is being given, captured from the same values that build the
+    // request below - so the line in the transcript cannot describe a different request
+    // than the one that was sent.
+    const context = chatContextSnapshot(model, apiMessages.length, workspaceDir);
+    const asstMsg = {
+      role: "assistant",
+      model,
+      content: "",
+      reasoning: "",
+      tools: [],
+      usage: null,
+      context,
+      timing: { startedAt: performance.now(), firstTokenAt: null },
+    };
     chatHistory.push(asstMsg);
     chatBusy = true;
     renderChatMessages();
     consumeSSE("/api/chat/stream", {
       model,
       messages: apiMessages,
-      reasoning_mode: document.getElementById("chatReasoning").value,
+      reasoning_mode: context.reasoning,
       auto_unload: document.getElementById("chatUnload").checked,
       tools_enabled: toolsEnabled,
       workspace_dir: workspaceDir,
       skills: [...selectedSkills]
     }, {
-      token(d) { if (d.kind === "reasoning") asstMsg.reasoning += d.text; else asstMsg.content += d.text; renderChatMessages(); },
+      token(d) {
+        if (!asstMsg.timing.firstTokenAt) asstMsg.timing.firstTokenAt = performance.now();
+        if (d.kind === "reasoning") asstMsg.reasoning += d.text; else asstMsg.content += d.text;
+        renderChatMessages();
+      },
       step_clean(d) { asstMsg.content = d.content || ""; renderChatMessages(); },
       chat_tool(d) { asstMsg.tools.push(d); renderChatMessages(); },
-      done(d) { asstMsg.usage = d.usage; renderChatMessages(); },
+      done(d) {
+        asstMsg.usage = d.usage;
+        // Freeze the clock: the turn took this long, and a later re-render must not
+        // keep counting seconds after the stream has stopped.
+        asstMsg.timing.endedAt = performance.now();
+        renderChatMessages();
+      },
       error(d) {
         // Roll back the empty placeholder so Retry re-sends one message, not two.
         if (!asstMsg.content.trim()) {

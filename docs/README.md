@@ -137,6 +137,7 @@ measurements without trusting them).
 · [`uiux-2-0-recent-work.md`](uiux-2-0-recent-work.md) (generated P2-02 Start layer: recent Harness sessions as buttons, every run state toned, and a task handoff that runs nothing)
 · [`uiux-2-0-start-health.md`](uiux-2-0-start-health.md) (generated P2-03 Start layer: four health rows from the payload the monitor rail fetched, the demo payload labelled unverified rather than trusted, and one workspace setting written through the Harness's own route)
 · [`uiux-2-0-chat.md`](uiux-2-0-chat.md) (generated P2-04 Chat layer: every turn labelled with its role, number and model, a transcript that follows the reader instead of the stream, and a composer that says what Send will do)
+· [`uiux-2-0-chat-context.md`](uiux-2-0-chat-context.md) (generated P2-05 Chat layer: the context every reply was sent printed on it, tool calls with a status word, a step, a time and their whole arguments, and a streaming clock that is measured rather than guessed)
 · [`../M5_2_0_UIUX_AGENT_PROMPT.md`](../M5_2_0_UIUX_AGENT_PROMPT.md) (UI/UX claim, review and merge protocol)
 · [`uiux-2-0-coordination.md`](uiux-2-0-coordination.md) (read-only readiness check, current handoff and capture risks)
 · [`uiux-coordination-ledger-drift-followup.md`](uiux-coordination-ledger-drift-followup.md) (reconciled UI/UX phase summaries and status-walk token-exposure follow-up)
