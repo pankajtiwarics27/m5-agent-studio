@@ -2949,7 +2949,7 @@
         "progress_percent": 95,
         "attempts": 1,
         "started_at": "2026-11-01T02:09:19Z",
-        "updated_at": "2026-11-01T03:03:35Z",
+        "updated_at": "2026-11-01T03:07:49Z",
         "completed_at": null,
         "owner_session": "arena/de531f8c-m5-agent-studio",
         "commit_sha": null,
@@ -3043,7 +3043,12 @@
           {
             "command": "GitHub Actions CI run 41267248951 for draft PR #141",
             "exit_code": 1,
-            "result": "Python 3.11, 3.12 and 3.13 jobs passed; Browser safety regressions failed at the browser-backed step. Hosted log retrieval returned EOF, so root cause is unknown. The mandatory browser command was run locally with scripts.browser_ci_no_skips and passed 30 tests. Keep the story in progress until the hosted browser check is diagnosed or passes."
+            "result": "Python 3.11/3.12/3.13 jobs passed; Browser safety regressions failed and hosted log retrieval returned EOF, so that run’s root cause is unknown. This failure was superseded by clean run 41267654582, where every job including Browser safety passed."
+          },
+          {
+            "command": "GitHub Actions CI run 41267654582 for draft PR #141",
+            "exit_code": 0,
+            "result": "All four jobs passed: Python 3.11, 3.12, 3.13 and Browser safety regressions. Browser suite completed in 1m51s; all CI validations, tests and generated-artifact checks passed."
           }
         ],
         "visual_evidence": [
@@ -3060,11 +3065,9 @@
           "Represent cancellation as a visible stopped transcript state, stream/network failures as failed plus the existing retry/dismiss presentation, and an unexpected clean close as an error; retain partial output where present.",
           "Make retry reuse the existing user turn rather than duplicating it; preserve the user's selected model/persona/reasoning and existing tools/unload controls."
         ],
-        "blockers": [
-          "GitHub Actions Browser safety regressions failed in run 41267248951; hosted logs could not be retrieved (EOF). Local mandatory browser suite passes 30 tests, but the hosted result remains unresolved and must not be bypassed."
-        ],
-        "handoff_note": "Implementation and measured evidence are in draft PR #141. P2-04 deliberately remains in_progress; no owner approval or completion is claimed. Resolve the failed hosted Browser safety regressions check before advancing; await review and address requested changes.",
-        "next_action": "Diagnose or obtain a clean GitHub Actions Browser safety regressions run for draft PR #141, then await owner/reviewer feedback. Do not merge, bypass checks, mark done or imply approval.",
+        "blockers": [],
+        "handoff_note": "Implementation and measured evidence are in draft PR #141. The latest GitHub Actions run (41267654582) passed all jobs, including Browser safety. P2-04 deliberately remains in_progress at 95% pending owner/reviewer acceptance; no approval or completion is claimed.",
+        "next_action": "Await owner/reviewer feedback on draft PR #141 and address requested changes. Keep the story in_progress until acceptance is recorded; do not imply owner approval.",
         "readme_updated": false
       },
       "required_evidence": [
