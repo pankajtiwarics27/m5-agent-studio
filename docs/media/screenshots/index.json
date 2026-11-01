@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "captured_at": "2026-11-01T05:15:45.966Z",
+  "captured_at": "2026-11-01T05:22:48.801Z",
   "viewport": {
     "width": 1440,
     "height": 900,
@@ -15,15 +15,15 @@
       "id": "start",
       "tab": "start",
       "file": "start.png",
-      "bytes": 475541,
-      "sha256": "2d33abadb0069f83826a32b8b7dfc97d8ed75de5dafc6fb1b300cc30b564c939"
+      "bytes": 474671,
+      "sha256": "3798ed6604d66e95835cdc25693aaebef224e97695627fbcca4591ee28ce81a9"
     },
     {
       "id": "harness",
       "tab": "harness",
       "file": "harness.png",
-      "bytes": 513663,
-      "sha256": "0faf862f464b5a0b1540d1ac05c75927c3f2a397b97197545b882ecea0c10ff5"
+      "bytes": 512740,
+      "sha256": "716215aa41fcea2332243ceef7b708237beaa32fc389eb835004a1a6c86d792d"
     },
     {
       "id": "hall",

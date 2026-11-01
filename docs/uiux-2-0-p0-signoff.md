@@ -8,7 +8,7 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 178 markup controls (101 chrome, 77 panes) · 30 rendered by script.
+* 6 panes · 21 preserved capabilities · 182 markup controls (101 chrome, 81 panes) · 31 rendered by script.
 * 115 routes exist, 57 with a resolved or possible caller, 58 with none observed and 0 unknown due to unresolved edges; 37 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
@@ -28,7 +28,7 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 178 markup controls (101 chrome, 77 panes) plus 30 rendered by script |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 182 markup controls (101 chrome, 81 panes) plus 31 rendered by script |
 | 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 115 routes exist; 57 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 37 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
@@ -101,7 +101,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | compaction | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | GSD and SDLC | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 
-**Controls — 17 in the markup:**
+**Controls — 21 in the markup:**
 
 | Tag | Id | Label | Handler |
 |---|---|---|---|
@@ -119,18 +119,25 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | select | harnessMaxSteps | 6 steps 10 steps 16 steps 24 steps | — |
 | select | harnessSessionActionSelect | Session Actions… Inspect Git Status & Diff Compact Session Context (≤2 KB) Open Agile SDLC Product Board | — |
 | button | harnessAbortBtn | Abort | abortHarnessRun() |
+| button | harnessTimelineToggle | Session log | toggleHarnessTimeline() |
+| button | harnessTimelineJump | Jump to latest ↓ | jumpToLatestHarnessEvent() |
+| button | harnessTimelineReplay | Replay log | replayHarnessLog() |
+| button | harnessTimelineResync | Resync | harnessResyncFromSnapshot('operator') |
 | textarea | harnessPromptInput | — | — |
 | select | harnessWorkflowMode | Autonomous Turn (Step Loop) Plan, Build, Verify (GSD 3-Wave) Agile SDLC Factory (Full Build) Agile SDLC Board & Backlog… | — |
 | button | harnessRunBtn | Run | executeHarnessSelectedWorkflow() |
 
-**Routes reached from this pane's controls — 9, walking at most 2 calls; 6 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
+**Routes reached from this pane's controls — 12, walking at most 2 calls; 6 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
 
 | Method | Route | Certainty | State-changing | Walk | Gates that can refuse it |
 |---|---|---|---|---|---|
 | DELETE | `/api/harness/sessions/{session_id}` | certain | yes | `startFreshHarnessDraft` → `renderHarnessSidebar` → `deleteHarnessSession` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | GET | `/api/harness/sessions` | certain | no | `executeHarnessSelectedWorkflow` → `runGsdWaveTurn` → `loadHarnessSessions` | — |
 | GET | `/api/harness/sessions/{session_id}` | certain | no | `startFreshHarnessDraft` → `renderHarnessSidebar` → `selectHarnessSession` | — |
+| GET | `/api/harness/sessions/{session_id}/events` | certain | no | `harnessResyncFromSnapshot` → `loadHarnessEvents` → `harnessFetchEventPage` | — |
+| GET | `/api/harness/sessions/{session_id}/events/stream` | certain | no | `harnessResyncFromSnapshot` → `scheduleHarnessEventStreamRetry` → `openHarnessEventStream` | — |
 | GET | `/api/harness/sessions/{session_id}/sdlc` | certain | no | `executeHarnessSelectedWorkflow` → `openSdlcModal` → `refreshSdlcBoard` | — |
+| GET | `/api/harness/sessions/{session_id}/state` | certain | no | `harnessResyncFromSnapshot` | — |
 | POST | `/api/harness/abort/{session_id}` | certain | yes | `abortHarnessRun` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | POST | `/api/harness/approve` | certain | yes | `executeHarnessSelectedWorkflow` → `runHarnessTurn` → `resolveHarnessApproval` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | POST | `/api/harness/gsd-wave` | certain | yes | `executeHarnessSelectedWorkflow` → `runGsdWaveTurn` → `consumeSSE` | `host_allowlist`, `origin_check`, `bearer_token`, `rate_limit`, `body_size_limit` |
@@ -345,14 +352,14 @@ provenance; a matching snapshot cannot clear separate review holds.
 
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
-| `ledger_content_sha256` | `1170c36ab18ae199ce5153cb54172bcfc0fca9cecd7932d4c6c79fee30fa62db` | `not recorded` |
-| `source_manifest_sha256` | `bcded52e8dacf48aa5b03edcbf1614d49fb385d5013a5eb7ed396b08b6879295` | `not recorded` |
-| `control_inventory_sha256` | `a5e55565195fbbf7f1d3a0b421d0e0d395d3dbb6f6408edbf730d680d2ae2a48` | `not recorded` |
-| `route_map_sha256` | `206d067b619b5b2423a4e5dcb7159c8acd790860f2e8a66c300967decd099e1e` | `not recorded` |
-| `authorization_trace_sha256` | `fbc054f21549eff61b3179a9b70b67c1f9511f90928c156958a6b218628a5af0` | `not recorded` |
-| `frontend_sha256` | `025aea0d33f075116e2660b9936a3f42305f97b2ff1dcf6a76415890ce0a5a02` | `not recorded` |
+| `ledger_content_sha256` | `038f27bdcb52dc65b5d414096f17fe1d9e93068f59ca7dcab5d4cdf71803360c` | `not recorded` |
+| `source_manifest_sha256` | `2be11bcb238c1db91e0d68088d98b01ca90897c37ba80933b88e599ecef5531c` | `not recorded` |
+| `control_inventory_sha256` | `5b0f8c9cb075cd77256fc84ac3045ed0798fdeb3f45d2be708cca81b4282e3f4` | `not recorded` |
+| `route_map_sha256` | `626bdd45bb1b9871f28bb5181bdb77578c6f7eb427476a91d9ce18afdbc09149` | `not recorded` |
+| `authorization_trace_sha256` | `461d91b9aabb2969224b827b41f1dc3f5a64cc283b14719faa623e89f1bd21f2` | `not recorded` |
+| `frontend_sha256` | `36d01245ff34319ff671c1e3cac1cfaf2d34ed4e3042537c79bec2f0a7942713` | `not recorded` |
 | `screenshot_manifest_sha256` | `cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57` | `not recorded` |
-| `screenshot_index_sha256` | `465a88dc9a1c8a8ca58a35200c5bfb83ca51d378606597588f1f325b9aca3313` | `not recorded` |
+| `screenshot_index_sha256` | `82ecdeb4870961951b1b8946a657438d2a3893f443e5fe182f3372ed41784f07` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |
 | `route_map_generator_sha256` | `923981fc78ff0f844e67691bfa966963f3959be1b9650eaf49f3b58b0a14d555` | `not recorded` |
 
