@@ -125,6 +125,7 @@ measurements without trusting them).
 · [`uiux-2-0-control-inventory.md`](uiux-2-0-control-inventory.md) (generated inventory of every control in the six panes and the shared chrome)
 · [`uiux-2-0-route-map.md`](uiux-2-0-route-map.md) (generated map of every frontend fetch call to the route it hits)
 · [`uiux-2-0-authorization-trace.md`](uiux-2-0-authorization-trace.md) (generated trace of what can refuse each state-changing call, and what state it touches)
+· [`uiux-2-0-pipeline-artifacts.md`](uiux-2-0-pipeline-artifacts.md) (generated P3-06 Pipeline layer: each stage card states what its seat was handed and what it produced - the upstream characters, the seat it feeds, its own chars/tokens/tok-s, and "produced nothing" when it did - and one live run line says how many seats finished, how much output the run produced, how many handoffs carried content, and whether the server saved it at all; a stopped pipeline is never given a run id)
 · [`uiux-2-0-baseline-evidence.md`](uiux-2-0-baseline-evidence.md) (measured baseline: suite results with exit codes, and the capture plan that needs a browser)
 · [`uiux-2-0-p0-signoff.md`](uiux-2-0-p0-signoff.md) (generated P0-06 package: what must be preserved, controls, routes, boundary and rollback — approved by the owner 2026-10-31)
 · [`uiux-2-0-tokens.md`](uiux-2-0-tokens.md) (generated P1-01 token layer: the values P1 builds on, with themes, density and measured contrast)
