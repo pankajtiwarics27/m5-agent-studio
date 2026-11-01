@@ -3440,7 +3440,9 @@
           "docs/uiux-2-0-status-and-evidence.md",
           "docs/uiux-2-0-overlays.md",
           "docs/uiux-2-0-p0-signoff.md",
-          "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
+          ".github/workflows/ci.yml",
+          "tests/browser/accessibility_walk.mjs"
         ],
         "evidence": [
           "There was no crossing between Chat and the Harness. A conversation that turned into work had to be retyped, and the record of what the model was told, which tools ran and which failed stayed in the pane that is least able to act on it. The Chat transcript bar now carries one control - Open in Harness - whose sentence and disabled state come from a single predicate, chatHandoffReason(), exactly as chatSendReason() does for Send.",
@@ -3452,6 +3454,7 @@
           "The failure path is reachable and honest. The walk removes #harnessPromptInput from the page, presses the button, and gets an error named \"The handoff did not happen\" with its cause, the line that the conversation and its tool calls are untouched, and Retry / Dismiss; restoring the composer and pressing Retry performs the handoff. Nothing is cleared and no state is invented.",
           "The sentence was shortened to fit one line: the first wording ran to 130 characters and was ellipsized in the bar at 1440px, which is a status line nobody finishes. It now reads \"Carries 2 messages (1 reply) and 10 tool calls (1 failed) to the Harness; nothing runs there.\" and the walk asserts it fits on one line at 900px.",
           "A P1-05 negative test had silently stopped being a hole. test_a_raw_writer_in_a_converted_handler_is_caught injected its raw writer after the bare substring `    clearPresentation(\"chatState\");`, and the new Back to Chat action contains that string at a deeper indent, so str.replace put the injection inside handOffChatToHarness - not a wired handler - and the rule had nothing to report. The test is now anchored inside sendChatRequest with a text.count(marker) == 1 guard, which is the general lesson: a negative test must prove where it landed, not just that it changed something.",
+          "The browser job failed twice on this pull request while the same 29 tests passed locally with the job's own pinned stack (@sparticuz/chromium 153.0.0, puppeteer-core 25.16.0, M5_REQUIRE_BROWSER_TESTS=1, scripts.browser_ci_no_skips). The job ran pytest straight to the log, so the check said only \"Process completed with exit code 1\" and the log was not reachable from here; the step now echoes FAILED/ERROR lines as check annotations, as the test job already does, and the next run named it: test_real_isolated_demo_captures_all_six_panes, \"Ctrl+K opens a modal command palette with an accessible combobox failed: {... focus: themeToggleBtn ...}\". openOverlay() focuses in the frame after the class lands - deliberately, since a display:none element cannot take focus - and the walk read activeElement the instant .open appeared. The walk now waits for the focus to land and still reports the real focus when it does not; the product's deferred focus was right and did not change.",
           "The acceptance criteria are the reviewer's call. This story records what was run and what was seen; the artifacts prove freshness, not owner review (issue #126 still reports historical-approval-unbound, which is the owner's to resolve)."
         ],
         "test_results": [
@@ -3509,6 +3512,11 @@
             "command": ".venv/bin/python scripts/build_studio.py",
             "exit_code": 0,
             "result": "studio.py 3,123,146 bytes"
+          },
+          {
+            "command": "CI: Browser safety regressions (GitHub Actions, run 41271376533)",
+            "exit_code": 0,
+            "result": "pass after the accessibility walk waits for the palette focus; the same run's test (3.11/3.12/3.13) jobs all pass"
           }
         ],
         "visual_evidence": [
@@ -3538,7 +3546,8 @@
           "The pane marks what it handed over and resets the mark on Clear, Undo and failure. A sentence that says \"already in the composer\" must be backed by a fact the pane can still check.",
           "A handoff that cannot happen keeps everything and offers Retry; a handoff that happens leaves a receipt with the counts and a way back that focuses the composer unconditionally.",
           "No server route was added. The inventory fails on one, because a route would turn a local carry into a request and put the conversation on the wire before a human chose anything.",
-          "The four captures come from the walk, through Chromium 153 from @sparticuz/chromium and puppeteer-core 23, because this host has no system browser."
+          "The four captures come from the walk, through Chromium 153 from @sparticuz/chromium and puppeteer-core 23, because this host has no system browser.",
+          "The browser failure was a race in the walk, not in the pane: openOverlay() defers focus by one frame on purpose, and the check sampled focus in the same instant the class landed. The walk waits; the product behaviour is unchanged."
         ],
         "blockers": [],
         "handoff_note": "UIUX-P2-06 is complete: Chat carries a conversation - task, counts, recorded context and every tool call - into the Harness composer and stops there, leaves a receipt with a way back, remembers what it handed over, and presents an error that keeps everything when the composer is missing. Gates: 2000 passed / 1 skipped, 30 handoff rules (15 of them negative), 16 walk checks, the P2-04 and P2-05 walks still green at 21 and 19, every regenerated artifact current, ruff/mypy/frontend syntax clean, 4 captures in docs/media/chat. That closes phase P2 (Start and Chat, 6 of 6) and the program stands at 17 of 40. UIUX-P3-01 (Harness task creation and settings hierarchy) is next: the Harness is the pane that now receives work from Chat, and it is the one pane the program has not redesigned - its task creation, its settings hierarchy and its relationship to the brief that arrives from Chat are the natural first story of P3.",
