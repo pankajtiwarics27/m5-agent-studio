@@ -472,8 +472,11 @@ def test_real_isolated_demo_captures_all_six_panes(
         assert overlays.returncode == 0, overlays.stderr
         overlay_result = json.loads(overlays.stdout)
         assert overlay_result["failed"] == 0
-        assert overlay_result["passed"] == 78
-        assert overlay_result["blocked"] == 1
+        # The tenth dialog (UIUX-P3-03's permissions surface) adds two checks. It is
+        # blocked for the same reason the diff dialog is: its only control is a badge the
+        # pane hides until a Harness session is selected, and the walk opens no session.
+        assert overlay_result["passed"] == 80
+        assert overlay_result["blocked"] == 2
         assert banner["token"] not in overlays.stdout + overlays.stderr
         assert sentinel.read_bytes() == before
         assert [p for p in store.rglob("*") if p.is_file()] == [sentinel]
