@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 17,
+  "revision": 18,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,13 +102,13 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P3-01",
-    "next_recommended_story": "UIUX-P3-02",
-    "last_checkpoint": "2026-11-01T04:45:00Z",
-    "last_session_id": "arena/213dcf55-m5-agent-studio",
+    "last_completed_story": "UIUX-P3-02",
+    "next_recommended_story": "UIUX-P3-03",
+    "last_checkpoint": "2026-11-01T05:05:00Z",
+    "last_session_id": "arena/a1225fc9-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "32fb0e49e934a9a43407cf110619ba073f319c4d",
+    "last_verified_commit": "c5b5219069f4f79f1bf9016fbf137739da7e77b8",
     "last_updated": "2026-11-01",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -273,11 +273,11 @@
         "UIUX-P3-07"
       ],
       "total": 7,
-      "done": 1,
+      "done": 2,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 6,
-      "percent_complete": 14
+      "not_started": 5,
+      "percent_complete": 29
     },
     {
       "id": "P4",
@@ -340,11 +340,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 18,
+    "done": 19,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 22,
-    "percent_complete": 45
+    "not_started": 21,
+    "percent_complete": 48
   },
   "stories": [
     {
@@ -3818,8 +3818,8 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "Harness durable timeline and event replay with no loss of existing functionality.",
+      "current_behavior": "The server has always written a durable event log and served it from a cursor, and the pane kept it to itself. Its trajectory renderer had a card for 18 of the 43 event types app.py emits and returned an empty string for the other 25 - session/init (so every session began blank), all seven security/* types (so a policy change left no trace) and the whole edit/*, delegation/*, handoff/* and mcp/* families - so a session with a real log drew an empty trajectory. renderStoredHarnessEvents() rewrote the whole transcript on every frame and then set scrollTop = scrollHeight, pulling a reader who had scrolled up back to the bottom, and nothing stated the cursor, how many events were held, or whether the view came from the stream, a re-read or a snapshot. Resync existed but only as a toast.",
+      "target_behavior": "The trajectory states what it is a view of, and a reader can rebuild it from the record. A strip above the trajectory states the count, the seq range, the cursor and how the view was filled (following the stream, a page read, a snapshot the log would not resume from), and opens into one row per held event, oldest first, each row a button that brings its card into view and marks it. Every retained event draws, so the cards a reader counts equal the events the log holds. Replay re-reads the log from its first retained event and rebuilds the view from it, refusing to report success on a gap. A frame that lands while the reader is scrolled up does not move them and does not shut the cards they opened; Jump to latest, offered only when they are away from the newest event, is the only control that scrolls them.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
         "Trace relevant DOM, JS handlers, API and backend state transitions",
@@ -3861,24 +3861,133 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P3-02 (Harness durable timeline and event replay). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-01T04:50:00Z",
+        "updated_at": "2026-11-01T05:05:00Z",
+        "completed_at": "2026-11-01T05:05:00Z",
+        "owner_session": "arena/a1225fc9-m5-agent-studio",
+        "commit_sha": "c5b5219069f4f79f1bf9016fbf137739da7e77b8",
+        "changed_files": [
+          "static/index.html",
+          "studio.py",
+          "scripts/uiux_harness_timeline_inventory.py",
+          "scripts/harness_timeline_walk.mjs",
+          "tests/test_harness_timeline.py",
+          "docs/uiux-2-0-harness-timeline.md",
+          "docs/media/harness-timeline/README.md",
+          "docs/media/harness-timeline/log-open.png",
+          "docs/media/harness-timeline/replayed.png",
+          "docs/media/harness-timeline/pruned.png",
+          "docs/media/harness-timeline/short-window.png",
+          "product/M5_2_0_UIUX_Harness_Timeline.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-tokens.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-presentations.md",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+        ],
+        "evidence": [
+          "The pane dropped 25 of the 43 event types app.py emits, and the walk proves it in a browser: a session created through POST /api/harness/sessions (which makes the server append session/init) drew an empty trajectory before this story and now draws a card - `every held event draws a card, so session/init is no longer a blank trajectory - cards=1 held=1`. The counts are the server's: `harness_timeline_inventory.py` parses the types out of the _append_harness_event/_safe_append_harness_event call sites (43) and out of the renderer (18 with a card), and 18 + 25 = 43 with no type left in between.",
+          "`renderStoredHarnessEventHtml()` now ends in `renderRecordedHarnessEventHtml(ev)`, so a type with no card arrives as a compact line read from the event (`session/init  standard policy · direct /tmp/... · lead Qwen3.8-27B`, `security/policy_revision  standard -> plan (revision 2)`, `edit/applied  applied · src/app.py`). The inventory fails on `renderer_ends_in_the_fallback`, on any `return \"\"` in the renderer, and on a card for a type nothing emits (`no_dead_branches`) - a dead branch is a card no event can reach.",
+          "The strip states what the trajectory is: `following the log from seq 13 · 13 events held · replayed 3 times` while the stream fills it, `1 event held, seq 1-1 · cursor 1 of 1` after a page read with the stream closed, `the log did not resume (events_pruned), so this view is the snapshot's: task state and 9 events, seq 5-13` when the fallback fired, and `· 4 earlier events pruned, retained from seq 5 · this view holds 9 of the 13 events last reported` for a pruned or incomplete view. Every one of those sentences is produced by harnessLogState() from the log it holds and the last page it read, not from prose; the walk reads each one out of the DOM.",
+          "The reader's place survives a frame. `harnessStreamNearBottom()` (28px slack, the chat transcript's rule) is consulted once before the transcript is rewritten: a pinned view follows, and a reading view keeps its `scrollTop` and its open `<details>` cards - the walk scrolls to 0, replays, and reads `scrollTop 0 -> 0`. Jump to latest is drawn only when the reader is away from the newest event (`hidden at bottom=true shown when up=true`), and pressing it is what returns them (`hidden after=true atBottom=true`). The walk asks the browser for pixels, not for the `hidden` property, because `.btn` sets its own display and had made the first version of the button always visible.",
+          "Replay rebuilds from the record: `replayHarnessLog()` empties the cache, re-reads the log from its first retained event and re-renders from what came back - `before=13 after=13 cards=13`, twice, with `replayed 1 time` then `replayed 2 times`, so a replay is countable and a duplicate is impossible (the seq-keyed merge is untouched). A replay that hits a gap does not pretend: it records the reason, says so, and resyncs the authoritative snapshot instead.",
+          "The engine underneath is unchanged: the six gap reasons (no_page, snapshot_required, cursor_ahead, events_pruned, sequence_gap, missing_events), seq-deduplication, the cursor, snapshot_required handling, the pruned-history notice, the three stream frames (task_event, resync_required, stream_error) and the resync path that re-reads /state and re-anchors the stream all still work, and the inventory fails if any of them goes. No endpoint was added: the strip reads the four routes the pane already had.",
+          "The strip is capped at 45% of the pane and its list at min(168px, 22vh), and it does not shrink away: at 1440x560 the walk measures the strip keeping its line and the trajectory keeping its floor. The hidden Jump button is not drawn either - a `[hidden]` rule for `.btn` inside the strip, because `.btn`'s own display beat the UA rule and the first build showed a control that was not offered."
+        ],
+        "test_results": [
+          {
+            "command": ".venv/bin/python -m pytest -q",
+            "exit_code": 0,
+            "result": "2049 passed, 26 skipped in 163.15s on the ledger tree; the same suite on the feature commit c5b5219 was 2046 passed with the three tests/test_uiux_preservation_signoff.py cases failing until that package was regenerated for this tree"
+          },
+          {
+            "command": "LD_LIBRARY_PATH=/tmp:/tmp/chromium-libs/lib STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=/home/user/m5-agent-studio/tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js STUDIO_SCREENSHOT_CHROME_ARGS=\"--disable-gpu\" M5_REQUIRE_BROWSER_TESTS=1 .venv/bin/python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py",
+            "exit_code": 0,
+            "result": "30 passed in 87.30s: the six-pane captures and the keyboard/accessibility walk still pass with the changed frontend, and the committed screenshots were not rewritten by the run"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q tests/test_harness_timeline.py",
+            "exit_code": 0,
+            "result": "27 passed (8 of them negative: each rule broken in a copy of the source)"
+          },
+          {
+            "command": "LD_LIBRARY_PATH=/tmp/chromium-libs/lib STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=tests/browser/node_modules/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js STUDIO_SCREENSHOT_CHROME_ARGS=\"--no-zygote --single-process --disable-gpu\" node scripts/harness_timeline_walk.mjs --base-url http://127.0.0.1:8902 --token <demo> --screenshots docs/media/harness-timeline",
+            "exit_code": 0,
+            "result": "21 of 21 checks passed, 0 page errors, four captures written (on @sparticuz/chromium 153.0.0 + puppeteer-core 25.16.0, against `scripts/demo_tour.py --serve`)"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_harness_timeline_inventory.py --check",
+            "exit_code": 0,
+            "result": "harness timeline OK: 81 checks, 43 event types, 0 findings"
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_control_inventory.py && .venv/bin/python scripts/uiux_route_map.py && .venv/bin/python scripts/uiux_authorization_trace.py && .venv/bin/python scripts/uiux_tokens.py && .venv/bin/python scripts/uiux_status_components.py && .venv/bin/python scripts/uiux_overlay_inventory.py && .venv/bin/python scripts/uiux_onboarding_inventory.py && .venv/bin/python scripts/uiux_presentation_inventory.py && .venv/bin/python scripts/uiux_source_manifest.py",
+            "exit_code": 0,
+            "result": "All regenerated for the changed frontend and every --check clean afterwards (182 markup controls, 54 route call sites, 37 authorization traces, 45 tokens, 10 status states, 9 dialogs, 13 onboarding cases, 12 presentations, 48 source files)"
+          },
+          {
+            "command": ".venv/bin/python -m ruff check . && .venv/bin/python -m mypy && .venv/bin/python scripts/check_frontend_syntax.py",
+            "exit_code": 0,
+            "result": "ruff: all checks passed; mypy: no issues in 58 source files; frontend syntax OK (1 inline block)"
+          },
+          {
+            "command": ".venv/bin/python scripts/verify_baseline.py && .venv/bin/python scripts/validate_docs.py && .venv/bin/python scripts/validate_screenshots.py && .venv/bin/python scripts/demo_tour.py --check && .venv/bin/python scripts/generate_roadmap_status.py --check",
+            "exit_code": 0,
+            "result": "Baseline verified at 7904892d7; docs 153 files scanned; screenshots 6 of 6; demo transcript up to date; roadmap dashboard up to date"
+          },
+          {
+            "command": ".venv/bin/python scripts/build_studio.py",
+            "exit_code": 0,
+            "result": "Built studio.py: 3,164,350 bytes"
+          }
+        ],
+        "visual_evidence": [
+          {
+            "file": "docs/media/harness-timeline/log-open.png",
+            "shows": "The Harness at 1440x900 with a newly created session: the Session log strip saying `1 event held, seq 1-1 · cursor 1 of 1`, opened to its single row `#1 session/init · standard policy · direct /tmp/m5-demo-.../workspace · lead Qwen3.8-27B`, and below it the card that row points at - the session that used to draw an empty trajectory."
+          },
+          {
+            "file": "docs/media/harness-timeline/replayed.png",
+            "shows": "The same session after twelve policy changes: `13 events`, `following the log from seq 13 · 13 events held · replayed 3 times`, rows #1 session/init, #2 standard -> plan (revision 2), #3 plan -> autonomous (revision 3)..., Replay and Resync in the bar, and the recorded-event cards in the trajectory matching the rows one for one."
+          },
+          {
+            "file": "docs/media/harness-timeline/pruned.png",
+            "shows": "A log whose head was pruned: the strip in its warning colour reading `9 events held`, `4 earlier events pruned, retained from seq 5`, `this view holds 9 of the 13 events last reported`, with the rows starting at #5 because that is all the pane can show."
+          },
+          {
+            "file": "docs/media/harness-timeline/short-window.png",
+            "shows": "The same state at 1440x560, where the strip and the trajectory compete for room: the strip keeps its line and the trajectory keeps enough of the pane to read."
+          }
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "The strip is a view of what the browser holds, not a second log. It states the count it has, the range it covers, the cursor it is at and the newest seq the last page reported; it never claims to know an event it does not hold, which is why the widest sentence it can write about missing history is `this view holds 9 of the 13 events last reported`.",
+          "Unknown event types get a recorded-event card rather than a nicer one per type. The point of the story is that nothing is dropped, and a card per type would grow a 43-branch renderer that rots; `harnessEventSummary()` describes the 25 types in the reader's terms and the card prints whatever the event carries for anything newer.",
+          "A gap is never smoothed over. If the log will not resume, the strip's first clause says so and names the reason, and the view is described as the snapshot's - the same rule the resync toast already followed, moved from a transient toast into the surface it describes.",
+          "Place is preserved rather than restored after the fact: the renderer asks `harnessStreamNearBottom()` once, before rewriting, and a reading view keeps its `scrollTop` and its open cards. Jump to latest exists because a reader who is behind has no other way back without hunting for the bottom.",
+          "Pruning wins the strip's colour over the live/replay tone, because a missing event matters more than whether the view is live; the sentence still says both.",
+          "The story re-pins nothing: `source_commit_sha` stays at the tree UIUX-P0-06 approved. The frontend changed, so the source manifest, route map, authorization trace, control inventory, tokens, status components, overlays, onboarding, presentations, studio.py and the preservation package were all regenerated in this branch."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
-        "readme_updated": false
+        "handoff_note": "UIUX-P3-02 is the Harness saying what its trajectory is a view of, and letting a reader rebuild it from the record. A strip above the trajectory states the count, the seq range, the cursor and how the view was filled, then opens into one row per held event with a jump to its card; every retained event draws (18 with their own card, 25 through the recorded-event fallback that reads the event); Replay rebuilds the view from the log alone and refuses a log it could not resume; and a frame no longer moves a reader who is scrolled up. The cursor, seq dedupe, six gap reasons, pruned notice, three stream frames and the resync path are untouched, and no endpoint was added. Next: UIUX-P3-03, which builds on this log - read `docs/uiux-2-0-harness-timeline.md` and keep `harnessEventSummary()` the place a type is described, so the strip and the trajectory cannot disagree.",
+        "next_action": "Implement UIUX-P3-03 (Harness recovery surfaces) against the log and cursor semantics this story left in place.",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",

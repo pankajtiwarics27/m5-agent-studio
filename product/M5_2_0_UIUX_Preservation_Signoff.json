@@ -25,12 +25,12 @@
     "current_inputs_match_approval": null,
     "approved_inputs": null,
     "current_inputs": {
-      "ledger_content_sha256": "1170c36ab18ae199ce5153cb54172bcfc0fca9cecd7932d4c6c79fee30fa62db",
-      "source_manifest_sha256": "2770bd3b9096ede0d64e17d38a37c5f3bb58859d9f4a136f32278c6d1ced4be7",
-      "control_inventory_sha256": "7ca4143fe3ff0454659bd0b7b172ed5cc1da8431cc7786106e2ebbd29d20ef82",
-      "route_map_sha256": "99d4174453ab3dceb312796d3dd014b26518614e1ef02131f95aad7a6ce08576",
-      "authorization_trace_sha256": "2bca78e194eac5ced3ace0560f51f2bcb908310e449ae61fa3c8a1f28c47342c",
-      "frontend_sha256": "913aa2832030f7e9ee984d21b181e9344f0d663291d4a6501cbf674f095465fb",
+      "ledger_content_sha256": "038f27bdcb52dc65b5d414096f17fe1d9e93068f59ca7dcab5d4cdf71803360c",
+      "source_manifest_sha256": "d6ca5f449f1ad6c30b0c83d0fe5579353d5de7473b4d3f718f2f21251eb1937c",
+      "control_inventory_sha256": "0c4e10751da0a773b646a7d76a4c756b827fc2b6bd7d6a58eeeb96644b4a2572",
+      "route_map_sha256": "a6568ab915ac99419d435232d336b76acba10b4b4c2881804f87492df737def4",
+      "authorization_trace_sha256": "7f219eff0f09367c1f8e78c0311c599d81edd1a220cf85ae3855e736bc7979f4",
+      "frontend_sha256": "fee7f61a819a0f562285334465217561191e1c5b6dac15fb77fea907e1bedf3c",
       "screenshot_manifest_sha256": "69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92",
       "screenshot_index_sha256": "de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -39,12 +39,12 @@
     "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "2cc4343110c59d09c566580faee826a1fc77bf1a7be71e26c47b17aaa5a4f984",
-    "source_manifest_sha256": "2770bd3b9096ede0d64e17d38a37c5f3bb58859d9f4a136f32278c6d1ced4be7",
-    "control_inventory_sha256": "7ca4143fe3ff0454659bd0b7b172ed5cc1da8431cc7786106e2ebbd29d20ef82",
-    "route_map_sha256": "99d4174453ab3dceb312796d3dd014b26518614e1ef02131f95aad7a6ce08576",
-    "authorization_trace_sha256": "2bca78e194eac5ced3ace0560f51f2bcb908310e449ae61fa3c8a1f28c47342c",
-    "frontend_sha256": "913aa2832030f7e9ee984d21b181e9344f0d663291d4a6501cbf674f095465fb"
+    "ledger_sha256": "e786189165929b0153a8a3daa7c50a55199e262d8154a09d42d57c47877bb5e6",
+    "source_manifest_sha256": "d6ca5f449f1ad6c30b0c83d0fe5579353d5de7473b4d3f718f2f21251eb1937c",
+    "control_inventory_sha256": "0c4e10751da0a773b646a7d76a4c756b827fc2b6bd7d6a58eeeb96644b4a2572",
+    "route_map_sha256": "a6568ab915ac99419d435232d336b76acba10b4b4c2881804f87492df737def4",
+    "authorization_trace_sha256": "7f219eff0f09367c1f8e78c0311c599d81edd1a220cf85ae3855e736bc7979f4",
+    "frontend_sha256": "fee7f61a819a0f562285334465217561191e1c5b6dac15fb77fea907e1bedf3c"
   },
   "approval_request": [
     {
@@ -55,7 +55,7 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "178 markup controls (101 chrome, 77 panes) plus 30 rendered by script"
+      "evidence": "182 markup controls (101 chrome, 81 panes) plus 31 rendered by script"
     },
     {
       "id": 3,
@@ -76,10 +76,10 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 178,
+    "markup_controls": 182,
     "chrome_controls": 101,
-    "pane_controls": 77,
-    "script_rendered_controls": 30,
+    "pane_controls": 81,
+    "script_rendered_controls": 31,
     "routes": 115,
     "routes_with_resolved_or_possible_caller": 57,
     "routes_no_caller_observed": 58,
@@ -88,7 +88,7 @@
     "route_map_unresolved_caller_edges": 0,
     "route_map_unresolved_method_edges": 0,
     "state_changing_routes_traced": 37,
-    "pane_routes_reached": 31,
+    "pane_routes_reached": 34,
     "pane_routes_excluded": 34,
     "route_walk_depth": 2,
     "screenshots_captured": 6,
@@ -401,9 +401,9 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 17,
+      "control_count": 21,
       "counts": {
-        "button": 4,
+        "button": 8,
         "input": 2,
         "select": 9,
         "summary": 1,
@@ -509,6 +509,34 @@
           "handler": "abortHarnessRun"
         },
         {
+          "tag": "button",
+          "id": "harnessTimelineToggle",
+          "text": "Session log",
+          "onclick": "toggleHarnessTimeline()",
+          "handler": "toggleHarnessTimeline"
+        },
+        {
+          "tag": "button",
+          "id": "harnessTimelineJump",
+          "text": "Jump to latest ↓",
+          "onclick": "jumpToLatestHarnessEvent()",
+          "handler": "jumpToLatestHarnessEvent"
+        },
+        {
+          "tag": "button",
+          "id": "harnessTimelineReplay",
+          "text": "Replay log",
+          "onclick": "replayHarnessLog()",
+          "handler": "replayHarnessLog"
+        },
+        {
+          "tag": "button",
+          "id": "harnessTimelineResync",
+          "text": "Resync",
+          "onclick": "harnessResyncFromSnapshot('operator')",
+          "handler": "harnessResyncFromSnapshot"
+        },
+        {
           "tag": "textarea",
           "id": "harnessPromptInput",
           "text": null,
@@ -533,8 +561,12 @@
       "declared_handlers": [
         "abortHarnessRun",
         "executeHarnessSelectedWorkflow",
+        "harnessResyncFromSnapshot",
+        "jumpToLatestHarnessEvent",
+        "replayHarnessLog",
         "saveWorkspaceDirectory",
-        "startFreshHarnessDraft"
+        "startFreshHarnessDraft",
+        "toggleHarnessTimeline"
       ],
       "routes_reached": [
         {
@@ -583,6 +615,32 @@
         },
         {
           "method": "GET",
+          "path": "/api/harness/sessions/{session_id}/events",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "harnessFetchEventPage",
+          "via": [
+            "harnessResyncFromSnapshot",
+            "loadHarnessEvents",
+            "harnessFetchEventPage"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/harness/sessions/{session_id}/events/stream",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "openHarnessEventStream",
+          "via": [
+            "harnessResyncFromSnapshot",
+            "scheduleHarnessEventStreamRetry",
+            "openHarnessEventStream"
+          ]
+        },
+        {
+          "method": "GET",
           "path": "/api/harness/sessions/{session_id}/sdlc",
           "certainty": "certain",
           "state_changing": false,
@@ -592,6 +650,17 @@
             "executeHarnessSelectedWorkflow",
             "openSdlcModal",
             "refreshSdlcBoard"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/harness/sessions/{session_id}/state",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "harnessResyncFromSnapshot",
+          "via": [
+            "harnessResyncFromSnapshot"
           ]
         },
         {
