@@ -144,6 +144,41 @@ def _activity_payload(state: RuntimeState) -> dict:
     }
 
 
+# UIUX-P4-03: what a model says in the fixture. P4-01/P4-02 only needed a reply that streamed;
+# a verdict needs four replies that can be *told apart*, and one pair that cannot - two seats
+# pointing at the same model must produce the same words, or the pane's "same words as another
+# seat" reading could never be seen. The texts differ in substance and vocabulary, not in a model
+# id, so a shared-wording measure has something real to measure.
+REPLY_TEXTS = {
+    LOADED_MODEL: (
+        "I would put the durable queue behind a single append-only log and let a consumer group "
+        "track its own offsets. Backpressure comes from the log's byte budget rather than from a "
+        "broker, so a slow worker stalls its partition and nothing else. Delivery is at least once, "
+        "and the consumer deduplicates on the message key it already carries."
+    ),
+    OVER_BUDGET_MODEL: (
+        "Do not build this on one log. Shard by tenant, keep a per-shard sequence number, and make "
+        "the lease a row with an expiry the database enforces. A worker that dies loses the lease, "
+        "not the message. The cost is a second round trip on claim, which is cheaper than the "
+        "duplicate everyone discovers in production."
+    ),
+    FITS_MODEL: (
+        "The interesting failure is the poison message, not throughput. Cap the attempts, move the "
+        "message to a quarantine stream with the reason attached, and let a human release it. At "
+        "five hundred per second the log is fine; what breaks is the retry storm after a downstream "
+        "outage, so the retry budget has to be shared per dependency."
+    ),
+}
+
+
+def _reply_words(model: str) -> str:
+    """What the stand-in runtime says for ``model``; a distinct paragraph per catalogue entry."""
+    text = REPLY_TEXTS.get(model)
+    if text:
+        return text
+    return f"The fixture runtime answered as {model}. It streams, so the pane can see a real seat finish."
+
+
 class _RuntimeHandler(BaseHTTPRequestHandler):
     state: RuntimeState
     # UIUX-P4-02: a model whose replies the runtime stops at its length limit. A real runtime
@@ -217,7 +252,7 @@ class _RuntimeHandler(BaseHTTPRequestHandler):
         self.end_headers()
         capped = bool(self.cap_model) and model == self.cap_model
         reasoning_only = bool(self.reasoning_model) and model == self.reasoning_model
-        words = f"The fixture runtime answered as {model}. It streams, so the pane can see a real seat finish.".split(" ")
+        words = _reply_words(model).split(" ")
         if capped:
             # Cut where a real ceiling would cut it: the reply stops mid-sentence and the finish
             # reason says why. The token count stays the truth of what was actually written.
