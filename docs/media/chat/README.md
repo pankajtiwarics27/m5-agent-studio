@@ -34,6 +34,22 @@ writes one turn with a passing and a failing tool call and then sends one real m
 Regenerate those four with the same command as above, pointing it at
 `node scripts/chat_context_walk.mjs`. See `docs/uiux-2-0-chat-context.md`.
 
+## Handing the conversation to the Harness (UIUX-P2-06)
+
+Captured by `node scripts/chat_handoff_walk.mjs --screenshots docs/media/chat`, which
+writes a conversation with ten tool calls (one failed) and then presses the real button
+against the real Harness composer.
+
+| File | What it shows |
+|---|---|
+| `handed-to-harness.png` | After **Open in Harness**: the reader is in the Harness, the composer holds the brief - the task, `- carried from Chat: nothing has run, and no model has been asked to run it -`, the counts, the recorded context line, the calls with their statuses and the bounds it applied - and the cursor is in the box. `Run` is the reader's to press; the handoff never presses it. |
+| `back-to-chat.png` | Back in Chat after **Back to Chat**: the transcript is unchanged (ten tool rows and the answer), the cursor is in the composer, and the sentence beside the button now reads `Already in the Harness composer (2 messages, 10 tool calls); nothing has run.` |
+| `handoff-failed.png` | The composer removed from the page and the button pressed: an error named \`The handoff did not happen\`, its cause, the line that the conversation and its tool calls are untouched, and **Retry** / **Dismiss**. The sentence no longer claims the carry happened. |
+| `handoff-narrow.png` | The transcript bar at 900px: the sentence stays on one line and the button stays reachable. |
+
+Regenerate those four with `node scripts/chat_handoff_walk.mjs`. See
+`docs/uiux-2-0-chat-handoff.md`.
+
 Regenerate:
 
     python3 scripts/demo_tour.py --serve            # prints the port and token

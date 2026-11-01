@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "436fd88fa66ba24d099fc811c9bfbb5cb2f4f227a62fe46d41d117d75392d306",
+  "frontend_sha256": "7b99848ef5a6155c1cbb274910d95ef95684a775badaca2340a2ef5c695bcd00",
   "panes": [
     {
       "dom_id": "start",
@@ -497,9 +497,9 @@
     {
       "dom_id": "chat",
       "section_id": "pane-chat",
-      "control_count": 10,
+      "control_count": 11,
       "counts": {
-        "button": 4,
+        "button": 5,
         "input": 2,
         "select": 3,
         "textarea": 1
@@ -538,6 +538,16 @@
           "title": "Clear the transcript on this pane (undoable)",
           "onclick": "clearChat()",
           "text": "Clear"
+        },
+        {
+          "tag": "button",
+          "id": "chatHandoffBtn",
+          "type": "button",
+          "class": "btn btn-xs chat-handoff-btn",
+          "aria-describedby": "chatHandoffHint",
+          "title": "Put this conversation into the Harness composer; nothing runs until you press Run there",
+          "onclick": "handOffChatToHarness()",
+          "text": "Open in Harness"
         },
         {
           "tag": "button",
@@ -1253,8 +1263,8 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 177,
-    "pane_controls": 76,
+    "markup_controls": 178,
+    "pane_controls": 77,
     "chrome_controls": 101,
     "script_rendered_controls": 30,
     "script_rendered_by_function": {
