@@ -24,15 +24,17 @@ is a bug in the caller, and the `error` kind is already how bugs are shown.
 
 | Container | Pane | Kind | Actions | Line |
 |---|---|---|---|---|
-| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 2652 |
-| `#startRecentState` | Start | `empty` | `Start a session`, `Open Harness` | 2711 |
-| `#startRecentState` | Start | `error` | `Retry`, `Open Harness` | 2776 |
-| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 3059 |
-| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 3073 |
-| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 3083 |
-| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 3097 |
+| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 2731 |
+| `#startRecentState` | Start | `empty` | `Start a session`, `Open Harness` | 2790 |
+| `#startRecentState` | Start | `error` | `Retry`, `Open Harness` | 2865 |
+| `#startHealthState` | Start | `error` | `Re-check`, `Monitor rail` | 2959 |
+| `#startWorkspaceState` | Start | `error` | `Retry`, `Open Harness` | 3043 |
+| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 3340 |
+| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 3354 |
+| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 3364 |
+| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 3378 |
 
-7 call sites across 6 of 6 containers: 3 empty, 3 error, 1 recovery.
+9 call sites across 8 of 8 containers: 3 empty, 5 error, 1 recovery.
 
 ## The paths that were broken before
 
@@ -56,9 +58,9 @@ should not quietly become a pane rewrite:
 
 | Handler | Line |
 |---|---|
-| `installSkill()` | 3366 |
-| `openHarnessDiffModal()` | 4734 |
-| `runMcpPlayground()` | 5210 |
+| `installSkill()` | 3647 |
+| `openHarnessDiffModal()` | 5026 |
+| `runMcpPlayground()` | 5502 |
 
 ## Checks and limits
 

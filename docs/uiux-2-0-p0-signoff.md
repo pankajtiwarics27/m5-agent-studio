@@ -8,7 +8,7 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 171 markup controls (101 chrome, 70 panes) · 30 rendered by script.
+* 6 panes · 21 preserved capabilities · 176 markup controls (101 chrome, 75 panes) · 30 rendered by script.
 * 115 routes exist, 57 with a resolved or possible caller, 58 with none observed and 0 unknown due to unresolved edges; 37 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
@@ -28,7 +28,7 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 171 markup controls (101 chrome, 70 panes) plus 30 rendered by script |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 176 markup controls (101 chrome, 75 panes) plus 30 rendered by script |
 | 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 115 routes exist; 57 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 37 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
@@ -52,7 +52,7 @@ The preflight checklist a new user sees first: what is ready, what still needs t
 | recheck | Start primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | provider settings | Start primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 
-**Controls — 6 in the markup:**
+**Controls — 11 in the markup:**
 
 | Tag | Id | Label | Handler |
 |---|---|---|---|
@@ -62,6 +62,11 @@ The preflight checklist a new user sees first: what is ready, what still needs t
 | input | startTaskInput | — | — |
 | button | startTaskBtn | Open in Harness | launchTaskFromStart() |
 | button | — | Refresh | loadStartRecent({ force: true }) |
+| button | — | Re-check health | refreshTelemetry() |
+| button | — | Monitor rail | toggleMonitorRail() |
+| input | startWorkspaceInput | — | — |
+| select | startWorkspaceRecent | Recent folders… | — |
+| button | startWorkspaceBtn | Set / Create | saveStartWorkspace() |
 
 **Routes reached from this pane's controls — 49, walking at most 2 calls; 8 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
 
@@ -90,7 +95,7 @@ The preflight checklist a new user sees first: what is ready, what still needs t
 | GET | `/api/opencontext/search` | certain | no | `launchTaskFromStart` → `switchTab` → `searchOpenContextUI` | — |
 | GET | `/api/providers` | certain | no | `openProvidersModal` → `loadProviders` | — |
 | GET | `/api/skills` | certain | no | `launchTaskFromStart` → `switchTab` → `loadSkills` | — |
-| GET | `/api/telemetry` | certain | no | `launchTaskFromStart` → `switchTab` → `refreshTelemetry` | — |
+| GET | `/api/telemetry` | certain | no | `refreshTelemetry` | — |
 | GET | `/api/workspace/files` | certain | no | `launchTaskFromStart` → `switchTab` → `openSpawnModal` | — |
 | PATCH | `/api/harness/sessions/{session_id}` | certain | yes | `launchTaskFromStart` → `switchTab` → `patchActiveHarnessSettings` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | PATCH | `/api/mcp/servers/{alias}` | certain | yes | `launchTaskFromStart` → `switchTab` → `toggleMcpServerEnabled` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
@@ -115,7 +120,7 @@ The preflight checklist a new user sees first: what is ready, what still needs t
 | POST | `/api/providers` | certain | yes | `launchTaskFromStart` → `switchTab` → `saveProvider` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | POST | `/api/providers/fetch-models` | certain | yes | `launchTaskFromStart` → `switchTab` → `fetchRemoteModels` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | POST | `/api/skills/install` | certain | yes | `launchTaskFromStart` → `switchTab` → `installSkill` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/workspace/directory` | certain | yes | `launchTaskFromStart` → `switchTab` → `saveWorkspaceDirectory` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
+| POST | `/api/workspace/directory` | certain | yes | `saveStartWorkspace` → `saveWorkspaceDirectory` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 
 ### Harness (`data-tab="harness"`, Alt+1)
 
@@ -376,12 +381,12 @@ provenance; a matching snapshot cannot clear separate review holds.
 
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
-| `ledger_content_sha256` | `13ea9cdc193dc5d3d3e1502f4b7519a51eb40affc380d2709e69ec13d2349f54` | `not recorded` |
-| `source_manifest_sha256` | `3c8807e8d4620b04db8e2c268646cb2f67fb00e1fa48e9cccbf0729d38864159` | `not recorded` |
-| `control_inventory_sha256` | `6eb5b038c7bc9c67bb88f8bbcc3043ac3d63d0a8c1653e2017b949ac28183be6` | `not recorded` |
-| `route_map_sha256` | `c6b9bb85bf516a2633281aef1384140a46b255e8921791a673523ea00aef56ae` | `not recorded` |
-| `authorization_trace_sha256` | `2614abf58c9491141d8eb00a60d35dbba26edb9554ff894615e4ecf0efc32270` | `not recorded` |
-| `frontend_sha256` | `bf1d6b1c255793972df88d5dff3f6cefbe5fca66b54b0326832429fb36f5941e` | `not recorded` |
+| `ledger_content_sha256` | `c2c2c50ae6c280dd5a7309767120e3770dff74a5faeeae7ea0682fea4523f349` | `not recorded` |
+| `source_manifest_sha256` | `ba483b58841cdc4667169bd81b8779b345eec36f1516ab6558ab025d5596fc4d` | `not recorded` |
+| `control_inventory_sha256` | `77124be4205ef54d1a4969c649d3d3625a0ef5b5f8f4b878500d45ee0dab26c1` | `not recorded` |
+| `route_map_sha256` | `2085fdcc288fd1efee2f13721956bef7e17f106bd5460d19eecc1ecbba815f9e` | `not recorded` |
+| `authorization_trace_sha256` | `b1c2e873963e0eb55b82e445d079637bbe71118c60932d8492663a050d6bdaa0` | `not recorded` |
+| `frontend_sha256` | `9570e726f3c320c2c50adcaf795deb21728edb168b211527ef22014a62c5e5f4` | `not recorded` |
 | `screenshot_manifest_sha256` | `69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92` | `not recorded` |
 | `screenshot_index_sha256` | `de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

@@ -3965,6 +3965,35 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .start-recent-meta { font-size: var(--text-2xs); color: var(--text-faint); font-family: var(--mono); }
   .start-launch { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; margin-top: var(--space-4); }
   .start-launch input { flex: 1 1 320px; min-width: 220px; }
+
+  /* ── System health and workspace ────────────────────────────────────────────
+     Two questions a first-run reader asks after "what next": is this machine
+     actually working, and where will my task run? Both are answered from data the
+     server already produces - /api/telemetry and the session payload's
+     default_workspace/git_info - and neither is guessed.
+
+     The basis line is the point of the health card. The demo tour has no model
+     runtime, so /api/telemetry answers with a simulated payload
+     (telemetry_source = "simulated_demo"); showing those numbers as if they were
+     this machine's would be the exact failure the evidence component exists to
+     prevent. The card says "unverified" and why, and keeps saying which rows are
+     still real. */
+  .start-health { display: flex; flex-direction: column; }
+  .start-health-row {
+    display: flex; align-items: center; gap: var(--space-3); justify-content: space-between;
+    padding: var(--space-2) 0; border-bottom: 1px solid var(--border);
+  }
+  .start-health-row:last-child { border-bottom: 0; }
+  .start-health-label { font-size: var(--text-xs); color: var(--text-dim); flex: 0 0 auto; }
+  .start-health-value {
+    font-family: var(--mono); font-size: var(--text-xs); color: var(--text);
+    text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+  }
+  .start-workspace { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2) 0 var(--space-3); }
+  .start-workspace-path { font-family: var(--mono); font-size: var(--text-xs); color: var(--text); word-break: break-all; }
+  .start-workspace-source { font-size: var(--text-2xs); color: var(--text-faint); }
+  .start-workspace-actions { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; margin-top: var(--space-2); }
+  .start-workspace-actions input { flex: 1 1 260px; min-width: 180px; font-family: var(--mono); font-size: var(--text-xs); }
   .badge.red { background: rgba(239, 68, 68, 0.18); color: #fca5a5; border-color: rgba(239, 68, 68, 0.45); }
 
   .config-strip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 11px; padding: 12px 14px; margin-bottom: 12px; }
@@ -5181,6 +5210,51 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           </div>
           <div id="startTaskHint" class="onboarding-note"></div>
         </div>
+
+        <!-- Health, then the workspace it will run in. Both read from endpoints the
+             Harness already owns; neither invents a number. -->
+        <div class="m-card" style="margin-top: 14px;">
+          <div class="m-head">
+            <span>System health</span>
+            <span id="startHealthSummary" class="status" data-tone="neutral" role="status">Reading…</span>
+          </div>
+          <div id="startHealthRows" class="start-health"></div>
+          <!-- The basis is a required part of the claim: a simulated payload says so. -->
+          <div class="evidence" id="startHealthEvidence" data-basis="unverified">
+            <span class="evidence-basis">Basis: unverified</span>
+            Nothing has been read from the runtime yet.
+          </div>
+          <div id="startHealthState"></div>
+          <div id="startHealthActions" class="onboarding-actions">
+            <button class="btn" type="button" onclick="refreshTelemetry()">Re-check health</button>
+            <button class="btn" type="button" onclick="toggleMonitorRail()" title="Open the monitor rail with the full telemetry">Monitor rail</button>
+          </div>
+        </div>
+
+        <div class="m-card" style="margin-top: 14px;">
+          <div class="m-head">
+            <span>Project workspace</span>
+            <span id="startWorkspaceSummary" class="status" data-tone="neutral" role="status">Reading…</span>
+          </div>
+          <p class="onboarding-lede">
+            Where the Harness runs your task. This is the same setting the Harness pane shows;
+            changing it here changes it there, and the preflight is re-read afterwards so the
+            checklist cannot disagree with this line.
+          </p>
+          <div id="startWorkspaceRow" class="start-workspace">
+            <div class="start-workspace-path">reading the configured directory…</div>
+          </div>
+          <div class="start-workspace-actions">
+            <label for="startWorkspaceInput" style="position:absolute; left:-9999px;">Project directory</label>
+            <input type="text" id="startWorkspaceInput" autocomplete="off" placeholder="~/Projects/my-app" aria-describedby="startWorkspaceHint" />
+            <select id="startWorkspaceRecent" aria-label="Recent project folders" onchange="if(this.value) pickStartWorkspace(this.value)">
+              <option value="">Recent folders…</option>
+            </select>
+            <button class="btn btn-primary" id="startWorkspaceBtn" type="button" onclick="saveStartWorkspace()" aria-describedby="startWorkspaceHint">Set / Create</button>
+          </div>
+          <div id="startWorkspaceHint" class="onboarding-note"></div>
+          <div id="startWorkspaceState"></div>
+        </div>
       </div>
     </section>
 
@@ -6089,6 +6163,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   let startRecentSessions = [];
   let startRecentReadAt = 0;
   const START_RECENT_LIMIT = 5;
+  // The last telemetry payload, kept so the health card reads what the monitor
+  // rail already fetched instead of polling a second time.
+  let lastTelemetry = null;
+  let startHealthReadAt = 0;
+  let startWorkspace = { dir: "", recent: [], git: null, source: "server" };
 
   const ONBOARDING_ACTION_LABELS = {
     "restart-server": "Restart Studio from your terminal, then reload this page.",
@@ -6394,6 +6473,16 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const payload = await response.json();
       startRecentSessions = (payload.sessions || []).slice(0, START_RECENT_LIMIT);
       startRecentReadAt = Date.now();
+      // The same response carries the configured workspace and its git state, so the
+      // workspace card is filled from it rather than from a second request.
+      if (payload.default_workspace) {
+        startWorkspace.dir = payload.default_workspace;
+        startWorkspace.git = payload.git_info || startWorkspace.git;
+        startWorkspace.recent = payload.recent_workspaces || startWorkspace.recent;
+        if (startWorkspace.source !== "chosen") startWorkspace.source = "server";
+      }
+      renderStartWorkspace();
+      renderStartHealth();
       renderStartRecent();
       return startRecentSessions;
     } catch (error) {
@@ -6412,6 +6501,198 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       });
       return null;
     }
+  }
+
+  /* ── System health ─────────────────────────────────────────────────────────
+     Four rows, each from a payload the server produced: the runtime verdict, the
+     unified-memory figures, the container count, and the workspace Start just read.
+     The basis line carries the honesty: when /api/telemetry answers with the demo
+     payload because no runtime is reachable, the card says "unverified" and the
+     claim says which rows still describe this machine. */
+  function startHealthRows() {
+    const d = lastTelemetry;
+    const rows = [];
+    if (!d) {
+      // Same four rows, saying they do not know. A row that disappears reads as "fine".
+      rows.push({ label: "Model runtime", value: "not measured yet", tone: "neutral" });
+      rows.push({ label: "Unified memory", value: "not measured yet", tone: "neutral" });
+      rows.push({ label: "Containers", value: "not measured yet", tone: "neutral" });
+    } else {
+      const mem = d.memory || {};
+      const omlx = d.omlx || {};
+      const used = +(((mem.omlx_gb || 0) + (mem.orbstack_gb || 0) + (mem.macos_apps_gb || 0)).toFixed(1));
+      const total = +(mem.total_gb || 0);
+      const cap = +(omlx.ceiling_gb || 0);
+      rows.push({
+        label: "Model runtime",
+        value: d.omlx_online ? "answering on the loopback port" : "not reachable",
+        tone: d.omlx_online ? "ok" : "warn",
+      });
+      rows.push({
+        label: "Unified memory",
+        value: `${used} / ${total || "?"} GB used${cap ? ` · cap ${cap} GB` : ""}`,
+        tone: cap && used > cap ? "danger" : "ok",
+      });
+      const dk = d.docker || {};
+      const containers = (dk.containers || []).length;
+      rows.push({
+        label: "Containers",
+        value: `${containers} running${dk.orbstack_detected ? " · OrbStack" : ""}`,
+        tone: containers ? "ok" : "neutral",
+      });
+    }
+    rows.push({
+      label: "Project workspace",
+      value: startWorkspace.dir || "not set",
+      tone: startWorkspace.dir ? "ok" : "warn",
+    });
+    return rows;
+  }
+
+  function renderStartHealth() {
+    const host = document.getElementById("startHealthRows");
+    const summary = document.getElementById("startHealthSummary");
+    if (!host) return null;
+    const d = lastTelemetry;
+    const simulated = Boolean(d && d.telemetry_source === "simulated_demo");
+    host.innerHTML = "";
+    startHealthRows().forEach(row => {
+      const line = document.createElement("div");
+      line.className = "start-health-row";
+      line.dataset.health = row.label.toLowerCase().replace(/[^a-z]+/g, "-");
+      const label = document.createElement("span");
+      label.className = "start-health-label";
+      label.textContent = row.label;
+      const value = document.createElement("span");
+      value.className = "start-health-value";
+      value.textContent = row.value;
+      const pill = document.createElement("span");
+      pill.className = "status";
+      setStatus(pill, row.tone, row.tone === "ok" ? "OK" : row.tone === "danger" ? "OVER CAP" : row.tone === "warn" ? "CHECK" : "—");
+      line.append(label, value, pill);
+      host.appendChild(line);
+    });
+
+    if (summary) {
+      setStatus(summary, simulated ? "warn" : (d ? "ok" : "danger"), simulated ? "Demo data" : (d ? "Live" : "Offline"));
+    }
+    // One box either way: the failure gets a cause and a way back, and a successful
+    // read removes it again rather than leaving a stale error under a working card.
+    const actions = document.getElementById("startHealthActions");
+    if (actions) actions.style.display = d ? "" : "none";
+    if (d) {
+      clearPresentation("startHealthState");
+    } else {
+      presentInto("startHealthState", {
+        kind: "error",
+        title: "The machine's health could not be read",
+        cause: "GET /api/telemetry did not answer, so the runtime, memory and container rows are blank.",
+        context: startWorkspace.dir
+          ? `The workspace row is unaffected: ${startWorkspace.dir} is still the project directory, read from the session list.`
+          : "The workspace row is unaffected: it comes from the session list, not from telemetry.",
+        actions: [
+          { label: "Re-check", run: () => refreshTelemetry(), title: "Read /api/telemetry again" },
+          { label: "Monitor rail", run: () => toggleMonitorRail(), title: "See what the rail last recorded" },
+        ],
+      });
+    }
+    // When the pane read it, not a field the payload does not carry.
+    const readAt = startHealthReadAt ? ` at ${new Date(startHealthReadAt).toLocaleTimeString()}` : "";
+    // The basis, and the sentence that keeps the simulated case honest.
+    evidenceNote(
+      "startHealthEvidence",
+      simulated ? "unverified" : (d ? "measured" : "unavailable"),
+      simulated
+        ? "no model runtime answered, so the runtime and memory rows are the demo payload and describe no machine. The workspace row is still this machine's: it came from the session list, not from telemetry."
+        : d
+          ? `read from /api/telemetry${readAt}; the runtime verdict, memory figures and container count are the runtime's own report, not an estimate.`
+          : "the telemetry request has not succeeded, so the runtime, memory and container rows describe no machine. "
+            + "The workspace row is still this machine's: it came from the session list, not from telemetry.",
+    );
+    return host;
+  }
+
+  /* ── Project workspace ─────────────────────────────────────────────────────
+     One setting, two panes. Start reads it from the session payload the server
+     already sends (default_workspace + git_info) and writes it through the same
+     /api/workspace/directory route the Harness uses, then re-reads the preflight so
+     the checklist cannot keep saying the workspace is unwritable after it was set. */
+  function renderStartWorkspace() {
+    const row = document.getElementById("startWorkspaceRow");
+    const summary = document.getElementById("startWorkspaceSummary");
+    const input = document.getElementById("startWorkspaceInput");
+    const recent = document.getElementById("startWorkspaceRecent");
+    if (!row) return null;
+    const dir = startWorkspace.dir || "";
+    const git = startWorkspace.git || {};
+    row.innerHTML = "";
+    const path = document.createElement("div");
+    path.className = "start-workspace-path";
+    path.textContent = dir || "no project directory is configured";
+    const source = document.createElement("div");
+    source.className = "start-workspace-source";
+    source.textContent = dir
+      ? `${git.is_git ? `git:${git.branch || "HEAD"}` : "not a git repository"} · ${startWorkspace.source === "chosen" ? "chosen on this pane" : "the server's configured default"}`
+      : "the Harness will fall back to its own default until you set one";
+    row.append(path, source);
+    if (summary) {
+      setStatus(summary, dir ? "ok" : "warn", dir ? (git.is_git ? `git:${git.branch || "HEAD"}` : "set") : "Not set");
+    }
+    if (input && !input.value) input.value = dir;
+    if (recent) {
+      const dirs = Array.isArray(startWorkspace.recent) ? startWorkspace.recent.filter(Boolean) : [];
+      recent.innerHTML = '<option value="">Recent folders…</option>' +
+        dirs.map(folder => `<option value="${escapeHtml(folder)}"${folder === dir ? " selected" : ""}>${escapeHtml(folder)}</option>`).join("");
+      recent.style.display = dirs.length ? "" : "none";
+    }
+    return row;
+  }
+
+  function pickStartWorkspace(value) {
+    const input = document.getElementById("startWorkspaceInput");
+    if (input) input.value = value;
+    const hint = document.getElementById("startWorkspaceHint");
+    if (hint) hint.textContent = `"${value}" is in the field; press Set / Create to make it the project directory.`;
+  }
+
+  async function saveStartWorkspace() {
+    const input = document.getElementById("startWorkspaceInput");
+    const hint = document.getElementById("startWorkspaceHint");
+    const target = (input ? input.value : "").trim();
+    if (!target) {
+      if (hint) hint.textContent = "Type a project directory first: the field is empty, and nothing was changed.";
+      if (input) input.focus();
+      return null;
+    }
+    const result = await saveWorkspaceDirectory(target);
+    if (!result || !result.ok) {
+      // The previous directory is still in force - saying which one is the useful part.
+      presentInto("startWorkspaceState", {
+        kind: "error",
+        title: "The workspace was not changed",
+        cause: (result && result.message) || "the request failed",
+        context: startWorkspace.dir
+          ? `${startWorkspace.dir} is still the project directory; nothing was created or moved`
+          : "no project directory is set, so the Harness will use its own default",
+        actions: [
+          { label: "Retry", run: () => saveStartWorkspace(), title: "Try the same directory again" },
+          { label: "Open Harness", run: () => switchTab("harness"), title: "Set it on the Harness pane instead" },
+        ],
+      });
+      if (hint) hint.textContent = "The directory was not changed; the reason is above.";
+      return null;
+    }
+    startWorkspace.dir = result.dir;
+    startWorkspace.source = "chosen";
+    startWorkspace.recent = result.recent || startWorkspace.recent;
+    startWorkspace.git = result.git || startWorkspace.git;
+    clearPresentation("startWorkspaceState");
+    renderStartWorkspace();
+    renderStartHealth();
+    if (hint) hint.textContent = `${result.dir} is the project directory now. The preflight is being re-read so the checklist agrees.`;
+    await refreshOnboarding();
+    await loadStartRecent({ force: true, silent: true });
+    return result.dir;
   }
 
   async function openHarnessSessionFromStart(id) {
@@ -7395,6 +7676,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const d = await (await fetch("/api/telemetry")).json();
       renderTelemetry(d);
     } catch (e) {
+      // The card must not keep showing a payload that is no longer being refreshed.
+      lastTelemetry = null;
+      startHealthReadAt = 0;
+      renderStartHealth();
       const pill = document.getElementById("connPill");
       pill.className = "status-pill demo";
       document.getElementById("connText").textContent = "Backend Offline";
@@ -7402,6 +7687,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   function renderTelemetry(d) {
+    lastTelemetry = d;
+    startHealthReadAt = Date.now();
+    renderStartHealth();
     const pill = document.getElementById("connPill");
     pill.className = d.omlx_online ? "status-pill" : "status-pill demo";
     document.getElementById("connText").textContent = d.omlx_online ? "oMLX Live (:8000)" : "Preview Demo";
@@ -7736,7 +8024,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function syncProjectDirInputs(val) {
     const clean = (val || "").trim();
     if (!clean) return;
-    for (const id of ["harnessWorkspaceInput", "sdlcWorkspaceInput", "cgWorkspaceInput"]) {
+    for (const id of ["harnessWorkspaceInput", "sdlcWorkspaceInput", "cgWorkspaceInput", "startWorkspaceInput"]) {
       const el = document.getElementById(id);
       if (el && el.value !== clean) el.value = clean;
     }
@@ -7756,11 +8044,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   async function saveWorkspaceDirectory(rawDir) {
+    // Returns what happened rather than only toasting it: the Start pane presents a
+    // failure with a cause and what is still in force, and a toast cannot carry that.
     const wsInput = document.getElementById("harnessWorkspaceInput");
     const target = (rawDir !== undefined ? String(rawDir) : (wsInput ? wsInput.value : "")).trim();
     if (!target) {
       showToast("Enter a target project directory path first (e.g. ~/Projects/my-app).", "warn");
-      return;
+      return { ok: false, message: "no directory was given" };
     }
     try {
       const r = await fetch("/api/workspace/directory", {
@@ -7776,8 +8066,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const gitBadge = document.getElementById("harnessGitBadge");
       if (gitBadge) gitBadge.textContent = gi.is_git ? `git:${gi.branch || 'HEAD'}` : "direct-dir";
       showToast(`Project directory set to ${d.workspace_dir}`, "ok");
+      return { ok: true, dir: d.workspace_dir, recent: d.recent_dirs || [], git: gi };
     } catch (e) {
       showToast("Directory error: " + e.message, "err");
+      return { ok: false, message: e && e.message ? e.message : "the request failed" };
     }
   }
 
@@ -9344,6 +9636,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   loadProviders();
   refreshOnboarding();
   loadStartRecent();
+  renderStartWorkspace();
+  renderStartHealth();
   loadSkills();
   loadMcpServers();
   loadHarnessSessions();

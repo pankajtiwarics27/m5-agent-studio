@@ -35,43 +35,55 @@
       "id": "sdlcProgressBadge",
       "tone": "neutral",
       "live": false,
-      "line": 1349
+      "line": 1378
     },
     {
       "id": "onboardingSummary",
       "tone": "neutral",
       "live": true,
-      "line": 1496
+      "line": 1525
     },
     {
       "id": "startRecentSummary",
       "tone": "neutral",
       "live": true,
-      "line": 1536
+      "line": 1565
+    },
+    {
+      "id": "startHealthSummary",
+      "tone": "neutral",
+      "live": true,
+      "line": 1592
+    },
+    {
+      "id": "startWorkspaceSummary",
+      "tone": "neutral",
+      "live": true,
+      "line": 1610
     },
     {
       "id": "harnessActiveStatusBadge",
       "tone": "info",
       "live": true,
-      "line": 1652
+      "line": 1726
     },
     {
       "id": "hallStatusBadge",
       "tone": "warn",
       "live": true,
-      "line": 1695
+      "line": 1769
     },
     {
       "id": null,
       "tone": "ok",
       "live": false,
-      "line": 1892
+      "line": 1966
     },
     {
       "id": "dockerStateBadge",
       "tone": "neutral",
       "live": false,
-      "line": 1939
+      "line": 2013
     }
   ],
   "state_matrix": [
@@ -127,10 +139,10 @@
     }
   ],
   "writers": {
-    "set_status_calls": 19,
+    "set_status_calls": 22,
     "legacy_badge_writers": 0,
-    "evidence_calls": 1,
-    "evidence_blocks": 1
+    "evidence_calls": 2,
+    "evidence_blocks": 2
   },
   "contrast": {
     "labels": [
@@ -225,10 +237,10 @@
   "totals": {
     "tones": 6,
     "bases": 4,
-    "status_surfaces": 7,
-    "live_regions": 4,
+    "status_surfaces": 9,
+    "live_regions": 6,
     "states": 10,
-    "set_status_calls": 19,
+    "set_status_calls": 22,
     "findings": 0
   },
   "findings": [],

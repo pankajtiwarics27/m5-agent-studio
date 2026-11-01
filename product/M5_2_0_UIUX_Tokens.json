@@ -37,7 +37,7 @@
   "totals": {
     "tokens": 45,
     "groups": 7,
-    "references": 691,
+    "references": 711,
     "theme_overrides": 18,
     "density_overrides": 5,
     "contrast_pairs": 20,
@@ -163,7 +163,7 @@
         "light": "#d9dcd8"
       },
       "density_override": null,
-      "references": 107
+      "references": 108
     },
     {
       "name": "--border-hi",
@@ -183,7 +183,7 @@
         "light": "#202326"
       },
       "density_override": null,
-      "references": 44
+      "references": 46
     },
     {
       "name": "--text-dim",
@@ -193,7 +193,7 @@
         "light": "#555c62"
       },
       "density_override": null,
-      "references": 78
+      "references": 79
     },
     {
       "name": "--text-faint",
@@ -203,7 +203,7 @@
         "light": "#687077"
       },
       "density_override": null,
-      "references": 50
+      "references": 51
     },
     {
       "name": "--accent",
@@ -291,7 +291,7 @@
       "value": "11px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 6
+      "references": 7
     },
     {
       "name": "--text-xs",
@@ -299,7 +299,7 @@
       "value": "12px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 7
+      "references": 11
     },
     {
       "name": "--text-sm",
@@ -363,7 +363,7 @@
       "value": "4px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 4
+      "references": 5
     },
     {
       "name": "--space-2",
@@ -371,7 +371,7 @@
       "value": "6px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 15
+      "references": 19
     },
     {
       "name": "--space-3",
@@ -379,7 +379,7 @@
       "value": "8px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 14
+      "references": 16
     },
     {
       "name": "--space-4",
@@ -491,7 +491,7 @@
       "value": "\"JetBrains Mono\", \"SFMono-Regular\", Consolas, \"Liberation Mono\", monospace",
       "theme_overrides": {},
       "density_override": null,
-      "references": 68
+      "references": 71
     },
     {
       "name": "--header-height",

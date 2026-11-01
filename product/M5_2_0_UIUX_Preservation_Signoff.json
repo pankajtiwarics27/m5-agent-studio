@@ -25,12 +25,12 @@
     "current_inputs_match_approval": null,
     "approved_inputs": null,
     "current_inputs": {
-      "ledger_content_sha256": "13ea9cdc193dc5d3d3e1502f4b7519a51eb40affc380d2709e69ec13d2349f54",
-      "source_manifest_sha256": "3c8807e8d4620b04db8e2c268646cb2f67fb00e1fa48e9cccbf0729d38864159",
-      "control_inventory_sha256": "6eb5b038c7bc9c67bb88f8bbcc3043ac3d63d0a8c1653e2017b949ac28183be6",
-      "route_map_sha256": "c6b9bb85bf516a2633281aef1384140a46b255e8921791a673523ea00aef56ae",
-      "authorization_trace_sha256": "2614abf58c9491141d8eb00a60d35dbba26edb9554ff894615e4ecf0efc32270",
-      "frontend_sha256": "bf1d6b1c255793972df88d5dff3f6cefbe5fca66b54b0326832429fb36f5941e",
+      "ledger_content_sha256": "c2c2c50ae6c280dd5a7309767120e3770dff74a5faeeae7ea0682fea4523f349",
+      "source_manifest_sha256": "ba483b58841cdc4667169bd81b8779b345eec36f1516ab6558ab025d5596fc4d",
+      "control_inventory_sha256": "77124be4205ef54d1a4969c649d3d3625a0ef5b5f8f4b878500d45ee0dab26c1",
+      "route_map_sha256": "2085fdcc288fd1efee2f13721956bef7e17f106bd5460d19eecc1ecbba815f9e",
+      "authorization_trace_sha256": "b1c2e873963e0eb55b82e445d079637bbe71118c60932d8492663a050d6bdaa0",
+      "frontend_sha256": "9570e726f3c320c2c50adcaf795deb21728edb168b211527ef22014a62c5e5f4",
       "screenshot_manifest_sha256": "69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92",
       "screenshot_index_sha256": "de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -39,12 +39,12 @@
     "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "b26a2d3ed368f138440d641eb6fbfb13137fad7f277d2330eb86ca617d5b584e",
-    "source_manifest_sha256": "3c8807e8d4620b04db8e2c268646cb2f67fb00e1fa48e9cccbf0729d38864159",
-    "control_inventory_sha256": "6eb5b038c7bc9c67bb88f8bbcc3043ac3d63d0a8c1653e2017b949ac28183be6",
-    "route_map_sha256": "c6b9bb85bf516a2633281aef1384140a46b255e8921791a673523ea00aef56ae",
-    "authorization_trace_sha256": "2614abf58c9491141d8eb00a60d35dbba26edb9554ff894615e4ecf0efc32270",
-    "frontend_sha256": "bf1d6b1c255793972df88d5dff3f6cefbe5fca66b54b0326832429fb36f5941e"
+    "ledger_sha256": "e66cd249c4e2376c4e1e68a955b35707793140273a30cb866a90f21fc53e991c",
+    "source_manifest_sha256": "ba483b58841cdc4667169bd81b8779b345eec36f1516ab6558ab025d5596fc4d",
+    "control_inventory_sha256": "77124be4205ef54d1a4969c649d3d3625a0ef5b5f8f4b878500d45ee0dab26c1",
+    "route_map_sha256": "2085fdcc288fd1efee2f13721956bef7e17f106bd5460d19eecc1ecbba815f9e",
+    "authorization_trace_sha256": "b1c2e873963e0eb55b82e445d079637bbe71118c60932d8492663a050d6bdaa0",
+    "frontend_sha256": "9570e726f3c320c2c50adcaf795deb21728edb168b211527ef22014a62c5e5f4"
   },
   "approval_request": [
     {
@@ -55,7 +55,7 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "171 markup controls (101 chrome, 70 panes) plus 30 rendered by script"
+      "evidence": "176 markup controls (101 chrome, 75 panes) plus 30 rendered by script"
     },
     {
       "id": 3,
@@ -76,9 +76,9 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 171,
+    "markup_controls": 176,
     "chrome_controls": 101,
-    "pane_controls": 70,
+    "pane_controls": 75,
     "script_rendered_controls": 30,
     "routes": 115,
     "routes_with_resolved_or_possible_caller": 57,
@@ -128,10 +128,11 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 6,
+      "control_count": 11,
       "counts": {
-        "button": 5,
-        "input": 1
+        "button": 8,
+        "input": 2,
+        "select": 1
       },
       "controls": [
         {
@@ -175,6 +176,41 @@
           "text": "Refresh",
           "onclick": "loadStartRecent({ force: true })",
           "handler": "loadStartRecent"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Re-check health",
+          "onclick": "refreshTelemetry()",
+          "handler": "refreshTelemetry"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Monitor rail",
+          "onclick": "toggleMonitorRail()",
+          "handler": "toggleMonitorRail"
+        },
+        {
+          "tag": "input",
+          "id": "startWorkspaceInput",
+          "text": null,
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "startWorkspaceRecent",
+          "text": "Recent folders…",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "startWorkspaceBtn",
+          "text": "Set / Create",
+          "onclick": "saveStartWorkspace()",
+          "handler": "saveStartWorkspace"
         }
       ],
       "declared_handlers": [
@@ -182,7 +218,10 @@
         "loadStartRecent",
         "openProvidersModal",
         "refreshOnboarding",
-        "startGuidedFirstTask"
+        "refreshTelemetry",
+        "saveStartWorkspace",
+        "startGuidedFirstTask",
+        "toggleMonitorRail"
       ],
       "routes_reached": [
         {
@@ -512,8 +551,6 @@
           "gates": [],
           "handler": "refreshTelemetry",
           "via": [
-            "launchTaskFromStart",
-            "switchTab",
             "refreshTelemetry"
           ]
         },
@@ -957,8 +994,7 @@
           ],
           "handler": "saveWorkspaceDirectory",
           "via": [
-            "launchTaskFromStart",
-            "switchTab",
+            "saveStartWorkspace",
             "saveWorkspaceDirectory"
           ]
         }
