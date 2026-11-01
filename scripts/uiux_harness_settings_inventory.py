@@ -240,7 +240,7 @@ def read_frontend(html: str) -> dict:
             "is_a_details_group": element(html, "harnessAdvanced").startswith("<details"),
             "summary_names_its_contents": bool(
                 re.search(
-                    r"<summary>Advanced settings<span id=\"harnessAdvancedSummary\"",
+                    r"<summary><span>Run settings</span><span id=\"harnessAdvancedSummary\"",
                     html,
                 )
             ),
@@ -587,7 +587,7 @@ def render_doc(payload: dict) -> str:
         "",
         "Nine controls decide a Harness run, and before this story none of them said what the run would do with them.",
         "A reader had to know already that `plan` means read-only, that the critic is a sub-agent the lead delegates",
-        "to, and that three more settings were folded into a group that said only \"Advanced settings\". The composer",
+        "to, and that three more settings were folded into a group that said only \"Run settings\". The composer",
         "now prints the plan above Run:",
         "",
         "| Row | What it prints | Where it is read from |",

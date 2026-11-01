@@ -113,7 +113,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | select | harnessLeadModel | — | — |
 | select | harnessCriticModel | — | — |
 | select | harnessPolicy | Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only) | — |
-| summary | — | Advanced settings | — |
+| summary | — | Run settings | — |
 | select | harnessEfficiencyMode | Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose | — |
 | select | harnessReasoning | Off (Fastest) Low Medium xHigh | — |
 | select | harnessMaxSteps | 6 steps 10 steps 16 steps 24 steps | — |
@@ -353,13 +353,13 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `038f27bdcb52dc65b5d414096f17fe1d9e93068f59ca7dcab5d4cdf71803360c` | `not recorded` |
-| `source_manifest_sha256` | `d6ca5f449f1ad6c30b0c83d0fe5579353d5de7473b4d3f718f2f21251eb1937c` | `not recorded` |
-| `control_inventory_sha256` | `0c4e10751da0a773b646a7d76a4c756b827fc2b6bd7d6a58eeeb96644b4a2572` | `not recorded` |
-| `route_map_sha256` | `a6568ab915ac99419d435232d336b76acba10b4b4c2881804f87492df737def4` | `not recorded` |
-| `authorization_trace_sha256` | `7f219eff0f09367c1f8e78c0311c599d81edd1a220cf85ae3855e736bc7979f4` | `not recorded` |
-| `frontend_sha256` | `fee7f61a819a0f562285334465217561191e1c5b6dac15fb77fea907e1bedf3c` | `not recorded` |
-| `screenshot_manifest_sha256` | `69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92` | `not recorded` |
-| `screenshot_index_sha256` | `de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0` | `not recorded` |
+| `source_manifest_sha256` | `2be11bcb238c1db91e0d68088d98b01ca90897c37ba80933b88e599ecef5531c` | `not recorded` |
+| `control_inventory_sha256` | `5b0f8c9cb075cd77256fc84ac3045ed0798fdeb3f45d2be708cca81b4282e3f4` | `not recorded` |
+| `route_map_sha256` | `626bdd45bb1b9871f28bb5181bdb77578c6f7eb427476a91d9ce18afdbc09149` | `not recorded` |
+| `authorization_trace_sha256` | `461d91b9aabb2969224b827b41f1dc3f5a64cc283b14719faa623e89f1bd21f2` | `not recorded` |
+| `frontend_sha256` | `36d01245ff34319ff671c1e3cac1cfaf2d34ed4e3042537c79bec2f0a7942713` | `not recorded` |
+| `screenshot_manifest_sha256` | `cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57` | `not recorded` |
+| `screenshot_index_sha256` | `82ecdeb4870961951b1b8946a657438d2a3893f443e5fe182f3372ed41784f07` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |
 | `route_map_generator_sha256` | `923981fc78ff0f844e67691bfa966963f3959be1b9650eaf49f3b58b0a14d555` | `not recorded` |
 

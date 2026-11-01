@@ -694,7 +694,7 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .hall-composer { flex-wrap: wrap; }
 .hall-composer textarea { flex: 1 1 200px !important; min-width: 0; }
 .harness-advanced { flex: 1 1 100%; color: var(--text-dim); }
-.harness-advanced summary { cursor: pointer; width: fit-content; padding: 4px 0; font-weight: 600; }
+.harness-advanced summary { cursor: pointer; width: fit-content; max-width: 100%; padding: 4px 0; font-weight: 600; }
 .harness-advanced-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding-top: 8px; }
 /* The collapsed group states its own contents, so a reader does not have to open it to
    learn what it holds, or that it was changed. */
@@ -1778,7 +1778,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
               </select>
             </div>
             <details class="harness-advanced" id="harnessAdvanced">
-              <summary>Advanced settings<span id="harnessAdvancedSummary" class="harness-advanced-summary"></span></summary>
+              <summary><span>Run settings</span><span id="harnessAdvancedSummary" class="harness-advanced-summary"></span></summary>
               <div class="harness-advanced-fields">
             <div style="display:flex; flex-direction:column;">
               <label class="field-lbl" style="margin-bottom:2px;" for="harnessEfficiencyMode">Discipline</label>

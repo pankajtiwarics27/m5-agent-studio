@@ -1,53 +1,57 @@
 {
   "schema": 1,
-  "captured_at": "2026-10-31T17:54:48.907Z",
+  "captured_at": "2026-11-01T05:22:48.801Z",
   "viewport": {
     "width": 1440,
     "height": 900,
     "device_scale_factor": 2
+  },
+  "variant": {
+    "theme": null,
+    "density": null
   },
   "shots": [
     {
       "id": "start",
       "tab": "start",
       "file": "start.png",
-      "bytes": 348544,
-      "sha256": "70ab13111454e1aab68fe4c6c96e19bb010112aa7cb08112b9144a6c5568fcbf"
+      "bytes": 474671,
+      "sha256": "3798ed6604d66e95835cdc25693aaebef224e97695627fbcca4591ee28ce81a9"
     },
     {
       "id": "harness",
       "tab": "harness",
       "file": "harness.png",
-      "bytes": 359794,
-      "sha256": "6ee91662ce7b217c1b00c7a32f380d7dfd0151218a96786c22d1def112946b93"
+      "bytes": 512740,
+      "sha256": "716215aa41fcea2332243ceef7b708237beaa32fc389eb835004a1a6c86d792d"
     },
     {
       "id": "hall",
       "tab": "hall",
       "file": "hall.png",
-      "bytes": 285246,
-      "sha256": "489664c019af28937bd43622dcde2bd4795c3b713b258770ee237aecd6f0575c"
+      "bytes": 350007,
+      "sha256": "bdee24d09ada9625aefcf0ece6069e49fbd7f15c6c7b160747cf7c37d18e5159"
     },
     {
       "id": "council",
       "tab": "council",
       "file": "pipeline.png",
-      "bytes": 263852,
-      "sha256": "e807e09e0bf17c61116e76d680270b595558edbaa7d3c1e312955ed748a5b252"
+      "bytes": 323070,
+      "sha256": "35d3fa91cd489ebf13384dbed79b23f2846fb70cb6c32a3ab22d0f1976df5f39"
     },
     {
       "id": "debate",
       "tab": "debate",
       "file": "compare.png",
-      "bytes": 251863,
-      "sha256": "23865a9969dd1fe25eeb0cfd24b541fa094941ebe76cf7a7c93b8f5e913f49f1"
+      "bytes": 343826,
+      "sha256": "c4d969db44d19ddc307d4bf16be6f593b22a871d94491e4d0c91690ea9972f2a"
     },
     {
       "id": "chat",
       "tab": "chat",
       "file": "chat.png",
-      "bytes": 248564,
-      "sha256": "66488f4e34f678f19e3b5382e980318b5d52c00c823a7e517fae7fcd658934c6"
+      "bytes": 334413,
+      "sha256": "81a1df1cdc03c062547e488c5fe861347fd135336ebf7d76c6d90fd7531ebd3b"
     }
   ]
 }
