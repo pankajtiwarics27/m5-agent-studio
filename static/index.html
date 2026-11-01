@@ -487,7 +487,7 @@
   .harness-sidebar { background: var(--bg-elev); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
   .harness-main { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
   .harness-bar { padding: 9px 16px; background: var(--bg-elev); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .harness-stream { flex: 1; overflow-y: auto; padding: 14px 18px 22px; display: flex; flex-direction: column; gap: 11px; }
+  .harness-stream { flex: 1; min-height: 96px; overflow-y: auto; padding: 14px 18px 22px; display: flex; flex-direction: column; gap: 11px; }
   .h-turn-user { align-self: flex-end; max-width: 88%; background: rgba(99, 102, 241, 0.16); border: 1px solid rgba(99, 102, 241, 0.42); border-radius: 12px; padding: 10px 14px; }
   .h-step-card { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--cyan); border-radius: 11px; padding: 11px 14px; }
   .h-step-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 12px; }
@@ -700,6 +700,35 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
    learn what it holds, or that it was changed. */
 .harness-advanced-summary { margin-left: 8px; font-weight: 400; font-size: 10.8px; color: var(--text-faint); }
 .harness-advanced-summary[data-changed="true"] { color: var(--amber); }
+/* The durable log, stated before the view of it: the strip says what the pane is showing
+   and the list is the record itself, oldest first, one row per event with its seq. */
+.harness-timeline { flex: 0 0 auto; max-height: 45%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; border-bottom: 1px solid var(--border); background: var(--bg-elev); padding: 4px 12px; }
+.harness-timeline[hidden] { display: none; }
+.harness-timeline-bar { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11.2px; color: var(--text-dim); }
+.harness-timeline-toggle { background: none; border: 0; padding: 3px 2px; color: var(--text-dim); font: inherit; font-weight: 700; cursor: pointer; }
+.harness-timeline-toggle::before { content: "\25B8 "; color: var(--text-faint); }
+.harness-timeline-toggle[aria-expanded="true"]::before { content: "\25BE "; }
+.harness-timeline-count { font-size: 10.8px; color: var(--text-faint); }
+.harness-timeline-state { flex: 0 0 auto; min-width: 0; margin: 1px 0 2px; font-size: 11px; line-height: 1.45; color: var(--text-faint); overflow-wrap: anywhere; }
+.harness-timeline-state[data-mode="live"] { color: var(--emerald); }
+.harness-timeline-state[data-mode="replay"] { color: var(--amber); }
+.harness-timeline-state[data-mode="pruned"] { color: var(--amber); }
+.harness-timeline-actions { display: flex; gap: 5px; margin-left: auto; }
+/* `.btn` sets its own display, which wins over the UA rule for [hidden]: say it again
+   here, so a control that is not offered is not drawn either. */
+.harness-timeline-actions .btn[hidden] { display: none; }
+.harness-timeline-list { flex: 1 1 auto; min-height: 0; list-style: none; margin: 2px 0 6px; padding: 0; max-height: min(168px, 22vh); overflow-y: auto; border-top: 1px solid var(--border); }
+.harness-timeline-list[hidden] { display: none; }
+.harness-timeline-row { display: flex; gap: 8px; align-items: baseline; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid rgba(255,255,255,0.04); padding: 3px 4px; color: var(--text-dim); font: inherit; font-size: 11px; cursor: pointer; }
+.harness-timeline-row:hover { background: rgba(99,102,241,0.10); }
+.harness-timeline-seq { font-family: var(--mono); font-size: 10.4px; color: var(--text-faint); min-width: 34px; }
+.harness-timeline-type { font-family: var(--mono); font-size: 10.4px; color: var(--cyan); min-width: 168px; }
+.harness-timeline-summary { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.harness-timeline-time { font-family: var(--mono); font-size: 10.2px; color: var(--text-faint); }
+.h-event[data-highlight="true"] { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+.h-recorded { display: flex; gap: 9px; align-items: baseline; font-family: var(--mono); font-size: 11px; color: var(--text-dim); padding: 4px 8px; background: rgba(148,163,184,0.07); border-left: 2px solid rgba(148,163,184,0.45); border-radius: 5px; }
+.h-recorded-type { color: var(--cyan); flex: 0 0 auto; white-space: nowrap; }
+.h-recorded-body { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 /* The plan is the answer to "what will Run do?" printed before it is pressed. Every value
    is read from the control the run payload reads, so it cannot describe a run this pane
    would not start. */
@@ -1798,6 +1827,21 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
               <span id="harnessCtxSavingsBadge" class="badge green" style="display:none;" title="Context-Mode SQLite FTS5 KV-Cache Compression Savings">Ctx Saved 0%</span>
               <span id="harnessActiveStatusBadge" class="status" data-tone="info" role="status">READY</span>
             </div>
+          </div>
+
+          <!-- Durable log: the record the trajectory is a view of -->
+          <div id="harnessTimeline" class="harness-timeline" data-mode="idle" hidden>
+            <div class="harness-timeline-bar">
+              <button id="harnessTimelineToggle" class="harness-timeline-toggle" type="button" aria-expanded="false" aria-controls="harnessTimelineList" onclick="toggleHarnessTimeline()">Session log</button>
+              <span id="harnessTimelineCount" class="harness-timeline-count mono">0 events</span>
+              <span class="harness-timeline-actions">
+                <button id="harnessTimelineJump" class="btn btn-xs" type="button" hidden onclick="jumpToLatestHarnessEvent()" title="Scroll the trajectory to the newest event">Jump to latest &darr;</button>
+                <button id="harnessTimelineReplay" class="btn btn-xs" type="button" onclick="replayHarnessLog()" title="Re-read the durable log from its first retained event and rebuild the view">Replay log</button>
+                <button id="harnessTimelineResync" class="btn btn-xs" type="button" onclick="harnessResyncFromSnapshot('operator')" title="Re-read the authoritative task state and the whole log">Resync</button>
+              </span>
+            </div>
+            <div id="harnessTimelineState" class="harness-timeline-state" data-mode="idle" role="status" aria-live="polite"></div>
+            <ol id="harnessTimelineList" class="harness-timeline-list" aria-label="Durable task events, oldest first" hidden></ol>
           </div>
 
           <!-- Trajectory Stream -->
@@ -5311,6 +5355,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     activeHarnessId = null;
     activeHarnessSession = null;
     harnessResetEventCache();
+    harnessLogTelemetry = { source: "idle", reason: "", trigger: "", pages: 0, reloads: 0, resyncs: 0, streamed: 0, latest: 0, retained: 0 };
     harnessSnapshot = null;
     closeHarnessEventStream();
     document.getElementById("harnessActiveLabel").textContent = "New Harness Draft — choose workspace, worktree isolation, & policy, then run your task below.";
@@ -5456,6 +5501,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     // and the durable event log, never from whatever DOM happened to survive.
     activeHarnessId = id;
     harnessResetEventCache();
+    harnessLogTelemetry = { source: "idle", reason: "", trigger: "", pages: 0, reloads: 0, resyncs: 0, streamed: 0, latest: 0, retained: 0 };
     harnessSnapshot = null;
     await closeHarnessEventStream();
     try {
@@ -5603,6 +5649,227 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
   /* M5-P1-07-PURE-END */
 
+  // How this view of the log was filled, so the pane can say it instead of leaving the
+  // reader to guess whether they are looking at the live stream, a re-read, or a snapshot.
+  let harnessLogTelemetry = { source: "idle", reason: "", trigger: "", pages: 0, reloads: 0, resyncs: 0, streamed: 0, latest: 0, retained: 0 };
+  const HARNESS_PIN_SLACK = 28;
+
+  function harnessStreamNearBottom(box) {
+    if (!box) return true;
+    return box.scrollHeight - box.scrollTop - box.clientHeight <= HARNESS_PIN_SLACK;
+  }
+
+  // One line per event, in the reader's terms: what happened, not the field names.
+  function harnessEventSummary(ev) {
+    const type = String((ev && ev.type) || "");
+    const clip = (text, n) => String(text || "").replace(/\s+/g, " ").trim().slice(0, n);
+    if (type === "session/init") {
+      const where = ev.use_worktree ? `isolated worktree ${ev.worktree_dir || ""}` : `direct ${ev.workspace_dir || ""}`;
+      return `${ev.policy || "standard"} policy · ${where} · lead ${ev.lead_model || "?"}`;
+    }
+    if (type === "security/policy_revision") {
+      const revoked = Array.isArray(ev.revoked_grant_ids) ? ev.revoked_grant_ids.length : 0;
+      return `${ev.previous_policy || "?"} -> ${ev.new_policy || "?"} (revision ${Number(ev.policy_revision) || "?"})${revoked ? ` · ${revoked} grant(s) revoked` : ""}`;
+    }
+    if (type === "turn/start") return `${ev.policy || "standard"} policy${ev.resumed_from_step ? ` · resumed from step ${ev.resumed_from_step}` : ""} · ${clip(ev.prompt, 70)}`;
+    if (type === "step/start") return `step ${Number(ev.step) || "?"} · ${ev.model || "?"}`;
+    if (type === "assistant/message") return `step ${Number(ev.step) || "?"} · ${ev.model || "?"}${ev.tool_calls && ev.tool_calls.length ? ` · ${ev.tool_calls.length} tool call(s)` : ""}`;
+    if (type === "tool/result") return `${ev.tool || "tool"} · ${ev.ok === false ? "FAILED" : "OK"} · ${Number(ev.elapsed_ms) || 0} ms`;
+    if (type === "approval/request") return `${ev.tool || "tool"} needs a decision (${ev.approval_id || "?"})`;
+    if (type === "approval/decision") return `${ev.approval_id || "?"} ${ev.decision === "approve" ? "approved" : "rejected"}`;
+    if (type === "turn/end") return `turn ended in ${Number(ev.elapsed_s) || 0}s · ${Number(ev.steps) || 0} step(s) · ${ev.state || "completed"}`;
+    if (type.startsWith("turn/")) return type.slice(5).replace(/_/g, " ") + (ev.reason ? ` · ${clip(ev.reason, 70)}` : "");
+    if (type === "context/compacted") return `${Number(ev.before_chars) || 0} -> ${Number(ev.after_chars) || 0} chars archived`;
+    if (type === "gsd/wave") return `wave ${Number(ev.wave) || "?"} · ${ev.name || ""} · ${ev.model || ""}`;
+    if (type === "worktree/applied") return clip(ev.message, 90);
+    if (type === "workspace/snapshot_captured") return `snapshot ${ev.snapshot_id || "?"}${ev.label ? ` · ${clip(ev.label, 40)}` : ""}`;
+    if (type === "workspace/snapshot_restored") return `restored ${ev.snapshot_id || "?"}${ev.files_restored !== undefined ? ` · ${Number(ev.files_restored) || 0} file(s)` : ""}`;
+    if (type.startsWith("edit/")) {
+      const target = ev.path || ev.file || ev.target || "";
+      return `${type.slice(5).replace(/_/g, " ")}${target ? ` · ${clip(target, 70)}` : ""}${ev.reason ? ` · ${clip(ev.reason, 50)}` : ""}`;
+    }
+    if (type.startsWith("security/grant_")) {
+      return `${ev.grant_id || "?"}${ev.tool ? ` · ${ev.tool}` : ""}${ev.reason ? ` · ${clip(ev.reason, 50)}` : ""}`;
+    }
+    if (type === "security/containment") return `${ev.action || "contained strikes"}${ev.strikes !== undefined ? ` · ${Number(ev.strikes) || 0} strike(s)` : ""}`;
+    if (type === "mcp/effects_reconciled") return `${Number(ev.reconciled) || 0} reconciled${ev.uncertain ? ` · ${Number(ev.uncertain)} uncertain` : ""}`;
+    if (type === "mcp/effect_operator_resolved") return `${ev.effect_id || "?"} · ${ev.resolution || ev.decision || "resolved"}`;
+    if (type.startsWith("delegation/")) return `${ev.child_session_id || ev.session_id || "?"}${ev.role ? ` · ${ev.role}` : ""}${ev.task ? ` · ${clip(ev.task, 50)}` : ""}`;
+    if (type.startsWith("handoff/")) return `${ev.branch_name || ev.reason || "handoff"}${ev.commit ? ` · ${clip(ev.commit, 12)}` : ""}`;
+    if (type.startsWith("turn/lesson")) return `${Number((ev.lesson_ids || []).length) || 1} lesson(s)${ev.reason ? ` · ${clip(ev.reason, 60)}` : ""}`;
+    const keys = Object.keys(ev || {}).filter(key => !["seq", "ts", "type"].includes(key));
+    if (!keys.length) return "recorded";
+    return clip(keys.slice(0, 4).map(key => {
+      const value = ev[key];
+      return `${key}=${typeof value === "object" && value !== null ? JSON.stringify(value) : String(value)}`;
+    }).join(" · "), 110);
+  }
+
+  function harnessLogState() {
+    const events = harnessCachedEvents();
+    const tele = harnessLogTelemetry;
+    const stream = (harnessSnapshot || {}).event_stream || {};
+    const latest = Number(tele.latest || stream.latest_seq || 0);
+    const retained = Number(tele.retained || stream.retained_from_seq || 0);
+    const count = events.length;
+    const first = count ? Number(events[0].seq) || 0 : 0;
+    const last = count ? Number(events[count - 1].seq) || 0 : 0;
+    const pruned = retained > 1 ? retained - 1 : 0;
+    // "following" needs somewhere to follow from: a zero cursor is an empty view, not a
+    // live one, and saying "following from seq 0" would be a lie about a pane with no log.
+    const following = Boolean(harnessEventStreamAbort) && !harnessRunActive && harnessCursor > 0;
+    const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+    let mode = "idle";
+    let text = "";
+    if (!activeHarnessId) {
+      text = "";
+    } else if (harnessRunActive) {
+      mode = "live";
+      text = `a run is in flight: the trajectory is what it sends, and ${plural(count, "event")} are held in the log`;
+    } else if (tele.reason) {
+      // The log did not resume, so the view is the snapshot's: say that before the numbers.
+      mode = pruned ? "pruned" : "replay";
+      text = `the log did not resume (${tele.reason}), so this view is the snapshot's: task state and ${plural(count, "event")}, seq ${first}-${last}`;
+    } else if (following) {
+      mode = "live";
+      text = `following the log from seq ${harnessCursor} · ${plural(count, "event")} held`;
+    } else {
+      mode = pruned ? "pruned" : "idle";
+      text = `${plural(count, "event")} held, seq ${first}-${last} · cursor ${harnessCursor}${latest ? ` of ${latest}` : ""}`;
+    }
+    // A pruned log is the more important fact than whether it is live: say it in colour.
+    if (pruned && mode !== "replay") mode = "pruned";
+    if (pruned) text += ` · ${plural(pruned, "earlier event")} pruned, retained from seq ${retained}`;
+    // What this view holds against what the log last reported as its newest: the only
+    // honest way to say "there is more" without claiming what the missing events are.
+    if (latest && count < latest) text += ` · this view holds ${count} of the ${latest} events last reported`;
+    if (tele.reloads) text += ` · replayed ${plural(tele.reloads, "time")}`;
+    return {
+      mode,
+      text,
+      count,
+      first,
+      last,
+      pruned,
+      latest,
+      retained,
+      cursor: harnessCursor,
+      following,
+      signature: `${mode}|${tele.source}|${tele.reason}|${tele.trigger}|${tele.reloads}|${harnessCursor}|${latest}|${retained}|${harnessRunActive}|${following}|${count}|${first}|${last}`,
+    };
+  }
+
+  let harnessTimelineSignature = "";
+
+  function renderHarnessTimeline() {
+    const host = document.getElementById("harnessTimeline");
+    if (!host) return null;
+    if (!activeHarnessId) {
+      host.hidden = true;
+      host.dataset.mode = "idle";
+      harnessTimelineSignature = "";
+      return null;
+    }
+    const state = harnessLogState();
+    host.hidden = false;
+    host.dataset.mode = state.mode;
+    const count = document.getElementById("harnessTimelineCount");
+    if (count) count.textContent = `${state.count} event${state.count === 1 ? "" : "s"}`;
+    const line = document.getElementById("harnessTimelineState");
+    if (line) {
+      line.dataset.mode = state.mode;
+      if (line.textContent !== state.text) line.textContent = state.text;
+    }
+    const toggle = document.getElementById("harnessTimelineToggle");
+    const list = document.getElementById("harnessTimelineList");
+    const expanded = Boolean(toggle) && toggle.getAttribute("aria-expanded") === "true";
+    if (list && expanded) {
+      const signature = `${state.signature}|${harnessCachedEvents().length}`;
+      if (signature !== harnessTimelineSignature) {
+        harnessTimelineSignature = signature;
+        list.innerHTML = harnessCachedEvents().map((ev) => {
+          const seq = Number(ev.seq) || 0;
+          const type = String(ev.type || "event");
+          const time = Number(ev.ts) ? new Date(Number(ev.ts) * 1000).toLocaleTimeString([], { hour12: false }) : "";
+          return `<li><button type="button" class="harness-timeline-row" data-seq="${seq}" data-type="${escapeHtml(type)}" onclick="focusHarnessEvent(${seq})" title="Show seq ${seq} in the trajectory"><span class="harness-timeline-seq">#${seq}</span><span class="harness-timeline-type">${escapeHtml(type)}</span><span class="harness-timeline-summary">${escapeHtml(harnessEventSummary(ev))}</span><span class="harness-timeline-time">${escapeHtml(time)}</span></button></li>`;
+        }).join("");
+      }
+    }
+    updateHarnessTimelineJump();
+    return state;
+  }
+
+  function updateHarnessTimelineJump() {
+    const jump = document.getElementById("harnessTimelineJump");
+    const stream = document.getElementById("harnessStream");
+    if (jump && stream) jump.hidden = harnessStreamNearBottom(stream);
+  }
+
+  function toggleHarnessTimeline() {
+    const toggle = document.getElementById("harnessTimelineToggle");
+    const list = document.getElementById("harnessTimelineList");
+    if (!toggle || !list) return null;
+    const next = toggle.getAttribute("aria-expanded") !== "true";
+    toggle.setAttribute("aria-expanded", next ? "true" : "false");
+    list.hidden = !next;
+    if (next) {
+      harnessTimelineSignature = "";
+      renderHarnessTimeline();
+    }
+    return next;
+  }
+
+  function focusHarnessEvent(seq) {
+    const stream = document.getElementById("harnessStream");
+    const target = stream ? stream.querySelector(`.h-event[data-seq="${Number(seq)}"]`) : null;
+    if (!target) return null;
+    target.scrollIntoView({ block: "center" });
+    target.setAttribute("tabindex", "-1");
+    target.focus({ preventScroll: true });
+    target.dataset.highlight = "true";
+    setTimeout(() => { if (target.isConnected) delete target.dataset.highlight; }, 1400);
+    updateHarnessTimelineJump();
+    return Number(seq);
+  }
+
+  function jumpToLatestHarnessEvent() {
+    const stream = document.getElementById("harnessStream");
+    if (!stream) return null;
+    stream.scrollTop = stream.scrollHeight;
+    const all = stream.querySelectorAll(".h-event");
+    const last = all.length ? all[all.length - 1] : null;
+    if (last) {
+      last.setAttribute("tabindex", "-1");
+      last.focus({ preventScroll: true });
+    }
+    updateHarnessTimelineJump();
+    return stream;
+  }
+
+  async function replayHarnessLog() {
+    // Re-read the durable log from its first retained event and rebuild the view from the
+    // record alone: the snapshot is not re-read here, which is the point of the log path.
+    const sessionId = activeHarnessId;
+    if (!sessionId) return null;
+    const before = harnessCachedEvents().length;
+    harnessLogTelemetry.reason = "";
+    harnessResetEventCache();
+    const verdict = await loadHarnessEvents({ full: true });
+    if (activeHarnessId !== sessionId) return null;
+    harnessLogTelemetry.reloads += 1;
+    if (verdict.gap && verdict.reason !== "session_changed") {
+      // A cursor of zero cannot be ahead of the log, so a gap here is the record itself
+      // saying it is not replayable. Say that, then reload the authoritative snapshot.
+      harnessLogTelemetry.reason = verdict.reason;
+      renderHarnessTimeline();
+      showToast(`The log could not be replayed from its start (${verdict.reason}); reloading the authoritative snapshot.`, "warn");
+      await harnessResyncFromSnapshot("replay_gap");
+      return null;
+    }
+    renderStoredHarnessEvents(harnessCachedEvents());
+    return { before, after: harnessCachedEvents().length };
+  }
+
   function harnessResetEventCache() { harnessEventCache = new Map(); harnessCursor = 0; }
 
   function harnessCachedEvents() {
@@ -5631,6 +5898,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (opts && opts.full) harnessResetEventCache();
     let cursor = harnessCursor;
     let verdict = { gap: false, reason: "" };
+    let pages = 0;
     for (let page = 0; page < 40; page++) {
       let payload;
       try { payload = await harnessFetchEventPage(sessionId, cursor); } catch (e) { return { gap: true, reason: "fetch_error" }; }
@@ -5638,9 +5906,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       verdict = harnessEventGap(payload, cursor);
       if (verdict.gap) return verdict;
       harnessRememberEvents(payload.events || []);
+      harnessLogTelemetry.latest = Number(payload.latest_seq || payload.next_cursor || 0);
+      harnessLogTelemetry.retained = Number(payload.retained_from_seq || 0);
+      pages += 1;
       cursor = Number(payload.next_cursor || cursor);
       if (!payload.has_more) break;
     }
+    harnessLogTelemetry.source = "log";
+    harnessLogTelemetry.pages += pages;
     return verdict;
   }
 
@@ -5683,6 +5956,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     applyHarnessSnapshotState(state);
     const verdict = await loadHarnessEvents({ full: true });
     if (activeHarnessId !== sessionId) return;
+    harnessLogTelemetry.source = "snapshot";
+    harnessLogTelemetry.trigger = String(reason || "");
+    harnessLogTelemetry.reason = verdict.gap && verdict.reason !== "session_changed" ? verdict.reason : "";
+    harnessLogTelemetry.resyncs += 1;
     renderStoredHarnessEvents(harnessCachedEvents());
     if (verdict.gap && verdict.reason !== "session_changed") {
       showToast(`Task event resync: ${verdict.reason}. Showing the authoritative snapshot.`, "warn");
@@ -5745,6 +6022,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             );
             if (verdict.gap) { await harnessResyncFromSnapshot(verdict.reason || "stream_gap"); return; }
             harnessRememberEvents([data]);
+            harnessLogTelemetry.source = "live";
+            harnessLogTelemetry.reason = "";
+            harnessLogTelemetry.streamed += 1;
             renderStoredHarnessEvents(harnessCachedEvents());
             if (data.type && (data.type === "turn/end" || data.type === "turn/verified" || data.type === "turn/cancelled")) {
               // A turn reached a durable outcome: re-anchor status to the runtime.
@@ -5801,8 +6081,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     harnessResyncFromSnapshot("focus");
   });
 
+  function renderRecordedHarnessEventHtml(ev) {
+    // The fallback card. A log the pane cannot draw is a log the pane drops, and a reader
+    // cannot tell a dropped event from an event that never happened.
+    const type = String((ev && ev.type) || "event");
+    return `<div class="h-recorded"><span class="h-recorded-type">${escapeHtml(type)}</span><span class="h-recorded-body">${escapeHtml(harnessEventSummary(ev))}</span></div>`;
+  }
+
   function renderStoredHarnessEventHtml(ev, decisions, livePending) {
-    if (!ev || !ev.type) return "";
+    // Not even a payload with no event: everything the pane retains is drawn, so that the
+    // number of cards a reader counts is the number of events the log holds.
+    if (!ev) return renderRecordedHarnessEventHtml(ev);
     if (ev.type === "turn/start") {
       const resumed = ev.resumed_from_step ? ` resuming from step ${ev.resumed_from_step}` : "";
       return `<div class="h-turn-user"><div style="font-size:10.8px; color:#c7d2fe; font-weight:700; margin-bottom:3px;">USER TASK (${escapeHtml(ev.policy || '')}${escapeHtml(resumed)})</div>${renderMarkdown(ev.prompt || "")}</div>`;
@@ -5873,13 +6162,18 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (ev.type === "worktree/applied") {
       return `<div style="font-family:var(--mono); font-size:11.4px; color:#a7f3d0; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.4); border-radius:8px; padding:7px 11px;">${UI_ICONS.check} ${escapeHtml(ev.message || "Worktree applied.")}</div>`;
     }
-    return "";
+    return renderRecordedHarnessEventHtml(ev);
   }
 
   function renderStoredHarnessEvents(events) {
     const stream = document.getElementById("harnessStream");
     const ordered = harnessMergeEvents([], events || []);
-    if (!ordered.length) { renderHarnessStarter(); return; }
+    if (!ordered.length) { renderHarnessStarter(); renderHarnessTimeline(); return; }
+    // Where the reader is, and which cards they opened: a frame that arrives while they
+    // are reading must not move them, and must not shut the cards they opened.
+    const pinned = harnessStreamNearBottom(stream);
+    const previousTop = stream ? stream.scrollTop : 0;
+    const openDetails = stream ? Array.from(stream.querySelectorAll("details")).map((d, i) => (d.open ? i : -1)).filter(i => i >= 0) : [];
     const decisions = {};
     for (const ev of ordered) {
       if (ev.type === "approval/decision" && ev.approval_id) decisions[ev.approval_id] = ev.decision || "";
@@ -5890,9 +6184,26 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (Number(streamState.retained_from_seq || 0) > 1) {
       htmlParts.push(`<div class="mono" style="font-size:11px; color:var(--text-faint);">Earlier events were pruned; showing the retained log from seq ${escapeHtml(String(streamState.retained_from_seq))}. Task status above is authoritative.</div>`);
     }
-    for (const ev of ordered) htmlParts.push(renderStoredHarnessEventHtml(ev, decisions, livePending));
+    for (const ev of ordered) {
+      const seq = Number(ev.seq) || 0;
+      const type = String(ev.type || "event");
+      htmlParts.push(`<div class="h-event" data-seq="${seq}" data-type="${escapeHtml(type)}">${renderStoredHarnessEventHtml(ev, decisions, livePending)}</div>`);
+    }
     stream.innerHTML = htmlParts.join("");
-    stream.scrollTop = stream.scrollHeight;
+    if (openDetails.length) {
+      const details = stream.querySelectorAll("details");
+      for (const index of openDetails) if (details[index]) details[index].open = true;
+    }
+    if (pinned) {
+      stream.scrollTop = stream.scrollHeight;
+    } else {
+      stream.scrollTop = previousTop;
+      // The reader was reading when this frame landed: say a frame landed.
+      const landed = document.getElementById("harnessTimelineCount");
+      if (landed) landed.dataset.fresh = "true";
+      setTimeout(() => { if (landed && landed.isConnected) delete landed.dataset.fresh; }, 1600);
+    }
+    renderHarnessTimeline();
   }
 
   function appendWorkflowApprovalCard(target, d) {
@@ -6147,6 +6458,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (node) node.addEventListener("change", () => updateChatComposer());
   }
   document.getElementById("chatMessages").addEventListener("scroll", () => updateChatTranscriptBar(), { passive: true });
+  // The same rule as the chat transcript: the jump appears only when the reader is not at
+  // the newest event, and it is the only thing that scrolls them there unasked.
+  document.getElementById("harnessStream").addEventListener("scroll", () => updateHarnessTimelineJump(), { passive: true });
   renderChatMessages();
   document.getElementById("hallHumanInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitHallComposer(); } });
 

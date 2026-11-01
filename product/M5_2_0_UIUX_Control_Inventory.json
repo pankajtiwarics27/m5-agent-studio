@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "913aa2832030f7e9ee984d21b181e9344f0d663291d4a6501cbf674f095465fb",
+  "frontend_sha256": "fee7f61a819a0f562285334465217561191e1c5b6dac15fb77fea907e1bedf3c",
   "panes": [
     {
       "dom_id": "start",
@@ -112,9 +112,9 @@
     {
       "dom_id": "harness",
       "section_id": "pane-harness",
-      "control_count": 17,
+      "control_count": 21,
       "counts": {
-        "button": 4,
+        "button": 8,
         "input": 2,
         "select": 9,
         "summary": 1,
@@ -213,6 +213,41 @@
           "class": "btn btn-danger",
           "onclick": "abortHarnessRun()",
           "text": "Abort"
+        },
+        {
+          "tag": "button",
+          "id": "harnessTimelineToggle",
+          "type": "button",
+          "class": "harness-timeline-toggle",
+          "onclick": "toggleHarnessTimeline()",
+          "text": "Session log"
+        },
+        {
+          "tag": "button",
+          "id": "harnessTimelineJump",
+          "type": "button",
+          "class": "btn btn-xs",
+          "title": "Scroll the trajectory to the newest event",
+          "onclick": "jumpToLatestHarnessEvent()",
+          "text": "Jump to latest ↓"
+        },
+        {
+          "tag": "button",
+          "id": "harnessTimelineReplay",
+          "type": "button",
+          "class": "btn btn-xs",
+          "title": "Re-read the durable log from its first retained event and rebuild the view",
+          "onclick": "replayHarnessLog()",
+          "text": "Replay log"
+        },
+        {
+          "tag": "button",
+          "id": "harnessTimelineResync",
+          "type": "button",
+          "class": "btn btn-xs",
+          "title": "Re-read the authoritative task state and the whole log",
+          "onclick": "harnessResyncFromSnapshot('operator')",
+          "text": "Resync"
         },
         {
           "tag": "textarea",
@@ -1278,10 +1313,10 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 178,
-    "pane_controls": 77,
+    "markup_controls": 182,
+    "pane_controls": 81,
     "chrome_controls": 101,
-    "script_rendered_controls": 30,
+    "script_rendered_controls": 31,
     "script_rendered_by_function": {
       "appendWorkflowApprovalCard": 3,
       "ensureLiveStepCard": 3,
@@ -1290,6 +1325,7 @@
       "refreshOnboarding": 1,
       "renderCommandPaletteList": 1,
       "renderHarnessSidebar": 1,
+      "renderHarnessTimeline": 1,
       "renderMarkdown": 1,
       "renderMcpUI": 7,
       "renderOpenContextDocs": 3,
