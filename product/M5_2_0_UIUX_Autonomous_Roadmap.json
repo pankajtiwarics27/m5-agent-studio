@@ -4520,7 +4520,7 @@
         "updated_at": "2026-11-01T07:26:00Z",
         "completed_at": "2026-11-01T07:26:00Z",
         "owner_session": "arena/069a2b89-m5-agent-studio",
-        "commit_sha": null,
+        "commit_sha": "94a50373ce60e94efad729ed0a1446780bf70883",
         "changed_files": [
           "docs/README.md",
           "docs/media/harness-recovery/README.md",
@@ -4575,8 +4575,8 @@
         "test_results": [
           {
             "command": ".venv/bin/python -m pytest -q",
-            "result": "2196 passed, 26 skipped",
-            "note": "full suite on the story tree, before the ledger commit"
+            "result": "2140 passed, 26 skipped",
+            "note": "full suite on the story tree plus this ledger commit (195 s)"
           },
           {
             "command": ".venv/bin/python -m pytest -q tests/test_harness_recovery.py",
