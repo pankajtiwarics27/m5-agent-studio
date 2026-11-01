@@ -106,7 +106,7 @@
     ],
     "last_completed_story": "UIUX-P2-03",
     "next_recommended_story": "UIUX-P2-04",
-    "last_checkpoint": "2026-11-01T02:10:29Z",
+    "last_checkpoint": "2026-11-01T02:38:06Z",
     "last_session_id": "arena/de531f8c-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
@@ -2902,7 +2902,7 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
+      "current_behavior": "Before change: model/persona/reasoning and tool/unload/clear controls existed; messages were minimally styled, user turns lacked role/time labels, assistant turns exposed only informal model/streaming or usage metadata, and the composer provided inline Enter guidance. Existing Stop, retry/dismiss, and keyboard paths were traced before editing.",
       "target_behavior": "Chat composer and conversation hierarchy with no loss of existing functionality.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
@@ -2946,46 +2946,118 @@
       "agent_prompt": "Implement UIUX-P2-04 (Chat composer and conversation hierarchy). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
         "status": "in_progress",
-        "progress_percent": 1,
+        "progress_percent": 95,
         "attempts": 1,
         "started_at": "2026-11-01T02:09:19Z",
-        "updated_at": "2026-11-01T02:10:29Z",
+        "updated_at": "2026-11-01T02:57:02Z",
         "completed_at": null,
         "owner_session": "arena/de531f8c-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [
+          "docs/media/uiux-p2-04/after-dark-mobile/chat.png",
+          "docs/media/uiux-p2-04/after-dark-mobile/index.json",
+          "docs/media/uiux-p2-04/after-dark/chat.png",
+          "docs/media/uiux-p2-04/after-dark/index.json",
+          "docs/media/uiux-p2-04/after-light/chat.png",
+          "docs/media/uiux-p2-04/after-light/index.json",
+          "docs/media/uiux-p2-04/before-dark-mobile/chat.png",
+          "docs/media/uiux-p2-04/before-dark-mobile/index.json",
+          "docs/media/uiux-p2-04/before-dark/chat.png",
+          "docs/media/uiux-p2-04/before-dark/index.json",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-p2-04-evidence.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-tokens.md",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
           "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Presentations.json",
           "product/M5_2_0_UIUX_Preservation_Signoff.json",
-          "docs/uiux-2-0-p0-signoff.md"
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "scripts/chat_composer_walk.mjs",
+          "scripts/uiux_source_manifest.py",
+          "static/index.html",
+          "studio.py",
+          "tests/test_screenshot_capture_browser.py",
+          "tests/test_uiux_chat_composer.py",
+          "tests/test_uiux_source_manifest.py"
         ],
         "evidence": [
-          "Claim checkpoint: current branch arena/de531f8c-m5-agent-studio is clean at adfff5248bbcff8fc5d86770d4ee3f318a446d87; origin/main is current at the same commit after fast-forwarding the session branch.",
+          "Claim checkpoint: current branch arena/de531f8c-m5-agent-studio was clean at adfff5248bbcff8fc5d86770d4ee3f318a446d87 before the claim; origin/main remains current at that commit.",
           "Prerequisite UIUX-P2-03 is done on main via PR #140 under its owner session; its tracking was left untouched.",
-          "Read-only coordination after PR #140 merged found no open pull requests or blocking issues; UIUX-P2-04 was the sole eligible story, with source pin 73bc5e417c1508b41127f3d7162c4afdcbcdbfc4 confirmed as an ancestor."
+          "Read-only coordination after PR #140 merged found no open pull requests or blocking issues; UIUX-P2-04 was the sole eligible story, with source pin 73bc5e417c1508b41127f3d7162c4afdcbcdbfc4 confirmed as an ancestor. Claim commit 043898f was pushed and draft PR #141 opened before implementation; a follow-up PR scan found only this session’s draft and no competing story claim.",
+          "Inspected #pane-chat, its model/persona/reasoning/tools/unload/clear controls, renderChatMessages(), sendChatRequest(), consumeSSE(), stopActiveStream(), presentChatError(), the Enter/Shift+Enter handler and the actual POST /api/chat/stream route. The payload remains model, messages, reasoning_mode, auto_unload, tools_enabled, workspace_dir and skills; app.py and authorization are unchanged.",
+          "The transcript now gives each user/assistant turn a visible role and timestamp, identifies the assistant model, shows completion tokens and decode rate, and distinguishes generating, complete, stopped and failed states. Unexpected clean EOF becomes a recovery error; Stop retains partial output and returns focus to the composer. Retry removes the failed partial assistant item and reuses the original user turn exactly once.",
+          "All pre-existing Chat controls and endpoint semantics are preserved. The new markup uses explicit labels, response-mode grouping and a named transcript region; responsive controls were verified at 390 CSS px. No backend, durable task, approval, event-cursor, sandbox, workspace-edit or recovery semantics were changed.",
+          "The synthetic-SSE browser walk exposed a retry race and a Clear-during-finalization edge: Retry is presented only after stream release, and Clear invalidates any late failure presentation. The full recovery journey passed three consecutive browser runs plus the full browser suite.",
+          "Visually reviewed all five before/after screenshots, including the final recapture of the after states; validated every adjacent index.json SHA-256, byte count, PNG signature and device-scale-adjusted dimensions. All five matched their capture metadata.",
+          "Visual and interaction evidence is mapped in docs/uiux-2-0-p2-04-evidence.md. The Chat screenshots were captured only by scripts/capture_screenshots.mjs against disposable copies and isolated demo servers; the browser walk substitutes synthetic SSE and makes no model-provider call.",
+          "Acceptance remains the reviewer’s call. This ledger records measurements, not owner approval; the P0 preservation package remains historical-approval-unbound."
         ],
         "test_results": [
           {
-            "command": ".venv/bin/python -m pytest -q tests/test_uiux_roadmap.py tests/test_uiux_coordination.py --tb=short",
+            "command": ".venv/bin/python -m pytest -q --tb=short -rf",
             "exit_code": 0,
-            "result": "62 passed after the P2-04 claim and counter reconciliation."
+            "result": "1873 passed, 26 skipped; one Starlette/httpx deprecation warning."
           },
           {
-            "command": ".venv/bin/python scripts/uiux_preservation_signoff.py --check",
+            "command": "M5_REQUIRE_BROWSER_TESTS=1 .venv/bin/python -m pytest -q tests/test_screenshot_capture_browser.py --tb=short",
             "exit_code": 0,
-            "result": "Up to date: historical-approval-unbound, 21 capabilities across 6 panes."
+            "result": "30 passed in 86.23s, including the isolated Chat interaction walk; synthetic SSE, no provider call."
           },
           {
-            "command": ".venv/bin/python scripts/validate_docs.py",
+            "command": "M5_REQUIRE_BROWSER_TESTS=1 .venv/bin/python -m pytest -q tests/test_screenshot_capture_browser.py::test_chat_loading_stream_success_stop_failure_retry_and_mobile --tb=short (repeated 3 times)",
             "exit_code": 0,
-            "result": "Documentation validation passed (5 required pages, 144 files scanned)."
+            "result": "Each run passed (3.62s, 3.85s, 3.65s); verifies Retry after stream release and Clear while a failure finalizes."
+          },
+          {
+            "command": "node scripts/presentation_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway> --json",
+            "exit_code": 0,
+            "result": "20 passed, 0 failed, 0 blocked: refused Chat stream, retained transcript, Retry/Dismiss, and Harness recovery."
+          },
+          {
+            "command": ".venv/bin/ruff check . && .venv/bin/mypy",
+            "exit_code": 0,
+            "result": "Ruff: all checks passed; mypy: no issues in 58 source files."
+          },
+          {
+            "command": ".venv/bin/python scripts/check_frontend_syntax.py && .venv/bin/python scripts/demo_tour.py --check && .venv/bin/python scripts/validate_screenshots.py && .venv/bin/python scripts/validate_docs.py && .venv/bin/python scripts/verify_baseline.py",
+            "exit_code": 0,
+            "result": "Frontend syntax OK; demo transcript current; 6/6 baseline screenshots consistent; docs validation passed (5 required pages, 145 files scanned); baseline 7904892d759bb66b817bb17b6f4f377874bd6e25 verified."
+          },
+          {
+            "command": ".venv/bin/python scripts/uiux_presentation_inventory.py --check && .venv/bin/python scripts/uiux_control_inventory.py --check && .venv/bin/python scripts/uiux_route_map.py --check && .venv/bin/python scripts/uiux_source_manifest.py --check && .venv/bin/python scripts/uiux_authorization_trace.py --check && .venv/bin/python scripts/uiux_tokens.py --check && .venv/bin/python scripts/uiux_overlay_inventory.py --check && .venv/bin/python scripts/uiux_onboarding_inventory.py --check && .venv/bin/python scripts/uiux_status_components.py --check && .venv/bin/python scripts/uiux_preservation_signoff.py --check",
+            "exit_code": 0,
+            "result": "All generated UIUX artifacts up to date; preserved 176 markup controls, 115 routes and 37 state-changing route traces. Sign-off remains historical-approval-unbound."
           }
         ],
-        "visual_evidence": [],
+        "visual_evidence": [
+          "docs/media/uiux-p2-04/before-dark/chat.png — before-state Chat at 1280×900, dark; captured by scripts/capture_screenshots.mjs from the claim commit in a disposable source copy.",
+          "docs/media/uiux-p2-04/before-dark-mobile/chat.png — before-state Chat at 390×844, dark; captured by scripts/capture_screenshots.mjs from the claim commit in a disposable source copy.",
+          "docs/media/uiux-p2-04/after-dark/chat.png — after-state empty Chat at 1280×900, dark; scripts/capture_screenshots.mjs, isolated demo, manifest digest in adjacent index.json.",
+          "docs/media/uiux-p2-04/after-dark-mobile/chat.png — after-state empty Chat at 390×844, dark; scripts/capture_screenshots.mjs, isolated demo, manifest digest in adjacent index.json.",
+          "docs/media/uiux-p2-04/after-light/chat.png — after-state empty Chat at 1280×900, light; scripts/capture_screenshots.mjs, isolated demo, manifest digest in adjacent index.json.",
+          "Dynamic streaming, stopped, failed and retry states were checked in Chromium by scripts/chat_composer_walk.mjs; no screenshot of those synthetic states is claimed."
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "Keep this a vanilla frontend-only story: preserve POST /api/chat/stream and its request fields, with no new dependency, endpoint, privilege, persistence or provider behavior.",
+          "Represent cancellation as a visible stopped transcript state, stream/network failures as failed plus the existing retry/dismiss presentation, and an unexpected clean close as an error; retain partial output where present.",
+          "Make retry reuse the existing user turn rather than duplicating it; preserve the user's selected model/persona/reasoning and existing tools/unload controls."
+        ],
         "blockers": [],
-        "handoff_note": "Claimed before implementation. Trace the Chat composer and conversation surfaces, their handlers/API calls and accessibility/failure states; use only isolated demo state and synthetic credentials.",
-        "next_action": "Inspect the Chat DOM, composer handlers, message rendering, API routes and current regression coverage; capture a disposable baseline before editing.",
+        "handoff_note": "Implementation and measured evidence are in draft PR #141. P2-04 deliberately remains in_progress; no owner approval or completion is claimed. Await review and address requested changes before updating story status.",
+        "next_action": "Await owner/reviewer feedback on draft PR #141; recheck coordination before any further story work. Do not mark done or imply approval until review and acceptance are recorded.",
         "readme_updated": false
       },
       "required_evidence": [

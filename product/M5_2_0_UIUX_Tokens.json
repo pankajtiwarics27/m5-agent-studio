@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "b820146541c376c3be1fcb8f7428a90ab2e55a7264b959510cd40e494b86effd",
+    "style_block_sha256": "01d91cabde0bd83452800ff715c13dc2193022fbe67624c6ec026a1b39af136d",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -37,7 +37,7 @@
   "totals": {
     "tokens": 45,
     "groups": 7,
-    "references": 711,
+    "references": 730,
     "theme_overrides": 18,
     "density_overrides": 5,
     "contrast_pairs": 20,
@@ -143,7 +143,7 @@
         "light": "#eff0ed"
       },
       "density_override": null,
-      "references": 19
+      "references": 20
     },
     {
       "name": "--bg-code",
@@ -163,7 +163,7 @@
         "light": "#d9dcd8"
       },
       "density_override": null,
-      "references": 108
+      "references": 109
     },
     {
       "name": "--border-hi",
@@ -173,7 +173,7 @@
         "light": "#b7bcb7"
       },
       "density_override": null,
-      "references": 22
+      "references": 23
     },
     {
       "name": "--text",
@@ -183,7 +183,7 @@
         "light": "#202326"
       },
       "density_override": null,
-      "references": 46
+      "references": 49
     },
     {
       "name": "--text-dim",
@@ -193,7 +193,7 @@
         "light": "#555c62"
       },
       "density_override": null,
-      "references": 79
+      "references": 82
     },
     {
       "name": "--text-faint",
@@ -203,7 +203,7 @@
         "light": "#687077"
       },
       "density_override": null,
-      "references": 51
+      "references": 53
     },
     {
       "name": "--accent",
@@ -213,7 +213,7 @@
         "light": "#5969d8"
       },
       "density_override": null,
-      "references": 21
+      "references": 22
     },
     {
       "name": "--primary-text",
@@ -243,7 +243,7 @@
         "light": "#286e50"
       },
       "density_override": null,
-      "references": 13
+      "references": 15
     },
     {
       "name": "--amber",
@@ -253,7 +253,7 @@
         "light": "#80580e"
       },
       "density_override": null,
-      "references": 18
+      "references": 20
     },
     {
       "name": "--rose",
@@ -263,7 +263,7 @@
         "light": "#a4313a"
       },
       "density_override": null,
-      "references": 14
+      "references": 16
     },
     {
       "name": "--purple",
@@ -331,7 +331,7 @@
       "value": "600",
       "theme_overrides": {},
       "density_override": null,
-      "references": 5
+      "references": 6
     },
     {
       "name": "--lh-tight",
@@ -411,7 +411,7 @@
       "value": "8px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 2
+      "references": 3
     },
     {
       "name": "--radius-lg",
@@ -491,7 +491,7 @@
       "value": "\"JetBrains Mono\", \"SFMono-Regular\", Consolas, \"Liberation Mono\", monospace",
       "theme_overrides": {},
       "density_override": null,
-      "references": 71
+      "references": 70
     },
     {
       "name": "--header-height",

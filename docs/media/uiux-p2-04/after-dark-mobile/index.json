@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "captured_at": "2026-11-01T02:56:46.427Z",
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "device_scale_factor": 2
+  },
+  "variant": {
+    "theme": "dark",
+    "density": null
+  },
+  "shots": [
+    {
+      "id": "chat",
+      "tab": "chat",
+      "file": "chat.png",
+      "bytes": 119937,
+      "sha256": "b47dd7617c98257e799417c6cf8b714af420f7215b90e3100b563a5fbec7f92f"
+    }
+  ]
+}

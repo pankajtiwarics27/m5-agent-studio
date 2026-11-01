@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "9570e726f3c320c2c50adcaf795deb21728edb168b211527ef22014a62c5e5f4",
-      "bytes": 357201,
-      "lines": 6022
+      "sha256": "3c784739aa3b6d8dc6a90454df4bc37ef5e68c34e6e2eeb065b4fb42578f8865",
+      "bytes": 365806,
+      "lines": 6163
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "65a943eec1d7acf726d9c50ac5b87589a5546db1ded5483ffb0f55dd2157dd1d",
-      "bytes": 3094851,
-      "lines": 69051
+      "sha256": "c275df07ac2925dd5876024162c0818f68773ad8c30daad4b4ce83427b4a1aa3",
+      "bytes": 3103456,
+      "lines": 69192
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -106,12 +106,47 @@
       "sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
       "bytes": 42949,
       "lines": 840
+    },
+    {
+      "path": "scripts/chat_composer_walk.mjs",
+      "role": "exercises Chat composer and stream states against a throwaway loopback demo",
+      "sha256": "1b7666a86d3f11294d4845abbd144c789ba59b86069eb42e13a11e1e99e5c763",
+      "bytes": 15034,
+      "lines": 244
+    },
+    {
+      "path": "tests/test_uiux_chat_composer.py",
+      "role": "checks the Chat mode, hierarchy, payload and recovery contracts",
+      "sha256": "49a5c0b972d47e861c09994586270b1c14c24c6d26088531e52b56d55cb1cf2c",
+      "bytes": 5199,
+      "lines": 129
+    },
+    {
+      "path": "tests/test_screenshot_capture_browser.py",
+      "role": "runs browser-backed UI and screenshot safety regressions",
+      "sha256": "9eff58d6e80d6687b4516888fdea4ee4cd3c139834a5c50e816bc71cb731d4d5",
+      "bytes": 24876,
+      "lines": 642
+    },
+    {
+      "path": "tests/test_uiux_source_manifest.py",
+      "role": "checks the completeness and hashes of this source manifest",
+      "sha256": "9c593344c8e3329dcd53dc59fa1fc2e8fb7b33f274335969431d4ebe70ec004f",
+      "bytes": 8927,
+      "lines": 215
+    },
+    {
+      "path": "docs/uiux-2-0-p2-04-evidence.md",
+      "role": "maps P2-04 acceptance criteria to captured and executed evidence",
+      "sha256": "a0d6d70e733d796a4ab294cea4336a0a14c8dabb89f4fa6fefaace96d416cbe4",
+      "bytes": 4304,
+      "lines": 29
     }
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "9570e726f3c320c2c50adcaf795deb21728edb168b211527ef22014a62c5e5f4",
-    "lines": 6022,
+    "sha256": "3c784739aa3b6d8dc6a90454df4bc37ef5e68c34e6e2eeb065b4fb42578f8865",
+    "lines": 6163,
     "tab_count": 6,
     "tabs": [
       {

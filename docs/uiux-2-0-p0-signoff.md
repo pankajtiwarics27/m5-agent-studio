@@ -306,7 +306,7 @@ A single streaming conversation with the selected model.
 | select | chatReasoning | Off Low Medium | — |
 | input | chatToolsEnabled | — | — |
 | input | chatUnload | — | — |
-| button | — | Clear | clearChat() |
+| button | chatClearBtn | Clear | clearChat() |
 | textarea | chatInput | — | — |
 | button | chatStopBtn | Stop | stopActiveStream() |
 | button | chatSendBtn | Send | sendChat() |
@@ -381,12 +381,12 @@ provenance; a matching snapshot cannot clear separate review holds.
 
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
-| `ledger_content_sha256` | `0f01bd4cddaebdb29281df8f7dfa9c7c6695e74ecba54ea0966605d7e6dca44f` | `not recorded` |
-| `source_manifest_sha256` | `ba483b58841cdc4667169bd81b8779b345eec36f1516ab6558ab025d5596fc4d` | `not recorded` |
-| `control_inventory_sha256` | `77124be4205ef54d1a4969c649d3d3625a0ef5b5f8f4b878500d45ee0dab26c1` | `not recorded` |
-| `route_map_sha256` | `2085fdcc288fd1efee2f13721956bef7e17f106bd5460d19eecc1ecbba815f9e` | `not recorded` |
-| `authorization_trace_sha256` | `b1c2e873963e0eb55b82e445d079637bbe71118c60932d8492663a050d6bdaa0` | `not recorded` |
-| `frontend_sha256` | `9570e726f3c320c2c50adcaf795deb21728edb168b211527ef22014a62c5e5f4` | `not recorded` |
+| `ledger_content_sha256` | `23b6df1d50b339863174ba2c12f33627ffbe29bb3c3f5c2ececfb16146791a28` | `not recorded` |
+| `source_manifest_sha256` | `0ad3f0885ede8fd289b4951142043bd3e9c3e826028b1ea51c5d0c34091a5cc1` | `not recorded` |
+| `control_inventory_sha256` | `042b604c93cf7256b09dda9139c080949e4ee69ce17c5859d6d450fdc71c1de1` | `not recorded` |
+| `route_map_sha256` | `d1fedf38407c76b349f1e4658031edde10cc75f2748de2fbe5ebcfa6a441e200` | `not recorded` |
+| `authorization_trace_sha256` | `8aa69e9aeef69540e7bf7a789cb099d62b865d1899ea42eedfe4e61b9b4dea41` | `not recorded` |
+| `frontend_sha256` | `3c784739aa3b6d8dc6a90454df4bc37ef5e68c34e6e2eeb065b4fb42578f8865` | `not recorded` |
 | `screenshot_manifest_sha256` | `69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92` | `not recorded` |
 | `screenshot_index_sha256` | `de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

@@ -67,6 +67,11 @@ def test_the_manifest_covers_the_files_the_program_depends_on() -> None:
         "studio.py",
         "scripts/build_studio.py",
         "scripts/capture_screenshots.mjs",
+        "scripts/chat_composer_walk.mjs",
+        "tests/test_uiux_chat_composer.py",
+        "tests/test_screenshot_capture_browser.py",
+        "tests/test_uiux_source_manifest.py",
+        "docs/uiux-2-0-p2-04-evidence.md",
         "docs/media/screenshots/manifest.json",
     ):
         assert required in paths, f"the manifest does not pin {required}"
