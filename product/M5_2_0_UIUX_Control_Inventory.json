@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "36d01245ff34319ff671c1e3cac1cfaf2d34ed4e3042537c79bec2f0a7942713",
+  "frontend_sha256": "603a29493780f6b867268ef3b87c25a37b0bc3ddfb5f60979e0b216eeff666dd",
   "panes": [
     {
       "dom_id": "start",
@@ -112,17 +112,48 @@
     {
       "dom_id": "harness",
       "section_id": "pane-harness",
-      "control_count": 21,
+      "control_count": 24,
       "counts": {
-        "button": 8,
-        "input": 2,
+        "button": 10,
+        "input": 3,
         "select": 9,
         "summary": 1,
         "textarea": 1
       },
-      "controls_without_id": 3,
+      "controls_without_id": 6,
       "controls_without_label": 0,
       "controls": [
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "btn btn-emerald btn-xs",
+          "aria-label": "Approve this tool call once",
+          "onclick": "resolveHarnessApproval(this)",
+          "data": {
+            "data-decision": "approve"
+          },
+          "text": "✓ Approve this call once"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "btn btn-danger btn-xs",
+          "aria-label": "Reject this tool call and do not run it",
+          "onclick": "resolveHarnessApproval(this)",
+          "data": {
+            "data-decision": "reject"
+          },
+          "text": "× Reject — do not run"
+        },
+        {
+          "tag": "input",
+          "type": "text",
+          "aria-label": "Optional note for rejecting this approval",
+          "placeholder": "Optional rejection note",
+          "data": {
+            "data-approval-note": ""
+          }
+        },
         {
           "tag": "button",
           "class": "btn",
@@ -1313,13 +1344,11 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 182,
-    "pane_controls": 81,
+    "markup_controls": 185,
+    "pane_controls": 84,
     "chrome_controls": 101,
-    "script_rendered_controls": 31,
+    "script_rendered_controls": 22,
     "script_rendered_by_function": {
-      "appendWorkflowApprovalCard": 3,
-      "ensureLiveStepCard": 3,
       "ensureStageCardMounted": 1,
       "openSpawnModal": 1,
       "refreshOnboarding": 1,
@@ -1330,7 +1359,6 @@
       "renderMcpUI": 7,
       "renderOpenContextDocs": 3,
       "renderProvidersModal": 3,
-      "renderStoredHarnessEventHtml": 3,
       "renderTelemetry": 1,
       "syncUnifiedSelectors": 1
     }

@@ -4023,7 +4023,7 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
+      "current_behavior": "Approval requests are rendered in durable replay and in live Harness/GSD/SDLC paths. Durable replay exposes controls only for a currently pending approval, but cards showed only a tool/argument preview, live workflow cards hard-coded “Standard Policy”, and rejection/timeout outcomes were not clearly distinguished. The server remains authoritative for session-scoped, replay-protected approval resolution and one-use grant creation.",
       "target_behavior": "Harness approval safety and permission UX with no loss of existing functionality.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
@@ -4067,30 +4067,84 @@
       "agent_prompt": "Implement UIUX-P3-03 (Harness approval safety and permission UX). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
         "status": "in_progress",
-        "progress_percent": 1,
+        "progress_percent": 85,
         "attempts": 1,
         "started_at": "2026-11-01T05:47:49Z",
-        "updated_at": "2026-11-01T05:48:18Z",
+        "updated_at": "2026-11-01T06:31:03Z",
         "completed_at": null,
         "owner_session": "arena/95c8a2aa-m5-agent-studio",
         "commit_sha": null,
-        "changed_files": [],
+        "changed_files": [
+          "docs/media/uiux-p3-03/approval-after.png",
+          "docs/media/uiux-p3-03/approval-before.png",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-tokens.md",
+          "docs/uiux-p3-03-approval-evidence.md",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "static/index.html",
+          "studio.py",
+          "tests/browser/accessibility_walk.mjs",
+          "tests/test_harness_approval_ui.py",
+          "tests/test_screenshot_capture_browser.py"
+        ],
         "evidence": [
-          "Claimed before implementation at 21108aac85da50bc447f355837eb1499f2b96892 after python3 scripts/uiux_coordination.py --github --json reported UIUX-P3-03 as the sole eligible story, the source pin as an ancestor, a clean checkout at current main, and no open pull requests or marked blocker issues. No implementation changes have started."
+          "Claimed before implementation at 21108aac85da50bc447f355837eb1499f2b96892 after python3 scripts/uiux_coordination.py --github --json reported UIUX-P3-03 as the sole eligible story, the source pin as an ancestor, a clean checkout at current main, and no open pull requests or marked blocker issues. No implementation changes have started.",
+          "Post-claim coordination recheck on 2026-11-01 found main current at 21108aac, PR #148 as the only open PR, and no competing claim or blocking issue; the expected active-story/open-PR holds remain.",
+          "Traced durable approval replay plus the live Harness, GSD and SDLC card paths, the current /state pending snapshot, /api/harness/approve, and grant/session/replay/timeout behavior. No backend authorization, endpoint, event payload, task state, grant, sandbox, action-admission, workspace, or recovery semantics were changed.",
+          "Captured before and after approval-card views using the pinned browser against a disposable demo and synthetic DOM-only run_bash preview. No approval endpoint, tool, model/provider, user workspace, or real credential was used; these images are presentation evidence only, not authorization evidence.",
+          "Regenerated source manifest, control inventory, route map, authorization trace, overlay/presentation/onboarding/status/token inventories, and preservation package after the frontend change. Preservation package remains historical-approval-unbound; the owner approval record and P0 attribution were not edited.",
+          "The regenerated preservation sign-off now maps Harness GET /api/harness/sessions/{session_id}/state and POST /api/harness/approve to the approval journey; inventory reports 185 markup controls and 22 script-rendered controls with no route-map findings."
         ],
         "test_results": [
           {
             "command": ".venv/bin/python -m pytest -q tests/test_uiux_roadmap.py tests/test_uiux_preservation_signoff.py",
             "exit_code": 0,
             "result": "52 passed (Python 3.11.2, pytest 9.2.0); claim counters, dependencies, session state and preservation-signoff invariants verified."
+          },
+          {
+            "command": "STUDIO_SCREENSHOT_CHROME=/tmp/chromium STUDIO_PUPPETEER_CORE=tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js LD_LIBRARY_PATH=/tmp/chromium-libs/lib STUDIO_SCREENSHOT_CHROME_ARGS=\"--no-zygote --single-process --disable-gpu\" M5_REQUIRE_BROWSER_TESTS=1 .venv/bin/pytest -q",
+            "exit_code": 0,
+            "result": "2078 passed, 1 skipped (live sandbox requires explicit opt-in), 1 Starlette deprecation warning in 256.50s. Python 3.11 / pytest 9.2.0; required browser tests ran with pinned Chromium 153 and Puppeteer Core 25.16.0."
+          },
+          {
+            "command": ".venv/bin/ruff check . && .venv/bin/mypy",
+            "exit_code": 0,
+            "result": "Ruff passed; mypy reported no issues in 58 source files."
+          },
+          {
+            "command": ".venv/bin/python scripts/check_frontend_syntax.py && .venv/bin/python scripts/demo_tour.py --check && .venv/bin/python scripts/validate_screenshots.py && .venv/bin/python scripts/validate_docs.py && .venv/bin/python scripts/uiux_preservation_signoff.py --check",
+            "exit_code": 0,
+            "result": "Frontend syntax OK; demo transcript current; standard baseline screenshots 6/6 validated; documentation validation passed (5 required pages, 154 files scanned); preservation package current and historical-approval-unbound."
           }
         ],
-        "visual_evidence": [],
+        "visual_evidence": [
+          "docs/media/uiux-p3-03/approval-before.png — original pending-card presentation, captured before implementation with synthetic DOM-only data in the isolated demo.",
+          "docs/media/uiux-p3-03/approval-after.png — updated disclosure/control presentation, captured after implementation with the same synthetic DOM-only data in the isolated demo.",
+          "docs/uiux-p3-03-approval-evidence.md documents screenshot provenance and the reason these focused synthetic views are not inserted into the provider-backed baseline screenshot manifest."
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "Keep the existing approval and state endpoints unchanged. Before a decision POST, the client rechecks the originating session and pending approval against the existing authoritative state snapshot, then leaves refused/unconfirmed controls disabled until resync. Approval still does not bypass server policy, action admission, or sandbox checks."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace approval-card renderers, pending/resolved snapshot state, /api/harness/approve refusals, policy changes and grant revocation; capture a disposable before-state and enumerate approval, rejection, replay, stale-request and recovery journeys before implementation.",
+        "handoff_note": "Implementation and regression evidence are prepared on the active session branch and in draft PR #148. Story remains in_progress; this session has not self-certified completion or changed owner approval. Independent owner review is still required before the story can be marked done.",
+        "next_action": "Request independent review of PR #148, especially the authorization-copy accuracy, fresh-snapshot gate, and generated preservation artifacts; address review findings and obtain owner approval before changing status to done.",
         "readme_updated": false
       },
       "required_evidence": [

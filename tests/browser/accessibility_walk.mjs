@@ -317,6 +317,186 @@ async function main() {
     await page.keyboard.press("Enter");
     const toastDismissed = await page.evaluate(() => !document.querySelector("#toastStack .toast"));
     results.push(check("toast can be dismissed from the keyboard", toastDismissed));
+
+    const approvalDisclosure = await page.evaluate(() => {
+      const oldActive = activeHarnessId;
+      const oldSnapshot = harnessSnapshot;
+      const sessionId = "synthetic-approval-session";
+      const approvalId = "synthetic-approval-id";
+      const event = { type: "approval/request", seq: 1, step: 3, approval_id: approvalId,
+        tool: "run_bash", args: { command: "echo safe preview" } };
+      activeHarnessId = sessionId;
+      harnessSnapshot = { session_id: sessionId, session: { id: sessionId, lead_model: "synthetic-model" },
+        approvals: { pending: [{ approval_id: approvalId, live: true }] } };
+      const parse = (html) => { const root = document.createElement("div"); root.innerHTML = html; return root; };
+      const pending = parse(renderStoredHarnessEventHtml(event, {}, new Set([approvalId])));
+      const pendingCard = pending.querySelector(".h-tool-card");
+      const pendingText = pendingCard?.textContent.replace(/\s+/g, " ").trim() || "";
+      const buttonLabels = [...(pendingCard?.querySelectorAll("button") || [])].map((button) => button.textContent.trim());
+      const expired = parse(renderStoredHarnessEventHtml(event, {}, new Set()));
+      activeHarnessId = "another-session";
+      const wrongSession = parse(renderStoredHarnessEventHtml(event, {}, new Set([approvalId])));
+      activeHarnessId = oldActive;
+      harnessSnapshot = oldSnapshot;
+      return {
+        pendingState: pendingCard?.dataset.approvalState,
+        pendingText,
+        buttonLabels,
+        expiredButtons: expired.querySelectorAll("button").length,
+        expiredState: expired.querySelector(".h-tool-card")?.dataset.approvalState,
+        wrongSessionButtons: wrongSession.querySelectorAll("button").length,
+        wrongSessionState: wrongSession.querySelector(".h-tool-card")?.dataset.approvalState,
+        rejectionNoteIsNotMisclassified: harnessApprovalOutcome("reject", "Operator note: I timed out waiting").title === "Rejected — invocation not run",
+      };
+    });
+    results.push(check("approval card identifies requester, action, one-use scope, expiry and refusal consequence",
+      approvalDisclosure.pendingState === "pending" && approvalDisclosure.pendingText.includes("Harness agent") &&
+      approvalDisclosure.pendingText.includes("synthetic-model") && approvalDisclosure.pendingText.includes("What will run") &&
+      approvalDisclosure.pendingText.includes("echo safe preview") && approvalDisclosure.pendingText.includes("Permission scope") &&
+      approvalDisclosure.pendingText.includes("One use") && approvalDisclosure.pendingText.includes("Expiry") &&
+      approvalDisclosure.pendingText.includes("10 minutes") && approvalDisclosure.pendingText.includes("If rejected") &&
+      approvalDisclosure.pendingText.includes("not run") && approvalDisclosure.pendingText.includes("sandbox checks") &&
+      approvalDisclosure.buttonLabels.some((label) => label.includes("Approve this call once")) &&
+      approvalDisclosure.buttonLabels.some((label) => label.includes("Reject") && label.includes("do not run")) &&
+      !approvalDisclosure.pendingText.includes("Standard Policy") && !approvalDisclosure.pendingText.includes("Approve & Run"),
+      JSON.stringify(approvalDisclosure)));
+    results.push(check("expired and cross-session approval requests render without decision controls",
+      approvalDisclosure.expiredState === "expired" && approvalDisclosure.expiredButtons === 0 &&
+      approvalDisclosure.wrongSessionState === "unavailable" && approvalDisclosure.wrongSessionButtons === 0 &&
+      approvalDisclosure.rejectionNoteIsNotMisclassified,
+      JSON.stringify(approvalDisclosure)));
+
+    await page.setViewport({ width: 420, height: 800, deviceScaleFactor: 1 });
+    const mobileApprovalLayout = await page.evaluate(() => {
+      const oldActive = activeHarnessId;
+      const oldSnapshot = harnessSnapshot;
+      const sessionId = "synthetic-mobile-approval-session";
+      const approvalId = "synthetic-mobile-approval-id";
+      const event = { type: "approval/request", step: 1, approval_id: approvalId,
+        tool: "run_bash", args: { command: "echo mobile" } };
+      activeHarnessId = sessionId;
+      harnessSnapshot = { session_id: sessionId, session: { id: sessionId },
+        approvals: { pending: [{ approval_id: approvalId, live: true }] } };
+      const host = document.createElement("div");
+      host.style.cssText = "width:calc(100vw - 24px);margin:8px auto;";
+      host.innerHTML = renderStoredHarnessEventHtml(event, {}, new Set([approvalId]));
+      document.body.appendChild(host);
+      const card = host.querySelector(".h-tool-card");
+      const details = card?.querySelector(".h-approval-details");
+      const columns = details ? (getComputedStyle(details).gridTemplateColumns.match(/\d+(?:\.\d+)?px/g) || []).length : 0;
+      const cardRect = card?.getBoundingClientRect();
+      const buttonsFit = [...(card?.querySelectorAll(".h-approval-actions button") || [])].every((button) => {
+        const rect = button.getBoundingClientRect();
+        return rect.left >= cardRect.left && rect.right <= cardRect.right;
+      });
+      const result = { columns, buttonsFit, documentWidth: document.documentElement.scrollWidth, viewportWidth: innerWidth };
+      host.remove();
+      activeHarnessId = oldActive;
+      harnessSnapshot = oldSnapshot;
+      return result;
+    });
+    await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+    results.push(check("approval details and controls fit a narrow 420px viewport",
+      mobileApprovalLayout.columns === 1 && mobileApprovalLayout.buttonsFit &&
+      mobileApprovalLayout.documentWidth <= mobileApprovalLayout.viewportWidth,
+      JSON.stringify(mobileApprovalLayout)));
+
+    await page.evaluate(() => {
+      const sessionId = "synthetic-fabricated-session";
+      const approvalId = "client-fabricated-approval";
+      const event = { type: "approval/request", seq: 1, ts: Date.now() / 1000, step: 1,
+        approval_id: approvalId, tool: "run_bash", args: { command: "echo must-not-run" } };
+      const requests = [];
+      const state = {
+        oldActive: activeHarnessId,
+        oldSnapshot: harnessSnapshot,
+        oldRunActive: harnessRunActive,
+        oldFetch: window.fetch,
+        oldResolver: resolveHarnessApproval,
+        requests,
+        approvalPosts: 0,
+        executionPosts: 0,
+        sessionId,
+        approvalId,
+        root: document.createElement("div"),
+        keyboardFocused: false,
+      };
+      activeHarnessId = sessionId;
+      harnessRunActive = true;
+      harnessSnapshot = { session_id: sessionId, session: { id: sessionId },
+        approvals: { pending: [{ approval_id: approvalId, live: true }] } };
+      state.root.id = "synthetic-approval-security-walk";
+      state.root.innerHTML = renderHarnessApprovalCardHtml(event, { state: "pending", interactive: true, sessionId });
+      document.body.appendChild(state.root);
+      window.fetch = async (input, init = {}) => {
+        const url = String(input);
+        requests.push({ url, method: init.method || "GET" });
+        if (url.endsWith(`/api/harness/sessions/${sessionId}/state`)) {
+          return new Response(JSON.stringify({ session_id: sessionId, session: null, status: "waiting_approval",
+            task_status: "running", approvals: { pending: [], expired: [{ approval_id: approvalId }] },
+            event_stream: { latest_seq: 1, retained_from_seq: 1 } }),
+            { status: 200, headers: { "Content-Type": "application/json" } });
+        }
+        if (url.includes(`/api/harness/sessions/${sessionId}/events?`)) {
+          return new Response(JSON.stringify({ events: [event], latest_seq: 1, next_cursor: 1,
+            retained_from_seq: 1, has_more: false, snapshot_required: false }),
+            { status: 200, headers: { "Content-Type": "application/json" } });
+        }
+        if (url === "/api/harness/approve") {
+          state.approvalPosts += 1;
+          return new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } });
+        }
+        if (url.startsWith("/api/harness/run") || url.includes("/execute")) state.executionPosts += 1;
+        return new Response("{}", { status: 404, headers: { "Content-Type": "application/json" } });
+      };
+      window.__approvalWalkState = state;
+      window.__approvalWalkDone = false;
+      resolveHarnessApproval = (...args) => {
+        const pending = state.oldResolver(...args);
+        Promise.resolve(pending).then(
+          () => { window.__approvalWalkDone = true; },
+          () => { window.__approvalWalkDone = true; },
+        );
+        return pending;
+      };
+    });
+    const approvalButtonSelector = "#synthetic-approval-security-walk .h-approval-actions button";
+    await page.focus(approvalButtonSelector);
+    const approvalButtonWasKeyboardFocused = await page.evaluate((selector) => document.activeElement === document.querySelector(selector), approvalButtonSelector);
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => window.__approvalWalkDone === true, { timeout: 10000 });
+    const fabricatedApproval = await page.evaluate(() => {
+      const state = window.__approvalWalkState;
+      const liveCard = document.querySelector(`#synthetic-approval-security-walk #apr-card-${state.approvalId}`);
+      const refreshedCard = document.querySelector(`#harnessStream #apr-card-${state.approvalId}`);
+      const result = {
+        requests: state.requests,
+        approvalPosts: state.approvalPosts,
+        executionPosts: state.executionPosts,
+        keyboardFocused: state.keyboardFocused,
+        allButtonsStayDisabled: [...(liveCard?.querySelectorAll("button") || [])].every((button) => button.disabled),
+        refreshedState: refreshedCard?.dataset.approvalState || "",
+        refreshedButtons: refreshedCard?.querySelectorAll("button").length || 0,
+        refreshedText: refreshedCard?.textContent.replace(/\s+/g, " ").trim() || "",
+      };
+      window.fetch = state.oldFetch;
+      resolveHarnessApproval = state.oldResolver;
+      state.root.remove();
+      activeHarnessId = state.oldActive;
+      harnessSnapshot = state.oldSnapshot;
+      harnessRunActive = state.oldRunActive;
+      delete window.__approvalWalkState;
+      delete window.__approvalWalkDone;
+      return result;
+    });
+    fabricatedApproval.keyboardFocused = approvalButtonWasKeyboardFocused;
+    results.push(check("keyboard-activated fabricated approval cannot authorize execution without a live server pending slot",
+      fabricatedApproval.keyboardFocused && fabricatedApproval.approvalPosts === 0 && fabricatedApproval.executionPosts === 0 &&
+      fabricatedApproval.requests.some((request) => request.url.endsWith("/state")) &&
+      !fabricatedApproval.requests.some((request) => request.url === "/api/harness/approve") &&
+      fabricatedApproval.allButtonsStayDisabled && fabricatedApproval.refreshedState === "expired" &&
+      fabricatedApproval.refreshedButtons === 0 && fabricatedApproval.refreshedText.includes("not authorized"),
+      JSON.stringify(fabricatedApproval)));
     results.push(check("no browser page errors during the overlay walk", errors.length === 0, errors.join("; ")));
   } finally {
     await browser.close();

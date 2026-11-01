@@ -495,6 +495,16 @@
   .h-tool-card.ok { border-left: 3px solid var(--emerald); }
   .h-tool-card.err { border-left: 3px solid var(--rose); }
   .h-tool-card.wait { border-color: rgba(245, 158, 11, 0.65); background: rgba(245, 158, 11, 0.08); border-left: 3px solid var(--amber); }
+  .h-approval-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin: 9px 0; }
+  .h-approval-details > div { min-width: 0; padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); }
+  .h-approval-details > .wide { grid-column: 1 / -1; }
+  .h-approval-details dt { color: var(--text-faint); font-size: 10px; font-weight: 700; letter-spacing: .055em; text-transform: uppercase; }
+  .h-approval-details dd { margin: 3px 0 0; color: var(--text); font-size: 11.4px; line-height: 1.45; overflow-wrap: anywhere; }
+  .h-approval-details pre { margin: 4px 0 0; color: var(--text); font: 11.3px/1.45 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .h-approval-actions { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+  .h-approval-actions input { flex: 1; min-width: 180px; font-size: 11.5px; padding: 5px 8px; }
+  .h-approval-outcome { margin-top: 7px; color: var(--text); font-size: 11.4px; line-height: 1.45; }
+  @media (max-width: 620px) { .h-approval-details { grid-template-columns: 1fr; } .h-approval-details > .wide { grid-column: auto; } .h-approval-actions > button { flex: 1 1 100%; } }
   .diff-box { margin-top: 7px; background: #06090e; border: 1px solid var(--border); border-radius: 7px; padding: 8px 10px; font-family: var(--mono); font-size: 11.4px; line-height: 1.45; overflow-x: auto; max-height: 260px; overflow-y: auto; }
   .diff-add { color: #6ee7b7; background: rgba(16, 185, 129, 0.11); display: block; padding: 0 4px; }
   .diff-del { color: #fda4af; background: rgba(244, 63, 94, 0.11); display: block; padding: 0 4px; }
@@ -1734,6 +1744,27 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </section>
 
     <section id="pane-harness" role="tabpanel" aria-labelledby="tab-harness" class="pane active">
+      <template id="harnessApprovalCardTemplate">
+        <div class="h-tool-card wait" data-approval-card>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+            <strong style="color:#fde68a;">⚠ Approval required: <code data-approval-tool></code></strong>
+            <span class="badge amber" data-approval-status role="status">Awaiting your decision</span>
+          </div>
+          <dl class="h-approval-details">
+            <div><dt>Requested by</dt><dd data-approval-requester></dd></div>
+            <div><dt>What will run</dt><dd><code data-approval-action-tool></code><pre data-approval-summary></pre></dd></div>
+            <div><dt>Permission scope</dt><dd data-approval-scope></dd></div>
+            <div><dt>Expiry</dt><dd data-approval-expiry></dd></div>
+            <div class="wide"><dt>If rejected</dt><dd data-approval-refusal></dd></div>
+          </dl>
+          <div class="h-approval-outcome" data-approval-outcome role="status" aria-live="polite" hidden></div>
+          <div class="h-approval-actions" data-approval-actions>
+            <button type="button" class="btn btn-emerald btn-xs" data-decision="approve" onclick="resolveHarnessApproval(this)" aria-label="Approve this tool call once">✓ Approve this call once</button>
+            <button type="button" class="btn btn-danger btn-xs" data-decision="reject" onclick="resolveHarnessApproval(this)" aria-label="Reject this tool call and do not run it">× Reject — do not run</button>
+            <input type="text" data-approval-note aria-label="Optional note for rejecting this approval" placeholder="Optional rejection note" />
+          </div>
+        </div>
+      </template>
       <div class="harness-shell">
         <aside class="harness-sidebar">
           <div style="padding:11px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
@@ -5676,7 +5707,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (type === "assistant/message") return `step ${Number(ev.step) || "?"} · ${ev.model || "?"}${ev.tool_calls && ev.tool_calls.length ? ` · ${ev.tool_calls.length} tool call(s)` : ""}`;
     if (type === "tool/result") return `${ev.tool || "tool"} · ${ev.ok === false ? "FAILED" : "OK"} · ${Number(ev.elapsed_ms) || 0} ms`;
     if (type === "approval/request") return `${ev.tool || "tool"} needs a decision (${ev.approval_id || "?"})`;
-    if (type === "approval/decision") return `${ev.approval_id || "?"} ${ev.decision === "approve" ? "approved" : "rejected"}`;
+    if (type === "approval/decision") return `${ev.approval_id || "?"} · ${harnessApprovalOutcome(ev.decision, ev.note).title}`;
     if (type === "turn/end") return `turn ended in ${Number(ev.elapsed_s) || 0}s · ${Number(ev.steps) || 0} step(s) · ${ev.state || "completed"}`;
     if (type.startsWith("turn/")) return type.slice(5).replace(/_/g, " ") + (ev.reason ? ` · ${clip(ev.reason, 70)}` : "");
     if (type === "context/compacted") return `${Number(ev.before_chars) || 0} -> ${Number(ev.after_chars) || 0} chars archived`;
@@ -6088,6 +6119,123 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return `<div class="h-recorded"><span class="h-recorded-type">${escapeHtml(type)}</span><span class="h-recorded-body">${escapeHtml(harnessEventSummary(ev))}</span></div>`;
   }
 
+  // Keep these client disclosures synchronized with _await_tool_approval's timeout and
+  // SG_DEFAULT_GRANT_TTL_SECONDS. The UI never treats either duration as authority.
+  const HARNESS_APPROVAL_WAIT_TIMEOUT_SECONDS_UI = 600;
+  const HARNESS_APPROVAL_GRANT_TTL_SECONDS_UI = 600;
+
+  function harnessApprovalDurationLabel(seconds) {
+    const minutes = Number(seconds) / 60;
+    if (Number.isInteger(minutes) && minutes > 0) return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+    return `${Number(seconds)} seconds`;
+  }
+
+  function harnessApprovalSnapshotSessionId() {
+    const snapshot = harnessSnapshot || {};
+    return String(snapshot.session_id || (snapshot.session && snapshot.session.id) || "");
+  }
+
+  function harnessApprovalOutcome(decision, note) {
+    const cleanNote = String(note || "").trim();
+    if (decision === "approve") {
+      return {
+        title: "Approved for one use",
+        detail: "The run may attempt this invocation; server policy, action-admission, and sandbox checks still apply.",
+        tone: "green",
+      };
+    }
+    if (/^Approval timed out after \d+s\.$/i.test(cleanNote)) {
+      return {
+        title: "Expired — invocation not run",
+        detail: "The approval wait ended without authorization. This request cannot be replayed.",
+        tone: "amber",
+      };
+    }
+    if (cleanNote === "Workflow cancelled while waiting for approval.") {
+      return {
+        title: "Cancelled — invocation not run",
+        detail: "The workflow ended before this call was authorized.",
+        tone: "amber",
+      };
+    }
+    return {
+      title: "Rejected — invocation not run",
+      detail: "The run receives a rejection instead of tool output. No execution is authorized by this decision.",
+      tone: "rose",
+    };
+  }
+
+  function renderHarnessApprovalCardHtml(ev, options = {}) {
+    const approvalId = String((ev && ev.approval_id) || "");
+    const tool = String((ev && ev.tool) || "tool");
+    const sessionId = String(options.sessionId || "");
+    const step = Number(ev && ev.step);
+    const snapshotSessionId = harnessApprovalSnapshotSessionId();
+    const leadModel = snapshotSessionId && snapshotSessionId === sessionId
+      ? String((((harnessSnapshot || {}).session || {}).lead_model) || "").trim()
+      : "";
+    const requester = `Harness agent${step > 0 ? ` · step #${step}` : ""}${leadModel ? ` · session lead model ${leadModel}` : ""}`;
+    const summary = String(formatToolArgsSummary(tool, (ev && ev.args) || {}) || "(No argument summary supplied.)");
+    const state = String(options.state || "pending");
+    const decision = String(options.decision || "");
+    const outcome = state === "resolved" ? harnessApprovalOutcome(decision, options.note) : null;
+    const template = document.getElementById("harnessApprovalCardTemplate");
+    const cardTemplate = template && template.content && template.content.firstElementChild;
+    if (!cardTemplate) {
+      return `<div class="h-tool-card wait" data-approval-state="unavailable">Approval details could not be loaded; no approval action is available.</div>`;
+    }
+    const card = cardTemplate.cloneNode(true);
+    card.id = `apr-card-${approvalId}`;
+    card.dataset.approvalState = state;
+    card.dataset.approvalId = approvalId;
+    card.dataset.sessionId = sessionId;
+    const setText = (selector, value) => {
+      const element = card.querySelector(selector);
+      if (element) element.textContent = String(value || "");
+    };
+    setText("[data-approval-tool]", tool);
+    setText("[data-approval-action-tool]", tool);
+    setText("[data-approval-requester]", requester);
+    setText("[data-approval-summary]", summary);
+    setText("[data-approval-scope]", "One use of this submitted tool invocation in this Harness session. It does not create reusable access or authorize other calls.");
+    setText("[data-approval-expiry]", `Without a decision, this request times out after ${harnessApprovalDurationLabel(HARNESS_APPROVAL_WAIT_TIMEOUT_SECONDS_UI)}. If approved, the one-use grant expires after ${harnessApprovalDurationLabel(HARNESS_APPROVAL_GRANT_TTL_SECONDS_UI)}.`);
+    setText("[data-approval-refusal]", "This invocation is not run; the agent receives a rejection instead of tool output. Approval never overrides server policy, action-admission, or sandbox checks.");
+
+    const badge = card.querySelector("[data-approval-status]");
+    let badgeText = "Awaiting your decision";
+    let badgeTone = "amber";
+    if (state === "expired") badgeText = "Expired — action unavailable";
+    else if (state === "unavailable") badgeText = "Not verified for this session";
+    else if (outcome) {
+      badgeText = outcome.title;
+      badgeTone = outcome.tone === "green" ? "green" : "amber";
+    }
+    if (badge) {
+      badge.className = `badge ${badgeTone}`;
+      badge.textContent = badgeText;
+    }
+
+    const outcomeBox = card.querySelector("[data-approval-outcome]");
+    let outcomeText = "";
+    if (outcome) outcomeText = `${outcome.title}. ${outcome.detail}${options.note ? ` Server note: ${String(options.note)}` : ""}`;
+    else if (state === "expired") outcomeText = "This request is no longer pending; the tool invocation was not authorized and cannot be replayed.";
+    else if (state === "unavailable") outcomeText = "The active session does not confirm this request as pending, so no approval action is available.";
+    if (outcomeBox) {
+      outcomeBox.textContent = outcomeText;
+      outcomeBox.hidden = !outcomeText;
+    }
+
+    const actions = card.querySelector("[data-approval-actions]");
+    const interactive = options.interactive && state === "pending" && approvalId && sessionId;
+    if (interactive) {
+      const noteInput = actions && actions.querySelector("[data-approval-note]");
+      if (noteInput) noteInput.id = `apr-note-${approvalId}`;
+    } else if (actions) {
+      actions.remove();
+    }
+    return card.outerHTML;
+  }
+
   function renderStoredHarnessEventHtml(ev, decisions, livePending) {
     // Not even a payload with no event: everything the pane retains is drawn, so that the
     // number of cards a reader counts is the number of events the log holds.
@@ -6115,20 +6263,22 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (ev.type === "tool/result") return renderToolResultCardHtml(ev);
     if (ev.type === "approval/request") {
       const approvalId = String(ev.approval_id || "");
-      const decided = decisions[approvalId];
-      const isLive = !decided && livePending.has(approvalId);
-      const badgeHtml = decided
-        ? `<span class="badge ${decided === "approve" ? "green" : "amber"}">${decided === "approve" ? "Approved" : "Rejected"}</span>`
-        : (isLive ? `<span class="badge amber">Awaiting decision</span>` : `<span class="badge amber">Expired — re-run the turn</span>`);
-      const controls = isLive
-        ? `<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:6px;"><button class="btn btn-emerald btn-xs" onclick="resolveHarnessApproval('${escapeHtml(approvalId)}','approve','${escapeHtml(activeHarnessId || '')}')">${UI_ICONS.check} Approve &amp; Run</button><button class="btn btn-danger btn-xs" onclick="resolveHarnessApproval('${escapeHtml(approvalId)}','reject','${escapeHtml(activeHarnessId || '')}')">${UI_ICONS.close} Reject</button><input type="text" id="apr-note-${escapeHtml(approvalId)}" placeholder="Optional rejection guidance" style="flex:1;min-width:160px;font-size:11.5px;padding:4px 8px;" /></div>`
-        : "";
-      return `<div class="h-tool-card wait" id="apr-card-${escapeHtml(approvalId)}"><div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;flex-wrap:wrap;"><strong style="color:#fde68a;">${UI_ICONS.warn} Approval required: <code>${escapeHtml(ev.tool || "")}</code></strong>${badgeHtml}</div><pre style="padding:7px 9px;background:#06090e;border-radius:6px;font-family:var(--mono);font-size:11.6px;color:#fff;overflow-x:auto;margin-bottom:6px;">${escapeHtml(formatToolArgsSummary(ev.tool, ev.args))}</pre>${controls}</div>`;
+      const decision = decisions[approvalId];
+      const decisionRecord = decision && typeof decision === "object" ? decision : { decision: decision || "" };
+      const snapshotMatchesActive = Boolean(activeHarnessId) && harnessApprovalSnapshotSessionId() === String(activeHarnessId);
+      const isLive = !decisionRecord.decision && snapshotMatchesActive && livePending.has(approvalId);
+      const state = decisionRecord.decision ? "resolved" : (isLive ? "pending" : (snapshotMatchesActive ? "expired" : "unavailable"));
+      return renderHarnessApprovalCardHtml(ev, {
+        state,
+        decision: decisionRecord.decision,
+        note: decisionRecord.note,
+        interactive: isLive,
+        sessionId: activeHarnessId || "",
+      });
     }
     if (ev.type === "approval/decision") {
-      const approved = ev.decision === "approve";
-      const note = ev.note ? ` • ${escapeHtml(ev.note)}` : "";
-      return `<div class="mono" style="font-size:11px; color:${approved ? '#6ee7b7' : '#fda4af'};">approval ${escapeHtml(String(ev.approval_id || ""))}: ${approved ? "approved" : "rejected"}${note}</div>`;
+      const outcome = harnessApprovalOutcome(ev.decision, ev.note);
+      return `<div class="h-approval-outcome" role="status"><strong>${escapeHtml(outcome.title)}.</strong> ${escapeHtml(outcome.detail)}${ev.note ? `<div><span class="mono">Server note:</span> ${escapeHtml(String(ev.note))}</div>` : ""}</div>`;
     }
     if (ev.type === "turn/end") {
       const state = ev.state ? ` • ${escapeHtml(String(ev.state))}` : "";
@@ -6176,7 +6326,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const openDetails = stream ? Array.from(stream.querySelectorAll("details")).map((d, i) => (d.open ? i : -1)).filter(i => i >= 0) : [];
     const decisions = {};
     for (const ev of ordered) {
-      if (ev.type === "approval/decision" && ev.approval_id) decisions[ev.approval_id] = ev.decision || "";
+      if (ev.type === "approval/decision" && ev.approval_id) {
+        decisions[ev.approval_id] = { decision: ev.decision || "reject", note: ev.note || "" };
+      }
     }
     const livePending = new Set((((harnessSnapshot || {}).approvals || {}).pending || []).map(a => a.approval_id));
     const htmlParts = [];
@@ -6207,45 +6359,130 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   function appendWorkflowApprovalCard(target, d) {
+    const sessionId = String(d.session_id || "");
+    const sessionMatches = Boolean(sessionId) && sessionId === String(activeHarnessId || "");
     const statusBadge = document.getElementById("harnessActiveStatusBadge");
-    if (statusBadge) setStatus(statusBadge, "warn", "WAITING APPROVAL");
-    const card = document.createElement("div");
-    card.id = `apr-card-${d.approval_id}`;
-    card.className = "h-tool-card wait";
-    card.innerHTML = `<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;"><strong style="color:#fde68a;">${UI_ICONS.warn} Approval required: <code>${escapeHtml(d.tool)}</code></strong><span class="badge amber">Standard Policy</span></div><pre style="padding:7px 9px;background:#06090e;border-radius:6px;font-family:var(--mono);font-size:11.6px;color:#fff;overflow-x:auto;margin-bottom:8px;">${escapeHtml(formatToolArgsSummary(d.tool, d.args))}</pre><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;"><button class="btn btn-emerald btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}','approve','${escapeHtml(d.session_id||'')}')">${UI_ICONS.check} Approve &amp; Run</button><button class="btn btn-danger btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}','reject','${escapeHtml(d.session_id||'')}')">${UI_ICONS.close} Reject</button><input type="text" id="apr-note-${escapeHtml(d.approval_id)}" placeholder="Optional rejection guidance" style="flex:1;min-width:160px;font-size:11.5px;padding:4px 8px;" /></div>`;
-    target.appendChild(card);
+    if (statusBadge && sessionMatches) setStatus(statusBadge, "warn", "WAITING APPROVAL");
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = renderHarnessApprovalCardHtml(d, {
+      state: sessionMatches ? "pending" : "unavailable",
+      interactive: sessionMatches,
+      sessionId,
+    });
+    if (wrapper.firstElementChild) target.appendChild(wrapper.firstElementChild);
     target.scrollTop = target.scrollHeight;
   }
 
   function updateWorkflowApprovalCard(d) {
+    const outcome = harnessApprovalOutcome(d.decision, d.note);
     const statusBadge = document.getElementById("harnessActiveStatusBadge");
-    if (statusBadge) setStatus(statusBadge, "ok", "WORKFLOW RUNNING");
+    if (statusBadge) {
+      if (d.decision === "approve") setStatus(statusBadge, "ok", "WORKFLOW RUNNING");
+      else setStatus(statusBadge, "warn", outcome.title.toUpperCase());
+    }
     const card = document.getElementById(`apr-card-${d.approval_id}`);
-    if (card) card.innerHTML = `<div class="mono" style="font-size:11.3px;color:${d.decision === 'approve' ? '#6ee7b7' : '#fda4af'};">${d.decision === 'approve' ? UI_ICONS.check + ' Approved — executing...' : UI_ICONS.close + ' Rejected'}</div>`;
+    if (card) {
+      card.dataset.approvalState = "resolved";
+      card.innerHTML = `<div class="h-approval-outcome" role="status" aria-live="polite"><strong>${escapeHtml(outcome.title)}.</strong> ${escapeHtml(outcome.detail)}${d.note ? `<div><span class="mono">Server note:</span> ${escapeHtml(String(d.note))}</div>` : ""}</div>`;
+    }
+  }
+
+  function setHarnessApprovalCardStatus(approvalId, text) {
+    const card = document.getElementById(`apr-card-${approvalId}`);
+    if (!card) return;
+    const badge = card.querySelector("[data-approval-status]");
+    if (badge) badge.textContent = text;
+  }
+
+  async function confirmLiveHarnessApproval(sessionId, approvalId) {
+    if (!sessionId || sessionId !== String(activeHarnessId || "")) {
+      return { ok: false, message: "This approval is not for the active Harness session; no decision was sent." };
+    }
+    let response;
+    try {
+      response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`);
+    } catch (_) {
+      return { ok: false, message: "The current approval state could not be verified; no decision was sent." };
+    }
+    if (!response.ok) {
+      return { ok: false, message: "The server could not confirm a live approval; no decision was sent." };
+    }
+    let state;
+    try { state = await response.json(); } catch (_) {
+      return { ok: false, message: "The approval state response was invalid; no decision was sent." };
+    }
+    if (!state || typeof state !== "object") {
+      return { ok: false, message: "The approval state response was invalid; no decision was sent." };
+    }
+    if (sessionId !== String(activeHarnessId || "")) {
+      return { ok: false, message: "The active Harness session changed; no decision was sent." };
+    }
+    const stateSessionId = String(state.session_id || (state.session && state.session.id) || "");
+    if (stateSessionId !== sessionId) {
+      return { ok: false, message: "The server returned a different session; no decision was sent." };
+    }
+    harnessSnapshot = state;
+    const pending = Array.isArray((state.approvals || {}).pending) ? state.approvals.pending : [];
+    const live = pending.some((approval) => approval && String(approval.approval_id || "") === approvalId && approval.live !== false);
+    return {
+      ok: live,
+      message: live ? "" : "This approval is no longer pending; no decision was sent.",
+    };
   }
 
   async function resolveHarnessApproval(approvalId, decision, sessionId) {
-    const noteEl = document.getElementById(`apr-note-${approvalId}`);
-    const note = noteEl ? noteEl.value.trim() : "";
+    if (approvalId && typeof approvalId === "object" && approvalId.dataset) {
+      const button = approvalId;
+      const card = button.closest("[data-approval-card]");
+      if (!card) return;
+      decision = button.dataset.decision || "";
+      sessionId = card.dataset.sessionId || "";
+      approvalId = card.dataset.approvalId || "";
+    }
+    if (!approvalId || !["approve", "reject"].includes(decision)) return;
+    const session = (typeof sessionId === "string" && sessionId) ? sessionId : String(activeHarnessId || "");
     const card = document.getElementById(`apr-card-${approvalId}`);
-    if (card) card.querySelectorAll("button").forEach(b => (b.disabled = true));
-    const session = (typeof sessionId === "string" && sessionId) ? sessionId : activeHarnessId;
-    const body = JSON.stringify({ approval_id: approvalId, decision, note, session_id: session || "" });
-    const res = await fetch("/api/harness/approve", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-    });
-    if (!res.ok) {
-      let msg = "Approval failed";
-      try { msg = (await res.json()).detail || msg; } catch (_) {}
-      if (card) card.querySelectorAll("button").forEach(b => (b.disabled = false));
-      showToast(msg, "error");
-      // A rejected replay (409) means the durable decision already exists: reload
-      // it instead of leaving an actionable stale card on screen.
+    if (card && card.dataset.submitting === "true") return;
+    if (card) {
+      card.dataset.submitting = "true";
+      card.setAttribute("aria-busy", "true");
+      card.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+    }
+    setHarnessApprovalCardStatus(approvalId, "Verifying current server state…");
+    const liveCheck = await confirmLiveHarnessApproval(session, approvalId);
+    if (!liveCheck.ok) {
+      setHarnessApprovalCardStatus(approvalId, "Not confirmed — no decision sent");
+      showToast(liveCheck.message, "warn");
+      await harnessResyncFromSnapshot("approval_not_pending");
+      return;
+    }
+    const noteEl = document.getElementById(`apr-note-${approvalId}`);
+    const note = decision === "reject" && noteEl ? noteEl.value.trim() : "";
+    const body = JSON.stringify({ approval_id: approvalId, decision, note, session_id: session });
+    let response;
+    try {
+      response = await fetch("/api/harness/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+    } catch (_) {
+      setHarnessApprovalCardStatus(approvalId, "Decision not confirmed — refreshing server state…");
+      showToast("The approval decision could not be confirmed; refreshing the authoritative session state.", "warn");
+      await harnessResyncFromSnapshot("approval_transport_error");
+      return;
+    }
+    if (!response.ok) {
+      let message = "The server did not accept this approval decision.";
+      try { message = (await response.json()).detail || message; } catch (_) {}
+      setHarnessApprovalCardStatus(approvalId, "Server refused — refreshing state…");
+      showToast(message, "error");
+      // Fail closed: do not re-enable a stale action. Only the refreshed server
+      // snapshot may render the request as actionable again.
       await harnessResyncFromSnapshot("approval_rejected");
       return;
     }
+    setHarnessApprovalCardStatus(approvalId, "Decision accepted — refreshing server state…");
     await harnessResyncFromSnapshot("approval_decision");
   }
 
@@ -6376,23 +6613,16 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         if (b) setStatus(b, "ok", u.decode_tps ? `${u.decode_tps} tok/s • ${u.completion_tokens || 0} tok` : "Step Done");
       },
       approval_required(d) {
-        setStatus("harnessActiveStatusBadge", "warn", "WAITING APPROVAL");
+        const sessionMatches = Boolean(d.session_id) && String(d.session_id) === String(activeHarnessId || "");
+        if (sessionMatches) setStatus("harnessActiveStatusBadge", "warn", "WAITING APPROVAL");
         const toolsBox = ensureLiveStepCard(d.step, "").el.querySelector(`#h-live-tools-${d.step}`);
-        const aprDiv = document.createElement("div");
-        aprDiv.id = `apr-card-${d.approval_id}`;
-        aprDiv.className = "h-tool-card wait";
-        aprDiv.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
-            <strong style="color:#fde68a;">${UI_ICONS.warn} Human Approval Required: <code>${escapeHtml(d.tool)}</code></strong>
-            <span class="badge amber">Standard Policy</span>
-          </div>
-          <pre style="padding:7px 9px; background:#06090e; border-radius:6px; font-family:var(--mono); font-size:11.6px; color:#fff; overflow-x:auto; margin-bottom:8px;">${escapeHtml(formatToolArgsSummary(d.tool, d.args))}</pre>
-          <div style="display:flex; gap:7px; align-items:center; flex-wrap:wrap;">
-            <button class="btn btn-emerald btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}', 'approve', '${escapeHtml(d.session_id||'')}')">${UI_ICONS.check} Approve &amp; Run</button>
-            <button class="btn btn-danger btn-xs" onclick="resolveHarnessApproval('${escapeHtml(d.approval_id)}', 'reject', '${escapeHtml(d.session_id||'')}')">${UI_ICONS.close} Reject</button>
-            <input type="text" id="apr-note-${escapeHtml(d.approval_id)}" placeholder="Optional guidance if rejecting..." style="flex:1; min-width:160px; font-size:11.5px; padding:4px 8px;" />
-          </div>`;
-        toolsBox.appendChild(aprDiv);
+        const wrapper = document.createElement("div");
+        wrapper.innerHTML = renderHarnessApprovalCardHtml(d, {
+          state: sessionMatches ? "pending" : "unavailable",
+          interactive: sessionMatches,
+          sessionId: d.session_id || "",
+        });
+        if (wrapper.firstElementChild) toolsBox.appendChild(wrapper.firstElementChild);
         stream.scrollTop = stream.scrollHeight;
       },
       approval_resolved(d) {

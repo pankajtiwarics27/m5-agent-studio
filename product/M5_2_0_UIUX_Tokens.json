@@ -37,7 +37,7 @@
   "totals": {
     "tokens": 45,
     "groups": 7,
-    "references": 803,
+    "references": 807,
     "theme_overrides": 18,
     "density_overrides": 5,
     "contrast_pairs": 20,
@@ -113,7 +113,7 @@
         "light": "#f7f7f5"
       },
       "density_override": null,
-      "references": 12
+      "references": 13
     },
     {
       "name": "--bg-elev",
@@ -163,7 +163,7 @@
         "light": "#d9dcd8"
       },
       "density_override": null,
-      "references": 114
+      "references": 115
     },
     {
       "name": "--border-hi",
@@ -183,7 +183,7 @@
         "light": "#202326"
       },
       "density_override": null,
-      "references": 50
+      "references": 53
     },
     {
       "name": "--text-dim",
@@ -203,7 +203,7 @@
         "light": "#687077"
       },
       "density_override": null,
-      "references": 67
+      "references": 68
     },
     {
       "name": "--accent",
@@ -491,7 +491,7 @@
       "value": "\"JetBrains Mono\", \"SFMono-Regular\", Consolas, \"Liberation Mono\", monospace",
       "theme_overrides": {},
       "density_override": null,
-      "references": 85
+      "references": 83
     },
     {
       "name": "--header-height",
