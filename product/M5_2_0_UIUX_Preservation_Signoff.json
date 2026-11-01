@@ -25,12 +25,12 @@
     "current_inputs_match_approval": null,
     "approved_inputs": null,
     "current_inputs": {
-      "ledger_content_sha256": "2f9b16ee8585144bcfd876915b397be90fbe83d9b2bd3b9e023f202f2b07cb21",
-      "source_manifest_sha256": "60d1a126735876fcde68994cef7aa26c5ca4b1c6cc09608fb708f111c2c6e203",
-      "control_inventory_sha256": "26baf40800b25c7dfc03019e7149051097f1bab21e6f7d8d035acb8f5269816b",
-      "route_map_sha256": "7782a338455d92ff9f4b80bc495258e550e283e16c9f5a51e94e26205a69ad6c",
-      "authorization_trace_sha256": "670d1adaa36c3fce7df845b4dffac2b061118f5bd7efbb19f37cd90ffe41304f",
-      "frontend_sha256": "de1ad22ff72ff64e8e93711d17bf121dcf69753105e3a0460c8faeabb5fbad4c",
+      "ledger_content_sha256": "551509b2545b7624a8ff60c77c9fd88fcd0a7a30a689c1a602f3f231a8e91cb6",
+      "source_manifest_sha256": "5f729fc20e191a8b7fe0dac4f16fa2c39767c476fa29e8ec7bbb4a464a0ae764",
+      "control_inventory_sha256": "a69029df932318739b6ac66c69a02b5d7c5e4d3b8d004af6fc3fd370de67f091",
+      "route_map_sha256": "0f70a60ea815c9a29fbfe17808a44b4f9c56f86822768b4a1c2a0609a921ff24",
+      "authorization_trace_sha256": "8558c47a8cb7357096848defb584c579f5fceb532099ca5f4871ebe01e4a2810",
+      "frontend_sha256": "46d37ca1e8b244dace04d6bcc48d8679c8fb15e670cd84e24dd50ba5bb36315a",
       "screenshot_manifest_sha256": "cde335f7c839303c1c63d92e864b9daa1efe4508b21514c80fc967f4bfc5bf57",
       "screenshot_index_sha256": "82ecdeb4870961951b1b8946a657438d2a3893f443e5fe182f3372ed41784f07",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -39,12 +39,12 @@
     "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "807048a5921a86246b83c25d9aeed76cd7ee66fe63a83331d91dff7bf3bdd83c",
-    "source_manifest_sha256": "60d1a126735876fcde68994cef7aa26c5ca4b1c6cc09608fb708f111c2c6e203",
-    "control_inventory_sha256": "26baf40800b25c7dfc03019e7149051097f1bab21e6f7d8d035acb8f5269816b",
-    "route_map_sha256": "7782a338455d92ff9f4b80bc495258e550e283e16c9f5a51e94e26205a69ad6c",
-    "authorization_trace_sha256": "670d1adaa36c3fce7df845b4dffac2b061118f5bd7efbb19f37cd90ffe41304f",
-    "frontend_sha256": "de1ad22ff72ff64e8e93711d17bf121dcf69753105e3a0460c8faeabb5fbad4c"
+    "ledger_sha256": "377d5ea112cc14d315a2488f0cad99758b0607892e69fd7531189fd50feb76f2",
+    "source_manifest_sha256": "5f729fc20e191a8b7fe0dac4f16fa2c39767c476fa29e8ec7bbb4a464a0ae764",
+    "control_inventory_sha256": "a69029df932318739b6ac66c69a02b5d7c5e4d3b8d004af6fc3fd370de67f091",
+    "route_map_sha256": "0f70a60ea815c9a29fbfe17808a44b4f9c56f86822768b4a1c2a0609a921ff24",
+    "authorization_trace_sha256": "8558c47a8cb7357096848defb584c579f5fceb532099ca5f4871ebe01e4a2810",
+    "frontend_sha256": "46d37ca1e8b244dace04d6bcc48d8679c8fb15e670cd84e24dd50ba5bb36315a"
   },
   "approval_request": [
     {
@@ -55,12 +55,12 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "186 markup controls (103 chrome, 83 panes) plus 29 rendered by script"
+      "evidence": "188 markup controls (106 chrome, 82 panes) plus 32 rendered by script"
     },
     {
       "id": 3,
       "ask": "Review route candidates and preserve confirmed browser-reachable routes and their gates",
-      "evidence": "115 routes exist; 59 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 38 state-changing candidates; the lexical scan is not exhaustive"
+      "evidence": "115 routes exist; 60 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 38 state-changing candidates; the lexical scan is not exhaustive"
     },
     {
       "id": 4,
@@ -76,19 +76,19 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 186,
-    "chrome_controls": 103,
-    "pane_controls": 83,
-    "script_rendered_controls": 29,
+    "markup_controls": 188,
+    "chrome_controls": 106,
+    "pane_controls": 82,
+    "script_rendered_controls": 32,
     "routes": 115,
-    "routes_with_resolved_or_possible_caller": 59,
-    "routes_no_caller_observed": 56,
+    "routes_with_resolved_or_possible_caller": 60,
+    "routes_no_caller_observed": 55,
     "routes_unknown_frontend_caller": 0,
     "route_map_unresolved_call_sites": 0,
     "route_map_unresolved_caller_edges": 0,
     "route_map_unresolved_method_edges": 0,
     "state_changing_routes_traced": 38,
-    "pane_routes_reached": 35,
+    "pane_routes_reached": 34,
     "pane_routes_excluded": 34,
     "route_walk_depth": 2,
     "screenshots_captured": 6,
@@ -401,22 +401,15 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 23,
+      "control_count": 22,
       "counts": {
-        "button": 10,
+        "button": 9,
         "input": 2,
         "select": 9,
         "summary": 1,
         "textarea": 1
       },
       "controls": [
-        {
-          "tag": "button",
-          "id": null,
-          "text": "Approve",
-          "onclick": "resolveHarnessApproval('__inventory_probe__','approve','__inventory_probe__')",
-          "handler": "resolveHarnessApproval"
-        },
         {
           "tag": "button",
           "id": null,
@@ -504,7 +497,7 @@
         {
           "tag": "select",
           "id": "harnessSessionActionSelect",
-          "text": "Session Actions… Inspect Git Status & Diff Permissions & Revocations Compact Session Context (≤2 KB) Open Agile SDLC Product Board",
+          "text": "Session Actions… Inspect Git Status & Diff Permissions & Revocations Compact Session Context (≤2 KB) Open Agile SDLC Product Board Verification & Artifacts",
           "onclick": null,
           "handler": null
         },
@@ -579,7 +572,6 @@
         "jumpToLatestHarnessEvent",
         "openHarnessGrants",
         "replayHarnessLog",
-        "resolveHarnessApproval",
         "saveWorkspaceDirectory",
         "startFreshHarnessDraft",
         "toggleHarnessTimeline"
@@ -705,22 +697,6 @@
           "handler": "abortHarnessRun",
           "via": [
             "abortHarnessRun"
-          ]
-        },
-        {
-          "method": "POST",
-          "path": "/api/harness/approve",
-          "certainty": "certain",
-          "state_changing": true,
-          "gates": [
-            "host_allowlist",
-            "origin_check",
-            "bearer_token",
-            "body_size_limit"
-          ],
-          "handler": "resolveHarnessApproval",
-          "via": [
-            "resolveHarnessApproval"
           ]
         },
         {
@@ -1468,9 +1444,9 @@
     }
   ],
   "chrome": {
-    "control_count": 103,
+    "control_count": 106,
     "counts": {
-      "button": 56,
+      "button": 59,
       "input": 29,
       "select": 12,
       "summary": 1,

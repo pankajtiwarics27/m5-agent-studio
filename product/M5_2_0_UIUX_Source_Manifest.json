@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "de1ad22ff72ff64e8e93711d17bf121dcf69753105e3a0460c8faeabb5fbad4c",
-      "bytes": 457249,
-      "lines": 7816
+      "sha256": "46d37ca1e8b244dace04d6bcc48d8679c8fb15e670cd84e24dd50ba5bb36315a",
+      "bytes": 491856,
+      "lines": 8369
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "d72c5341fedf7ebebbb55ad8891a491f4f2a3accf8039c4df4546ef080ce34cc",
-      "bytes": 3194899,
-      "lines": 70845
+      "sha256": "953504196a2a0b181d3a5061a9382d12ecfcd02f835e1ed317520fd9deef92b5",
+      "bytes": 3229506,
+      "lines": 71398
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -299,9 +299,9 @@
     {
       "path": "tests/browser/accessibility_walk.mjs",
       "role": "browser accessibility walk with the current-main Chat handoff checks",
-      "sha256": "280026be916bd38f67574847705ce7c9c864df01e2268a617512d1146cdb7dc2",
-      "bytes": 23515,
-      "lines": 428
+      "sha256": "d6925149e9dde36baf500a337952b887dcaecf1af76f9dee2cc057ff7c7dd7c5",
+      "bytes": 18108,
+      "lines": 330
     },
     {
       "path": "tests/test_presentations.py",
@@ -327,9 +327,9 @@
     {
       "path": "tests/test_screenshot_capture_browser.py",
       "role": "runs browser-backed UI and screenshot safety regressions",
-      "sha256": "ddfd2d2db640f2f288e7050ae9442ff680423a17279ff99b3fcc8e8d984f1ac5",
-      "bytes": 25140,
-      "lines": 645
+      "sha256": "195b2bec9cf79f2c0ffe419dd85b206d4595fc361e4083b0b1fcbf724ace16bb",
+      "bytes": 25196,
+      "lines": 646
     },
     {
       "path": "tests/test_uiux_source_manifest.py",
@@ -348,8 +348,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "de1ad22ff72ff64e8e93711d17bf121dcf69753105e3a0460c8faeabb5fbad4c",
-    "lines": 7816,
+    "sha256": "46d37ca1e8b244dace04d6bcc48d8679c8fb15e670cd84e24dd50ba5bb36315a",
+    "lines": 8369,
     "tab_count": 6,
     "tabs": [
       {
@@ -395,8 +395,8 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 57,
-    "api_literal_count": 50,
+    "fetch_call_count": 58,
+    "api_literal_count": 51,
     "api_literals": [
       "/api/cache/clear-ssd",
       "/api/chat/stream",
@@ -427,6 +427,7 @@
       "/api/harness/sessions/{param}/grants/revoke",
       "/api/harness/sessions/{param}/sdlc",
       "/api/harness/sessions/{param}/state",
+      "/api/harness/sessions/{param}/task",
       "/api/mcp/import-json",
       "/api/mcp/servers",
       "/api/mcp/servers/{param}",

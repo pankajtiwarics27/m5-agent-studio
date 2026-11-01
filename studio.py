@@ -4355,6 +4355,65 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .perm-confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: rgba(244,63,94,0.10); border: 1px solid rgba(244,63,94,0.45); border-radius: 8px; padding: 7px 10px; font-size: 11.2px; color: #fecdd3; }
 .perm-section { font-size: 10.8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
 .perm-empty { font-size: 11.4px; color: var(--text-faint); }
+/* A completion claim is a claim about evidence, so the card states the verdict and what it
+   rests on - the contract's digest, the exit code, the revision, the files, the patch - and
+   the surface behind it holds the contract, the observation and the change. The three tones
+   are the runtime's three outcomes, not a decoration: a rejected run is danger, a paused one
+   is the amber of every other safe-boundary pause, and only a verified run is green. */
+.h-verdict { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--emerald); border-radius: 11px; padding: 11px 13px; display: flex; flex-direction: column; gap: 7px; }
+.h-verdict[data-verdict="rejected"] { border-left-color: var(--rose); border-color: rgba(244,63,94,0.42); }
+.h-verdict[data-verdict="paused"] { border-left-color: var(--amber); border-color: rgba(245,158,11,0.45); }
+.h-verdict-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.h-verdict-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12.4px; font-weight: 700; color: #6ee7b7; }
+.h-verdict[data-verdict="rejected"] .h-verdict-badge { color: #fda4af; }
+.h-verdict[data-verdict="paused"] .h-verdict-badge { color: #fde68a; }
+.h-verdict-sub { font-size: 10.9px; color: var(--text-faint); }
+.h-verdict-claim { margin: 0; font-size: 11.6px; line-height: 1.5; color: var(--text-dim); }
+.h-verdict-detail { margin: 0; font-size: 11.4px; line-height: 1.5; color: #fecdd3; overflow-wrap: anywhere; }
+.h-verdict .ev-facts { grid-template-columns: 88px 1fr; margin: 0; padding-top: 6px; border-top: 1px solid var(--border); font-size: 11.2px; }
+.ev-coverage { display: flex; flex-direction: column; gap: 3px; }
+.ev-failures { display: flex; flex-direction: column; gap: 3px; }
+.ev-failure { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 11.1px; color: #fecdd3; }
+.ev-failure[data-kind="pre_existing"] { color: #fde68a; }
+.ev-failure[data-kind="environmental"] { color: var(--text-dim); }
+.ev-failure-kind { font-size: 10.4px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-faint); }
+.ev-failure-detail { color: var(--text-dim); overflow-wrap: anywhere; }
+.ev-cover { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 11.1px; color: var(--text-dim); }
+.ev-cover-mark { font-size: 10.2px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--emerald); min-width: 78px; }
+.ev-cover[data-covered="false"] .ev-cover-mark { color: #fda4af; }
+.ev-cover[data-declared="true"] .ev-cover-mark { color: var(--text-faint); }
+.ev-cover-criterion { flex: 1 1 220px; min-width: 0; color: var(--text); overflow-wrap: anywhere; }
+.ev-cover-tests { font-size: 10.6px; color: var(--text-faint); overflow-wrap: anywhere; }
+.ev-more { font-size: 10.9px; color: var(--text-faint); }
+.h-verdict-output, .ev-output { font-size: 11.2px; color: var(--text-dim); }
+.h-verdict-output summary, .ev-output summary { cursor: pointer; color: var(--text-dim); }
+.h-verdict-output pre, .ev-output pre { margin: 5px 0 0; padding: 8px 10px; background: #06090e; border: 1px solid var(--border); border-radius: 7px; font-family: var(--mono); font-size: 11px; color: #e2e8f0; max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.h-verdict-actions, .ev-actions { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.h-verdict-not { margin: 0; font-size: 10.7px; color: var(--text-faint); }
+.ev-block { display: flex; flex-direction: column; gap: 7px; }
+.ev-heading { font-size: 10.8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
+.ev-subheading { font-size: 10.6px; font-weight: 700; color: var(--text-dim); }
+.ev-verdict { display: flex; flex-direction: column; gap: 7px; background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--emerald); border-radius: 9px; padding: 10px 12px; }
+.ev-verdict[data-verdict="rejected"] { border-left-color: var(--rose); }
+.ev-verdict[data-verdict="paused"], .ev-verdict[data-verdict="none"] { border-left-color: var(--amber); }
+.ev-verdict-head { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
+.ev-verdict-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12.4px; font-weight: 700; color: #6ee7b7; }
+.ev-verdict[data-verdict="rejected"] .ev-verdict-badge { color: #fda4af; }
+.ev-verdict[data-verdict="none"] .ev-verdict-badge, .ev-verdict[data-verdict="paused"] .ev-verdict-badge { color: #fde68a; }
+.ev-verdict-state { font-size: 10.8px; color: #fde68a; }
+.ev-verdict-claim { margin: 0; font-size: 11.8px; line-height: 1.5; color: var(--text); }
+.ev-facts { display: grid; grid-template-columns: 112px 1fr; gap: 2px 10px; margin: 0; font-size: 11.3px; color: var(--text-dim); }
+.ev-facts dt { color: var(--text-faint); }
+.ev-facts dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+.ev-note { margin: 0; font-size: 11.2px; line-height: 1.5; color: var(--text-dim); overflow-wrap: anywhere; }
+.ev-refs, .ev-files { display: flex; flex-direction: column; gap: 2px; }
+.ev-ref { font-size: 10.8px; color: var(--text-faint); overflow-wrap: anywhere; }
+.ev-file { display: flex; gap: 9px; align-items: baseline; font-size: 11.1px; color: var(--text-dim); }
+.ev-file-path { flex: 1 1 auto; min-width: 0; color: var(--text); overflow-wrap: anywhere; }
+.ev-file-add { color: #6ee7b7; }
+.ev-file-del { color: #fda4af; }
+.ev-limits { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 11.1px; line-height: 1.5; color: var(--text-dim); }
+
 /* The durable log, stated before the view of it: the strip says what the pane is showing
    and the list is the record itself, oldest first, one row per event with its seq. */
 .harness-timeline { flex: 0 0 auto; max-height: 45%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; border-bottom: 1px solid var(--border); background: var(--bg-elev); padding: 4px 12px; }
@@ -5011,17 +5070,44 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       <div style="display:flex; gap:7px; align-items:center;">
         <button id="applyWorktreeBtn" class="btn btn-emerald btn-xs" style="display:none;" onclick="applyHarnessWorktree()">Apply Worktree to Main Workspace</button>
         <button class="btn btn-xs" onclick="openHarnessDiffModal()">Refresh</button>
+        <button class="btn btn-xs" onclick="openHarnessEvidenceModal()" title="The contract, the observation and the artifacts this change belongs to">Verification &amp; artifacts</button>
         <button class="btn btn-xs" onclick="closeHarnessDiffModal()">Close</button>
       </div>
     </div>
     <div style="padding:14px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:10px;">
       <div id="harnessGitStatusBox" class="mono" style="font-size:11.5px; color:#fde68a; background:var(--bg-card); padding:8px 11px; border-radius:7px; border:1px solid var(--border); white-space:pre-wrap;"></div>
+      <div id="harnessGitDiffSummary" class="mono" style="font-size:11.2px; color:var(--text-dim);"></div>
       <div id="harnessGitDiffBox" class="diff-box" style="max-height:52vh;"></div>
+      <p style="margin:0; font-size:11px; color:var(--text-faint);">This is the worktree as it is now. It is not frozen at any verdict: "Verification &amp; artifacts" says what a completion claim was checked against.</p>
     </div>
   </div>
 </div>
 
-<!-- ================= PERMISSIONS & REVOCATIONS MODAL ================= -->
+<!-- ================= PERMISSIONS & REVOCATIONS MODAL ================= --><!-- ================= VERIFICATION EVIDENCE & ARTIFACTS MODAL ================= -->
+<div id="harnessEvidenceModal" class="modal-backdrop" onclick="if(event.target===this)closeHarnessEvidenceModal()">
+  <div class="modal" style="max-width:940px;" role="dialog" aria-label="What a completion claim rests on">
+    <div style="padding:13px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:10px;">
+      <div>
+        <strong style="font-size:14.8px;">Verification &amp; artifacts</strong>
+        <div id="harnessEvidenceMeta" class="mono" style="font-size:11.3px; color:var(--text-dim);"></div>
+      </div>
+      <div style="display:flex; gap:7px; align-items:center;">
+        <button class="btn btn-xs" onclick="refreshHarnessEvidence()">Refresh</button>
+        <button class="btn btn-xs" onclick="closeHarnessEvidenceModal()">Close</button>
+      </div>
+    </div>
+    <div style="padding:14px 18px; overflow-y:auto; max-height:74vh; display:flex; flex-direction:column; gap:12px;">
+      <div id="harnessEvidenceVerdict" class="ev-block" role="status"></div>
+      <div id="harnessEvidenceSpec" class="ev-block"></div>
+      <div id="harnessEvidenceObserved" class="ev-block"></div>
+      <div id="harnessEvidenceChange" class="ev-block"></div>
+      <div id="harnessEvidenceArtifacts" class="ev-block"></div>
+      <div id="harnessEvidenceLimits" class="ev-block"></div>
+    </div>
+  </div>
+</div>
+
+
 <div id="harnessGrantsModal" class="modal-backdrop" onclick="if(event.target===this)closeHarnessGrants()">
   <div class="modal" style="max-width:880px;" role="dialog" aria-label="Harness permissions for this session">
     <div style="padding:13px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:10px;">
@@ -5503,6 +5589,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
                 <option value="permissions">Permissions &amp; Revocations</option>
                 <option value="compact">Compact Session Context (&le;2 KB)</option>
                 <option value="sdlc">Open Agile SDLC Product Board</option>
+                <option value="evidence">Verification &amp; Artifacts</option>
               </select>
               <button id="harnessAbortBtn" class="btn btn-danger" style="display:none;" onclick="abortHarnessRun()">Abort</button>
             </div>
@@ -5941,6 +6028,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     { label: "Manage agent skills", hint: "Skills", run: () => openSkillsModal() },
     { label: "Compact active Harness session", hint: "KV Cache", run: () => compactActiveHarness() },
     { label: "Inspect Harness Git Status & Unified Diff", hint: "Worktree", run: () => openHarnessDiffModal() },
+    { label: "Show what a completion claim rests on", hint: "Evidence", run: () => openHarnessEvidenceModal() },
     { label: "Unload local models", hint: "RAM", run: () => unloadAllModels() },
     { label: "Toggle telemetry", hint: "Monitor", run: () => toggleMonitorRail() },
     { label: "Toggle appearance", hint: "Theme", run: () => toggleTheme() },
@@ -7764,6 +7852,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     else if (v === "permissions") openHarnessGrants();
     else if (v === "compact") compactActiveHarness();
     else if (v === "sdlc") openSdlcModal();
+    else if (v === "evidence") openHarnessEvidenceModal();
   }
 
   // ================= UIUX-P3-01: WHAT RUN WILL DO, AND WHY IT CAN =================
@@ -9377,6 +9466,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (type === "approval/request") return `${ev.tool || "tool"} needs a decision (${ev.approval_id || "?"})`;
     if (type === "approval/decision") return `${ev.approval_id || "?"} ${ev.decision === "approve" ? "approved" : "rejected"}`;
     if (type === "turn/end") return `turn ended in ${Number(ev.elapsed_s) || 0}s · ${Number(ev.steps) || 0} step(s) · ${ev.state || "completed"}`;
+    if (harnessVerdictTone(ev)) {
+      const tone = harnessVerdictTone(ev);
+      const facts = harnessEvidenceFacts(ev);
+      const code = String(ev.failure_code || "");
+      return `${HARNESS_VERDICT_WORDS[tone] || tone}${code ? ` · ${code}` : ""}${facts.length ? ` · ${facts[0].value}` : ""}`;
+    }
     if (type.startsWith("turn/")) return type.slice(5).replace(/_/g, " ") + (ev.reason ? ` · ${clip(ev.reason, 70)}` : "");
     if (type === "context/compacted") return `${Number(ev.before_chars) || 0} -> ${Number(ev.after_chars) || 0} chars archived`;
     if (type === "gsd/wave") return `wave ${Number(ev.wave) || "?"} · ${ev.name || ""} · ${ev.model || ""}`;
@@ -10210,11 +10305,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const ok = !ev.state || ev.state === "completed";
       return `<div style="font-family:var(--mono); font-size:11.2px; color:${ok ? '#6ee7b7' : '#fde68a'}; text-align:right; padding:2px 4px;">[${ok ? 'OK' : 'END'}] Turn complete in ${escapeHtml(String(ev.elapsed_s || 0))}s (${escapeHtml(String(ev.steps || 0))} step${Number(ev.steps) === 1 ? '' : 's'})${state}</div>`;
     }
-    if (ev.type === "turn/verified") {
-      return `<div style="font-family:var(--mono); font-size:11.2px; color:#6ee7b7; padding:2px 4px;">${UI_ICONS.check} Completion verified (${escapeHtml(String(ev.spec_sha256 || "spec").slice(0, 12))})</div>`;
-    }
-    if (ev.type === "turn/verification_failed") {
-      return `<div class="h-tool-card err"><strong>Completion rejected:</strong> ${escapeHtml(String(ev.failure_code || "unverified"))} — ${escapeHtml(String(ev.reason || ev.detail || ""))}</div>`;
+    if (harnessVerdictTone(ev)) {
+      // One card for all three outcomes: a verdict that draws itself as a one-line label tells
+      // a reader the digest of a contract they cannot see and nothing about what was checked.
+      return renderHarnessVerdictCardHtml(ev);
     }
     if (ev.type === "turn/paused") {
       return `<div style="font-family:var(--mono); font-size:11.2px; color:#fde68a; padding:2px 4px;">Paused at step ${escapeHtml(String(ev.step || 0))} — ${escapeHtml(String(ev.reason || ""))}</div>`;
@@ -10423,6 +10517,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       document.getElementById("harnessDiffMeta").textContent = `${s.worktree_dir || ""} ${d.branch ? "(" + d.branch + ")" : ""}`;
       document.getElementById("applyWorktreeBtn").style.display = (s.use_worktree && s.workspace_dir !== s.worktree_dir) ? "inline-flex" : "none";
       document.getElementById("harnessGitStatusBox").textContent = d.status ? d.status : "(clean working tree — no modified/untracked files)";
+      const files = harnessDiffFiles(d.diff || "");
+      const summaryBox = document.getElementById("harnessGitDiffSummary");
+      if (summaryBox) {
+        const added = files.reduce((total, file) => total + file.added, 0);
+        const deleted = files.reduce((total, file) => total + file.deleted, 0);
+        summaryBox.textContent = files.length
+          ? `${files.length} file(s) · +${added} −${deleted}${d.branch ? ` · on ${d.branch}` : ""}`
+          : "no file changes";
+      }
       document.getElementById("harnessGitDiffBox").innerHTML = renderDiffHtml(d.diff || "");
     } catch (e) {
       document.getElementById("harnessGitStatusBox").textContent = "Error: " + e.message;
@@ -10438,6 +10541,529 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     closeHarnessDiffModal();
     selectHarnessSession(activeHarnessId);
   }
+
+  // ================= UIUX-P3-04: WHAT A COMPLETION CLAIM RESTS ON =================
+  // A finished run used to end in one mono line: `Completion verified (spec_sha256…)` - the
+  // digest of a contract the reader never saw, printed over an execution nothing described: no
+  // test command, no exit code, no revision, no file list. A rejected run did barely better: a
+  // failure code and a reason, while the transcript, the classification and the acceptance
+  // coverage that decided it stayed in the log. The diff a run produced lived in a separate
+  // dialog that never said what the change had been verified against, and the artifacts a turn
+  // left behind - its checkpoints, its workspace revision, its patch digest - were on a route
+  // the pane never read.
+  //
+  // So a verdict is a card, and the card opens the record. Three inputs, all of them the
+  // server's own: the contract (`GET …/task` -> `verification_spec`), the observation the
+  // runtime wrote when it decided (`turn/verified` and `turn/verification_failed` carry
+  // `TaskVerificationReport.to_dict()`), and the change the claim is attached to
+  // (`GET …/diff`). No route was added, nothing here re-runs a test, and an absent record is
+  // drawn as absent rather than as a pass.
+
+  const HARNESS_VERDICT_WORDS = {
+    verified: "Completion verified",
+    rejected: "Completion rejected",
+    paused: "Paused for a human",
+  };
+
+  const HARNESS_VERDICT_CLAIMS = {
+    verified: "Every check in this session's verification contract passed, at the revision below.",
+    rejected: "The run claimed completion and the evidence did not support it, so the turn did not complete.",
+    paused: "The same evidence kept coming back, so the run stopped at a safe boundary instead of repeating itself.",
+  };
+
+  //: What this surface does not do, said on the surface rather than in a commit message.
+  const HARNESS_EVIDENCE_LIMITS = [
+    "The verdict is the runtime's own record of one turn. This pane draws it; it does not re-run the command, so a drawn pass is not a fresh one.",
+    "The diff is read from the worktree as it is now. It is not frozen at the verdict, so a change made after the turn appears here too.",
+    "A file the contract did not name was not part of what was verified, even when the diff shows it changed.",
+    "Pre-existing failures are classified and shown, not fixed: a contract that allows them says so, and this pane says which ones it saw.",
+  ];
+
+  // The recovery verdict attached to a report says how many times this evidence had been seen.
+  // "first" is the ordinary case and saying it would bury the one that matters.
+  function harnessEvidenceStagnationLabel(stagnation) {
+    const value = (stagnation && typeof stagnation === "object") ? stagnation : {};
+    const state = String(value.state || "");
+    const repeats = Number(value.repeat_count) || 0;
+    if (!state || (state === "first" && !value.escalate && repeats === 0)) return "";
+    const reason = String(value.reason || "");
+    return `repeated evidence: ${state}${repeats ? ` · seen ${repeats}×` : ""}${reason ? ` · ${reason}` : ""}`;
+  }
+
+  function harnessVerdictTone(ev) {
+    const type = String((ev && ev.type) || "");
+    if (type === "turn/verified") return "verified";
+    if (type === "turn/verification_failed") return "rejected";
+    if (type === "turn/stagnation_paused") return "paused";
+    return "";
+  }
+
+  function harnessEvidenceShort(value, length = 12) {
+    const text = String(value === null || value === undefined ? "" : value).trim();
+    if (!text) return "";
+    return text.length > length ? `${text.slice(0, length)}…` : text;
+  }
+
+  function harnessEvidenceTestEvidence(report) {
+    const raw = (report && report.test_evidence && typeof report.test_evidence === "object") ? report.test_evidence : {};
+    return raw;
+  }
+
+  // The facts a verdict rests on, in one list so the card and the surface cannot disagree.
+  function harnessEvidenceFacts(report) {
+    const r = (report && typeof report === "object") ? report : {};
+    const evidence = harnessEvidenceTestEvidence(r);
+    const revision = (evidence.revision_before && typeof evidence.revision_before === "object")
+      ? evidence.revision_before
+      : ((r.revision && typeof r.revision === "object") ? r.revision : {});
+    const files = Array.isArray(r.modified_files) ? r.modified_files.filter(Boolean) : [];
+    const dirty = Array.isArray(revision.git_dirty) ? revision.git_dirty : [];
+    const environment = (evidence.environment && typeof evidence.environment === "object")
+      ? evidence.environment
+      : ((r.environment && typeof r.environment === "object") ? r.environment : {});
+    const facts = [];
+    const specDigest = harnessEvidenceShort(r.spec_sha256, 12);
+    facts.push({ label: "Contract", value: specDigest ? `spec ${specDigest}` : "no spec digest recorded", mono: true });
+    const exitCode = (evidence.exit_code === null || evidence.exit_code === undefined) ? null : Number(evidence.exit_code);
+    facts.push({
+      label: "Command",
+      value: exitCode === null
+        ? "the verification command never ran"
+        : `exit ${exitCode} · ${String(evidence.classification || r.failure_classification || "unclassified")}`,
+      mono: true,
+    });
+    const head = harnessEvidenceShort(revision.git_head, 10);
+    const digest = harnessEvidenceShort(revision.digest, 12);
+    facts.push({
+      label: "Revision",
+      value: head
+        ? `${head}${dirty.length ? ` · ${dirty.length} uncommitted` : " · clean"}`
+        : (digest ? `digest ${digest}` : "no revision captured"),
+      mono: true,
+    });
+    facts.push({
+      label: "Files",
+      value: files.length
+        ? `${files.length} modified: ${files.slice(0, 3).join(", ")}${files.length > 3 ? ", …" : ""}`
+        : "no modified file recorded",
+      mono: false,
+    });
+    const patch = harnessEvidenceShort(r.patch_sha256, 12);
+    facts.push({ label: "Patch", value: patch ? `sha256 ${patch}` : "no patch digest", mono: true });
+    if (environment.python) {
+      facts.push({
+        label: "Environment",
+        value: `python ${environment.python}${environment.platform ? ` on ${environment.platform}` : ""}${environment.machine ? ` ${environment.machine}` : ""}`,
+        mono: true,
+      });
+    }
+    return facts;
+  }
+
+  function harnessEvidenceFailures(report) {
+    const raw = Array.isArray(harnessEvidenceTestEvidence(report).failures) ? harnessEvidenceTestEvidence(report).failures : [];
+    return raw
+      .filter(record => record && typeof record === "object")
+      .map(record => ({
+        testId: String(record.test_id || ""),
+        kind: String(record.kind || ""),
+        detail: String(record.detail || ""),
+      }))
+      .slice(0, 20);
+  }
+
+  // Which declared criterion an observed test actually covered. A criterion the record never
+  // evaluated is drawn as uncovered, because "not seen" is the opposite of "proved".
+  function harnessEvidenceCoverage(report, spec) {
+    const rows = [];
+    const seen = new Set();
+    const reported = Array.isArray(report && report.acceptance_coverage) ? report.acceptance_coverage : [];
+    for (const entry of reported) {
+      if (!entry || typeof entry !== "object") continue;
+      const criterion = String(entry.criterion || "").trim();
+      if (!criterion || seen.has(criterion)) continue;
+      seen.add(criterion);
+      const ids = Array.isArray(entry.test_ids) ? entry.test_ids.map(String) : [];
+      const missing = Array.isArray(entry.missing_test_ids) ? entry.missing_test_ids.map(String) : [];
+      rows.push({ criterion, ids, missing, covered: entry.covered !== false && ids.length > 0 });
+    }
+    const declared = Array.isArray(spec && spec.acceptance_coverage) ? spec.acceptance_coverage : [];
+    for (const entry of declared) {
+      if (!entry || typeof entry !== "object") continue;
+      const criterion = String(entry.criterion || "").trim();
+      if (!criterion || seen.has(criterion)) continue;
+      seen.add(criterion);
+      const ids = Array.isArray(entry.test_ids) ? entry.test_ids.map(String) : [];
+      rows.push({ criterion, ids, missing: ids, covered: false });
+    }
+    return rows;
+  }
+
+  // A unified diff, counted per file. `git diff` output only: every hunk header is skipped so
+  // the `---`/`+++` markers cannot be mistaken for a deletion and an addition.
+  function harnessDiffFiles(diffText) {
+    const files = [];
+    let current = null;
+    for (const line of String(diffText || "").split("\n")) {
+      if (line.startsWith("diff --git ")) {
+        const match = line.match(/^diff --git a\/(.*) b\/(.*)$/);
+        current = { path: match ? match[2] : line.slice("diff --git ".length), added: 0, deleted: 0 };
+        files.push(current);
+        continue;
+      }
+      if (!current) continue;
+      if (line.startsWith("+++") || line.startsWith("---") || line.startsWith("@@")) continue;
+      if (line.startsWith("+")) current.added += 1;
+      else if (line.startsWith("-")) current.deleted += 1;
+    }
+    return files;
+  }
+
+  function harnessEvidenceFactListHtml(facts) {
+    return `<dl class="ev-facts">${facts
+      .map(fact => `<dt>${escapeHtml(fact.label)}</dt><dd${fact.mono ? ' class="mono"' : ""}>${escapeHtml(fact.value)}</dd>`)
+      .join("")}</dl>`;
+  }
+
+  function harnessEvidenceCoverageHtml(rows) {
+    if (!rows.length) return "";
+    const uncovered = rows.filter(row => !row.covered).length;
+    return `<div class="ev-coverage">
+      ${rows
+        .map(row => `<div class="ev-cover" data-covered="${row.covered ? "true" : "false"}">
+          <span class="ev-cover-mark">${row.covered ? "covered" : "not covered"}</span>
+          <span class="ev-cover-criterion">${escapeHtml(row.criterion)}</span>
+          <span class="ev-cover-tests mono">${escapeHtml(row.ids.join(", ") || "no test id declared")}</span>
+        </div>`)
+        .join("")}
+      ${uncovered ? `<div class="ev-more">${escapeHtml(String(uncovered))} declared criterion(s) were not covered by an observed test, so this record does not claim them.</div>` : ""}
+    </div>`;
+  }
+
+  function harnessEvidenceDeclaredHtml(rows) {
+    if (!rows.length) return "";
+    return `<div class="ev-coverage">
+      ${rows
+        .map(row => `<div class="ev-cover" data-declared="true">
+          <span class="ev-cover-mark">declared</span>
+          <span class="ev-cover-criterion">${escapeHtml(row.criterion)}</span>
+          <span class="ev-cover-tests mono">${escapeHtml(row.ids.join(", ") || "no test id declared")}</span>
+        </div>`)
+        .join("")}
+    </div>`;
+  }
+
+  function harnessEvidenceFailuresHtml(failures) {
+    if (!failures.length) return "";
+    return `<div class="ev-failures">
+      ${failures
+        .map(row => `<div class="ev-failure" data-kind="${escapeHtml(row.kind)}">
+          <span class="mono">${escapeHtml(row.testId || "(no test id)")}</span>
+          <span class="ev-failure-kind">${escapeHtml(row.kind || "unclassified")}</span>
+          ${row.detail ? `<span class="ev-failure-detail">${escapeHtml(row.detail)}</span>` : ""}
+        </div>`)
+        .join("")}
+    </div>`;
+  }
+
+  function renderHarnessVerdictCardHtml(ev) {
+    const tone = harnessVerdictTone(ev) || "verified";
+    const word = HARNESS_VERDICT_WORDS[tone] || "Verdict";
+    const claim = HARNESS_VERDICT_CLAIMS[tone] || "";
+    const facts = harnessEvidenceFacts(ev);
+    const failures = harnessEvidenceFailures(ev);
+    const coverage = harnessEvidenceCoverage(ev, null);
+    const evidence = harnessEvidenceTestEvidence(ev);
+    const excerpt = String(evidence.output_excerpt || ev.test_output_excerpt || "");
+    const failureCode = String(ev.failure_code || "");
+    const failureDetail = String(ev.failure_detail || ev.reason || ev.detail || "");
+    const stagnationLabel = harnessEvidenceStagnationLabel(ev.stagnation);
+    return `<div class="h-verdict" data-verdict="${tone}">
+      <div class="h-verdict-head">
+        <span class="h-verdict-badge">${tone === "verified" ? UI_ICONS.check : UI_ICONS.warn} ${escapeHtml(word)}</span>
+        <span class="h-verdict-sub mono">${escapeHtml(facts.length ? facts[0].value : "")}${stagnationLabel ? ` · ${escapeHtml(stagnationLabel)}` : ""}</span>
+      </div>
+      <p class="h-verdict-claim">${escapeHtml(claim)}</p>
+      ${failureCode || failureDetail ? `<p class="h-verdict-detail"><strong>${escapeHtml(failureCode || "unverified")}</strong>${failureDetail ? ` — ${escapeHtml(failureDetail)}` : ""}</p>` : ""}
+      ${harnessEvidenceFactListHtml(facts)}
+      ${harnessEvidenceFailuresHtml(failures)}
+      ${harnessEvidenceCoverageHtml(coverage)}
+      ${excerpt ? `<details class="h-verdict-output"><summary>Verification output (${escapeHtml(String(excerpt.length))} chars kept)</summary><pre>${escapeHtml(excerpt)}</pre></details>` : ""}
+      <div class="h-verdict-actions">
+        <button class="btn btn-xs" type="button" onclick="openHarnessEvidenceModal()">Verification &amp; artifacts</button>
+        <button class="btn btn-xs" type="button" onclick="openHarnessDiffModal()">Inspect the diff</button>
+      </div>
+      <p class="h-verdict-not">A verdict is the runtime's record of one turn: this card draws it, and re-runs nothing.</p>
+    </div>`;
+  }
+
+  // ================= The record behind the card =================
+  let harnessEvidencePayload = null;
+  let harnessEvidenceBusy = false;
+
+  function harnessLatestVerdict() {
+    const events = harnessCachedEvents() || [];
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      if (harnessVerdictTone(events[index])) return events[index];
+    }
+    return null;
+  }
+
+  function openHarnessEvidenceModal() {
+    if (!activeHarnessId) {
+      showToast("Start or select a Harness session first: there is no run whose evidence could be shown.", "warn");
+      return;
+    }
+    openOverlay("harnessEvidenceModal");
+    refreshHarnessEvidence();
+  }
+
+  function closeHarnessEvidenceModal() {
+    closeOverlay("harnessEvidenceModal");
+  }
+
+  async function refreshHarnessEvidence() {
+    const sessionId = activeHarnessId;
+    if (!sessionId || harnessEvidenceBusy) return;
+    harnessEvidenceBusy = true;
+    const meta = document.getElementById("harnessEvidenceMeta");
+    if (meta) meta.textContent = `${sessionId} · reading the contract, the record and the change…`;
+    let task = null;
+    let diff = null;
+    const errors = [];
+    try {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/task`);
+      if (response.ok) task = await response.json();
+      else errors.push(`the contract read answered HTTP ${response.status}`);
+    } catch (error) {
+      errors.push(`the contract could not be read: ${error.message}`);
+    }
+    try {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/diff`);
+      if (response.ok) diff = await response.json();
+      else errors.push(`the diff read answered HTTP ${response.status}`);
+    } catch (error) {
+      errors.push(`the diff could not be read: ${error.message}`);
+    }
+    harnessEvidenceBusy = false;
+    if (activeHarnessId !== sessionId) return;
+    harnessEvidencePayload = { sessionId, task, diff, report: harnessLatestVerdict(), errors };
+    renderHarnessEvidence(harnessEvidencePayload);
+  }
+
+  function harnessEvidenceMetaText(payload) {
+    const report = payload.report;
+    const parts = [payload.sessionId];
+    if (report) {
+      const tone = harnessVerdictTone(report);
+      parts.push(HARNESS_VERDICT_WORDS[tone] || "verdict recorded");
+      const facts = harnessEvidenceFacts(report);
+      if (facts.length) parts.push(facts[0].value);
+    } else {
+      parts.push("no verdict recorded");
+    }
+    if (payload.diff && payload.diff.branch) parts.push(`branch ${payload.diff.branch}`);
+    return parts.join(" · ");
+  }
+
+  function harnessEvidenceVerdictHtml(payload) {
+    const report = payload.report;
+    if (!report) {
+      return `<div class="ev-heading">The verdict</div>
+        <p class="ev-note">No verdict is recorded in this session's log yet, so there is no completion claim to check. The contract and the change below are the two things a verdict would be drawn from, and neither is a result.</p>`;
+    }
+    const tone = harnessVerdictTone(report) || "verified";
+    const word = HARNESS_VERDICT_WORDS[tone] || "Verdict";
+    const claim = HARNESS_VERDICT_CLAIMS[tone] || "";
+    const stagnationLabel = harnessEvidenceStagnationLabel(report.stagnation);
+    const evidence = harnessEvidenceTestEvidence(report);
+    const excerpt = String(evidence.output_excerpt || report.test_output_excerpt || "");
+    const outputDigest = harnessEvidenceShort(evidence.output_sha256 || report.test_sha256, 16);
+    const refs = Array.isArray(report.evidence_refs) ? report.evidence_refs : [];
+    return `<div class="ev-heading">The verdict</div>
+      <div class="ev-verdict" data-verdict="${tone}">
+        <div class="ev-verdict-head">
+          <span class="ev-verdict-badge">${tone === "verified" ? UI_ICONS.check : UI_ICONS.warn} ${escapeHtml(word)}</span>
+          ${stagnationLabel ? `<span class="ev-verdict-state mono">${escapeHtml(stagnationLabel)}</span>` : ""}
+        </div>
+        <p class="ev-verdict-claim">${escapeHtml(claim)}</p>
+        ${report.failure_code || report.failure_detail ? `<p class="ev-note"><strong>${escapeHtml(String(report.failure_code || "unverified"))}</strong>${report.failure_detail ? ` — ${escapeHtml(String(report.failure_detail))}` : ""}</p>` : ""}
+        ${harnessEvidenceFactListHtml(harnessEvidenceFacts(report))}
+        ${harnessEvidenceFailuresHtml(harnessEvidenceFailures(report))}
+        ${refs.length ? `<div class="ev-refs">${refs
+          .map(ref => `<div class="ev-ref mono">${escapeHtml(String(ref.kind || "ref"))} · ${escapeHtml(String(ref.ref_id || ""))}${ref.sha256 ? ` · ${escapeHtml(String(ref.sha256).slice(0, 12))}` : ""}</div>`)
+          .join("")}</div>` : ""}
+        ${outputDigest ? `<div class="ev-note mono">output sha256 ${escapeHtml(outputDigest)}${report.test_sha256 && report.test_sha256 !== evidence.output_sha256 ? ` · transcript ${escapeHtml(harnessEvidenceShort(report.test_sha256, 16))}` : ""}</div>` : ""}
+        ${excerpt ? `<details class="ev-output"><summary>The verification command's output</summary><pre>${escapeHtml(excerpt)}</pre></details>` : ""}
+      </div>`;
+  }
+
+  function harnessEvidenceSpecHtml(task) {
+    const spec = (task && task.verification_spec) ? task.verification_spec : null;
+    if (!spec) {
+      return `<div class="ev-heading">What had to pass</div>
+        <p class="ev-note">This session has no verification contract, so completion was not gated by one. A run can end here; it cannot be <em>verified</em>, and this surface will not draw an empty contract as a pass.</p>`;
+    }
+    const flags = [
+      spec.require_managed_edit ? "edits through the managed tools" : "unmanaged edits allowed",
+      spec.require_git_diff ? "a git diff is required" : "no diff required",
+      spec.require_agent_test_action ? "the agent must run a test" : "no test action required",
+      spec.allow_pre_existing_failures ? "pre-existing failures may still verify" : "only a clean run verifies",
+      spec.require_revision_stability ? "the revision must not move while the command runs" : "the revision may move while the command runs",
+      `timeout ${escapeHtml(String(spec.timeout_s))}s`,
+    ];
+    const rows = [
+      { label: "Test command", value: (spec.test_command || []).join(" ") || "no command declared", mono: true },
+    ];
+    if ((spec.targeted_test_command || []).length) {
+      rows.push({ label: "First stage", value: spec.targeted_test_command.join(" "), mono: true });
+    }
+    if ((spec.expected_test_output_contains || []).length) {
+      rows.push({ label: "Output must contain", value: spec.expected_test_output_contains.join(" · "), mono: true });
+    }
+    rows.push({ label: "Required files", value: (spec.required_files || []).join(", ") || "none", mono: true });
+    rows.push({ label: "Required modified", value: (spec.required_modified_files || []).join(", ") || "none", mono: true });
+    rows.push({ label: "Protected files", value: `${Object.keys(spec.protected_files || {}).length} pinned by digest`, mono: false });
+    rows.push({ label: "Baseline digests", value: `${Object.keys(spec.baseline_file_digests || {}).length} recorded before the run`, mono: false });
+    rows.push({ label: "Rules", value: flags.join(" · "), mono: false });
+    const declared = Array.isArray(spec.pre_existing_failures) ? spec.pre_existing_failures : [];
+    rows.push({ label: "Known failures", value: declared.length ? declared.join(", ") : "none declared before this run", mono: true });
+    const declaredCriteria = (Array.isArray(spec.acceptance_coverage) ? spec.acceptance_coverage : []).map((entry) => ({
+      criterion: String((entry && entry.criterion) || ""),
+      ids: Array.isArray(entry && entry.test_ids) ? entry.test_ids.map(String) : [],
+    })).filter((entry) => entry.criterion);
+    return `<div class="ev-heading">What had to pass</div>
+      ${harnessEvidenceFactListHtml(rows)}
+      ${declaredCriteria.length ? `<div class="ev-coverage"><div class="ev-subheading">Acceptance criteria the contract declares (${escapeHtml(String(declaredCriteria.length))})</div>${harnessEvidenceDeclaredHtml(declaredCriteria)}</div><p class="ev-note">A declared criterion is a promise about the test, not proof of it: whether it was covered is in what was observed.</p>` : ""}
+      <p class="ev-note">A contract is not a result: this is the gate the session set, and the verdict above is what happened when it was applied.</p>`;
+  }
+
+  function harnessEvidenceChangeHtml(diff) {
+    if (!diff) {
+      return `<div class="ev-heading">The change</div>
+        <p class="ev-note">The workspace diff could not be read, so this record cannot say what the verdict was attached to.</p>`;
+    }
+    const files = harnessDiffFiles(diff.diff || "");
+    const added = files.reduce((total, file) => total + file.added, 0);
+    const deleted = files.reduce((total, file) => total + file.deleted, 0);
+    const rows = files.length
+      ? files.map(file => `<div class="ev-file">
+          <span class="ev-file-path mono">${escapeHtml(file.path)}</span>
+          <span class="ev-file-add mono">+${escapeHtml(String(file.added))}</span>
+          <span class="ev-file-del mono">-${escapeHtml(String(file.deleted))}</span>
+        </div>`).join("")
+      : `<p class="ev-note">The worktree has no uncommitted change, so there is no diff to attach a claim to.</p>`;
+    return `<div class="ev-heading">The change</div>
+      <dl class="ev-facts">
+        <dt>Branch</dt><dd class="mono">${escapeHtml(String(diff.branch || "no branch (not a git worktree)"))}</dd>
+        <dt>Files</dt><dd class="mono">${escapeHtml(String(files.length))} · +${escapeHtml(String(added))} −${escapeHtml(String(deleted))}</dd>
+        <dt>Status</dt><dd class="mono">${escapeHtml(String(diff.status || "clean"))}</dd>
+      </dl>
+      ${rows}
+      <div class="ev-actions"><button class="btn btn-xs" type="button" onclick="openHarnessDiffModal()">Read the full unified diff</button></div>
+      <p class="ev-note">This diff is the worktree as it is now, not a copy frozen at the verdict: a change made after the turn appears here too.</p>`;
+  }
+
+  function harnessEvidenceArtifactsHtml(task, report) {
+    if (!task) {
+      return `<div class="ev-heading">What the turn left behind</div>
+        <p class="ev-note">The contract read failed, so the checkpoints and the workspace revision this session recorded could not be listed.</p>`;
+    }
+    const checkpoints = Array.isArray(task.checkpoints) ? task.checkpoints : [];
+    const latest = task.latest_checkpoint || null;
+    const lineage = (task.artifact_lineage && typeof task.artifact_lineage === "object") ? task.artifact_lineage : {};
+    const preview = (task.verification_evidence && typeof task.verification_evidence === "object") ? task.verification_evidence : null;
+    const previewRevision = preview && preview.revision && typeof preview.revision === "object" ? preview.revision : null;
+    const previewEnvironment = preview && preview.environment && typeof preview.environment === "object" ? preview.environment : null;
+    const rows = [
+      { label: "Checkpoints", value: checkpoints.length ? `${checkpoints.length} recorded, holding step, payload hash and evidence refs` : "none recorded", mono: false },
+      { label: "Latest", value: latest ? `seq ${latest.seq} · step ${latest.step} · ${latest.status}${latest.created_at ? ` · at ${harnessClockFrom(latest.created_at) || String(latest.created_at)}` : ""}` : "no checkpoint", mono: true },
+    ];
+    if (latest && Array.isArray(latest.evidence_refs)) {
+      rows.push({ label: "Its evidence", value: `${latest.evidence_refs.length} reference(s)`, mono: false });
+    }
+    if (task.checkpoint_integrity_error) {
+      rows.push({ label: "Integrity", value: String(task.checkpoint_integrity_error), mono: false });
+    }
+    if (lineage && !lineage.error) {
+      rows.push({
+        label: "Lineage",
+        value: `revision ${lineage.revision} · ${lineage.artifact_count} artifact(s) · ${lineage.provenance_entry_count} provenance entr(y/ies) · ${lineage.stale_evidence_count || 0} stale evidence`,
+        mono: true,
+      });
+    } else if (lineage && lineage.error) {
+      rows.push({ label: "Lineage", value: `could not be read: ${lineage.error}`, mono: false });
+    }
+    if (previewRevision) {
+      rows.push({
+        label: "Workspace now",
+        value: `${harnessEvidenceShort(previewRevision.git_head, 10) || "no head"}${Array.isArray(previewRevision.git_dirty) && previewRevision.git_dirty.length ? ` · ${previewRevision.git_dirty.length} uncommitted` : " · clean"} · ${harnessEvidenceShort(previewRevision.digest, 12) || "no digest"}`,
+        mono: true,
+      });
+    }
+    if (previewEnvironment && previewEnvironment.python) {
+      rows.push({ label: "Next command", value: `would run under python ${previewEnvironment.python} on ${previewEnvironment.platform || "?"} in the session worktree`, mono: false });
+    }
+    const modified = Array.isArray(report && report.modified_files) ? report.modified_files : [];
+    return `<div class="ev-heading">What the turn left behind</div>
+      ${harnessEvidenceFactListHtml(rows)}
+      ${modified.length ? `<div class="ev-files"><div class="ev-subheading">Files the verdict recorded as modified</div>${modified
+        .map(path => `<div class="ev-file"><span class="ev-file-path mono">${escapeHtml(String(path))}</span></div>`)
+        .join("")}</div>` : ""}
+      <p class="ev-note">A checkpoint records where the turn was, not a copy of the workspace: the revision above is what a re-run would be tied to.</p>`;
+  }
+
+  function harnessEvidenceLimitsHtml() {
+    return `<div class="ev-heading">What this does not prove</div>
+      <ul class="ev-limits">${HARNESS_EVIDENCE_LIMITS.map(limit => `<li>${escapeHtml(limit)}</li>`).join("")}</ul>`;
+  }
+
+  function renderHarnessEvidence(payload) {
+    const meta = document.getElementById("harnessEvidenceMeta");
+    if (meta) {
+      meta.textContent = harnessEvidenceMetaText(payload) + (payload.errors.length ? ` · ${payload.errors.join(" · ")}` : "");
+    }
+    const sections = [
+      ["harnessEvidenceVerdict", harnessEvidenceVerdictHtml(payload)],
+      ["harnessEvidenceSpec", harnessEvidenceSpecHtml(payload.task)],
+      ["harnessEvidenceObserved", harnessEvidenceObservedHtml(payload)],
+      ["harnessEvidenceChange", harnessEvidenceChangeHtml(payload.diff)],
+      ["harnessEvidenceArtifacts", harnessEvidenceArtifactsHtml(payload.task, payload.report)],
+      ["harnessEvidenceLimits", harnessEvidenceLimitsHtml()],
+    ];
+    for (const [id, html] of sections) {
+      const node = document.getElementById(id);
+      if (node) node.innerHTML = html;
+    }
+  }
+
+  function harnessEvidenceObservedHtml(payload) {
+    const report = payload.report;
+    if (!report) {
+      return `<div class="ev-heading">What was observed</div>
+        <p class="ev-note">Nothing, yet: no turn has recorded a verification result in this session's log.</p>`;
+    }
+    const evidence = harnessEvidenceTestEvidence(report);
+    const coverage = harnessEvidenceCoverage(report, payload.task && payload.task.verification_spec);
+    const staged = (report.staged_test_evidence && typeof report.staged_test_evidence === "object") ? report.staged_test_evidence.targeted : null;
+    const declaredPreExisting = Array.isArray(evidence.failures)
+      ? evidence.failures.filter(record => record && record.kind === "pre_existing")
+      : [];
+    const rows = [
+      { label: "Exit code", value: (evidence.exit_code === null || evidence.exit_code === undefined) ? "the command never produced one" : String(evidence.exit_code), mono: true },
+      { label: "Classification", value: String(evidence.classification || report.failure_classification || "unclassified"), mono: true },
+      { label: "Pre-existing", value: declaredPreExisting.length ? `${declaredPreExisting.length} classified as pre-existing, not introduced` : "none classified as pre-existing", mono: false },
+      { label: "Output kept", value: `${String(evidence.output_excerpt || "").length} chars · sha256 ${harnessEvidenceShort(evidence.output_sha256, 16) || "not recorded"}`, mono: true },
+    ];
+    if (staged && typeof staged === "object") {
+      rows.push({ label: "First stage", value: `exit ${staged.exit_code === null || staged.exit_code === undefined ? "?" : staged.exit_code} · ${staged.classification || "unclassified"}`, mono: true });
+    }
+    return `<div class="ev-heading">What was observed</div>
+      ${harnessEvidenceFactListHtml(rows)}
+      ${harnessEvidenceFailuresHtml(harnessEvidenceFailures(report))}
+      ${coverage.length ? `<div class="ev-coverage"><div class="ev-subheading">Acceptance coverage, as the transcript recorded it</div>${harnessEvidenceCoverageHtml(coverage)}</div>` : `<p class="ev-note">The contract declared no acceptance criteria, so there is no coverage to record.</p>`}`;
+  }
+
 
   function runHarnessTurn() {
     const input = document.getElementById("harnessPromptInput");

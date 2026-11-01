@@ -10,8 +10,8 @@ The server has always written a durable event log — `session/init`, a `securit
 policy change, a `turn/*` family, `approval/*`, `edit/*`, `delegation/*`, `handoff/*`, `mcp/*` — and the
 pane has always been able to read it back from a cursor.
 
-In practice a session with a log drew an empty trajectory. The renderer had a card for 18 of the 43 types the server emits and
-returned `""` for the other 25: `session/init` (so every session began blank), all seven
+In practice a session with a log drew an empty trajectory. The renderer had a card for 16 of the 43 types the server emits and
+returned `""` for the other 27: `session/init` (so every session began blank), all seven
 `security/*` types (so a policy change left no trace), and the whole `edit/*`, `delegation/*`,
 `handoff/*` and `mcp/*` families. A reader could not tell a dropped event from an event that never
 happened.
@@ -74,10 +74,10 @@ security/policy_revision  standard -> plan (revision 2)
 edit/applied          applied · src/app.py
 ```
 
-The split as it stands: 18 types have a card of their own,
+The split as it stands: 16 types have a card of their own,
 7 more are described by a
 sentence in `harnessEventSummary()` on the fallback card (that is where `session/init` and
-`security/policy_revision` live), and 18 fall through to
+`security/policy_revision` live), and 20 fall through to
 a `key=value` preview of whatever the event carries — still visible, still counted, just not phrased.
 
 The inventory counts that split and fails on a card for a type the server never emits: a dead branch is
