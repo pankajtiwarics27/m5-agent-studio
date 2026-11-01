@@ -1,0 +1,164 @@
+{
+  "schema_version": "1.0.0",
+  "story": "UIUX-P2-04",
+  "statement": "Chat's transcript names who is speaking and follows the stream only when the reader was already at the bottom; its composer says what Send will do, disables the button on the same predicate that writes the sentence, and keeps Clear undoable.",
+  "source": {
+    "frontend": "static/index.html",
+    "server": "app.py",
+    "routes": [
+      "/api/chat/stream"
+    ]
+  },
+  "server": {
+    "route": "/api/chat/stream",
+    "fields": [
+      "auto_unload",
+      "max_tokens",
+      "messages",
+      "model",
+      "reasoning_mode",
+      "skills",
+      "temperature",
+      "tools_enabled",
+      "workspace_dir"
+    ],
+    "optional_fields": [
+      "max_tokens",
+      "temperature"
+    ],
+    "policy": "plan",
+    "workspace_fallback": "WORKSPACE_ROOT"
+  },
+  "roles": {
+    "user": {
+      "label": "You",
+      "tone": "info"
+    },
+    "assistant": {
+      "label": "Model",
+      "tone": "ok"
+    }
+  },
+  "reasons": [
+    "no-model",
+    "ready",
+    "runtime-offline",
+    "streaming",
+    "tools-readonly"
+  ],
+  "tones_used": [
+    "busy",
+    "info",
+    "ok",
+    "warn"
+  ],
+  "frontend": {
+    "functions": {
+      "renderChatMessages": true,
+      "updateChatComposer": true,
+      "chatComposerState": true,
+      "clearChat": true,
+      "sendChat": true,
+      "sendChatRequest": true,
+      "jumpToLatestChatTurn": true
+    },
+    "roles": {
+      "table": {
+        "user": {
+          "label": "You",
+          "tone": "info"
+        },
+        "assistant": {
+          "label": "Model",
+          "tone": "ok"
+        }
+      },
+      "emitted": [
+        "assistant",
+        "user"
+      ],
+      "labelled": true,
+      "numbered": true,
+      "model_in_header": true
+    },
+    "composer": {
+      "one_predicate": true,
+      "button_reads_it": true,
+      "no_second_rule": true,
+      "hint_written_on_change": true,
+      "reasons": [
+        "no-model",
+        "ready",
+        "runtime-offline",
+        "streaming",
+        "tools-readonly"
+      ],
+      "tones": [
+        "busy",
+        "info",
+        "ok",
+        "warn"
+      ],
+      "tools_says_readonly": true,
+      "tools_names_a_directory": true,
+      "offline_reads_telemetry": true,
+      "local_only_for_offline": true,
+      "live_region": true
+    },
+    "transcript": {
+      "pinned_before_render": true,
+      "scroll_guarded": true,
+      "no_unconditional_scroll": true,
+      "slack_constant": true,
+      "jump_control": true,
+      "jump_hidden_when_pinned": true,
+      "log_role": true,
+      "live_off": true,
+      "aria_busy": true,
+      "streaming_marked": true,
+      "empty_says_what_appears": true
+    },
+    "clear": {
+      "undoable": true,
+      "keeps_a_copy": true,
+      "restores": true,
+      "noop_when_empty": true,
+      "disabled_when_empty": true
+    },
+    "keyboard": {
+      "enter_sends": true,
+      "shift_is_a_newline": true,
+      "one_handler": true,
+      "no_markup_handler": true,
+      "placeholder_matches": true,
+      "described_by_hint": true
+    },
+    "stream": {
+      "busy_flag": true,
+      "busy_cleared_in_finally": true,
+      "stop_clears_busy": true,
+      "payload_fields": [
+        "auto_unload",
+        "messages",
+        "model",
+        "reasoning_mode",
+        "skills",
+        "tools_enabled",
+        "workspace_dir"
+      ]
+    }
+  },
+  "totals": {
+    "roles": 2,
+    "reasons": 5,
+    "tones": 4,
+    "server_fields": 9,
+    "findings": 0
+  },
+  "findings": [],
+  "limits": [
+    "the walk drives the transcript by writing chatHistory in the page, because the demo has no model runtime: it proves the rendering, the scroll rule, the composer predicate and the Clear undo, and it proves the failure surface by sending to a runtime that is not there - it does not prove a model's answer",
+    "the read-only claim is checked against the policy literal in app.py, not by attempting a write tool call",
+    "the pin tolerance (80px) is a judgement about a hand, not a measurement; it is recorded here so a later story can change it in one place"
+  ]
+}

@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "3c784739aa3b6d8dc6a90454df4bc37ef5e68c34e6e2eeb065b4fb42578f8865",
+  "frontend_sha256": "08f93e899faad25d171ddce3674cd85d101b8203bd6d95c8ee0060783349f0b6",
   "panes": [
     {
       "dom_id": "start",
@@ -497,9 +497,9 @@
     {
       "dom_id": "chat",
       "section_id": "pane-chat",
-      "control_count": 9,
+      "control_count": 10,
       "counts": {
-        "button": 3,
+        "button": 4,
         "input": 2,
         "select": 3,
         "textarea": 1
@@ -535,16 +535,26 @@
           "tag": "button",
           "id": "chatClearBtn",
           "type": "button",
-          "class": "btn btn-xs chat-clear",
-          "aria-label": "Clear conversation",
+          "class": "btn btn-xs",
+          "title": "Clear the transcript on this pane (undoable)",
           "onclick": "clearChat()",
           "text": "Clear"
         },
         {
+          "tag": "button",
+          "id": "chatJumpLatest",
+          "type": "button",
+          "class": "btn btn-xs chat-jump",
+          "title": "Scroll the transcript to the newest turn",
+          "onclick": "jumpToLatestChatTurn()",
+          "text": "Jump to latest ↓"
+        },
+        {
           "tag": "textarea",
           "id": "chatInput",
-          "aria-describedby": "chatComposerHint",
-          "placeholder": "Write a message…",
+          "aria-label": "Message",
+          "aria-describedby": "chatComposerHint chatKeyboardHint",
+          "placeholder": "Message your selected model… (Enter sends, Shift+Enter adds a line)",
           "rows": "2"
         },
         {
@@ -552,7 +562,7 @@
           "id": "chatStopBtn",
           "type": "button",
           "class": "btn btn-danger",
-          "onclick": "stopActiveStream()",
+          "onclick": "stopChatStream()",
           "text": "Stop"
         },
         {
@@ -560,6 +570,7 @@
           "id": "chatSendBtn",
           "type": "button",
           "class": "btn btn-primary",
+          "aria-describedby": "chatComposerHint",
           "onclick": "sendChat()",
           "text": "Send"
         }
@@ -1246,8 +1257,8 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 176,
-    "pane_controls": 75,
+    "markup_controls": 177,
+    "pane_controls": 76,
     "chrome_controls": 101,
     "script_rendered_controls": 30,
     "script_rendered_by_function": {

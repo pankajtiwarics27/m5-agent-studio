@@ -124,13 +124,15 @@ try {
   await page.evaluate(() => switchTab("chat"));
 
   const empty = await page.evaluate(() => ({
-    title: document.querySelector("#chatMessages h2")?.textContent,
-    inputLabel: Boolean(document.querySelector('label[for="chatInput"]')),
+    title: document.querySelector("#chatMessages .chat-empty-state strong")?.textContent,
+    inputLabel: document.getElementById("chatInput")?.getAttribute("aria-label"),
     modeLabels: ["chatModel", "chatPersona", "chatReasoning"].every(id => document.querySelector(`label[for="${id}"]`)),
-    hint: document.getElementById("chatComposerHint")?.textContent || "",
+    keyboardHint: document.getElementById("chatKeyboardHint")?.textContent || "",
+    describedBy: document.getElementById("chatInput")?.getAttribute("aria-describedby") || "",
+    transcriptRole: document.getElementById("chatMessages")?.getAttribute("role"),
   }));
-  check("empty conversation and labelled response mode", empty.title === "No messages yet" && empty.inputLabel && empty.modeLabels, empty.title);
-  check("keyboard guidance distinguishes Enter and Shift+Enter", /Enter to send/.test(empty.hint) && /Shift\+Enter/.test(empty.hint), empty.hint);
+  check("empty conversation and labelled response mode", empty.title === "Nothing has been said yet" && empty.inputLabel === "Message" && empty.modeLabels && empty.transcriptRole === "log", empty.title);
+  check("keyboard guidance survives dynamic send states", /Enter sends/.test(empty.keyboardHint) && /Shift\+Enter adds a line/.test(empty.keyboardHint) && empty.describedBy.includes("chatKeyboardHint"), empty.keyboardHint);
 
   await page.select("#chatReasoning", "low");
   await page.select("#chatPersona", "You are an adversarial code reviewer. Focus strictly on bugs, race conditions, UX anti-patterns, and security issues.");
@@ -158,11 +160,11 @@ try {
       text: assistant?.textContent || "",
       time: assistant?.querySelector("time")?.getAttribute("datetime"),
       model: assistant?.querySelector(".chat-msg-model")?.textContent,
-      metadata: assistant?.querySelector(".chat-msg-footer")?.textContent || "",
+      metadata: assistant?.querySelector(".msg-meta")?.textContent || "",
       request: body,
     };
   });
-  check("success keeps role, model, time and token metadata", /A verified answer\./.test(success.text) && Boolean(success.time && success.model) && /24 tokens/.test(success.metadata) && /12\.5 tok\/s/.test(success.metadata));
+  check("success keeps role, model, time and token metadata", /A verified answer\./.test(success.text) && Boolean(success.time && success.model) && /24 tok/.test(success.metadata) && /12\.5 tok\/s/.test(success.metadata));
   check("existing chat API payload keys and selected mode are preserved", success.request.reasoning_mode === "low" && success.request.messages[0].content.startsWith("You are an adversarial code reviewer.") && ["auto_unload", "messages", "model", "reasoning_mode", "skills", "tools_enabled", "workspace_dir"].every(key => Object.hasOwn(success.request, key)));
 
   await page.evaluate(() => { window.__chatTestMode = "hang"; });
@@ -221,9 +223,10 @@ try {
   await new Promise(resolve => setTimeout(resolve, 550));
   const afterClear = await page.evaluate(() => ({
     empty: Boolean(document.querySelector("#chatMessages .chat-empty-state")),
-    alerts: document.querySelectorAll('#chatState [role="alert"]').length,
+    title: document.querySelector("#chatState .presentation-title")?.textContent || "",
+    actions: [...document.querySelectorAll("#chatState .presentation-actions button")].map(button => button.textContent.trim()),
   }));
-  check("Clear cancels a pending error presentation", afterClear.empty && afterClear.alerts === 0);
+  check("Clear cancels a pending error presentation but keeps Undo", afterClear.empty && afterClear.title === "Transcript cleared" && afterClear.actions.join(",") === "Undo,Dismiss");
 
   await page.evaluate(() => clearChat());
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });

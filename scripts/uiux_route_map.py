@@ -185,7 +185,14 @@ def _conditional_arms(expression: str) -> tuple[str, str] | None:
 
 
 def _brace_end(script: str, open_index: int) -> int:
-    """Index just past the `}` matching the `{` at `open_index`."""
+    """Index just past the `}` matching the `{` at `open_index`.
+
+    Comments are skipped, not counted: an apostrophe in prose ("the abort's own
+    finally") used to open a string that never closed, so one comment could stretch a
+    function's body over the rest of the file and hand its routes to every pane that
+    called it. Regex literals are still not understood; no function here relies on one
+    containing a brace.
+    """
     depth = 0
     index = open_index
     quote: str | None = None
@@ -197,6 +204,14 @@ def _brace_end(script: str, open_index: int) -> int:
                 continue
             if char == quote:
                 quote = None
+        elif char == "/" and script.startswith("//", index):
+            newline = script.find("\n", index)
+            index = len(script) if newline == -1 else newline
+            continue
+        elif char == "/" and script.startswith("/*", index):
+            close = script.find("*/", index + 2)
+            index = len(script) if close == -1 else close + 2
+            continue
         elif char in "'\"`":
             quote = char
         elif char == "{":

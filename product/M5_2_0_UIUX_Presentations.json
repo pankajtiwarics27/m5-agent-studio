@@ -52,7 +52,7 @@
         "Re-check",
         "Providers"
       ],
-      "line": 2786
+      "line": 2784
     },
     {
       "container": "startRecentState",
@@ -65,7 +65,7 @@
         "Start a session",
         "Open Harness"
       ],
-      "line": 2845
+      "line": 2843
     },
     {
       "container": "startRecentState",
@@ -78,7 +78,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 2920
+      "line": 2918
     },
     {
       "container": "startHealthState",
@@ -91,7 +91,7 @@
         "Re-check",
         "Monitor rail"
       ],
-      "line": 3014
+      "line": 3012
     },
     {
       "container": "startWorkspaceState",
@@ -104,7 +104,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 3098
+      "line": 3096
     },
     {
       "container": "hallStream",
@@ -118,7 +118,7 @@
         "Ask one model",
         "Configure providers"
       ],
-      "line": 3395
+      "line": 3393
     },
     {
       "container": "debateSynthesisArea",
@@ -130,7 +130,7 @@
       "actions": [
         "Start Compare"
       ],
-      "line": 3409
+      "line": 3407
     },
     {
       "container": "chatState",
@@ -143,7 +143,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 3419
+      "line": 3417
     },
     {
       "container": "harnessStreamState",
@@ -156,7 +156,20 @@
         "Reconnect now",
         "Reload from snapshot"
       ],
-      "line": 3433
+      "line": 3431
+    },
+    {
+      "container": "chatState",
+      "pane": "Chat",
+      "kind": "recovery",
+      "title": "Transcript cleared",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Undo",
+        "Dismiss"
+      ],
+      "line": 4665
     }
   ],
   "containers": [
@@ -211,27 +224,27 @@
   ],
   "remaining_raw_writers": [
     {
-      "line": 3702,
+      "line": 3704,
       "handler": "installSkill"
     },
     {
-      "line": 5167,
+      "line": 5490,
       "handler": "openHarnessDiffModal"
     },
     {
-      "line": 5643,
+      "line": 5974,
       "handler": "runMcpPlayground"
     }
   ],
   "totals": {
     "kinds": 3,
-    "surfaces": 9,
+    "surfaces": 10,
     "containers": 8,
     "wired_containers": 8,
     "by_kind": {
       "empty": 3,
       "error": 5,
-      "recovery": 1
+      "recovery": 2
     },
     "remaining_raw_writers": 3,
     "findings": 0

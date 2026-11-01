@@ -1,4 +1,4 @@
-"""UIUX-P2-04: Chat mode, transcript hierarchy and stream-state contracts."""
+"""Supplemental P2-04 Chat stream and recovery contracts after mainline reconciliation."""
 
 from __future__ import annotations
 
@@ -17,12 +17,18 @@ def _chat_markup() -> str:
 
 
 def _chat_handler() -> str:
-    start = FRONTEND.index("  function chatTime(")
+    start = FRONTEND.index("  const CHAT_ROLES = {")
     end = FRONTEND.index("  // ================= AUTONOMOUS AGENTIC HARNESS", start)
     return FRONTEND[start:end]
 
 
-def test_existing_chat_controls_remain_present_and_labelled() -> None:
+def _consume_sse() -> str:
+    start = FRONTEND.index("  async function consumeSSE(")
+    end = FRONTEND.index("  // ================= AUTO 4-STAGE", start)
+    return FRONTEND[start:end]
+
+
+def test_existing_chat_controls_keep_labels_and_keyboard_guidance() -> None:
     markup = _chat_markup()
     for control in (
         "chatModel",
@@ -36,94 +42,96 @@ def test_existing_chat_controls_remain_present_and_labelled() -> None:
         "chatSendBtn",
     ):
         assert markup.count(f'id="{control}"') == 1, control
-    for control in ("chatModel", "chatPersona", "chatReasoning", "chatInput"):
+    for control in ("chatModel", "chatPersona", "chatReasoning"):
         assert re.search(rf'<label\b[^>]*\bfor="{control}"', markup), control
-    assert "Workspace + MCP Tools" in markup
-    assert "Unload M5 after reply" in markup
-    assert "onclick=\"clearChat()\"" in markup
-    assert "onclick=\"stopActiveStream()\"" in markup
-    assert "onclick=\"sendChat()\"" in markup
+    assert 'aria-label="Message" aria-describedby="chatComposerHint chatKeyboardHint"' in markup
+    assert 'id="chatKeyboardHint"' in markup
+    assert 'role="log" aria-label="Conversation" aria-live="off"' in markup
+    assert "Shift+Enter adds a line" in markup
+    assert "Enter sends" in markup
 
 
-def test_mode_and_composer_are_visible_and_keyboard_described() -> None:
-    markup = _chat_markup()
-    assert 'role="group" aria-label="Response mode"' in markup
-    assert 'aria-label="Conversation options"' in markup
-    assert 'role="region" aria-label="Conversation transcript"' in markup
-    assert 'aria-describedby="chatComposerHint"' in markup
-    assert "Enter to send" in markup
-    assert "Shift+Enter for a new line" in markup
-    assert "No messages yet" in markup
-
-
-def test_transcript_marks_role_model_time_status_and_usage() -> None:
+def test_transcript_retains_role_model_turn_number_local_time_and_state() -> None:
     handler = _chat_handler()
     for marker in (
-        'class="chat-msg-role"',
+        'class="chat-turn-role"',
+        'class="chat-turn-index"',
         'class="chat-msg-model"',
-        'class="chat-msg-time"',
+        'class="chat-turn-time"',
         'class="chat-msg-state"',
-        'completion_tokens',
-        'decode_tps',
-        'data-role="user"',
-        'data-role="assistant"',
+        'data-role="user" data-state="sent"',
+        'data-role="assistant" data-state="${escapeHtml(state)}"',
     ):
         assert marker in handler, marker
     assert "new Intl.DateTimeFormat" in handler
+    assert "createdAt: Date.now()" in handler
+    assert 'status: "streaming"' in handler
+    for state in ("complete", "stopped", "failed"):
+        assert f'asstMsg.status = "{state}"' in handler
     assert 'data-state="${escapeHtml(state)}"' in handler
-    assert 'escapeHtml(m.model)' in handler
-    assert 'title="${escapeHtml(m.model)}"' not in handler, "untrusted model text must not enter an attribute"
-    assert 'renderMarkdown(m.content || "")' in handler
 
 
-def test_stream_has_explicit_success_stop_failure_and_unexpected_close_states() -> None:
+def test_stop_failure_and_unexpected_close_have_distinct_recovery_states() -> None:
     handler = _chat_handler()
-    for state in ("streaming", "complete", "stopped", "failed"):
-        assert f'status: "{state}"' in handler or f'asstMsg.status = "{state}"' in handler
-    assert "presentChatError(pendingChatFailure" in handler
-    assert handler.index("setChatBusy(false)") < handler.index("presentChatError(pendingChatFailure"), "Retry must not appear while Send is locked"
+    consume = _consume_sse()
+    assert 'function stopChatStream()' in handler
+    assert 'stopped() {' in handler
+    assert 'failed(message) {' in handler
     assert 'closed() { this.failed("the stream closed before the model answered"); }' in handler
-    consume = FRONTEND[FRONTEND.index("  async function consumeSSE(") : FRONTEND.index("  // ================= AUTO 4-STAGE", FRONTEND.index("  async function consumeSSE("))]
+    for state in ("complete", "stopped", "failed"):
+        assert f'asstMsg.status = "{state}"' in handler
     assert "handlers.stopped" in consume
     assert "handlers.closed" in consume
     assert "receivedTerminalEvent" in consume
+    assert "controller.signal.aborted" in consume
+    assert 'class="chat-pending"' in handler
 
 
-def test_chat_request_contract_is_unchanged() -> None:
+def test_chat_request_payload_contract_and_authorized_route_are_unchanged() -> None:
     handler = _chat_handler()
-    assert 'consumeSSE("/api/chat/stream"' in handler
     for field in (
         "model,",
         "messages: apiMessages",
-        "reasoning_mode:",
+        "reasoning_mode: context.reasoning",
         "auto_unload:",
-        "tools_enabled:",
-        "workspace_dir:",
-        "skills:",
+        "tools_enabled: toolsEnabled",
+        "workspace_dir: workspaceDir",
+        "skills: [...selectedSkills]",
     ):
         assert field in handler, field
     assert re.search(r'@app\.post\("/api/chat/stream"\)', APP)
     assert APP.count('"/api/chat/stream"') >= 1
 
 
-def test_retry_reuses_the_existing_user_turn_without_duplicating_it() -> None:
+def test_retry_reuses_the_existing_user_turn_after_the_busy_lock_is_released() -> None:
     handler = _chat_handler()
     assert "function retryChatRequest(text, assistantMessage)" in handler
     assert "sendChatRequest(text, { appendUser: false })" in handler
     assert "if (options.appendUser !== false) chatHistory.push" in handler
     assert "lastIndexOf(assistantMessage)" in handler
+    assert handler.index("chatBusy = false;", handler.index("function sendChatRequest")) < handler.index(
+        "presentChatError(pendingChatFailure", handler.index("function sendChatRequest")
+    )
 
 
-def test_clear_invalidates_late_failure_presentation() -> None:
+def test_clear_keeps_undo_but_invalidates_a_pending_failure_presentation() -> None:
     handler = _chat_handler()
     assert "let chatRequestGeneration = 0" in FRONTEND
     assert "chatRequestGeneration += 1" in handler
     assert "requestGeneration === chatRequestGeneration" in handler
+    assert "const kept = chatHistory.slice()" in handler
+    assert 'label: "Undo"' in handler
+    assert 'title: "Transcript cleared"' in handler
 
 
-def test_narrow_chat_layout_can_shrink_controls_without_horizontal_overflow() -> None:
-    assert "grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr)" in FRONTEND
-    assert "grid-template-columns: minmax(0, 1fr);" in FRONTEND
-    assert ".chat-mode-field select { width: 100%; min-width: 0; }" in FRONTEND
-    assert ".chat-composer-row { grid-template-columns: minmax(0, 1fr); }" in FRONTEND
-    assert ".chat-messages { flex: 1; min-height: 0;" in FRONTEND
+def test_untrusted_context_is_not_interpolated_into_an_html_attribute() -> None:
+    handler = _chat_handler()
+    assert 'data-context="sent">Context: ${escapeHtml(contextLine)}' in handler
+    assert 'title="${escapeHtml(contextLine)}"' not in handler
+
+
+def test_narrow_layout_keeps_chat_controls_within_the_viewport() -> None:
+    assert ".chat-header-bar > div { min-width: 0; flex: 1 1 160px; }" in FRONTEND
+    assert ".chat-header-bar select { width: 100%; min-width: 0; }" in FRONTEND
+    assert ".chat-header-bar > div { flex: 1 1 100%; }" in FRONTEND
+    assert ".chat-composer textarea { flex: 1 1 100% !important; width: 100%; min-width: 0; }" in FRONTEND

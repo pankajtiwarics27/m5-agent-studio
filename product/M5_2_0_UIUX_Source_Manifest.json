@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "3c784739aa3b6d8dc6a90454df4bc37ef5e68c34e6e2eeb065b4fb42578f8865",
-      "bytes": 365806,
-      "lines": 6163
+      "sha256": "08f93e899faad25d171ddce3674cd85d101b8203bd6d95c8ee0060783349f0b6",
+      "bytes": 381774,
+      "lines": 6494
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "c275df07ac2925dd5876024162c0818f68773ad8c30daad4b4ce83427b4a1aa3",
-      "bytes": 3103456,
-      "lines": 69192
+      "sha256": "cf4d4944680e4643d7557161f0885f2b303ce1705b6a2314d1216835ae4cf8b7",
+      "bytes": 3119424,
+      "lines": 69523
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -89,9 +89,9 @@
     {
       "path": "scripts/uiux_route_map.py",
       "role": "maps every fetch call to the route it can hit",
-      "sha256": "b60f8e88e6dba6f31dea75b6c79ce18b45c5bb221f84227d915be9f6b97d5c23",
-      "bytes": 41449,
-      "lines": 916
+      "sha256": "923981fc78ff0f844e67691bfa966963f3959be1b9650eaf49f3b58b0a14d555",
+      "bytes": 42201,
+      "lines": 931
     },
     {
       "path": "scripts/uiux_authorization_trace.py",
@@ -108,18 +108,158 @@
       "lines": 840
     },
     {
+      "path": "scripts/chat_walk.mjs",
+      "role": "mainline P2-04 browser walk and existing Chat visual evidence producer",
+      "sha256": "ca906e5eaef5132115d15da0cfb2e285de4218a84857bde15b74f8d372610074",
+      "bytes": 28721,
+      "lines": 602
+    },
+    {
+      "path": "scripts/uiux_chat_inventory.py",
+      "role": "builds and checks the mainline P2-04 Chat composer inventory",
+      "sha256": "d6b348249b2c306a8b11a286f992bd5029454a405a8c598a4c0ef47e208ac153",
+      "bytes": 28476,
+      "lines": 674
+    },
+    {
+      "path": "tests/test_chat_composer.py",
+      "role": "checks mainline P2-04 Chat behavior and its negative cases",
+      "sha256": "64774cd1885b2c4c24245ed727251203ab4dcc21fae19eb68ef43c4e374727b9",
+      "bytes": 16133,
+      "lines": 456
+    },
+    {
+      "path": "scripts/chat_context_walk.mjs",
+      "role": "mainline P2-05 browser walk for sent context, tools and timing",
+      "sha256": "13e950401ad3486cafca2d2bc0c2400eeb65ce6dcffa2df1cb1a4ca0d3fc8336",
+      "bytes": 22747,
+      "lines": 507
+    },
+    {
+      "path": "scripts/uiux_chat_context_inventory.py",
+      "role": "builds and checks the P2-05 Chat context inventory",
+      "sha256": "cca51452e5a1d27640d45d1584e485b8a8bd20fd034798e87ebf90381baa842f",
+      "bytes": 29039,
+      "lines": 634
+    },
+    {
+      "path": "tests/test_chat_context.py",
+      "role": "checks the P2-05 context, tool-event and streaming-time contracts",
+      "sha256": "1363f1db37a7f5c4a75c2ab24c06b3d9096cddba5e7f69099aabb395a53a6c72",
+      "bytes": 17044,
+      "lines": 498
+    },
+    {
+      "path": "docs/uiux-2-0-chat.md",
+      "role": "mainline P2-04 story evidence and owner-session tracking",
+      "sha256": "91251575154776bf446f1c601e31035817b2be0117204a9e6a95c5f0ec2a154d",
+      "bytes": 3953,
+      "lines": 54
+    },
+    {
+      "path": "docs/media/chat/README.md",
+      "role": "mainline P2-04 screenshot provenance and visual evidence index",
+      "sha256": "83ab9318dd908a9226f25e36f1082461af79c52a879a95cdb4c2632d042bd61b",
+      "bytes": 3987,
+      "lines": 45
+    },
+    {
+      "path": "docs/media/chat/transcript.png",
+      "role": "mainline P2-04 desktop transcript capture",
+      "sha256": "c138c6ec0ff10f6ebec30210e2166df7d154a8df4f608dc43ac03215fe204620",
+      "bytes": 141754,
+      "lines": null
+    },
+    {
+      "path": "docs/media/chat/scrolled.png",
+      "role": "mainline P2-04 scroll-preservation capture",
+      "sha256": "eb1f49e05bf392b9fd0dea182d12bd9ceb7d047da275759faf07b09d1185020f",
+      "bytes": 137785,
+      "lines": null
+    },
+    {
+      "path": "docs/media/chat/answered.png",
+      "role": "mainline P2-04 successful-reply capture",
+      "sha256": "cfba1eb38ce6e21b0590621b1ffdf764bb08a4356da1f0a0ba1e8341e2a4a1ef",
+      "bytes": 135636,
+      "lines": null
+    },
+    {
+      "path": "docs/media/chat/cleared.png",
+      "role": "mainline P2-04 undoable-clear capture",
+      "sha256": "df0d14101431c51e52644975ba28c84bd33a8bf213501f26729ff5214cfa6e90",
+      "bytes": 118848,
+      "lines": null
+    },
+    {
+      "path": "docs/media/chat/failure.png",
+      "role": "mainline P2-04 recoverable-failure capture",
+      "sha256": "48c6ee9f13e36dcb120db6bf328acba67d24f3f2fbc2d43486024cbdabade2f6",
+      "bytes": 136219,
+      "lines": null
+    },
+    {
+      "path": "docs/media/chat/narrow.png",
+      "role": "mainline P2-04 narrow viewport capture",
+      "sha256": "500567848dcdbf0e670a648887a449c2d75fef7b62bdcaada17aeb0443d61f47",
+      "bytes": 80354,
+      "lines": null
+    },
+    {
+      "path": "docs/media/chat/sent-context.png",
+      "role": "mainline P2-05 sent-context capture",
+      "sha256": "47713b4e684e1a35ab38e21bdddfd1c84499f030167b1da0d405ead0e852561f",
+      "bytes": 133686,
+      "lines": null
+    },
+    {
+      "path": "docs/media/chat/streaming.png",
+      "role": "mainline P2-05 streaming and timing capture",
+      "sha256": "8bc80694a07e7d4a2b246aa21237fd25a372727e668e76f25280641ad1b9e495",
+      "bytes": 134413,
+      "lines": null
+    },
+    {
+      "path": "docs/media/chat/context-tools.png",
+      "role": "mainline P2-05 tool context and event capture",
+      "sha256": "f73ee91d9a11730bb4ad9aab141dd0b6e006fa2638a4cd817636f5bf5f2f69ff",
+      "bytes": 127631,
+      "lines": null
+    },
+    {
+      "path": "docs/media/chat/narrow-context.png",
+      "role": "mainline P2-05 narrow context capture",
+      "sha256": "64dde144ce84eb1699e8b0a0514790b9d1625422fe03aece03d41b4d3b61b677",
+      "bytes": 76189,
+      "lines": null
+    },
+    {
+      "path": "docs/uiux-2-0-chat-context.md",
+      "role": "mainline P2-05 context and tool evidence",
+      "sha256": "a9612e6d84ad6e2ac0464474b19eb468d1fe3bb936907781be483b26add11a2d",
+      "bytes": 6156,
+      "lines": 72
+    },
+    {
+      "path": "tests/test_presentations.py",
+      "role": "shared Chat, Start and overlay presentation contract tests",
+      "sha256": "b9d5972a9e7564e2d0488995f97f857c7abc45a977a8c3051d9d11f025f3d043",
+      "bytes": 11137,
+      "lines": 296
+    },
+    {
       "path": "scripts/chat_composer_walk.mjs",
-      "role": "exercises Chat composer and stream states against a throwaway loopback demo",
-      "sha256": "1b7666a86d3f11294d4845abbd144c789ba59b86069eb42e13a11e1e99e5c763",
-      "bytes": 15034,
-      "lines": 244
+      "role": "exercises supplemental Chat stream and recovery states against a throwaway loopback demo",
+      "sha256": "f6cfd5b2a2dd25ca4e71dff78cc3497c70d155c573a25005bcdec3602bf87401",
+      "bytes": 15600,
+      "lines": 247
     },
     {
       "path": "tests/test_uiux_chat_composer.py",
-      "role": "checks the Chat mode, hierarchy, payload and recovery contracts",
-      "sha256": "49a5c0b972d47e861c09994586270b1c14c24c6d26088531e52b56d55cb1cf2c",
-      "bytes": 5199,
-      "lines": 129
+      "role": "checks supplemental Chat hierarchy, API and recovery contracts",
+      "sha256": "9c0ef3142a77b95ab979e7feab15d2fe02cbbd85bd883383d696678da956aa3a",
+      "bytes": 5453,
+      "lines": 137
     },
     {
       "path": "tests/test_screenshot_capture_browser.py",
@@ -131,22 +271,22 @@
     {
       "path": "tests/test_uiux_source_manifest.py",
       "role": "checks the completeness and hashes of this source manifest",
-      "sha256": "9c593344c8e3329dcd53dc59fa1fc2e8fb7b33f274335969431d4ebe70ec004f",
-      "bytes": 8927,
-      "lines": 215
+      "sha256": "e76206aca15ee9a0aff624ee45661e7f9d0048b7062ee3646acec539914427b1",
+      "bytes": 9286,
+      "lines": 224
     },
     {
       "path": "docs/uiux-2-0-p2-04-evidence.md",
       "role": "maps P2-04 acceptance criteria to captured and executed evidence",
-      "sha256": "a0d6d70e733d796a4ab294cea4336a0a14c8dabb89f4fa6fefaace96d416cbe4",
-      "bytes": 4304,
-      "lines": 29
+      "sha256": "1ec60f0f53cb706d1852922fa7ceaf572872541d107818fe4b3e78e85d140a4e",
+      "bytes": 3953,
+      "lines": 34
     }
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "3c784739aa3b6d8dc6a90454df4bc37ef5e68c34e6e2eeb065b4fb42578f8865",
-    "lines": 6163,
+    "sha256": "08f93e899faad25d171ddce3674cd85d101b8203bd6d95c8ee0060783349f0b6",
+    "lines": 6494,
     "tab_count": 6,
     "tabs": [
       {

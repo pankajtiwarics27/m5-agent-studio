@@ -1,29 +1,34 @@
-# UIUX-P2-04 — Chat composer and conversation hierarchy
+# UIUX-P2-04 — supplemental Chat stream and recovery evidence
 
-## Acceptance evidence
+## Scope and tracking
 
-| Acceptance area | Evidence | Result / limit |
+The P2-04 story and its owner/session tracking remain authoritative in the current-main roadmap. P2-04 is already recorded there as **done** by the session and commit that completed PR #142. This reconciliation does not reopen the story, replace its owner, claim owner approval, or change the preservation sign-off. It carries forward only distinct Chat stream/recovery behavior from PR #141 that remains useful with the merged #142/#143 implementation.
+
+The mainline Chat screenshots and story evidence remain in [`docs/uiux-2-0-chat.md`](uiux-2-0-chat.md) and [`docs/media/chat/README.md`](media/chat/README.md). They belong to the already-merged implementation and are not presented here as before/after proof of this supplemental change. No screenshots were captured for this reconciliation; the synthetic browser walk below does not take screenshots. Visual evidence for a later change must use `scripts/capture_screenshots.mjs` and `scripts/validate_screenshots.py`.
+
+## Supplemental behavior and evidence
+
+| Behavior retained from #141 | Evidence | Result / limit |
 |---|---|---|
-| Empty conversation, explicit model/persona/reasoning mode, retained tools/unload/clear controls | [`after-dark/chat.png`](media/uiux-p2-04/after-dark/chat.png), [`after-dark-mobile/chat.png`](media/uiux-p2-04/after-dark-mobile/chat.png), [`after-light/chat.png`](media/uiux-p2-04/after-light/chat.png); capture metadata is in each adjacent `index.json` | Captured by `scripts/capture_screenshots.mjs` against `scripts/demo_tour.py --serve`; dark/light and 390px wide states. The screenshots show the empty state, not a live model response. |
-| Before/after layout at matching viewport sizes | [`before-dark/chat.png`](media/uiux-p2-04/before-dark/chat.png), [`before-dark-mobile/chat.png`](media/uiux-p2-04/before-dark-mobile/chat.png), compared with the after captures above | Both sets were captured by the prescribed script from disposable source copies and separate isolated demo servers. |
-| Role, model, local time and token metadata; streaming and successful completion | `scripts/chat_composer_walk.mjs` asserts the role-bearing user/assistant entries, model, `<time datetime>`, completion-token count and decode rate against synthetic SSE frames | Browser test passed without contacting a model provider. |
-| Stop, partial-output retention and focus recovery | Browser walk sends a synthetic partial token, activates Stop, then checks `Stopped`, retained text, restored Send state, and focus returning to the composer | Passed at 1280px; the same walk checks the narrow layout after recovery. |
-| Failure, retry, unexpected stream close and duplicate prevention | Browser walk covers a partial SSE error, retries the same turn and verifies a single user entry in both transcript and request payload; it also closes a stream without a terminal event. `scripts/presentation_walk.mjs --json` separately exercises the refused-request presentation and Dismiss path | The chat walk passed; presentation walk passed 20 checks with 0 failures and 0 blocked. All text and credentials were synthetic/throwaway. |
-| Keyboard and narrow viewport | Browser walk checks Enter to send, Shift+Enter newline, Stop focus return, and all Chat controls within a 390×844 viewport with no document-wide horizontal overflow | Passed. The actual app was loaded in Chromium; only `/api/chat/stream` was replaced in-page with controlled synthetic SSE. |
-| Backend/API/authorization preservation | `app.py` was not changed. `tests/test_uiux_chat_composer.py`, the route map, authorization trace, preservation sign-off and existing Chat route tests verify the unchanged `/api/chat/stream` boundary and request fields | No new route, dependency, authorization, persistence or provider behavior was introduced. The browser walk sends only to the isolated demo server; its Chat stream is mocked locally. |
+| Timestamped, explicit user/assistant turns and visible stream state | `scripts/chat_composer_walk.mjs` checks role, model, local `<time datetime>`, and `streaming` / `complete` states in the real Chat DOM | Chromium walk uses synthetic SSE only; no model call. |
+| Stop retains partial output and returns focus after the stream finalizer releases Send | Browser walk streams a partial token, activates Stop, and verifies retained text, `Stopped`, Send enabled, Stop hidden, and focus returned to the composer | Tested in the isolated demo at desktop size. |
+| Partial failure and EOF before a terminal SSE event remain recoverable | Browser walk injects a partial error and an unexpected EOF, and verifies the failure presentation | Synthetic errors only; no provider request. |
+| Retry reuses one user turn rather than duplicating it | Browser walk retries, then counts the user turn in both the transcript and the retried request payload | One user turn observed in each. |
+| Clear during failure finalization does not resurrect a stale failure | Browser walk clears while the synthetic stream is closing, waits past the delayed close, and verifies the empty state and the existing Undo/Dismiss recovery presentation | Clear remains undoable; stale error is not presented. |
+| Enter, Shift+Enter, keyboard focus, and a 390×844 viewport | Browser walk uses keyboard input and checks the composer controls fit without document-wide horizontal overflow | The browser runs the actual UI; only `/api/chat/stream` is replaced in-page. |
+| API, authorization, and durable-state preservation | `app.py` is unchanged; supplemental contract test checks `/api/chat/stream` and the existing request fields | No route, backend, persistence, approval, authorization, or workspace behavior was added or altered. |
 
 ## Reproduction
 
-The browser test is included in `tests/test_screenshot_capture_browser.py` and runs in the browser-safety CI job. Locally, install the pinned browser tooling described in `docs/demo.md`, set `STUDIO_SCREENSHOT_CHROME` and `STUDIO_PUPPETEER_CORE`, then run:
+The walk accepts only a loopback HTTP demo URL, uses a throwaway demo token, replaces only `/api/chat/stream` in-page with controlled synthetic SSE, and aborts outbound browser requests. It makes no model/provider call and does not capture screenshots.
 
 ```bash
-.venv/bin/python -m pytest -q tests/test_screenshot_capture_browser.py::test_chat_loading_stream_success_stop_failure_retry_and_mobile --tb=short
+.venv/bin/python -m pytest -q tests/test_uiux_chat_composer.py tests/test_chat_composer.py tests/test_chat_context.py
+node scripts/chat_composer_walk.mjs --base-url http://127.0.0.1:<port> --token <throwaway>
 ```
 
-The test starts `scripts/demo_tour.py --serve`, which creates a disposable workspace and throwaway token. The walk accepts only loopback HTTP origins and aborts any browser request to another origin. It never calls a provider or takes screenshots.
+For the browser-walk environment, install the pinned tooling described in `docs/demo.md`, set `STUDIO_SCREENSHOT_CHROME` and `STUDIO_PUPPETEER_CORE`, and start the demo with `scripts/demo_tour.py --serve`.
 
-For fresh visual captures, start the isolated demo and use `scripts/capture_screenshots.mjs --panes chat --emulate-theme dark --viewport 390x844 --out <separate-output-directory>` (repeat with `--viewport 1280x900`, and `--emulate-theme light` for variants). The screenshot tool is the only source of the images linked here.
+## Approval and preservation caveat
 
-## Scope and approval
-
-Only the Chat frontend, its generated standalone bundle, story tests, and derived evidence artifacts changed. `app.py` and the Chat endpoint contract did not. The P0 preservation package still reports `historical-approval-unbound`; this evidence is not owner approval or a claim of sign-off. P2-04 remains `in_progress` pending PR review.
+The P0 preservation package remains `historical-approval-unbound`. This evidence is not owner approval, does not bind issue #126, and is not a sign-off. The merge/reconciliation itself must remain subject to review and required checks.

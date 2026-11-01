@@ -124,9 +124,9 @@ def test_the_stylesheet_prints_the_cause_and_kept_labels(payload):
 
 def test_every_surface_says_why_what_survives_and_what_to_do(payload):
     assert len(inventory.CONTAINERS) >= 5
-    assert any(surface["container"] == "startRecentState" for surface in payload["surfaces"]), (
-        "the recent-work list presents empty and error states and must be in the map"
-    )
+    assert any(
+        surface["container"] == "startRecentState" for surface in payload["surfaces"]
+    ), "the recent-work list presents empty and error states and must be in the map"
     for surface in payload["surfaces"]:
         assert surface["kind"] in inventory.KINDS, surface
         assert surface["has_cause"] and surface["has_context"], surface
@@ -265,9 +265,11 @@ def test_a_missing_label_is_caught(markup_copy):
 
 
 def test_an_unwired_container_is_caught(markup_copy):
+    # Every call site, not the first: Chat now presents into chatState from both the
+    # failed reply and the Clear undo, and one stray presenter still wires the container.
     payload = markup_copy(
         lambda text: text.replace(
-            'presentInto("chatState"', 'presentInto("chatStateOld"', 1
+            'presentInto("chatState"', 'presentInto("chatStateOld"'
         )
     )
     assert "container-unwired" in _checks(payload)

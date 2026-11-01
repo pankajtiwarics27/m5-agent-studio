@@ -6,8 +6,8 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `3c784739aa3b6d8dc6a90454df4bc37ef5e68c34e6e2eeb065b4fb42578f8865`.
-* Panes: 6 · controls in panes: 75 · controls in the
+* Frontend digest: `08f93e899faad25d171ddce3674cd85d101b8203bd6d95c8ee0060783349f0b6`.
+* Panes: 6 · controls in panes: 76 · controls in the
   shared chrome: 101 · script-rendered: 30.
 
 ## What this page is, and is not
@@ -26,13 +26,13 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 | hall | `pane-hall` | 17 | 4 | 0 | button 6, select 8, summary 2, textarea 1 |
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
 | debate | `pane-debate` | 5 | 0 | 0 | button 2, input 1, select 1, textarea 1 |
-| chat | `pane-chat` | 9 | 0 | 0 | button 3, input 2, select 3, textarea 1 |
+| chat | `pane-chat` | 10 | 0 | 0 | button 4, input 2, select 3, textarea 1 |
 | (chrome) | outside the panes | 101 | 38 | 0 | button 54, input 29, select 12, summary 1, textarea 5 |
 
 ## What the numbers already say
 
-* 176 controls are in the markup and 30 more are built by script — a checklist written from the markup alone would miss 15% of the interactive surface.
-* The shared chrome carries 101 controls; all six panes together carry 75. Most of the clicking happens in the shell, not inside a tab.
+* 177 controls are in the markup and 30 more are built by script — a checklist written from the markup alone would miss 14% of the interactive surface.
+* The shared chrome carries 101 controls; all six panes together carry 76. Most of the clicking happens in the shell, not inside a tab.
 * 52 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
@@ -138,7 +138,7 @@ Section `pane-debate`, 5 interactive elements.
 
 ## Pane `chat`
 
-Section `pane-chat`, 9 interactive elements.
+Section `pane-chat`, 10 interactive elements.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
@@ -147,10 +147,11 @@ Section `pane-chat`, 9 interactive elements.
 | 3 | select | chatReasoning | — | Off Low Medium | — |
 | 4 | input | chatToolsEnabled | checkbox | — | — |
 | 5 | input | chatUnload | checkbox | — | — |
-| 6 | button | chatClearBtn | button | Clear conversation | clearChat() |
-| 7 | textarea | chatInput | — | Write a message… | — |
-| 8 | button | chatStopBtn | button | Stop | stopActiveStream() |
-| 9 | button | chatSendBtn | button | Send | sendChat() |
+| 6 | button | chatClearBtn | button | Clear | clearChat() |
+| 7 | button | chatJumpLatest | button | Jump to latest ↓ | jumpToLatestChatTurn() |
+| 8 | textarea | chatInput | — | Message | — |
+| 9 | button | chatStopBtn | button | Stop | stopChatStream() |
+| 10 | button | chatSendBtn | button | Send | sendChat() |
 
 ## Shared chrome
 
