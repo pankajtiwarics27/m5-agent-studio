@@ -344,7 +344,7 @@ def test_a_line_that_does_not_name_the_model_is_caught(sources):
 def test_a_transcript_that_reads_as_idle_while_a_turn_arrives_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            '    const streaming = chatHistory.some(m => m.role === "assistant" && !m.usage);\n',
+            '    const streaming = chatHistory.some(m => m.role === "assistant" && (m.status === "streaming" || (!m.status && !m.usage)));\n',
             "",
             1,
         )
@@ -430,7 +430,7 @@ def test_a_first_token_nobody_stamped_is_caught(sources):
 def test_a_clock_that_keeps_running_after_the_stream_stops_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            "        asstMsg.timing.endedAt = performance.now();\n", "", 1
+            "        asstMsg.timing.endedAt = performance.now();\n", ""
         )
     )
     assert "timing" in _checks(payload)

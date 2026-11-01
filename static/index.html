@@ -399,8 +399,12 @@
   .debate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px; margin-bottom: 14px; }
 
   .chat-header-bar { padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--bg-elev); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .chat-messages { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 13px; }
-  .msg { max-width: 900px; border-radius: 12px; padding: 12px 16px; border: 1px solid var(--border); }
+  .chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 13px; }
+  .chat-empty-state { align-self: center; width: min(100%, 680px); margin: auto; padding: 24px 20px; text-align: center; color: var(--text-dim); }
+  .chat-empty-state strong { display: block; margin-bottom: 8px; color: var(--text); font-size: 18px; }
+  .chat-header-bar > div { min-width: 0; flex: 1 1 160px; }
+  .chat-header-bar select { width: 100%; min-width: 0; }
+  .msg { max-width: min(900px, 94%); border-radius: 12px; padding: 12px 16px; border: 1px solid var(--border); }
   .msg.user { align-self: flex-end; background: rgba(99, 102, 241, 0.16); border-color: rgba(99, 102, 241, 0.4); }
   .msg.assistant { align-self: flex-start; background: var(--bg-card); width: 100%; }
   .msg-meta { font-family: var(--mono); font-size: 11px; color: var(--text-faint); margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
@@ -409,9 +413,18 @@
      under the reply asks the reader to scroll to find out who is speaking. */
   .chat-turn-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-family: var(--mono); font-size: 10.6px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-faint); }
   .chat-turn-role { color: var(--text-dim); font-weight: 700; }
+  .chat-turn-time { color: var(--text-faint); font-size: 10px; letter-spacing: 0; text-transform: none; }
+  .chat-msg-state { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; color: var(--text-dim); font: 600 10px/1.5 var(--sans); letter-spacing: 0; text-transform: none; }
+  .chat-msg-state[data-state="streaming"] { border-color: var(--accent); color: var(--text); }
+  .chat-msg-state[data-state="complete"] { border-color: var(--emerald); color: var(--emerald); }
+  .chat-msg-state[data-state="stopped"] { border-color: var(--amber); color: var(--amber); }
+  .chat-msg-state[data-state="failed"] { border-color: var(--rose); color: var(--rose); }
+  .chat-pending { color: var(--text-faint); font-size: 13px; }
   .chat-turn-index { margin-left: auto; opacity: 0.7; }
   .msg[data-role="user"] .chat-turn-role { color: var(--accent); }
   .msg[data-streaming="true"] { border-color: var(--accent); }
+  .msg[data-state="failed"] { border-color: var(--rose); }
+  .msg[data-state="stopped"] { border-color: var(--amber); }
   .chat-transcript-bar { display: flex; align-items: center; gap: 10px; padding: 6px 20px; border-bottom: 1px solid var(--border); background: var(--bg-elev); }
   .chat-turn-summary { font-family: var(--mono); font-size: 10.8px; color: var(--text-faint); }
   .chat-jump { margin-left: auto; }
@@ -421,7 +434,8 @@
   .chat-handoff-hint[data-reason="handed"] { color: var(--emerald); }
   .chat-handoff-hint[data-reason="failed"] { color: var(--amber); }
   .chat-handoff-btn { white-space: nowrap; }
-  .chat-composer-hint { margin-top: 7px; font-size: 11.6px; color: var(--text-dim); display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .chat-keyboard-hint { margin-top: 7px; font-size: 11px; color: var(--text-faint); }
+  .chat-composer-hint { margin-top: 4px; font-size: 11.6px; color: var(--text-dim); display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
   .chat-composer-hint[data-reason="no-model"], .chat-composer-hint[data-reason="runtime-offline"] { color: var(--amber); }
   .chat-composer-hint[data-reason="tools-readonly"] { color: var(--text-dim); }
   .chat-composer-hint code { font-family: var(--mono); font-size: 11px; color: var(--text); }
@@ -934,6 +948,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   .skills-strip > div:last-child { flex: 1 1 100%; margin-left: 0 !important; }
   .scroll-body, .hall-stream, .chat-messages { padding-left: 12px; padding-right: 12px; }
+  .chat-header-bar { gap: 8px; padding: 10px 12px; }
+  .chat-header-bar > div { flex: 1 1 100%; }
+  .chat-header-bar > .chk-lbl { margin-top: 0 !important; }
+  .chat-header-bar > #chatClearBtn { margin-top: 0 !important; }
+  .chat-composer > div:first-child { flex-wrap: wrap; }
+  .chat-composer textarea { flex: 1 1 100% !important; width: 100%; min-width: 0; }
+  .chat-composer #chatStopBtn, .chat-composer #chatSendBtn { min-width: 76px; }
   .hall-header { padding: 8px 12px; }
   .hall-header > div:last-child { width: 100%; }
   .hall-header > div:last-child .btn { flex: 1; justify-content: center; }
@@ -1984,9 +2005,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     <!-- ================= TAB 4: DIRECT CHAT ================= -->
     <section id="pane-chat" role="tabpanel" aria-labelledby="tab-chat" class="pane">
       <div class="chat-header-bar">
-        <div><label class="field-lbl">Active Model (Local / Cloud / Combo)</label><select id="chatModel"></select></div>
+        <div><label class="field-lbl" for="chatModel">Active Model (Local / Cloud / Combo)</label><select id="chatModel"></select></div>
         <div>
-          <label class="field-lbl">Persona</label>
+          <label class="field-lbl" for="chatPersona">Persona</label>
           <select id="chatPersona">
             <option value="You are a concise Principal Software Engineer & UI Architect. Write clean, accessible, production-ready code.">Principal Engineer &amp; UI Architect</option>
             <option value="You are an adversarial code reviewer. Focus strictly on bugs, race conditions, UX anti-patterns, and security issues.">Bug &amp; UX Auditor</option>
@@ -1994,7 +2015,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           </select>
         </div>
         <div>
-          <label class="field-lbl">Reasoning</label>
+          <label class="field-lbl" for="chatReasoning">Reasoning</label>
           <select id="chatReasoning">
             <option value="off" selected>Off</option>
             <option value="low">Low</option>
@@ -2003,7 +2024,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         </div>
         <label class="chk-lbl" style="margin-top:14px;" title="Automatically execute Read-Only Workspace, CodeGraph, OpenContext & MCP tools when Qwen/Claude/models emit <tool_call>"><input type="checkbox" id="chatToolsEnabled" checked /> Workspace + MCP Tools</label>
         <label class="chk-lbl" style="margin-top:14px;"><input type="checkbox" id="chatUnload" /> Unload M5 after reply</label>
-        <button class="btn btn-xs" id="chatClearBtn" style="margin-top:14px; margin-left:auto;" onclick="clearChat()" title="Clear the transcript on this pane (undoable)">Clear</button>
+        <button class="btn btn-xs" id="chatClearBtn" type="button" style="margin-top:14px; margin-left:auto;" onclick="clearChat()" title="Clear the transcript on this pane (undoable)">Clear</button>
       </div>
       <div id="chatState"></div>
       <div class="chat-transcript-bar">
@@ -2016,18 +2037,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
                 title="Scroll the transcript to the newest turn">Jump to latest ↓</button>
       </div>
       <div id="chatMessages" class="chat-messages" role="log" aria-label="Conversation" aria-live="off" aria-relevant="additions">
-        <div style="color:var(--text-faint); text-align:center; margin-top:40px; font-size:13px;">
-          Chat with any Local M5 model, Cloud API, or Auto-Fallback Combo (`http://127.0.0.1:3000/v1` also works directly inside Cursor / OpenCode / Cline!).
-        </div>
+        <div class="chat-empty-state"><strong>Nothing has been said yet</strong><span>Choose a model above and type below; replies and reasoning appear here. The local OpenAI-compatible endpoint is also available at http://127.0.0.1:3000/v1.</span></div>
       </div>
       <div class="chat-composer">
         <div style="display:flex; gap:10px; align-items:flex-end;">
           <textarea id="chatInput" rows="2" style="flex:1; resize:none;"
                     placeholder="Message your selected model… (Enter sends, Shift+Enter adds a line)"
-                    aria-describedby="chatComposerHint"></textarea>
-          <button id="chatStopBtn" class="btn btn-danger" style="display:none; height:40px;" onclick="stopActiveStream()">Stop</button>
-          <button id="chatSendBtn" class="btn btn-primary" style="height:40px;" onclick="sendChat()" aria-describedby="chatComposerHint">Send</button>
+                    aria-label="Message" aria-describedby="chatComposerHint chatKeyboardHint"></textarea>
+          <button id="chatStopBtn" class="btn btn-danger" style="display:none; height:40px;" type="button" onclick="stopChatStream()">Stop</button>
+          <button id="chatSendBtn" class="btn btn-primary" type="button" style="height:40px;" onclick="sendChat()" aria-describedby="chatComposerHint">Send</button>
         </div>
+        <div id="chatKeyboardHint" class="chat-keyboard-hint">Enter sends · Shift+Enter adds a line.</div>
         <!-- What pressing Send will do, in the same words the button obeys. -->
         <div id="chatComposerHint" class="chat-composer-hint" data-reason="idle" role="status" aria-live="polite"></div>
       </div>
@@ -3497,9 +3517,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function setCouncilPreset(txt) { document.getElementById("councilPrompt").value = txt; }
   function stopActiveStream() {
     if (activeAbort) { activeAbort.abort(); activeAbort = null; }
-    // The abort's own finally clears chatBusy; this only makes the composer answer the
-    // click immediately instead of at the next frame.
-    if (chatBusy) { chatBusy = false; renderChatMessages(); }
+    // Chat stays locked until its stream finalizer marks the Stop result. Releasing the
+    // composer here would let another send race the old reader's finalizer.
   }
 
   // ================= CLOUD PROVIDERS & OMNIROUTE ROUTER =================
@@ -4467,9 +4486,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   async function consumeSSE(url, payload, handlers, onFinally) {
     stopActiveStream();
-    activeAbort = new AbortController();
+    const controller = new AbortController();
+    activeAbort = controller;
+    let receivedTerminalEvent = false;
     try {
-      const resp = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: activeAbort.signal });
+      const resp = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const reader = resp.body.getReader(), dec = new TextDecoder();
       let buf = "";
@@ -4485,13 +4506,25 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             if (line.startsWith("event:")) ev = line.slice(6).trim();
             else if (line.startsWith("data:")) dataStr += line.slice(5).trim();
           }
+          if (ev === "done" || ev === "error") receivedTerminalEvent = true;
           if (dataStr && handlers[ev]) await handlers[ev](JSON.parse(dataStr));
         }
       }
+      if (controller.signal.aborted && !receivedTerminalEvent && handlers.stopped) {
+        await handlers.stopped();
+      } else if (!controller.signal.aborted && !receivedTerminalEvent && handlers.closed) {
+        await handlers.closed();
+      }
     } catch (e) {
-      if (e.name !== "AbortError" && handlers.error) handlers.error({ message: e.message });
+      if (e.name === "AbortError") {
+        if (!receivedTerminalEvent && handlers.stopped) await handlers.stopped();
+      } else if (handlers.error) {
+        await handlers.error({ message: e.message });
+      }
     } finally {
-      activeAbort = null; if (onFinally) onFinally(); refreshTelemetry();
+      if (activeAbort === controller) activeAbort = null;
+      if (onFinally) onFinally();
+      refreshTelemetry();
     }
   }
 
@@ -4611,6 +4644,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   };
   const CHAT_PIN_SLACK = 80;
   let chatBusy = false;
+  let chatRequestGeneration = 0;
+  let chatStopRequested = false;
   let chatHintSignature = "";
   let chatHandoffSignature = "";
   // What the last handoff carried: if the transcript still looks the same, the brief in
@@ -4725,7 +4760,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (jump) jump.hidden = chatNearBottom(box);
     // Busy means a turn is still arriving, not merely that this pane sent one: a turn
     // without usage is still streaming, whether or not the send flag is set.
-    const streaming = chatHistory.some(m => m.role === "assistant" && !m.usage);
+    const streaming = chatHistory.some(m => m.role === "assistant" && (m.status === "streaming" || (!m.status && !m.usage)));
     if (box) box.setAttribute("aria-busy", chatBusy || streaming ? "true" : "false");
   }
 
@@ -4995,10 +5030,29 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return composer.value;
   }
 
+  function chatTime(timestamp) {
+    const value = new Date(timestamp || Date.now());
+    if (Number.isNaN(value.getTime())) return { iso: "", label: "" };
+    return {
+      iso: value.toISOString(),
+      label: new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(value),
+    };
+  }
+
+  function chatStateLabel(state) {
+    return ({ streaming: "Generating", complete: "Complete", stopped: "Stopped", failed: "Failed" })[state] || "";
+  }
+
+  function stopChatStream() {
+    if (!chatBusy) return;
+    chatStopRequested = true;
+    stopActiveStream();
+  }
+
   function renderChatMessages() {
     const box = document.getElementById("chatMessages");
     if (!chatHistory.length) {
-      box.innerHTML = `<div style="color:var(--text-faint); text-align:center; margin-top:40px;">Nothing has been said yet. Type below; the reply and its reasoning appear here.</div>`;
+      box.innerHTML = `<div class="chat-empty-state"><strong>Nothing has been said yet</strong><span>Choose a model above and type below; replies and reasoning appear here.</span></div>`;
       updateChatTranscriptBar();
       updateChatComposer();
       return;
@@ -5008,18 +5062,23 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const pinned = chatNearBottom(box);
     box.innerHTML = chatHistory.map((m, index) => {
       const role = CHAT_ROLES[m.role] || CHAT_ROLES.assistant;
+      const stamp = chatTime(m.createdAt);
+      const state = m.role === "assistant" ? (m.status || (m.usage ? "complete" : "streaming")) : "";
+      const time = stamp.iso ? `<time class="chat-turn-time" datetime="${escapeHtml(stamp.iso)}">${escapeHtml(stamp.label)}</time>` : "";
+      const stateBadge = state ? `<span class="chat-msg-state" data-state="${escapeHtml(state)}">${chatStateLabel(state)}</span>` : "";
       const head = `<div class="chat-turn-head">`
         + `<span class="chat-turn-role">${escapeHtml(role.label)}</span>`
-        + (m.role === "assistant" && m.model ? `<code>${escapeHtml(m.model)}</code>` : "")
+        + (m.role === "assistant" && m.model ? `<code class="chat-msg-model">${escapeHtml(m.model)}</code>` : "")
+        + time + stateBadge
         + `<span class="chat-turn-index">${index + 1}</span>`
         + `</div>`;
-      const streaming = m.role === "assistant" && !m.usage ? ' data-streaming="true"' : "";
+      const streaming = state === "streaming" ? ' data-streaming="true"' : "";
       if (m.role === "user") {
-        return `<div class="msg user" data-role="user">${head}${renderMarkdown(m.content)}</div>`;
+        return `<div class="msg user" data-role="user" data-state="sent">${head}${renderMarkdown(m.content)}</div>`;
       }
       const contextLine = m.context ? chatContextLine(m.context) : "";
       const context = contextLine
-        ? `<div class="chat-context" data-context="sent" title="${escapeHtml(contextLine)}">Context: ${escapeHtml(contextLine)}</div>`
+        ? `<div class="chat-context" data-context="sent">Context: ${escapeHtml(contextLine)}</div>`
         : "";
       const think = m.reasoning
         ? `<details class="think-box" ${!m.content ? "open" : ""}><summary>Reasoning Trace · ${m.reasoning.length} chars</summary><pre>${escapeHtml(m.reasoning)}</pre></details>`
@@ -5030,14 +5089,22 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           + m.tools.map(renderChatTool).join("")
           + `</div>`
         : "";
+      const pending = state === "stopped" ? "No reply was received before the stream stopped." : state === "failed" ? "No reply was received." : "Waiting for the first token…";
+      const content = m.content
+        ? renderMarkdown(m.content)
+        : (state === "stopped" || state === "failed")
+          ? `<div class="md"><p class="chat-pending">${escapeHtml(pending)}</p></div>`
+          : renderMarkdown((m.reasoning || (m.tools && m.tools.length)) ? "" : "...");
       const meta = m.usage
         ? `<div class="msg-meta">`
           + `<span>${escapeHtml(m.model)}</span><span>•</span>`
           + (m.timing && m.timing.startedAt ? `<span>${(((m.timing.endedAt || performance.now()) - m.timing.startedAt) / 1000).toFixed(1)}s</span><span>•</span>` : "")
           + (m.timing && m.timing.firstTokenAt ? `<span>first token ${((m.timing.firstTokenAt - m.timing.startedAt) / 1000).toFixed(2)}s</span><span>•</span>` : "")
           + `<span>${m.usage.decode_tps} tok/s</span><span>•</span><span>${m.usage.completion_tokens} tok</span></div>`
-        : `<div class="msg-meta"><span>${escapeHtml(m.model)}</span><span>•</span><span>${chatStreamingMeta(m)}</span></div>`;
-      return `<div class="msg assistant" data-role="assistant"${streaming}>${head}${context}${think}${toolsHtml}${renderMarkdown(m.content || ((m.reasoning || (m.tools && m.tools.length)) ? "" : "..."))}${meta}</div>`;
+        : state === "streaming"
+          ? `<div class="msg-meta"><span>${escapeHtml(m.model)}</span><span>•</span><span>${chatStreamingMeta(m)}</span></div>`
+          : `<div class="msg-meta"><span>${chatStateLabel(state)}</span></div>`;
+      return `<div class="msg assistant" data-role="assistant" data-state="${escapeHtml(state)}"${streaming}>${head}${context}${think}${toolsHtml}${content}${meta}</div>`;
     }).join("");
     if (pinned) box.scrollTop = box.scrollHeight;
     updateChatTranscriptBar();
@@ -5046,6 +5113,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   function clearChat() {
+    chatRequestGeneration += 1;
+    if (chatBusy) stopActiveStream();
     if (!chatHistory.length) {
       updateChatComposer();
       return null;
@@ -5083,13 +5152,23 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return sendChatRequest(text);
   }
 
-  function sendChatRequest(text) {
+  function retryChatRequest(text, assistantMessage) {
+    if (chatBusy) return;
+    const index = chatHistory.lastIndexOf(assistantMessage);
+    if (index >= 0) chatHistory.splice(index, 1);
+    sendChatRequest(text, { appendUser: false });
+  }
+
+  function sendChatRequest(text, options = {}) {
+    if (chatBusy) return;
+    const requestGeneration = ++chatRequestGeneration;
+    let pendingChatFailure = null;
     clearPresentation("chatState");
-    const model = document.getElementById("chatModel").value;
+    const model = chatModelId();
     const toolsEnabled = document.getElementById("chatToolsEnabled").checked;
     const wsInput = document.getElementById("harnessWorkspaceInput");
     const workspaceDir = wsInput ? wsInput.value.trim() : "";
-    chatHistory.push({ role: "user", content: text });
+    if (options.appendUser !== false) chatHistory.push({ role: "user", content: text, createdAt: Date.now() });
     const apiMessages = [{ role: "system", content: document.getElementById("chatPersona").value }, ...chatHistory.map(m => ({ role: m.role, content: m.content }))];
     // What this reply is being given, captured from the same values that build the
     // request below - so the line in the transcript cannot describe a different request
@@ -5102,11 +5181,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       reasoning: "",
       tools: [],
       usage: null,
+      status: "streaming",
+      createdAt: Date.now(),
       context,
       timing: { startedAt: performance.now(), firstTokenAt: null },
     };
     chatHistory.push(asstMsg);
     chatBusy = true;
+    chatStopRequested = false;
     renderChatMessages();
     consumeSSE("/api/chat/stream", {
       model,
@@ -5125,22 +5207,40 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       step_clean(d) { asstMsg.content = d.content || ""; renderChatMessages(); },
       chat_tool(d) { asstMsg.tools.push(d); renderChatMessages(); },
       done(d) {
-        asstMsg.usage = d.usage;
+        asstMsg.usage = d.usage || null;
+        asstMsg.status = "complete";
+        asstMsg.completedAt = Date.now();
         // Freeze the clock: the turn took this long, and a later re-render must not
         // keep counting seconds after the stream has stopped.
         asstMsg.timing.endedAt = performance.now();
         renderChatMessages();
       },
-      error(d) {
-        // Roll back the empty placeholder so Retry re-sends one message, not two.
-        if (!asstMsg.content.trim()) {
+      stopped() {
+        asstMsg.status = "stopped";
+        asstMsg.stoppedAt = Date.now();
+        asstMsg.timing.endedAt = performance.now();
+        renderChatMessages();
+        if (chatStopRequested) document.getElementById("chatInput").focus({ preventScroll: true });
+      },
+      failed(message) {
+        asstMsg.status = "failed";
+        asstMsg.failedAt = Date.now();
+        asstMsg.timing.endedAt = performance.now();
+        if (!asstMsg.content.trim() && !asstMsg.reasoning.trim() && !asstMsg.tools.length) {
           const index = chatHistory.lastIndexOf(asstMsg);
           if (index >= 0) chatHistory.splice(index, 1);
         }
         renderChatMessages();
-        presentChatError(d.message, () => sendChatRequest(text));
+        pendingChatFailure = message || "the stream closed before the model answered";
+      },
+      error(d) { this.failed(d.message || "the stream failed before the model answered"); },
+      closed() { this.failed("the stream closed before the model answered"); },
+    }, () => { chatBusy = false; renderChatMessages();
+      chatStopRequested = false;
+      if (pendingChatFailure !== null && requestGeneration === chatRequestGeneration) {
+        presentChatError(pendingChatFailure, () => retryChatRequest(text, asstMsg));
       }
-    }, () => { chatBusy = false; renderChatMessages(); });
+    });
   }
 
   // ================= AUTONOMOUS AGENTIC HARNESS (v5.0) =================

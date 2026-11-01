@@ -119,7 +119,8 @@
       "A parallel session owns the optional M5 P6 stories (the lessons/retrieval work). If a UI story surfaces a backend defect, it is recorded as a new M5 story or an open risk, never fixed inside a UI pull request.",
       "The program's prose had drifted from the code at the pin: the program page still said 102 routes and 11 pinned files while app.py mounts 115 and the manifest now pins 12. Counts in docs are re-derived from the artifacts, not remembered.",
       "PR #104 was closed rather than merged: its UIUX-P0-03 work was ported to #109 and landed there, but the runtime-program benchmark diagnostics that branch also carried still need their own pull request in the runtime program.",
-      "UIUX-P0-05 cannot be closed in this environment: the six baseline screenshots need Chrome/Chromium and puppeteer-core, neither of which is vendored. The test-results half is capturable here; the visual half needs a machine with a browser, and the owner has said they will capture there."
+      "UIUX-P0-05 cannot be closed in this environment: the six baseline screenshots need Chrome/Chromium and puppeteer-core, neither of which is vendored. The test-results half is capturable here; the visual half needs a machine with a browser, and the owner has said they will capture there.",
+      "Two sessions are closing UI/UX stories against the same static/index.html at the same time. P3-01 and the P2-04 work merged without a source conflict because they own different panes, but every generated artifact conflicted: resolve those by regenerating from the merged source rather than by choosing a side, and re-run the full suite on the merged tree, because each story's own numbers describe its own commit."
     ]
   },
   "tab_registry": [
@@ -3684,7 +3685,8 @@
           "The task box grows with the task. A carried brief arrived in a two-row textarea that showed its first two lines and hid the rest, including the sentence that nothing had run; `fitHarnessComposer()` sizes the box to its content between a two-row floor and a ten-row ceiling, follows the reader as they type, and returns it to rest when a run takes the task away. Manual resizing stays off (`resize:none`) so a drag cannot fight the fitter - the walk measures both the growth and the rest.",
           "Accessibility, found by walking the pane rather than assuming it: the four `<label>`s naming the lead model, the critic, the execution policy and the max steps had no `for`, so those selects had no accessible name, and the task box had no name at all. All four labels are associated, the composer carries `aria-label=\"Your task for the Harness\"` and `aria-describedby=\"harnessRunHint\"`, and the inventory fails on any of the ten controls in the bar and composer that carries no visible text of its own and no label or `aria-label`.",
           "Nothing that worked stopped working: eleven controls in the bar, the sidebar and the composer are pinned to the handler or binding that made each work (`PRESERVED_CONTROLS`), and the five routes they write through (`POST /api/workspace/directory`, `PATCH /api/harness/sessions/{id}`, `POST /api/harness/run`, `/gsd-wave`, `/sdlc/run`) are checked to be still mounted in `app.py`. No route was added: the plan reads state that is already in the pane and writes nothing.",
-          "`scripts/harness_settings_walk.mjs` drives the same surface in a browser against `scripts/demo_tour.py --serve` and reported 24 of 24: the plan and its four rows, each control moving the row that claims it (policy, worktree box, workflow mode with the Run button's label, max steps with the changed word while the group is closed, directory, critic), Run off with the sentence for an empty task and pressing it anyway starting nothing while returning the cursor, the board mode needing no task, the banner from a real Chat handoff with its counts and its mismatch, the banner flipping to `match` when the model and directory are aligned, the box growing to show the whole brief and resting afterwards, the banner clearing three ways, every control named, the group opening and closing from the keyboard, no overflow at 900px, and no page errors."
+          "`scripts/harness_settings_walk.mjs` drives the same surface in a browser against `scripts/demo_tour.py --serve` and reported 24 of 24: the plan and its four rows, each control moving the row that claims it (policy, worktree box, workflow mode with the Run button's label, max steps with the changed word while the group is closed, directory, critic), Run off with the sentence for an empty task and pressing it anyway starting nothing while returning the cursor, the board mode needing no task, the banner from a real Chat handoff with its counts and its mismatch, the banner flipping to `match` when the model and directory are aligned, the box growing to show the whole brief and resting afterwards, the banner clearing three ways, every control named, the group opening and closing from the keyboard, no overflow at 900px, and no page errors.",
+          "Main moved while this story was in review: UIUX-P2-04 was merged in #141 (adf15eb) and had rewritten the Chat composer in the same file. The two stories touch different panes, so static/index.html merged without a conflict; the conflicts were all in generated artifacts, which were resolved by deleting both sides and regenerating each one from the merged source (control inventory, route map, authorization trace, tokens, status components, overlays, onboarding, presentations, the Chat and handoff and Harness inventories, the source manifest, studio.py, and finally the preservation package). The full suite and the browser suite were re-run on the merged tree and the Harness walk was re-run against it; the numbers below are the merged-tree numbers."
         ],
         "test_results": [
           {
@@ -3731,6 +3733,21 @@
             "command": ".venv/bin/python scripts/build_studio.py && .venv/bin/python scripts/uiux_preservation_signoff.py",
             "exit_code": 0,
             "result": "studio.py rebuilt (3,138,360 bytes) from the changed frontend; preservation package regenerated against the new tree and ledger"
+          },
+          {
+            "command": ".venv/bin/python -m pytest -q  (after merging origin/main adf15eb)",
+            "exit_code": 0,
+            "result": "2022 passed, 26 skipped in 163.18s on the merged tree (the runs above are the story's own commit; this one includes the UIUX-P2-04 tests that landed in main)"
+          },
+          {
+            "command": "M5_REQUIRE_BROWSER_TESTS=1 .venv/bin/python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py --tb=short  (after merging origin/main adf15eb)",
+            "exit_code": 0,
+            "result": "30 passed in 100.39s on the merged tree, including the browser test UIUX-P2-04 added"
+          },
+          {
+            "command": "node scripts/harness_settings_walk.mjs  (after merging origin/main adf15eb)",
+            "exit_code": 0,
+            "result": "24 of 24 checks passed, 0 page errors - the Harness plan and the Chat composer coexist in the merged page"
           }
         ],
         "visual_evidence": [

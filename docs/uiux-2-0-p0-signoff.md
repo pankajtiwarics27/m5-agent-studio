@@ -269,7 +269,7 @@ A single streaming conversation with the selected model.
 | button | chatHandoffBtn | Open in Harness | handOffChatToHarness() |
 | button | chatJumpLatest | Jump to latest ↓ | jumpToLatestChatTurn() |
 | textarea | chatInput | — | — |
-| button | chatStopBtn | Stop | stopActiveStream() |
+| button | chatStopBtn | Stop | stopChatStream() |
 | button | chatSendBtn | Send | sendChat() |
 
 **Routes reached from this pane's controls — 4, walking at most 2 calls; 7 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
@@ -345,12 +345,12 @@ provenance; a matching snapshot cannot clear separate review holds.
 
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
-| `ledger_content_sha256` | `58886c878fdf17c9169354fdca49f347a80f9bb4695824a5857babf438774a1b` | `not recorded` |
-| `source_manifest_sha256` | `de5ee68b0892b8d8a893d635a4f275e4188217dca29ad162f98695fa448f73c1` | `not recorded` |
-| `control_inventory_sha256` | `e9e1b458573bacaebfade22208176c4b2774a663fd071e69afe0c746c3ee3f1f` | `not recorded` |
-| `route_map_sha256` | `7ceebc8e8ccf19663e7c4992e82ed1448d1183bf592cb14f75ab14fccca8f156` | `not recorded` |
-| `authorization_trace_sha256` | `189b0c4407fbb45dac853618e74c37fe050373a54a970b122b137f038b772e14` | `not recorded` |
-| `frontend_sha256` | `82a0f1ac3a2f723f587be8f93f2e715667673b5b37ea44692e9ce650232153e1` | `not recorded` |
+| `ledger_content_sha256` | `1170c36ab18ae199ce5153cb54172bcfc0fca9cecd7932d4c6c79fee30fa62db` | `not recorded` |
+| `source_manifest_sha256` | `2770bd3b9096ede0d64e17d38a37c5f3bb58859d9f4a136f32278c6d1ced4be7` | `not recorded` |
+| `control_inventory_sha256` | `7ca4143fe3ff0454659bd0b7b172ed5cc1da8431cc7786106e2ebbd29d20ef82` | `not recorded` |
+| `route_map_sha256` | `99d4174453ab3dceb312796d3dd014b26518614e1ef02131f95aad7a6ce08576` | `not recorded` |
+| `authorization_trace_sha256` | `2bca78e194eac5ced3ace0560f51f2bcb908310e449ae61fa3c8a1f28c47342c` | `not recorded` |
+| `frontend_sha256` | `913aa2832030f7e9ee984d21b181e9344f0d663291d4a6501cbf674f095465fb` | `not recorded` |
 | `screenshot_manifest_sha256` | `69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92` | `not recorded` |
 | `screenshot_index_sha256` | `de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

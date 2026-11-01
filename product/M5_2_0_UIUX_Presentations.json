@@ -52,7 +52,7 @@
         "Re-check",
         "Providers"
       ],
-      "line": 2805
+      "line": 2825
     },
     {
       "container": "startRecentState",
@@ -65,7 +65,7 @@
         "Start a session",
         "Open Harness"
       ],
-      "line": 2864
+      "line": 2884
     },
     {
       "container": "startRecentState",
@@ -78,7 +78,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 2939
+      "line": 2959
     },
     {
       "container": "startHealthState",
@@ -91,7 +91,7 @@
         "Re-check",
         "Monitor rail"
       ],
-      "line": 3033
+      "line": 3053
     },
     {
       "container": "startWorkspaceState",
@@ -104,7 +104,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 3117
+      "line": 3137
     },
     {
       "container": "hallStream",
@@ -118,7 +118,7 @@
         "Ask one model",
         "Configure providers"
       ],
-      "line": 3414
+      "line": 3434
     },
     {
       "container": "debateSynthesisArea",
@@ -130,7 +130,7 @@
       "actions": [
         "Start Compare"
       ],
-      "line": 3428
+      "line": 3448
     },
     {
       "container": "chatState",
@@ -143,7 +143,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 3438
+      "line": 3458
     },
     {
       "container": "harnessStreamState",
@@ -156,7 +156,7 @@
         "Reconnect now",
         "Reload from snapshot"
       ],
-      "line": 3452
+      "line": 3472
     },
     {
       "container": "chatState",
@@ -169,7 +169,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 4944
+      "line": 4979
     },
     {
       "container": "chatState",
@@ -182,7 +182,7 @@
         "Back to Chat",
         "Open Harness"
       ],
-      "line": 4970
+      "line": 5005
     },
     {
       "container": "chatState",
@@ -195,7 +195,7 @@
         "Undo",
         "Dismiss"
       ],
-      "line": 5060
+      "line": 5129
     }
   ],
   "containers": [
@@ -250,15 +250,15 @@
   ],
   "remaining_raw_writers": [
     {
-      "line": 3726,
+      "line": 3745,
       "handler": "installSkill"
     },
     {
-      "line": 5861,
+      "line": 5961,
       "handler": "openHarnessDiffModal"
     },
     {
-      "line": 6365,
+      "line": 6465,
       "handler": "runMcpPlayground"
     }
   ],

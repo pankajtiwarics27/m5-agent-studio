@@ -24,6 +24,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 CAPTURE = ROOT / "scripts" / "capture_screenshots.mjs"
+CHAT_WALK = ROOT / "scripts" / "chat_composer_walk.mjs"
+DEMO = ROOT / "scripts" / "demo_tour.py"
 WALK = ROOT / "scripts" / "keyboard_walk.mjs"
 ACCESSIBILITY_WALK = ROOT / "tests" / "browser" / "accessibility_walk.mjs"
 OVERLAY_WALK = ROOT / "scripts" / "overlay_walk.mjs"
@@ -58,6 +60,45 @@ def server(handler: type[BaseHTTPRequestHandler]):
         httpd.shutdown()
         httpd.server_close()
         thread.join()
+
+
+@contextmanager
+def isolated_demo(env: dict[str, str]):
+    """Start the repository's generated-token demo and always stop its server child."""
+    process = subprocess.Popen(
+        [sys.executable, str(DEMO), "--serve"],
+        cwd=ROOT,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        start_new_session=True,
+    )
+    selector = selectors.DefaultSelector()
+    try:
+        assert process.stdout is not None
+        selector.register(process.stdout, selectors.EVENT_READ)
+        if not selector.select(timeout=60):
+            raise AssertionError("isolated demo did not publish its throwaway token in 60 seconds")
+        line = process.stdout.readline()
+        if not line:
+            raise AssertionError(f"isolated demo exited before startup (status {process.poll()})")
+        instance = json.loads(line)
+        assert instance["url"].startswith("http://127.0.0.1:")
+        assert instance["token"]
+        yield instance
+    finally:
+        selector.close()
+        if process.poll() is None:
+            process.send_signal(signal.SIGINT)
+            try:
+                process.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait(timeout=5)
+        if process.stdout:
+            process.stdout.close()
 
 
 def page(
@@ -578,3 +619,24 @@ def test_keyboard_walker_rejects_non_demo_urls(base: str) -> None:
     assert result.returncode != 0
     assert "--base-url must be" in result.stderr
     assert TOKEN not in result.stdout + result.stderr
+
+
+def test_chat_loading_stream_success_stop_failure_retry_and_mobile(
+    browser_env: dict[str, str]
+) -> None:
+    """The direct Chat route is mocked in-page; the isolated demo makes no model call."""
+    with isolated_demo(browser_env) as demo:
+        result = subprocess.run(
+            ["node", str(CHAT_WALK), "--base-url", demo["url"], "--token", demo["token"], "--json"],
+            cwd=ROOT,
+            env=browser_env,
+            capture_output=True,
+            text=True,
+            timeout=90,
+            check=False,
+        )
+    assert result.returncode == 0, result.stdout + result.stderr
+    report = json.loads(result.stdout)
+    assert report["failed"] == 0
+    assert report["passed"] >= 10
+    assert demo["token"] not in result.stdout + result.stderr

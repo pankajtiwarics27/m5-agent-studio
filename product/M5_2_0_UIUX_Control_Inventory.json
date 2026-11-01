@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "82a0f1ac3a2f723f587be8f93f2e715667673b5b37ea44692e9ce650232153e1",
+  "frontend_sha256": "913aa2832030f7e9ee984d21b181e9344f0d663291d4a6501cbf674f095465fb",
   "panes": [
     {
       "dom_id": "start",
@@ -545,6 +545,7 @@
         {
           "tag": "button",
           "id": "chatClearBtn",
+          "type": "button",
           "class": "btn btn-xs",
           "title": "Clear the transcript on this pane (undoable)",
           "onclick": "clearChat()",
@@ -572,20 +573,23 @@
         {
           "tag": "textarea",
           "id": "chatInput",
-          "aria-describedby": "chatComposerHint",
+          "aria-label": "Message",
+          "aria-describedby": "chatComposerHint chatKeyboardHint",
           "placeholder": "Message your selected model… (Enter sends, Shift+Enter adds a line)",
           "rows": "2"
         },
         {
           "tag": "button",
           "id": "chatStopBtn",
+          "type": "button",
           "class": "btn btn-danger",
-          "onclick": "stopActiveStream()",
+          "onclick": "stopChatStream()",
           "text": "Stop"
         },
         {
           "tag": "button",
           "id": "chatSendBtn",
+          "type": "button",
           "class": "btn btn-primary",
           "aria-describedby": "chatComposerHint",
           "onclick": "sendChat()",
