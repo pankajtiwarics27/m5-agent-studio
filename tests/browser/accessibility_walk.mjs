@@ -317,6 +317,104 @@ async function main() {
     await page.keyboard.press("Enter");
     const toastDismissed = await page.evaluate(() => !document.querySelector("#toastStack .toast"));
     results.push(check("toast can be dismissed from the keyboard", toastDismissed));
+
+    await page.evaluate(() => {
+      const sessionId = "synthetic-fabricated-session";
+      const approvalId = "client-fabricated-approval";
+      const event = { type: "approval/request", seq: 1, ts: Date.now() / 1000, step: 1,
+        approval_id: approvalId, tool: "run_bash", args: { command: "echo must-not-run" } };
+      const requests = [];
+      const state = {
+        oldActive: activeHarnessId,
+        oldSnapshot: harnessSnapshot,
+        oldRunActive: harnessRunActive,
+        oldFetch: window.fetch,
+        oldResolver: resolveHarnessApproval,
+        requests,
+        approvalPosts: 0,
+        executionPosts: 0,
+        sessionId,
+        approvalId,
+        root: document.createElement("div"),
+      };
+      activeHarnessId = sessionId;
+      harnessRunActive = true;
+      // The client cache lies: it claims this invented id is still pending.
+      harnessSnapshot = { session_id: sessionId, session: { id: sessionId },
+        approvals: { pending: [{ approval_id: approvalId, live: true }] } };
+      state.root.id = "synthetic-approval-security-walk";
+      state.root.innerHTML = renderStoredHarnessEventHtml(event, {}, new Set([approvalId]));
+      document.body.appendChild(state.root);
+      window.fetch = async (input, init = {}) => {
+        const url = String(input);
+        requests.push({ url, method: init.method || "GET" });
+        if (url.endsWith(`/api/harness/sessions/${sessionId}/state`)) {
+          return new Response(JSON.stringify({ session_id: sessionId, session: { id: sessionId },
+            status: "waiting_approval", task_status: "running",
+            approvals: { pending: [], expired: [{ approval_id: approvalId, tool: "run_bash", step: 1 }] },
+            event_stream: { latest_seq: 1, retained_from_seq: 1 } }),
+            { status: 200, headers: { "Content-Type": "application/json" } });
+        }
+        if (url.includes(`/api/harness/sessions/${sessionId}/events?`)) {
+          return new Response(JSON.stringify({ events: [event], latest_seq: 1, next_cursor: 1,
+            retained_from_seq: 1, has_more: false, snapshot_required: false }),
+            { status: 200, headers: { "Content-Type": "application/json" } });
+        }
+        if (url === "/api/harness/approve") {
+          state.approvalPosts += 1;
+          return new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } });
+        }
+        if (url.startsWith("/api/harness/run") || url.includes("/execute")) state.executionPosts += 1;
+        return new Response("{}", { status: 404, headers: { "Content-Type": "application/json" } });
+      };
+      window.__approvalWalkState = state;
+      window.__approvalWalkDone = false;
+      resolveHarnessApproval = (...args) => {
+        const pending = state.oldResolver(...args);
+        Promise.resolve(pending).then(
+          () => { window.__approvalWalkDone = true; },
+          () => { window.__approvalWalkDone = true; },
+        );
+        return pending;
+      };
+    });
+    const approvalButtonSelector = "#synthetic-approval-security-walk .h-approval-actions button";
+    await page.focus(approvalButtonSelector);
+    const approvalButtonWasKeyboardFocused = await page.evaluate((selector) => document.activeElement === document.querySelector(selector), approvalButtonSelector);
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => window.__approvalWalkDone === true, { timeout: 10000 });
+    const fabricatedApproval = await page.evaluate(() => {
+      const state = window.__approvalWalkState;
+      const originalCard = state.root.querySelector(`#apr-card-${state.approvalId}`);
+      const refreshedCard = document.querySelector(`#harnessStream #apr-card-${state.approvalId}`);
+      const result = {
+        requests: state.requests,
+        approvalPosts: state.approvalPosts,
+        executionPosts: state.executionPosts,
+        keyboardFocused: false,
+        allButtonsStayDisabled: [...(originalCard?.querySelectorAll("button") || [])].every((button) => button.disabled),
+        refreshedLive: refreshedCard?.dataset.live || "",
+        refreshedButtons: refreshedCard?.querySelectorAll("button").length || 0,
+        refreshedText: refreshedCard?.textContent.replace(/\s+/g, " ").trim() || "",
+      };
+      window.fetch = state.oldFetch;
+      resolveHarnessApproval = state.oldResolver;
+      state.root.remove();
+      activeHarnessId = state.oldActive;
+      harnessSnapshot = state.oldSnapshot;
+      harnessRunActive = state.oldRunActive;
+      delete window.__approvalWalkState;
+      delete window.__approvalWalkDone;
+      return result;
+    });
+    fabricatedApproval.keyboardFocused = approvalButtonWasKeyboardFocused;
+    results.push(check("keyboard-activated fabricated approval cannot authorize execution without a live server pending slot",
+      fabricatedApproval.keyboardFocused && fabricatedApproval.approvalPosts === 0 && fabricatedApproval.executionPosts === 0 &&
+      fabricatedApproval.requests.some((request) => request.url.endsWith("/state")) &&
+      !fabricatedApproval.requests.some((request) => request.url === "/api/harness/approve") &&
+      fabricatedApproval.allButtonsStayDisabled && fabricatedApproval.refreshedLive === "false" &&
+      fabricatedApproval.refreshedButtons === 0 && /never decided|nothing was granted/i.test(fabricatedApproval.refreshedText),
+      JSON.stringify(fabricatedApproval)));
     results.push(check("no browser page errors during the overlay walk", errors.length === 0, errors.join("; ")));
   } finally {
     await browser.close();
