@@ -10,6 +10,6 @@ If the session changed, the state request fails, or the server no longer reports
 
 `tests/test_harness_approval_ui.py` additionally verifies that the current approval handler checks the session ID and matching live pending slot before reaching the single, unchanged approval POST, and that stale/failed paths do not re-enable cached controls. A disabled, never-cloned template anchor makes the dynamically rendered decision handler visible to the pane inventory; the regenerated preservation sign-off now attributes both `GET /api/harness/sessions/{session_id}/state` and `POST /api/harness/approve` to Harness.
 
-On the reconciled tree, the full suite passed **2,113 tests, 1 skipped** (live sandbox requires explicit opt-in), with one existing Starlette deprecation warning. Ruff, mypy, frontend syntax, browser-backed six-pane and accessibility walks, docs/screenshots validation, and all generated UI/UX inventory checks passed.
+On the reconciled tree after merging the intervening P3-04 main update, the full suite passed **2,147 tests, 1 skipped** (live sandbox requires explicit opt-in), with one existing Starlette deprecation warning. Ruff, mypy, frontend syntax, browser-backed six-pane and accessibility walks, docs/screenshots validation, and all generated UI/UX inventory checks passed.
 
 This is supplemental implementation evidence for independent review. It does not alter the P3-03 status, owner session, or approval recorded on main, and it is not a substitute for owner review or sign-off.

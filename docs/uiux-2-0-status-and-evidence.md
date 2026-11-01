@@ -50,10 +50,10 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 | `#startRecentSummary` | `neutral` | yes | 1808 |
 | `#startHealthSummary` | `neutral` | yes | 1835 |
 | `#startWorkspaceSummary` | `neutral` | yes | 1853 |
-| `#harnessActiveStatusBadge` | `info` | yes | 1972 |
-| `#hallStatusBadge` | `warn` | yes | 2039 |
-| (unnamed) | `ok` | no | 2248 |
-| `#dockerStateBadge` | `neutral` | no | 2295 |
+| `#harnessActiveStatusBadge` | `info` | yes | 1977 |
+| `#hallStatusBadge` | `warn` | yes | 2044 |
+| (unnamed) | `ok` | no | 2253 |
+| `#dockerStateBadge` | `neutral` | no | 2300 |
 
 ## Writers
 

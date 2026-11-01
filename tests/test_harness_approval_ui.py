@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 HTML = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+SIGNOFF = json.loads((ROOT / "product" / "M5_2_0_UIUX_Preservation_Signoff.json").read_text(encoding="utf-8"))
 
 
 def test_decision_rechecks_the_matching_live_server_slot_before_posting() -> None:
@@ -51,3 +53,11 @@ def test_route_inventory_anchor_is_inert_and_never_cloned() -> None:
     assert 'onclick="resolveHarnessApproval(' in anchor
     assert "harnessApprovalRouteAttributionTemplate" not in renderer
     assert "cloneNode" not in renderer
+
+
+def test_preservation_signoff_maps_both_approval_journey_routes() -> None:
+    harness = next(pane for pane in SIGNOFF["panes"] if pane["label"] == "Harness")
+    routes = {(route["method"], route["path"]) for route in harness["routes_reached"]}
+
+    assert ("GET", "/api/harness/sessions/{session_id}/state") in routes
+    assert ("POST", "/api/harness/approve") in routes
