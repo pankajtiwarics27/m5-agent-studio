@@ -2737,6 +2737,7 @@
           "product/M5_2_0_UIUX_Tokens.json",
           "product/M5_2_0_UIUX_Status_Components.json",
           "product/M5_2_0_UIUX_Overlays.json",
+          "docs/uiux-2-0-p0-signoff.md",
           "product/M5_2_0_UIUX_Preservation_Signoff.json",
           "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
         ],
