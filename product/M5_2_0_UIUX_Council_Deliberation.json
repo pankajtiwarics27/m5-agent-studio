@@ -101,6 +101,11 @@
       "detail": ""
     },
     {
+      "check": "the contract row is redrawn with the card, and its values are part of what triggers a redraw",
+      "ok": true,
+      "detail": ""
+    },
+    {
       "check": "the row states the budget, the reasoning mode and the skills decision",
       "ok": true,
       "detail": ""
@@ -191,7 +196,7 @@
       "detail": ""
     }
   ],
-  "check_count": 24,
+  "check_count": 25,
   "findings": [],
   "status": "clean"
 }

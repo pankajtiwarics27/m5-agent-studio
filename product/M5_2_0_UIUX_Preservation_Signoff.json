@@ -25,8 +25,8 @@
     "current_inputs_match_approval": null,
     "approved_inputs": null,
     "current_inputs": {
-      "ledger_content_sha256": "394940db37dd7bf68952d2de34ebd334db8b15bb668eadb3e651462ca2252a57",
-      "source_manifest_sha256": "088b058b11685327c6a47f7ab3ab73532684bb8aa759e52595904c92ee69b092",
+      "ledger_content_sha256": "6ec27dccde21b842c28f8a6d64f4c97d6d8572c7f68280845eb2e527adbaffe0",
+      "source_manifest_sha256": "ee24ed478bfac4e5795f932ccdc437b107f1a585f99b6eaaa8251c4b7df7dc1d",
       "control_inventory_sha256": "46ed7e95efc98eb24ab4e794ca38e50e87838d0a2d3f2db9e55828dca15fc046",
       "route_map_sha256": "d83ca89276eadc7fef205c7f3df2fd6af332cbc7de06e545578e0d8615c75409",
       "authorization_trace_sha256": "d7c045b36a2de11eecc9fe5fb2629d2416b65da0b64244475412c13bab34ad40",
@@ -39,8 +39,8 @@
     "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "cb76adb3c22b5675ee49f2dbe1990014f3975c794783d3e78f332df225c3b0b1",
-    "source_manifest_sha256": "088b058b11685327c6a47f7ab3ab73532684bb8aa759e52595904c92ee69b092",
+    "ledger_sha256": "0b9d08d20ce7a18bfa8a5861f12cbf4c0949562dae764d55e942019282dd5dd4",
+    "source_manifest_sha256": "ee24ed478bfac4e5795f932ccdc437b107f1a585f99b6eaaa8251c4b7df7dc1d",
     "control_inventory_sha256": "46ed7e95efc98eb24ab4e794ca38e50e87838d0a2d3f2db9e55828dca15fc046",
     "route_map_sha256": "d83ca89276eadc7fef205c7f3df2fd6af332cbc7de06e545578e0d8615c75409",
     "authorization_trace_sha256": "d7c045b36a2de11eecc9fe5fb2629d2416b65da0b64244475412c13bab34ad40",

@@ -58,7 +58,7 @@ The captures are described in `docs/media/council-deliberation/README.md`.
 
 ## Checks
 
-24 checks, 0 findings — **clean**.
+25 checks, 0 findings — **clean**.
 
 * `pass` the orchestrator publishes the contract a stage runs under
 * `pass` the council route hands the skills decision to the stream, seat by seat
@@ -66,6 +66,7 @@ The captures are described in `docs/media/council-deliberation/README.md`.
 * `pass` the pane keeps the contract from the event, and holds no copy of a budget
 * `pass` every stage card carries a contract row, hidden until the seat starts
 * `pass` an absent contract is drawn as absent, not as a default
+* `pass` the contract row is redrawn with the card, and its values are part of what triggers a redraw
 * `pass` the row states the budget, the reasoning mode and the skills decision
 * `pass` six verdicts, and a cut reply is not drawn as an answer
 * `pass` a demo reply is drawn as demo text, and is given no figure it did not earn

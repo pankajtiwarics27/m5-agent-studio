@@ -308,6 +308,11 @@ def build_inventory() -> dict:
         "a stage that has not started was allowed nothing, and the row must say nothing",
     )
     check(
+        "the contract row is redrawn with the card, and its values are part of what triggers a redraw",
+        "renderStageContract(stage)" in rows_row and "buffer.k" in rows_row and "contract" in rows_row,
+        "a row drawn once at mount would keep the contract of a seat that has since been re-run",
+    )
+    check(
         "the row states the budget, the reasoning mode and the skills decision",
         all(field in render_contract for field in ("budget", "reasoning", "skills"))
         and "contract-chip" in render_contract,
@@ -522,7 +527,7 @@ def render_doc(payload: dict) -> str:
         "",
         "## Evidence",
         "",
-        f"`node scripts/council_deliberation_walk.mjs --screenshots docs/media/council-deliberation`",
+        "`node scripts/council_deliberation_walk.mjs --screenshots docs/media/council-deliberation`",
         "runs the four seats against a stand-in oMLX runtime that answers one seat in reasoning only",
         "and cuts another at its length limit, then against the same fixture with no runtime at all.",
         "The captures are described in `docs/media/council-deliberation/README.md`.",
