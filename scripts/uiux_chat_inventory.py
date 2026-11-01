@@ -222,8 +222,7 @@ def read_frontend(html: str) -> dict:
             "live_off": 'aria-live="off"' in html,
             "aria_busy": 'setAttribute("aria-busy"' in bar,
             "streaming_marked": 'data-streaming="true"' in render,
-            "empty_says_what_appears": "the reply and its reasoning appear here"
-            in render,
+            "empty_says_what_appears": "replies and reasoning appear here" in render,
         },
         "clear": {
             "undoable": 'kind: "recovery"' in clearer and "Undo" in clearer,
@@ -249,14 +248,16 @@ def read_frontend(html: str) -> dict:
             "placeholder_matches": 'placeholder="Message your selected model… (Enter sends, Shift+Enter adds a line)"'
             in html
             and "Enter sends, Shift+Enter adds a line" in state,
-            "described_by_hint": 'aria-describedby="chatComposerHint"' in html,
+            "described_by_hint": 'aria-describedby="chatComposerHint chatKeyboardHint"' in html
+            and 'id="chatKeyboardHint"' in html,
         },
         "stream": {
             "busy_flag": "chatBusy = true;" in request and "chatBusy = false;" in html,
-            "busy_cleared_in_finally": "() => { chatBusy = false; renderChatMessages(); }"
+            "busy_cleared_in_finally": "() => { chatBusy = false; renderChatMessages();"
             in request,
-            "stop_clears_busy": "chatBusy = false; renderChatMessages();"
-            in function_body(html, "stopActiveStream"),
+            "stop_clears_busy": "stopActiveStream();"
+            in function_body(html, "stopChatStream")
+            and "() => { chatBusy = false; renderChatMessages();" in request,
             "payload_fields": sorted(
                 {
                     field

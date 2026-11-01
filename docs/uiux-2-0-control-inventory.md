@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `7b99848ef5a6155c1cbb274910d95ef95684a775badaca2340a2ef5c695bcd00`.
+* Frontend digest: `ff264c2354f6b0c292f9074c4fb7e2c2511f8c65c02580011092a007040157a9`.
 * Panes: 6 · controls in panes: 77 · controls in the
   shared chrome: 101 · script-rendered: 30.
 
@@ -147,12 +147,12 @@ Section `pane-chat`, 11 interactive elements.
 | 3 | select | chatReasoning | — | Off Low Medium | — |
 | 4 | input | chatToolsEnabled | checkbox | — | — |
 | 5 | input | chatUnload | checkbox | — | — |
-| 6 | button | chatClearBtn | — | Clear | clearChat() |
+| 6 | button | chatClearBtn | button | Clear | clearChat() |
 | 7 | button | chatHandoffBtn | button | Open in Harness | handOffChatToHarness() |
 | 8 | button | chatJumpLatest | button | Jump to latest ↓ | jumpToLatestChatTurn() |
-| 9 | textarea | chatInput | — | Message your selected model… (Enter sends, Shift+Enter adds a line) | — |
-| 10 | button | chatStopBtn | — | Stop | stopActiveStream() |
-| 11 | button | chatSendBtn | — | Send | sendChat() |
+| 9 | textarea | chatInput | — | Message | — |
+| 10 | button | chatStopBtn | button | Stop | stopChatStream() |
+| 11 | button | chatSendBtn | button | Send | sendChat() |
 
 ## Shared chrome
 

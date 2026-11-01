@@ -277,8 +277,8 @@ def test_a_role_without_a_tone_is_caught(sources):
 def test_a_role_outside_the_table_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            'return `<div class="msg user" data-role="user">${head}${renderMarkdown(m.content)}</div>`;',
-            'return `<div class="msg user" data-role="operator">${head}${renderMarkdown(m.content)}</div>`;',
+            'return `<div class="msg user" data-role="user" data-state="sent">${head}${renderMarkdown(m.content)}</div>`;',
+            'return `<div class="msg user" data-role="operator" data-state="sent">${head}${renderMarkdown(m.content)}</div>`;',
             1,
         )
     )
@@ -299,7 +299,7 @@ def test_a_turn_without_a_number_is_caught(sources):
 def test_a_model_named_below_its_answer_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            '        + (m.role === "assistant" && m.model ? `<code>${escapeHtml(m.model)}</code>` : "")\n',
+            '        + (m.role === "assistant" && m.model ? `<code class="chat-msg-model">${escapeHtml(m.model)}</code>` : "")\n',
             "",
             1,
         )
@@ -429,8 +429,8 @@ def test_a_guessed_runtime_failure_is_caught(sources):
 def test_a_busy_state_that_is_never_cleared_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            "    }, () => { chatBusy = false; renderChatMessages(); });",
-            "    });",
+            "chatBusy = false; renderChatMessages();",
+            "renderChatMessages();",
             1,
         )
     )
@@ -449,9 +449,8 @@ def test_a_payload_that_drops_a_field_is_caught(sources):
 def test_a_transcript_that_never_says_what_appears_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            "Nothing has been said yet. Type below; the reply and its reasoning appear here.",
+            "Choose a model above and type below; replies and reasoning appear here.",
             "Session cleared.",
-            1,
         )
     )
     assert "transcript" in _checks(payload)

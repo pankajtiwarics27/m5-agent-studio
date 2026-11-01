@@ -185,8 +185,8 @@ def read_frontend(html: str) -> dict:
         },
         "busy": {
             # aria-busy must follow the turn, not only the send flag.
-            "follows_a_streaming_turn": 'chatHistory.some(m => m.role === "assistant" && !m.usage)'
-            in html,
+            "follows_a_streaming_turn": 'm.status === "streaming"' in html
+            and '(!m.status && !m.usage)' in html,
             "keeps_the_send_flag": "chatBusy || streaming" in html,
         },
         "timing": {
