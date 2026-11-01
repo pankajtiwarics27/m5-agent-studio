@@ -96,9 +96,11 @@ def test_inventory_is_clean_and_complete(payload: dict):
     assert payload["check_count"] == len(payload["checks"]) >= 30
 
 
-def test_the_ten_states_are_all_drawn(payload: dict):
+def test_the_readiness_states_are_all_drawn(payload: dict):
     assert payload["states"] == [
         "ready",
+        "configured",
+        "stale",
         "demo",
         "needs-load",
         "needs-memory",
@@ -142,7 +144,7 @@ def test_a_state_that_stops_being_drawn_is_a_finding(sources):
     broken = sources(
         html_transform=lambda html: html.replace('state: "needs-key"', 'state: "ready"', 1)
     )
-    assert "the states the rows can draw are exactly the ten the artifact lists" in _checks(broken)
+    assert "the states the rows can draw are exactly the twelve the artifact lists" in _checks(broken)
 
 
 def test_a_ready_seat_with_no_read_behind_it_is_a_finding(sources):
@@ -173,8 +175,8 @@ def test_a_combo_that_is_ready_because_it_exists_is_a_finding(sources):
 def test_a_round_that_reads_the_pickers_behind_the_plans_back_is_a_finding(sources):
     broken = sources(
         html_transform=lambda html: html.replace(
-            "    const plan = councilSeatPlan().map(seat => [",
-            '    const plan = [["architect", document.getElementById("hallSeatArch").value, rm, false]].map(seat => [',
+            "    const seatPlan = councilSeatPlan();",
+            "    const seatPlan = [];",
             1,
         )
     )
@@ -224,12 +226,37 @@ def test_a_role_name_the_server_does_not_use_is_a_finding(sources):
     assert "the role names are the server's own AGENT_ROLES labels, not retyped" in _checks(broken)
 
 
-def test_a_summary_that_promises_a_round_the_loop_does_not_run_is_a_finding(sources):
+def test_a_round_without_an_all_seat_preflight_is_a_finding(sources):
     broken = sources(
-        html_transform=lambda html: html.replace("      try { await summonAgentPromise(rk, mod, rmode, pinIt); } catch (e) { break; }", "      try { await summonAgentPromise(rk, mod, rmode, pinIt); } catch (e) { }", 1)
+        html_transform=lambda html: html.replace(
+            "const issues = councilInvocationIssues(seatPlan);",
+            "const issues = [];",
+            1,
+        )
     )
-    assert "the summary says the round stops at the first seat that fails, because it does" in _checks(broken)
+    assert "a full round and spawn-and-convene are preflighted before any summon or session write" in _checks(broken)
 
+
+def test_spawn_and_convene_without_a_preflight_is_a_finding(sources):
+    broken = sources(
+        html_transform=lambda html: html.replace(
+            "const issues = councilInvocationIssues(councilSeatPlan());",
+            "const issues = [];",
+            1,
+        )
+    )
+    assert "a full round and spawn-and-convene are preflighted before any summon or session write" in _checks(broken)
+
+
+def test_single_seat_without_a_guard_is_a_finding(sources):
+    broken = sources(
+        html_transform=lambda html: html.replace(
+            "if (!councilCanInvoke(verdict)) {\n      const role = (COUNCIL_ROLES[roleKey] || { label: roleKey }).label;",
+            "if (false) {\n      const role = (COUNCIL_ROLES[roleKey] || { label: roleKey }).label;",
+            1,
+        )
+    )
+    assert "single-seat dispatch is blocked by the same readiness classifier at both entry points" in _checks(broken)
 
 def test_a_row_that_rebuilds_under_the_keyboard_is_a_finding(sources):
     broken = sources(
@@ -306,18 +333,21 @@ def test_the_walk_reads_the_dom_and_refuses_to_report_a_walk_it_did_not_perform(
     assert "council_readiness_seed.py" in source
 
 
-def test_the_walk_drives_the_failure_it_reports():
-    """The failing seat is the keyless alias, and the seats before it really answered."""
+def test_the_walk_covers_preflight_and_preserved_non_invoking_flows():
     source = WALK.read_text(encoding="utf-8")
-    assert 'await pickModel(page, "hallSeatJudge", ready.keyless_model);' in source
-    assert "summon.cards.filter((card) => card.role).length === 3" in source
-    assert "!card.demo && card.tokPerSecond" in source
+    assert "full-round and spawn-and-convene are rejected before any summon or new session request" in source
+    assert "single-seat invocation is disabled and blocked before a summon" in source
+    assert "Open Empty Room still creates a session without invoking a seat" in source
+    assert "Post note only remains enabled and saves the note without summoning" in source
+    assert "offline local seats disable round, spawn-and-convene and single-seat invocation" in source
+    assert "a ready single seat still dispatches one model" in source
 
 
-def test_the_walk_checks_the_demo_reply_against_the_tok_s_badge():
+def test_the_walk_checks_assignment_identity_and_resource_disclosures():
     source = WALK.read_text(encoding="utf-8")
-    assert "is not given a tok/s badge" in source
-    assert "card.demo && !card.tokPerSecond" in source
+    assert "exact selected model and locality/source" in source
+    assert "shared-memory and per-turn unload policy" in source
+    assert "provider reachability" in source
 
 
 # ── the pages that must point at it ────────────────────────────────────────

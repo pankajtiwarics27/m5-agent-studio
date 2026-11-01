@@ -27,7 +27,7 @@
       "tab": "hall",
       "title": "Council",
       "file": "hall.png",
-      "purpose": "A council session: who was asked, what each participant said, in order."
+      "purpose": "Council Hall with four pre-round role assignments, exact model IDs, locality and readiness, the shared-memory/per-turn unload disclosure, and actual session participants; the demo fallback route is configured, not reachability-tested."
     },
     {
       "id": "council",

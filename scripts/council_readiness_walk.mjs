@@ -22,23 +22,18 @@
  *
  * What it proves:
  *
- *   1. four seats, each named by role, each saying what the seat is for;
- *   2. a resident model is READY and says how much memory it holds;
- *   3. a listed model that does not fit the ceiling says so in gigabytes;
- *   4. a listed model that fits is NEEDS LOAD, and its "Load now" really loads it - the row
- *      turns READY because the runtime then reports it resident;
- *   5. an alias saved without a key is NEEDS KEY, and its action opens the providers panel;
- *   6. a model the runtime does not list is NOT LISTED, and its action moves focus to the picker;
- *   7. the summary counts what the rows say, and names the read it came from;
- *   8. on the offline fixture every local seat says DEMO TEXT, and a combo of local models is
- *      demo text too - a combo is not green because it exists;
- *   9. a round still runs all four seats, and each reply carries its seat and role;
- *  10. a demo reply is labelled one, and carries no tok/s badge it did not earn;
- *  11. a seat that fails is stated where the next action is, the phantom "Connecting..." card is
- *      gone, and the block says nothing was saved for that seat;
- *  12. Check again re-reads the two endpoints and the basis line ages;
- *  13. the readiness rows survive a narrow viewport and the light theme without overflowing;
- *  14. no page error occurs, and the pane posts only the summon it posted before.
+ *   1. four seats, each named by role and each saying what the seat is for;
+ *   2. exact selected model ids, locality/source, and readiness before invocation;
+ *   3. resident, over-budget, loading, keyless, not-listed, stale and offline states from the
+ *      server's own reads;
+ *   4. configured cloud/fallback routes are not described as reachability-tested;
+ *   5. full-round, spawn-and-convene and unready single-seat actions are blocked before writes;
+ *   6. Open Empty Room and Post note only remain available while seats are blocked;
+ *   7. a ready single seat still dispatches with its role tag and server usage;
+ *   8. Check again re-reads the two endpoints and the basis line ages;
+ *   9. the readiness rows survive a narrow viewport and the light theme without overflowing;
+ *  10. no page error occurs, and the pane uses only the existing session, message, summon and
+ *      model-load routes.
  */
 import { existsSync, mkdirSync } from "node:fs";
 import { spawn } from "node:child_process";
@@ -220,6 +215,8 @@ async function readReadiness(page) {
           ? { label: clean(action.textContent), kind: action.dataset.action || "", id: action.id, disabled: Boolean(action.disabled) }
           : null,
         model: select ? select.value : "",
+        modelLabel: clean(element && element.querySelector(".seat-model-id") ? element.querySelector(".seat-model-id").textContent : ""),
+        source: clean(element && element.querySelector(".seat-source") ? element.querySelector(".seat-source").textContent : ""),
       };
     });
     const summary = document.getElementById("councilReadinessSummary");
@@ -234,6 +231,13 @@ async function readReadiness(page) {
       basis: clean(basis ? basis.textContent : ""),
       basisHasNote: Boolean(basis && basis.classList.contains("evidence")),
       seatsOpen: seats ? seats.open : false,
+      roundDisabled: Boolean(document.getElementById("hallFullRoundBtn")?.disabled),
+      spawnConveneDisabled: Boolean(document.getElementById("spawnConveneBtn")?.disabled),
+      singleDisabled: Boolean(document.getElementById("hallSummonBtn")?.disabled),
+      singleState: document.getElementById("hallSingleState")?.dataset.state || "",
+      singleText: clean(document.getElementById("hallSingleState")?.textContent || ""),
+      sendDisabled: Boolean(document.getElementById("hallSendBtn")?.disabled),
+      resourceDisclosure: clean(document.querySelector(".council-resource-note")?.textContent || ""),
       purposes: [...document.querySelectorAll("#hallSeatsSettings .seat-purpose")].map((node) => clean(node.textContent)),
       labels: [...document.querySelectorAll("#hallSeatsSettings .field-lbl")].map((node) => clean(node.textContent)),
       focusId: document.activeElement ? document.activeElement.id : "",
@@ -413,16 +417,120 @@ async function run(args) {
       `${block.rows[3].pill} — ${block.rows[3].text}`,
     );
     record(
-      "the summary counts what the rows say and names the reads it stands on",
+      "the summary counts ready assignments, names both reads, and states that an incomplete round is blocked",
       block.count === "1/4 READY"
-        && /1 of 4 seats can answer now; the other 3 cannot/.test(block.summary)
-        && /The round still runs all four seats in order and stops at the first seat that fails/.test(block.summary)
+        && /1 of 4 assignments are ready or configured/.test(block.summary)
+        && /invocation is blocked/.test(block.summary)
         && block.basisHasNote
         && /GET \/api\/telemetry and GET \/api\/providers/.test(block.basis)
         && /not from the picker/.test(block.basis),
       `${block.count} — ${block.summary} — ${block.basis}`,
     );
+    record(
+      "each Council row shows its exact selected model and locality/source before invocation",
+      block.rows.every((row) => row.model && row.modelLabel === row.model && (row.model.includes("::") ? row.source.startsWith("Cloud ·") : row.source === "Local · oMLX")),
+      block.rows.map((row) => `${row.modelLabel} / ${row.source}`).join(" | "),
+    );
+    record(
+      "shared-memory and per-turn unload policy are disclosed without claiming cloud reachability",
+      /share this machine’s memory/i.test(block.resourceDisclosure)
+        && /requests unload after each local turn/i.test(block.resourceDisclosure)
+        && /does not confirm provider reachability/i.test(block.resourceDisclosure),
+      block.resourceDisclosure,
+    );
+    const loadingFixture = await page.evaluate((modelId) => {
+      const previous = { telemetry: lastTelemetry, readAt: councilTelemetryReadAt };
+      const telemetry = JSON.parse(JSON.stringify(lastTelemetry));
+      const model = (telemetry.models || []).find((entry) => entry.id === modelId);
+      if (!model) return { state: "missing-fixture-model", disabled: false };
+      model.loaded = false;
+      model.is_loading = true;
+      lastTelemetry = telemetry;
+      councilTelemetryReadAt = Date.now();
+      renderCouncilReadiness();
+      const state = document.getElementById("hallSeatArchState").dataset.state;
+      const disabled = document.getElementById("hallFullRoundBtn").disabled;
+      lastTelemetry = previous.telemetry;
+      councilTelemetryReadAt = previous.readAt;
+      renderCouncilReadiness();
+      return { state, disabled };
+    }, ready.loaded_model);
+    record(
+      "a local assignment that is loading blocks a round before invocation",
+      loadingFixture.state === "loading" && loadingFixture.disabled,
+      JSON.stringify(loadingFixture),
+    );
+
+    const staleFixture = await page.evaluate(() => {
+      const previous = councilTelemetryReadAt;
+      councilTelemetryReadAt = Date.now() - COUNCIL_READ_MAX_AGE_MS - 1;
+      renderCouncilReadiness();
+      const states = ["hallSeatArchState", "hallSeatCoderState", "hallSeatCriticState", "hallSeatJudgeState"].map((id) => document.getElementById(id).dataset.state);
+      const disabled = document.getElementById("hallFullRoundBtn").disabled;
+      councilTelemetryReadAt = previous;
+      renderCouncilReadiness();
+      return { states, disabled };
+    });
+    record(
+      "stale telemetry blocks all four seat assignments until a fresh read",
+      staleFixture.states.length === 4 && staleFixture.states.every((state) => state === "stale") && staleFixture.disabled,
+      JSON.stringify(staleFixture),
+    );
+
+    const emptySingle = await page.evaluate(() => {
+      const select = document.getElementById("hallModelSelect");
+      const previous = select.value;
+      select.value = "";
+      renderCouncilReadiness();
+      const state = document.getElementById("hallSingleState").dataset.state;
+      const disabled = document.getElementById("hallSummonBtn").disabled;
+      select.value = previous;
+      renderCouncilReadiness();
+      return { state, disabled };
+    });
+    record(
+      "an empty single-seat model cannot be summoned",
+      emptySingle.state === "no-model" && emptySingle.disabled,
+      JSON.stringify(emptySingle),
+    );
+
+    const configuredCloud = await page.evaluate((alias) => {
+      const provider = configuredProviders.find((entry) => entry.alias === alias);
+      if (!provider) return { state: "missing-fixture-provider", text: "" };
+      const previous = provider.has_key;
+      provider.has_key = true;
+      councilProvidersReadAt = Date.now();
+      renderCouncilReadiness();
+      const row = document.getElementById("hallSeatCriticState");
+      const value = { state: row.dataset.state, pill: row.querySelector(".status")?.textContent || "", text: row.textContent };
+      provider.has_key = previous;
+      renderCouncilReadiness();
+      return value;
+    }, ready.keyless_alias);
+    record(
+      "a keyed cloud alias is labelled CONFIGURED without claiming it is reachable",
+      configuredCloud.state === "configured" && /CONFIGURED/.test(configuredCloud.pill)
+        && /reachability has not been tested/.test(configuredCloud.text),
+      JSON.stringify(configuredCloud),
+    );
+
+    record(
+      "unready assignments disable full-round and spawn-and-convene actions",
+      block.roundDisabled && block.spawnConveneDisabled,
+      `round=${block.roundDisabled} spawn-convene=${block.spawnConveneDisabled}`,
+    );
     await shoot(page, "council-readiness-mixed", "#pane-hall");
+
+    const beforeBlocked = posts.length;
+    await page.evaluate(() => runHallFullRound());
+    await page.evaluate(() => confirmSpawnSession(true));
+    await sleep(args.settleMs * 3);
+    const blockedActions = posts.slice(beforeBlocked);
+    record(
+      "full-round and spawn-and-convene are rejected before any summon or new session request",
+      !blockedActions.some((path) => /\/summon$/.test(path) || path === "/api/hall/sessions"),
+      blockedActions.join(", "),
+    );
 
     // the load action really loads
     await page.click("#hallSeatJudgeStateAction");
@@ -479,45 +587,79 @@ async function run(args) {
       `${block.rows[3].pill} — focus=${focused}`,
     );
 
-    // a seat that fails is stated where the next action is: three seats answer, the fourth
-    // is the alias with no key, so the round stops there with three cards on screen
-    await pickModel(page, "hallSeatArch", ready.loaded_model);
-    await pickModel(page, "hallSeatCoder", ready.unloaded_fits_model);
-    await pickModel(page, "hallSeatCritic", ready.keyless_alias);
-    await pickModel(page, "hallSeatCritic", "combo/hybrid-resilient");
-    await pickModel(page, "hallSeatJudge", ready.keyless_model);
+    // A missing seat disables single invocation and remains visible by its original id.
+    await pickModel(page, "hallModelSelect", "a-model-the-runtime-does-not-list");
     await sleep(args.settleMs * 3);
-    await page.evaluate(() => runHallFullRound());
-    let summon = null;
-    for (let attempt = 0; attempt < 120; attempt += 1) {
+    block = await readReadiness(page);
+    const beforeSingleBlock = posts.length;
+    await page.evaluate(() => summonSingleAgent());
+    await sleep(args.settleMs * 4);
+    const singleBlockedPosts = posts.slice(beforeSingleBlock);
+    record(
+      "single-seat invocation is disabled and blocked before a summon when its selected model is unavailable",
+      block.singleDisabled
+        && block.rows.length === 4
+        && !singleBlockedPosts.some((path) => /\/summon$/.test(path))
+        && /a-model-the-runtime-does-not-list/.test(await page.evaluate(() => document.getElementById("hallSingleState").textContent)),
+      `disabled=${block.singleDisabled} posts=${singleBlockedPosts.join(", ")}`,
+    );
+
+    // Open Empty Room remains available even while the four-seat plan is blocked.
+    await page.evaluate(() => openSpawnModal());
+    await sleep(args.settleMs * 2);
+    const beforeEmptyRoom = posts.length;
+    await page.evaluate(() => confirmSpawnSession(false));
+    await sleep(args.settleMs * 4);
+    const emptyRoomPosts = posts.slice(beforeEmptyRoom);
+    record(
+      "Open Empty Room still creates a session without invoking a seat",
+      emptyRoomPosts.includes("/api/hall/sessions") && !emptyRoomPosts.some((path) => /\/summon$/.test(path)),
+      emptyRoomPosts.join(", "),
+    );
+
+    // Note-only remains enabled while round actions are unavailable.
+    await page.evaluate(() => {
+      document.getElementById("hallSendModeSelect").value = "post_only";
+      document.getElementById("hallSendModeSelect").dispatchEvent(new Event("change", { bubbles: true }));
+      document.getElementById("hallHumanInput").value = "Keep this note while Council seats are unavailable.";
+    });
+    block = await readReadiness(page);
+    const beforeNoteOnly = posts.length;
+    await page.evaluate(() => submitHallComposer());
+    await sleep(args.settleMs * 4);
+    const notePosts = posts.slice(beforeNoteOnly);
+    const noteState = await page.evaluate(() => ({
+      enabled: !document.getElementById("hallSendBtn").disabled,
+      mode: document.getElementById("hallSendModeSelect").value,
+      text: activeHallData && activeHallData.messages.length ? activeHallData.messages[activeHallData.messages.length - 1].content : "",
+    }));
+    record(
+      "Post note only remains enabled and saves the note without summoning",
+      !block.sendDisabled && noteState.enabled && noteState.mode === "post_only"
+        && noteState.text === "Keep this note while Council seats are unavailable."
+        && notePosts.some((path) => /\/message$/.test(path))
+        && !notePosts.some((path) => /\/summon$/.test(path)),
+      `${noteState.text} — ${notePosts.join(", ")}`,
+    );
+
+    // A ready single seat remains invokable and keeps the server's seat tag and usage.
+    await pickModel(page, "hallModelSelect", ready.loaded_model);
+    await sleep(args.settleMs * 3);
+    const beforeReadySingle = posts.length;
+    await page.evaluate(() => summonSingleAgent());
+    let singleReply = null;
+    for (let attempt = 0; attempt < 80; attempt += 1) {
       await sleep(args.settleMs * 2);
-      summon = await readSummonState(page);
-      if (summon.visible) break;
+      singleReply = await readSummonState(page);
+      if (singleReply.cards.some((card) => card.role)) break;
     }
     record(
-      "a failed seat is stated as a block: which seat, the provider's message, and that nothing was saved for it",
-      Boolean(summon) && summon.kind === "error"
-        && /Seat 4 \(Lead Arbiter\) did not answer/.test(summon.title)
-        && summon.cause.length > 0
-        && /Nothing was saved for/.test(summon.context)
-        && summon.actions.includes("Retry the round"),
-      summon ? `${summon.title} — ${summon.cause}` : "no failure block appeared",
+      "a ready single seat still dispatches one model with its role tag and genuine usage",
+      singleReply.cards.some((card) => card.role === "Seat 1 · Staff Architect")
+        && singleReply.cards.filter((card) => card.role).every((card) => !card.demo && card.tokPerSecond)
+        && posts.slice(beforeReadySingle).some((path) => /\/summon$/.test(path)),
+      singleReply.cards.map((card) => `${card.role}/${card.demo}/${card.tokPerSecond}`).join(" | "),
     );
-    record(
-      "the seats that answered keep their cards, and the failed seat leaves none claiming to connect",
-      Boolean(summon)
-        && summon.cards.filter((card) => card.role).length === 3
-        && summon.cards.every((card) => !card.connecting),
-      summon ? summon.cards.map((card) => card.head).join(" | ") : "",
-    );
-    record(
-      "a seat answered by the runtime is not labelled a demo reply, and keeps its tok/s",
-      Boolean(summon)
-        && summon.cards.filter((card) => card.role).length === 3
-        && summon.cards.filter((card) => card.role).every((card) => !card.demo && card.tokPerSecond),
-      summon ? summon.cards.filter((card) => card.role).map((card) => `${card.demo}/${card.tokPerSecond}`).join(" ") : "",
-    );
-    if (summon && summon.visible) await shoot(page, "council-summon-failed", "#pane-hall");
 
     // the basis ages, and Check again re-reads it
     const before = (await readReadiness(page)).basis;
@@ -568,7 +710,11 @@ async function run(args) {
     offlinePage.on("console", (message) => { if (message.type() === "error") pageErrors.push(message.text()); });
     await offlinePage.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
     await openHall(offlinePage, args, args.offlineBaseUrl, args.offlineToken);
-    await createSession(offlinePage, "Demo readiness walk");
+    await createSession(offlinePage, "Offline readiness guard walk");
+    for (const selectId of [...SEAT_SELECTS, "hallModelSelect"]) {
+      await pickModel(offlinePage, selectId, ready.loaded_model);
+    }
+    await sleep(args.settleMs * 4);
     const selects = await offlinePage.evaluate((ids) => ids.map((id) => document.getElementById(id).value), SEAT_SELECTS);
     const demo = await readReadiness(offlinePage);
     record(
@@ -576,52 +722,47 @@ async function run(args) {
       demo.rows.every((row) => row.state === "demo")
         && demo.rows.every((row) => /demo text/.test(row.text))
         && demo.count === "0/4 READY"
-        && /would answer with the server's demo text/.test(demo.summary),
+        && /would receive demo text; invocation is blocked/.test(demo.summary),
       `${demo.count} — ${demo.rows[0].text}`,
     );
+    await pickModel(offlinePage, "hallSeatArch", "combo/hybrid-resilient");
+    await sleep(args.settleMs * 3);
+    const comboOffline = await readReadiness(offlinePage);
     record(
-      "a combo of local models is demo text, not a green pill",
-      demo.rows.some((row) => /^combo\//.test(row.model) && row.state === "demo")
-        || demo.rows.every((row) => !/^combo\//.test(row.model)),
-      `seats: ${selects.join(", ")}`,
+      "a configured combo that only targets offline local models is demo text, not a green pill",
+      comboOffline.rows[0].state === "demo"
+        && /demo text/.test(comboOffline.rows[0].text)
+        && comboOffline.rows[0].source === "Fallback combo · hybrid-resilient",
+      `${comboOffline.rows[0].modelLabel} — ${comboOffline.rows[0].pill} — ${comboOffline.rows[0].text}`,
     );
+    await pickModel(offlinePage, "hallSeatArch", ready.loaded_model);
+    await sleep(args.settleMs * 3);
     await shoot(offlinePage, "council-readiness-offline", "#pane-hall");
 
+    const beforeOfflineBlock = posts.length;
     await offlinePage.evaluate(() => runHallFullRound());
-    let replies = [];
-    for (let attempt = 0; attempt < 160; attempt += 1) {
-      await sleep(args.settleMs * 2);
-      replies = (await readSummonState(offlinePage)).cards.filter((card) => card.role);
-      if (replies.length >= 4) break;
-    }
+    await offlinePage.evaluate(() => confirmSpawnSession(true));
+    await sleep(args.settleMs * 3);
+    const offlineBlockedPosts = posts.slice(beforeOfflineBlock);
+    const offlineAfter = await readReadiness(offlinePage);
     record(
-      "a round still runs all four seats, and each reply carries its seat and role",
-      replies.length === 4
-        && replies.map((card) => card.role).join(" | ") === [
-          "Seat 1 · Staff Architect",
-          "Seat 2 · Fast Coder / Analyst",
-          "Seat 3 · Adversarial Critic",
-          "Seat 4 · Lead Arbiter",
-        ].join(" | "),
-      replies.map((card) => card.role).join(" | "),
+      "offline local seats disable round, spawn-and-convene and single-seat invocation without sending",
+      offlineAfter.rows.every((row) => row.state === "demo")
+        && offlineAfter.roundDisabled && offlineAfter.spawnConveneDisabled && offlineAfter.singleDisabled
+        && !offlineBlockedPosts.some((path) => path === "/api/hall/sessions" || /\/summon$/.test(path)),
+      `${offlineAfter.count} — ${offlineBlockedPosts.join(", ")}`,
     );
-    record(
-      "a demo reply is labelled one, and is not given a tok/s badge",
-      replies.length === 4 && replies.every((card) => card.demo && !card.tokPerSecond),
-      replies.map((card) => `${card.demo}/${card.tokPerSecond}`).join(" "),
-    );
-    await shoot(offlinePage, "council-demo-replies", "#pane-hall");
 
     record(
       "no page error occurred on either machine",
       pageErrors.length === 0,
       pageErrors.slice(0, 3).join(" | "),
     );
-    const unexpected = posts.filter((path) => !["/api/hall/sessions", "/api/hall/sessions/" + ""].includes(path)
-      && !/^\/api\/hall\/sessions\/[^/]+\/summon$/.test(path)
+    const unexpected = posts.filter((path) => path !== "/api/hall/sessions"
+      && !/^\/api\/hall\/sessions\/[^/]+\/(?:summon|message)$/.test(path)
       && !/^\/api\/models\/[^/]+\/load$/.test(path));
     record(
-      "the pane posts only what it posted before: a summon, a session, and the load it was asked for",
+      "the pane uses only existing session, message, summon and model-load routes",
       unexpected.length === 0,
       [...new Set(posts)].join(", "),
     );
