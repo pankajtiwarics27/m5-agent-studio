@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "fee7f61a819a0f562285334465217561191e1c5b6dac15fb77fea907e1bedf3c",
+  "frontend_sha256": "6e50c2aaa80042843991ccf45f6ea437076d0880d5fd7b0c2969a114f96b969a",
   "panes": [
     {
       "dom_id": "start",
@@ -112,9 +112,9 @@
     {
       "dom_id": "harness",
       "section_id": "pane-harness",
-      "control_count": 21,
+      "control_count": 22,
       "counts": {
-        "button": 8,
+        "button": 9,
         "input": 2,
         "select": 9,
         "summary": 1,
@@ -205,7 +205,7 @@
           "id": "harnessSessionActionSelect",
           "aria-label": "Session actions",
           "onchange": "runHarnessSessionAction(this)",
-          "text": "Session Actions… Inspect Git Status & Diff Compact Session Context (≤2 KB) Open Agile SDLC Product Board"
+          "text": "Session Actions… Inspect Git Status & Diff Permissions & Revocations Compact Session Context (≤2 KB) Open Agile SDLC Product Board"
         },
         {
           "tag": "button",
@@ -213,6 +213,18 @@
           "class": "btn btn-danger",
           "onclick": "abortHarnessRun()",
           "text": "Abort"
+        },
+        {
+          "tag": "button",
+          "id": "harnessPermissionBadge",
+          "type": "button",
+          "class": "harness-perm-badge",
+          "title": "Permissions this session holds, and the way to take them back",
+          "onclick": "openHarnessGrants()",
+          "data": {
+            "data-count": "0"
+          },
+          "text": "No permissions"
         },
         {
           "tag": "button",
@@ -634,9 +646,9 @@
     }
   ],
   "chrome": {
-    "control_count": 101,
+    "control_count": 103,
     "counts": {
-      "button": 54,
+      "button": 56,
       "input": 29,
       "select": 12,
       "summary": 1,
@@ -1035,6 +1047,18 @@
       {
         "tag": "button",
         "class": "btn btn-xs",
+        "onclick": "refreshHarnessGrants()",
+        "text": "Refresh"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "closeHarnessGrants()",
+        "text": "Close"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
         "onclick": "closeProvidersModal()",
         "text": "Close"
       },
@@ -1313,24 +1337,23 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 182,
-    "pane_controls": 81,
-    "chrome_controls": 101,
-    "script_rendered_controls": 31,
+    "markup_controls": 185,
+    "pane_controls": 82,
+    "chrome_controls": 103,
+    "script_rendered_controls": 29,
     "script_rendered_by_function": {
-      "appendWorkflowApprovalCard": 3,
-      "ensureLiveStepCard": 3,
       "ensureStageCardMounted": 1,
       "openSpawnModal": 1,
       "refreshOnboarding": 1,
       "renderCommandPaletteList": 1,
+      "renderHarnessApprovalCardHtml": 3,
+      "renderHarnessGrants": 4,
       "renderHarnessSidebar": 1,
       "renderHarnessTimeline": 1,
       "renderMarkdown": 1,
       "renderMcpUI": 7,
       "renderOpenContextDocs": 3,
       "renderProvidersModal": 3,
-      "renderStoredHarnessEventHtml": 3,
       "renderTelemetry": 1,
       "syncUnifiedSelectors": 1
     }

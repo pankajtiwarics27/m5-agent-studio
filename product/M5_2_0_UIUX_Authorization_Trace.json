@@ -9,54 +9,54 @@
   "statement": "For state-changing route candidates resolved by the browser map: the shared gates every request passes, handler refusals, referenced authority and durable-state subsystems, and possible effects. The route map is a lexical scan, not proof of exhaustive browser coverage; a reference is evidence of a consultation, not proof of enforcement.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
   "app_sha256": "e3dd15bef236555d4cb3fca12eac003a55e099b48bbefa20e313489af652f129",
-  "route_map_sha256": "a6568ab915ac99419d435232d336b76acba10b4b4c2881804f87492df737def4",
+  "route_map_sha256": "9376278dc3ae7ccbc3a88575c927581ca1a8136ddf394e557588c60749849c62",
   "totals": {
     "routes_in_app": 115,
     "state_changing_routes_in_app": 77,
-    "traced_routes": 37,
+    "traced_routes": 38,
     "route_map_unresolved_call_sites": 0,
     "route_map_unresolved_caller_edges": 0,
     "route_map_unresolved_method_edges": 0,
     "traced_by_method": {
       "DELETE": 5,
       "PATCH": 3,
-      "POST": 29
+      "POST": 30
     },
-    "routes_with_authority_subsystem": 12,
-    "routes_with_authority_directly": 7,
-    "routes_with_state_subsystem": 30,
+    "routes_with_authority_subsystem": 13,
+    "routes_with_authority_directly": 8,
+    "routes_with_state_subsystem": 31,
     "routes_with_state_directly": 12,
     "routes_with_durable_writes": 3,
     "routes_that_can_leave_the_machine": 22,
     "distinct_handler_refusals": 9,
     "refusals_by_status": {
-      "400": 62,
-      "401": 37,
-      "403": 42,
-      "404": 9,
+      "400": 66,
+      "401": 38,
+      "403": 43,
+      "404": 11,
       "409": 10,
-      "413": 37,
+      "413": 38,
       "429": 6,
       "500": 1,
       "502": 1,
-      "503": 4,
+      "503": 5,
       "507": 2
     },
     "shared_refusals_by_status": {
-      "400": 37,
-      "401": 37,
-      "403": 37,
-      "413": 37,
+      "400": 38,
+      "401": 38,
+      "403": 38,
+      "413": 38,
       "429": 6
     },
     "handler_refusals_by_status": {
-      "400": 25,
+      "400": 28,
       "403": 5,
-      "404": 9,
+      "404": 11,
       "409": 10,
       "500": 1,
       "502": 1,
-      "503": 4,
+      "503": 5,
       "507": 2,
       "dynamic": 1
     }
@@ -1626,6 +1626,90 @@
       "helpers_scanned": [
         "get_harness_session_db",
         "compact_harness_session_messages"
+      ],
+      "durable_writes": 0,
+      "effects": {
+        "subprocess": false,
+        "outbound_http": false,
+        "os_keyring": false,
+        "via_helpers": false,
+        "streams": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/grants/revoke",
+      "handler": "api_revoke_harness_session_grant",
+      "handler_line": 13891,
+      "response": "json",
+      "ui_callers": [
+        "revokeHarnessGrant"
+      ],
+      "shared_gates": [
+        {
+          "gate": "host_allowlist",
+          "status": 400,
+          "when": "always, when a Host header is present"
+        },
+        {
+          "gate": "origin_check",
+          "status": 403,
+          "when": "always, for a state-changing method"
+        },
+        {
+          "gate": "bearer_token",
+          "status": 401,
+          "when": "always, unless the token is unconfigured (503)"
+        },
+        {
+          "gate": "body_size_limit",
+          "status": 413,
+          "when": "a declared Content-Length exceeds the limit"
+        }
+      ],
+      "handler_refusals": [
+        {
+          "status": 404,
+          "detail": "f\"Harness session {session_id!r} not found.\""
+        },
+        {
+          "status": 400,
+          "detail": "\"Request body must be a JSON object.\""
+        },
+        {
+          "status": 404,
+          "detail": "f\"Grant {grant_id_in!r} not found.\""
+        },
+        {
+          "status": 400,
+          "detail": "\"`capabilities`, `resource_scopes`, and `tool_names` must be lists.\","
+        },
+        {
+          "status": 400,
+          "detail": "str(exc)"
+        },
+        {
+          "status": 503,
+          "detail": "str(exc)"
+        }
+      ],
+      "authority": [
+        "process_supervision",
+        "scoped_grants"
+      ],
+      "state": [],
+      "support": [],
+      "authority_via_helpers": [],
+      "state_via_helpers": [
+        "runtime_persistence",
+        "task_events",
+        "workspace_snapshots"
+      ],
+      "helpers_scanned": [
+        "get_harness_session_db",
+        "get_scoped_grant_store",
+        "get_process_supervisor",
+        "_safe_append_harness_event"
       ],
       "durable_writes": 0,
       "effects": {

@@ -17,20 +17,20 @@
       "callers": [
         {
           "kind": "markup",
-          "line": 1064
+          "line": 1092
         },
         {
           "kind": "script",
-          "line": 2519
+          "line": 2576
         }
       ],
       "triggers": [
         {
           "kind": "markup",
-          "line": 1064
+          "line": 1092
         }
       ],
-      "line": 1081
+      "line": 1109
     },
     {
       "id": "contextModal",
@@ -43,23 +43,23 @@
       "callers": [
         {
           "kind": "script",
-          "line": 2246
+          "line": 2303
         },
         {
           "kind": "script",
-          "line": 2247
+          "line": 2304
         },
         {
           "kind": "script",
-          "line": 2248
+          "line": 2305
         },
         {
           "kind": "script",
-          "line": 4066
+          "line": 4123
         }
       ],
       "triggers": [],
-      "line": 1093
+      "line": 1121
     },
     {
       "id": "mcpModal",
@@ -72,15 +72,15 @@
       "callers": [
         {
           "kind": "script",
-          "line": 2249
+          "line": 2306
         },
         {
           "kind": "script",
-          "line": 4064
+          "line": 4121
         }
       ],
       "triggers": [],
-      "line": 1197
+      "line": 1225
     },
     {
       "id": "externalHarnessModal",
@@ -93,15 +93,15 @@
       "callers": [
         {
           "kind": "script",
-          "line": 2250
+          "line": 2307
         },
         {
           "kind": "script",
-          "line": 4067
+          "line": 4124
         }
       ],
       "triggers": [],
-      "line": 1310
+      "line": 1338
     },
     {
       "id": "harnessDiffModal",
@@ -114,24 +114,50 @@
       "callers": [
         {
           "kind": "markup",
-          "line": 1358
+          "line": 1386
         },
         {
           "kind": "script",
-          "line": 2254
+          "line": 2311
         },
         {
           "kind": "script",
-          "line": 4074
+          "line": 4131
         }
       ],
       "triggers": [
         {
           "kind": "markup",
-          "line": 1358
+          "line": 1386
         }
       ],
-      "line": 1349
+      "line": 1377
+    },
+    {
+      "id": "harnessGrantsModal",
+      "role": "dialog",
+      "label": "Harness permissions for this session",
+      "backdrop_close": "closeHarnessGrants",
+      "open_function": "openHarnessGrants",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "markup",
+          "line": 1884
+        },
+        {
+          "kind": "script",
+          "line": 4132
+        }
+      ],
+      "triggers": [
+        {
+          "kind": "markup",
+          "line": 1884
+        }
+      ],
+      "line": 1398
     },
     {
       "id": "providersModal",
@@ -144,36 +170,36 @@
       "callers": [
         {
           "kind": "markup",
-          "line": 1642
+          "line": 1697
         },
         {
           "kind": "script",
-          "line": 2251
+          "line": 2308
         },
         {
           "kind": "script",
-          "line": 2878
+          "line": 2935
         },
         {
           "kind": "script",
-          "line": 2886
+          "line": 2943
         },
         {
           "kind": "script",
-          "line": 3486
+          "line": 3543
         },
         {
           "kind": "script",
-          "line": 4063
+          "line": 4120
         }
       ],
       "triggers": [
         {
           "kind": "markup",
-          "line": 1642
+          "line": 1697
         }
       ],
-      "line": 1370
+      "line": 1425
     },
     {
       "id": "skillsModal",
@@ -186,15 +212,15 @@
       "callers": [
         {
           "kind": "script",
-          "line": 2252
+          "line": 2309
         },
         {
           "kind": "script",
-          "line": 4065
+          "line": 4122
         }
       ],
       "triggers": [],
-      "line": 1442
+      "line": 1497
     },
     {
       "id": "sdlcModal",
@@ -207,19 +233,19 @@
       "callers": [
         {
           "kind": "script",
-          "line": 2239
+          "line": 2296
         },
         {
           "kind": "script",
-          "line": 4076
+          "line": 4134
         },
         {
           "kind": "script",
-          "line": 4339
+          "line": 4397
         }
       ],
       "triggers": [],
-      "line": 1472
+      "line": 1527
     },
     {
       "id": "spawnModal",
@@ -232,28 +258,28 @@
       "callers": [
         {
           "kind": "markup",
-          "line": 1882
+          "line": 1939
         },
         {
           "kind": "script",
-          "line": 3935
+          "line": 3992
         },
         {
           "kind": "script",
-          "line": 3939
+          "line": 3996
         },
         {
           "kind": "script",
-          "line": 3951
+          "line": 4008
         }
       ],
       "triggers": [
         {
           "kind": "markup",
-          "line": 1882
+          "line": 1939
         }
       ],
-      "line": 1567
+      "line": 1622
     }
   ],
   "shortcuts": {
@@ -356,8 +382,8 @@
     "role": "complementary"
   },
   "totals": {
-    "dialogs": 9,
-    "dialogs_via_controller": 9,
+    "dialogs": 10,
+    "dialogs_via_controller": 10,
     "registry_entries": 4,
     "rail_shortcuts": 6,
     "advertised_controls": 1,

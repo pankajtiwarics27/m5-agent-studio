@@ -1,0 +1,301 @@
+{
+  "schema_version": "1.0.0",
+  "story": "UIUX-P3-03",
+  "statement": "An approval in the Harness is a permission, and the pane now says so before the click: one card, drawn by every path that can raise one, naming the policy that is asking, the tool and its exact arguments, the capability and resource scope the decision records, the one-use limit and the minute it expires; the decision is sent with the session that owns the approval, not the one on screen; refusing states what it does instead; an offer that is never decided expires in words and says to re-run the turn; and the session's permissions are inspectable and revocable from a surface that lists what is held, the revocation rules that refuse matching actions, the history, and the approvals still waiting - with a two-step confirmation that says a revocation rule outlives the grant it came from.",
+  "source": {
+    "frontend": "static/index.html",
+    "server": "app.py"
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/harness/sessions/{session_id}/grants",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/grants",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/grants/revoke",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/approve",
+      "mounted": true
+    }
+  ],
+  "frontend": {
+    "functions": {
+      "harnessApprovalPermission": true,
+      "harnessPolicyInForce": true,
+      "harnessPolicyLabel": true,
+      "harnessClockFrom": true,
+      "harnessApprovalGrantExpiry": true,
+      "harnessApprovalRemainingLabel": true,
+      "tickHarnessApprovalCountdowns": true,
+      "startHarnessApprovalCountdown": true,
+      "renderHarnessApprovalCardHtml": true,
+      "renderHarnessGrants": true,
+      "refreshHarnessGrants": true,
+      "openHarnessGrants": true,
+      "closeHarnessGrants": true,
+      "requestRevokeHarnessGrant": true,
+      "cancelRevokeHarnessGrant": true,
+      "revokeHarnessGrant": true,
+      "focusHarnessApprovalCard": true,
+      "updateHarnessPermissionBadge": true,
+      "resolveHarnessApproval": true
+    },
+    "card": {
+      "one_builder": true,
+      "no_second_headline_existed": true,
+      "one_headline": true,
+      "no_hardcoded_policy_badge": true,
+      "every_path_draws_with_it": true,
+      "drawing_paths": {
+        "renderStoredHarnessEventHtml": true,
+        "appendWorkflowApprovalCard": true,
+        "updateWorkflowApprovalCard": true,
+        "runHarnessTurn": true
+      },
+      "one_decision_control": true,
+      "a_decided_card_is_redrawn_from_the_request": true,
+      "the_request_is_filed_before_it_is_redrawn": true,
+      "arguments_survive_a_decision": true
+    },
+    "permission": {
+      "names_the_policy": true,
+      "policy_is_the_selects_own_label": true,
+      "policy_comes_from_the_session_first": true,
+      "names_the_tool": true,
+      "shows_the_arguments": true,
+      "states_the_capability": true,
+      "states_the_resource": true,
+      "states_the_limit": true,
+      "states_the_expiry_clock": true,
+      "will_not_invent_a_scope": true,
+      "the_mapping_is_read_from_a_table": true,
+      "mcp_tools_resolve_first": true,
+      "ttl_seconds": 600,
+      "capability_map": {
+        "run_bash": [
+          "code_execution",
+          "workspace_read",
+          "workspace_write"
+        ],
+        "ctx_execute_python": [
+          "code_execution",
+          "workspace_read",
+          "workspace_write"
+        ],
+        "skill_execute_script": [
+          "code_execution",
+          "workspace_read",
+          "workspace_write"
+        ],
+        "ctx_run_block": [
+          "code_execution",
+          "workspace_read",
+          "workspace_write"
+        ],
+        "write_file": [
+          "workspace_write",
+          "workspace_read"
+        ],
+        "edit_file": [
+          "workspace_write",
+          "workspace_read"
+        ],
+        "rollback_edits": [
+          "workspace_write",
+          "workspace_read"
+        ],
+        "read_file": [
+          "workspace_read"
+        ],
+        "list_files": [
+          "workspace_read"
+        ],
+        "grep_search": [
+          "workspace_read"
+        ],
+        "codegraph_context": [
+          "workspace_read"
+        ],
+        "ctx_search": [
+          "workspace_read"
+        ],
+        "oc_save_doc": [
+          "context_write"
+        ],
+        "mcp_bridge__oc_save_doc": [
+          "context_write"
+        ],
+        "delegate_subagent": [
+          "subagent_delegation"
+        ],
+        "mcp_bridge__start_council": [
+          "council_mutation"
+        ],
+        "mcp_bridge__send_response": [
+          "council_mutation"
+        ],
+        "mcp_bridge__close_council": [
+          "council_mutation"
+        ]
+      },
+      "fallback": "\"code_execution\", \"workspace_read\", \"workspace_write\", \"external_mcp\""
+    },
+    "session": {
+      "accepts_a_session": true,
+      "falls_back_to_the_active_session": true,
+      "sends_it": true,
+      "the_card_carries_one": true,
+      "workflow_cards_use_their_own": true,
+      "a_decided_card_keeps_its_session": true
+    },
+    "expiry": {
+      "counts_from_the_request": true,
+      "states_the_remaining_time": true,
+      "countdown_ticks": true,
+      "countdown_updates_the_lines": true,
+      "countdown_stops": true,
+      "an_expired_offer_says_so": true,
+      "the_expired_card_says_what_to_do": true,
+      "an_undecided_card_is_not_an_approval": true,
+      "the_state_badge_states_expiry": true
+    },
+    "refusal": {
+      "says_what_rejecting_does": true,
+      "says_it_is_not_a_standing_allow": true,
+      "says_the_turn_waits": true,
+      "a_decided_card_says_the_permission_was_used": true
+    },
+    "surface": {
+      "dialog_exists": true,
+      "is_a_dialog": true,
+      "is_named": true,
+      "closes_on_the_backdrop": true,
+      "opens_through_the_controller": true,
+      "closes_through_the_controller": true,
+      "reachable_from_the_badge": true,
+      "reachable_from_the_session_actions": true,
+      "refuses_without_a_session": true,
+      "lists": {
+        "harnessGrantsSummary": true,
+        "harnessGrantsActive": true,
+        "harnessGrantsRules": true,
+        "harnessGrantsHistory": true,
+        "harnessGrantsApprovals": true
+      },
+      "reads_the_grants_route": true,
+      "states_the_policy_and_revision": true,
+      "states_what_is_held": true,
+      "states_the_rules": true,
+      "states_the_history": true,
+      "states_the_approvals": true,
+      "says_when_it_could_not_read": true,
+      "keeps_the_session_it_asked_about": true,
+      "refreshed_on_selection": true,
+      "refreshed_after_a_decision": true,
+      "refreshed_on_a_new_draft": true,
+      "badge_states_a_count": true,
+      "badge_is_hidden_without_a_session": true,
+      "badge_says_none_in_words": true,
+      "badge_names_what_it_opens": true,
+      "badge_does_not_reach_the_network": true,
+      "finding_an_approval_card": true,
+      "the_permission_is_a_dl": true
+    },
+    "revocation": {
+      "is_two_steps": true,
+      "can_be_kept": true,
+      "confirms_in_place": true,
+      "names_the_denial_rule": true,
+      "names_unrecoverability": true,
+      "names_contained_processes": true,
+      "uses_the_existing_route": true,
+      "is_a_post": true,
+      "sends_the_grant_and_a_reason": true,
+      "blocks_the_scope": true,
+      "reports_what_was_stopped": true,
+      "a_failed_revoke_is_said": true,
+      "keeps_the_session_it_asked_about": true,
+      "refreshes_both_views": true,
+      "disables_the_button_while_it_runs": true
+    },
+    "styles": {
+      "card": true,
+      "card_decided": true,
+      "card_head": true,
+      "card_consequence": true,
+      "card_actions": true,
+      "card_facts": true,
+      "countdown": true,
+      "badge": true,
+      "badge_empty": true,
+      "badge_held": true,
+      "summary": true,
+      "card_row": true,
+      "card_revoked": true,
+      "card_expired": true,
+      "facts": true,
+      "confirm": true,
+      "section": true,
+      "wraps_long_paths": true
+    }
+  },
+  "server": {
+    "approve_contract": {
+      "requires_a_session": true,
+      "anything_else_is_a_refusal": true,
+      "replays_fail_closed": true,
+      "durable_decisions_fail_closed": true,
+      "unknown_is_404": true,
+      "ttl_is_bounded": true,
+      "returns_the_session": true
+    },
+    "grant_persistence": {
+      "records_a_grant_under_the_approval": true,
+      "one_use": true,
+      "names_the_operator": true,
+      "capabilities_from_the_tool": true,
+      "scopes_from_the_tool": true,
+      "exact_arguments": true,
+      "a_refusal_is_recorded_too": true,
+      "is_idempotent": true,
+      "defaults_to_the_store_ttl": true
+    },
+    "enforcement": {
+      "denials_are_checked": true,
+      "a_denial_names_the_rule": true,
+      "grants_are_issued_and_revoked": true
+    }
+  },
+  "totals": {
+    "checks": 124,
+    "functions": 19,
+    "card_paths": 4,
+    "surface_lists": 5,
+    "capability_map_tools": 18,
+    "routes": 4,
+    "routes_called": 50,
+    "routes_unmounted": 0,
+    "findings": 0
+  },
+  "findings": [],
+  "limits": [
+    "the card states the capability and the resource argument it can see; the server canonicalises the scope (`path:<worktree>:<rel>`) when it issues the grant, so the surface shows the canonical string and the card shows the argument while saying where it will be resolved - the pane never invents a scope it did not receive",
+    "the capability table is a copy of `scoped_grants.resolve_tool_capabilities()` and this inventory imports the real function and fails on any disagreement, so the copy is checked rather than trusted",
+    "the ten-minute figure is `SG_DEFAULT_GRANT_TTL_SECONDS`, the default the approve route uses when the request carries no `ttl_seconds`; the pane does not ask for a different one, because a per-tool TTL chosen in the browser would be a second policy",
+    "the countdown is drawn from the browser's clock against the request's timestamp, so a skewed client shows a skewed countdown; the expiry that matters is the store's `expires_at`, which the surface prints from the record",
+    "revocation is offered per grant. Revoking by capability or scope without a grant is a route the pane already had and this story does not expose, because a scope-wide rule created by accident would refuse actions no card on screen named",
+    "a revocation rule cannot be undone from the pane: the store keeps rules for the life of the session, and re-issuing the same capability does not clear the rule - the confirmation says so rather than offering an undo the server does not have",
+    "the surface lists revocations and expired approvals from the session's own grants store and its approval state; it is not a global audit view, and does not read another session's permissions",
+    "the walk's approvals are seeded by `scripts/harness_permissions_seed.py`, not produced by a turn: the demo has no model runtime, and no route mints a pending approval, so the fixture calls the app's own `_create_pending_tool_approval()` and lets one slot lapse the way the runtime does. The approvals, the grants and the events are the server's own records; only the arrival is staged"
+  ]
+}

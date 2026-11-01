@@ -8,8 +8,8 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 182 markup controls (101 chrome, 81 panes) · 31 rendered by script.
-* 115 routes exist, 57 with a resolved or possible caller, 58 with none observed and 0 unknown due to unresolved edges; 37 state-changing candidates traced.
+* 6 panes · 21 preserved capabilities · 185 markup controls (103 chrome, 82 panes) · 29 rendered by script.
+* 115 routes exist, 59 with a resolved or possible caller, 56 with none observed and 0 unknown due to unresolved edges; 38 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
 
@@ -28,8 +28,8 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 182 markup controls (101 chrome, 81 panes) plus 31 rendered by script |
-| 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 115 routes exist; 57 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 37 state-changing candidates; the lexical scan is not exhaustive |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 185 markup controls (103 chrome, 82 panes) plus 29 rendered by script |
+| 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 115 routes exist; 59 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 38 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
 
@@ -101,7 +101,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | compaction | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | GSD and SDLC | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 
-**Controls — 21 in the markup:**
+**Controls — 22 in the markup:**
 
 | Tag | Id | Label | Handler |
 |---|---|---|---|
@@ -117,8 +117,9 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | select | harnessEfficiencyMode | Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose | — |
 | select | harnessReasoning | Off (Fastest) Low Medium xHigh | — |
 | select | harnessMaxSteps | 6 steps 10 steps 16 steps 24 steps | — |
-| select | harnessSessionActionSelect | Session Actions… Inspect Git Status & Diff Compact Session Context (≤2 KB) Open Agile SDLC Product Board | — |
+| select | harnessSessionActionSelect | Session Actions… Inspect Git Status & Diff Permissions & Revocations Compact Session Context (≤2 KB) Open Agile SDLC Product Board | — |
 | button | harnessAbortBtn | Abort | abortHarnessRun() |
+| button | harnessPermissionBadge | No permissions | openHarnessGrants() |
 | button | harnessTimelineToggle | Session log | toggleHarnessTimeline() |
 | button | harnessTimelineJump | Jump to latest ↓ | jumpToLatestHarnessEvent() |
 | button | harnessTimelineReplay | Replay log | replayHarnessLog() |
@@ -136,10 +137,10 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | GET | `/api/harness/sessions/{session_id}` | certain | no | `startFreshHarnessDraft` → `renderHarnessSidebar` → `selectHarnessSession` | — |
 | GET | `/api/harness/sessions/{session_id}/events` | certain | no | `harnessResyncFromSnapshot` → `loadHarnessEvents` → `harnessFetchEventPage` | — |
 | GET | `/api/harness/sessions/{session_id}/events/stream` | certain | no | `harnessResyncFromSnapshot` → `scheduleHarnessEventStreamRetry` → `openHarnessEventStream` | — |
+| GET | `/api/harness/sessions/{session_id}/grants` | certain | no | `openHarnessGrants` → `refreshHarnessGrants` | — |
 | GET | `/api/harness/sessions/{session_id}/sdlc` | certain | no | `executeHarnessSelectedWorkflow` → `openSdlcModal` → `refreshSdlcBoard` | — |
 | GET | `/api/harness/sessions/{session_id}/state` | certain | no | `harnessResyncFromSnapshot` | — |
 | POST | `/api/harness/abort/{session_id}` | certain | yes | `abortHarnessRun` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
-| POST | `/api/harness/approve` | certain | yes | `executeHarnessSelectedWorkflow` → `runHarnessTurn` → `resolveHarnessApproval` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | POST | `/api/harness/gsd-wave` | certain | yes | `executeHarnessSelectedWorkflow` → `runGsdWaveTurn` → `consumeSSE` | `host_allowlist`, `origin_check`, `bearer_token`, `rate_limit`, `body_size_limit` |
 | POST | `/api/harness/run` | certain | yes | `executeHarnessSelectedWorkflow` → `runHarnessTurn` → `consumeSSE` | `host_allowlist`, `origin_check`, `bearer_token`, `rate_limit`, `body_size_limit` |
 | POST | `/api/workspace/directory` | certain | yes | `saveWorkspaceDirectory` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
@@ -290,7 +291,7 @@ A single streaming conversation with the selected model.
 
 ## Shared chrome
 
-101 controls: button 54, input 29, select 12, summary 1, textarea 5.
+103 controls: button 56, input 29, select 12, summary 1, textarea 5.
 
 Tabs, command palette, modals and the shared toolbar. A pane story may restyle chrome, but every control here stays reachable: the inventory test fails if one disappears.
 
@@ -353,11 +354,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `038f27bdcb52dc65b5d414096f17fe1d9e93068f59ca7dcab5d4cdf71803360c` | `not recorded` |
-| `source_manifest_sha256` | `d6ca5f449f1ad6c30b0c83d0fe5579353d5de7473b4d3f718f2f21251eb1937c` | `not recorded` |
-| `control_inventory_sha256` | `0c4e10751da0a773b646a7d76a4c756b827fc2b6bd7d6a58eeeb96644b4a2572` | `not recorded` |
-| `route_map_sha256` | `a6568ab915ac99419d435232d336b76acba10b4b4c2881804f87492df737def4` | `not recorded` |
-| `authorization_trace_sha256` | `7f219eff0f09367c1f8e78c0311c599d81edd1a220cf85ae3855e736bc7979f4` | `not recorded` |
-| `frontend_sha256` | `fee7f61a819a0f562285334465217561191e1c5b6dac15fb77fea907e1bedf3c` | `not recorded` |
+| `source_manifest_sha256` | `ef82f2986a62941117d7020d16e587c65c5871f0c252523d8f7edb3bf5e2e8bd` | `not recorded` |
+| `control_inventory_sha256` | `995bdeafa2b458984413088b700f5b9369c849aa4765e69bd7d88b2aa3d0042e` | `not recorded` |
+| `route_map_sha256` | `9376278dc3ae7ccbc3a88575c927581ca1a8136ddf394e557588c60749849c62` | `not recorded` |
+| `authorization_trace_sha256` | `8e2041e1d520f62ab77c45c6a1ba475448d1db9cf84212ee4691f9cc7598cdd6` | `not recorded` |
+| `frontend_sha256` | `6e50c2aaa80042843991ccf45f6ea437076d0880d5fd7b0c2969a114f96b969a` | `not recorded` |
 | `screenshot_manifest_sha256` | `69539975c2f4884d7cfcff939fd2b2bae56058f6a499d5cd5f5340448755ff92` | `not recorded` |
 | `screenshot_index_sha256` | `de925b006a83496d54d635904ed4bca62c9ed95658c9baf17b05d94e57eb8ef0` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "fee7f61a819a0f562285334465217561191e1c5b6dac15fb77fea907e1bedf3c",
-      "bytes": 426700,
-      "lines": 7300
+      "sha256": "6e50c2aaa80042843991ccf45f6ea437076d0880d5fd7b0c2969a114f96b969a",
+      "bytes": 453099,
+      "lines": 7743
     },
     {
       "path": "app.py",
@@ -348,8 +348,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "fee7f61a819a0f562285334465217561191e1c5b6dac15fb77fea907e1bedf3c",
-    "lines": 7300,
+    "sha256": "6e50c2aaa80042843991ccf45f6ea437076d0880d5fd7b0c2969a114f96b969a",
+    "lines": 7743,
     "tab_count": 6,
     "tabs": [
       {
@@ -395,8 +395,8 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 54,
-    "api_literal_count": 48,
+    "fetch_call_count": 56,
+    "api_literal_count": 50,
     "api_literals": [
       "/api/cache/clear-ssd",
       "/api/chat/stream",
@@ -423,6 +423,8 @@
       "/api/harness/sessions/{param}/compact",
       "/api/harness/sessions/{param}/diff",
       "/api/harness/sessions/{param}/events/stream?cursor={param}",
+      "/api/harness/sessions/{param}/grants",
+      "/api/harness/sessions/{param}/grants/revoke",
       "/api/harness/sessions/{param}/sdlc",
       "/api/harness/sessions/{param}/state",
       "/api/mcp/import-json",
