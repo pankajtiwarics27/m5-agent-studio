@@ -428,6 +428,12 @@
   .chat-transcript-bar { display: flex; align-items: center; gap: 10px; padding: 6px 20px; border-bottom: 1px solid var(--border); background: var(--bg-elev); }
   .chat-turn-summary { font-family: var(--mono); font-size: 10.8px; color: var(--text-faint); }
   .chat-jump { margin-left: auto; }
+  /* The handoff's own sentence: what is about to be carried, or why nothing is. */
+  .chat-handoff-hint { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.2px; color: var(--text-faint); }
+  .chat-handoff-hint[data-reason="ready"] { color: var(--text-dim); }
+  .chat-handoff-hint[data-reason="handed"] { color: var(--emerald); }
+  .chat-handoff-hint[data-reason="failed"] { color: var(--amber); }
+  .chat-handoff-btn { white-space: nowrap; }
   .chat-keyboard-hint { margin-top: 7px; font-size: 11px; color: var(--text-faint); }
   .chat-composer-hint { margin-top: 4px; font-size: 11.6px; color: var(--text-dim); display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
   .chat-composer-hint[data-reason="no-model"], .chat-composer-hint[data-reason="runtime-offline"] { color: var(--amber); }
@@ -1992,6 +1998,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       <div id="chatState"></div>
       <div class="chat-transcript-bar">
         <span id="chatTurnSummary" class="chat-turn-summary">No messages yet</span>
+        <span id="chatHandoffHint" class="chat-handoff-hint" data-reason="nothing" role="status" aria-live="polite"></span>
+        <button class="btn btn-xs chat-handoff-btn" id="chatHandoffBtn" type="button" disabled
+                onclick="handOffChatToHarness()" aria-describedby="chatHandoffHint"
+                title="Put this conversation into the Harness composer; nothing runs until you press Run there">Open in Harness</button>
         <button class="btn btn-xs chat-jump" id="chatJumpLatest" type="button" hidden onclick="jumpToLatestChatTurn()"
                 title="Scroll the transcript to the newest turn">Jump to latest ↓</button>
       </div>
@@ -4360,6 +4370,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   let chatRequestGeneration = 0;
   let chatStopRequested = false;
   let chatHintSignature = "";
+  let chatHandoffSignature = "";
+  // What the last handoff carried: if the transcript still looks the same, the brief in
+  // the Harness is that conversation, and the pane says so instead of offering again.
+  let chatHandoffMark = null;
 
   function chatModelId() {
     const el = document.getElementById("chatModel");
@@ -4447,6 +4461,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (send) send.disabled = Boolean(chatSendReason());
     if (stop) stop.style.display = chatBusy ? "inline-flex" : "none";
     if (clear) clear.disabled = !chatHistory.length;
+    updateChatHandoff();
     return state;
   }
 
@@ -4568,6 +4583,167 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return `streaming… · ${elapsed.toFixed(1)}s · ${ttft === null ? "waiting for the first token" : `first token ${ttft.toFixed(2)}s`} · ${chars} chars`;
   }
 
+  // ── The handoff ───────────────────────────────────────────────────────────
+  // Chat is where the thinking happens; the Harness is where work is admitted. A run
+  // started from here would be a run with a workspace, an execution policy and an
+  // approval surface the reader never saw, so the handoff carries a brief and stops:
+  // it never posts, never starts anything, and never clears the transcript.
+
+  function chatCount(count, singular, plural) {
+    return `${count} ${count === 1 ? singular : (plural || `${singular}s`)}`;
+  }
+
+  function chatHandoffClip(text, limit) {
+    const flat = String(text == null ? "" : text).replace(/\s+/g, " ").trim();
+    return flat.length > limit ? `${flat.slice(0, limit - 1)}…` : flat;
+  }
+
+  // Everything the brief is built from comes off the turns themselves - the recorded
+  // context from P2-05, the tool calls with their statuses - so the Harness is handed
+  // what happened, not a summary this pane made up.
+  function chatHandoffStats() {
+    const replies = chatHistory.filter(m => m.role === "assistant" && (m.content || "").trim());
+    const calls = replies.reduce((all, m) => all.concat(m.tools || []), []);
+    const withContext = replies.filter(m => m.context);
+    const lastUser = chatHistory.filter(m => m.role === "user" && (m.content || "").trim()).pop();
+    return {
+      messages: chatHistory.length,
+      replies: replies.length,
+      calls: calls.length,
+      failed: calls.filter(t => !t.ok).length,
+      callsList: calls,
+      context: withContext.length ? withContext[withContext.length - 1].context : null,
+      task: lastUser ? String(lastUser.content).trim() : "",
+    };
+  }
+
+  function chatHandoffBrief() {
+    const stats = chatHandoffStats();
+    if (!stats.task) return null;
+    const lines = [
+      stats.task,
+      "",
+      "- carried from Chat: nothing has run, and no model has been asked to run it -",
+      `Conversation so far: ${chatCount(stats.messages, "message")} (${chatCount(stats.replies, "reply", "replies")}), ${chatCount(stats.calls, "tool call")}${stats.failed ? `, ${stats.failed} failed` : ""}.`,
+    ];
+    if (stats.context) lines.push(`The last reply was sent with: ${chatContextLine(stats.context)}.`);
+    const shown = stats.callsList.slice(-8);
+    if (shown.length) {
+      lines.push("Tool calls in this conversation:");
+      shown.forEach((tool) => {
+        const step = Math.max(1, Number(tool.step) || 1);
+        lines.push(`- ${tool.ok ? "OK" : "FAILED"} ${tool.tool} - step ${step}, ${Number(tool.elapsed_ms) || 0} ms: ${chatHandoffClip(tool.preview, 200) || "(no output)"}`);
+      });
+      if (stats.callsList.length > shown.length) {
+        lines.push(`(${stats.callsList.length - shown.length} earlier call(s) are in the Chat transcript.)`);
+      }
+      if (shown.some(tool => String(tool.preview || "").length > 200)) {
+        lines.push("Outputs above are clipped to 200 characters; Chat holds what the server sent, up to its 500-character cap.");
+      }
+    }
+    lines.push("The full replies, their reasoning and their outputs are in the Chat pane.");
+    return lines.join("\n");
+  }
+
+  // One predicate, like chatSendReason(): the button's disabled state and the sentence
+  // beside it are the same answer.
+  function chatHandoffReason(stats) {
+    if (!stats || !stats.task) {
+      return { reason: "nothing", text: "Nothing to hand over yet: send a message and this carries it to the Harness composer." };
+    }
+    if (chatBusy) {
+      return { reason: "streaming", text: "A reply is still arriving; the handoff waits so the brief is not half a conversation." };
+    }
+    if (chatHandoffMark && chatHandoffMark.messages === stats.messages && chatHandoffMark.calls === stats.calls) {
+      return { reason: "handed", text: `Already in the Harness composer (${chatCount(stats.messages, "message")}, ${chatCount(stats.calls, "tool call")}); nothing has run.` };
+    }
+    return {
+      reason: "ready",
+      text: `Carries ${chatCount(stats.messages, "message")} (${chatCount(stats.replies, "reply", "replies")}) and ${chatCount(stats.calls, "tool call")}${stats.failed ? ` (${stats.failed} failed)` : ""} to the Harness; nothing runs there.`,
+    };
+  }
+
+  function updateChatHandoff() {
+    const button = document.getElementById("chatHandoffBtn");
+    const hint = document.getElementById("chatHandoffHint");
+    if (!button || !hint) return null;
+    const stats = chatHandoffStats();
+    const state = chatHandoffReason(stats);
+    button.disabled = state.reason !== "ready";
+    // Same discipline as the composer's sentence: a live region rewritten on every
+    // token announces the same words forever, so it is written only when they change.
+    const signature = `${state.reason}|${state.text}`;
+    if (signature !== chatHandoffSignature) {
+      chatHandoffSignature = signature;
+      hint.dataset.reason = state.reason;
+      hint.textContent = state.text;
+      hint.title = state.text;
+    }
+    return { ...state, stats };
+  }
+
+  function handOffChatToHarness() {
+    const stats = chatHandoffStats();
+    const brief = chatHandoffBrief();
+    if (!brief) {
+      updateChatHandoff();
+      const input = document.getElementById("chatInput");
+      if (input) input.focus();
+      return null;
+    }
+    const composer = document.getElementById("harnessPromptInput");
+    if (!composer) {
+      // The failure this surface exists for: the reader pressed something real and the
+      // pane on the other end is not there. Say so, change nothing, and offer a retry.
+      // The pane no longer knows that a composer holds this conversation, so the mark
+      // goes: a sentence saying "already carried" over an error saying it did not happen
+      // is two claims, one of them false.
+      chatHandoffMark = null;
+      presentInto("chatState", {
+        kind: "error",
+        title: "The handoff did not happen",
+        cause: "the Harness composer was not found on this page",
+        context: `the conversation is untouched - ${chatCount(stats.messages, "message")} and ${chatCount(stats.calls, "tool call")} are still here, and nothing ran`,
+        actions: [
+          { label: "Retry", run: () => handOffChatToHarness(), title: "Try the handoff again" },
+          { label: "Dismiss", run: () => clearPresentation("chatState", { focus: "chatInput" }), title: "Stay in Chat" },
+        ],
+      });
+      updateChatHandoff();
+      return null;
+    }
+    switchTab("harness");
+    composer.value = brief;
+    composer.dispatchEvent(new Event("input"));
+    composer.focus();
+    presentInto("chatState", {
+      kind: "recovery",
+      title: "Handed to the Harness",
+      cause: `you pressed Open in Harness with ${chatCount(stats.messages, "message")} and ${chatCount(stats.calls, "tool call")}`,
+      context: `"${chatHandoffClip(stats.task, 60)}" is in the Harness composer with the model, the directory and every tool call recorded here; nothing has run, and this transcript is kept - Back to Chat returns to it unchanged.`,
+      actions: [
+        {
+          label: "Back to Chat",
+          // Unconditional, not "if the receipt had focus": the promise is that the next
+          // keystroke lands in the composer, and this action is pressed from Chat itself.
+          run: () => {
+            switchTab("chat");
+            clearPresentation("chatState");
+            const input = document.getElementById("chatInput");
+            if (input) input.focus();
+          },
+          title: "Return to the conversation, unchanged",
+        },
+        { label: "Open Harness", run: () => switchTab("harness"), title: "Go back to the composer holding the brief" },
+      ],
+    });
+    // The mark, not a message: the sentence beside the button is derived from it, so it
+    // survives every later render instead of flashing for one poll.
+    chatHandoffMark = { messages: stats.messages, calls: stats.calls };
+    updateChatHandoff();
+    return composer.value;
+  }
+
   function chatTime(timestamp) {
     const value = new Date(timestamp || Date.now());
     if (Number.isNaN(value.getTime())) return { iso: "", label: "" };
@@ -4661,6 +4837,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     // nothing here is recoverable from the server.
     const kept = chatHistory.slice();
     chatHistory = [];
+    // A cleared transcript is not the one the Harness was handed, whatever it says.
+    chatHandoffMark = null;
     renderChatMessages();
     return presentInto("chatState", {
       kind: "recovery",
@@ -4668,7 +4846,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       cause: "you pressed Clear on this pane",
       context: `${kept.length} message(s) were removed from this pane only; they were never sent anywhere else and Undo puts them back.`,
       actions: [
-        { label: "Undo", run: () => { chatHistory = kept.slice(); clearPresentation("chatState", { focus: "chatInput" }); renderChatMessages(); }, title: "Put the conversation back" },
+        { label: "Undo", run: () => { chatHistory = kept.slice(); chatHandoffMark = null; clearPresentation("chatState", { focus: "chatInput" }); renderChatMessages(); }, title: "Put the conversation back" },
         { label: "Dismiss", run: () => clearPresentation("chatState", { focus: "chatInput" }), title: "Keep it cleared and return to the composer" },
       ],
     });

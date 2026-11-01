@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "08f93e899faad25d171ddce3674cd85d101b8203bd6d95c8ee0060783349f0b6",
-      "bytes": 381774,
-      "lines": 6494
+      "sha256": "ff264c2354f6b0c292f9074c4fb7e2c2511f8c65c02580011092a007040157a9",
+      "bytes": 391204,
+      "lines": 6672
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "cf4d4944680e4643d7557161f0885f2b303ce1705b6a2314d1216835ae4cf8b7",
-      "bytes": 3119424,
-      "lines": 69523
+      "sha256": "bdc83b717b4dfd832f275b40fb3c3bc3a67ed583f565f70f541bcc06ce46ae8c",
+      "bytes": 3128854,
+      "lines": 69701
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -159,9 +159,9 @@
     {
       "path": "docs/media/chat/README.md",
       "role": "mainline P2-04 screenshot provenance and visual evidence index",
-      "sha256": "83ab9318dd908a9226f25e36f1082461af79c52a879a95cdb4c2632d042bd61b",
-      "bytes": 3987,
-      "lines": 45
+      "sha256": "018f768d199fca251079a7951a196a9d2b77c0cedc1d4dca3b631f12e300edf6",
+      "bytes": 5476,
+      "lines": 61
     },
     {
       "path": "docs/media/chat/transcript.png",
@@ -241,11 +241,74 @@
       "lines": 72
     },
     {
+      "path": "scripts/chat_handoff_walk.mjs",
+      "role": "mainline P2-06 Chat-to-Harness handoff browser walk",
+      "sha256": "388e60dfc1964846d831f5e19659ad6b56a9c3799220d2c08b2d98946b3cf9c7",
+      "bytes": 25226,
+      "lines": 550
+    },
+    {
+      "path": "scripts/uiux_chat_handoff_inventory.py",
+      "role": "builds and checks the mainline P2-06 handoff inventory",
+      "sha256": "94d5dcaac117e483b5aae008d677a918bcf14140a83d4aff563c8c4dde6c008a",
+      "bytes": 27197,
+      "lines": 614
+    },
+    {
+      "path": "tests/test_chat_handoff.py",
+      "role": "checks P2-06 handoff safety and recovery contracts",
+      "sha256": "c3e34ac0fc13534c0859eb976b8034a89d9460c747e8442c63c51a887049387e",
+      "bytes": 14128,
+      "lines": 394
+    },
+    {
+      "path": "docs/uiux-2-0-chat-handoff.md",
+      "role": "mainline P2-06 story evidence and owner-session tracking",
+      "sha256": "c72e248b8a1086cbbcd75d7a5298225cfe30ac3b148f488f09c7eb7beca034e0",
+      "bytes": 4589,
+      "lines": 70
+    },
+    {
+      "path": "docs/media/chat/back-to-chat.png",
+      "role": "mainline P2-06 return-to-chat capture",
+      "sha256": "7706b524ae9e35d8a97a76186d78052222b5fff786794682d5ee6d8ee333e0d2",
+      "bytes": 149656,
+      "lines": null
+    },
+    {
+      "path": "docs/media/chat/handed-to-harness.png",
+      "role": "mainline P2-06 safe handoff capture",
+      "sha256": "7c35bb53553d2639fb031dad75b90638b0c3f1b25af374d6d27e9c8f8218b78b",
+      "bytes": 157689,
+      "lines": null
+    },
+    {
+      "path": "docs/media/chat/handoff-failed.png",
+      "role": "mainline P2-06 failed-handoff recovery capture",
+      "sha256": "5c9ef8b82a476400b6b6638d2e7b38508c512da85471ac42726b695f70b8c599",
+      "bytes": 148389,
+      "lines": null
+    },
+    {
+      "path": "docs/media/chat/handoff-narrow.png",
+      "role": "mainline P2-06 narrow handoff capture",
+      "sha256": "f6a77fad3b225b854eaa40a5e3ecba1256cd3f7490cd35e3fd499e2fb75e25e9",
+      "bytes": 73594,
+      "lines": null
+    },
+    {
+      "path": "tests/browser/accessibility_walk.mjs",
+      "role": "browser accessibility walk with the current-main Chat handoff checks",
+      "sha256": "f130a6b84efc884609c83321bec5efbb3b5cac6f5d827d6283086c5c7a436d33",
+      "bytes": 13594,
+      "lines": 256
+    },
+    {
       "path": "tests/test_presentations.py",
       "role": "shared Chat, Start and overlay presentation contract tests",
-      "sha256": "b9d5972a9e7564e2d0488995f97f857c7abc45a977a8c3051d9d11f025f3d043",
-      "bytes": 11137,
-      "lines": 296
+      "sha256": "09cf0a2c4b0a464944db0df65c451ba26cb54ab1d44837c23ded65d2b3bf2889",
+      "bytes": 11650,
+      "lines": 302
     },
     {
       "path": "scripts/chat_composer_walk.mjs",
@@ -271,22 +334,22 @@
     {
       "path": "tests/test_uiux_source_manifest.py",
       "role": "checks the completeness and hashes of this source manifest",
-      "sha256": "e76206aca15ee9a0aff624ee45661e7f9d0048b7062ee3646acec539914427b1",
-      "bytes": 9286,
-      "lines": 224
+      "sha256": "de040e7a218ae17ea5582ea025c0b6233255b31940c3030ce2a2c87e6fb96489",
+      "bytes": 9553,
+      "lines": 230
     },
     {
       "path": "docs/uiux-2-0-p2-04-evidence.md",
       "role": "maps P2-04 acceptance criteria to captured and executed evidence",
-      "sha256": "1ec60f0f53cb706d1852922fa7ceaf572872541d107818fe4b3e78e85d140a4e",
-      "bytes": 3953,
+      "sha256": "029e038d4d50209738733d146015417bc6e9f2b877b0503d3c0a2b7c07fcf15a",
+      "bytes": 4084,
       "lines": 34
     }
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "08f93e899faad25d171ddce3674cd85d101b8203bd6d95c8ee0060783349f0b6",
-    "lines": 6494,
+    "sha256": "ff264c2354f6b0c292f9074c4fb7e2c2511f8c65c02580011092a007040157a9",
+    "lines": 6672,
     "tab_count": 6,
     "tabs": [
       {

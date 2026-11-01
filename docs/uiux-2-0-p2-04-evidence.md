@@ -2,7 +2,7 @@
 
 ## Scope and tracking
 
-The P2-04 story and its owner/session tracking remain authoritative in the current-main roadmap. P2-04 is already recorded there as **done** by the session and commit that completed PR #142. This reconciliation does not reopen the story, replace its owner, claim owner approval, or change the preservation sign-off. It carries forward only distinct Chat stream/recovery behavior from PR #141 that remains useful with the merged #142/#143 implementation.
+The P2-04 story and its owner/session tracking remain authoritative in the current-main roadmap. P2-04 is already recorded there as **done** by the session and commit that completed PR #142. This reconciliation does not reopen the story, replace its owner, claim owner approval, or change the preservation sign-off. It carries forward only distinct Chat stream/recovery behavior from PR #141 that remains useful with the merged #142/#143 implementation. Current-main P2-06 work from PR #144 and its owner/session tracking are preserved as well; this change does not modify that story.
 
 The mainline Chat screenshots and story evidence remain in [`docs/uiux-2-0-chat.md`](uiux-2-0-chat.md) and [`docs/media/chat/README.md`](media/chat/README.md). They belong to the already-merged implementation and are not presented here as before/after proof of this supplemental change. No screenshots were captured for this reconciliation; the synthetic browser walk below does not take screenshots. Visual evidence for a later change must use `scripts/capture_screenshots.mjs` and `scripts/validate_screenshots.py`.
 
