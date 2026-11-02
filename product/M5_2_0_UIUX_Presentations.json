@@ -209,7 +209,7 @@
         "Undo",
         "Dismiss"
       ],
-      "line": 8536
+      "line": 8584
     }
   ],
   "containers": [
@@ -274,11 +274,11 @@
       "handler": "installSkill"
     },
     {
-      "line": 10189,
+      "line": 10411,
       "handler": "openHarnessDiffModal"
     },
     {
-      "line": 11832,
+      "line": 12054,
       "handler": "runMcpPlayground"
     }
   ],

@@ -36,7 +36,7 @@ is a bug in the caller, and the `error` kind is already how bugs are shown.
 | `#hallSummonState` | Council | `error` | `Retry the round`, `Check readiness`, `Ask one model` | 5284 |
 | `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 8386 |
 | `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 8412 |
-| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 8536 |
+| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 8584 |
 
 13 call sites across 9 of 9 containers: 3 empty, 7 error, 3 recovery.
 
@@ -63,8 +63,8 @@ should not quietly become a pane rewrite:
 | Handler | Line |
 |---|---|
 | `installSkill()` | 4274 |
-| `openHarnessDiffModal()` | 10189 |
-| `runMcpPlayground()` | 11832 |
+| `openHarnessDiffModal()` | 10411 |
+| `runMcpPlayground()` | 12054 |
 
 ## Checks and limits
 
