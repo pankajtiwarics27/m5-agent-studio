@@ -520,8 +520,8 @@
   ],
   "last_run": {
     "recorded": true,
-    "commit": "2fb5dbc",
-    "seconds": 392.9,
+    "commit": "ad826f3",
+    "seconds": 389.8,
     "totals": {
       "rows": 21,
       "passed_rows": 17,
@@ -541,7 +541,7 @@
           "issue": "#169",
           "reason": "the rejected half of the seed is written - the verifier returns `verification_test_failed_introduced` for `hns-592ef299` - but the trajectory draws no rejected card, so the failure code, the exit code and the failing test are not on screen (27/29)"
         },
-        "seconds": 43.3,
+        "seconds": 43.0,
         "detail": "FAIL  a rejected completion is drawn as a rejection with the code that decided it \u2014 no card"
       },
       {
@@ -552,7 +552,7 @@
           "issue": "#170",
           "reason": "after the log is pruned the strip counts the client's cache (`13 events held`) while the server serves 9, so a resync leaves the pane stating 13 and drawing 9 - the walk's \"restores every event without duplicating one\" cannot hold while the count and the drawing disagree (20/21)"
         },
-        "seconds": 9.9,
+        "seconds": 9.8,
         "detail": "FAIL  a resync restores every event from the server without duplicating one \u2014 count=13 cards=9 seq 1-13 state=\"following the log from seq 13 \u00b7 13 events held \u00b7 "
       }
     ],

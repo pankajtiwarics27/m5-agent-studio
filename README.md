@@ -826,10 +826,13 @@ protocol in [`M5_2_0_AGENT_PROMPT.md`](M5_2_0_AGENT_PROMPT.md).
 
 A second program was authorized on 2026-10-31:
 [`product/M5_2_0_UIUX_Autonomous_Roadmap.json`](product/M5_2_0_UIUX_Autonomous_Roadmap.json)
-— 40 UI/UX stories across 7 phases, **0 done**. It is a plan, not a shipped
-feature set: nothing in it is described in this README as available, its `P0`
-phase exists to replace the plan's web-derived assumptions with a pinned,
-locally verified baseline, and its claim/review/merge rules live in
+— 40 UI/UX stories across 7 phases, **36 done with recorded evidence** (phases
+`P0`–`P5` complete; `UIUX-P6-01`, the automated preservation end-to-end suite,
+closed on 2026-11-03). Its `P0` phase replaced the plan's web-derived
+assumptions with a pinned, locally verified baseline, its `P6` phase is the
+regression gate — `scripts/preservation_suite.py` runs every prover the 21-row
+preservation matrix names and reports a row as `known` rather than as a pass
+when a tracked defect stops it — and its claim/review/merge rules live in
 [`M5_2_0_UIUX_AGENT_PROMPT.md`](M5_2_0_UIUX_AGENT_PROMPT.md) with the phase
 gates and evidence bar in
 [`docs/uiux-2-0-program.md`](docs/uiux-2-0-program.md).

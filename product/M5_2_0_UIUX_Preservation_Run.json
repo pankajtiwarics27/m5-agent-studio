@@ -1,0 +1,335 @@
+{
+  "story": "UIUX-P6-01",
+  "kind": "preservation-suite-run",
+  "commit": "ad826f3eee35edde67e13bfe439fe303b7f8affc",
+  "environment": {
+    "python": "3.11.2",
+    "chrome": "/tmp/m5-runner/m5-browser/tmp/chromium",
+    "tmpdir": "/tmp/m5-runner/m5-browser/tmp"
+  },
+  "only": "",
+  "seconds": 389.8,
+  "totals": {
+    "rows": 21,
+    "passed_rows": 17,
+    "failed_rows": 0,
+    "not_run_rows": 0,
+    "steps": 27,
+    "failed_steps": 0,
+    "known_failures": 2,
+    "stale_known_failures": []
+  },
+  "routes": [
+    {
+      "step": "GET /api/providers",
+      "anonymous": 401,
+      "authenticated": 200,
+      "passed": true,
+      "detail": "without a token 401, with one 200"
+    },
+    {
+      "step": "POST /api/providers",
+      "anonymous": 401,
+      "authenticated": 400,
+      "passed": true,
+      "detail": "without a token 401, with one 400"
+    },
+    {
+      "step": "POST /api/harness/sessions",
+      "anonymous": 401,
+      "authenticated": 200,
+      "passed": true,
+      "detail": "without a token 401, with one 200"
+    },
+    {
+      "step": "POST /api/workspace/directory",
+      "anonymous": 401,
+      "authenticated": 400,
+      "passed": true,
+      "detail": "without a token 401, with one 400"
+    },
+    {
+      "step": "POST /api/harness/approve",
+      "anonymous": 401,
+      "authenticated": 404,
+      "passed": true,
+      "detail": "without a token 401, with one 404"
+    },
+    {
+      "step": "POST /api/harness/sessions/{session_id}/apply",
+      "anonymous": 401,
+      "authenticated": 404,
+      "passed": true,
+      "detail": "without a token 401, with one 404"
+    },
+    {
+      "step": "POST /api/harness/abort/{session_id}",
+      "anonymous": 401,
+      "authenticated": 200,
+      "passed": true,
+      "detail": "without a token 401, with one 200"
+    },
+    {
+      "step": "POST /api/harness/sessions/{session_id}/compact",
+      "anonymous": 401,
+      "authenticated": 404,
+      "passed": true,
+      "detail": "without a token 401, with one 404"
+    },
+    {
+      "step": "POST /api/harness/sdlc/run",
+      "anonymous": 401,
+      "authenticated": 400,
+      "passed": true,
+      "detail": "without a token 401, with one 400"
+    }
+  ],
+  "pytest": {
+    "step": "pytest tests/test_harness_evidence.py::test_apply_still_refuses_and_reports tests/test_security_and_quality.py::test_abort_resolves_pending_approvals_and_tombstones_replay tests/test_security_and_quality.py::test_sdlc_pass_requires_successful_verification_and_explicit_first_line_pass tests/test_workspace_snapshots.py::test_worktree_apply_refuses_clobbering_uncommitted_user_changes",
+    "passed": true,
+    "detail": "4 passed, 1 warning in 1.52s",
+    "seconds": 1.8,
+    "nodes": [
+      "tests/test_harness_evidence.py::test_apply_still_refuses_and_reports",
+      "tests/test_security_and_quality.py::test_abort_resolves_pending_approvals_and_tombstones_replay",
+      "tests/test_security_and_quality.py::test_sdlc_pass_requires_successful_verification_and_explicit_first_line_pass",
+      "tests/test_workspace_snapshots.py::test_worktree_apply_refuses_clobbering_uncommitted_user_changes"
+    ]
+  },
+  "walks": [
+    {
+      "walk": "chat_composer_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 2.4,
+      "detail": "PASS no browser error or outbound request"
+    },
+    {
+      "walk": "chat_context_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 11.0,
+      "detail": "19 of 19 checks passed"
+    },
+    {
+      "walk": "chat_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 15.6,
+      "detail": "21 of 21 checks passed"
+    },
+    {
+      "walk": "compare_criteria_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 26.6,
+      "detail": "15/15 checks passed"
+    },
+    {
+      "walk": "compare_history_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 2.6,
+      "detail": "8/8 checks passed"
+    },
+    {
+      "walk": "compare_provenance_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 28.2,
+      "detail": "12/12 checks passed"
+    },
+    {
+      "walk": "council_deliberation_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 19.0,
+      "detail": "14/14 checks passed"
+    },
+    {
+      "walk": "council_readiness_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 33.8,
+      "detail": "31/31 checks passed"
+    },
+    {
+      "walk": "council_verdict_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 98.2,
+      "detail": "17/17 checks passed"
+    },
+    {
+      "walk": "harness_evidence_walk.mjs",
+      "passed": false,
+      "known": {
+        "owner": "UIUX-P3-04",
+        "issue": "#169",
+        "reason": "the rejected half of the seed is written - the verifier returns `verification_test_failed_introduced` for `hns-592ef299` - but the trajectory draws no rejected card, so the failure code, the exit code and the failing test are not on screen (27/29)"
+      },
+      "seconds": 43.0,
+      "detail": "FAIL  a rejected completion is drawn as a rejection with the code that decided it \u2014 no card"
+    },
+    {
+      "walk": "harness_permissions_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 25.9,
+      "detail": "24/24 checks passed"
+    },
+    {
+      "walk": "harness_settings_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 5.7,
+      "detail": "24 of 24 checks passed"
+    },
+    {
+      "walk": "harness_timeline_walk.mjs",
+      "passed": false,
+      "known": {
+        "owner": "UIUX-P5-04",
+        "issue": "#170",
+        "reason": "after the log is pruned the strip counts the client's cache (`13 events held`) while the server serves 9, so a resync leaves the pane stating 13 and drawing 9 - the walk's \"restores every event without duplicating one\" cannot hold while the count and the drawing disagree (20/21)"
+      },
+      "seconds": 9.8,
+      "detail": "FAIL  a resync restores every event from the server without duplicating one \u2014 count=13 cards=9 seq 1-13 state=\"following the log from seq 13 \u00b7 13 events held \u00b7 "
+    },
+    {
+      "walk": "pipeline_artifacts_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 12.2,
+      "detail": "22/22 checks passed"
+    },
+    {
+      "walk": "start_health_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 22.6,
+      "detail": "21 of 21 checks passed"
+    },
+    {
+      "walk": "start_recent_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 14.9,
+      "detail": "16 of 16 checks passed"
+    },
+    {
+      "walk": "start_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 8.8,
+      "detail": "18 of 18 checks passed"
+    }
+  ],
+  "rows": [
+    {
+      "row": "Start / Guided first run",
+      "status": "pass",
+      "proofs": 2
+    },
+    {
+      "row": "Start / readiness summary",
+      "status": "pass",
+      "proofs": 2
+    },
+    {
+      "row": "Start / run-first-task",
+      "status": "pass",
+      "proofs": 3
+    },
+    {
+      "row": "Start / recheck",
+      "status": "pass",
+      "proofs": 3
+    },
+    {
+      "row": "Start / provider settings",
+      "status": "pass",
+      "proofs": 3
+    },
+    {
+      "row": "Harness / Session creation",
+      "status": "known",
+      "proofs": 3
+    },
+    {
+      "row": "Harness / workspace",
+      "status": "pass",
+      "proofs": 3
+    },
+    {
+      "row": "Harness / policy",
+      "status": "pass",
+      "proofs": 2
+    },
+    {
+      "row": "Harness / lead/critic",
+      "status": "pass",
+      "proofs": 2
+    },
+    {
+      "row": "Harness / streamed tool events",
+      "status": "known",
+      "proofs": 2
+    },
+    {
+      "row": "Harness / approvals",
+      "status": "pass",
+      "proofs": 3
+    },
+    {
+      "row": "Harness / diffs",
+      "status": "known",
+      "proofs": 2
+    },
+    {
+      "row": "Harness / worktree apply",
+      "status": "pass",
+      "proofs": 4
+    },
+    {
+      "row": "Harness / abort",
+      "status": "pass",
+      "proofs": 3
+    },
+    {
+      "row": "Harness / compaction",
+      "status": "known",
+      "proofs": 2
+    },
+    {
+      "row": "Harness / GSD and SDLC",
+      "status": "pass",
+      "proofs": 3
+    },
+    {
+      "row": "Council / Council Hall session spawning and chronicle browsing",
+      "status": "pass",
+      "proofs": 3
+    },
+    {
+      "row": "Pipeline / Four-stage orchestrator with architect/coder role selection",
+      "status": "pass",
+      "proofs": 2
+    },
+    {
+      "row": "Compare / Multi-model selection and compare responses",
+      "status": "pass",
+      "proofs": 3
+    },
+    {
+      "row": "Chat / Active model and persona selection",
+      "status": "pass",
+      "proofs": 2
+    },
+    {
+      "row": "Chat / conversation interface",
+      "status": "pass",
+      "proofs": 3
+    }
+  ]
+}

@@ -284,13 +284,29 @@ claimed elsewhere. The two programs share a repository, not a ledger:
 
 ## Status
 
-Nothing in this program is shipped: 40 stories, 6 done — the whole P0 phase,
-`UIUX-P0-01` through `UIUX-P0-06`: the pinned source manifest, the control
-inventory, the route map, the authorization and state trace, the baseline (suite
-results and **6 of 6 screenshots** in
-[`uiux-2-0-baseline-evidence.md`](uiux-2-0-baseline-evidence.md), merged in #118)
-and the preservation and rollback sign-off the owner approved on 2026-10-31. The
-P0 gate is therefore open, and `UIUX-P1-01` — the design tokens and the shell
-frame — is the next story. Nothing in P1 is claimed to work yet.
-Planned work is never described as available in `README.md` before the owning
-story closes with evidence.
+36 of the 40 stories are done with recorded evidence: phases `P0` through `P5`
+are complete and `UIUX-P6-01` closed on 2026-11-03. That covers the pinned
+source manifest, the control inventory, the route map, the authorization and
+state trace, the owner-approved preservation sign-off, the token and shell
+layers, the shared status/evidence and overlay components, the Start, Chat,
+Harness, Council, Pipeline and Compare journeys, the keyboard and responsive
+work, and the polish layer. The evidence for each one is its own tracking block
+in [`product/M5_2_0_UIUX_Autonomous_Roadmap.json`](../product/M5_2_0_UIUX_Autonomous_Roadmap.json),
+with the commands that were run and their results.
+
+`UIUX-P6-01` is the phase's first half: the ledger's 21-row preservation matrix
+is now executable. [`scripts/preservation_suite.py`](../scripts/preservation_suite.py)
+resolves every row to the provers that can actually fail — walk checks, pytest
+nodes, mounted routes, wired controls — runs each browser walk against its own
+throwaway app, and records the run in
+[`product/M5_2_0_UIUX_Preservation_Run.json`](../product/M5_2_0_UIUX_Preservation_Run.json),
+which [`uiux-2-0-preservation-e2e.md`](uiux-2-0-preservation-e2e.md) renders.
+The last run: **27 steps, 0 failed — 17 of 21 rows proved**, with the remaining
+four rows reported as `known` behind two harness defects (#169, #170) rather
+than as passes.
+
+Still open: `UIUX-P6-02` (adversarial permission and recovery UI tests),
+`UIUX-P6-03` (full visual screenshot review), `UIUX-P6-04` (README, docs and
+onboarding verification) and `UIUX-P6-05` (the release gate and handover
+report). Planned work is never described as available before the owning story
+closes with evidence.
