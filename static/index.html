@@ -819,7 +819,8 @@ body { font-family: var(--sans); }
   font-size: var(--text-sm); font-weight: var(--weight-medium);
   box-shadow: none; transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
-.btn:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--border-hi); }
+.btn:hover:not(:disabled),
+.top-actions .btn:focus-visible:not(:disabled) { background: var(--bg-hover); border-color: var(--border-hi); }
 .btn-primary { background: var(--accent); color: var(--primary-text); border-color: var(--accent); box-shadow: none; }
 .btn-primary:hover:not(:disabled) { background: var(--accent-hi); border-color: var(--accent-hi); }
 .btn-cyan, .btn-amber, .btn-purple { background: var(--bg-elev); color: var(--text); border-color: var(--border); }
@@ -7523,6 +7524,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const load = document.getElementById("debateHistoryLoadBtn");
     const select = document.getElementById("debateHistorySelect");
     const download = document.getElementById("debateHistoryExportBtn");
+    // Disabling the focused button during an async request sends focus to <body>.
+    // Restore keyboard focus only if the user has not moved it elsewhere.
+    const restoreKeyboardFocus = find && find.matches(":focus-visible") ? find : null;
     if (find) find.disabled = true;
     if (load) load.disabled = true;
     if (download) download.disabled = true;
@@ -7554,6 +7558,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       if (find) find.disabled = false;
       if (download) download.disabled = false;
       if (load) load.disabled = !select || !select.value;
+      if (restoreKeyboardFocus && document.activeElement === document.body) {
+        restoreKeyboardFocus.focus({ preventScroll: true });
+      }
     }
   }
 
@@ -7583,6 +7590,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const find = document.getElementById("debateHistoryFindBtn");
     const load = document.getElementById("debateHistoryLoadBtn");
     const download = document.getElementById("debateHistoryExportBtn");
+    const restoreKeyboardFocus = download && download.matches(":focus-visible") ? download : null;
     if (find) find.disabled = true;
     if (load) load.disabled = true;
     if (download) download.disabled = true;
@@ -7608,6 +7616,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       if (find) find.disabled = false;
       if (download) download.disabled = false;
       if (load) load.disabled = !document.getElementById("debateHistorySelect")?.value;
+      if (restoreKeyboardFocus && document.activeElement === document.body) {
+        restoreKeyboardFocus.focus({ preventScroll: true });
+      }
     }
   }
 

@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "4ccf628a584a1a8f3bf4fc68ee63eb9500405f4e8ae810de83c000738e753ff8",
+    "style_block_sha256": "0a18c9efa5ae0fecd27988e39a349aa997c6c95eb185520d8dabfb755c903165",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]

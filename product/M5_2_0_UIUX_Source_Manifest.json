@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "28a98327e2804b389b67a2859558c2050f263a08a9f6c556405f7cca6505a981",
-      "bytes": 740223,
-      "lines": 12860
+      "sha256": "c1ac917f8d347ac0e393e16fa2ac55462e04070d40e7672c56bb1e3c6ba5cb52",
+      "bytes": 740909,
+      "lines": 12871
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "52ec71ba40b26c30565634cdc02e9388f43cbc5383a5c0b70be59125e2520f00",
-      "bytes": 3479628,
-      "lines": 75910
+      "sha256": "16086aebcdffea04284418a31742ad6df443408d28efcfe27f176cb948cf045e",
+      "bytes": 3480314,
+      "lines": 75921
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -355,9 +355,9 @@
     {
       "path": "tests/test_compare_history.py",
       "role": "checks history browsing, route reuse, mode filtering and separate restoration",
-      "sha256": "c814345c77334011290832d027d57afb977ee2135b5b39d8fb108367b66adaa2",
-      "bytes": 3363,
-      "lines": 72
+      "sha256": "288ff9cd6815ce0f80d9952fcd7549528070fd6666e873163ac26cc85cc41183",
+      "bytes": 3900,
+      "lines": 81
     },
     {
       "path": "docs/uiux-2-0-compare-history-browser.md",
@@ -369,8 +369,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "28a98327e2804b389b67a2859558c2050f263a08a9f6c556405f7cca6505a981",
-    "lines": 12860,
+    "sha256": "c1ac917f8d347ac0e393e16fa2ac55462e04070d40e7672c56bb1e3c6ba5cb52",
+    "lines": 12871,
     "tab_count": 6,
     "tabs": [
       {
