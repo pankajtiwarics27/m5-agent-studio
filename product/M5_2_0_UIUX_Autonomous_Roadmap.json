@@ -100,8 +100,10 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": null,
-    "active_stories": [],
+    "active_story": "UIUX-P6-01",
+    "active_stories": [
+      "UIUX-P6-01"
+    ],
     "last_completed_story": "UIUX-P5-05",
     "next_recommended_story": "UIUX-P6-01",
     "last_checkpoint": "2026-11-03T12:25:00Z",
@@ -326,7 +328,7 @@
       "id": "P6",
       "name": "Regression QA and release",
       "title": "Regression QA and release",
-      "status": "not_started",
+      "status": "in_progress",
       "story_ids": [
         "UIUX-P6-01",
         "UIUX-P6-02",
@@ -336,18 +338,18 @@
       ],
       "total": 5,
       "done": 0,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 5,
+      "not_started": 4,
       "percent_complete": 0
     }
   ],
   "overall_progress": {
     "total_stories": 40,
     "done": 35,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 5,
+    "not_started": 4,
     "percent_complete": 88
   },
   "stories": [
@@ -6809,13 +6811,13 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P6-01 (Automated feature preservation E2E). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 10,
+        "attempts": 1,
+        "started_at": "2026-11-03T13:05:00Z",
+        "updated_at": "2026-11-03T13:05:00Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/fa380e39-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -6825,7 +6827,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "next_action": "Map every row of the preservation matrix to the walk that proves it, then run the suite",
         "readme_updated": false
       },
       "required_evidence": [
