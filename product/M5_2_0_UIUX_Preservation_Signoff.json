@@ -26,11 +26,11 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "650cd254456ec7d0d749a6e1f0f0ca4808ab4ec51f767dcdaa7dbcd559ffd0ca",
-      "source_manifest_sha256": "edb19fed55f5262c79fada1bb8514141ac2acd97fa306b75b66dc5c0d994b7f9",
-      "control_inventory_sha256": "bfd10b92905c7b924b87ee42ae137e34585050be157e834a265fd841b9e67183",
-      "route_map_sha256": "fdc461f613bc866e3776890198a806155d7f993825338da656e90e8fddc27c18",
-      "authorization_trace_sha256": "a035b6c996234e9942affee3c283e12c4c916c948f89d5f06e687713a22fe9a6",
-      "frontend_sha256": "d15c076a8eb768495681256903392a831420a3d48aa3caa9967d5907be41ff1f",
+      "source_manifest_sha256": "6ebb2b6258baa2fd1d945e03149e6b159e25476db41c050ce7d4c6a59f9ee51f",
+      "control_inventory_sha256": "9f2c9fcf9e7a04ace8aedae7d8c9c030a22e39a7c6184a68ff6a45e8f0f893af",
+      "route_map_sha256": "186b4505bab57b5697bef41b960c1195b49886b09e06f9f5265c33930117ccdd",
+      "authorization_trace_sha256": "fa04758b7faabe66d67ee6db151365ae4c9ffbdf1c33a3ee4cce85d201504da8",
+      "frontend_sha256": "0663cd052ce2434ae9b511cfbdd6015855a9b25544166b30b439e041b42910c2",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
       "screenshot_index_sha256": "0fa81561ac870619a2517fcf6f382055a98c9eb573e35c07bcde0faf4d2b1941",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -40,11 +40,11 @@
   },
   "inputs": {
     "ledger_sha256": "70322995c8eff25892bfa93518f89c7998f6d2809aa8ab4e03836c963fabcaa8",
-    "source_manifest_sha256": "edb19fed55f5262c79fada1bb8514141ac2acd97fa306b75b66dc5c0d994b7f9",
-    "control_inventory_sha256": "bfd10b92905c7b924b87ee42ae137e34585050be157e834a265fd841b9e67183",
-    "route_map_sha256": "fdc461f613bc866e3776890198a806155d7f993825338da656e90e8fddc27c18",
-    "authorization_trace_sha256": "a035b6c996234e9942affee3c283e12c4c916c948f89d5f06e687713a22fe9a6",
-    "frontend_sha256": "d15c076a8eb768495681256903392a831420a3d48aa3caa9967d5907be41ff1f"
+    "source_manifest_sha256": "6ebb2b6258baa2fd1d945e03149e6b159e25476db41c050ce7d4c6a59f9ee51f",
+    "control_inventory_sha256": "9f2c9fcf9e7a04ace8aedae7d8c9c030a22e39a7c6184a68ff6a45e8f0f893af",
+    "route_map_sha256": "186b4505bab57b5697bef41b960c1195b49886b09e06f9f5265c33930117ccdd",
+    "authorization_trace_sha256": "fa04758b7faabe66d67ee6db151365ae4c9ffbdf1c33a3ee4cce85d201504da8",
+    "frontend_sha256": "0663cd052ce2434ae9b511cfbdd6015855a9b25544166b30b439e041b42910c2"
   },
   "approval_request": [
     {
@@ -55,7 +55,7 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "190 markup controls (106 chrome, 84 panes) plus 42 rendered by script"
+      "evidence": "194 markup controls (106 chrome, 88 panes) plus 42 rendered by script"
     },
     {
       "id": 3,
@@ -76,9 +76,9 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 190,
+    "markup_controls": 194,
     "chrome_controls": 106,
-    "pane_controls": 84,
+    "pane_controls": 88,
     "script_rendered_controls": 42,
     "routes": 115,
     "routes_with_resolved_or_possible_caller": 69,
@@ -1242,11 +1242,11 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 5,
+      "control_count": 9,
       "counts": {
-        "button": 2,
+        "button": 5,
         "input": 1,
-        "select": 1,
+        "select": 2,
         "textarea": 1
       },
       "controls": [
@@ -1284,6 +1284,34 @@
           "text": "Start Compare",
           "onclick": "runDebate()",
           "handler": "runDebate"
+        },
+        {
+          "tag": "button",
+          "id": "debateHistoryFindBtn",
+          "text": "Find saved comparisons",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "debateHistorySelect",
+          "text": "Find saved comparisons to populate this list",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "debateHistoryLoadBtn",
+          "text": "Revisit selected",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "debateHistoryExportBtn",
+          "text": "Download full history export",
+          "onclick": null,
+          "handler": null
         }
       ],
       "declared_handlers": [

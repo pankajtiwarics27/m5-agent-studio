@@ -4147,11 +4147,25 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .debate-provenance-note { color: var(--text-faint); font-size: 11.2px; line-height: 1.45; padding-top: 2px; }
   .debate-results-basis { margin-top: 9px; color: var(--text-faint); font-size: 11.4px; line-height: 1.5; }
   .debate-panel-note { font-size: 11.6px; color: var(--amber); margin-bottom: 8px; }
-  .debate-record { margin: 0 20px 16px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
+  .debate-record { margin: 0 20px 12px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
   .debate-record[data-source="browser"] { border-color: var(--amber); }
   .debate-record[data-source="server"] { border-color: var(--accent); }
   .debate-record-state { font-size: 11.8px; line-height: 1.55; color: var(--text-dim); margin: 6px 0 0; }
   .debate-record-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .debate-history { margin: 0 20px 16px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
+  .debate-history-title { color: var(--text); font-size: 12.5px; font-weight: 700; }
+  .debate-history-note { margin: 6px 0 10px; color: var(--text-faint); font-size: 11.4px; line-height: 1.5; }
+  .debate-history-controls { display: grid; grid-template-columns: auto minmax(180px, 1fr) auto auto; gap: 8px; align-items: end; }
+  .debate-history-controls label { color: var(--text-dim); font-size: 11px; }
+  .debate-history-controls select { display: block; width: 100%; min-width: 0; height: 32px; margin-top: 4px; padding: 0 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg-elev); color: var(--text); }
+  .debate-history-status { min-height: 18px; margin-top: 9px; color: var(--text-faint); font-size: 11.2px; line-height: 1.45; overflow-wrap: anywhere; }
+  .debate-history-status[data-tone="warn"] { color: var(--amber); }
+  .debate-history-status[data-tone="error"] { color: var(--rose); }
+  @media (max-width: 600px) {
+    .debate-record, .debate-history { margin-left: 10px; margin-right: 10px; padding: 10px; }
+    .debate-history-controls { grid-template-columns: minmax(0, 1fr); }
+    .debate-history-controls > * { width: 100%; min-width: 0; }
+  }
   .debate-run-hint { font-size: 11.5px; color: var(--text-faint); }
 
   .chat-header-bar { padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--bg-elev); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -6103,6 +6117,21 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div id="debateProvenance" class="debate-results debate-provenance" role="region" aria-label="Measured performance per reply" hidden></div>
         <!-- UIUX-P4-06: where this comparison came from, what is kept, and how it leaves the page. -->
         <div id="debateRecord" class="debate-record" role="region" aria-label="This comparison's record and export" hidden></div>
+        <section id="debateHistoryPanel" class="debate-history" role="region" aria-labelledby="debateHistoryTitle">
+          <div id="debateHistoryTitle" class="debate-history-title">Saved Compare history</div>
+          <p class="debate-history-note">Find reads existing server history only when requested. Revisit shows the saved opinions and arbiter separately; it does not run models or change history. The full export includes every exported history table, not just Compare, and the server's credential redaction is best-effort.</p>
+          <div class="debate-history-controls">
+            <button id="debateHistoryFindBtn" class="btn btn-xs" type="button">Find saved comparisons</button>
+            <label for="debateHistorySelect">Saved Compare run
+              <select id="debateHistorySelect" aria-describedby="debateHistoryStatus">
+                <option value="">Find saved comparisons to populate this list</option>
+              </select>
+            </label>
+            <button id="debateHistoryLoadBtn" class="btn btn-xs" type="button" disabled>Revisit selected</button>
+            <button id="debateHistoryExportBtn" class="btn btn-xs" type="button">Download full history export</button>
+          </div>
+          <div id="debateHistoryStatus" class="debate-history-status" role="status" aria-live="polite"></div>
+        </section>
       </div>
     </section>
 
@@ -10973,6 +11002,186 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return String(panel.content || "").trim() ? "answered" : "empty";
   }
 
+  const DEBATE_HISTORY_LIST_LIMIT = 50;
+  let debateHistoryRows = [];
+  let debateHistoryBusy = false;
+
+  function debateSetHistoryStatus(message, tone = "") {
+    const host = document.getElementById("debateHistoryStatus");
+    if (!host) return;
+    host.textContent = String(message || "");
+    if (tone) host.dataset.tone = tone;
+    else delete host.dataset.tone;
+  }
+
+  async function debateFetchHistoryBundle() {
+    const response = await fetch("/api/history/export", { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const contentType = response.headers.get("content-type") || "";
+    if (!/application\/json/i.test(contentType)) throw new Error("the history export was not JSON");
+    const bundle = await response.json();
+    if (!bundle || !bundle.tables || !Array.isArray(bundle.tables.runs)) throw new Error("the history export has no runs table");
+    return bundle;
+  }
+
+  function debateHistoryOption(row) {
+    const id = Number(row.id);
+    let prompt = "";
+    try {
+      const payload = typeof row.payload_json === "string" ? JSON.parse(row.payload_json) : row.payload_json;
+      prompt = payload && typeof payload.prompt === "string" ? payload.prompt.replace(/\s+/g, " ").trim() : "";
+    } catch (_error) {
+      prompt = "";
+    }
+    if (prompt.length > 76) prompt = prompt.slice(0, 73) + "…";
+    const rawDate = typeof row.created_at === "string" ? row.created_at : "";
+    const parsedDate = rawDate ? new Date(rawDate) : null;
+    const date = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate.toLocaleString() : rawDate;
+    return [`Run #${id}`, date, prompt].filter(Boolean).join(" · ");
+  }
+
+  function debateSnapshotFromHistoryRow(row) {
+    const id = Number(row && row.id);
+    if (!Number.isSafeInteger(id) || id <= 0 || String(row.mode || "debate") !== "debate") throw new Error("the selected row is not a saved Compare run");
+    const record = typeof row.payload_json === "string" ? JSON.parse(row.payload_json) : row.payload_json;
+    if (!record || typeof record !== "object" || !Array.isArray(record.opinions) || !record.opinions.length) throw new Error("the saved run has no panel responses to restore");
+    const panels = record.opinions.map(opinion => {
+      if (!opinion || typeof opinion !== "object") throw new Error("a saved panel response is malformed");
+      const content = typeof opinion.content === "string" ? opinion.content : "";
+      const usage = opinion.usage && typeof opinion.usage === "object" ? opinion.usage : null;
+      return {
+        model: typeof opinion.model === "string" ? opinion.model : "not reported",
+        status: debateRecordedStatus({ content, usage }),
+        content,
+        usage,
+        error: "",
+      };
+    });
+    const synthesis = record.synthesis && typeof record.synthesis === "object" ? record.synthesis : {};
+    return {
+      version: 1,
+      saved_at: typeof row.created_at === "string" ? row.created_at : "",
+      run_id: id,
+      run_elapsed_s: record.total_elapsed_s === undefined ? null : record.total_elapsed_s,
+      prompt: typeof record.prompt === "string" ? record.prompt : "",
+      models: panels.map(panel => panel.model),
+      // The existing server record does not store custom criteria; defaults are explicit below.
+      judged: DEBATE_JUDGED_DEFAULTS.slice(),
+      panels,
+      synthesis: {
+        model: typeof synthesis.model === "string" ? synthesis.model : "",
+        content: typeof synthesis.content === "string" ? synthesis.content : "",
+        usage: synthesis.usage && typeof synthesis.usage === "object" ? synthesis.usage : null,
+      },
+    };
+  }
+
+  async function debateFindSavedComparisons() {
+    if (debateHistoryBusy) return;
+    debateHistoryBusy = true;
+    const find = document.getElementById("debateHistoryFindBtn");
+    const load = document.getElementById("debateHistoryLoadBtn");
+    const select = document.getElementById("debateHistorySelect");
+    const download = document.getElementById("debateHistoryExportBtn");
+    if (find) find.disabled = true;
+    if (load) load.disabled = true;
+    if (download) download.disabled = true;
+    debateSetHistoryStatus("Reading saved comparisons from the existing history export…");
+    try {
+      const bundle = await debateFetchHistoryBundle();
+      const matches = bundle.tables.runs
+        .filter(row => row && Number.isSafeInteger(Number(row.id)) && Number(row.id) > 0 && String(row.mode || "debate") === "debate")
+        .sort((a, b) => Number(b.id) - Number(a.id));
+      const count = matches.length;
+      debateHistoryRows = matches.slice(0, DEBATE_HISTORY_LIST_LIMIT);
+      if (select) {
+        select.replaceChildren(new Option("Select a saved Compare run", ""));
+        debateHistoryRows.forEach(row => {
+          const option = new Option(debateHistoryOption(row), String(Number(row.id)));
+          select.add(option);
+        });
+      }
+      const shown = debateHistoryRows.length;
+      debateSetHistoryStatus(count
+        ? `Found ${count} saved Compare run${count === 1 ? "" : "s"}; showing the ${shown} most recent. Selecting one only reads the saved, redacted server export.`
+        : "No saved Compare runs were found in the server history export.", count ? "" : "warn");
+    } catch (error) {
+      debateHistoryRows = [];
+      if (select) select.replaceChildren(new Option("Could not load saved comparisons", ""));
+      debateSetHistoryStatus(`Could not read saved comparisons from GET /api/history/export (${String(error.message || error)}). Nothing was run or changed.`, "error");
+    } finally {
+      debateHistoryBusy = false;
+      if (find) find.disabled = false;
+      if (download) download.disabled = false;
+      if (load) load.disabled = !select || !select.value;
+    }
+  }
+
+  function debateLoadSelectedSavedComparison() {
+    const select = document.getElementById("debateHistorySelect");
+    const id = Number(select && select.value);
+    const row = debateHistoryRows.find(item => Number(item.id) === id);
+    try {
+      const snapshot = debateSnapshotFromHistoryRow(row);
+      if (!debateApplySnapshot(snapshot, "server", {
+        fetched_at: new Date().toISOString(),
+        run_id: snapshot.run_id,
+        truncated: false,
+        redacted: true,
+        history_lookup: true,
+        criteria_missing: true,
+      })) throw new Error("the saved run could not be restored");
+      debateSetHistoryStatus(`Showing saved Compare run #${snapshot.run_id} from the existing redacted export. It was not run again; custom criteria are not stored in this record, so the criteria strip shows defaults.`, "");
+    } catch (error) {
+      debateSetHistoryStatus(`Could not revisit the selected comparison (${String(error.message || error)}). The current view and server history are unchanged.`, "error");
+    }
+  }
+
+  async function debateDownloadFullHistoryExport() {
+    if (debateHistoryBusy) return;
+    debateHistoryBusy = true;
+    const find = document.getElementById("debateHistoryFindBtn");
+    const load = document.getElementById("debateHistoryLoadBtn");
+    const download = document.getElementById("debateHistoryExportBtn");
+    if (find) find.disabled = true;
+    if (load) load.disabled = true;
+    if (download) download.disabled = true;
+    debateSetHistoryStatus("Preparing the full existing history export…");
+    try {
+      const bundle = await debateFetchHistoryBundle();
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+      if (!blob.size) throw new Error("the history export was empty");
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "studio-history-export.json";
+      anchor.rel = "noopener";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      debateSetHistoryStatus("Started downloading the full history export (all exported tables; credential redaction is best-effort).", "");
+    } catch (error) {
+      debateSetHistoryStatus(`Could not download GET /api/history/export (${String(error.message || error)}). Nothing was run or changed.`, "error");
+    } finally {
+      debateHistoryBusy = false;
+      if (find) find.disabled = false;
+      if (download) download.disabled = false;
+      if (load) load.disabled = !document.getElementById("debateHistorySelect")?.value;
+    }
+  }
+
+  function debateBindHistoryControls() {
+    const find = document.getElementById("debateHistoryFindBtn");
+    const load = document.getElementById("debateHistoryLoadBtn");
+    const select = document.getElementById("debateHistorySelect");
+    const download = document.getElementById("debateHistoryExportBtn");
+    if (find) find.addEventListener("click", debateFindSavedComparisons);
+    if (load) load.addEventListener("click", debateLoadSelectedSavedComparison);
+    if (select) select.addEventListener("change", () => { if (load) load.disabled = !select.value; });
+    if (download) download.addEventListener("click", debateDownloadFullHistoryExport);
+  }
+
   /** Draw a comparison from a copy - this browser's or the server's - never as a live run. */
   function debateApplySnapshot(snapshot, source, meta) {
     if (!snapshot || !Array.isArray(snapshot.panels)) return false;
@@ -11001,7 +11210,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     debateLocalKept = source === "browser" ? true : debateLocalKept;
     debateBusy = false;
     const prompt = document.getElementById("debatePrompt");
-    if (prompt && snapshot.prompt) prompt.value = snapshot.prompt;
+    if (prompt && typeof snapshot.prompt === "string") prompt.value = snapshot.prompt;
     const wanted = new Set(snapshot.models || snapshot.panels.map(panel => panel.model));
     [...document.querySelectorAll(".debate-m-chk")].forEach(box => { box.checked = wanted.has(box.value); });
     deployDebateCriterionFocus();
@@ -11191,10 +11400,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const truncation = debateSourceMeta && debateSourceMeta.truncated
       ? ` ${escapeHtml(String(debateSourceMeta.dropped_chars || 0))} characters of the longest replies were dropped to fit this browser's storage.`
       : "";
+    const criteriaNote = debateSourceMeta && debateSourceMeta.criteria_missing
+      ? " The server record does not retain custom Compare criteria; the criteria strip shows defaults, not the original criteria."
+      : "";
     host.innerHTML = '<div class="debate-criteria-head"><strong>This comparison</strong>'
       + '<span class="badge ' + (debateSource === "live" ? "green" : debateSource === "server" ? "indigo" : "amber") + '">'
       + (debateSource === "live" ? "ran on this page" : debateSource === "server" ? "read from the server" : debateSource === "detached" ? "not kept here" : "kept in this browser") + "</span></div>"
-      + '<div class="debate-record-state">' + source + " " + saved + availability + truncation + "</div>"
+      + '<div class="debate-record-state">' + source + " " + saved + availability + truncation + criteriaNote + "</div>"
       + '<div class="debate-record-actions">'
       + '<button class="btn btn-xs" type="button" onclick="debateCopyComparison(this)" title="Copy every reply and the arbiter&apos;s verdict as markdown">Copy as markdown</button>'
       + '<button class="btn btn-xs" type="button" onclick="debateDownloadComparison()" title="Download the whole comparison as JSON, one entry per reply">Download .json</button>'
@@ -11626,6 +11838,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // The criteria are stated before anything runs, and Start's hint obeys the same predicate that
   // enables it - a button that silently does nothing was its own defect.
   (function initDebatePane() {
+    debateBindHistoryControls();
     renderDebateCriteria();
     renderDebate();
     // A reload used to be a deletion. The copy this browser kept is drawn back with its source

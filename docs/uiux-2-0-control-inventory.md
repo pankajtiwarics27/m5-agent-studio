@@ -6,8 +6,8 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `d15c076a8eb768495681256903392a831420a3d48aa3caa9967d5907be41ff1f`.
-* Panes: 6 · controls in panes: 84 · controls in the
+* Frontend digest: `0663cd052ce2434ae9b511cfbdd6015855a9b25544166b30b439e041b42910c2`.
+* Panes: 6 · controls in panes: 88 · controls in the
   shared chrome: 106 · script-rendered: 42.
 
 ## What this page is, and is not
@@ -25,14 +25,14 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 | harness | `pane-harness` | 23 | 4 | 0 | button 10, input 2, select 9, summary 1, textarea 1 |
 | hall | `pane-hall` | 18 | 3 | 0 | button 7, select 8, summary 2, textarea 1 |
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
-| debate | `pane-debate` | 5 | 0 | 0 | button 2, input 1, select 1, textarea 1 |
+| debate | `pane-debate` | 9 | 0 | 0 | button 5, input 1, select 2, textarea 1 |
 | chat | `pane-chat` | 11 | 0 | 0 | button 5, input 2, select 3, textarea 1 |
 | (chrome) | outside the panes | 106 | 42 | 0 | button 59, input 29, select 12, summary 1, textarea 5 |
 
 ## What the numbers already say
 
-* 190 controls are in the markup and 42 more are built by script — a checklist written from the markup alone would miss 18% of the interactive surface.
-* The shared chrome carries 106 controls; all six panes together carry 84. Most of the clicking happens in the shell, not inside a tab.
+* 194 controls are in the markup and 42 more are built by script — a checklist written from the markup alone would miss 18% of the interactive surface.
+* The shared chrome carries 106 controls; all six panes together carry 88. Most of the clicking happens in the shell, not inside a tab.
 * 56 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
@@ -133,7 +133,7 @@ Section `pane-council`, 16 interactive elements.
 
 ## Pane `debate`
 
-Section `pane-debate`, 5 interactive elements.
+Section `pane-debate`, 9 interactive elements.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
@@ -142,6 +142,10 @@ Section `pane-debate`, 5 interactive elements.
 | 3 | textarea | debatePrompt | — | What to compare | — |
 | 4 | button | debateStopBtn | — | Stop | stopActiveStream() |
 | 5 | button | debateRunBtn | — | Start Compare | runDebate() |
+| 6 | button | debateHistoryFindBtn | button | Find saved comparisons | — |
+| 7 | select | debateHistorySelect | — | Find saved comparisons to populate this list | — |
+| 8 | button | debateHistoryLoadBtn | button | Revisit selected | — |
+| 9 | button | debateHistoryExportBtn | button | Download full history export | — |
 
 ## Pane `chat`
 
