@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "bdae960e3d520b03418871cd06cb77578023683108391bfaa939eca188e2b7c9",
+    "style_block_sha256": "4ccf628a584a1a8f3bf4fc68ee63eb9500405f4e8ae810de83c000738e753ff8",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -31,16 +31,21 @@
         "foreground": "--primary-text",
         "background": "--accent",
         "floor": 4.5
+      },
+      {
+        "foreground": "--primary-text",
+        "background": "--accent-hi",
+        "floor": 4.5
       }
     ]
   },
   "totals": {
-    "tokens": 46,
+    "tokens": 53,
     "groups": 8,
-    "references": 1050,
-    "theme_overrides": 18,
+    "references": 1192,
+    "theme_overrides": 20,
     "density_overrides": 5,
-    "contrast_pairs": 20,
+    "contrast_pairs": 22,
     "lowest_contrast_ratio": 4.69
   },
   "groups": {
@@ -49,6 +54,7 @@
       "bg-elev",
       "bg-card",
       "bg-hover",
+      "bg-press",
       "bg-code",
       "border",
       "border-hi",
@@ -56,6 +62,7 @@
       "text-dim",
       "text-faint",
       "accent",
+      "accent-hi",
       "primary-text",
       "cyan",
       "emerald",
@@ -83,9 +90,12 @@
       "space-5"
     ],
     "radius": [
+      "radius-xs",
       "radius-sm",
       "radius-md",
-      "radius-lg"
+      "radius-lg",
+      "radius-xl",
+      "radius-pill"
     ],
     "density": [
       "control-min-h",
@@ -99,7 +109,9 @@
     ],
     "motion": [
       "ease-out",
-      "dur-fast"
+      "dur-fast",
+      "dur-slow",
+      "dur-meter"
     ],
     "shell": [
       "sans",
@@ -146,7 +158,17 @@
         "light": "#eff0ed"
       },
       "density_override": null,
-      "references": 19
+      "references": 20
+    },
+    {
+      "name": "--bg-press",
+      "group": "colour",
+      "value": "#23272b",
+      "theme_overrides": {
+        "light": "#e4e6e0"
+      },
+      "density_override": null,
+      "references": 1
     },
     {
       "name": "--bg-code",
@@ -176,7 +198,7 @@
         "light": "#b7bcb7"
       },
       "density_override": null,
-      "references": 24
+      "references": 27
     },
     {
       "name": "--text",
@@ -186,7 +208,7 @@
         "light": "#202326"
       },
       "density_override": null,
-      "references": 73
+      "references": 74
     },
     {
       "name": "--text-dim",
@@ -217,6 +239,16 @@
       },
       "density_override": null,
       "references": 28
+    },
+    {
+      "name": "--accent-hi",
+      "group": "colour",
+      "value": "#4a55c8",
+      "theme_overrides": {
+        "light": "#4a55c8"
+      },
+      "density_override": null,
+      "references": 2
     },
     {
       "name": "--primary-text",
@@ -286,7 +318,7 @@
         "light": "#4858c8"
       },
       "density_override": null,
-      "references": 4
+      "references": 5
     },
     {
       "name": "--text-2xs",
@@ -401,12 +433,20 @@
       "references": 1
     },
     {
+      "name": "--radius-xs",
+      "group": "radius",
+      "value": "4px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 9
+    },
+    {
       "name": "--radius-sm",
       "group": "radius",
       "value": "6px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 10
+      "references": 35
     },
     {
       "name": "--radius-md",
@@ -414,7 +454,7 @@
       "value": "8px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 2
+      "references": 33
     },
     {
       "name": "--radius-lg",
@@ -422,7 +462,23 @@
       "value": "10px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 1
+      "references": 27
+    },
+    {
+      "name": "--radius-xl",
+      "group": "radius",
+      "value": "12px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 10
+    },
+    {
+      "name": "--radius-pill",
+      "group": "radius",
+      "value": "999px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 9
     },
     {
       "name": "--control-min-h",
@@ -478,7 +534,7 @@
       "value": "cubic-bezier(.2,.8,.2,1)",
       "theme_overrides": {},
       "density_override": null,
-      "references": 9
+      "references": 12
     },
     {
       "name": "--dur-fast",
@@ -486,7 +542,23 @@
       "value": "140ms",
       "theme_overrides": {},
       "density_override": null,
-      "references": 5
+      "references": 20
+    },
+    {
+      "name": "--dur-slow",
+      "group": "motion",
+      "value": "320ms",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 4
+    },
+    {
+      "name": "--dur-meter",
+      "group": "motion",
+      "value": "480ms",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 1
     },
     {
       "name": "--sans",
@@ -595,6 +667,14 @@
       "passes": true
     },
     {
+      "theme": "dark",
+      "foreground": "--primary-text",
+      "background": "--accent-hi",
+      "ratio": 6.13,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
       "theme": "light",
       "foreground": "--text",
       "background": "--bg",
@@ -671,6 +751,14 @@
       "foreground": "--primary-text",
       "background": "--accent",
       "ratio": 4.73,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "foreground": "--primary-text",
+      "background": "--accent-hi",
+      "ratio": 6.13,
       "floor": 4.5,
       "passes": true
     }

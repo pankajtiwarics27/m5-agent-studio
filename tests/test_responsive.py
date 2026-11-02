@@ -141,8 +141,8 @@ def test_density_moving_the_floor_is_a_finding(sources):
 def test_a_control_that_stops_reading_the_token_is_a_finding(sources):
     def strip(html: str) -> str:
         return html.replace(
-            ".harness-perm-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10.8px; font-weight: 700; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-dim); cursor: pointer; min-height: var(--target-min); }",
-            ".harness-perm-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10.8px; font-weight: 700; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-dim); cursor: pointer; }",
+            ".harness-perm-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10.8px; font-weight: 700; letter-spacing: 0.04em; padding: 3px 8px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--bg-card); color: var(--text-dim); cursor: pointer; min-height: var(--target-min); }",
+            ".harness-perm-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10.8px; font-weight: 700; letter-spacing: 0.04em; padding: 3px 8px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--bg-card); color: var(--text-dim); cursor: pointer; }",
             1,
         )
 

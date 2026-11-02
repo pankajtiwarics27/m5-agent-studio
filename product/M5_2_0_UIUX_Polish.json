@@ -1,0 +1,190 @@
+{
+  "story": "UIUX-P5-05",
+  "generated_by": "scripts/uiux_polish_inventory.py",
+  "source": {
+    "frontend": "static/index.html",
+    "walk": "scripts/polish_walk.mjs",
+    "style_blocks": 2,
+    "rules": 805
+  },
+  "tokens": {
+    "radius": [
+      "--radius-lg",
+      "--radius-md",
+      "--radius-pill",
+      "--radius-sm",
+      "--radius-xl",
+      "--radius-xs"
+    ],
+    "motion": [
+      "--dur-fast",
+      "--dur-meter",
+      "--dur-slow"
+    ],
+    "press": [
+      "--bg-press"
+    ]
+  },
+  "layer": {
+    "pressable": [
+      ".btn",
+      ".btn-xs",
+      ".chip",
+      ".step-card",
+      ".starter-card",
+      ".harness-perm-badge",
+      ".mode-tab",
+      ".toast-dismiss",
+      ".evidence-copy",
+      ".cmd-item",
+      ".skill-pill",
+      ".harness-timeline-row",
+      ".start-recent-row",
+      "summary",
+      "select"
+    ],
+    "hoverable": [
+      "button",
+      "select",
+      "summary",
+      "input",
+      "textarea",
+      "label:has(> input)"
+    ],
+    "press_rules": [
+      ".btn:active:not(:disabled)",
+      ":is(.btn, .btn-xs, .chip, .step-card, .starter-card, .harness-perm-badge, .mode-tab, .toast-dismiss,\n    .evidence-copy, .cmd-item, .skill-pill, .harness-timeline-row, .start-recent-row, summary,\n    select):active:not(:disabled):not([aria-disabled=\"true\"])"
+    ],
+    "hover_rules": [
+      "::-webkit-scrollbar-thumb:hover",
+      ".mode-tab:hover",
+      ".btn:hover:not(:disabled)",
+      ".btn-primary:hover:not(:disabled)",
+      ".btn-cyan:hover:not(:disabled)",
+      ".btn-amber:hover:not(:disabled)",
+      ".btn-danger:hover:not(:disabled)",
+      ".btn-purple:hover:not(:disabled)",
+      "select:hover, input[type=\"text\"]:hover, input[type=\"password\"]:hover, textarea:hover",
+      ".toast-dismiss:hover",
+      ".cmd-item:hover, .cmd-item.selected",
+      ".chronicle-item:hover",
+      ".start-recent-row:hover",
+      ".chip:hover, .chip.active",
+      ".debate-tag button:hover",
+      ".btn-emerald:hover:not(:disabled)",
+      ".starter-card:hover",
+      ".mode-tab:hover",
+      ".btn:hover:not(:disabled)",
+      ".btn-primary:hover:not(:disabled)",
+      ".btn-cyan:hover:not(:disabled), .btn-amber:hover:not(:disabled), .btn-purple:hover:not(:disabled)",
+      ".btn-emerald:hover:not(:disabled)",
+      ".btn-danger:hover:not(:disabled)",
+      ":is(button, select, summary):hover:not(:disabled):not([aria-disabled=\"true\"])",
+      ":is(input, textarea):hover:not(:disabled)",
+      ":is(label):has(> input):hover",
+      ".harness-timeline-row:hover",
+      ".evidence-copy:hover",
+      ".cmd-item:hover, .cmd-item.selected",
+      ".chip:hover, .chip.active"
+    ],
+    "ring_rules": [
+      "button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible,\n  summary:focus-visible, [tabindex]:focus-visible",
+      ".start-recent-row:focus-visible",
+      ".prompt-box:focus-within",
+      ".harness-stream:focus-visible, .hall-stream:focus-visible",
+      "button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible,\nsummary",
+      "summary:focus-visible, [tabindex]:focus-visible",
+      ":is(input, textarea, select):focus-visible"
+    ],
+    "composed_ring_rules": [
+      ".prompt-box:focus-within"
+    ],
+    "disabled_rules": [
+      ".btn:hover:not(:disabled)",
+      ".btn:active:not(:disabled)",
+      ".btn:disabled",
+      ".btn-primary:hover:not(:disabled)",
+      ".btn-cyan:hover:not(:disabled)",
+      ".btn-amber:hover:not(:disabled)",
+      ".btn-danger:hover:not(:disabled)",
+      ".btn-purple:hover:not(:disabled)",
+      ".btn-emerald:hover:not(:disabled)",
+      ".btn:hover:not(:disabled)",
+      ".btn-primary:hover:not(:disabled)",
+      ".btn-cyan:hover:not(:disabled), .btn-amber:hover:not(:disabled), .btn-purple:hover:not(:disabled)",
+      ".btn-emerald:hover:not(:disabled)",
+      ".btn-danger:hover:not(:disabled)",
+      ":is(button, select, summary):hover:not(:disabled):not([aria-disabled=\"true\"])",
+      ":is(input, textarea):hover:not(:disabled)",
+      ":is(.btn, .btn-xs, .chip, .step-card, .starter-card, .harness-perm-badge, .mode-tab, .toast-dismiss,\n    .evidence-copy, .cmd-item, .skill-pill, .harness-timeline-row, .start-recent-row, summary,\n    select):active:not(:disabled):not([aria-disabled=\"true\"])",
+      ":is(button, select, input, textarea, [role=\"button\"]):disabled"
+    ]
+  },
+  "totals": {
+    "radius_rules": 93,
+    "motion_rules": 17,
+    "press_rules": 2,
+    "hover_rules": 30,
+    "captures": 8,
+    "findings": 0
+  },
+  "captures": [
+    {
+      "file": "docs/media/polish/polish-dark-hover-primary.png",
+      "theme": "dark",
+      "width": 1440,
+      "height": 900,
+      "bytes": 135677
+    },
+    {
+      "file": "docs/media/polish/polish-dark-narrow-start.png",
+      "theme": "dark",
+      "width": 360,
+      "height": 740,
+      "bytes": 64109
+    },
+    {
+      "file": "docs/media/polish/polish-dark-rest-chat.png",
+      "theme": "dark",
+      "width": 1440,
+      "height": 900,
+      "bytes": 135594
+    },
+    {
+      "file": "docs/media/polish/polish-dark-rest-start.png",
+      "theme": "dark",
+      "width": 1440,
+      "height": 900,
+      "bytes": 192243
+    },
+    {
+      "file": "docs/media/polish/polish-light-hover-primary.png",
+      "theme": "light",
+      "width": 1440,
+      "height": 900,
+      "bytes": 133305
+    },
+    {
+      "file": "docs/media/polish/polish-light-narrow-start.png",
+      "theme": "light",
+      "width": 360,
+      "height": 740,
+      "bytes": 62406
+    },
+    {
+      "file": "docs/media/polish/polish-light-rest-chat.png",
+      "theme": "light",
+      "width": 1440,
+      "height": 900,
+      "bytes": 133349
+    },
+    {
+      "file": "docs/media/polish/polish-light-rest-start.png",
+      "theme": "light",
+      "width": 1440,
+      "height": 900,
+      "bytes": 189012
+    }
+  ],
+  "findings": []
+}

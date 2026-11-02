@@ -3669,7 +3669,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   /* Custom subtle dark scrollbars */
   ::-webkit-scrollbar { width: 7px; height: 7px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(62, 86, 132, 0.45); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb { background: rgba(62, 86, 132, 0.45); border-radius: var(--radius-pill); }
   ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.65); }
 
   /* WCAG 2.2 AA High-Visibility Keyboard Focus Rings */
@@ -3684,7 +3684,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
 
   .svg-ico { width: 14px; height: 14px; stroke: currentColor; stroke-width: 1.85; fill: none; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
   .kbd {
-    font-family: var(--mono); font-size: 10.2px; padding: 1px 5px; border-radius: 4px;
+    font-family: var(--mono); font-size: 10.2px; padding: 1px 5px; border-radius: var(--radius-xs);
     background: rgba(255,255,255,0.07); border: 1px solid var(--border-hi); color: var(--text-dim);
   }
 
@@ -3695,31 +3695,31 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   }
   .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 14.5px; white-space: nowrap; letter-spacing: -0.01em; }
   .brand-chip {
-    width: 30px; height: 30px; border-radius: 8px;
+    width: 30px; height: 30px; border-radius: var(--radius-md);
     background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 55%, #22c55e 100%);
     box-shadow: 0 0 14px rgba(6, 182, 212, 0.28);
     display: grid; place-items: center; font-family: var(--mono); font-weight: 800; font-size: 11.6px; color: #fff;
   }
   .ver-badge {
-    font-family: var(--mono); font-size: 10.6px; padding: 2px 6px; border-radius: 5px;
+    font-family: var(--mono); font-size: 10.6px; padding: 2px 6px; border-radius: var(--radius-xs);
     background: rgba(34, 197, 94, 0.15); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.42);
   }
   .status-pill {
     display: inline-flex; align-items: center; gap: 6px; font-size: 11.2px; font-weight: 600;
-    padding: 3px 9px; border-radius: 999px;
+    padding: 3px 9px; border-radius: var(--radius-pill);
     background: rgba(34, 197, 94, 0.13); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.35);
   }
   .status-pill.demo { background: rgba(245, 158, 11, 0.14); color: #fbbf24; border-color: rgba(245, 158, 11, 0.38); }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
 
   .mode-tabs {
-    display: flex; background: var(--bg-code); padding: 3px; border-radius: 10px;
+    display: flex; background: var(--bg-code); padding: 3px; border-radius: var(--radius-lg);
     border: 1px solid var(--border); gap: 2px; overflow-x: auto;
   }
   .mode-tab {
-    background: transparent; border: 1px solid transparent; color: var(--text-dim); padding: 5px 11px; border-radius: 7px;
+    background: transparent; border: 1px solid transparent; color: var(--text-dim); padding: 5px 11px; border-radius: var(--radius-sm);
     font-size: 12.4px; font-weight: 600; cursor: pointer;
-    transition: background 160ms var(--ease-out), color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
     min-height: 34px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
   }
   .mode-tab:hover { color: var(--text); background: rgba(255,255,255,0.03); }
@@ -3732,8 +3732,8 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
 
   .btn {
     background: var(--bg-card); color: var(--text); border: 1px solid var(--border);
-    padding: 6px 11px; min-height: 34px; border-radius: 8px; font-size: 12.2px; font-weight: 600;
-    cursor: pointer; transition: background 150ms var(--ease-out), border-color 150ms var(--ease-out), opacity 150ms;
+    padding: 6px 11px; min-height: 34px; border-radius: var(--radius-md); font-size: 12.2px; font-weight: 600;
+    cursor: pointer; transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), opacity var(--dur-fast);
     display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
   }
   .btn:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--border-hi); }
@@ -3749,19 +3749,19 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .btn-danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.24); }
   .btn-purple { background: rgba(168, 85, 247, 0.16); border-color: rgba(168, 85, 247, 0.48); color: #f3e8ff; }
   .btn-purple:hover:not(:disabled) { background: rgba(168, 85, 247, 0.27); }
-  .btn-xs { padding: 3px 8px; min-height: 27px; font-size: 11.2px; border-radius: 6px; }
+  .btn-xs { padding: 3px 8px; min-height: 27px; font-size: 11.2px; border-radius: var(--radius-sm); }
 
   select, input[type="text"], input[type="password"], textarea {
     background: var(--bg-code); color: var(--text); border: 1px solid var(--border);
-    border-radius: 8px; padding: 6px 9px; font-family: inherit; font-size: 12.6px;
-    transition: border-color 150ms var(--ease-out);
+    border-radius: var(--radius-md); padding: 6px 9px; font-family: inherit; font-size: 12.6px;
+    transition: border-color var(--dur-fast) var(--ease-out);
   }
   select:hover, input[type="text"]:hover, input[type="password"]:hover, textarea:hover { border-color: var(--border-hi); }
 
   .layout { display: grid; grid-template-columns: 1fr 356px; height: calc(100vh - 56px); }
 
   /* KPI Cards & Toast Stack & Command Palette */
-  .kpi { background: var(--bg-code); border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px; }
+  .kpi { background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 9px 11px; }
   .kpi-lbl { font-size: 10.4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
   .kpi-val { font-family: var(--mono); font-size: 16px; font-weight: 700; color: #fff; margin-top: 2px; }
 
@@ -3772,16 +3772,16 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .toast {
     pointer-events: auto; background: rgba(19, 28, 46, 0.96); backdrop-filter: blur(12px);
     border: 1px solid var(--border-hi); border-left: 3px solid var(--cyan);
-    border-radius: 10px; padding: 10px 13px; box-shadow: 0 12px 32px rgba(0,0,0,0.55);
+    border-radius: var(--radius-lg); padding: 10px 13px; box-shadow: 0 12px 32px rgba(0,0,0,0.55);
     display: flex; align-items: flex-start; gap: 9px; font-size: 12.4px; color: var(--text);
-    animation: toastIn 200ms var(--ease-out);
+    animation: toastIn var(--dur-fast) var(--ease-out);
   }
   .toast.ok { border-left-color: var(--emerald); }
   .toast.warn { border-left-color: var(--amber); }
   .toast.err { border-left-color: var(--rose); }
   .toast-dismiss {
     flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
-    width: 24px; height: 24px; margin: -3px -5px 0 0; border: 0; border-radius: 5px;
+    width: 24px; height: 24px; margin: -3px -5px 0 0; border: 0; border-radius: var(--radius-xs);
     color: var(--text-dim); background: transparent; cursor: pointer;
   }
   .toast-dismiss:hover { background: var(--bg-hover); color: var(--text); }
@@ -3791,9 +3791,9 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .cmd-list { display: flex; flex-direction: column; gap: 4px; max-height: 360px; overflow-y: auto; padding: 8px; }
   .cmd-item {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    padding: 9px 12px; border-radius: 8px; background: transparent; border: 1px solid transparent;
+    padding: 9px 12px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent;
     color: var(--text); cursor: pointer; text-align: left; width: 100%; font-size: 12.8px;
-    transition: background 120ms var(--ease-out), border-color 120ms var(--ease-out);
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
   }
   .cmd-item:hover, .cmd-item.selected { background: var(--bg-hover); border-color: var(--border-hi); }
   .layout.rail-collapsed { grid-template-columns: 1fr; }
@@ -3811,9 +3811,9 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
     padding: 7px 18px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 42px;
   }
   .skill-pill {
-    display: inline-flex; align-items: center; gap: 6px; padding: 3.5px 10px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 6px; padding: 3.5px 10px; border-radius: var(--radius-pill);
     font-size: 11.8px; font-weight: 650; cursor: pointer; user-select: none;
-    background: var(--bg-card); color: var(--text-dim); border: 1px solid var(--border); transition: all 0.15s;
+    background: var(--bg-card); color: var(--text-dim); border: 1px solid var(--border); transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
   }
   .skill-pill.active { background: rgba(168, 85, 247, 0.22); color: #f3e8ff; border-color: #a855f7; }
 
@@ -3823,7 +3823,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .hall-sidebar { background: var(--bg-elev); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
   .hall-side-head { padding: 11px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
   .hall-chronicles { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 5px; }
-  .chronicle-item { padding: 8px 10px; border-radius: 9px; border: 1px solid transparent; cursor: pointer; }
+  .chronicle-item { padding: 8px 10px; border-radius: var(--radius-md); border: 1px solid transparent; cursor: pointer; }
   .chronicle-item:hover { background: var(--bg-card); border-color: var(--border); }
   .chronicle-item.active { background: var(--bg-card); border-color: var(--amber); box-shadow: inset -3px 0 0 var(--amber); }
   .chronicle-title { font-size: 12.6px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -3832,7 +3832,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .hall-main { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
   .hall-header { padding: 10px 18px; background: var(--bg-elev); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   .avatar-stack { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .agent-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 650; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-card); }
+  .agent-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 650; padding: 2px 8px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--bg-card); }
   .agent-chip.human { border-color: rgba(16,185,129,0.5); color: #6ee7b7; }
   .agent-chip.architect { border-color: rgba(99,102,241,0.55); color: #c7d2fe; }
   .agent-chip.coder { border-color: rgba(6,182,212,0.55); color: #67e8f9; }
@@ -3842,7 +3842,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
 
   .summon-bar { padding: 8px 18px; background: rgba(99, 102, 241, 0.06); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .hall-stream { flex: 1; overflow-y: auto; padding: 15px 18px; display: flex; flex-direction: column; gap: 12px; }
-  .voice-card { border-radius: 12px; padding: 12px 15px; border: 1px solid var(--border); background: var(--bg-card); max-width: 94%; }
+  .voice-card { border-radius: var(--radius-xl); padding: 12px 15px; border: 1px solid var(--border); background: var(--bg-card); max-width: 94%; }
   .voice-card.human { align-self: flex-end; background: rgba(16, 185, 129, 0.09); border-color: rgba(16, 185, 129, 0.38); }
   .voice-card.architect { align-self: flex-start; border-left: 3px solid var(--accent); width: 100%; }
   .voice-card.coder { align-self: flex-start; border-left: 3px solid var(--cyan); width: 100%; }
@@ -3873,40 +3873,40 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .hall-verdict .verdict-reading[data-reading="dissent"] { color: var(--amber); }
   .hall-verdict .verdict-reading[data-reading="same"] { color: var(--rose); }
   .hall-verdict .verdict-basis { margin-top: 8px; color: var(--text-faint); font-size: 11.4px; }
-  .conclusion-banner { margin: 0 18px 9px; padding: 11px 15px; border-radius: 11px; background: rgba(245, 158, 11, 0.10); border: 1px solid rgba(245, 158, 11, 0.45); }
+  .conclusion-banner { margin: 0 18px 9px; padding: 11px 15px; border-radius: var(--radius-lg); background: rgba(245, 158, 11, 0.10); border: 1px solid rgba(245, 158, 11, 0.45); }
   .hall-composer { padding: 10px 18px; background: var(--bg-elev); border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-end; }
 
   /* Monitor Rail */
   .monitor-rail { background: var(--bg-elev); border-left: 1px solid var(--border); overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
-  .m-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 11px; padding: 11px 12px; }
+  .m-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 11px 12px; }
   .m-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
   .ram-bar-wrap { position: relative; margin: 7px 0 8px; }
-  .ram-bar { height: 13px; width: 100%; background: #080b12; border-radius: 7px; overflow: hidden; display: flex; border: 1px solid var(--border); }
-  .seg-omlx { background: var(--accent); transition: width 0.35s ease; }
-  .seg-orb  { background: var(--cyan); transition: width 0.35s ease; }
-  .seg-apps { background: var(--amber); transition: width 0.35s ease; }
-  .seg-free { background: rgba(16, 185, 129, 0.22); transition: width 0.35s ease; }
+  .ram-bar { height: 13px; width: 100%; background: #080b12; border-radius: var(--radius-sm); overflow: hidden; display: flex; border: 1px solid var(--border); }
+  .seg-omlx { background: var(--accent); transition: width var(--dur-slow) ease; }
+  .seg-orb  { background: var(--cyan); transition: width var(--dur-slow) ease; }
+  .seg-apps { background: var(--amber); transition: width var(--dur-slow) ease; }
+  .seg-free { background: rgba(16, 185, 129, 0.22); transition: width var(--dur-slow) ease; }
   .ceiling-marker { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--rose); pointer-events: none; }
   .ram-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 11.4px; }
   .leg-item { display: flex; align-items: center; justify-content: space-between; color: var(--text-dim); }
   .leg-left { display: flex; align-items: center; gap: 6px; }
-  .swatch { width: 8px; height: 8px; border-radius: 2px; }
+  .swatch { width: 8px; height: 8px; border-radius: var(--radius-xs); }
   .mono { font-family: var(--mono); }
 
-  .model-row { padding: 8px 9px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border); margin-bottom: 6px; }
+  .model-row { padding: 8px 9px; border-radius: var(--radius-md); background: var(--bg); border: 1px solid var(--border); margin-bottom: 6px; }
   .model-row:last-child { margin-bottom: 0; }
   .model-row.loaded { border-color: rgba(16, 185, 129, 0.55); background: rgba(16, 185, 129, 0.05); }
   .model-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
   .model-name { font-weight: 650; font-size: 12px; word-break: break-all; }
   .model-sub { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; font-size: 10.6px; color: var(--text-dim); flex-wrap: wrap; gap: 4px; }
-  .badge { font-family: var(--mono); font-size: 10.2px; padding: 1.5px 6px; border-radius: 5px; background: var(--bg-hover); color: var(--text-dim); border: 1px solid var(--border); }
+  .badge { font-family: var(--mono); font-size: 10.2px; padding: 1.5px 6px; border-radius: var(--radius-xs); background: var(--bg-hover); color: var(--text-dim); border: 1px solid var(--border); }
   .badge.green { background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.38); }
   .badge.indigo { background: rgba(99, 102, 241, 0.18); color: #c7d2fe; border-color: rgba(99, 102, 241, 0.4); }
   .badge.cyan { background: rgba(6, 182, 212, 0.16); color: #67e8f9; border-color: rgba(6, 182, 212, 0.38); }
   .badge.purple { background: rgba(168, 85, 247, 0.18); color: #e9d5ff; border-color: rgba(168, 85, 247, 0.4); }
   .badge.amber { background: rgba(245, 158, 11, 0.18); color: #fde68a; border-color: rgba(245, 158, 11, 0.42); }
-  .ttl-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 5px; overflow: hidden; }
-  .ttl-fill { height: 100%; background: var(--emerald); transition: width 0.5s linear; }
+  .ttl-bar { height: 3px; background: var(--border); border-radius: var(--radius-xs); margin-top: 5px; overflow: hidden; }
+  .ttl-fill { height: 100%; background: var(--emerald); transition: width var(--dur-meter) linear; }
 
   /* `margin: 0 auto` on a flex item turns off the cross-axis stretch: without a definite
      width the shell sized to its own max-content (589px) and the pane, which hides its
@@ -3914,7 +3914,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .onboarding-shell { width: 100%; max-width: 860px; margin: 0 auto; padding: 18px 16px 28px; }
   .onboarding-lede { font-size: 12.4px; line-height: 1.55; color: var(--text-dim); margin: 8px 0 14px; }
   .onboarding-steps { display: flex; flex-direction: column; gap: 8px; }
-  .onboarding-step { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card); }
+  .onboarding-step { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-card); }
   .onboarding-step .btn { margin-left: auto; align-self: center; }
   .onboarding-step.done { border-color: rgba(16, 185, 129, 0.42); }
   .onboarding-step.pending { border-color: rgba(245, 158, 11, 0.42); }
@@ -4023,24 +4023,26 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .start-workspace-actions select { flex: 1 1 200px; }
   .badge.red { background: rgba(239, 68, 68, 0.18); color: #fca5a5; border-color: rgba(239, 68, 68, 0.45); }
 
-  .config-strip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 11px; padding: 12px 14px; margin-bottom: 12px; }
+  .config-strip { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; margin-bottom: 12px; }
   .role-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
   @media (max-width: 820px) { .role-grid { grid-template-columns: 1fr 1fr; } }
   .field-lbl { display: block; font-size: 10.6px; font-weight: 700; color: var(--text-dim); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
   .role-grid select { width: 100%; font-size: 11.8px; padding: 6px 8px; }
 
-  .prompt-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 13px; }
+  .prompt-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 12px 14px; margin-bottom: 13px; }
   .prompt-box textarea { width: 100%; min-height: 72px; resize: vertical; border: none; background: transparent; padding: 2px; font-size: 14px; line-height: 1.55; color: var(--text); }
+  /* The textarea's own ring is off so the box can carry it: a composer that shows no focus at
+     all is the one control a keyboard user cannot find again once they are inside it. */
   /* The textarea's own ring is off so the box can carry it: a composer that shows no focus at
      all is the one control a keyboard user cannot find again once they are inside it. */
   .prompt-box textarea:focus { outline: none; }
   .prompt-box:focus-within { outline: 2px solid var(--ring); outline-offset: 2px; }
   .prompt-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
-  .chip { background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); padding: 3.5px 9px; border-radius: 999px; font-size: 11.4px; cursor: pointer; display: inline-flex; align-items: center; min-height: var(--target-min); }
+  .chip { background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); padding: 3.5px 9px; border-radius: var(--radius-pill); font-size: 11.4px; cursor: pointer; display: inline-flex; align-items: center; min-height: var(--target-min); }
   .chip:hover, .chip.active { color: #fff; border-color: var(--cyan); background: rgba(6,182,212,0.14); }
 
   .stepper { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 13px; }
-  .step-card { text-align: left; font-family: inherit; color: var(--text); background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+  .step-card { text-align: left; font-family: inherit; color: var(--text); background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 8px 10px; cursor: pointer; }
   .step-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .step-card.running { border-color: var(--cyan); background: rgba(6, 182, 212, 0.08); }
   .step-card.done { border-color: rgba(16, 185, 129, 0.5); }
@@ -4050,7 +4052,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .step-title { font-weight: 650; font-size: 12.4px; margin: 2px 0; }
   .step-meta { font-family: var(--mono); font-size: 10.6px; color: var(--text-dim); display: flex; justify-content: space-between; }
 
-  .stage-output-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+  .stage-output-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-xl); margin-bottom: 12px; overflow: hidden; }
   .stage-output-head { padding: 9px 14px; background: rgba(255,255,255,0.025); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   .stage-output-body { padding: 14px 17px; }
   /* ── What each stage was given, and what it left behind ────────────────────
@@ -4072,7 +4074,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .stage-contract { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; padding: 6px 14px; border-bottom: 1px solid var(--border); font-size: 11.2px; color: var(--text-dim); }
   .stage-contract[hidden] { display: none; }
   .stage-contract .contract-key { color: var(--text-faint); font-size: 10.4px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
-  .stage-contract .contract-chip { font-family: var(--mono); font-size: 10.8px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-dim); white-space: nowrap; }
+  .stage-contract .contract-chip { font-family: var(--mono); font-size: 10.8px; padding: 1px 7px; border-radius: var(--radius-pill); border: 1px solid var(--border); color: var(--text-dim); white-space: nowrap; }
   .stage-contract[data-verdict="capped"] .contract-chip[data-chip="verdict"] { border-color: var(--amber); color: var(--amber); }
   .stage-contract[data-verdict="demo"] .contract-chip[data-chip="verdict"] { border-color: var(--cyan); color: var(--cyan); }
   .deliberation-evidence { margin: 0 0 13px; padding: 11px 14px; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-sm); background: var(--bg-card); font-size: 12px; line-height: 1.55; color: var(--text-dim); }
@@ -4117,7 +4119,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
      stopped run left every card saying "Streaming", and no row said which panels answered. The
      strip below names the criteria and, for each, what could settle it; the table under the grid
      reads the run against those criteria and refuses the two it cannot decide. */
-  .debate-criteria { margin: 0 20px 12px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
+  .debate-criteria { margin: 0 20px 12px; padding: 12px 15px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--bg-card); }
   .debate-criteria-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
   .debate-criteria-head strong { color: var(--text); font-size: 12.5px; }
   .debate-criteria-basis { color: var(--text-faint); font-size: 11.4px; line-height: 1.5; margin-bottom: 9px; }
@@ -4129,16 +4131,16 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .debate-criteria .criterion-yes { color: var(--emerald); }
   .debate-criteria .criterion-no { color: var(--amber); }
   .debate-criteria-add { display: flex; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
-  .debate-criteria-add input { flex: 1; min-width: 180px; height: 30px; padding: 0 10px; font-size: 12px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; color: var(--text); }
+  .debate-criteria-add input { flex: 1; min-width: 180px; height: 30px; padding: 0 10px; font-size: 12px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text); }
   .debate-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-  .debate-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-dim); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
+  .debate-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-dim); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 2px 8px; }
   .debate-tag button { border: 0; background: transparent; color: var(--text-faint); cursor: pointer; font-size: 12px; line-height: 1; padding: 0; }
   .debate-tag button:hover { color: var(--text); }
   .debate-summary { margin: 0 20px 10px; font-size: 12px; color: var(--text-dim); }
   .debate-summary[data-state="bad"] { color: var(--rose); }
   .debate-summary[data-state="mixed"] { color: var(--amber); }
   .debate-summary[data-state="ok"] { color: var(--emerald); }
-  .debate-results { margin: 0 20px 16px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
+  .debate-results { margin: 0 20px 16px; padding: 12px 15px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--bg-card); }
   .debate-provenance table { width: 100%; border-collapse: collapse; font-size: 11.8px; }
   .debate-provenance th { text-align: left; color: var(--text-faint); font-size: 10.4px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--border); }
   .debate-provenance td { padding: 5px 10px 5px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--text-dim); }
@@ -4147,17 +4149,17 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .debate-provenance-note { color: var(--text-faint); font-size: 11.2px; line-height: 1.45; padding-top: 2px; }
   .debate-results-basis { margin-top: 9px; color: var(--text-faint); font-size: 11.4px; line-height: 1.5; }
   .debate-panel-note { font-size: 11.6px; color: var(--amber); margin-bottom: 8px; }
-  .debate-record { margin: 0 20px 12px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
+  .debate-record { margin: 0 20px 12px; padding: 12px 15px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--bg-card); }
   .debate-record[data-source="browser"] { border-color: var(--amber); }
   .debate-record[data-source="server"] { border-color: var(--accent); }
   .debate-record-state { font-size: 11.8px; line-height: 1.55; color: var(--text-dim); margin: 6px 0 0; }
   .debate-record-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-  .debate-history { margin: 0 20px 16px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
+  .debate-history { margin: 0 20px 16px; padding: 12px 15px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--bg-card); }
   .debate-history-title { color: var(--text); font-size: 12.5px; font-weight: 700; }
   .debate-history-note { margin: 6px 0 10px; color: var(--text-faint); font-size: 11.4px; line-height: 1.5; }
   .debate-history-controls { display: grid; grid-template-columns: auto minmax(180px, 1fr) auto auto; gap: 8px; align-items: end; }
   .debate-history-controls label { color: var(--text-dim); font-size: 11px; }
-  .debate-history-controls select { display: block; width: 100%; min-width: 0; height: 32px; margin-top: 4px; padding: 0 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg-elev); color: var(--text); }
+  .debate-history-controls select { display: block; width: 100%; min-width: 0; height: 32px; margin-top: 4px; padding: 0 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-elev); color: var(--text); }
   .debate-history-status { min-height: 18px; margin-top: 9px; color: var(--text-faint); font-size: 11.2px; line-height: 1.45; overflow-wrap: anywhere; }
   .debate-history-status[data-tone="warn"] { color: var(--amber); }
   .debate-history-status[data-tone="error"] { color: var(--rose); }
@@ -4174,7 +4176,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .chat-empty-state strong { display: block; margin-bottom: 8px; color: var(--text); font-size: 18px; }
   .chat-header-bar > div { min-width: 0; flex: 1 1 160px; }
   .chat-header-bar select { width: 100%; min-width: 0; }
-  .msg { max-width: min(900px, 94%); border-radius: 12px; padding: 12px 16px; border: 1px solid var(--border); }
+  .msg { max-width: min(900px, 94%); border-radius: var(--radius-xl); padding: 12px 16px; border: 1px solid var(--border); }
   .msg.user { align-self: flex-end; background: rgba(99, 102, 241, 0.16); border-color: rgba(99, 102, 241, 0.4); }
   .msg.assistant { align-self: flex-start; background: var(--bg-card); width: 100%; }
   .msg-meta { font-family: var(--mono); font-size: 11px; color: var(--text-faint); margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
@@ -4184,7 +4186,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .chat-turn-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-family: var(--mono); font-size: 10.6px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-faint); }
   .chat-turn-role { color: var(--text-dim); font-weight: 700; }
   .chat-turn-time { color: var(--text-faint); font-size: 10px; letter-spacing: 0; text-transform: none; }
-  .chat-msg-state { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; color: var(--text-dim); font: 600 10px/1.5 var(--sans); letter-spacing: 0; text-transform: none; }
+  .chat-msg-state { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 1px 7px; color: var(--text-dim); font: 600 10px/1.5 var(--sans); letter-spacing: 0; text-transform: none; }
   .chat-msg-state[data-state="streaming"] { border-color: var(--accent); color: var(--text); }
   .chat-msg-state[data-state="complete"] { border-color: var(--emerald); color: var(--emerald); }
   .chat-msg-state[data-state="stopped"] { border-color: var(--amber); color: var(--amber); }
@@ -4213,7 +4215,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .chat-context { font-size: 11.2px; color: var(--text-faint); margin: 0 0 8px; line-height: 1.5; }
   .chat-context code { font-family: var(--mono); font-size: 10.8px; color: var(--text-dim); }
   .chat-tools-summary { font-family: var(--mono); font-size: 10.8px; color: var(--text-dim); margin-bottom: 5px; }
-  .chat-tool-status { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.05em; border-radius: 4px; padding: 1px 5px; border: 1px solid var(--border-hi); color: var(--text-dim); }
+  .chat-tool-status { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.05em; border-radius: var(--radius-xs); padding: 1px 5px; border: 1px solid var(--border-hi); color: var(--text-dim); }
   .chat-tool-status[data-tone="ok"] { color: var(--emerald); border-color: var(--emerald); }
   .chat-tool-status[data-tone="danger"] { color: var(--rose); border-color: var(--rose); }
   .chat-tool-meta { color: var(--text-faint); font-weight: 400; }
@@ -4226,17 +4228,17 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .md h1, .md h2, .md h3, .md h4 { margin: 14px 0 7px; font-weight: 700; color: #fff; line-height: 1.3; }
   .md ul, .md ol { padding-left: 22px; margin-bottom: 9px; } .md li { margin-bottom: 3px; }
   .md hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
-  .md blockquote { border-left: 3px solid var(--accent); padding: 5px 11px; margin: 9px 0; background: rgba(99, 102, 241, 0.08); border-radius: 0 7px 7px 0; color: var(--text-dim); }
-  .md code.inline { font-family: var(--mono); font-size: 12.2px; background: rgba(255,255,255,0.08); padding: 1.5px 5px; border-radius: 4px; color: #c7d2fe; }
-  .md-table-wrap { overflow-x: auto; margin: 11px 0; border-radius: 8px; border: 1px solid var(--border); }
+  .md blockquote { border-left: 3px solid var(--accent); padding: 5px 11px; margin: 9px 0; background: rgba(99, 102, 241, 0.08); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: var(--text-dim); }
+  .md code.inline { font-family: var(--mono); font-size: 12.2px; background: rgba(255,255,255,0.08); padding: 1.5px 5px; border-radius: var(--radius-xs); color: #c7d2fe; }
+  .md-table-wrap { overflow-x: auto; margin: 11px 0; border-radius: var(--radius-md); border: 1px solid var(--border); }
   .md-table { width: 100%; border-collapse: collapse; font-size: 12.6px; }
   .md-table th { background: #101624; color: #fff; font-weight: 650; text-align: left; padding: 7px 11px; border-bottom: 1px solid var(--border-hi); }
   .md-table td { padding: 7px 11px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
-  .code-wrap { margin: 10px 0; border-radius: 9px; overflow: hidden; border: 1px solid var(--border); background: var(--bg-code); }
+  .code-wrap { margin: 10px 0; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border); background: var(--bg-code); }
   .code-bar { display: flex; justify-content: space-between; align-items: center; padding: 5px 11px; background: #101522; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
   .code-wrap pre { padding: 12px; overflow-x: auto; font-family: var(--mono); font-size: 12.3px; line-height: 1.5; color: #e2e8f0; }
 
-  details.think-box { margin-bottom: 10px; background: rgba(168, 85, 247, 0.07); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 9px; padding: 7px 11px; font-size: 12px; color: var(--text-dim); }
+  details.think-box { margin-bottom: 10px; background: rgba(168, 85, 247, 0.07); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: var(--radius-md); padding: 7px 11px; font-size: 12px; color: var(--text-dim); }
   details.think-box summary { cursor: pointer; font-weight: 650; color: #e9d5ff; font-size: 11.6px; }
   details.think-box pre { white-space: pre-wrap; font-family: var(--mono); font-size: 11.4px; margin-top: 7px; max-height: 250px; overflow-y: auto; color: var(--text-dim); padding-top: 6px; border-top: 1px solid rgba(168, 85, 247, 0.2); }
 
@@ -4246,7 +4248,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
 
   .modal-backdrop { position: fixed; inset: 0; background: rgba(4, 6, 12, 0.76); backdrop-filter: blur(4px); z-index: 50; display: none; align-items: center; justify-content: center; padding: 16px; }
   .modal-backdrop.open { display: flex; }
-  .modal { width: 100%; max-width: 760px; max-height: 88vh; background: var(--bg-elev); border: 1px solid var(--border-hi); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 55px rgba(0,0,0,0.7); }
+  .modal { width: 100%; max-width: 760px; max-height: 88vh; background: var(--bg-elev); border: 1px solid var(--border-hi); border-radius: var(--radius-xl); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 55px rgba(0,0,0,0.7); }
   .chk-lbl { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); cursor: pointer; user-select: none; min-height: var(--target-min); }
 
   /* Agentic Harness (v5.0) */
@@ -4261,20 +4263,20 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   /* The stream is focusable so it can be scrolled with the arrow keys; without a ring the focus
      lands on a region with no visible boundary and the keyboard user is lost inside it. */
   .harness-stream:focus-visible, .hall-stream:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
-  .h-turn-user { align-self: flex-end; max-width: 88%; background: rgba(99, 102, 241, 0.16); border: 1px solid rgba(99, 102, 241, 0.42); border-radius: 12px; padding: 10px 14px; }
-  .h-step-card { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--cyan); border-radius: 11px; padding: 11px 14px; }
+  .h-turn-user { align-self: flex-end; max-width: 88%; background: rgba(99, 102, 241, 0.16); border: 1px solid rgba(99, 102, 241, 0.42); border-radius: var(--radius-xl); padding: 10px 14px; }
+  .h-step-card { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--cyan); border-radius: var(--radius-lg); padding: 11px 14px; }
   .h-step-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 12px; }
-  .h-tool-card { background: #0c111b; border: 1px solid var(--border); border-radius: 9px; padding: 9px 12px; margin-top: 7px; font-size: 12.2px; }
+  .h-tool-card { background: #0c111b; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 9px 12px; margin-top: 7px; font-size: 12.2px; }
   .h-tool-card.ok { border-left: 3px solid var(--emerald); }
   .h-tool-card.err { border-left: 3px solid var(--rose); }
   .h-tool-card.wait { border-color: rgba(245, 158, 11, 0.65); background: rgba(245, 158, 11, 0.08); border-left: 3px solid var(--amber); }
-  .diff-box { margin-top: 7px; background: #06090e; border: 1px solid var(--border); border-radius: 7px; padding: 8px 10px; font-family: var(--mono); font-size: 11.4px; line-height: 1.45; overflow-x: auto; max-height: 260px; overflow-y: auto; }
+  .diff-box { margin-top: 7px; background: #06090e; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; font-family: var(--mono); font-size: 11.4px; line-height: 1.45; overflow-x: auto; max-height: 260px; overflow-y: auto; }
   .diff-add { color: #6ee7b7; background: rgba(16, 185, 129, 0.11); display: block; padding: 0 4px; }
   .diff-del { color: #fda4af; background: rgba(244, 63, 94, 0.11); display: block; padding: 0 4px; }
   .diff-hdr { color: #67e8f9; font-weight: 700; display: block; padding: 1px 4px; }
   .diff-ctx { color: var(--text-dim); display: block; padding: 0 4px; }
   .starter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-top: 12px; }
-  .starter-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 11px 13px; cursor: pointer; transition: border-color 0.15s, background 0.15s; text-align: left; }
+  .starter-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 11px 13px; cursor: pointer; transition: border-color var(--dur-fast), background var(--dur-fast); text-align: left; }
   .starter-card:hover { border-color: var(--cyan); background: var(--bg-hover); }
 </style>
 <style id="m5-redesign-system">
@@ -4300,6 +4302,9 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   --bg-elev: #1b1e21;
   --bg-card: #202428;
   --bg-hover: #292e33;
+  /* A press is one step past a hover: a reader who has committed to the click gets an answer even
+     where the platform draws no press of its own, and one that survives reduced motion. */
+  --bg-press: #23272b;
   --bg-code: #111315;
   --border: #34393e;
   --border-hi: #525a62;
@@ -4307,6 +4312,9 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   --text-dim: #b0b5ba;
   --text-faint: #969da4;
   --accent: #5969d8;
+  /* The hover of a filled accent control. Darker in both themes, which is the direction that keeps
+     white text above AA: a lighter hover would be a prettier effect and a worse button. */
+  --accent-hi: #4a55c8;
   --primary-text: #ffffff;
   --cyan: #70b7c9;
   --emerald: #72b598;
@@ -4335,10 +4343,14 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   --space-4: 12px;
   --space-5: 16px;
 
-  /* Radius */
+  /* Radius — one scale for every corner in the app. A corner is a decision the token makes, not a
+     number a rule picks: the pane had eleven of them before this list existed. */
+  --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-pill: 999px;
 
   /* Target size — the floor a control's hit area may not go below on a touch screen.
      It is deliberately *not* re-pointed by density: density is how tight the layout
@@ -4353,9 +4365,13 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   --card-pad: 13px;
   --row-gap: 4px;
 
-  /* Motion — a duration and an easing curve, so a transition is a choice. */
+  /* Motion — a duration and an easing curve, so a transition is a choice. `slow` is for a shape
+     that changes size rather than colour, and `meter` is for a bar reporting progress, which may
+     take as long as the reading does. */
   --ease-out: cubic-bezier(.2,.8,.2,1);
   --dur-fast: 140ms;
+  --dur-slow: 320ms;
+  --dur-meter: 480ms;
 
   /* Shell metrics and families */
   --sans: Inter, "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -4371,6 +4387,7 @@ body[data-theme="light"] {
   --bg-elev: #ffffff;
   --bg-card: #ffffff;
   --bg-hover: #eff0ed;
+  --bg-press: #e4e6e0;
   --bg-code: #f1f2ef;
   --border: #d9dcd8;
   --border-hi: #b7bcb7;
@@ -4378,6 +4395,7 @@ body[data-theme="light"] {
   --text-dim: #555c62;
   --text-faint: #687077;
   --accent: #5969d8;
+  --accent-hi: #4a55c8;
   --cyan: #276e82;
   --emerald: #286e50;
   --amber: #80580e;
@@ -4402,7 +4420,7 @@ body { font-family: var(--sans); }
   background: var(--bg-elev); border-bottom: 1px solid var(--border); backdrop-filter: none;
 }
 .brand { gap: 10px; font-size: var(--text-base); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
-.brand-chip { width: 28px; height: 28px; border-radius: 7px; background: var(--accent); box-shadow: none; font-weight: 650; }
+.brand-chip { width: 28px; height: 28px; border-radius: var(--radius-sm); background: var(--accent); box-shadow: none; font-weight: 650; }
 .ver-badge { display: none; }
 .status-pill { background: transparent; border-color: var(--border); color: var(--text-dim); font-size: 12px; font-weight: 500; }
 .status-pill .dot { box-shadow: none; width: 6px; height: 6px; }
@@ -4424,12 +4442,13 @@ body { font-family: var(--sans); }
 .svg-ico { width: 16px; height: 16px; stroke-width: 1.75; }
 .btn {
   background: var(--bg-elev); color: var(--text); border: 1px solid var(--border);
-  min-height: var(--control-min-h); border-radius: 7px; padding: 7px 11px;
+  min-height: var(--control-min-h); border-radius: var(--radius-sm); padding: 7px 11px;
   font-size: var(--text-sm); font-weight: var(--weight-medium);
   box-shadow: none; transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .btn:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--border-hi); }
-.btn-primary, .btn-primary:hover:not(:disabled) { background: var(--accent); color: var(--primary-text); border-color: var(--accent); box-shadow: none; }
+.btn-primary { background: var(--accent); color: var(--primary-text); border-color: var(--accent); box-shadow: none; }
+.btn-primary:hover:not(:disabled) { background: var(--accent-hi); border-color: var(--accent-hi); }
 .btn-cyan, .btn-amber, .btn-purple { background: var(--bg-elev); color: var(--text); border-color: var(--border); }
 .btn-cyan:hover:not(:disabled), .btn-amber:hover:not(:disabled), .btn-purple:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--border-hi); }
 .btn-emerald { background: var(--bg-elev); color: var(--text); border-color: var(--emerald); }
@@ -4456,7 +4475,7 @@ select { min-width: 0; max-width: 100%; }
 .skill-pill.active { background: var(--bg-hover); color: var(--text); border-color: var(--accent); }
 .field-lbl { color: var(--text-dim) !important; font-size: 12px !important; line-height: 1.35; font-weight: 600; letter-spacing: 0 !important; text-transform: none !important; }
 input, select, textarea {
-  color: var(--text); background-color: var(--bg); border-color: var(--border); border-radius: 6px;
+  color: var(--text); background-color: var(--bg); border-color: var(--border); border-radius: var(--radius-sm);
   font-family: var(--sans); font-size: 13px;
 }
 input::placeholder, textarea::placeholder { color: var(--text-faint); opacity: 1; }
@@ -4464,13 +4483,61 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); }
 button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible,
 summary { min-height: var(--target-min); }
 summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* ── One affordance for anything a reader can press (UIUX-P5-05) ──────────────────────────────
+   Each pane used to decide for itself what a control does when you point at it. Measured across the
+   six panes, half of the control *kinds* a reader can reach answered the pointer with nothing, and
+   the primary action - the one button a pane wants pressed - was the one with no reaction at all:
+   its hover rule re-declared the resting fill.
+
+   These rules are the floor, not the design. A pane that has already said how its own buttons look
+   keeps its answer, because a state set on a class (`.btn:hover`) still outranks a state set on the
+   element. What they cover is everything no pane ever dressed. Every one of them reads a token, and
+   every one of them works with transitions turned off, because a reader who asked for reduced motion
+   asked for the state, not the animation. */
+
+/* Pointing at a control says it can be pressed. */
+:is(button, select, summary):hover:not(:disabled):not([aria-disabled="true"]) {
+  background-color: var(--bg-hover);
+  border-color: var(--border-hi);
+}
+:is(input, textarea):hover:not(:disabled) {
+  border-color: var(--border-hi);
+}
+/* A checkbox is pressed through its label, so the label is the control and the label answers. */
+:is(label):has(> input):hover {
+  color: var(--text);
+}
+
+/* Pressing one says it was pressed - one step past the hover, and one that does not need a frame of
+   animation to be visible. */
+:is(.btn, .btn-xs, .chip, .step-card, .starter-card, .harness-perm-badge, .mode-tab, .toast-dismiss,
+    .evidence-copy, .cmd-item, .skill-pill, .harness-timeline-row, .start-recent-row, summary,
+    select):active:not(:disabled):not([aria-disabled="true"]) {
+  background-color: var(--bg-press);
+  border-color: var(--border-hi);
+  transform: translateY(1px);
+}
+
+/* A text field answers by taking the caret, and the caret is not visible to a screenshot - the ring
+   is. Two composers were drawn without one; every field now draws the same ring as every button. */
+:is(input, textarea, select):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* A control that will not answer says so, and stops pretending to be a pointer. */
+:is(button, select, input, textarea, [role="button"]):disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
 .m-card, .config-strip, .prompt-box, .stage-output-card, .step-card, .starter-card,
 .model-row, .msg, .h-step-card, .h-tool-card, .code-wrap, .diff-box {
   background-color: var(--bg-card); border-color: var(--border); box-shadow: none;
 }
 .m-card { border-radius: var(--radius-md); padding: var(--card-pad); }
-.config-strip, .prompt-box { border-radius: 8px; padding: 14px 16px; }
-.step-card, .starter-card { border-radius: 7px; }
+.config-strip, .prompt-box { border-radius: var(--radius-md); padding: 14px 16px; }
+.step-card, .starter-card { border-radius: var(--radius-sm); }
 .mode-tab, .btn, .chip, .step-card, .starter-card, .chronicle-item { -webkit-tap-highlight-color: transparent; }
 .hall-sidebar, .harness-sidebar, .monitor-rail { background: var(--bg-elev); }
 .hall-header, .harness-bar, .chat-header-bar, .hall-composer, .chat-composer { background: var(--bg-elev); }
@@ -4486,22 +4553,22 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .harness-advanced-summary[data-changed="true"] { color: var(--amber); }
 /* An approval is a permission decision, so the card states the permission it records:
    which policy is asking, for which tool, until when, and what refusing does instead. */
-.h-approval { background: var(--bg-card); border: 1px solid rgba(245,158,11,0.45); border-left: 3px solid var(--amber); border-radius: 11px; padding: 11px 13px; display: flex; flex-direction: column; gap: 7px; }
+.h-approval { background: var(--bg-card); border: 1px solid rgba(245,158,11,0.45); border-left: 3px solid var(--amber); border-radius: var(--radius-lg); padding: 11px 13px; display: flex; flex-direction: column; gap: 7px; }
 .h-approval[data-live="false"] { opacity: 0.82; }
 .h-approval-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .h-approval-title { font-size: 12.4px; font-weight: 700; color: #fde68a; }
-.h-approval-args { padding: 7px 9px; background: #06090e; border-radius: 6px; font-family: var(--mono); font-size: 11.6px; color: #fff; overflow-x: auto; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.h-approval-args { padding: 7px 9px; background: #06090e; border-radius: var(--radius-sm); font-family: var(--mono); font-size: 11.6px; color: #fff; overflow-x: auto; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .h-approval-consequence { font-size: 11.4px; line-height: 1.5; color: var(--text-dim); }
 .h-approval-consequence strong { color: var(--text); }
 .h-approval-actions { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
 .h-approval-countdown { color: #fde68a; font-variant-numeric: tabular-nums; }
 .h-approval-facts { border-top: 1px solid var(--border); padding-top: 6px; }
 .h-approval-facts dd { color: var(--text); }
-.harness-perm-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10.8px; font-weight: 700; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-dim); cursor: pointer; min-height: var(--target-min); }
+.harness-perm-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10.8px; font-weight: 700; letter-spacing: 0.04em; padding: 3px 8px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--bg-card); color: var(--text-dim); cursor: pointer; min-height: var(--target-min); }
 .harness-perm-badge[data-count="0"] { color: var(--text-faint); }
 .harness-perm-badge[data-count]:not([data-count="0"]) { color: #fde68a; border-color: rgba(245,158,11,0.5); background: rgba(245,158,11,0.10); }
-.perm-summary { font-size: 11.4px; color: var(--text-dim); background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 11px; line-height: 1.5; }
-.perm-card { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--emerald); border-radius: 9px; padding: 9px 12px; display: flex; flex-direction: column; gap: 6px; }
+.perm-summary { font-size: 11.4px; color: var(--text-dim); background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 8px 11px; line-height: 1.5; }
+.perm-card { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--emerald); border-radius: var(--radius-md); padding: 9px 12px; display: flex; flex-direction: column; gap: 6px; }
 .perm-card[data-status="revoked"] { border-left-color: var(--rose); opacity: 0.85; }
 .perm-card[data-status="expired"] { border-left-color: var(--text-faint); opacity: 0.8; }
 .perm-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 11.8px; }
@@ -4509,7 +4576,7 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .perm-facts { display: grid; grid-template-columns: 92px 1fr; gap: 2px 10px; font-size: 11.2px; color: var(--text-dim); }
 .perm-facts dt { color: var(--text-faint); }
 .perm-facts dd { margin: 0; overflow-wrap: anywhere; }
-.perm-confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: rgba(244,63,94,0.10); border: 1px solid rgba(244,63,94,0.45); border-radius: 8px; padding: 7px 10px; font-size: 11.2px; color: #fecdd3; }
+.perm-confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: rgba(244,63,94,0.10); border: 1px solid rgba(244,63,94,0.45); border-radius: var(--radius-md); padding: 7px 10px; font-size: 11.2px; color: #fecdd3; }
 .perm-section { font-size: 10.8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
 .perm-empty { font-size: 11.4px; color: var(--text-faint); }
 /* A completion claim is a claim about evidence, so the card states the verdict and what it
@@ -4517,7 +4584,7 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
    the surface behind it holds the contract, the observation and the change. The three tones
    are the runtime's three outcomes, not a decoration: a rejected run is danger, a paused one
    is the amber of every other safe-boundary pause, and only a verified run is green. */
-.h-verdict { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--emerald); border-radius: 11px; padding: 11px 13px; display: flex; flex-direction: column; gap: 7px; }
+.h-verdict { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--emerald); border-radius: var(--radius-lg); padding: 11px 13px; display: flex; flex-direction: column; gap: 7px; }
 .h-verdict[data-verdict="rejected"] { border-left-color: var(--rose); border-color: rgba(244,63,94,0.42); }
 .h-verdict[data-verdict="paused"] { border-left-color: var(--amber); border-color: rgba(245,158,11,0.45); }
 .h-verdict-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
@@ -4544,13 +4611,13 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .ev-more { font-size: 10.9px; color: var(--text-faint); }
 .h-verdict-output, .ev-output { font-size: 11.2px; color: var(--text-dim); }
 .h-verdict-output summary, .ev-output summary { cursor: pointer; color: var(--text-dim); }
-.h-verdict-output pre, .ev-output pre { margin: 5px 0 0; padding: 8px 10px; background: #06090e; border: 1px solid var(--border); border-radius: 7px; font-family: var(--mono); font-size: 11px; color: #e2e8f0; max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.h-verdict-output pre, .ev-output pre { margin: 5px 0 0; padding: 8px 10px; background: #06090e; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 11px; color: #e2e8f0; max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 .h-verdict-actions, .ev-actions { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
 .h-verdict-not { margin: 0; font-size: 10.7px; color: var(--text-faint); }
 .ev-block { display: flex; flex-direction: column; gap: 7px; }
 .ev-heading { font-size: 10.8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
 .ev-subheading { font-size: 10.6px; font-weight: 700; color: var(--text-dim); }
-.ev-verdict { display: flex; flex-direction: column; gap: 7px; background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--emerald); border-radius: 9px; padding: 10px 12px; }
+.ev-verdict { display: flex; flex-direction: column; gap: 7px; background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--emerald); border-radius: var(--radius-md); padding: 10px 12px; }
 .ev-verdict[data-verdict="rejected"] { border-left-color: var(--rose); }
 .ev-verdict[data-verdict="paused"], .ev-verdict[data-verdict="none"] { border-left-color: var(--amber); }
 .ev-verdict-head { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
@@ -4594,7 +4661,7 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .presentation-why[hidden] { display: none; }
 /* The same story in the stream, one card per recovery event, so the log says what
    the event meant at the place it happened. */
-.hrec-card { display: flex; flex-direction: column; gap: 5px; background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--amber); border-radius: 9px; padding: 9px 11px; }
+.hrec-card { display: flex; flex-direction: column; gap: 5px; background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--amber); border-radius: var(--radius-md); padding: 9px 11px; }
 .hrec-card[data-tone="danger"] { border-left-color: var(--rose); }
 .hrec-card[data-tone="ok"] { border-left-color: var(--emerald); }
 .hrec-head { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
@@ -4627,14 +4694,14 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .harness-timeline-type { font-family: var(--mono); font-size: 10.4px; color: var(--cyan); min-width: 168px; }
 .harness-timeline-summary { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .harness-timeline-time { font-family: var(--mono); font-size: 10.2px; color: var(--text-faint); }
-.h-event[data-highlight="true"] { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
-.h-recorded { display: flex; gap: 9px; align-items: baseline; font-family: var(--mono); font-size: 11px; color: var(--text-dim); padding: 4px 8px; background: rgba(148,163,184,0.07); border-left: 2px solid rgba(148,163,184,0.45); border-radius: 5px; }
+.h-event[data-highlight="true"] { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius-md); }
+.h-recorded { display: flex; gap: 9px; align-items: baseline; font-family: var(--mono); font-size: 11px; color: var(--text-dim); padding: 4px 8px; background: rgba(148,163,184,0.07); border-left: 2px solid rgba(148,163,184,0.45); border-radius: var(--radius-xs); }
 .h-recorded-type { color: var(--cyan); flex: 0 0 auto; white-space: nowrap; }
 .h-recorded-body { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 /* The plan is the answer to "what will Run do?" printed before it is pressed. Every value
    is read from the control the run payload reads, so it cannot describe a run this pane
    would not start. */
-.harness-plan { flex: 1 1 100%; display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 12px; padding: 6px 9px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 7px; font-size: 11.2px; color: var(--text-dim); }
+.harness-plan { flex: 1 1 100%; display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 12px; padding: 6px 9px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 11.2px; color: var(--text-dim); }
 .harness-plan-title { font-family: var(--mono); font-size: 9.9px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); }
 .harness-plan-body { display: flex; flex-wrap: wrap; gap: 2px 14px; min-width: 0; }
 .harness-plan-row { display: flex; align-items: baseline; gap: 5px; min-width: 0; max-width: 100%; }
@@ -4645,7 +4712,7 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .harness-run-hint[data-reason="ready"] { color: var(--text-dim); }
 .harness-run-hint[data-reason="running"] { color: var(--text-dim); }
 .harness-run-hint[data-reason="no-task"] { color: var(--amber); }
-.harness-brief { flex: 1 1 100%; display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 7px; padding: 5px 9px; border: 1px solid var(--border); border-left: 3px solid var(--cyan); border-radius: 6px; background: var(--bg-card); font-size: 11.2px; color: var(--text-dim); }
+.harness-brief { flex: 1 1 100%; display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 7px; padding: 5px 9px; border: 1px solid var(--border); border-left: 3px solid var(--cyan); border-radius: var(--radius-sm); background: var(--bg-card); font-size: 11.2px; color: var(--text-dim); }
 .harness-brief[hidden] { display: none; }
 .harness-brief[data-match="mismatch"] { border-left-color: var(--amber); }
 .harness-brief-tag { font-family: var(--mono); font-size: 9.9px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); }
@@ -4706,7 +4773,7 @@ body[data-density="compact"] .council-settings { padding-block: var(--strip-pad-
 }
 .badge { color: var(--text-dim); background: var(--bg-hover); border-color: var(--border); font: var(--weight-medium) var(--text-xs)/var(--lh-tight) var(--sans); }
 .badge.green, .badge.indigo, .badge.cyan, .badge.purple, .badge.amber { color: var(--text); background: var(--bg-hover); border-color: var(--border); }
-.kpi { background: var(--bg-code); border-color: var(--border); border-radius: 8px; }
+.kpi { background: var(--bg-code); border-color: var(--border); border-radius: var(--radius-md); }
 .kpi-lbl, .m-head, .step-num, .step-meta, .chronicle-meta, .msg-meta { font-size: 12px; }
 .kpi-lbl { text-transform: none; letter-spacing: 0; }
 .c-table { font-size: 12px; }
@@ -4833,11 +4900,11 @@ body[data-density="compact"] .council-settings { padding-block: var(--strip-pad-
 .voice-card.human, .voice-card.architect, .voice-card.coder, .voice-card.critic, .voice-card.judge, .voice-card.external {
   background: var(--bg-card); border-color: var(--border); border-left: 2px solid var(--border-hi);
 }
-.voice-card { border-radius: 8px; }
+.voice-card { border-radius: var(--radius-md); }
 .step-card.running { border-color: var(--accent); background: var(--bg-card); }
 .chip:hover, .chip.active { color: var(--text); border-color: var(--border-hi); background: var(--bg-hover); }
 .model-row.loaded { border-color: var(--border); background: var(--bg-card); }
-details.think-box { background: var(--bg-card); border-color: var(--border); border-radius: 7px; }
+details.think-box { background: var(--bg-card); border-color: var(--border); border-radius: var(--radius-sm); }
 details.think-box summary { color: var(--text); font-size: 12px; }
 details.think-box pre { border-color: var(--border); font-size: 12px; }
 .modal .field-lbl { color: var(--text-dim) !important; }
@@ -4941,7 +5008,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
   #contextModal #cgStatsSummary { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .modal-backdrop { padding: 8px; }
-  .modal { max-height: 94dvh; border-radius: 9px; }
+  .modal { max-height: 94dvh; border-radius: var(--radius-md); }
   #contextModal, #mcpModal, #providersModal, #skillsModal, #sdlcModal, #externalHarnessModal { padding: 0; }
   #contextModal .modal, #mcpModal .modal, #providersModal .modal, #skillsModal .modal,
   #sdlcModal .modal, #externalHarnessModal .modal {
@@ -5052,7 +5119,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     <div style="padding:15px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:14px;">
       <!-- SUB-PANE 1: OPENCONTEXT PERSISTENT MEMORY VAULT -->
       <div id="ctxPane-oc" style="display:flex; flex-direction:column; gap:12px;">
-        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:12px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <strong style="font-size:13px; color:#6ee7b7;">Save a knowledge document</strong>
             <span class="mono" style="font-size:11px; color:var(--text-faint);">Pinned documents are included in Harness context.</span>
@@ -5085,14 +5152,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
               <button class="btn btn-emerald btn-xs" onclick="saveOpenContextDoc()">Save to OpenContext</button>
             </div>
           </div>
-          <div id="ocLintBanner" style="display:none; margin-top:8px; padding:7px 10px; border-radius:7px; background:var(--bg-code); border:1px solid var(--border); font-family:var(--mono); font-size:11.3px; color:var(--text-dim);"></div>
+          <div id="ocLintBanner" style="display:none; margin-top:8px; padding:7px 10px; border-radius: var(--radius-sm); background:var(--bg-code); border:1px solid var(--border); font-family:var(--mono); font-size:11.3px; color:var(--text-dim);"></div>
         </div>
         <div id="ocDocsList" style="display:flex; flex-direction:column; gap:8px;"></div>
       </div>
 
       <!-- SUB-PANE 2: AST CODEGRAPH + GRAPHIFY v8 + PONYTAIL DEBT -->
       <div id="ctxPane-cg" style="display:none; flex-direction:column; gap:12px;">
-        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:12px;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
             <strong style="font-size:13px; color:#67e8f9;">Explore code relationships and path queries</strong>
             <button class="btn btn-cyan btn-xs" onclick="refreshCodeGraphOverview()">Scan Workspace Graph</button>
@@ -5115,7 +5182,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           </div>
         </div>
         <div id="cgStatsSummary" style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px;"></div>
-        <pre id="cgReportOutput" style="background:var(--bg-code); border:1px solid var(--border); border-radius:9px; padding:11px; font-family:var(--mono); font-size:11.4px; max-height:300px; overflow:auto; white-space:pre-wrap; color:#e2e8f0;">Choose Scan workspace or Run query to inspect symbols, callers, paths, and complexity.</pre>
+        <pre id="cgReportOutput" style="background:var(--bg-code); border:1px solid var(--border); border-radius: var(--radius-md); padding:11px; font-family:var(--mono); font-size:11.4px; max-height:300px; overflow:auto; white-space:pre-wrap; color:#e2e8f0;">Choose Scan workspace or Run query to inspect symbols, callers, paths, and complexity.</pre>
       </div>
 
       <!-- SUB-PANE 3: CONTEXT-MODE & GSD SPEC ENGINE -->
@@ -5153,7 +5220,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
     <div style="padding:15px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:14px;">
       <!-- 1. Presets & Add/Edit Form -->
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:12px;">
         <label class="field-lbl" style="color:#67e8f9;">Remote server presets</label>
         <div id="mcpCloudPresetChips" style="display:flex; gap:6px; flex-wrap:wrap; margin:5px 0 10px;"></div>
 
@@ -5219,7 +5286,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       </div>
 
       <!-- 2. 1-Click Paste `mcpServers` JSON Import -->
-      <details style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:9px 12px;">
+      <details style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:9px 12px;">
         <summary style="cursor:pointer; font-size:12.3px; font-weight:650; color:#e9d5ff;">Paste <code>mcpServers</code> JSON Config (Claude Desktop / Cursor / Windsurf Format)</summary>
         <div style="margin-top:8px;">
           <label class="field-lbl" for="mcpImportJsonInput" style="display:block; margin-bottom:4px;">Imported servers JSON</label>
@@ -5237,7 +5304,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       </div>
 
       <!-- 4. Live MCP Tool Playground -->
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:12px;">
         <label class="field-lbl" style="color:var(--emerald);">Test an MCP tool call</label>
         <div style="display:grid; grid-template-columns:1fr 1.2fr 1.8fr auto; gap:7px; align-items:end; margin-top:6px;">
           <div><label class="field-lbl" for="mcpPlayServer">Server</label><select id="mcpPlayServer" style="width:100%;" onchange="populateMcpPlayTools()"></select></div>
@@ -5245,7 +5312,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div><label class="field-lbl" for="mcpPlayArgs">JSON Arguments</label><input type="text" id="mcpPlayArgs" style="width:100%; font-family:var(--mono); font-size:11.6px;" value="{}" /></div>
           <button id="mcpPlayBtn" class="btn btn-emerald" onclick="runMcpPlayground()">Test Call</button>
         </div>
-        <pre id="mcpPlayOutput" style="display:none; margin-top:8px; padding:9px; background:var(--bg-code); border-radius:7px; font-family:var(--mono); font-size:11.3px; max-height:170px; overflow:auto; white-space:pre-wrap; color:#e2e8f0;"></pre>
+        <pre id="mcpPlayOutput" style="display:none; margin-top:8px; padding:9px; background:var(--bg-code); border-radius: var(--radius-sm); font-family:var(--mono); font-size:11.3px; max-height:170px; overflow:auto; white-space:pre-wrap; color:#e2e8f0;"></pre>
       </div>
     </div>
   </div>
@@ -5262,29 +5329,29 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       <button class="btn btn-xs" onclick="closeExternalHarnessModal()">Close</button>
     </div>
     <div style="padding:15px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:13px;">
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
           <strong style="font-size:13px; color:#67e8f9;">1. `deepseek-ai/deepseek-harness` (`~/.dsh/settings.yaml` + `npx @deepseek-ai/dsh web`)</strong>
           <button class="btn btn-xs" onclick="copyPreText('extDshYaml', this)">Copy YAML</button>
         </div>
         <div style="font-size:11.6px; color:var(--text-dim); margin-bottom:6px;">Save as <code>~/.dsh/settings.yaml</code>, then run <code>DSH_LOCAL_KEY=m5 npx @deepseek-ai/dsh web</code> (`:3080`)!</div>
-        <pre id="extDshYaml" style="background:var(--bg-code); padding:9px; border-radius:7px; font-family:var(--mono); font-size:11.3px; overflow-x:auto; color:#e2e8f0;"></pre>
+        <pre id="extDshYaml" style="background:var(--bg-code); padding:9px; border-radius: var(--radius-sm); font-family:var(--mono); font-size:11.3px; overflow-x:auto; color:#e2e8f0;"></pre>
       </div>
 
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
           <strong style="font-size:13px; color:#a7f3d0;">2. `deepseek-harness-sdk` (Official Python JSON-RPC Wrapper — Zero Node Required)</strong>
           <button class="btn btn-xs" onclick="copyPreText('extDshPy', this)">Copy Python</button>
         </div>
-        <pre id="extDshPy" style="background:var(--bg-code); padding:9px; border-radius:7px; font-family:var(--mono); font-size:11.3px; overflow-x:auto; color:#e2e8f0;"></pre>
+        <pre id="extDshPy" style="background:var(--bg-code); padding:9px; border-radius: var(--radius-sm); font-family:var(--mono); font-size:11.3px; overflow-x:auto; color:#e2e8f0;"></pre>
       </div>
 
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
           <strong style="font-size:13px; color:#fde68a;">3. `autonomous-ai/openharness` (`hn` Multi-Agent tmux + Worktree Orchestrator)</strong>
           <button class="btn btn-xs" onclick="copyPreText('extOpenHarness', this)">Copy Commands</button>
         </div>
-        <pre id="extOpenHarness" style="background:var(--bg-code); padding:9px; border-radius:7px; font-family:var(--mono); font-size:11.3px; overflow-x:auto; color:#e2e8f0;"></pre>
+        <pre id="extOpenHarness" style="background:var(--bg-code); padding:9px; border-radius: var(--radius-sm); font-family:var(--mono); font-size:11.3px; overflow-x:auto; color:#e2e8f0;"></pre>
       </div>
     </div>
   </div>
@@ -5306,7 +5373,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       </div>
     </div>
     <div style="padding:14px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:10px;">
-      <div id="harnessGitStatusBox" class="mono" style="font-size:11.5px; color:#fde68a; background:var(--bg-card); padding:8px 11px; border-radius:7px; border:1px solid var(--border); white-space:pre-wrap;"></div>
+      <div id="harnessGitStatusBox" class="mono" style="font-size:11.5px; color:#fde68a; background:var(--bg-card); padding:8px 11px; border-radius: var(--radius-sm); border:1px solid var(--border); white-space:pre-wrap;"></div>
       <div id="harnessGitDiffSummary" class="mono" style="font-size:11.2px; color:var(--text-dim);"></div>
       <div id="harnessGitDiffBox" class="diff-box" style="max-height:52vh;"></div>
       <p style="margin:0; font-size:11px; color:var(--text-faint);">This is the worktree as it is now. It is not frozen at any verdict: "Verification &amp; artifacts" says what a completion claim was checked against.</p>
@@ -5378,7 +5445,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
     <div style="padding:15px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:14px;">
       <!-- Preset Picker -->
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:12px;">
         <label class="field-lbl">1. Quick-Fill Provider Preset (Click to Load Settings)</label>
         <div id="providerPresetChips" style="display:flex; gap:6px; flex-wrap:wrap; margin:6px 0 12px;"></div>
 
@@ -5420,7 +5487,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       </div>
 
       <!-- Smart Fallback Combos (OmniRoute Style) -->
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:12px;">
         <label class="field-lbl" style="color:var(--amber);">Smart Auto-Fallback Combos (`combo/&lt;alias&gt;` — Quota / 429 / Offline Failover)</label>
         <div style="font-size:11.8px; color:var(--text-dim); margin-bottom:8px;">
           List models in priority order (comma-separated). Example: try Cloud first -> Free Cloud -> Local M5 `Qwen3.8-27B-oQ4e-mtp` if offline or rate-limited!
@@ -5451,13 +5518,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       </div>
     </div>
     <div style="padding:16px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:14px;">
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:12px;">
         <label class="field-lbl" for="skillInstallInput">1-Click Install Skill (Zero-Node Git Fallback Built-In)</label>
         <div style="display:flex; gap:8px; margin-top:6px;">
           <input type="text" id="skillInstallInput" style="flex:1; font-family:var(--mono); font-size:12px;" value="npx skills add https://github.com/nextlevelbuilder/ui-ux-pro-max-skill --skill ui-ux-pro-max" />
           <button id="skillInstallBtn" class="btn btn-primary" onclick="installSkill()">Install</button>
         </div>
-        <pre id="skillInstallLog" style="display:none; margin-top:9px; padding:8px; background:var(--bg-code); border-radius:7px; font-family:var(--mono); font-size:11px; max-height:130px; overflow-y:auto; white-space:pre-wrap; color:var(--text-dim);"></pre>
+        <pre id="skillInstallLog" style="display:none; margin-top:9px; padding:8px; background:var(--bg-code); border-radius: var(--radius-sm); font-family:var(--mono); font-size:11px; max-height:130px; overflow-y:auto; white-space:pre-wrap; color:var(--text-dim);"></pre>
       </div>
       <div>
         <div class="field-lbl" style="margin-bottom:6px;">Discovered Skills (Click to Toggle Active)</div>
@@ -5484,7 +5551,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
     <div style="padding:15px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:14px;">
       <!-- 1. Broad-Context Product / App / Game Kickoff -->
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
           <strong style="font-size:13px; color:#6ee7b7;">Start with a product brief</strong>
           <span class="mono" style="font-size:11px; color:var(--text-faint);">Saves directly into your chosen Project Directory.</span>
@@ -5519,14 +5586,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
       <!-- 2. Sprint Backlog Stories (`backlog.json` Default-FAIL Contract) + Artifacts -->
       <div style="display:grid; grid-template-columns:1.15fr 1fr; gap:12px;">
-        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:8px;">
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:12px; display:flex; flex-direction:column; gap:8px;">
           <strong style="font-size:12.6px; color:#a5b4fc;">Sprint Backlog (`.sdlc/backlog.json` • Acceptance Criteria &amp; QA Gate)</strong>
           <div id="sdlcStoriesList" style="display:flex; flex-direction:column; gap:7px; max-height:270px; overflow-y:auto; font-size:11.8px; color:var(--text-dim);">
             <div style="color:var(--text-faint);">No SDLC backlog in active session yet. Launch Research &amp; Plan above!</div>
           </div>
         </div>
 
-        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:8px;">
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:12px; display:flex; flex-direction:column; gap:8px;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
             <strong style="font-size:12.6px; color:#67e8f9;">SDLC Artifacts (`.sdlc/`)</strong>
             <div style="display:flex; gap:4px; flex-wrap:wrap;">
@@ -5536,12 +5603,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
               <button class="btn btn-xs" onclick="switchSdlcArtifact('FEEDBACK_LOG.md')">Feedback</button>
             </div>
           </div>
-          <pre id="sdlcArtifactViewer" style="background:var(--bg-code); border:1px solid var(--border); border-radius:8px; padding:9px; font-family:var(--mono); font-size:11px; max-height:270px; overflow:auto; white-space:pre-wrap; color:#e2e8f0; margin:0;">Select an artifact tab after running Discovery / Planning.</pre>
+          <pre id="sdlcArtifactViewer" style="background:var(--bg-code); border:1px solid var(--border); border-radius: var(--radius-md); padding:9px; font-family:var(--mono); font-size:11px; max-height:270px; overflow:auto; white-space:pre-wrap; color:#e2e8f0; margin:0;">Select an artifact tab after running Discovery / Planning.</pre>
         </div>
       </div>
 
       <!-- 3. Closed-Loop Dissatisfaction Router -> Research & Online Inspiration Team -->
-      <div style="background:var(--bg-card); border:1px solid rgba(245,158,11,0.4); border-radius:10px; padding:12px;">
+      <div style="background:var(--bg-card); border:1px solid rgba(245,158,11,0.4); border-radius: var(--radius-lg); padding:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
           <strong style="font-size:13px; color:#fde68a;">3. Review results and provide feedback</strong>
           <label class="chk-lbl"><input type="checkbox" id="sdlcFeedbackAutoImpl" checked /> Auto-implement delta stories</label>
@@ -5576,7 +5643,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       </div>
       <div>
         <label class="field-lbl">Attach Read-Only Local Workspace Files (Optional)</label>
-        <div id="workspaceFilesChecks" style="max-height:140px; overflow-y:auto; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:4px;"></div>
+        <div id="workspaceFilesChecks" style="max-height:140px; overflow-y:auto; background:var(--bg); border:1px solid var(--border); border-radius: var(--radius-md); padding:8px; display:flex; flex-direction:column; gap:4px;"></div>
       </div>
       <div style="display:flex; justify-content:flex-end; gap:8px;">
         <button class="btn" onclick="closeSpawnModal()">Cancel</button>
@@ -12841,7 +12908,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         ${diffHtml}
         <details style="margin-top:6px;" ${!ok && !ev.diff ? "open" : ""}>
           <summary style="cursor:pointer; font-size:11.2px; color:var(--text-dim);">Tool Output</summary>
-          <pre style="margin-top:5px; padding:8px; background:#06090e; border-radius:6px; font-family:var(--mono); font-size:11.2px; max-height:220px; overflow:auto; white-space:pre-wrap; color:var(--text-dim);">${escapeHtml(ev.output || "")}</pre>
+          <pre style="margin-top:5px; padding:8px; background:#06090e; border-radius: var(--radius-sm); font-family:var(--mono); font-size:11.2px; max-height:220px; overflow:auto; white-space:pre-wrap; color:var(--text-dim);">${escapeHtml(ev.output || "")}</pre>
         </details>
       </div>`;
   }
@@ -13875,10 +13942,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       return `<div class="h-turn-user"><div style="font-size:10.8px; color:#c7d2fe; font-weight:700; margin-bottom:3px;">USER TASK (${escapeHtml(ev.policy || '')}${escapeHtml(resumed)})</div>${renderMarkdown(ev.prompt || "")}</div>`;
     }
     if (ev.type === "gsd/wave") {
-      return `<div style="font-family:var(--mono); font-size:11.4px; color:#fde68a; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.42); border-radius:8px; padding:7px 12px;">${UI_ICONS.bolt} GSD Fresh-Context Wave ${escapeHtml(String(ev.wave || ""))}/3: <strong>${escapeHtml(ev.name || '')}</strong> (${escapeHtml(ev.model || '')})</div>`;
+      return `<div style="font-family:var(--mono); font-size:11.4px; color:#fde68a; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.42); border-radius: var(--radius-md); padding:7px 12px;">${UI_ICONS.bolt} GSD Fresh-Context Wave ${escapeHtml(String(ev.wave || ""))}/3: <strong>${escapeHtml(ev.name || '')}</strong> (${escapeHtml(ev.model || '')})</div>`;
     }
     if (ev.type === "context/compacted") {
-      return `<div style="font-family:var(--mono); font-size:11.3px; color:#e9d5ff; background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.4); border-radius:8px; padding:6px 11px;">${UI_ICONS.bolt} Context-Mode Compacted: ${escapeHtml(String(ev.before_chars || 0))} -&gt; ${escapeHtml(String(ev.after_chars || 0))} chars (archived in FTS5 <code>${escapeHtml(ev.vault_id || '')}</code>)</div>`;
+      return `<div style="font-family:var(--mono); font-size:11.3px; color:#e9d5ff; background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.4); border-radius: var(--radius-md); padding:6px 11px;">${UI_ICONS.bolt} Context-Mode Compacted: ${escapeHtml(String(ev.before_chars || 0))} -&gt; ${escapeHtml(String(ev.after_chars || 0))} chars (archived in FTS5 <code>${escapeHtml(ev.vault_id || '')}</code>)</div>`;
     }
     if (ev.type === "step/start") {
       return `<div class="mono" style="font-size:10.9px; color:var(--text-faint);">step #${escapeHtml(String(ev.step || ""))} • ${escapeHtml(ev.model || "")}</div>`;
@@ -13928,7 +13995,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       return `<div class="h-tool-card err"><strong>Error:</strong> ${escapeHtml(ev.message || "")}</div>`;
     }
     if (ev.type === "worktree/applied") {
-      return `<div style="font-family:var(--mono); font-size:11.4px; color:#a7f3d0; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.4); border-radius:8px; padding:7px 11px;">${UI_ICONS.check} ${escapeHtml(ev.message || "Worktree applied.")}</div>`;
+      return `<div style="font-family:var(--mono); font-size:11.4px; color:#a7f3d0; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.4); border-radius: var(--radius-md); padding:7px 11px;">${UI_ICONS.check} ${escapeHtml(ev.message || "Worktree applied.")}</div>`;
     }
     return renderRecordedHarnessEventHtml(ev);
   }
@@ -15688,7 +15755,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         const toolsDrawer = tools.length ? `
           <details style="margin-top:7px;">
             <summary style="cursor:pointer; font-size:11.4px; color:#67e8f9;">Discovered Tools (${s.active_tool_count} / ${tools.length} active in Harness)</summary>
-            <div style="margin-top:6px; display:flex; flex-direction:column; gap:5px; max-height:190px; overflow-y:auto; padding:6px; background:var(--bg); border-radius:7px; border:1px solid var(--border);">
+            <div style="margin-top:6px; display:flex; flex-direction:column; gap:5px; max-height:190px; overflow-y:auto; padding:6px; background:var(--bg); border-radius: var(--radius-sm); border:1px solid var(--border);">
               ${tools.map(t => {
                 const isOn = enSet.has(t.name);
                 return `<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; font-size:11.4px; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px;">
@@ -15960,7 +16027,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       turn_start(d) { activeHarnessId = d.session.id; updateHarnessHeaderBanner(d.session); loadHarnessSessions(); },
       gsd_wave_start(d) {
         const wb = document.createElement("div");
-        wb.style.cssText = "font-family:var(--mono); font-size:11.4px; color:#fde68a; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.42); border-radius:8px; padding:7px 12px;";
+        wb.style.cssText = "font-family:var(--mono); font-size:11.4px; color:#fde68a; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.42); border-radius: var(--radius-md); padding:7px 12px;";
         wb.innerHTML = `${UI_ICONS.bolt} GSD Wave ${d.wave}/3: <strong>${escapeHtml(d.name)}</strong> (${escapeHtml(d.model)}) &rarr; <code>${escapeHtml(d.artifact)}</code>`;
         stream.appendChild(wb);
         if (d.wave === 1) ensureWaveStep(1, `Wave 1/3 • Spec & Plan (${d.model})`);
@@ -16224,7 +16291,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         box.innerHTML = stories.map(s => {
           const acHtml = (s.acceptance_criteria || []).map(c => `<div style="padding-left:10px; font-size:11px; color:var(--text-dim);">- ${escapeHtml(c)}</div>`).join("");
           const stBadge = s.passes ? `<span class="badge green">PASSED</span>` : `<span class="badge amber">PENDING (${s.attempts || 0} tries)</span>`;
-          return `<div style="padding:8px 10px; border-radius:8px; background:var(--bg); border:1px solid ${s.passes ? 'rgba(16,185,129,0.4)' : 'var(--border)'};">
+          return `<div style="padding:8px 10px; border-radius: var(--radius-md); background:var(--bg); border:1px solid ${s.passes ? 'rgba(16,185,129,0.4)' : 'var(--border)'};">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
               <strong><code>${escapeHtml(s.id)}</code> [${escapeHtml(s.priority || 'P0')}] ${escapeHtml(s.title)}</strong>
               ${stBadge}
@@ -16258,7 +16325,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       },
       sdlc_phase(d) {
         const card = document.createElement("div");
-        card.style.cssText = "font-family:var(--mono); font-size:11.4px; color:#6ee7b7; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.42); border-radius:8px; padding:8px 12px;";
+        card.style.cssText = "font-family:var(--mono); font-size:11.4px; color:#6ee7b7; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.42); border-radius: var(--radius-md); padding:8px 12px;";
         card.innerHTML = `${UI_ICONS.bolt} <strong>${escapeHtml(d.name || d.title || d.phase)}</strong> ${d.artifact ? '&rarr; <code>' + escapeHtml(d.artifact) + '</code>' : (d.story_id ? '<code>' + escapeHtml(d.story_id) + '</code>' : '')}`;
         stream.appendChild(card);
         stream.scrollTop = stream.scrollHeight;
