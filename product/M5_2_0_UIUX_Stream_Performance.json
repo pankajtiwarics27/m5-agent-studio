@@ -1,0 +1,240 @@
+{
+  "story": "UIUX-P5-04",
+  "title": "SSE performance and bounded DOM updates",
+  "generated_by": "scripts/uiux_stream_perf_inventory.py",
+  "surface": "the chat transcript and the harness event stream",
+  "render_window": 300,
+  "cache_limit": 5000,
+  "deferred_chat_handlers": [
+    "token",
+    "step_clean",
+    "chat_tool"
+  ],
+  "terminal_chat_handlers": [
+    "done",
+    "stopped",
+    "failed"
+  ],
+  "walk": {
+    "script": "scripts/stream_perf_walk.mjs",
+    "checks": [
+      "a streamed reply arrives, reads, and ends in complete",
+      "the reply was captured while it was still arriving, not after it landed",
+      "the two chat captures are different pictures",
+      "a token costs at most ${TOKEN_BUDGET_MS}ms on a 60-message transcript",
+      "and does not grow with the transcript: 60 messages cost at most 2x what 6 do",
+      "60 tokens scheduled in one frame cause one render, not sixty",
+      "a live event appends one card, at most ${EVENT_BUDGET_MS}ms",
+      "a reader who is at the bottom follows the stream",
+      "the stream holds at most ${RENDER_WINDOW} cards however long the log is",
+      "it says how many it is holding back, and names the window and the cursor it holds",
+      "the cache behind it is bounded at ${CACHE_LIMIT} events, and the cursor still advances",
+      "a full window absorbs 10 events a frame inside one frame budget",
+      "a reader who scrolled up keeps the words they were reading, and is told a frame landed",
+      "the bounded stream fits a 360px phone without a sideways scroll",
+      "no page error occurred"
+    ],
+    "check_count": 15
+  },
+  "captures": [
+    "stream-chat-midstream.png",
+    "stream-chat-complete.png",
+    "stream-harness-window.png",
+    "stream-harness-window-narrow.png"
+  ],
+  "checks": [
+    {
+      "check": "a token schedules a render for the next frame instead of drawing one",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the schedule is a flag, so a hundred tokens in one frame queue one render",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the frame that ends a turn is drawn immediately, not queued behind the next frame",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the handlers that fire many times per second defer their render",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the handlers that end a turn render exactly once, now",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the transcript's shape names every part of a turn that is not its words",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the render decides on the shape, the last node and the turn count",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "it builds the one turn that changed, not the turns around it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "and replaces that one node rather than rewriting the transcript",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "an empty transcript forgets the shape, so the next message is not drawn into a stale node",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the transcript still says what each turn is and what became of it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the window and the cache have one declared size each (300 cards, 5000 events)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "both sizes are declared with their reason, not as bare numbers in the middle of a function",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the stream draws the newest window of the log",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pane says how much of the log is not on screen, and where to read it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the note is updated as the window slides, so it never counts cards it is not showing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the timeline's own list is windowed by the same number",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the append is refused when approval state moved, because those cards are already drawn",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the append is also refused for an approval event, which changes a card that already exists",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the run on screen may slide forward: cards leaving are counted, cards arriving are added",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "an appended card is one node, and the rebuild is what it replaces",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the cards that leave are measured in one pass, and not at all for a reader at the bottom",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a reader who scrolled up is put back where they were reading",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the cache drops its oldest events instead of growing without a ceiling",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the cursor still advances past an event the cache refused to keep",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "drawing the window does not sort the whole cache",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "an out-of-order page is still merged correctly, it just pays for the sort",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a reset drops the order and the snapshot with the cache, so a second session cannot inherit them",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the snapshot fetch after a turn still draws synchronously, so it cannot be raced by a frame",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a pruned log still says it was pruned, and still defers to task state",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "replay and resync still read the log from the server rather than the window on screen",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk times a token, a burst, a live event and a full window",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk drives a real streamed reply, not a fixture of a transcript",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk refuses to report a walk it did not perform",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the captures the doc lists exist and were written by the walk",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "each rule is broken in a copy of the source by a test, so a rule that stopped looking fails",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the doc is written, and reachable from the docs index",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the ledger marks this story done with evidence",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "check_count": 38,
+  "findings": [],
+  "status": "clean"
+}

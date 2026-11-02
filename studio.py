@@ -12296,10 +12296,40 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     stopActiveStream();
   }
 
+  // A burst of tokens arrives faster than the screen can paint. Rendering on every token queues
+  // work the reader waits behind and throws away every frame but the last, so a burst is coalesced
+  // into one render per frame; the terminal events (done, stopped, failed) render immediately,
+  // because the final frame is the one that has to be exact.
+  let chatRenderQueued = false;
+  let chatRenderedShape = "";
+
+  function scheduleChatRender() {
+    if (chatRenderQueued) return;
+    chatRenderQueued = true;
+    requestAnimationFrame(() => {
+      chatRenderQueued = false;
+      renderChatMessages();
+    });
+  }
+
+  function flushChatRender() {
+    chatRenderQueued = false;
+    renderChatMessages();
+  }
+
+  // Everything about the transcript that is not the words: which turns exist, what they are and
+  // what state each one is in. Two renders with the same shape differ only in the last message's
+  // text, which is exactly the case a streaming token produces.
+  function chatTranscriptShape() {
+    return chatHistory.map((m) => `${m.role}|${m.status || ""}|${(m.tools || []).length}|${m.reasoning ? "r" : ""}|${m.usage ? "u" : ""}|${m.context ? "c" : ""}`).join(";");
+  }
+
   function renderChatMessages() {
+    chatRenderQueued = false;
     const box = document.getElementById("chatMessages");
     if (!chatHistory.length) {
       box.innerHTML = `<div class="chat-empty-state"><strong>Nothing has been said yet</strong><span>Choose a model above and type below; replies and reasoning appear here.</span></div>`;
+      chatRenderedShape = "";
       updateChatTranscriptBar();
       updateChatComposer();
       return;
@@ -12307,7 +12337,19 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     // Was the reader at the bottom before this render? A pane that always jumps turns
     // reading back through a long answer into a tug of war with the stream.
     const pinned = chatNearBottom(box);
-    box.innerHTML = chatHistory.map((m, index) => {
+    const shape = chatTranscriptShape();
+    const previousLast = box.lastElementChild;
+    const onlyTheLastChanged =
+      shape === chatRenderedShape
+      && chatHistory.length > 0
+      && previousLast
+      && previousLast.classList.contains("msg")
+      && box.children.length === chatHistory.length;
+    // Build the one turn that changed, not the conversation it sits in: a token costs the message
+    // being written, not every message written before it.
+    const indices = onlyTheLastChanged ? [chatHistory.length - 1] : chatHistory.map((_unused, index) => index);
+    const parts = indices.map((index) => {
+      const m = chatHistory[index];
       const role = CHAT_ROLES[m.role] || CHAT_ROLES.assistant;
       const stamp = chatTime(m.createdAt);
       const state = m.role === "assistant" ? (m.status || (m.usage ? "complete" : "streaming")) : "";
@@ -12352,7 +12394,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           ? `<div class="msg-meta"><span>${escapeHtml(m.model)}</span><span>•</span><span>${chatStreamingMeta(m)}</span></div>`
           : `<div class="msg-meta"><span>${chatStateLabel(state)}</span></div>`;
       return `<div class="msg assistant" data-role="assistant" data-state="${escapeHtml(state)}"${streaming}>${head}${context}${think}${toolsHtml}${content}${meta}</div>`;
-    }).join("");
+    });
+    if (onlyTheLastChanged) {
+      previousLast.outerHTML = parts[0];
+    } else {
+      box.innerHTML = parts.join("");
+    }
+    chatRenderedShape = shape;
     if (pinned) box.scrollTop = box.scrollHeight;
     updateChatTranscriptBar();
     updateChatComposer();
@@ -12449,10 +12497,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       token(d) {
         if (!asstMsg.timing.firstTokenAt) asstMsg.timing.firstTokenAt = performance.now();
         if (d.kind === "reasoning") asstMsg.reasoning += d.text; else asstMsg.content += d.text;
-        renderChatMessages();
+        scheduleChatRender();
       },
-      step_clean(d) { asstMsg.content = d.content || ""; renderChatMessages(); },
-      chat_tool(d) { asstMsg.tools.push(d); renderChatMessages(); },
+      step_clean(d) { asstMsg.content = d.content || ""; scheduleChatRender(); },
+      chat_tool(d) { asstMsg.tools.push(d); scheduleChatRender(); },
       done(d) {
         asstMsg.usage = d.usage || null;
         asstMsg.status = "complete";
@@ -12460,13 +12508,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         // Freeze the clock: the turn took this long, and a later re-render must not
         // keep counting seconds after the stream has stopped.
         asstMsg.timing.endedAt = performance.now();
-        renderChatMessages();
+        flushChatRender();
       },
       stopped() {
         asstMsg.status = "stopped";
         asstMsg.stoppedAt = Date.now();
         asstMsg.timing.endedAt = performance.now();
-        renderChatMessages();
+        flushChatRender();
         if (chatStopRequested) document.getElementById("chatInput").focus({ preventScroll: true });
       },
       failed(message) {
@@ -12477,7 +12525,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           const index = chatHistory.lastIndexOf(asstMsg);
           if (index >= 0) chatHistory.splice(index, 1);
         }
-        renderChatMessages();
+        flushChatRender();
         pendingChatFailure = message || "the stream closed before the model answered";
       },
       error(d) { this.failed(d.message || "the stream failed before the model answered"); },
@@ -12491,6 +12539,19 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   // ================= AUTONOMOUS AGENTIC HARNESS (v5.0) =================
+  // Bounded rendering: the durable log grows for as long as the task runs, the DOM may not. A long
+  // session keeps the newest cards on screen and says how many are held back, instead of adding a
+  // node per event until the pane stalls. The record is not touched: Replay re-reads all of it from
+  // the server, and the cursor still names the next event to fetch. The window bounds what is drawn;
+  // the cache bounds what is kept, and both are larger than a screen because re-fetching a card
+  // costs more than drawing one.
+  const HARNESS_RENDER_WINDOW = 300;
+  const HARNESS_CACHE_LIMIT = 5000;
+  let harnessRenderedSeqs = [];
+  let harnessRenderedPending = 0;
+  let harnessRenderedDecisions = 0;
+  let harnessStreamRenderQueued = false;
+
   let harnessSessions = [];
   let activeHarnessId = null;
   let activeHarnessSession = null;
@@ -12790,6 +12851,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // convenience view: when it drops events (backgrounded tab, reload mid-run, gap
   // in seq) the UI reloads the snapshot instead of pretending it saw everything.
   let harnessEventCache = new Map();      // seq -> durable event, rendered ascending
+  // The cache's keys, kept in order as they arrive. A render that re-sorted every key it held was
+  // paying for the length of the log, not the size of the window: 5,000 events cost 11 ms a frame
+  // before a card was drawn.
+  let harnessEventOrder = [];             // ascending seqs held in the cache
+  let harnessCachedSnapshot = null;       // the ordered array last handed out, until the cache moves
   let harnessCursor = 0;                  // highest seq applied to the UI
   let harnessSnapshot = null;             // last authoritative /state payload
   let harnessEventStreamAbort = null;     // live follow stream (GET SSE) abort handle
@@ -12877,17 +12943,32 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   function harnessMergeEvents(existing, incoming) {
-    // Sequence-keyed merge: a replayed or duplicated record renders at most once.
+    // Sequence-keyed merge: a replayed or duplicated record renders at most once. Both sides arrive
+    // in seq order in practice - the cache keeps its keys ascending and the server pages in order -
+    // so insertion order is seq order and the keys only need a walk, not a sort. Sorting them every
+    // render made drawing the newest 300 cards cost the length of a 5,000-event log.
     const bySeq = new Map();
+    let ascending = true;
+    let last = -Infinity;
     for (const ev of existing || []) {
       const seq = Number(ev && ev.seq);
-      if (Number.isInteger(seq) && seq > 0) bySeq.set(seq, ev);
+      if (!Number.isInteger(seq) || seq <= 0) continue;
+      if (seq <= last) ascending = false;
+      last = seq;
+      bySeq.set(seq, ev);
     }
     for (const ev of incoming || []) {
       const seq = Number(ev && ev.seq);
-      if (Number.isInteger(seq) && seq > 0 && !bySeq.has(seq)) bySeq.set(seq, ev);
+      if (!Number.isInteger(seq) || seq <= 0) continue;
+      if (!bySeq.has(seq)) {
+        if (seq <= last) ascending = false;
+        last = seq;
+        bySeq.set(seq, ev);
+      }
     }
-    return [...bySeq.keys()].sort((a, b) => a - b).map(seq => bySeq.get(seq));
+    const seqs = [...bySeq.keys()];
+    if (!ascending) seqs.sort((a, b) => a - b);
+    return seqs.map(seq => bySeq.get(seq));
   }
 
   // The run states the server actually reports, mapped to the shared vocabulary. This map used to
@@ -13063,7 +13144,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const signature = `${state.signature}|${harnessCachedEvents().length}`;
       if (signature !== harnessTimelineSignature) {
         harnessTimelineSignature = signature;
-        list.innerHTML = harnessCachedEvents().map((ev) => {
+        list.innerHTML = harnessCachedEvents().slice(-HARNESS_RENDER_WINDOW).map((ev) => {
           const seq = Number(ev.seq) || 0;
           const type = String(ev.type || "event");
           const time = Number(ev.ts) ? new Date(Number(ev.ts) * 1000).toLocaleTimeString([], { hour12: false }) : "";
@@ -13146,18 +13227,54 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return { before, after: harnessCachedEvents().length };
   }
 
-  function harnessResetEventCache() { harnessEventCache = new Map(); harnessCursor = 0; }
+  function harnessResetEventCache() {
+    harnessEventCache = new Map();
+    harnessEventOrder = [];
+    harnessCachedSnapshot = null;
+    harnessCursor = 0;
+  }
+
+  // Keep `harnessEventOrder` ascending without sorting it: events almost always arrive in seq order,
+  // so the common insert is a push, and the rare out-of-order one goes in by binary search.
+  function harnessNoteSeq(seq) {
+    const last = harnessEventOrder[harnessEventOrder.length - 1];
+    if (last === undefined || seq > last) { harnessEventOrder.push(seq); return; }
+    let low = 0;
+    let high = harnessEventOrder.length;
+    while (low < high) {
+      const mid = (low + high) >> 1;
+      if (harnessEventOrder[mid] < seq) low = mid + 1; else high = mid;
+    }
+    harnessEventOrder.splice(low, 0, seq);
+  }
 
   function harnessCachedEvents() {
-    return [...harnessEventCache.keys()].sort((a, b) => a - b).map(seq => harnessEventCache.get(seq));
+    if (harnessEventOrder.length !== harnessEventCache.size) {
+      harnessEventOrder = [...harnessEventCache.keys()].sort((a, b) => a - b);
+      harnessCachedSnapshot = null;
+    }
+    if (!harnessCachedSnapshot) harnessCachedSnapshot = harnessEventOrder.map(seq => harnessEventCache.get(seq));
+    return harnessCachedSnapshot.slice();
   }
 
   function harnessRememberEvents(events) {
     for (const ev of events || []) {
       const seq = Number(ev && ev.seq);
       if (!Number.isInteger(seq) || seq <= 0) continue;
-      if (!harnessEventCache.has(seq)) harnessEventCache.set(seq, ev);
+      if (!harnessEventCache.has(seq)) {
+        harnessEventCache.set(seq, ev);
+        harnessNoteSeq(seq);
+        harnessCachedSnapshot = null;
+      }
       if (seq > harnessCursor) harnessCursor = seq;
+    }
+    // The cursor is what the next fetch asks from; the cache is only what this pane can draw. A
+    // very long log drops its oldest entries here rather than growing without a ceiling.
+    if (harnessEventCache.size > HARNESS_CACHE_LIMIT) {
+      if (harnessEventOrder.length !== harnessEventCache.size) harnessEventOrder = [...harnessEventCache.keys()].sort((a, b) => a - b);
+      const dropped = harnessEventOrder.splice(0, harnessEventOrder.length - HARNESS_CACHE_LIMIT);
+      for (const seq of dropped) harnessEventCache.delete(seq);
+      harnessCachedSnapshot = null;
     }
   }
 
@@ -13304,7 +13421,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             harnessLogTelemetry.source = "live";
             harnessLogTelemetry.reason = "";
             harnessLogTelemetry.streamed += 1;
-            renderStoredHarnessEvents(harnessCachedEvents());
+            scheduleHarnessStreamRender();
             if (data.type && (data.type === "turn/end" || data.type === "turn/verified" || data.type === "turn/cancelled")) {
               // A turn reached a durable outcome: re-anchor status to the runtime.
               fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`)
@@ -13816,10 +13933,71 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return renderRecordedHarnessEventHtml(ev);
   }
 
+  // Appending is only safe when the window on screen is still a contiguous run of the new one and
+  // nothing that would redraw an earlier card changed: a decision or a new pending approval changes
+  // the cards already drawn, and those need the rebuild. The run may move forward - a full window
+  // drops its oldest card as it takes a new one - and that is a removal and an append, not a
+  // rebuild of every card between them.
+  function harnessStreamAppendPlan(shown, livePending, decisions) {
+    const rendered = harnessRenderedSeqs;
+    if (!rendered.length || shown.length < rendered.length) return null;
+    if (harnessRenderedPending !== livePending.size) return null;
+    if (harnessRenderedDecisions !== Object.keys(decisions).length) return null;
+    const shownSeqs = shown.map(ev => Number((ev && ev.seq) || 0));
+    // The card that was drawn last has to still be on screen: it anchors the run the reader has.
+    const tail = shownSeqs.indexOf(rendered[rendered.length - 1]);
+    if (tail < 0) return null;
+    const dropped = rendered.filter(seq => seq < shownSeqs[0]).length;
+    const shared = rendered.length - dropped;
+    if (shared < 0 || tail + 1 - shared < 0) return null;
+    for (let i = 0; i < shared; i += 1) {
+      if (rendered[dropped + i] !== shownSeqs[tail + 1 - shared + i]) return null;
+    }
+    const appended = shown.slice(tail + 1);
+    if (appended.some(ev => String((ev && ev.type) || "").startsWith("approval/"))) return null;
+    return { dropped, appended };
+  }
+
+  // The pane says how much of the log is not on screen, in the same words whether the note is drawn
+  // for the first time or updated in place as the window slides.
+  function harnessWindowNoteText(showing, total) {
+    return `Showing the newest ${showing} of ${total} events on screen; Replay re-reads the whole log from the server.`;
+  }
+
+  function harnessWindowNoteHtml(showing, total) {
+    return `<div class="mono" id="harnessWindowNote" style="font-size:11px; color:var(--text-faint);">${escapeHtml(harnessWindowNoteText(showing, total))}</div>`;
+  }
+
+  function harnessUpdateWindowNote(showing, total) {
+    const stream = document.getElementById("harnessStream");
+    const note = document.getElementById("harnessWindowNote");
+    if (showing < total) {
+      if (note) note.textContent = harnessWindowNoteText(showing, total);
+      else if (stream) stream.insertAdjacentHTML("afterbegin", harnessWindowNoteHtml(showing, total));
+    } else if (note) {
+      note.remove();
+    }
+  }
+
+  // One render per frame for a burst of live events, the same rule the chat transcript uses.
+  function scheduleHarnessStreamRender() {
+    if (harnessStreamRenderQueued) return;
+    harnessStreamRenderQueued = true;
+    requestAnimationFrame(() => {
+      harnessStreamRenderQueued = false;
+      renderStoredHarnessEvents(harnessCachedEvents());
+    });
+  }
+
   function renderStoredHarnessEvents(events) {
     const stream = document.getElementById("harnessStream");
     const ordered = harnessMergeEvents([], events || []);
-    if (!ordered.length) { renderHarnessStarter(); renderHarnessTimeline(); return; }
+    if (!ordered.length) {
+      harnessRenderedSeqs = [];
+      renderHarnessStarter();
+      renderHarnessTimeline();
+      return;
+    }
     // Where the reader is, and which cards they opened: a frame that arrives while they
     // are reading must not move them, and must not shut the cards they opened.
     const pinned = harnessStreamNearBottom(stream);
@@ -13830,17 +14008,61 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       if (ev.type === "approval/decision" && ev.approval_id) decisions[ev.approval_id] = ev.decision || "";
     }
     const livePending = new Set((((harnessSnapshot || {}).approvals || {}).pending || []).map(a => a.approval_id));
-    const htmlParts = [];
     const streamState = (harnessSnapshot || {}).event_stream || {};
+    // The newest window of the log, not all of it: the count in the timeline names the true total.
+    const shown = ordered.length > HARNESS_RENDER_WINDOW ? ordered.slice(ordered.length - HARNESS_RENDER_WINDOW) : ordered;
+    const cardHtml = (ev) => {
+      const seq = Number(ev.seq) || 0;
+      const type = String(ev.type || "event");
+      return `<div class="h-event" data-seq="${seq}" data-type="${escapeHtml(type)}">${renderStoredHarnessEventHtml(ev, decisions, livePending)}</div>`;
+    };
+    // A live event usually just adds a card to the end - and drops one off the top once the window
+    // is full. That costs one node in and one node out; rebuilding the window costs every card on
+    // screen, which is what a fast stream would otherwise pay per event.
+    const plan = harnessStreamAppendPlan(shown, livePending, decisions);
+    if (plan) {
+      // Collect the cards that leave the screen first, and measure them in one pass: taking a
+      // card out between two height reads made the browser lay the pane out once per card, which
+      // cost more than drawing the ones that stayed. A reader at the bottom does not need the
+      // heights at all - they are going to the bottom whatever moved above them.
+      const leaving = [];
+      for (const child of Array.from(stream.children)) {
+        if (leaving.length >= plan.dropped) break;
+        if (child.classList.contains("h-event")) leaving.push(child);
+      }
+      const removedHeight = pinned || !leaving.length
+        ? 0
+        : leaving.reduce((total, card) => total + card.getBoundingClientRect().height, 0);
+      for (const card of leaving) card.remove();
+      if (plan.appended.length) stream.insertAdjacentHTML("beforeend", plan.appended.map(cardHtml).join(""));
+      harnessRenderedSeqs = shown.map((ev) => Number(ev.seq) || 0);
+      harnessRenderedPending = livePending.size;
+      harnessRenderedDecisions = Object.keys(decisions).length;
+      harnessUpdateWindowNote(shown.length, ordered.length);
+      if (pinned) {
+        stream.scrollTop = stream.scrollHeight;
+      } else {
+        // The cards that left were above the reader, so their height comes out of the scroll as
+        // well as out of the DOM: the words they were reading stay where they were.
+        stream.scrollTop = Math.max(0, previousTop - removedHeight);
+        const landedNow = document.getElementById("harnessTimelineCount");
+        if (landedNow) landedNow.dataset.fresh = "true";
+        setTimeout(() => { if (landedNow && landedNow.isConnected) delete landedNow.dataset.fresh; }, 1600);
+      }
+      updateHarnessTimelineJump();
+      renderHarnessTimeline();
+      return;
+    }
+    const htmlParts = [];
     if (Number(streamState.retained_from_seq || 0) > 1) {
       htmlParts.push(`<div class="mono" style="font-size:11px; color:var(--text-faint);">Earlier events were pruned; showing the retained log from seq ${escapeHtml(String(streamState.retained_from_seq))}. Task status above is authoritative.</div>`);
     }
-    for (const ev of ordered) {
-      const seq = Number(ev.seq) || 0;
-      const type = String(ev.type || "event");
-      htmlParts.push(`<div class="h-event" data-seq="${seq}" data-type="${escapeHtml(type)}">${renderStoredHarnessEventHtml(ev, decisions, livePending)}</div>`);
-    }
+    if (shown.length < ordered.length) htmlParts.push(harnessWindowNoteHtml(shown.length, ordered.length));
+    for (const ev of shown) htmlParts.push(cardHtml(ev));
     stream.innerHTML = htmlParts.join("");
+    harnessRenderedSeqs = shown.map((ev) => Number(ev.seq) || 0);
+    harnessRenderedPending = livePending.size;
+    harnessRenderedDecisions = Object.keys(decisions).length;
     if (openDetails.length) {
       const details = stream.querySelectorAll("details");
       for (const index of openDetails) if (details[index]) details[index].open = true;
