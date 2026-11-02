@@ -514,10 +514,10 @@ def test_frontend_gap_predicate_requires_snapshot_resync_and_merges_without_dupl
     assert out["cursorOf"] == 9
     # UIUX-P1-03: harnessStatusBadge() returns a status tone, not a colour class -
     # setStatus() takes the tone and the label together so the two cannot drift.
-    # The words are the contract and stay identical; only the vocabulary changed.
-    assert out["statusWaiting"] == {"cls": "warn", "label": "WAITING APPROVAL"}
-    assert out["statusPaused"] == {"cls": "warn", "label": "PAUSED"}
-    assert out["statusCompleted"] == {"cls": "ok", "label": "COMPLETED"}
+    # UIUX-P5-01: the words are the shared vocabulary's now - one spelling per state, in prose.
+    assert out["statusWaiting"] == {"cls": "warn", "label": "waiting approval"}
+    assert out["statusPaused"] == {"cls": "warn", "label": "paused"}
+    assert out["statusCompleted"] == {"cls": "ok", "label": "completed"}
 
 
 def test_frontend_reload_and_resync_paths_use_the_durable_endpoints() -> None:

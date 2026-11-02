@@ -375,8 +375,8 @@ def test_a_tool_row_without_its_status_word_is_caught(sources):
 def test_a_tool_row_statused_by_colour_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            '    const status = tool.ok ? "OK" : "FAILED";',
-            '    const status = tool.ok ? "OK" : "FAILED";\n    const tint = "border-color: red";',
+            '    const status = tool.ok ? uiStatus("ok").label : uiStatus("failed").label;',
+            '    const status = tool.ok ? uiStatus("ok").label : uiStatus("failed").label;\n    const tint = "border-color: red";',
             1,
         )
     )

@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "d203adaf34e181df6ec1ff59d22dd7891c65c470ba3a49a153c0bbfc8c16b6f2",
-      "bytes": 704154,
-      "lines": 12255
+      "sha256": "75a860fc8a4c5a8fcd2de2009f875bfe9c04d1e621131b11029257f685aa08e5",
+      "bytes": 708253,
+      "lines": 12322
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "0e4421671674a3cb267a6e87098e341c555f2775fd6e3ffa220d5642d555b63d",
-      "bytes": 3443559,
-      "lines": 75305
+      "sha256": "e15e0b29677c9a36ceb30959cf7027289aba203030c37eb5da581df6b6dc7340",
+      "bytes": 3447658,
+      "lines": 75372
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -138,15 +138,15 @@
     {
       "path": "scripts/uiux_chat_context_inventory.py",
       "role": "builds and checks the P2-05 Chat context inventory",
-      "sha256": "cca51452e5a1d27640d45d1584e485b8a8bd20fd034798e87ebf90381baa842f",
-      "bytes": 29039,
+      "sha256": "f628cd44e67f79fec94cf13e6f4f7593744bc830331056d70687227df9254889",
+      "bytes": 29071,
       "lines": 634
     },
     {
       "path": "tests/test_chat_context.py",
       "role": "checks the P2-05 context, tool-event and streaming-time contracts",
-      "sha256": "1363f1db37a7f5c4a75c2ab24c06b3d9096cddba5e7f69099aabb395a53a6c72",
-      "bytes": 17044,
+      "sha256": "e0a49b563affc168b7e85d9afeddb5475f05404634e49626ea8109a2abf9ae2e",
+      "bytes": 17108,
       "lines": 498
     },
     {
@@ -250,8 +250,8 @@
     {
       "path": "scripts/uiux_chat_handoff_inventory.py",
       "role": "builds and checks the mainline P2-06 handoff inventory",
-      "sha256": "94d5dcaac117e483b5aae008d677a918bcf14140a83d4aff563c8c4dde6c008a",
-      "bytes": 27197,
+      "sha256": "7dac7892e3514b8f5a840340100a31abc7b2a117df9313f8af77958721b68a89",
+      "bytes": 27229,
       "lines": 614
     },
     {
@@ -348,8 +348,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "d203adaf34e181df6ec1ff59d22dd7891c65c470ba3a49a153c0bbfc8c16b6f2",
-    "lines": 12255,
+    "sha256": "75a860fc8a4c5a8fcd2de2009f875bfe9c04d1e621131b11029257f685aa08e5",
+    "lines": 12322,
     "tab_count": 6,
     "tabs": [
       {

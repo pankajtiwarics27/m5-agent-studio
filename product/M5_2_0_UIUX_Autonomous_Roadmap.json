@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 29,
+  "revision": 30,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,10 +102,10 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P4-06",
-    "next_recommended_story": "UIUX-P5-01",
+    "last_completed_story": "UIUX-P5-01",
+    "next_recommended_story": "UIUX-P5-02",
     "last_checkpoint": "2026-11-02T00:00:00Z",
-    "last_session_id": "arena/0c87dbdf-m5-agent-studio",
+    "last_session_id": "arena/c382938d-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
     "last_verified_commit": "c117de34d29996606e11b88415b0c0a959916531",
@@ -307,7 +307,7 @@
       "id": "P5",
       "name": "Accessibility performance consistency",
       "title": "Accessibility performance consistency",
-      "status": "not_started",
+      "status": "in_progress",
       "story_ids": [
         "UIUX-P5-01",
         "UIUX-P5-02",
@@ -316,11 +316,11 @@
         "UIUX-P5-05"
       ],
       "total": 5,
-      "done": 0,
+      "done": 1,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 5,
-      "percent_complete": 0
+      "not_started": 4,
+      "percent_complete": 20
     },
     {
       "id": "P6",
@@ -344,11 +344,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 30,
+    "done": 31,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 10,
-    "percent_complete": 75
+    "not_started": 9,
+    "percent_complete": 78
   },
   "stories": [
     {
@@ -5982,24 +5982,60 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P5-01 (Cross-tab terminology and consistent statuses). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-02T00:00:00Z",
+        "updated_at": "2026-11-02T00:00:00Z",
+        "completed_at": "2026-11-02T00:00:00Z",
+        "owner_session": "arena/c382938d-m5-agent-studio",
+        "commit_sha": "PENDING",
         "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
-        "known_regressions": [],
-        "decisions": [],
+        "evidence": [
+          "`UI_STATUS` is now the whole vocabulary: one entry per word carrying the label *and* the tone, declared once at the top of the pure-helper region so the node-based tests can reach it too. `uiStatus(state)` throws on a state the table does not know, so an unknown state cannot quietly print itself, and the tone always comes from the same entry - the way a green `running` used to happen was a second map with its own copy of the tone.",
+          "The Harness stop inventing words. `HARNESS_STATUS_STATE` maps the server's ten states onto the vocabulary and `harnessStatusBadge()` reads the word and the tone from it, so `FAILED` and `ERROR` are both `failed`, `CANCELLED` is `stopped by you`, `PENDING` is `queued` and `IDLE` is `ready` - four spellings that used to mean two states. A state the table has never seen keeps the server's own word (`something new`) with a neutral tone instead of being mapped onto a word that would be wrong. The session rows in the Harness list and the live badge both call the same function now (`const stIcon = harnessStatusBadge(s).label;`), which is how a row and a badge came to disagree.",
+          "The other panes followed: Start's preflight (`Ready`/`Blocked`/`Needs you`) and its health line (`Live`/`Offline`/`Demo data`), the Council readiness count (`0/4 READY`, `NEEDS LOAD`, `NEEDS KEY`), the Council session badge and the container badge (both `.toUpperCase()` of a server word), the pipeline's stage verdicts (`Done`, `Recovered \u00b7 partial`, `Stopped mid-seat`, `Recovered`, `Unloaded`), the chat tool cards and transcripts (`OK`/`FAILED`, and one call site that said `ERROR`), and the Compare pane's ten states - which were already one vocabulary and are now asserted to *be* this table, word for word and tone for tone.",
+          "The case was a second bug behind the words. The memory rail's heading carries `text-transform: uppercase`, which inherits, so a table that said `ok` reached the reader as `OK` and `halted` as `HALTED`. `.status` now sets `text-transform: none; letter-spacing: 0`, and the walk reads the computed `text-transform` of every chip it finds, so a container cannot shout a status again.",
+          "What is *not* a status is written down with its reason instead of being quietly tolerated: `PRD`, `MTP`, `CPU`, `RAM`, `PINNED`, `ESC`, `VIEW`, `USER TASK`, the counts (`0 / 0 Passed`), the model-residency chips (`LOADED`/`LOADING` - a property of a resource, not a state of a run) and the provider-route label `Unavailable provider \u00b7 alias`. The inventory fails when a status position draws a word that is neither in the table nor in that list, so every exception has to be argued for.",
+          "The rule is checkable from both sides: `scripts/uiux_terminology_inventory.py` reads the table out of the source and finds any pane that still spells its own word or draws a word in the wrong tone, while `scripts/terminology_walk.mjs` opens each pane with that pane's own keyboard shortcut (Alt+1\u2026Alt+6, read from the rail) and reads every status word the DOM actually holds - text, tone, and the computed case of the box."
+        ],
+        "test_results": [
+          "node scripts/terminology_walk.mjs --screenshots docs/media/terminology (TMPDIR/STUDIO_SCREENSHOT_CHROME/STUDIO_PUPPETEER_CORE/LD_LIBRARY_PATH set, STUDIO_PYTHON=.venv/bin/python) -> 15/15 checks passed",
+          "python3 scripts/uiux_terminology_inventory.py -> 20 checks, 0 findings - clean",
+          "python3 -m pytest -q tests/test_terminology.py -> 24 passed",
+          "python3 -m pytest -q (full suite) -> 2400 passed, 27 skipped, 1 failed: tests/test_baseline.py::test_pinned_baseline_is_present_and_ancestral raises `Pinned commit 7904892d... is not present in this checkout`, because this sandbox checkout holds one squashed commit and cannot resolve the pinned baseline SHA; the same file's manifest check skips for the same reason, and both run in full history on CI",
+          "python3 -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py (browser env) -> 30 passed",
+          "python3 -m ruff check . -> All checks passed; python3 -m mypy -> Success: no issues found in 59 source files; python3 scripts/check_frontend_syntax.py -> JavaScript syntax OK; python3 scripts/validate_docs.py -> 5 required pages, 177 files scanned; python3 scripts/demo_tour.py --check -> up to date; python3 scripts/validate_screenshots.py -> 6 of 6 captured and consistent; python3 scripts/build_studio.py -> Built studio.py: 3,447,658 bytes; every uiux_* inventory regenerates with no findings and the source manifest, preservation signoff and roadmap status page reproduce"
+        ],
+        "visual_evidence": [
+          "docs/media/terminology/terminology-start.png",
+          "docs/media/terminology/terminology-harness.png",
+          "docs/media/terminology/terminology-hall.png",
+          "docs/media/terminology/terminology-council.png",
+          "docs/media/terminology/terminology-debate.png",
+          "docs/media/terminology/terminology-chat.png",
+          "docs/media/terminology/terminology-narrow.png",
+          "docs/media/terminology/terminology-light.png"
+        ],
+        "known_regressions": [
+          "`stopped` carries the warn tone, where the Harness used to draw `CANCELLED` neutral. A stop is not a failure (that is `danger`) and it is not a normal completion either; the Panes now agree on one tone, and Compare - which already used warn - is unchanged.",
+          "Model-residency chips stay outside the vocabulary: `LOADED`/`LOADING` describe what a model is, not what a run did, and they are drawn as `badge` chips rather than the status component. The inventory lists them as a stated exception rather than folding them into a table whose meaning is 'where does this stand'.",
+          "A few counts keep their own words (`0 / 4 ready`, `2 ready \u00b7 1 configured`): the numbers are the value and the trailing word is the vocabulary's. The walk accepts a chip built from vocabulary words plus digits and separators, and fails on anything else.",
+          "`scripts/status_walk.mjs` still exercises the component with arbitrary words (`COMPLETED`/`FAILED` as literals in its own probe) because it is testing the writer, not the vocabulary; no pane draws those words any more.",
+          "A server state the vocabulary has never seen is shown as the server's own word. That is intentional - the alternative is a wrong word - but it means a new backend state reaches the reader before the table learns its name."
+        ],
+        "decisions": [
+          "One table, one entry per word, carrying the tone as well as the label. The drift was not only words: `WORKFLOW RUNNING` was drawn with an `ok` tone on one path and `busy` on another, which is why the tone had to move into the same entry as the word.",
+          "The list of words that are *not* statuses is explicit and each entry has a reason. A vocabulary that swallowed `CPU` and `PRD` would be a vocabulary nobody can check, and one that ignored them silently would let `FAILED` back in under a different shape.",
+          "An unknown state keeps the server's word. Mapping `something_new` onto `failed` or `ready` would be the pane asserting a fact it does not have; printing `something new` is ugly and true.",
+          "The vocabulary lives at the top of the pure-helper region. `tests/test_task_events.py` and the inventories evaluate frontend helpers in Node and in Python, and a table those readers cannot see would be a table they cannot check - which is how the old map survived in three copies.",
+          "The case fix belongs to the component, not to each pane: `text-transform: none` on `.status` means a heading can shout its own words without shouting the state inside it, and the walk reads the computed style rather than trusting the source.",
+          "Words drawn through a template use the table too (`${UI_STATUS.demo.label}`), so the demo badge, the tool card and the pipeline verdict cannot drift from the pane that shows the same state."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
-        "readme_updated": false
+        "handoff_note": "P5-01 closed: the six panes now name a state once, in prose, with its tone, and both the source and a real browser are checked for it. Next: UIUX-P5-02, which works on the keyboard journey - the walk here already proves Alt+1\u2026Alt+6 open the panes and move focus into them, so that is the floor to start from.",
+        "next_action": "Start UIUX-P5-02 from this commit; `scripts/terminology_walk.mjs` is the first walk in the program that presses every rail shortcut, and `scripts/uiux_terminology_inventory.py` shows how to hold a cross-pane contract in one table rather than six.",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",
