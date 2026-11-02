@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "28a98327e2804b389b67a2859558c2050f263a08a9f6c556405f7cca6505a981",
-      "bytes": 740223,
-      "lines": 12860
+      "sha256": "d09bde83f2a1ba188ba34ba24acee2f835ea334aaf37cfec3c9b75fee2c27e46",
+      "bytes": 740594,
+      "lines": 12862
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "52ec71ba40b26c30565634cdc02e9388f43cbc5383a5c0b70be59125e2520f00",
-      "bytes": 3479628,
-      "lines": 75910
+      "sha256": "0001996601254bb6fb1257809834581e5dd82e3838a6db08b1fcbeaf6bdf05f3",
+      "bytes": 3479999,
+      "lines": 75912
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -131,9 +131,9 @@
     {
       "path": "scripts/chat_context_walk.mjs",
       "role": "mainline P2-05 browser walk for sent context, tools and timing",
-      "sha256": "13e950401ad3486cafca2d2bc0c2400eeb65ce6dcffa2df1cb1a4ca0d3fc8336",
-      "bytes": 22747,
-      "lines": 507
+      "sha256": "e25549d28696b088d0f6f2e3fd62e0311d38199ab655b3b5cb6b9de0844dacc0",
+      "bytes": 23045,
+      "lines": 509
     },
     {
       "path": "scripts/uiux_chat_context_inventory.py",
@@ -145,9 +145,9 @@
     {
       "path": "tests/test_chat_context.py",
       "role": "checks the P2-05 context, tool-event and streaming-time contracts",
-      "sha256": "e0a49b563affc168b7e85d9afeddb5475f05404634e49626ea8109a2abf9ae2e",
-      "bytes": 17108,
-      "lines": 498
+      "sha256": "cfd6dea7513d577ad7c2596533ece82bc593dd2091bbcf02ffe89f04ce3198f5",
+      "bytes": 17302,
+      "lines": 500
     },
     {
       "path": "docs/uiux-2-0-chat.md",
@@ -365,12 +365,33 @@
       "sha256": "13760adc0db2de6012b15195a736d83e18804e84053d3d01415cf00e9e472e2d",
       "bytes": 1938,
       "lines": 21
+    },
+    {
+      "path": "scripts/preservation_suite.py",
+      "role": "runs every prover in the preservation matrix against its own throwaway app and records the result",
+      "sha256": "319b466191c27b8b5293d49a0e1ab24a564bda9f5cae493b837076b087153662",
+      "bytes": 20646,
+      "lines": 483
+    },
+    {
+      "path": "scripts/uiux_preservation_e2e.py",
+      "role": "maps each preservation-matrix row to the walk, test, route and control that proves it",
+      "sha256": "d8f0368b9822284817e9ca18c5cf95f11967ad3281d23ab6374fa65e98fd2501",
+      "bytes": 38306,
+      "lines": 821
+    },
+    {
+      "path": "tests/test_preservation_e2e.py",
+      "role": "checks the matrix mapper and the run record: a known failure is never green and an untaken step is never a pass",
+      "sha256": "b7c2311c68fc2017711a091e63cb1bc8bc26e77f2c7eb879fe6e24902d7c92c1",
+      "bytes": 11437,
+      "lines": 264
     }
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "28a98327e2804b389b67a2859558c2050f263a08a9f6c556405f7cca6505a981",
-    "lines": 12860,
+    "sha256": "d09bde83f2a1ba188ba34ba24acee2f835ea334aaf37cfec3c9b75fee2c27e46",
+    "lines": 12862,
     "tab_count": 6,
     "tabs": [
       {

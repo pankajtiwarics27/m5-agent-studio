@@ -217,7 +217,10 @@ async function run(args) {
       record("the row names the session and what it has done", mine.title === title && /\d+ steps?/.test(mine.meta), `${mine.title} / ${mine.meta}`);
       record(
         "the row's state is the shared table's label for that state",
-        mine.pill === "READY" && mine.tone === "info",
+        // UIUX-P5-01 made one vocabulary for every state, and it is not shouted: a session whose
+        // state is `ready` draws `ready`, not `READY`. The wording is the shared table's, so this
+        // walk reads it in lower case like every other pane.
+        mine.pill === "ready" && mine.tone === "info",
         `${mine.pill} (${mine.tone})`,
       );
       record("the row is a button a keyboard can reach", mine.tag === "BUTTON" && mine.role === "listitem", `${mine.tag} role=${mine.role}`);

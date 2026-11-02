@@ -33,10 +33,10 @@ is a bug in the caller, and the `error` kind is already how bugs are shown.
 | `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 4068 |
 | `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 4078 |
 | `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 4092 |
-| `#hallSummonState` | Council | `error` | `Retry the round`, `Check readiness`, `Ask one model` | 5380 |
-| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 8666 |
-| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 8692 |
-| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 8864 |
+| `#hallSummonState` | Council | `error` | `Retry the round`, `Check readiness`, `Ask one model` | 5379 |
+| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 8665 |
+| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 8691 |
+| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 8863 |
 
 13 call sites across 9 of 9 containers: 3 empty, 7 error, 3 recovery.
 
@@ -63,8 +63,8 @@ should not quietly become a pane rewrite:
 | Handler | Line |
 |---|---|
 | `installSkill()` | 4370 |
-| `openHarnessDiffModal()` | 10691 |
-| `runMcpPlayground()` | 12334 |
+| `openHarnessDiffModal()` | 10693 |
+| `runMcpPlayground()` | 12336 |
 
 ## Checks and limits
 

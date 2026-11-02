@@ -16,6 +16,10 @@
       "label": "ready",
       "tone": "info"
     },
+    "closed": {
+      "label": "closed",
+      "tone": "neutral"
+    },
     "queued": {
       "label": "queued",
       "tone": "neutral"
@@ -153,7 +157,7 @@
       "tone": "ok"
     }
   },
-  "state_count": 35,
+  "state_count": 36,
   "server_states": {
     "waiting_approval": "waiting-approval",
     "running": "running",

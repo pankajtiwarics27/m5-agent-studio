@@ -170,7 +170,7 @@
         "Check readiness",
         "Ask one model"
       ],
-      "line": 5380
+      "line": 5379
     },
     {
       "container": "chatState",
@@ -183,7 +183,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 8666
+      "line": 8665
     },
     {
       "container": "chatState",
@@ -196,7 +196,7 @@
         "Back to Chat",
         "Open Harness"
       ],
-      "line": 8692
+      "line": 8691
     },
     {
       "container": "chatState",
@@ -209,7 +209,7 @@
         "Undo",
         "Dismiss"
       ],
-      "line": 8864
+      "line": 8863
     }
   ],
   "containers": [
@@ -274,11 +274,11 @@
       "handler": "installSkill"
     },
     {
-      "line": 10691,
+      "line": 10693,
       "handler": "openHarnessDiffModal"
     },
     {
-      "line": 12334,
+      "line": 12336,
       "handler": "runMcpPlayground"
     }
   ],

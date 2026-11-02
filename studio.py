@@ -8373,11 +8373,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     clearPresentation("hallSummonState");
     document.getElementById("hallTitle").textContent = s.title;
     const badge = document.getElementById("hallStatusBadge");
-    setStatus(
-      badge,
-      s.status === "active" ? uiStatus("running").tone : uiStatus("ready").tone,
-      s.status === "active" ? uiStatus("running").label : uiStatus("ready").label,
-    );
+    // Three states, three words: an open round is running, a concluded session is closed, and
+    // anything else is a session waiting to be convened.
+    const badgeState = s.status === "active" ? "running" : s.status === "closed" ? "closed" : "ready";
+    setStatus(badge, uiStatus(badgeState).tone, uiStatus(badgeState).label);
 
     const fileBadges = (s.context_files || []).map(f => `<span class="badge cyan">@${escapeHtml(f)}</span>`).join("");
     const roster = (s.participants || []).map(p => {
@@ -12939,6 +12938,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // words. Tones come from STATUS_TONES, so a state cannot invent a colour either.
   const UI_STATUS = {
     ready: { label: "ready", tone: "info" },
+    // A room that pinned its decision is closed, and it must say so: the badge read `ready`
+    // after a conclusion because the only two words this mapping had were running and ready.
+    closed: { label: "closed", tone: "neutral" },
     queued: { label: "queued", tone: "neutral" },
     running: { label: "running", tone: "busy" },
     "waiting-approval": { label: "waiting approval", tone: "warn" },
