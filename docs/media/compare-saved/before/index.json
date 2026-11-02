@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "captured_at": "2026-11-02T02:43:30.817Z",
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "device_scale_factor": 2
+  },
+  "variant": {
+    "theme": null,
+    "density": null
+  },
+  "shots": [
+    {
+      "id": "start",
+      "tab": "start",
+      "file": "start.png",
+      "bytes": 354094,
+      "sha256": "1a3af110e224ebf69554abc3cc1c67276cd1de438679c801e2606796713e3c5d"
+    },
+    {
+      "id": "harness",
+      "tab": "harness",
+      "file": "harness.png",
+      "bytes": 395757,
+      "sha256": "dcf3cc0ec6ca1da02ba8cea717f1015050c4fcf26e60054062b03e01c33a3898"
+    },
+    {
+      "id": "hall",
+      "tab": "hall",
+      "file": "hall.png",
+      "bytes": 347041,
+      "sha256": "e92bbc0d8bccd50a928bab79f8aee1604cf326b6a2cb6a38f87bdb130fbd92c4"
+    },
+    {
+      "id": "council",
+      "tab": "council",
+      "file": "pipeline.png",
+      "bytes": 258470,
+      "sha256": "ee1563e65302ea32c3ebb1cbc9740b6d0a3a4e19fc96f93880d7a51547674dcf"
+    },
+    {
+      "id": "debate",
+      "tab": "debate",
+      "file": "compare.png",
+      "bytes": 341752,
+      "sha256": "d6c02ef8cb1c9bf1e8e97a6593f18742f25e2a38b9daea7f1931929d9656ae5c"
+    },
+    {
+      "id": "chat",
+      "tab": "chat",
+      "file": "chat.png",
+      "bytes": 267215,
+      "sha256": "616e5690c8393d6835b15b575c32b687dd36ec40684372d6c7aa225febeb76bb"
+    }
+  ]
+}

@@ -25,12 +25,12 @@
     "current_inputs_match_approval": null,
     "approved_inputs": null,
     "current_inputs": {
-      "ledger_content_sha256": "984a23afd38055409138731a09dab6b258df10297ae67f4d9faf7a0ecadf8a88",
-      "source_manifest_sha256": "8f62d445965abf438d6cd8db93c5bb8b04f99f79f82db88ef0a8fae019a4130c",
-      "control_inventory_sha256": "11dbee311ec3ba957d7145ea4ef5f328ffedc00c0fb4c960f4e94ea83650c794",
-      "route_map_sha256": "8f77642939d91e530fb6ae9465663acae08c736a9f6bd459d500aaaad9dcb500",
-      "authorization_trace_sha256": "6cb8c84bbb7891fd1fb762a22f6d7d431f22f27c99c13e5c4ebf33756d207022",
-      "frontend_sha256": "1eda4cd8b8a905e1f78269638fae11cf080a8e638ecd79154d3845996dffce8f",
+      "ledger_content_sha256": "9c448a6011f59d02dfc5fe277eed6e0c7143ef84f47aa02363f1858c3e2e4377",
+      "source_manifest_sha256": "e23a2fb9157586ea11a7062c3c9ec5d253cc383e8c871cea3e3c5438c06226f9",
+      "control_inventory_sha256": "6b717427e0d8b3f94ee93f0a21b811f48c431393b229122905e003ef2b519bdf",
+      "route_map_sha256": "ac210690335f8a43df35a6a2e0bfc52df8164a701b1f779bd82b62da76f78730",
+      "authorization_trace_sha256": "ec8f5d494e91036b46fb77394e93dcef2490a0340005c658314bc9a56ffe2b3b",
+      "frontend_sha256": "d873dff577c00aac1f5d66013a6d3624f9738b1860316c9884613bbf00e13c00",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
       "screenshot_index_sha256": "0fa81561ac870619a2517fcf6f382055a98c9eb573e35c07bcde0faf4d2b1941",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -39,12 +39,12 @@
     "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "fcaac5bc58e316ba7e833cfb1dbcb275231ffbca8ec51c07f4cbad545c7d7b38",
-    "source_manifest_sha256": "8f62d445965abf438d6cd8db93c5bb8b04f99f79f82db88ef0a8fae019a4130c",
-    "control_inventory_sha256": "11dbee311ec3ba957d7145ea4ef5f328ffedc00c0fb4c960f4e94ea83650c794",
-    "route_map_sha256": "8f77642939d91e530fb6ae9465663acae08c736a9f6bd459d500aaaad9dcb500",
-    "authorization_trace_sha256": "6cb8c84bbb7891fd1fb762a22f6d7d431f22f27c99c13e5c4ebf33756d207022",
-    "frontend_sha256": "1eda4cd8b8a905e1f78269638fae11cf080a8e638ecd79154d3845996dffce8f"
+    "ledger_sha256": "27922568552f7433dfa694e2b67664bff1092784bafcb008d4728581dae3810b",
+    "source_manifest_sha256": "e23a2fb9157586ea11a7062c3c9ec5d253cc383e8c871cea3e3c5438c06226f9",
+    "control_inventory_sha256": "6b717427e0d8b3f94ee93f0a21b811f48c431393b229122905e003ef2b519bdf",
+    "route_map_sha256": "ac210690335f8a43df35a6a2e0bfc52df8164a701b1f779bd82b62da76f78730",
+    "authorization_trace_sha256": "ec8f5d494e91036b46fb77394e93dcef2490a0340005c658314bc9a56ffe2b3b",
+    "frontend_sha256": "d873dff577c00aac1f5d66013a6d3624f9738b1860316c9884613bbf00e13c00"
   },
   "approval_request": [
     {
@@ -55,7 +55,7 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "190 markup controls (106 chrome, 84 panes) plus 38 rendered by script"
+      "evidence": "195 markup controls (106 chrome, 89 panes) plus 38 rendered by script"
     },
     {
       "id": 3,
@@ -76,9 +76,9 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 190,
+    "markup_controls": 195,
     "chrome_controls": 106,
-    "pane_controls": 84,
+    "pane_controls": 89,
     "script_rendered_controls": 38,
     "routes": 115,
     "routes_with_resolved_or_possible_caller": 69,
@@ -1242,11 +1242,11 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 5,
+      "control_count": 10,
       "counts": {
-        "button": 2,
+        "button": 6,
         "input": 1,
-        "select": 1,
+        "select": 2,
         "textarea": 1
       },
       "controls": [
@@ -1284,6 +1284,41 @@
           "text": "Start Compare",
           "onclick": "runDebate()",
           "handler": "runDebate"
+        },
+        {
+          "tag": "button",
+          "id": "debateFindSavedBtn",
+          "text": "Find saved comparisons",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "debateSavedSelect",
+          "text": "Find saved comparisons to populate this list",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "debateLoadSavedBtn",
+          "text": "Revisit selected",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "debateExportHistoryBtn",
+          "text": "Download full history export",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "debateForgetSessionBtn",
+          "text": "Forget this tab's copy",
+          "onclick": null,
+          "handler": null
         }
       ],
       "declared_handlers": [

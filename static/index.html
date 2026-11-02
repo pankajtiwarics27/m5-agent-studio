@@ -512,6 +512,25 @@
   .debate-provenance tr:last-child td { border-bottom: none; }
   .debate-provenance-note { color: var(--text-faint); font-size: 11.2px; line-height: 1.45; padding-top: 2px; }
   .debate-results-basis { margin-top: 9px; color: var(--text-faint); font-size: 11.4px; line-height: 1.5; }
+  .debate-saved-panel { margin: 0 20px 18px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
+  .debate-saved-title { color: var(--text); font-size: 12.5px; font-weight: 700; }
+  .debate-saved-note { margin: 6px 0 10px; color: var(--text-faint); font-size: 11.4px; line-height: 1.5; }
+  .debate-saved-controls { display: grid; grid-template-columns: auto minmax(180px, 1fr) auto; grid-template-areas: "find label select" "load export forget"; gap: 8px; align-items: end; }
+  #debateFindSavedBtn { grid-area: find; }
+  .debate-saved-controls label { grid-area: label; color: var(--text-dim); font-size: 11px; }
+  #debateSavedSelect { grid-area: select; }
+  #debateLoadSavedBtn { grid-area: load; }
+  #debateExportHistoryBtn { grid-area: export; }
+  #debateForgetSessionBtn { grid-area: forget; }
+  .debate-saved-controls select { min-width: 0; max-width: 100%; height: 32px; padding: 0 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg-elev); color: var(--text); }
+  .debate-saved-status { min-height: 18px; margin-top: 9px; color: var(--text-faint); font-size: 11.2px; line-height: 1.45; overflow-wrap: anywhere; }
+  .debate-saved-status[data-tone="warn"] { color: var(--amber); }
+  .debate-saved-status[data-tone="error"] { color: var(--rose); }
+  @media (max-width: 600px) {
+    .debate-saved-panel { margin-left: 10px; margin-right: 10px; padding: 10px; }
+    .debate-saved-controls { grid-template-columns: minmax(0, 1fr); grid-template-areas: "find" "label" "select" "load" "export" "forget"; }
+    .debate-saved-controls > * { width: 100%; min-width: 0; }
+  }
   .debate-panel-note { font-size: 11.6px; color: var(--amber); margin-bottom: 8px; }
   .debate-run-hint { font-size: 11.5px; color: var(--text-faint); }
 
@@ -2442,6 +2461,21 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div id="debateResults" class="debate-results" role="region" aria-label="Comparison results" hidden></div>
         <!-- UIUX-P4-05: what the response said about each reply, and this page times nothing. -->
         <div id="debateProvenance" class="debate-results debate-provenance" role="region" aria-label="Measured performance per reply" hidden></div>
+        <section id="debateSavedPanel" class="debate-saved-panel" role="region" aria-labelledby="debateSavedTitle">
+          <div id="debateSavedTitle" class="debate-saved-title">Saved comparisons and export</div>
+          <p class="debate-saved-note">The server attempts to save completed comparisons to local history; the returned run id is the confirmation. This tab also keeps only its latest view in session storage for reloads; that copy is browser-local and is not the server export. Finding saved comparisons reads the existing full history export only when you ask. The export includes all exported history tables; its credential redaction is best-effort.</p>
+          <div class="debate-saved-controls">
+            <button id="debateFindSavedBtn" class="btn btn-xs" type="button">Find saved comparisons</button>
+            <label for="debateSavedSelect">Saved Compare run</label>
+            <select id="debateSavedSelect" aria-describedby="debateSavedStatus">
+              <option value="">Find saved comparisons to populate this list</option>
+            </select>
+            <button id="debateLoadSavedBtn" class="btn btn-xs" type="button" disabled>Revisit selected</button>
+            <button id="debateExportHistoryBtn" class="btn btn-xs" type="button">Download full history export</button>
+            <button id="debateForgetSessionBtn" class="btn btn-xs" type="button">Forget this tab's copy</button>
+          </div>
+          <div id="debateSavedStatus" class="debate-saved-status" role="status" aria-live="polite"></div>
+        </section>
       </div>
     </section>
 
@@ -3918,6 +3952,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   function presentDebateEmpty() {
+    // A reload-restored comparison is already an answerable state, even before a new run.
+    // The generic empty-state pass at startup must not overwrite its saved synthesis/panels.
+    if (debatePanels().length || debateSynth.m) {
+      clearPresentation("debateSynthesisArea");
+      return null;
+    }
     return presentInto("debateSynthesisArea", {
       kind: "empty",
       title: "No comparison yet",
@@ -5747,6 +5787,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const chk = firstInit ? (idx < 3) : prevChecked.has(it.id);
       return `<label class="chk-lbl"><input type="checkbox" class="debate-m-chk" value="${escapeHtml(it.id)}" ${chk ? "checked" : ""}/> ${escapeHtml(it.label)}</label>`;
     }).join("");
+    // A comparison restored from this tab keeps its original selection where those models
+    // are already available; this never loads a model or adds an unavailable catalog entry.
+    if (typeof debateApplyPendingControls === "function") debateApplyPendingControls();
     // The set of models is part of what Start will do, so a rebuilt list re-states it.
     updateDebateRunControl();
   }
@@ -7263,6 +7306,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   /** The end of a stream, attributed to the panels it actually ended. */
   function debateEnd(kind, message) {
+    if (kind === "failed") debateRunState = "failed";
+    else if (kind === "stopped") debateRunState = "stopped";
+    else if (kind === "lost" && debateRunState === "running") debateRunState = "stream-ended";
     debatePanels().forEach(slot => {
       if (slot.status === "running") {
         slot.status = kind;
@@ -7354,6 +7400,451 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
      started - shows `—` and says why, because a zero would read as a measurement.
   */
   let debateRunElapsed = null;
+  const DEBATE_SESSION_KEY = "m5_compare_last_view_v1";
+  const DEBATE_SESSION_MAX_CHARS = 256 * 1024;
+  const DEBATE_HISTORY_LIST_MAX = 50;
+  let debateRunId = null;
+  let debateRunState = "idle";
+  let debateRestoredFrom = "";
+  let debateCriteriaFromHistory = false;
+  let debatePendingModelSelection = null;
+  let debatePendingJudgeModel = "";
+  let debateRestoredJudgeModel = "";
+  let debateUnavailableModels = [];
+  let debateSessionWriteTimer = null;
+  let debateSessionCopyBlocked = false;
+  let debateSessionCopyError = "";
+  let debateSavedFeedback = "";
+  let debateSavedFeedbackTone = "";
+  let debateSavedRows = [];
+  let debateHistoryBusy = false;
+
+  function debateSetSavedFeedback(message, tone = "") {
+    debateSavedFeedback = String(message || "");
+    debateSavedFeedbackTone = tone;
+    debateRenderSavedStatus();
+  }
+
+  function debateRenderSavedStatus() {
+    const host = document.getElementById("debateSavedStatus");
+    if (!host) return;
+    let message = debateSavedFeedback;
+    let tone = debateSavedFeedbackTone;
+    let source = "";
+    if (!message && debateSessionCopyError) {
+      message = debateSessionCopyError;
+      tone = "warn";
+    }
+    if (!message && debateRestoredFrom === "history" && debateRunId) {
+      message = `Showing server history record #${debateRunId} from the existing full export. It was not run again; loading it did not change server history or model availability. Custom Compare criteria are not in this record; the criteria strip shows defaults, not recovered criteria.`;
+      source = "history";
+    } else if (!message && debateRestoredFrom === "session") {
+      message = `Restored from this browser tab's session copy${debateRunId ? `; server history also reports run #${debateRunId}` : "; no server run id was received"}. The tab copy may contain unredacted model text.${debateCriteriaFromHistory ? " Custom Compare criteria are not in the server record; the strip shows defaults, not recovered criteria." : ""}`;
+      source = "session";
+    } else if (!message && debateRunState === "running") {
+      message = "This comparison is being kept in this tab for reload recovery; its server record is not confirmed until debate_done supplies a run id.";
+      source = "running";
+    } else if (!message && debateRunState === "completed" && debateRunId) {
+      message = `The server reported saved comparison #${debateRunId}. A tab-local copy is also kept for reloads; it is not the server export.`;
+      source = "saved";
+    } else if (!message && debateRunState === "completed-unrecorded") {
+      message = "The comparison completed, but the response supplied no saved run id. Only this tab's session copy can restore it.";
+      tone = "warn";
+      source = "unrecorded";
+    } else if (!message && ["failed", "stopped", "stream-ended", "interrupted"].includes(debateRunState)) {
+      message = `This is a partial ${debateRunState === "stopped" ? "stopped" : debateRunState === "failed" ? "failed" : "interrupted"} comparison kept in this browser tab; the server saves Compare runs only after completion${debateRunId ? ` (server record #${debateRunId} was received)` : " and no server run id was received"}.`;
+      tone = "warn";
+      source = "partial";
+    } else if (!message && debatePanels().length) {
+      message = "This comparison is kept in this tab's session storage for reloads; it is browser-local, may contain unredacted model text, and is not the server export.";
+      source = "tab";
+    } else if (!message) {
+      message = "No comparison is open in this tab. Find reads the existing full history export only when you ask; it does not run or load a model.";
+      source = "empty";
+    }
+    host.textContent = message;
+    host.dataset.tone = tone;
+    host.dataset.source = source;
+    host.dataset.runId = debateRunId ? String(debateRunId) : "";
+  }
+
+  function debateUsageSnapshot(usage) {
+    if (!usage || typeof usage !== "object" || Array.isArray(usage)) return null;
+    const out = {};
+    for (const key of ["elapsed_s", "ttft", "completion_tokens", "reasoning_tokens", "decode_tps"]) {
+      const value = usage[key];
+      if ((typeof value === "number" && Number.isFinite(value))
+        || (typeof value === "string" && value.length <= 64)) out[key] = value;
+    }
+    if (usage.demo === true || usage.demo === "true") out.demo = usage.demo;
+    if (typeof usage.finish_reason === "string" && usage.finish_reason.length <= 64) out.finish_reason = usage.finish_reason;
+    return out;
+  }
+
+  function debateSessionSnapshot() {
+    const prompt = document.getElementById("debatePrompt");
+    const judge = document.getElementById("d-judge");
+    const synth = document.getElementById("d-synth");
+    const elapsed = Number(debateRunElapsed);
+    return {
+      version: 1,
+      saved_at: new Date().toISOString(),
+      run_id: debateRunId,
+      run_state: debateRunState,
+      prompt: prompt ? String(prompt.value || "") : "",
+      selected_models: (Array.isArray(debatePendingModelSelection)
+        ? debatePendingModelSelection
+        : [...new Set(debateSelectedModels().concat(debateUnavailableModels))]).slice(0, 10),
+      include_synthesis: Boolean(synth && synth.checked),
+      judge_model: debatePendingJudgeModel || debateRestoredJudgeModel || (judge ? String(judge.value || "") : ""),
+      judged_criteria: debateJudged.slice(0, 20).map(value => String(value).slice(0, 200)),
+      criteria_from_history: debateCriteriaFromHistory,
+      panels: debatePanels().slice(0, 10).map((slot, index) => ({
+        slot: Number.isInteger(Number(index)) ? Number(index) : index,
+        model: String(slot.model || "").slice(0, 512),
+        content: String(slot.c || ""),
+        usage: debateUsageSnapshot(slot.u),
+        status: String(slot.status || "queued"),
+        error: String(slot.error || "").slice(0, 1200),
+      })),
+      synthesis: {
+        model: String(debateSynth.m || "").slice(0, 512),
+        content: String(debateSynth.c || ""),
+        usage: debateUsageSnapshot(debateSynth.u),
+      },
+      total_elapsed_s: Number.isFinite(elapsed) ? elapsed : null,
+    };
+  }
+
+  function debatePersistSessionCopy() {
+    if (debateSessionCopyBlocked || (!debatePanels().length && !debateSynth.m)) return false;
+    try {
+      const raw = JSON.stringify(debateSessionSnapshot());
+      if (raw.length > DEBATE_SESSION_MAX_CHARS) {
+        debateSessionCopyError = `This comparison is too large for the ${DEBATE_SESSION_MAX_CHARS.toLocaleString()}-character tab-copy limit; the server record, if present, is unchanged.`;
+        debateRenderSavedStatus();
+        return false;
+      }
+      sessionStorage.setItem(DEBATE_SESSION_KEY, raw);
+      debateSessionCopyError = "";
+      debateRenderSavedStatus();
+      return true;
+    } catch (_error) {
+      debateSessionCopyError = "This browser did not allow the tab-local comparison copy to be saved; any server history record is unchanged.";
+      debateRenderSavedStatus();
+      return false;
+    }
+  }
+
+  function debateScheduleSessionCopy() {
+    if (debateSessionCopyBlocked || (!debatePanels().length && !debateSynth.m)) return;
+    if (debateSessionWriteTimer) clearTimeout(debateSessionWriteTimer);
+    debateSessionWriteTimer = setTimeout(() => {
+      debateSessionWriteTimer = null;
+      debatePersistSessionCopy();
+    }, 180);
+  }
+
+  function debateReadSessionCopy() {
+    let raw = "";
+    try { raw = sessionStorage.getItem(DEBATE_SESSION_KEY) || ""; }
+    catch (_error) { return null; }
+    if (!raw) return null;
+    if (raw.length > DEBATE_SESSION_MAX_CHARS) {
+      debateSessionCopyError = "The tab-local comparison copy is larger than this pane accepts; server history was not changed.";
+      return null;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.panels) || !parsed.synthesis) throw new Error("unsupported comparison snapshot");
+      return parsed;
+    } catch (_error) {
+      debateSessionCopyError = "The tab-local comparison copy could not be read; use the saved-comparison list to restore a completed server run.";
+      return null;
+    }
+  }
+
+  function debateNormalizeSnapshot(raw) {
+    if (!raw || !Array.isArray(raw.panels) || raw.panels.length > 10 || !raw.synthesis || typeof raw.synthesis !== "object") return null;
+    const allowedStatuses = new Set(Object.keys(DEBATE_STATUS));
+    const panels = [];
+    for (const item of raw.panels) {
+      const slot = Number(item && item.slot);
+      if (!Number.isInteger(slot) || slot < 0 || slot > 9 || !item || !allowedStatuses.has(String(item.status || "queued"))) return null;
+      panels.push({
+        model: typeof item.model === "string" ? item.model.slice(0, 512) : "not reported",
+        c: typeof item.content === "string" ? item.content : "",
+        u: debateUsageSnapshot(item.usage),
+        status: String(item.status || "queued"),
+        error: typeof item.error === "string" ? item.error.slice(0, 1200) : "",
+      });
+    }
+    const criteria = Array.isArray(raw.judged_criteria)
+      ? raw.judged_criteria.filter(value => typeof value === "string").slice(0, 20).map(value => value.slice(0, 200))
+      : DEBATE_JUDGED_DEFAULTS.slice();
+    const runId = Number(raw.run_id);
+    const elapsed = Number(raw.total_elapsed_s);
+    const runStates = new Set(["idle", "running", "completed", "completed-unrecorded", "failed", "stopped", "stream-ended", "interrupted"]);
+    const runState = runStates.has(String(raw.run_state || "")) ? String(raw.run_state) : "interrupted";
+    return {
+      version: 1,
+      savedAt: typeof raw.saved_at === "string" ? raw.saved_at.slice(0, 80) : "",
+      runId: Number.isSafeInteger(runId) && runId > 0 ? runId : null,
+      runState,
+      prompt: typeof raw.prompt === "string" ? raw.prompt.slice(0, 100000) : "",
+      selectedModels: Array.isArray(raw.selected_models) ? raw.selected_models.filter(value => typeof value === "string").slice(0, 10).map(value => value.slice(0, 512)) : panels.map(panel => panel.model),
+      includeSynthesis: Boolean(raw.include_synthesis),
+      judgeModel: typeof raw.judge_model === "string" ? raw.judge_model.slice(0, 512) : "",
+      criteria,
+      criteriaFromHistory: raw.criteria_from_history === true,
+      panels,
+      synthesis: {
+        model: typeof raw.synthesis.model === "string" ? raw.synthesis.model.slice(0, 512) : "",
+        content: typeof raw.synthesis.content === "string" ? raw.synthesis.content : "",
+        usage: debateUsageSnapshot(raw.synthesis.usage),
+      },
+      totalElapsed: Number.isFinite(elapsed) && elapsed > 0 ? elapsed : null,
+    };
+  }
+
+  function debateApplyPendingControls() {
+    if (Array.isArray(debatePendingModelSelection)) {
+      const boxes = [...document.querySelectorAll(".debate-m-chk")];
+      if (boxes.length || lastCatalogSignature) {
+        const wanted = new Set(debatePendingModelSelection);
+        boxes.forEach(box => { box.checked = wanted.has(box.value); });
+        debateUnavailableModels = [...wanted].filter(model => !boxes.some(box => box.value === model));
+        debatePendingModelSelection = null;
+      }
+    }
+    if (debatePendingJudgeModel) {
+      const judge = document.getElementById("d-judge");
+      if (judge && [...judge.options].some(option => option.value === debatePendingJudgeModel)) {
+        judge.value = debatePendingJudgeModel;
+        debatePendingJudgeModel = "";
+      } else if (judge && (judge.options.length || lastCatalogSignature)) {
+        debateUnavailableModels.push(debatePendingJudgeModel);
+        debatePendingJudgeModel = "";
+      }
+    }
+    updateDebateRunControl();
+    debateRenderSavedStatus();
+  }
+
+  function debateRestoreSnapshot(raw, source) {
+    const snapshot = debateNormalizeSnapshot(raw);
+    if (!snapshot) return false;
+    debateSlots = {};
+    snapshot.panels.forEach((slot, index) => {
+      let status = slot.status;
+      if (snapshot.runState === "running") status = status === "running" ? "lost" : status === "queued" ? "not-run" : status;
+      debateSlots[index] = { model: slot.model, c: slot.c, u: slot.u, status, error: slot.error };
+    });
+    debateSynth = { m: snapshot.synthesis.model, c: snapshot.synthesis.content, u: snapshot.synthesis.usage };
+    debateRunElapsed = snapshot.totalElapsed;
+    debateRunId = snapshot.runId;
+    debateRunState = snapshot.runState === "running" ? "interrupted" : snapshot.runState;
+    if (source === "history") debateRunState = "completed";
+    debateRestoredFrom = source;
+    debateCriteriaFromHistory = source === "history" || snapshot.criteriaFromHistory;
+    debateBusy = false;
+    debateSessionCopyBlocked = false;
+    debateSessionCopyError = "";
+    debateSavedFeedback = "";
+    debateSavedFeedbackTone = "";
+    debateUnavailableModels = [];
+    debatePendingModelSelection = snapshot.selectedModels;
+    debatePendingJudgeModel = snapshot.judgeModel;
+    debateRestoredJudgeModel = snapshot.judgeModel;
+    const prompt = document.getElementById("debatePrompt");
+    if (prompt) prompt.value = snapshot.prompt;
+    const synth = document.getElementById("d-synth");
+    if (synth) synth.checked = snapshot.includeSynthesis;
+    debateJudged = snapshot.criteria.length ? snapshot.criteria : DEBATE_JUDGED_DEFAULTS.slice();
+    syncDebateArbiter();
+    debateApplyPendingControls();
+    const stop = document.getElementById("debateStopBtn");
+    if (stop) stop.style.display = "none";
+    renderDebateCriteria();
+    renderDebate();
+    return true;
+  }
+
+  function debateForgetSessionCopy() {
+    try {
+      sessionStorage.removeItem(DEBATE_SESSION_KEY);
+      debateSessionCopyBlocked = true;
+      debateSessionCopyError = "";
+      debateRestoredFrom = "";
+      debateSetSavedFeedback("Forgot this tab's copy. The visible result and any server history record are unchanged.");
+    } catch (_error) {
+      debateSetSavedFeedback("This browser did not allow the tab-local copy to be removed; server history is unchanged.", "warn");
+    }
+  }
+
+  async function debateFetchHistoryExport() {
+    const response = await fetch("/api/history/export", { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const bundle = await response.json();
+    if (!bundle || bundle.format !== "m5-agent-studio history export" || !bundle.tables || !Array.isArray(bundle.tables.runs)) {
+      throw new Error("the history export did not contain a runs table");
+    }
+    return bundle;
+  }
+
+  function debateHistoryOption(row) {
+    const id = Number(row.id);
+    const title = typeof row.title === "string" && row.title.trim() ? row.title.trim() : "Untitled comparison";
+    const created = typeof row.created_at === "string" && row.created_at ? row.created_at : "date not reported";
+    return `#${id} · ${created} · ${title}`;
+  }
+
+  async function debateFindSavedComparisons() {
+    if (debateHistoryBusy) return;
+    debateHistoryBusy = true;
+    const find = document.getElementById("debateFindSavedBtn");
+    const load = document.getElementById("debateLoadSavedBtn");
+    if (find) find.disabled = true;
+    if (load) load.disabled = true;
+    debateSetSavedFeedback("Reading saved comparisons from the existing full history export…");
+    try {
+      const bundle = await debateFetchHistoryExport();
+      debateSavedRows = bundle.tables.runs
+        .filter(row => row && row.mode === "debate" && Number.isSafeInteger(Number(row.id)) && Number(row.id) > 0)
+        .sort((a, b) => Number(b.id) - Number(a.id));
+      const select = document.getElementById("debateSavedSelect");
+      if (select) {
+        select.replaceChildren();
+        const shown = debateSavedRows.slice(0, DEBATE_HISTORY_LIST_MAX);
+        if (!shown.length) {
+          const option = document.createElement("option");
+          option.value = "";
+          option.textContent = "No completed Compare runs in this history export";
+          select.appendChild(option);
+        } else {
+          shown.forEach(row => {
+            const option = document.createElement("option");
+            option.value = String(Number(row.id));
+            option.textContent = debateHistoryOption(row);
+            select.appendChild(option);
+          });
+        }
+        select.selectedIndex = 0;
+      }
+      const count = debateSavedRows.length;
+      debateSetSavedFeedback(count
+        ? `Found ${count} saved Compare ${count === 1 ? "run" : "runs"} in the full history export${count > DEBATE_HISTORY_LIST_MAX ? `; showing the newest ${DEBATE_HISTORY_LIST_MAX}` : ""}.`
+        : "No saved Compare runs were found in this history export.", "");
+    } catch (error) {
+      debateSetSavedFeedback(`Could not read saved comparisons from GET /api/history/export (${String(error.message || error)}). Nothing was run or changed.`, "error");
+    } finally {
+      debateHistoryBusy = false;
+      if (find) find.disabled = false;
+      const select = document.getElementById("debateSavedSelect");
+      if (load) load.disabled = !select || !select.value;
+    }
+  }
+
+  function debateSavedRunSnapshot(row) {
+    if (!row || row.mode !== "debate" || !Number.isSafeInteger(Number(row.id)) || Number(row.id) <= 0) throw new Error("the selected row is not a saved Compare run");
+    const record = typeof row.payload_json === "string" ? JSON.parse(row.payload_json) : row.payload_json;
+    if (!record || !Array.isArray(record.opinions) || !record.opinions.length) throw new Error("the saved run has no panel responses to restore");
+    const panels = record.opinions.slice(0, 10).map(opinion => {
+      const slot = Number(opinion && opinion.slot);
+      if (!Number.isInteger(slot) || slot < 0 || slot > 9) throw new Error("a saved panel has an invalid slot");
+      const usage = debateUsageSnapshot(opinion.usage);
+      const content = typeof opinion.content === "string" ? opinion.content : "";
+      const status = usage && (usage.demo === true || usage.demo === "true") ? "demo"
+        : usage && String(usage.finish_reason || "") === "length" ? "cut"
+          : content.trim() ? "answered" : "empty";
+      return { slot, model: typeof opinion.model === "string" ? opinion.model : "not reported", content, usage, status, error: "" };
+    });
+    const synthesis = record.synthesis && typeof record.synthesis === "object" ? record.synthesis : {};
+    return {
+      version: 1,
+      saved_at: typeof row.created_at === "string" ? row.created_at : "",
+      run_id: Number(row.id),
+      run_state: "completed",
+      prompt: typeof record.prompt === "string" ? record.prompt : "",
+      selected_models: panels.map(panel => panel.model),
+      include_synthesis: Boolean(synthesis.model),
+      judge_model: typeof synthesis.model === "string" ? synthesis.model : "",
+      judged_criteria: DEBATE_JUDGED_DEFAULTS.slice(),
+      panels,
+      synthesis: {
+        model: typeof synthesis.model === "string" ? synthesis.model : "",
+        content: typeof synthesis.content === "string" ? synthesis.content : "",
+        usage: debateUsageSnapshot(synthesis.usage),
+      },
+      total_elapsed_s: record.total_elapsed_s,
+    };
+  }
+
+  function debateLoadSelectedSavedComparison() {
+    const select = document.getElementById("debateSavedSelect");
+    const id = Number(select && select.value);
+    const row = debateSavedRows.find(item => Number(item.id) === id);
+    try {
+      const snapshot = debateSavedRunSnapshot(row);
+      if (!debateRestoreSnapshot(snapshot, "history")) throw new Error("the saved run could not be restored");
+      if (debateUnavailableModels.length) {
+        debateSetSavedFeedback(`Loaded server record #${id}; ${debateUnavailableModels.length} original model selection(s) are not in the current catalogue and were not loaded. The saved replies remain visible. Custom Compare criteria are not in the record; the criteria strip shows defaults, not recovered criteria.`, "warn");
+      }
+    } catch (error) {
+      debateSetSavedFeedback(`Could not revisit the selected comparison (${String(error.message || error)}). The current view and server history are unchanged.`, "error");
+    }
+  }
+
+  async function debateDownloadHistoryExport() {
+    if (debateHistoryBusy) return;
+    debateHistoryBusy = true;
+    const download = document.getElementById("debateExportHistoryBtn");
+    if (download) download.disabled = true;
+    debateSetSavedFeedback("Preparing the existing full history export…");
+    try {
+      const response = await fetch("/api/history/export", { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const contentType = response.headers.get("content-type") || "";
+      if (!/application\/json/i.test(contentType)) throw new Error("the history export was not JSON");
+      const blob = await response.blob();
+      if (!blob.size) throw new Error("the history export was empty");
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "studio-history-export.json";
+      anchor.rel = "noopener";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      debateSetSavedFeedback("Started downloading the full history export (all exported tables; the server applies best-effort credential redaction).", "");
+    } catch (error) {
+      debateSetSavedFeedback(`Could not download GET /api/history/export (${String(error.message || error)}). Nothing was run or changed.`, "error");
+    } finally {
+      debateHistoryBusy = false;
+      if (download) download.disabled = false;
+    }
+  }
+
+  function debateBindSavedControls() {
+    const find = document.getElementById("debateFindSavedBtn");
+    const load = document.getElementById("debateLoadSavedBtn");
+    const select = document.getElementById("debateSavedSelect");
+    const exportButton = document.getElementById("debateExportHistoryBtn");
+    const forget = document.getElementById("debateForgetSessionBtn");
+    if (find) find.addEventListener("click", debateFindSavedComparisons);
+    if (load) load.addEventListener("click", debateLoadSelectedSavedComparison);
+    if (select) select.addEventListener("change", () => { if (load) load.disabled = !select.value; });
+    if (exportButton) exportButton.addEventListener("click", debateDownloadHistoryExport);
+    if (forget) forget.addEventListener("click", debateForgetSessionCopy);
+    debateRenderSavedStatus();
+  }
+
+  window.addEventListener("pagehide", () => {
+    if (debateSessionWriteTimer) clearTimeout(debateSessionWriteTimer);
+    debateSessionWriteTimer = null;
+    debatePersistSessionCopy();
+  });
 
   /** One field of the response, or `null` - never a zero standing in for a silence. */
   function debateFigure(value, suffix) {
@@ -7508,6 +7999,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     renderDebateSummary();
     renderDebateResults();
     renderDebateProvenance();
+    debateRenderSavedStatus();
+    debateScheduleSessionCopy();
   }
 
   function runDebate() {
@@ -7523,6 +8016,16 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     models.forEach((model, index) => (debateSlots[index] = { model, c: "", u: null, status: "queued", error: "" }));
     debateSynth = { m: "", c: "", u: null };
     debateRunElapsed = null;
+    debateRunId = null;
+    debateRunState = "running";
+    debateRestoredFrom = "";
+    debateCriteriaFromHistory = false;
+    debateRestoredJudgeModel = "";
+    debateSessionCopyBlocked = false;
+    debateSessionCopyError = "";
+    debateSavedFeedback = "";
+    debateSavedFeedbackTone = "";
+    debateUnavailableModels = [];
     renderDebate();
     updateDebateRunControl();
     document.getElementById("debateStopBtn").style.display = "inline-flex";
@@ -7557,10 +8060,20 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       },
       synthesis_start(d) { debateSynth.m = d.model; renderDebate(); },
       synthesis_done(d) { debateSynth.u = d.usage; renderDebate(); },
-      // The run's own total, as the server measured it. Nothing here is timed by the page.
-      debate_done(d) { debateRunElapsed = d.total_elapsed_s; renderDebate(); },
+      // The run's own total and id are from debate_done; this page does not time or persist it.
+      debate_done(d) {
+        debateRunElapsed = d.total_elapsed_s;
+        const id = Number(d.run_id);
+        debateRunId = Number.isSafeInteger(id) && id > 0 ? id : null;
+        debateRunState = debateRunId ? "completed" : "completed-unrecorded";
+        renderDebate();
+      },
       stopped() { debateEnd("stopped", ""); },
-      closed() { debateEnd("lost", ""); },
+      closed() {
+        // The server uses debate_done as its terminal event. A normally closed stream after that
+        // is not a lost run; only a close before debate_done leaves an interrupted comparison.
+        if (debateRunState !== "completed" && debateRunState !== "completed-unrecorded") debateEnd("lost", "");
+      },
       error(d) {
         showToast("Compare error: " + d.message, "err");
         debateEnd("failed", String(d.message || "the server reported an error"));
@@ -7571,16 +8084,29 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       // Nothing may keep saying "running" after the stream is gone.
       if (debatePanels().some(slot => slot.status === "running" || slot.status === "queued")) debateEnd("lost", "");
       updateDebateRunControl();
+      renderDebate();
     });
   }
 
   // The criteria are stated before anything runs, and Start's hint obeys the same predicate that
   // enables it - a button that silently does nothing was its own defect.
   (function initDebatePane() {
-    renderDebateCriteria();
-    renderDebate();
+    debateBindSavedControls();
+    const savedView = debateReadSessionCopy();
+    if (savedView) {
+      if (!debateRestoreSnapshot(savedView, "session")) {
+        debateSessionCopyError = "The tab-local comparison copy is incomplete or unsupported; completed server runs can still be loaded from history.";
+        renderDebateCriteria();
+        renderDebate();
+      }
+    } else {
+      renderDebateCriteria();
+      renderDebate();
+    }
     const prompt = document.getElementById("debatePrompt");
     if (prompt) prompt.addEventListener("input", updateDebateRunControl);
+    const judge = document.getElementById("d-judge");
+    if (judge) judge.addEventListener("change", () => { debateRestoredJudgeModel = ""; });
     // Enter adds a criterion, from one listener on the strip rather than an inline handler on the
     // input: the strip is rewritten on every add, and a delegated listener survives that.
     const criteria = document.getElementById("debateCriteria");

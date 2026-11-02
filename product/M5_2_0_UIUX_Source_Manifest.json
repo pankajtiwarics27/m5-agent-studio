@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "1eda4cd8b8a905e1f78269638fae11cf080a8e638ecd79154d3845996dffce8f",
-      "bytes": 684719,
-      "lines": 11871
+      "sha256": "d873dff577c00aac1f5d66013a6d3624f9738b1860316c9884613bbf00e13c00",
+      "bytes": 712835,
+      "lines": 12397
     },
     {
       "path": "app.py",
@@ -348,8 +348,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "1eda4cd8b8a905e1f78269638fae11cf080a8e638ecd79154d3845996dffce8f",
-    "lines": 11871,
+    "sha256": "d873dff577c00aac1f5d66013a6d3624f9738b1860316c9884613bbf00e13c00",
+    "lines": 12397,
     "tab_count": 6,
     "tabs": [
       {
@@ -395,7 +395,7 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 64,
+    "fetch_call_count": 66,
     "api_literal_count": 54,
     "api_literals": [
       "/api/cache/clear-ssd",
