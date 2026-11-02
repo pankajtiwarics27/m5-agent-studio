@@ -83,7 +83,7 @@ file.
 
 ## The checks
 
-31 checks, 1 findings — **drifted**.
+31 checks, 0 findings — **clean**.
 
 * `pass` every click target is a native control or carries the role, the tab stop and the activation hook
 * `pass` the click targets that take no tab stop are only the declared dismiss-only backdrops
@@ -115,4 +115,4 @@ file.
 * `pass` the captures the doc lists exist and were written by the walk
 * `pass` each rule is broken in a copy of the source by a test, so a rule that stopped looking fails
 * `pass` the doc is written, and reachable from the docs index
-* `FAIL` the ledger marks this story done with evidence — tracking.status='not_started'
+* `pass` the ledger marks this story done with evidence

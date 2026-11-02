@@ -37,7 +37,7 @@
   "totals": {
     "tokens": 45,
     "groups": 7,
-    "references": 1030,
+    "references": 1032,
     "theme_overrides": 18,
     "density_overrides": 5,
     "contrast_pairs": 20,
@@ -283,7 +283,7 @@
         "light": "#4858c8"
       },
       "density_override": null,
-      "references": 2
+      "references": 4
     },
     {
       "name": "--text-2xs",
