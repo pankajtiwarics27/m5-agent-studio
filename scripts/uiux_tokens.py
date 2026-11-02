@@ -52,8 +52,8 @@ STYLE_BLOCK_ID = "m5-redesign-system"
 #: under "other". Adding a token therefore means deciding what it is.
 GROUPS: dict[str, tuple[str, ...]] = {
     "colour": (
-        "bg", "bg-elev", "bg-card", "bg-hover", "bg-code", "border", "border-hi",
-        "text", "text-dim", "text-faint", "accent", "primary-text",
+        "bg", "bg-elev", "bg-card", "bg-hover", "bg-press", "bg-code", "border", "border-hi",
+        "text", "text-dim", "text-faint", "accent", "accent-hi", "primary-text",
         "cyan", "emerald", "amber", "rose", "purple", "ring",
     ),
     "typography": (
@@ -61,13 +61,13 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "weight-medium", "weight-semibold", "lh-tight", "lh-base", "tracking-tight",
     ),
     "space": ("space-1", "space-2", "space-3", "space-4", "space-5"),
-    "radius": ("radius-sm", "radius-md", "radius-lg"),
+    "radius": ("radius-xs", "radius-sm", "radius-md", "radius-lg", "radius-xl", "radius-pill"),
     "density": ("control-min-h", "control-min-h-sm", "strip-pad-y", "card-pad", "row-gap"),
     # Not density: the density block deliberately does not re-point this one, because
     # how tight a layout may look and how small a thing a finger may have to hit are
     # different questions (UIUX-P5-03, WCAG 2.5.8).
     "touch": ("target-min",),
-    "motion": ("ease-out", "dur-fast"),
+    "motion": ("ease-out", "dur-fast", "dur-slow", "dur-meter"),
     "shell": ("sans", "mono", "header-height"),
 }
 GROUP_OF = {f"--{name}": group for group, names in GROUPS.items() for name in names}
@@ -78,7 +78,11 @@ GROUP_OF = {f"--{name}": group for group, names in GROUPS.items() for name in na
 TEXT_ROLES: dict[str, float] = {"text": 7.0, "text-dim": 4.5, "text-faint": 4.5}
 SURFACES = ("bg", "bg-elev", "bg-card")
 #: Text drawn on the accent fill (primary buttons) — one pair, same AA floor.
-FILL_PAIRS: tuple[tuple[str, str, float], ...] = (("primary-text", "accent", 4.5),)
+FILL_PAIRS: tuple[tuple[str, str, float], ...] = (
+    ("primary-text", "accent", 4.5),
+    # The hover fill is a fill a reader reads text on, so it is measured like the resting one.
+    ("primary-text", "accent-hi", 4.5),
+)
 
 DECLARATION = re.compile(r"^\s*(--[a-z0-9-]+)\s*:\s*(.+?);?\s*$")
 REFERENCE = re.compile(r"var\(\s*(--[a-z0-9-]+)")

@@ -52,7 +52,7 @@
         "Re-check",
         "Providers"
       ],
-      "line": 3350
+      "line": 3417
     },
     {
       "container": "startRecentState",
@@ -65,7 +65,7 @@
         "Start a session",
         "Open Harness"
       ],
-      "line": 3409
+      "line": 3476
     },
     {
       "container": "startRecentState",
@@ -78,7 +78,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 3484
+      "line": 3551
     },
     {
       "container": "startHealthState",
@@ -91,7 +91,7 @@
         "Re-check",
         "Monitor rail"
       ],
-      "line": 3582
+      "line": 3649
     },
     {
       "container": "startWorkspaceState",
@@ -104,7 +104,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 3666
+      "line": 3733
     },
     {
       "container": "hallStream",
@@ -118,7 +118,7 @@
         "Ask one model",
         "Configure providers"
       ],
-      "line": 3987
+      "line": 4054
     },
     {
       "container": "debateSynthesisArea",
@@ -130,7 +130,7 @@
       "actions": [
         "Start Compare"
       ],
-      "line": 4001
+      "line": 4068
     },
     {
       "container": "chatState",
@@ -143,7 +143,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 4011
+      "line": 4078
     },
     {
       "container": "harnessStreamState",
@@ -156,7 +156,7 @@
         "Reconnect now",
         "Reload from snapshot"
       ],
-      "line": 4025
+      "line": 4092
     },
     {
       "container": "hallSummonState",
@@ -170,7 +170,7 @@
         "Check readiness",
         "Ask one model"
       ],
-      "line": 5313
+      "line": 5380
     },
     {
       "container": "chatState",
@@ -183,7 +183,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 8599
+      "line": 8666
     },
     {
       "container": "chatState",
@@ -196,7 +196,7 @@
         "Back to Chat",
         "Open Harness"
       ],
-      "line": 8625
+      "line": 8692
     },
     {
       "container": "chatState",
@@ -209,7 +209,7 @@
         "Undo",
         "Dismiss"
       ],
-      "line": 8797
+      "line": 8864
     }
   ],
   "containers": [
@@ -270,15 +270,15 @@
   ],
   "remaining_raw_writers": [
     {
-      "line": 4303,
+      "line": 4370,
       "handler": "installSkill"
     },
     {
-      "line": 10624,
+      "line": 10691,
       "handler": "openHarnessDiffModal"
     },
     {
-      "line": 12267,
+      "line": 12334,
       "handler": "runMcpPlayground"
     }
   ],
