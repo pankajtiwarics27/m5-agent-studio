@@ -6,7 +6,7 @@ executed by [`scripts/preservation_suite.py`](../scripts/preservation_suite.py).
 
 * 21 of 21 matrix rows mapped, 55 provers, 0 findings
 * 40 walk checks, 4 pytest nodes, 9 route probes, 2 wired controls
-* 17 walks prove a row; 13 more are listed with the reason they do not
+* 17 walks prove a row; 14 more are listed with the reason they do not
 
 ## What this page is, and is not
 
@@ -90,6 +90,7 @@ than succeed. That is what "existing endpoint and permission semantics" means in
 | `status_walk.mjs` | the status component (P1-03) is the vocabulary every row is drawn in |
 | `stream_perf_walk.mjs` | the streaming bound (P5-04) is a cost property, not a capability |
 | `terminology_walk.mjs` | the vocabulary walk (P5-01) proves the same states say the same words |
+| `uiux_interaction_polish_walk.mjs` | the supplemental P5-05 evidence walk measures hover/focus parity and captures 72 screenshots; it proves presentation, not a capability the matrix enumerates |
 
 ## The last recorded run
 

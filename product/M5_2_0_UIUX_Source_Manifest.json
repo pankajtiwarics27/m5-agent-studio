@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "d09bde83f2a1ba188ba34ba24acee2f835ea334aaf37cfec3c9b75fee2c27e46",
-      "bytes": 740594,
-      "lines": 12862
+      "sha256": "ce5da2c11a9cb25a844e4a40deb290da8cd9d23249646eaf787576f70c155bc7",
+      "bytes": 741280,
+      "lines": 12873
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "0001996601254bb6fb1257809834581e5dd82e3838a6db08b1fcbeaf6bdf05f3",
-      "bytes": 3479999,
-      "lines": 75912
+      "sha256": "d0fdfc50ad4d855a3f43862595ed9486fa984ee5531c37acd7555b2967d21a37",
+      "bytes": 3480685,
+      "lines": 75923
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -355,9 +355,9 @@
     {
       "path": "tests/test_compare_history.py",
       "role": "checks history browsing, route reuse, mode filtering and separate restoration",
-      "sha256": "c814345c77334011290832d027d57afb977ee2135b5b39d8fb108367b66adaa2",
-      "bytes": 3363,
-      "lines": 72
+      "sha256": "288ff9cd6815ce0f80d9952fcd7549528070fd6666e873163ac26cc85cc41183",
+      "bytes": 3900,
+      "lines": 81
     },
     {
       "path": "docs/uiux-2-0-compare-history-browser.md",
@@ -376,12 +376,12 @@
     {
       "path": "scripts/uiux_preservation_e2e.py",
       "role": "maps each preservation-matrix row to the walk, test, route and control that proves it",
-      "sha256": "d8f0368b9822284817e9ca18c5cf95f11967ad3281d23ab6374fa65e98fd2501",
-      "bytes": 38306,
-      "lines": 821
+      "sha256": "1e81390efb72ff586ceff85563c731d748f35ae8f96b77b3c02b8072b2086e12",
+      "bytes": 38546,
+      "lines": 823
     },
     {
-      "path": "tests/test_preservation_e2e.py",
+      "path": "tests/test_uiux_preservation_e2e.py",
       "role": "checks the matrix mapper and the run record: a known failure is never green and an untaken step is never a pass",
       "sha256": "b7c2311c68fc2017711a091e63cb1bc8bc26e77f2c7eb879fe6e24902d7c92c1",
       "bytes": 11437,
@@ -390,8 +390,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "d09bde83f2a1ba188ba34ba24acee2f835ea334aaf37cfec3c9b75fee2c27e46",
-    "lines": 12862,
+    "sha256": "ce5da2c11a9cb25a844e4a40deb290da8cd9d23249646eaf787576f70c155bc7",
+    "lines": 12873,
     "tab_count": 6,
     "tabs": [
       {

@@ -342,6 +342,7 @@ NEEDS_SERVER = {
     "start_recent_walk.mjs",
     "start_walk.mjs",
     "status_walk.mjs",
+    "uiux_interaction_polish_walk.mjs",
 }
 
 # Walks that exist for a story but prove no matrix row are not failures - most of them prove a
@@ -361,6 +362,7 @@ SUPPORT_WALKS = {
     "pipeline_recovery_walk.mjs": "Pipeline failure recovery (P3-07) extends a capability rather than preserving it",
     "harness_recovery_walk.mjs": "Harness pause/resume/abort recovery (P3-05) extends the abort surface rather than preserving it",
     "compare_continuity_walk.mjs": "Compare continuity (P4-06) keeps a comparison; the capability it belongs to is the comparison itself",
+    "uiux_interaction_polish_walk.mjs": "the supplemental P5-05 evidence walk measures hover/focus parity and captures 72 screenshots; it proves presentation, not a capability the matrix enumerates",
 }
 
 

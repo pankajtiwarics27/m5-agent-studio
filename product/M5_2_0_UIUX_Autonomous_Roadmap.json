@@ -6854,14 +6854,14 @@
           "static/index.html",
           "studio.py",
           "tests/test_chat_context.py",
-          "tests/test_preservation_e2e.py"
+          "tests/test_uiux_preservation_e2e.py"
         ],
         "evidence": [
           "`python3 scripts/uiux_preservation_e2e.py` -> 21/21 rows, 55 provers, 17 walks, 13 support walks, 0 findings; `--check` -> 0. A prover is a walk check title that must appear verbatim in the named script, a pytest node that must exist, a route that must be mounted, or a control that must be wired - so a reworded check, a renamed test, an unmounted route or a button that lost its handler fails the map instead of quietly deleting a proof.",
           "`python3 scripts/preservation_suite.py --save product/M5_2_0_UIUX_Preservation_Run.json` -> 27 steps, 0 failed in 389.8 s: 17/21 rows proved, 4 `known`. Each walk runs against its own throwaway `demo_tour --serve` app, because the first version shared one server across the 14 server-reading walks and produced a wall of failures that belonged to the harness rather than the product.",
           "Two rows cannot be proved today and the suite says so instead of turning green: `harness_evidence_walk.mjs` (27/29, #169 - a rejected completion draws no verdict card, so the failure code, exit code and failing test are not on screen) and `harness_timeline_walk.mjs` (20/21, #170 - after pruning, the strip counts the client's 13-event cache while the server serves 9). Both are recorded as `known` with an owner, an issue and a reason; if one starts passing, the suite reports the entry as stale.",
           "The run is a file: `product/M5_2_0_UIUX_Preservation_Run.json` names the tree it ran on (`ad826f3`), the environment, every row's status and the known defects, and `docs/uiux-2-0-preservation-e2e.md` renders it - \"we are preserved\" is now something a reader can re-run rather than a claim in prose.",
-          "`tests/test_preservation_e2e.py` (16 tests) holds the record's honesty: an untaken step is not a pass, a `known` entry must name an issue, an owner and a reason, a stale entry is reported as loudly as a failure, and a drifted or empty matrix is refused.",
+          "`tests/test_uiux_preservation_e2e.py` (16 tests) holds the record's honesty: an untaken step is not a pass, a `known` entry must name an issue, an owner and a reason, a stale entry is reported as loudly as a failure, and a drifted or empty matrix is refused.",
           "Two small honesty fixes came with the story: the sent-context line is drawn as text rather than carried in an HTML `title` (context is untrusted, and `tests/test_uiux_chat_composer.py` already forbade interpolating it into an attribute), and a concluded council room's badge says `closed` instead of falling back to `ready` - three states, three words, in both copies of the frontend.",
           "README and the program page were corrected to the verified count (36 of 40 stories done with recorded evidence) instead of the \"0 done\" / \"6 done\" they had carried since P1."
         ],
@@ -6869,7 +6869,7 @@
           "python3 scripts/preservation_suite.py --save product/M5_2_0_UIUX_Preservation_Run.json -> 27 steps, 0 failed in 389.8 s; 17/21 rows proved, 2 known defects; exit 0 [TMPDIR=/tmp/m5-runner/m5-browser/tmp, LD_LIBRARY_PATH=/tmp/m5-runner/m5-browser/libs/lib, STUDIO_SCREENSHOT_CHROME=/tmp/m5-runner/m5-browser/tmp/chromium, STUDIO_PUPPETEER_CORE=tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js, STUDIO_PYTHON=.venv/bin/python; Python 3.11.2]",
           "python3 scripts/uiux_preservation_e2e.py --check -> 0 (21/21 rows, 55 provers, 17 walks, 13 support walks, 0 findings)",
           "node scripts/chat_context_walk.mjs (own throwaway demo server) -> 19 of 19 checks passed, re-run after the `title` removal",
-          "pytest -q tests/test_preservation_e2e.py -> 16 passed; pytest -q tests/test_chat_context.py tests/test_uiux_chat_composer.py -> 51 passed",
+          "pytest -q tests/test_uiux_preservation_e2e.py -> 16 passed; pytest -q tests/test_chat_context.py tests/test_uiux_chat_composer.py -> 51 passed",
           "pytest -q -> 1 failed / 2,517 passed / 28 skipped (303.5 s). The failure is tests/test_baseline.py, whose pinned commit is not present in this clone (`Not a valid commit name`); it failed before this story too. Recorded values were written into this line immediately after that run; the only change made afterwards is this sentence.",
           "ruff check . -> All checks passed; mypy -> Success: no issues found in 58 source files",
           "python3 scripts/check_frontend_syntax.py -> JavaScript syntax OK (1 inline block(s)); scripts/demo_tour.py --check -> transcript up to date; scripts/validate_screenshots.py -> 6 of 6; scripts/validate_docs.py -> validation passed, 5 required pages, 185 files scanned; scripts/build_studio.py -> Built studio.py: 3,479,999 bytes",

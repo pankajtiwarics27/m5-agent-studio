@@ -4,6 +4,8 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "17 7 * * *"
 
 permissions:
   contents: read
@@ -52,13 +54,25 @@ jobs:
         run: git ls-files -z -- '*.py' | xargs -0 -r python -m compileall -q
       - name: Check frontend JavaScript syntax
         run: python scripts/check_frontend_syntax.py
+      - name: Validate scoped test map
+        run: python scripts/run_scoped_tests.py --check-map
       - name: Run tests
-        # Failing tests are echoed as check annotations (readable through the
-        # checks API) as well as logged, so a red run names the test even when
-        # the job log is not reachable from wherever it is being triaged.
+        # Pushes to feature branches run the affected mapped areas. Pull requests,
+        # main pushes, scheduled runs, and manual runs retain the full suite.
+        # Unknown or high-risk changes fall back to the full suite in the selector.
+        env:
+          SCOPE_ON_PUSH: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') && github.ref != 'refs/heads/main' }}
+          SCOPE_BASE: ${{ github.event.before || '' }}
+          SCOPE_HEAD: ${{ github.sha }}
+        # Failing tests are echoed as check annotations as well as logged, so a
+        # red run names the test even when its job log is not reachable.
         run: |
           set +e
-          python -m pytest -q --tb=short -rf > "${RUNNER_TEMP:-/tmp}/pytest.log" 2>&1
+          if [ "$SCOPE_ON_PUSH" = "true" ]; then
+            python scripts/run_scoped_tests.py --base "$SCOPE_BASE" --head "$SCOPE_HEAD" > "${RUNNER_TEMP:-/tmp}/pytest.log" 2>&1
+          else
+            python -m pytest -q --tb=short -rf > "${RUNNER_TEMP:-/tmp}/pytest.log" 2>&1
+          fi
           status=$?
           if [ "$status" -ne 0 ]; then
             grep -E '^(FAILED|ERROR)' "${RUNNER_TEMP:-/tmp}/pytest.log" | head -25 | while IFS= read -r line; do

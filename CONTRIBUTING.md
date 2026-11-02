@@ -35,6 +35,18 @@ python scripts/validate_governance.py
 
 This is the same sequence CI runs; a pull request is mergeable only when all three Python legs pass it.
 
+## Scoped test selection
+
+Test modules are grouped by feature in [`tests/test_scopes.json`](tests/test_scopes.json), including the six UI panes, shared UI, providers/models, storage/history, security, and docs/CI. Use the selector while iterating:
+
+```bash
+python scripts/run_scoped_tests.py --area ui.compare
+python scripts/run_scoped_tests.py --base origin/main --head HEAD --worktree --list
+python scripts/run_scoped_tests.py --base origin/main --head HEAD --worktree
+python scripts/run_scoped_tests.py --check-map
+```
+
+Unknown or high-risk changes (including `app.py`, generated `studio.py`, test infrastructure, and dependency or CI configuration) conservatively run the full suite. Feature-branch pushes use the selector; pull requests, pushes to `main`, nightly scheduled runs, and manual runs keep the full multi-version suite as the merge gate. The dedicated browser-safety job still runs on every event.
 
 The live container-runtime test is opt-in and is not required by the ordinary test suite. Do not make tests contact live model, cloud-provider, MCP, or other external services; use mocks, local fakes, temporary paths, and disposable loopback servers. Never run tests against a user's real workspace, credentials, or data.
 

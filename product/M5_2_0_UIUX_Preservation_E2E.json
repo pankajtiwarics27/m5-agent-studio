@@ -464,7 +464,7 @@
     "route_provers": 9,
     "control_provers": 2,
     "walks": 17,
-    "support_walks": 13,
+    "support_walks": 14,
     "findings": 0
   },
   "walks": [
@@ -510,7 +510,8 @@
     "responsive_walk.mjs": "the layout walk (P5-03) proves the matrix rows still fit a phone",
     "status_walk.mjs": "the status component (P1-03) is the vocabulary every row is drawn in",
     "stream_perf_walk.mjs": "the streaming bound (P5-04) is a cost property, not a capability",
-    "terminology_walk.mjs": "the vocabulary walk (P5-01) proves the same states say the same words"
+    "terminology_walk.mjs": "the vocabulary walk (P5-01) proves the same states say the same words",
+    "uiux_interaction_polish_walk.mjs": "the supplemental P5-05 evidence walk measures hover/focus parity and captures 72 screenshots; it proves presentation, not a capability the matrix enumerates"
   },
   "pytest_nodes": [
     "tests/test_harness_evidence.py::test_apply_still_refuses_and_reports",

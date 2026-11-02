@@ -137,8 +137,14 @@ python scripts/validate_adrs.py                         # only if you touched do
 python scripts/check_commit_messages.py --base origin/main   # only new commits are checked
 ```
 
-CI (`.github/workflows/ci.yml`) runs this same sequence on Python 3.11, 3.12,
-and 3.13. A pull request is mergeable only when all three legs are green.
+For local iteration, prefer the feature-scoped selector:
+`python scripts/run_scoped_tests.py --base origin/main --head HEAD --worktree`;
+use `--area ui.compare` (or another named area) for an explicit feature run. Unknown,
+high-risk, and unmapped changes fall back to the full suite. CI runs scoped
+pytest on feature-branch pushes, but keeps the full suite on pull requests,
+`main` pushes, nightly schedules, and manual runs across Python 3.11, 3.12, and
+3.13. The browser-safety suite still runs on every event. A pull request is
+mergeable only when all full-suite Python legs and browser checks are green.
 
 ## 6. Branch, commit, and merge rules
 
