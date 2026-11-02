@@ -63,6 +63,10 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "space": ("space-1", "space-2", "space-3", "space-4", "space-5"),
     "radius": ("radius-sm", "radius-md", "radius-lg"),
     "density": ("control-min-h", "control-min-h-sm", "strip-pad-y", "card-pad", "row-gap"),
+    # Not density: the density block deliberately does not re-point this one, because
+    # how tight a layout may look and how small a thing a finger may have to hit are
+    # different questions (UIUX-P5-03, WCAG 2.5.8).
+    "touch": ("target-min",),
     "motion": ("ease-out", "dur-fast"),
     "shell": ("sans", "mono", "header-height"),
 }

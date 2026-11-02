@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "ae578cb1f47bcec5c441b5452a395c7766e6ccdc991a1c5263126bd68eb1e98c",
+    "style_block_sha256": "bdae960e3d520b03418871cd06cb77578023683108391bfaa939eca188e2b7c9",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -35,9 +35,9 @@
     ]
   },
   "totals": {
-    "tokens": 45,
-    "groups": 7,
-    "references": 1043,
+    "tokens": 46,
+    "groups": 8,
+    "references": 1049,
     "theme_overrides": 18,
     "density_overrides": 5,
     "contrast_pairs": 20,
@@ -93,6 +93,9 @@
       "strip-pad-y",
       "card-pad",
       "row-gap"
+    ],
+    "touch": [
+      "target-min"
     ],
     "motion": [
       "ease-out",
@@ -460,6 +463,14 @@
       "theme_overrides": {},
       "density_override": "3px",
       "references": 1
+    },
+    {
+      "name": "--target-min",
+      "group": "touch",
+      "value": "24px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 6
     },
     {
       "name": "--ease-out",
