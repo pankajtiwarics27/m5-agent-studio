@@ -135,10 +135,26 @@ def server_statuses(app_source: str) -> list[dict[str, object]]:
 
 
 def status_table(html: str) -> dict[str, dict[str, str]]:
-    """The harness state table: state -> {tone, label}, read from its one source."""
-    body = function_body(html, "harnessStatusBadge")
-    pairs = re.findall(r'(\w+):\s*\["(\w+)",\s*"([^"]+)"\]', body)
-    return {state: {"tone": tone, "label": label} for state, tone, label in pairs}
+    """The harness state table: server state -> {tone, label}, read from its one source.
+
+    UIUX-P5-01 moved the words into `UI_STATUS` and left `HARNESS_STATUS_STATE` mapping the
+    server's own state names onto them, so both halves are read here - the rows Start lists still
+    have to name a state exactly as the harness badge names it.
+    """
+    words = {
+        name: (label, tone)
+        for name, label, tone in re.findall(
+            r'"?([a-z][\w-]*)"?:\s*\{\s*label:\s*"([^"]*)",\s*tone:\s*"([a-z]+)"\s*\}',
+            re.search(r"const UI_STATUS = \{(.*?)\n  \};", html, re.S).group(1) if "const UI_STATUS" in html else "",
+        )
+    }
+    mapping = re.search(r"const HARNESS_STATUS_STATE = \{(.*?)\n  \};", html, re.S)
+    pairs = re.findall(r'"?([a-z_]+)"?:\s*"([a-z-]+)"', mapping.group(1) if mapping else "")
+    table = {}
+    for server_state, vocabulary_state in pairs:
+        label, tone = words.get(vocabulary_state, ("", ""))
+        table[server_state] = {"tone": tone, "label": label}
+    return table
 
 
 def presentation_calls(body: str) -> list[dict[str, object]]:

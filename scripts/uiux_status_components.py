@@ -136,15 +136,34 @@ def read_basis_rules(html: str) -> dict[str, str]:
 
 
 def read_states(html: str) -> list[dict[str, str]]:
-    """The harness state table: the one place a run's state becomes words."""
-    start = html.find("function harnessStatusBadge")
-    if start < 0:
-        raise StatusError("harnessStatusBadge is missing: the state table is the component's only source")
-    tail = html[start : start + 4000]
-    pairs = re.findall(r'(\w+):\s*\["(\w+)",\s*"([^"]+)"\]', tail)
+    """The state words: the vocabulary table, and the server states it renames.
+
+    UIUX-P5-01 moved the words out of `harnessStatusBadge` and into one `UI_STATUS` table, so this
+    reads both halves: the vocabulary (state, word, tone) and the map from the server's own state
+    names to it. A server state that the map points at a word the table does not declare is a
+    finding, because that is exactly how `FAILED` and `ERROR` came to mean the same thing twice.
+    """
+    table = re.search(r"const UI_STATUS = \{(.*?)\n  \};", html, re.S)
+    mapping = re.search(r"const HARNESS_STATUS_STATE = \{(.*?)\n  \};", html, re.S)
+    if not table:
+        raise StatusError("UI_STATUS is missing: the vocabulary is the component's only source")
+    if not mapping:
+        raise StatusError("harnessStatusBadge declares no state to tone mapping")
+    words = {
+        name: (label, tone)
+        for name, label, tone in re.findall(
+            r'"?([a-z][\w-]*)"?:\s*\{\s*label:\s*"([^"]*)",\s*tone:\s*"([a-z]+)"\s*\}',
+            table.group(1),
+        )
+    }
+    pairs = re.findall(r'"?([a-z_]+)"?:\s*"([a-z-]+)"', mapping.group(1))
     if not pairs:
         raise StatusError("harnessStatusBadge declares no state to tone mapping")
-    return [{"state": state, "tone": tone, "label": label} for state, tone, label in pairs]
+    states = []
+    for server_state, vocabulary_state in pairs:
+        label, tone = words.get(vocabulary_state, ("", ""))
+        states.append({"state": server_state, "tone": tone, "label": label, "vocabulary_state": vocabulary_state})
+    return states
 
 
 def read_writers(html: str) -> dict[str, int]:

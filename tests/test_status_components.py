@@ -40,17 +40,21 @@ FRONTEND = ROOT / "static" / "index.html"
 TONES = ("ok", "warn", "danger", "info", "busy", "neutral")
 BASES = ("measured", "derived", "unverified", "unavailable")
 
+# UIUX-P5-01 moved these words into the shared `UI_STATUS` table and made them prose: the same
+# outcome is one word (`failed`), a stop has one spelling (`stopped by you`), and `pending` is no
+# longer drawn as `READY` when `idle` already means that. The server's own state names still reach
+# the pane; only the label is the vocabulary's.
 EXPECTED_STATES = {
-    "waiting_approval": ("warn", "WAITING APPROVAL"),
-    "running": ("busy", "WORKFLOW RUNNING"),
-    "paused": ("warn", "PAUSED"),
-    "blocked": ("danger", "BLOCKED"),
-    "pending": ("info", "READY"),
-    "idle": ("info", "READY"),
-    "completed": ("ok", "COMPLETED"),
-    "cancelled": ("neutral", "CANCELLED"),
-    "failed": ("danger", "FAILED"),
-    "error": ("danger", "ERROR"),
+    "waiting_approval": ("warn", "waiting approval"),
+    "running": ("busy", "running"),
+    "paused": ("warn", "paused"),
+    "blocked": ("danger", "blocked"),
+    "pending": ("neutral", "queued"),
+    "idle": ("info", "ready"),
+    "completed": ("ok", "completed"),
+    "cancelled": ("warn", "stopped by you"),
+    "failed": ("danger", "failed"),
+    "error": ("danger", "failed"),
 }
 
 
@@ -128,10 +132,13 @@ def test_a_state_mapped_to_a_made_up_tone_is_refused(
     module = _patched(
         monkeypatch,
         tmp_path,
-        ('      failed: ["danger", "FAILED"],', '      failed: ["red", "FAILED"],'),
+        ('    completed: { label: "completed", tone: "ok" },\n    failed: { label: "failed", tone: "danger" },',
+         '    completed: { label: "completed", tone: "ok" },\n    failed: { label: "failed", tone: "red" },'),
     )
     findings = module.build_components()["findings"]
-    assert any(finding["check"] == "tone-undeclared" for finding in findings), findings
+    # The vocabulary carries the tone now, so a state mapped to an unknown one is `state-tone-unknown`
+    # rather than an undeclared tone in a two-column map.
+    assert any(finding["check"] == "state-tone-unknown" for finding in findings), findings
 
 
 def test_a_tone_written_with_a_raw_colour_is_refused(
@@ -165,8 +172,8 @@ def test_a_surface_that_keeps_its_badge_is_refused(
     module = _patched(
         monkeypatch,
         tmp_path,
-        ('<span id="hallStatusBadge" class="status" data-tone="warn" role="status">IDLE</span>',
-         '<span id="hallStatusBadge" class="badge amber">IDLE</span>'),
+        ('<span id="hallStatusBadge" class="status" data-tone="info" role="status">ready</span>',
+         '<span id="hallStatusBadge" class="badge amber">ready</span>'),
     )
     findings = module.build_components()["findings"]
     assert any(finding["check"] == "surface-unconverted" for finding in findings), findings
@@ -178,7 +185,7 @@ def test_the_old_two_line_writer_is_refused(
     module = _patched(
         monkeypatch,
         tmp_path,
-        ('    setStatus("harnessActiveStatusBadge", "busy", "SDLC RUNNING");',
+        ('    setStatus("harnessActiveStatusBadge", "busy", uiStatus("running").label);',
          '    document.getElementById("harnessActiveStatusBadge").className = "badge cyan";'),
     )
     findings = module.build_components()["findings"]

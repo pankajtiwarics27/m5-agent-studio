@@ -4027,7 +4027,10 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
 
   .prompt-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 13px; }
   .prompt-box textarea { width: 100%; min-height: 72px; resize: vertical; border: none; background: transparent; padding: 2px; font-size: 14px; line-height: 1.55; color: var(--text); }
+  /* The textarea's own ring is off so the box can carry it: a composer that shows no focus at
+     all is the one control a keyboard user cannot find again once they are inside it. */
   .prompt-box textarea:focus { outline: none; }
+  .prompt-box:focus-within { outline: 2px solid var(--ring); outline-offset: 2px; }
   .prompt-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
   .chip { background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); padding: 3.5px 9px; border-radius: 999px; font-size: 11.4px; cursor: pointer; }
   .chip:hover, .chip.active { color: #fff; border-color: var(--cyan); background: rgba(6,182,212,0.14); }
@@ -4139,26 +4142,26 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .debate-provenance tr:last-child td { border-bottom: none; }
   .debate-provenance-note { color: var(--text-faint); font-size: 11.2px; line-height: 1.45; padding-top: 2px; }
   .debate-results-basis { margin-top: 9px; color: var(--text-faint); font-size: 11.4px; line-height: 1.5; }
-  .debate-saved-panel { margin: 0 20px 18px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
-  .debate-saved-title { color: var(--text); font-size: 12.5px; font-weight: 700; }
-  .debate-saved-note { margin: 6px 0 10px; color: var(--text-faint); font-size: 11.4px; line-height: 1.5; }
-  .debate-saved-controls { display: grid; grid-template-columns: auto minmax(180px, 1fr) auto; grid-template-areas: "find label select" "load export forget"; gap: 8px; align-items: end; }
-  #debateFindSavedBtn { grid-area: find; }
-  .debate-saved-controls label { grid-area: label; color: var(--text-dim); font-size: 11px; }
-  #debateSavedSelect { grid-area: select; }
-  #debateLoadSavedBtn { grid-area: load; }
-  #debateExportHistoryBtn { grid-area: export; }
-  #debateForgetSessionBtn { grid-area: forget; }
-  .debate-saved-controls select { min-width: 0; max-width: 100%; height: 32px; padding: 0 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg-elev); color: var(--text); }
-  .debate-saved-status { min-height: 18px; margin-top: 9px; color: var(--text-faint); font-size: 11.2px; line-height: 1.45; overflow-wrap: anywhere; }
-  .debate-saved-status[data-tone="warn"] { color: var(--amber); }
-  .debate-saved-status[data-tone="error"] { color: var(--rose); }
-  @media (max-width: 600px) {
-    .debate-saved-panel { margin-left: 10px; margin-right: 10px; padding: 10px; }
-    .debate-saved-controls { grid-template-columns: minmax(0, 1fr); grid-template-areas: "find" "label" "select" "load" "export" "forget"; }
-    .debate-saved-controls > * { width: 100%; min-width: 0; }
-  }
   .debate-panel-note { font-size: 11.6px; color: var(--amber); margin-bottom: 8px; }
+  .debate-record { margin: 0 20px 12px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
+  .debate-record[data-source="browser"] { border-color: var(--amber); }
+  .debate-record[data-source="server"] { border-color: var(--accent); }
+  .debate-record-state { font-size: 11.8px; line-height: 1.55; color: var(--text-dim); margin: 6px 0 0; }
+  .debate-record-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .debate-history { margin: 0 20px 16px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
+  .debate-history-title { color: var(--text); font-size: 12.5px; font-weight: 700; }
+  .debate-history-note { margin: 6px 0 10px; color: var(--text-faint); font-size: 11.4px; line-height: 1.5; }
+  .debate-history-controls { display: grid; grid-template-columns: auto minmax(180px, 1fr) auto auto; gap: 8px; align-items: end; }
+  .debate-history-controls label { color: var(--text-dim); font-size: 11px; }
+  .debate-history-controls select { display: block; width: 100%; min-width: 0; height: 32px; margin-top: 4px; padding: 0 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg-elev); color: var(--text); }
+  .debate-history-status { min-height: 18px; margin-top: 9px; color: var(--text-faint); font-size: 11.2px; line-height: 1.45; overflow-wrap: anywhere; }
+  .debate-history-status[data-tone="warn"] { color: var(--amber); }
+  .debate-history-status[data-tone="error"] { color: var(--rose); }
+  @media (max-width: 600px) {
+    .debate-record, .debate-history { margin-left: 10px; margin-right: 10px; padding: 10px; }
+    .debate-history-controls { grid-template-columns: minmax(0, 1fr); }
+    .debate-history-controls > * { width: 100%; min-width: 0; }
+  }
   .debate-run-hint { font-size: 11.5px; color: var(--text-faint); }
 
   .chat-header-bar { padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--bg-elev); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -4251,6 +4254,9 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .harness-main { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
   .harness-bar { padding: 9px 16px; background: var(--bg-elev); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .harness-stream { flex: 1; min-height: 96px; overflow-y: auto; padding: 14px 18px 22px; display: flex; flex-direction: column; gap: 11px; }
+  /* The stream is focusable so it can be scrolled with the arrow keys; without a ring the focus
+     lands on a region with no visible boundary and the keyboard user is lost inside it. */
+  .harness-stream:focus-visible, .hall-stream:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
   .h-turn-user { align-self: flex-end; max-width: 88%; background: rgba(99, 102, 241, 0.16); border: 1px solid rgba(99, 102, 241, 0.42); border-radius: 12px; padding: 10px 14px; }
   .h-step-card { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--cyan); border-radius: 11px; padding: 11px 14px; }
   .h-step-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 12px; }
@@ -4721,6 +4727,10 @@ body[data-density="compact"] .council-settings { padding-block: var(--strip-pad-
   border: 1px solid var(--border-hi); background: var(--bg-card); color: var(--text);
   font: var(--weight-medium) var(--text-xs)/var(--lh-tight) var(--sans);
   white-space: nowrap;
+  /* A status is a word, not a label: a container that shouts its headings (the memory rail's
+     `.m-head`) used to shout the state inside them too, so the vocabulary said `ok` and the reader
+     saw `OK`. Case and tracking belong to the table, never to the box it lands in. */
+  text-transform: none; letter-spacing: 0;
 }
 .status::before {
   content: ""; width: 6px; height: 6px; border-radius: 50%;
@@ -5035,7 +5045,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div style="display:grid; grid-template-columns:1.5fr 1fr auto; gap:8px; align-items:end; margin-bottom:8px;">
             <div><label class="field-lbl">Document Title</label><input type="text" id="ocTitle" style="width:100%;" placeholder="e.g. Auth Service JWT Rotation & Edge Cases" /></div>
             <div>
-              <label class="field-lbl">Folder Namespace</label>
+              <label class="field-lbl" for="ocFolder">Folder Namespace</label>
               <select id="ocFolder" style="width:100%;">
                 <option value="architecture">architecture</option>
                 <option value="decisions" selected>decisions</option>
@@ -5138,14 +5148,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div><label class="field-lbl">Server Alias</label><input type="text" id="mcpAlias" style="width:100%; font-family:var(--mono);" placeholder="context7" /></div>
           <div><label class="field-lbl">Display Name</label><input type="text" id="mcpName" style="width:100%;" placeholder="Context7 Live Docs" /></div>
           <div>
-            <label class="field-lbl">Transport</label>
+            <label class="field-lbl" for="mcpTransport">Transport</label>
             <select id="mcpTransport" style="width:100%;" onchange="toggleMcpTransportFields()">
               <option value="http">Cloud / Custom HTTP (URL)</option>
               <option value="stdio">Custom Stdio Command</option>
             </select>
           </div>
           <div>
-            <label class="field-lbl">Approval Policy</label>
+            <label class="field-lbl" for="mcpApprovalPolicy">Approval Policy</label>
             <select id="mcpApprovalPolicy" style="width:100%;">
               <option value="auto">Auto-Run (Trusted Read/Search)</option>
               <option value="inherit">Inherit Harness Policy</option>
@@ -5159,7 +5169,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div style="display:grid; grid-template-columns:1.8fr 0.9fr 1.2fr; gap:8px; margin-bottom:8px;">
             <div><label class="field-lbl">Remote / Custom MCP URL</label><input type="text" id="mcpUrl" style="width:100%; font-family:var(--mono);" placeholder="https://mcp.context7.com/mcp" /></div>
             <div>
-              <label class="field-lbl">Auth Header</label>
+              <label class="field-lbl" for="mcpAuthHeader">Auth Header</label>
               <select id="mcpAuthHeader" style="width:100%;">
                 <option value="Authorization">Authorization: Bearer</option>
                 <option value="x-api-key">x-api-key</option>
@@ -5169,7 +5179,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <div><label class="field-lbl">API Token (Masked; blank keeps existing)</label><input type="password" id="mcpToken" style="width:100%; font-family:var(--mono);" placeholder="Optional for free servers" /></div>
           </div>
           <div style="margin-bottom:8px;">
-            <label class="field-lbl">Extra HTTP Headers JSON (Optional)</label>
+            <label class="field-lbl" for="mcpHeadersJson">Extra HTTP Headers JSON (Optional)</label>
             <input type="text" id="mcpHeadersJson" style="width:100%; font-family:var(--mono); font-size:11.6px;" placeholder='{"X-Workspace": "prod"}' />
           </div>
         </div>
@@ -5181,7 +5191,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <div><label class="field-lbl">Arguments (Shell-quoted or space-separated)</label><input type="text" id="mcpArgs" style="width:100%; font-family:var(--mono);" placeholder="-y @playwright/mcp@latest --headless" /></div>
           </div>
           <div style="margin-bottom:8px;">
-            <label class="field-lbl">Environment Variables JSON (Secrets auto-masked)</label>
+            <label class="field-lbl" for="mcpEnvJson">Environment Variables JSON (Secrets auto-masked)</label>
             <input type="text" id="mcpEnvJson" style="width:100%; font-family:var(--mono); font-size:11.6px;" placeholder='{"API_KEY": "..."}' />
           </div>
         </div>
@@ -5196,6 +5206,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       <details style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:9px 12px;">
         <summary style="cursor:pointer; font-size:12.3px; font-weight:650; color:#e9d5ff;">Paste <code>mcpServers</code> JSON Config (Claude Desktop / Cursor / Windsurf Format)</summary>
         <div style="margin-top:8px;">
+          <label class="field-lbl" for="mcpImportJsonInput" style="display:block; margin-bottom:4px;">Imported servers JSON</label>
           <textarea id="mcpImportJsonInput" rows="4" style="width:100%; font-family:var(--mono); font-size:11.4px;" placeholder='{"mcpServers": {"exa": {"url": "https://mcp.exa.ai/mcp"}, "my-script": {"command": "python3", "args": ["server.py"]}}}'></textarea>
           <div style="display:flex; justify-content:flex-end; margin-top:6px;">
             <button class="btn btn-purple btn-xs" onclick="importMcpJson()">Import &amp; Sync All</button>
@@ -5213,9 +5224,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
         <label class="field-lbl" style="color:var(--emerald);">Test an MCP tool call</label>
         <div style="display:grid; grid-template-columns:1fr 1.2fr 1.8fr auto; gap:7px; align-items:end; margin-top:6px;">
-          <div><label class="field-lbl">Server</label><select id="mcpPlayServer" style="width:100%;" onchange="populateMcpPlayTools()"></select></div>
-          <div><label class="field-lbl">Tool Name</label><select id="mcpPlayTool" style="width:100%;"></select></div>
-          <div><label class="field-lbl">JSON Arguments</label><input type="text" id="mcpPlayArgs" style="width:100%; font-family:var(--mono); font-size:11.6px;" value="{}" /></div>
+          <div><label class="field-lbl" for="mcpPlayServer">Server</label><select id="mcpPlayServer" style="width:100%;" onchange="populateMcpPlayTools()"></select></div>
+          <div><label class="field-lbl" for="mcpPlayTool">Tool Name</label><select id="mcpPlayTool" style="width:100%;"></select></div>
+          <div><label class="field-lbl" for="mcpPlayArgs">JSON Arguments</label><input type="text" id="mcpPlayArgs" style="width:100%; font-family:var(--mono); font-size:11.6px;" value="{}" /></div>
           <button id="mcpPlayBtn" class="btn btn-emerald" onclick="runMcpPlayground()">Test Call</button>
         </div>
         <pre id="mcpPlayOutput" style="display:none; margin-top:8px; padding:9px; background:var(--bg-code); border-radius:7px; font-family:var(--mono); font-size:11.3px; max-height:170px; overflow:auto; white-space:pre-wrap; color:#e2e8f0;"></pre>
@@ -5359,7 +5370,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div><label class="field-lbl">Alias (prefix)</label><input type="text" id="provAlias" style="width:100%;" placeholder="openrouter" /></div>
           <div><label class="field-lbl">Display Name</label><input type="text" id="provName" style="width:100%;" placeholder="OpenRouter" /></div>
           <div>
-            <label class="field-lbl">Wire Protocol</label>
+            <label class="field-lbl" for="provWire">Wire Protocol</label>
             <select id="provWire" style="width:100%;">
               <option value="openai">OpenAI Compatible (/chat/completions)</option>
               <option value="anthropic">Anthropic Native (/v1/messages SSE)</option>
@@ -5399,8 +5410,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           List models in priority order (comma-separated). Example: try Cloud first -> Free Cloud -> Local M5 `Qwen3.8-27B-oQ4e-mtp` if offline or rate-limited!
         </div>
         <div style="display:grid; grid-template-columns:1fr 1.2fr 2fr auto; gap:7px; align-items:end; margin-bottom:10px;">
-          <div><label class="field-lbl">Combo Alias</label><input type="text" id="comboAlias" style="width:100%;" value="hybrid-architect" /></div>
-          <div><label class="field-lbl">Label</label><input type="text" id="comboName" style="width:100%;" value="Cloud -> M5 Fallback" /></div>
+          <div><label class="field-lbl" for="comboAlias">Combo Alias</label><input type="text" id="comboAlias" style="width:100%;" value="hybrid-architect" /></div>
+          <div><label class="field-lbl" for="comboName">Label</label><input type="text" id="comboName" style="width:100%;" value="Cloud -> M5 Fallback" /></div>
           <div><label class="field-lbl">Ordered Targets</label><input type="text" id="comboTargets" style="width:100%; font-family:var(--mono); font-size:11.6px;" placeholder="openrouter::qwen/qwen3-coder:free, Qwen3.8-27B-oQ4e-mtp" /></div>
           <button class="btn btn-amber" onclick="saveCombo()">Save Combo</button>
         </div>
@@ -5425,7 +5436,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </div>
     <div style="padding:16px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:14px;">
       <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
-        <label class="field-lbl">1-Click Install Skill (Zero-Node Git Fallback Built-In)</label>
+        <label class="field-lbl" for="skillInstallInput">1-Click Install Skill (Zero-Node Git Fallback Built-In)</label>
         <div style="display:flex; gap:8px; margin-top:6px;">
           <input type="text" id="skillInstallInput" style="flex:1; font-family:var(--mono); font-size:12px;" value="npx skills add https://github.com/nextlevelbuilder/ui-ux-pro-max-skill --skill ui-ux-pro-max" />
           <button id="skillInstallBtn" class="btn btn-primary" onclick="installSkill()">Install</button>
@@ -5544,7 +5555,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </div>
     <div style="padding:16px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
       <div>
-        <label class="field-lbl">Session Matter / Architecture Plan / Code Problem</label>
+        <label class="field-lbl" for="spawnRequestInput">Session Matter / Architecture Plan / Code Problem</label>
         <textarea id="spawnRequestInput" rows="4" style="width:100%;">Design an event-sourced local-first task queue on macOS with crash-safe SQLite WAL persistence, zero-polling wakeups, and backpressure.</textarea>
       </div>
       <div>
@@ -5596,7 +5607,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div class="m-card">
           <div class="m-head">
             <span>Guided first run</span>
-            <span id="onboardingSummary" class="status" data-tone="neutral" role="status">Checking...</span>
+            <span id="onboardingSummary" class="status" data-tone="neutral" role="status">checking</span>
           </div>
           <p class="onboarding-lede">
             Studio checks your local configuration and tells you the one next thing to click.
@@ -5636,7 +5647,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div class="m-card" style="margin-top: 14px;">
           <div class="m-head">
             <span>Recent work and task launch</span>
-            <span id="startRecentSummary" class="status" data-tone="neutral" role="status">Reading…</span>
+            <span id="startRecentSummary" class="status" data-tone="neutral" role="status">loading</span>
           </div>
           <p class="onboarding-lede">
             The five most recent Harness sessions on this machine, newest first, plus a composer
@@ -5663,7 +5674,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div class="m-card" style="margin-top: 14px;">
           <div class="m-head">
             <span>System health</span>
-            <span id="startHealthSummary" class="status" data-tone="neutral" role="status">Reading…</span>
+            <span id="startHealthSummary" class="status" data-tone="neutral" role="status">loading</span>
           </div>
           <div id="startHealthRows" class="start-health"></div>
           <!-- The basis is a required part of the claim: a simulated payload says so. -->
@@ -5681,7 +5692,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div class="m-card" style="margin-top: 14px;">
           <div class="m-head">
             <span>Project workspace</span>
-            <span id="startWorkspaceSummary" class="status" data-tone="neutral" role="status">Reading…</span>
+            <span id="startWorkspaceSummary" class="status" data-tone="neutral" role="status">loading</span>
           </div>
           <p class="onboarding-lede">
             Where the Harness runs your task. This is the same setting the Harness pane shows;
@@ -5805,7 +5816,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <div style="display:flex; gap:6px; align-items:center;">
               <span id="harnessCtxSavingsBadge" class="badge green" style="display:none;" title="Context-Mode SQLite FTS5 KV-Cache Compression Savings">Ctx Saved 0%</span>
               <button id="harnessPermissionBadge" class="harness-perm-badge" type="button" data-count="0" hidden onclick="openHarnessGrants()" title="Permissions this session holds, and the way to take them back">No permissions</button>
-              <span id="harnessActiveStatusBadge" class="status" data-tone="info" role="status">READY</span>
+              <span id="harnessActiveStatusBadge" class="status" data-tone="info" role="status">ready</span>
             </div>
           </div>
 
@@ -5881,7 +5892,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <div style="min-width:0;">
               <div style="display:flex; align-items:center; gap:8px;">
                 <strong id="hallTitle" style="font-size:14.8px;">Spawn or select a Council Session</strong>
-                <span id="hallStatusBadge" class="status" data-tone="warn" role="status">IDLE</span>
+                <span id="hallStatusBadge" class="status" data-tone="info" role="status">ready</span>
               </div>
               <div id="hallRoster" class="avatar-stack" style="margin-top:5px;"></div>
             </div>
@@ -6071,7 +6082,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <!-- UIUX-P4-04: what the comparison is judged on, before it runs. -->
         <div id="debateCriteria" class="debate-criteria" role="region" aria-label="Comparison criteria"></div>
         <div class="prompt-box">
-          <textarea id="debatePrompt">Compare SQLite WAL vs DuckDB vs embedded Postgres for a local macOS telemetry &amp; vector hybrid store handling 500 writes/sec.</textarea>
+          <textarea id="debatePrompt" aria-label="What to compare">Compare SQLite WAL vs DuckDB vs embedded Postgres for a local macOS telemetry &amp; vector hybrid store handling 500 writes/sec.</textarea>
           <div class="prompt-footer">
             <span style="font-size:12px; color:var(--text-faint);">Select the models to compare; responses appear side by side.</span>
             <div style="display:flex; gap:8px; align-items:center;">
@@ -6088,20 +6099,22 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div id="debateResults" class="debate-results" role="region" aria-label="Comparison results" hidden></div>
         <!-- UIUX-P4-05: what the response said about each reply, and this page times nothing. -->
         <div id="debateProvenance" class="debate-results debate-provenance" role="region" aria-label="Measured performance per reply" hidden></div>
-        <section id="debateSavedPanel" class="debate-saved-panel" role="region" aria-labelledby="debateSavedTitle">
-          <div id="debateSavedTitle" class="debate-saved-title">Saved comparisons and export</div>
-          <p class="debate-saved-note">The server attempts to save completed comparisons to local history; the returned run id is the confirmation. This tab also keeps only its latest view in session storage for reloads; that copy is browser-local and is not the server export. Finding saved comparisons reads the existing full history export only when you ask. The export includes all exported history tables; its credential redaction is best-effort.</p>
-          <div class="debate-saved-controls">
-            <button id="debateFindSavedBtn" class="btn btn-xs" type="button">Find saved comparisons</button>
-            <label for="debateSavedSelect">Saved Compare run</label>
-            <select id="debateSavedSelect" aria-describedby="debateSavedStatus">
-              <option value="">Find saved comparisons to populate this list</option>
-            </select>
-            <button id="debateLoadSavedBtn" class="btn btn-xs" type="button" disabled>Revisit selected</button>
-            <button id="debateExportHistoryBtn" class="btn btn-xs" type="button">Download full history export</button>
-            <button id="debateForgetSessionBtn" class="btn btn-xs" type="button">Forget this tab's copy</button>
+        <!-- UIUX-P4-06: where this comparison came from, what is kept, and how it leaves the page. -->
+        <div id="debateRecord" class="debate-record" role="region" aria-label="This comparison's record and export" hidden></div>
+        <section id="debateHistoryPanel" class="debate-history" role="region" aria-labelledby="debateHistoryTitle">
+          <div id="debateHistoryTitle" class="debate-history-title">Saved Compare history</div>
+          <p class="debate-history-note">Find reads existing server history only when requested. Revisit shows the saved opinions and arbiter separately; it does not run models or change history. The full export includes every exported history table, not just Compare, and the server's credential redaction is best-effort.</p>
+          <div class="debate-history-controls">
+            <button id="debateHistoryFindBtn" class="btn btn-xs" type="button">Find saved comparisons</button>
+            <label for="debateHistorySelect">Saved Compare run
+              <select id="debateHistorySelect" aria-describedby="debateHistoryStatus">
+                <option value="">Find saved comparisons to populate this list</option>
+              </select>
+            </label>
+            <button id="debateHistoryLoadBtn" class="btn btn-xs" type="button" disabled>Revisit selected</button>
+            <button id="debateHistoryExportBtn" class="btn btn-xs" type="button">Download full history export</button>
           </div>
-          <div id="debateSavedStatus" class="debate-saved-status" role="status" aria-live="polite"></div>
+          <div id="debateHistoryStatus" class="debate-history-status" role="status" aria-live="polite"></div>
         </section>
       </div>
     </section>
@@ -6161,7 +6174,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   <!-- ================= RIGHT MONITORING RAIL ================= -->
   <aside id="monitorRail" class="monitor-rail" role="complementary" aria-label="Telemetry and model monitor">
     <div class="m-card">
-      <div class="m-head"><span>M5 Unified Memory (24 GB)</span><span class="status" data-tone="ok">OK</span></div>
+      <div class="m-head"><span>M5 Unified Memory (24 GB)</span><span class="status" data-tone="ok">ok</span></div>
       <div style="display:flex; justify-content:space-between; font-size:11.6px; margin-bottom:2px;">
         <span id="ramUsedSummary" class="mono">-- / 24.0 GB</span>
         <span id="ramCeilingSummary" class="mono" style="color:var(--rose);">Cap: 20.8 GB</span>
@@ -6208,7 +6221,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </div>
 
     <div class="m-card">
-      <div class="m-head"><span>OrbStack &amp; Containers</span><span id="dockerStateBadge" class="status" data-tone="neutral">Checking</span></div>
+      <div class="m-head"><span>OrbStack &amp; Containers</span><span id="dockerStateBadge" class="status" data-tone="neutral">checking</span></div>
       <div style="display:flex; justify-content:space-between; font-size:11.4px; color:var(--text-dim); margin-bottom:4px;">
         <span>RAM: <strong id="dockerRam" class="mono" style="color:var(--text)">0.00 GB</strong></span>
         <span>CPU: <strong id="dockerCpu" class="mono" style="color:var(--text)">0.0%</strong></span>
@@ -6366,6 +6379,19 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       }
     }
   }
+
+  // A control that is a `div` or a `span` for layout reasons is still a control: it can be reached
+  // with Tab, and Enter or Space presses it, because the alternative is an affordance that only a
+  // mouse can operate. The attributes are on the element (`role="button" tabindex="0"
+  // data-key-activate`) and this one handler turns the two keys into the click the pointer would
+  // have made - no inline `onkeydown`, so nothing runs from markup.
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " " && event.key !== "Spacebar") return;
+    const target = event.target && event.target.closest ? event.target.closest("[data-key-activate]") : null;
+    if (!target || target.tagName === "BUTTON" || target.tagName === "A") return;
+    event.preventDefault();
+    target.click();
+  });
 
   function openOverlay(id, options = {}) {
     const backdrop = document.getElementById(id);
@@ -6877,7 +6903,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       setStatus(
         summary,
         onboardingReport.ready ? "ok" : onboardingReport.blocked ? "danger" : "warn",
-        onboardingReport.ready ? "Ready" : onboardingReport.blocked ? "Blocked" : "Needs you",
+        onboardingReport.ready ? uiStatus("ready").label : onboardingReport.blocked ? uiStatus("blocked").label : uiStatus("needs-you").label,
       );
       // The list is ordered by the server (STEP_ORDER). The row it named as next is
       // marked with aria-current="step" and a chip, so the eye and the screen reader
@@ -6926,7 +6952,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         { copyText: `Preflight ${checked}: ${onboardingReport.summary}` },
       );
     } catch (error) {
-      setStatus(summary, "danger", "Check failed");
+      setStatus(summary, "danger", uiStatus("failed").label);
       const runHint = document.getElementById("onboardingRunHint");
       if (runHint) runHint.textContent = "Run the first task is off while the preflight is unreadable; the last good result is still shown.";
       // The steps below are left alone on purpose: a failed re-check does not
@@ -6990,7 +7016,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     list.innerHTML = "";
 
     if (!startRecentSessions.length) {
-      setStatus(summary, "neutral", "Nothing yet");
+      setStatus(summary, "neutral", uiStatus("not-run").label);
       return presentInto("startRecentState", {
         kind: "empty",
         title: "No recent work yet",
@@ -7063,7 +7089,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       renderStartRecent();
       return startRecentSessions;
     } catch (error) {
-      if (summary) setStatus(summary, "danger", "Unavailable");
+      if (summary) setStatus(summary, "danger", uiStatus("unavailable").label);
       // The launcher below does not depend on this list, and saying so is the
       // difference between "Start is broken" and "recent work could not be read".
       presentInto("startRecentState", {
@@ -7145,13 +7171,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       value.textContent = row.value;
       const pill = document.createElement("span");
       pill.className = "status";
-      setStatus(pill, row.tone, row.tone === "ok" ? "OK" : row.tone === "danger" ? "OVER CAP" : row.tone === "warn" ? "CHECK" : "—");
+      setStatus(pill, row.tone, row.tone === "ok" ? uiStatus("ok").label : row.tone === "danger" ? uiStatus("over-cap").label : row.tone === "warn" ? uiStatus("check").label : uiStatus("absent").label);
       line.append(label, value, pill);
       host.appendChild(line);
     });
 
     if (summary) {
-      setStatus(summary, simulated ? "warn" : (d ? "ok" : "danger"), simulated ? "Demo data" : (d ? "Live" : "Offline"));
+      setStatus(
+        summary,
+        simulated ? uiStatus("demo-data").tone : (d ? uiStatus("live").tone : uiStatus("offline").tone),
+        simulated ? uiStatus("demo-data").label : (d ? uiStatus("live").label : uiStatus("offline").label),
+      );
     }
     // One box either way: the failure gets a cause and a way back, and a successful
     // read removes it again rather than leaving a stale error under a working card.
@@ -7579,12 +7609,6 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   function presentDebateEmpty() {
-    // A reload-restored comparison is already an answerable state, even before a new run.
-    // The generic empty-state pass at startup must not overwrite its saved synthesis/panels.
-    if (debatePanels().length || debateSynth.m) {
-      clearPresentation("debateSynthesisArea");
-      return null;
-    }
     return presentInto("debateSynthesisArea", {
       kind: "empty",
       title: "No comparison yet",
@@ -7706,7 +7730,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function renderProvidersModal() {
     document.getElementById("providerPresetChips").innerHTML = Object.keys(providerPresets).map(k => {
       const p = providerPresets[k];
-      return `<span class="chip" onclick="selectProviderPreset('${escapeHtml(k)}')">${escapeHtml(p.name)}</span>`;
+      return `<span class="chip" role="button" tabindex="0" data-key-activate onclick="selectProviderPreset('${escapeHtml(k)}')">${escapeHtml(p.name)}</span>`;
     }).join("");
 
     const list = document.getElementById("configuredProvidersList");
@@ -7856,14 +7880,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       ? `<span style="font-size:11.8px; color:var(--text-dim);">0 skills — click <strong>+ Skills</strong> to install <code>ui-ux-pro-max</code></span>`
       : installedSkills.map(s => {
           const on = selectedSkills.has(s.id);
-          return `<span class="skill-pill ${on ? 'active' : ''}" onclick="toggleSkill('${escapeHtml(s.id)}')">${on ? UI_ICONS.check + ' ' : ''}${escapeHtml(s.name)}${s.has_design_engine ? ' • Design Engine' : ''}</span>`;
+          return `<span class="skill-pill ${on ? 'active' : ''}" role="button" tabindex="0" data-key-activate onclick="toggleSkill('${escapeHtml(s.id)}')">${on ? UI_ICONS.check + ' ' : ''}${escapeHtml(s.name)}${s.has_design_engine ? ' • Design Engine' : ''}</span>`;
         }).join("");
 
     document.getElementById("installedSkillsList").innerHTML = !installedSkills.length
       ? `<div style="font-size:12px; color:var(--text-faint);">No SKILL.md found yet.</div>`
       : installedSkills.map(s => {
           const on = selectedSkills.has(s.id);
-          return `<div class="model-row ${on ? 'loaded' : ''}" style="cursor:pointer;" onclick="toggleSkill('${escapeHtml(s.id)}')">
+          return `<div class="model-row ${on ? 'loaded' : ''}" style="cursor:pointer;" role="button" tabindex="0" data-key-activate onclick="toggleSkill('${escapeHtml(s.id)}')">
             <div class="model-top"><strong>${escapeHtml(s.name)}</strong><span class="badge ${on ? 'green' : ''}">${on ? 'ACTIVE' : 'OFF'}</span></div>
             <div style="font-size:11.6px; color:var(--text-dim); margin-top:3px;">${escapeHtml(s.description)}</div>
           </div>`;
@@ -7937,7 +7961,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       }
       if (!activeHallId) { await selectHallSession(hallSessions[0].id); return; }
       list.innerHTML = hallSessions.map(s => `
-        <div class="chronicle-item ${s.id === activeHallId ? 'active' : ''}" onclick="selectHallSession('${escapeHtml(s.id)}')">
+        <div class="chronicle-item ${s.id === activeHallId ? 'active' : ''}" role="button" tabindex="0" data-key-activate onclick="selectHallSession('${escapeHtml(s.id)}')">
           <div class="chronicle-title">${escapeHtml(s.title)}</div>
           <div class="chronicle-meta"><span>${s.status === 'closed' ? 'Closed' : 'Active'}</span><span>${s.participant_count} voices • ${s.message_count} msgs</span></div>
         </div>`).join("");
@@ -8266,7 +8290,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     clearPresentation("hallSummonState");
     document.getElementById("hallTitle").textContent = s.title;
     const badge = document.getElementById("hallStatusBadge");
-    setStatus(badge, s.status === "active" ? "ok" : "warn", s.status.toUpperCase());
+    setStatus(
+      badge,
+      s.status === "active" ? uiStatus("running").tone : uiStatus("ready").tone,
+      s.status === "active" ? uiStatus("running").label : uiStatus("ready").label,
+    );
 
     const fileBadges = (s.context_files || []).map(f => `<span class="badge cyan">@${escapeHtml(f)}</span>`).join("");
     const roster = (s.participants || []).map(p => {
@@ -8284,7 +8312,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       // A reply the demo path wrote is not the named model's, and it earns no tok/s
       // badge: its usage line carries `demo`, so the card says what produced it.
       const meta = u.demo
-        ? `<span class="status" data-tone="warn" title="The local runtime did not answer, so the server wrote this reply itself. It is not the named model's output, and it carries no tok/s figure.">Demo reply · the runtime is offline</span>`
+        ? `<span class="status" data-tone="warn" title="The local runtime did not answer, so the server wrote this reply itself. It is not the named model's output, and it carries no tok/s figure.">${UI_STATUS.demo.label}</span>`
         : u.decode_tps ? `<span class="badge green">${u.decode_tps} tok/s • ${u.completion_tokens || 0} tok</span>` : "";
       const role = COUNCIL_ROLES[m.role_key];
       const seatTag = role ? `<span class="role-tag" data-seat="${role.seat}">Seat ${role.seat} · ${escapeHtml(role.label)}</span>` : "";
@@ -8600,7 +8628,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       }
       if (loadable) {
         return {
-          state: "needs-load", tone: "warn", tag: "NEEDS LOAD",
+          state: "needs-load", tone: "warn", tag: uiStatus("needs-load").label,
           text: `Combo "${route.alias}": ${loadable} of ${targets.length} targets answer once a model is loaded.`,
           action: { id: "check", label: "Check again", title: "Read /api/telemetry again" },
         };
@@ -8623,7 +8651,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const provider = route.provider;
       if (!provider.has_key) {
         return {
-          state: "needs-key", tone: "danger", tag: "NEEDS KEY",
+          state: "needs-key", tone: "danger", tag: uiStatus("needs-key").label,
           text: `"${provider.alias}" holds no API key, so this seat would fail when it is dispatched.`,
           action: { id: "providers", label: "Open providers", title: "Add the key for this alias" },
         };
@@ -8661,7 +8689,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (known.loaded) {
       const size = councilGigabytes(known.size_gb);
       return {
-        state: "ready", tone: "ok", tag: "READY",
+        state: "ready", tone: "ok", tag: uiStatus("ready").label,
         text: `Resident${size ? `, ${size}` : ""}.`,
         action: null,
       };
@@ -8679,7 +8707,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       };
     }
     return {
-      state: "needs-load", tone: "warn", tag: "NEEDS LOAD",
+      state: "needs-load", tone: "warn", tag: uiStatus("needs-load").label,
       text: `Not resident: ${sizeText || "an unreported size"} loads on the first token.`,
       action: { id: "load", label: "Load now", title: `Ask the runtime to load ${route.model}` },
     };
@@ -8841,9 +8869,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       sentence = `${allowed} of ${total} assignments are ready or configured; invocation is blocked until the remaining seats are ready.`;
     }
     const count = document.getElementById("councilReadinessCount");
+    // The count keeps its numbers; the word is the vocabulary's, in the reader's case.
     const countLabel = counts.configured
-      ? `${counts.ready} READY · ${counts.configured} CONFIGURED`
-      : `${counts.ready}/${total} READY`;
+      ? `${counts.ready} ${uiStatus("ready").label} · ${counts.configured} ${uiStatus("configured").label}`
+      : `${counts.ready}/${total} ${uiStatus("ready").label}`;
     if (count) setStatus(count, tone, countLabel, sentence);
     summary.textContent = sentence;
 
@@ -9411,12 +9440,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     // Debate checkboxes include only Loaded Local M5 + Cloud/Combo Models
     const prevChecked = new Set([...document.querySelectorAll(".debate-m-chk:checked")].map(c => c.value));
     document.getElementById("debateModelChecks").innerHTML = unifiedCatalog.slice(0, 10).map((it, idx) => {
-      const chk = firstInit ? (idx < 3) : prevChecked.has(it.id);
+      // A comparison restored from this browser's copy names the models it compared; the list is
+      // built after that restore, so it has to honour it rather than picking the first three.
+      const chk = firstInit
+        ? (debateRestoreModels ? debateRestoreModels.includes(it.id) : idx < 3)
+        : prevChecked.has(it.id);
+      if (firstInit) debateRestoreModels = null;
       return `<label class="chk-lbl"><input type="checkbox" class="debate-m-chk" value="${escapeHtml(it.id)}" ${chk ? "checked" : ""}/> ${escapeHtml(it.label)}</label>`;
     }).join("");
-    // A comparison restored from this tab keeps its original selection where those models
-    // are already available; this never loads a model or adds an unavailable catalog entry.
-    if (typeof debateApplyPendingControls === "function") debateApplyPendingControls();
     // The set of models is part of what Start will do, so a rebuilt list re-states it.
     updateDebateRunControl();
   }
@@ -9494,7 +9525,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     setStatus(
       dBadge,
       dk.state === "running" ? "info" : dk.state === "idle" ? "ok" : "neutral",
-      (dk.state || "stopped").toUpperCase(),
+      dk.state === "running" ? uiStatus("running").label : dk.state === "idle" ? uiStatus("ready").label : uiStatus("halted").label,
     );
     document.getElementById("dockerRam").textContent = `${(dk.vm_footprint_gb || 0).toFixed(2)} GB`;
     document.getElementById("dockerCpu").textContent = `${(dk.total_cpu_pct || 0).toFixed(1)}%`;
@@ -9707,10 +9738,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const view = pipelineContract(stage);
     const buffer = stageBuffers[Number(stage)] || {};
     const content = typeof buffer.c === "string" ? buffer.c : "";
-    if (view.demo) return { id: "demo", label: "demo text", note: "the runtime was offline, so the server wrote this reply" };
+    if (view.demo) return { id: "demo", label: uiStatus("demo").label, note: "the runtime was offline, so the server wrote this reply" };
     if (view.capped) {
       const label = view.cappedBy === "length"
-        ? "cut at the length limit"
+        ? uiStatus("cut").label
         : (view.budget === null ? "spent its whole budget" : `spent its ${String(view.budget)}-token budget`);
       const note = view.cappedBy === "length"
         ? "the runtime stopped this reply at its length limit, and the next seat reads the cut text"
@@ -10273,13 +10304,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const buffer = stageBuffers[seat.stage];
       if (!buffer.c && !buffer.u) return;
       document.getElementById(`step-card-${seat.stage}`).classList.add("done");
-      document.getElementById(`st-state-${seat.stage}`).textContent = "Recovered";
+      document.getElementById(`st-state-${seat.stage}`).textContent = uiStatus("partial").label;
       if (buffer.u) document.getElementById(`st-tps-${seat.stage}`).textContent = `${buffer.u.decode_tps} t/s`;
       ensureStageCardMounted(seat.stage);
       const card = document.getElementById(`stage-dom-${seat.stage}`);
       if (card) card.dataset.recovered = "true";
       const pill = document.getElementById(`stage-pill-${seat.stage}`);
-      if (pill && !buffer.u) setStatus(pill, "warn", "Recovered · partial");
+      if (pill && !buffer.u) setStatus(pill, "warn", uiStatus("partial").label);
     });
     scheduleStageUpdate();
     renderCouncilArtifacts();
@@ -10622,7 +10653,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         if (st.u) {
           const pill = document.getElementById(`stage-pill-${k}`);
           const demo = st.u.demo === true || st.u.demo === "true";
-          if (demo) setStatus(pill, "info", "demo reply • the runtime was offline");
+          if (demo) setStatus(pill, "warn", uiStatus("demo").label);
           else setStatus(pill, "ok", `${st.u.decode_tps} tok/s • TTFT ${st.u.ttft}s • ${st.u.completion_tokens} tok`);
         }
         updateStageRows(k);
@@ -10693,16 +10724,16 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         stageBuffers[d.stage].u = d.usage;
         document.getElementById(`step-card-${d.stage}`).classList.remove("running");
         document.getElementById(`step-card-${d.stage}`).classList.add("done");
-        document.getElementById(`st-state-${d.stage}`).textContent = "Done";
+        document.getElementById(`st-state-${d.stage}`).textContent = uiStatus("completed").label;
         // UIUX-P4-02: a demo reply carries the server's own figures (29.5 / 42.1 tok/s for text no
         // model produced). The stepper used to print one; it now says what the reply was.
         const demo = d.usage && (d.usage.demo === true || d.usage.demo === "true");
         document.getElementById(`st-tps-${d.stage}`).textContent = demo ? "demo" : `${d.usage.decode_tps} t/s`;
         scheduleStageUpdate();
       },
-      unloading(d) { document.getElementById(`st-state-${d.stage}`).textContent = "Unloaded"; },
+      unloading(d) { document.getElementById(`st-state-${d.stage}`).textContent = uiStatus("unloaded").label; },
       council_done(d) {
-        document.getElementById("councilTotalStatus").textContent = "Done";
+        document.getElementById("councilTotalStatus").textContent = uiStatus("completed").label;
         document.getElementById("councilTotalTime").textContent = `${d.total_elapsed_s}s`;
         if (councilRun) {
           // `run_id` is 0 when save_run() could not write; drawn as "not saved".
@@ -10766,7 +10797,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         const pill = document.getElementById(`stage-pill-${n}`);
         // A card mounted for a seat that never reported usage keeps its "Connecting..." default:
         // after the run ends that reads as still connecting, which is the opposite of true.
-        if (pill && !stageBuffers[n].u) setStatus(pill, "warn", "Stopped mid-seat");
+        if (pill && !stageBuffers[n].u) setStatus(pill, "warn", uiStatus("stopped").label);
       });
       // The only copy of what survived is this one, so it is written before the page can go.
       const kept = pipelineCheckpointWrite(councilRun.endReason);
@@ -10836,6 +10867,538 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // One badge per state, spelled out: `data-tone` is a fixed vocabulary and the status-component
   // inventory reads it from the markup, so the tone is a literal here rather than an attribute
   // computed from DEBATE_STATUS. The label still comes from DEBATE_STATUS, so the two cannot drift.
+  /* ── UIUX-P4-06: the comparison has a record, and it leaves the page whole ──
+     A comparison was twenty minutes of work on screen and nothing else: reload
+     and it was gone, and the only thing the server kept was a row nobody could
+     reach from this pane. `debate_done` carries a `run_id` - `save_run` returns 0
+     when the write fails, so a run can be unsaved - and the record it writes is
+     readable back through `GET /api/history/export`.
+
+     What is here now: the pane says whether this comparison is on record, keeps
+     its own copy in this browser so a reload restores it (labelled as this
+     browser's copy every time it is drawn, because a restored run must never
+     pass for a live one), reads the server's copy back on request from the
+     redacted export, and exports the comparison whole - every panel, the
+     arbiter's verdict under its own heading, and no answer picked.
+  */
+  const DEBATE_RECORD_KEY = "m5_debate_comparison";
+  const DEBATE_RECORD_MAX_CHARS = 60000;
+  let debateRunId = 0;
+  let debateSource = "live";
+  let debateSourceMeta = null;
+  let debateLocalKept = false;
+  let debateRestoreModels = null;
+
+  /** The comparison on screen, as data: every panel, the arbiter, and where it came from. */
+  function debateSnapshot() {
+    const panels = debatePanels();
+    if (!panels.length) return null;
+    return {
+      version: 1,
+      saved_at: new Date().toISOString(),
+      run_id: Number(debateRunId || 0),
+      run_elapsed_s: debateRunElapsed,
+      prompt: (document.getElementById("debatePrompt") || {}).value || "",
+      models: panels.map(panel => panel.model),
+      judged: debateJudged.slice(),
+      panels: panels.map(panel => ({
+        model: panel.model,
+        status: panel.status,
+        content: String(panel.c || ""),
+        usage: panel.u || null,
+        error: panel.error || "",
+      })),
+      synthesis: { model: debateSynth.m || "", content: String(debateSynth.c || ""), usage: debateSynth.u || null },
+    };
+  }
+
+  /**
+   * The snapshot, made to fit a browser's storage. Only the longest replies are shortened, and the
+   * fact is recorded rather than hidden: a restored comparison that had been quietly cut would be a
+   * different comparison wearing the same labels.
+   */
+  function debateSnapshotCapped(snapshot) {
+    if (!snapshot) return null;
+    const size = () => JSON.stringify(snapshot).length;
+    let dropped = 0;
+    if (size() <= DEBATE_RECORD_MAX_CHARS) return { snapshot, dropped };
+    const capEach = Math.max(400, Math.floor(DEBATE_RECORD_MAX_CHARS / (snapshot.panels.length + 2)));
+    snapshot.panels.forEach(panel => {
+      if (panel.content.length > capEach) {
+        dropped += panel.content.length - capEach;
+        panel.content = panel.content.slice(0, capEach);
+      }
+    });
+    if (snapshot.synthesis.content.length > capEach) {
+      dropped += snapshot.synthesis.content.length - capEach;
+      snapshot.synthesis.content = snapshot.synthesis.content.slice(0, capEach);
+    }
+    snapshot.truncated = dropped > 0;
+    snapshot.dropped_chars = dropped;
+    return { snapshot, dropped };
+  }
+
+  function debateRecordWrite() {
+    const built = debateSnapshotCapped(debateSnapshot());
+    if (!built) return false;
+    try {
+      localStorage.setItem(DEBATE_RECORD_KEY, JSON.stringify(built.snapshot));
+      debateLocalKept = true;
+      return true;
+    } catch (_error) {
+      debateLocalKept = false;
+      return false;
+    }
+  }
+
+  function debateRecordRead() {
+    let raw = null;
+    try {
+      raw = localStorage.getItem(DEBATE_RECORD_KEY);
+    } catch (_error) {
+      return null;
+    }
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.panels) || !parsed.panels.length) return null;
+      return parsed;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function debateRecordClear() {
+    try {
+      localStorage.removeItem(DEBATE_RECORD_KEY);
+      debateLocalKept = false;
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  /** The status a recorded reply has, from the usage the server stored with it. */
+  function debateRecordedStatus(panel) {
+    const usage = panel.usage || {};
+    if (usage.demo === true || usage.demo === "true") return "demo";
+    if (String(usage.finish_reason || "") === "length") return "cut";
+    return String(panel.content || "").trim() ? "answered" : "empty";
+  }
+
+  const DEBATE_HISTORY_LIST_LIMIT = 50;
+  let debateHistoryRows = [];
+  let debateHistoryBusy = false;
+
+  function debateSetHistoryStatus(message, tone = "") {
+    const host = document.getElementById("debateHistoryStatus");
+    if (!host) return;
+    host.textContent = String(message || "");
+    if (tone) host.dataset.tone = tone;
+    else delete host.dataset.tone;
+  }
+
+  async function debateFetchHistoryBundle() {
+    const response = await fetch("/api/history/export", { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const contentType = response.headers.get("content-type") || "";
+    if (!/application\/json/i.test(contentType)) throw new Error("the history export was not JSON");
+    const bundle = await response.json();
+    if (!bundle || !bundle.tables || !Array.isArray(bundle.tables.runs)) throw new Error("the history export has no runs table");
+    return bundle;
+  }
+
+  function debateHistoryOption(row) {
+    const id = Number(row.id);
+    let prompt = "";
+    try {
+      const payload = typeof row.payload_json === "string" ? JSON.parse(row.payload_json) : row.payload_json;
+      prompt = payload && typeof payload.prompt === "string" ? payload.prompt.replace(/\s+/g, " ").trim() : "";
+    } catch (_error) {
+      prompt = "";
+    }
+    if (prompt.length > 76) prompt = prompt.slice(0, 73) + "…";
+    const rawDate = typeof row.created_at === "string" ? row.created_at : "";
+    const parsedDate = rawDate ? new Date(rawDate) : null;
+    const date = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate.toLocaleString() : rawDate;
+    return [`Run #${id}`, date, prompt].filter(Boolean).join(" · ");
+  }
+
+  function debateSnapshotFromHistoryRow(row) {
+    const id = Number(row && row.id);
+    if (!Number.isSafeInteger(id) || id <= 0 || String(row.mode || "debate") !== "debate") throw new Error("the selected row is not a saved Compare run");
+    const record = typeof row.payload_json === "string" ? JSON.parse(row.payload_json) : row.payload_json;
+    if (!record || typeof record !== "object" || !Array.isArray(record.opinions) || !record.opinions.length) throw new Error("the saved run has no panel responses to restore");
+    const panels = record.opinions.map(opinion => {
+      if (!opinion || typeof opinion !== "object") throw new Error("a saved panel response is malformed");
+      const content = typeof opinion.content === "string" ? opinion.content : "";
+      const usage = opinion.usage && typeof opinion.usage === "object" ? opinion.usage : null;
+      return {
+        model: typeof opinion.model === "string" ? opinion.model : "not reported",
+        status: debateRecordedStatus({ content, usage }),
+        content,
+        usage,
+        error: "",
+      };
+    });
+    const synthesis = record.synthesis && typeof record.synthesis === "object" ? record.synthesis : {};
+    return {
+      version: 1,
+      saved_at: typeof row.created_at === "string" ? row.created_at : "",
+      run_id: id,
+      run_elapsed_s: record.total_elapsed_s === undefined ? null : record.total_elapsed_s,
+      prompt: typeof record.prompt === "string" ? record.prompt : "",
+      models: panels.map(panel => panel.model),
+      // The existing server record does not store custom criteria; defaults are explicit below.
+      judged: DEBATE_JUDGED_DEFAULTS.slice(),
+      panels,
+      synthesis: {
+        model: typeof synthesis.model === "string" ? synthesis.model : "",
+        content: typeof synthesis.content === "string" ? synthesis.content : "",
+        usage: synthesis.usage && typeof synthesis.usage === "object" ? synthesis.usage : null,
+      },
+    };
+  }
+
+  async function debateFindSavedComparisons() {
+    if (debateHistoryBusy) return;
+    debateHistoryBusy = true;
+    const find = document.getElementById("debateHistoryFindBtn");
+    const load = document.getElementById("debateHistoryLoadBtn");
+    const select = document.getElementById("debateHistorySelect");
+    const download = document.getElementById("debateHistoryExportBtn");
+    if (find) find.disabled = true;
+    if (load) load.disabled = true;
+    if (download) download.disabled = true;
+    debateSetHistoryStatus("Reading saved comparisons from the existing history export…");
+    try {
+      const bundle = await debateFetchHistoryBundle();
+      const matches = bundle.tables.runs
+        .filter(row => row && Number.isSafeInteger(Number(row.id)) && Number(row.id) > 0 && String(row.mode || "debate") === "debate")
+        .sort((a, b) => Number(b.id) - Number(a.id));
+      const count = matches.length;
+      debateHistoryRows = matches.slice(0, DEBATE_HISTORY_LIST_LIMIT);
+      if (select) {
+        select.replaceChildren(new Option("Select a saved Compare run", ""));
+        debateHistoryRows.forEach(row => {
+          const option = new Option(debateHistoryOption(row), String(Number(row.id)));
+          select.add(option);
+        });
+      }
+      const shown = debateHistoryRows.length;
+      debateSetHistoryStatus(count
+        ? `Found ${count} saved Compare run${count === 1 ? "" : "s"}; showing the ${shown} most recent. Selecting one only reads the saved, redacted server export.`
+        : "No saved Compare runs were found in the server history export.", count ? "" : "warn");
+    } catch (error) {
+      debateHistoryRows = [];
+      if (select) select.replaceChildren(new Option("Could not load saved comparisons", ""));
+      debateSetHistoryStatus(`Could not read saved comparisons from GET /api/history/export (${String(error.message || error)}). Nothing was run or changed.`, "error");
+    } finally {
+      debateHistoryBusy = false;
+      if (find) find.disabled = false;
+      if (download) download.disabled = false;
+      if (load) load.disabled = !select || !select.value;
+    }
+  }
+
+  function debateLoadSelectedSavedComparison() {
+    const select = document.getElementById("debateHistorySelect");
+    const id = Number(select && select.value);
+    const row = debateHistoryRows.find(item => Number(item.id) === id);
+    try {
+      const snapshot = debateSnapshotFromHistoryRow(row);
+      if (!debateApplySnapshot(snapshot, "server", {
+        fetched_at: new Date().toISOString(),
+        run_id: snapshot.run_id,
+        truncated: false,
+        redacted: true,
+        history_lookup: true,
+        criteria_missing: true,
+      })) throw new Error("the saved run could not be restored");
+      debateSetHistoryStatus(`Showing saved Compare run #${snapshot.run_id} from the existing redacted export. It was not run again; custom criteria are not stored in this record, so the criteria strip shows defaults.`, "");
+    } catch (error) {
+      debateSetHistoryStatus(`Could not revisit the selected comparison (${String(error.message || error)}). The current view and server history are unchanged.`, "error");
+    }
+  }
+
+  async function debateDownloadFullHistoryExport() {
+    if (debateHistoryBusy) return;
+    debateHistoryBusy = true;
+    const find = document.getElementById("debateHistoryFindBtn");
+    const load = document.getElementById("debateHistoryLoadBtn");
+    const download = document.getElementById("debateHistoryExportBtn");
+    if (find) find.disabled = true;
+    if (load) load.disabled = true;
+    if (download) download.disabled = true;
+    debateSetHistoryStatus("Preparing the full existing history export…");
+    try {
+      const bundle = await debateFetchHistoryBundle();
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+      if (!blob.size) throw new Error("the history export was empty");
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "studio-history-export.json";
+      anchor.rel = "noopener";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      debateSetHistoryStatus("Started downloading the full history export (all exported tables; credential redaction is best-effort).", "");
+    } catch (error) {
+      debateSetHistoryStatus(`Could not download GET /api/history/export (${String(error.message || error)}). Nothing was run or changed.`, "error");
+    } finally {
+      debateHistoryBusy = false;
+      if (find) find.disabled = false;
+      if (download) download.disabled = false;
+      if (load) load.disabled = !document.getElementById("debateHistorySelect")?.value;
+    }
+  }
+
+  function debateBindHistoryControls() {
+    const find = document.getElementById("debateHistoryFindBtn");
+    const load = document.getElementById("debateHistoryLoadBtn");
+    const select = document.getElementById("debateHistorySelect");
+    const download = document.getElementById("debateHistoryExportBtn");
+    if (find) find.addEventListener("click", debateFindSavedComparisons);
+    if (load) load.addEventListener("click", debateLoadSelectedSavedComparison);
+    if (select) select.addEventListener("change", () => { if (load) load.disabled = !select.value; });
+    if (download) download.addEventListener("click", debateDownloadFullHistoryExport);
+  }
+
+  /** Draw a comparison from a copy - this browser's or the server's - never as a live run. */
+  function debateApplySnapshot(snapshot, source, meta) {
+    if (!snapshot || !Array.isArray(snapshot.panels)) return false;
+    debateSlots = {};
+    snapshot.panels.forEach((panel, index) => {
+      debateSlots[index] = {
+        model: panel.model,
+        c: String(panel.content || ""),
+        u: panel.usage || null,
+        status: panel.status || debateRecordedStatus(panel),
+        error: panel.error || "",
+      };
+    });
+    debateSynth = {
+      m: (snapshot.synthesis && snapshot.synthesis.model) || "",
+      c: (snapshot.synthesis && snapshot.synthesis.content) || "",
+      u: (snapshot.synthesis && snapshot.synthesis.usage) || null,
+    };
+    debateJudged = Array.isArray(snapshot.judged) && snapshot.judged.length ? snapshot.judged.slice() : DEBATE_JUDGED_DEFAULTS.slice();
+    debateRunId = Number(snapshot.run_id || 0);
+    debateRunElapsed = snapshot.run_elapsed_s === undefined ? null : snapshot.run_elapsed_s;
+    debateSource = source;
+    debateSourceMeta = meta || null;
+    // A copy drawn back from this browser is a copy this browser holds: the Forget control has to
+    // be there for it, and the flag cannot depend on a write that happened in this page's lifetime.
+    debateLocalKept = source === "browser" ? true : debateLocalKept;
+    debateBusy = false;
+    const prompt = document.getElementById("debatePrompt");
+    if (prompt && typeof snapshot.prompt === "string") prompt.value = snapshot.prompt;
+    const wanted = new Set(snapshot.models || snapshot.panels.map(panel => panel.model));
+    [...document.querySelectorAll(".debate-m-chk")].forEach(box => { box.checked = wanted.has(box.value); });
+    deployDebateCriterionFocus();
+    renderDebate();
+    updateDebateRunControl();
+    return true;
+  }
+
+  function deployDebateCriterionFocus() {
+    // The criteria strip is redrawn with the comparison; nothing needs focusing here, but the
+    // strip must be redrawn or a restored comparison would be judged against the old list.
+    renderDebateCriteria();
+  }
+
+  /** The whole comparison as markdown: every reply, the arbiter separately, nothing picked. */
+  function debateComparisonMarkdown() {
+    const panels = debatePanels();
+    if (!panels.length) return "";
+    const prompt = ((document.getElementById("debatePrompt") || {}).value || "").trim();
+    const lines = ["# Comparison", "", prompt || "_no question was recorded_", ""];
+    panels.forEach((panel, index) => {
+      const meta = debateMeta(panel.status);
+      lines.push(`## Opinion ${index + 1} · ${panel.model} · ${meta.label}`, "");
+      if (panel.error) lines.push(`_${panel.error}_`, "");
+      lines.push(String(panel.c || "").trim() || "_this panel wrote nothing_", "");
+    });
+    if (debateSynth.m) {
+      lines.push(`## Arbiter verdict · ${debateSynth.m}`, "", String(debateSynth.c || "").trim() || "_the arbiter wrote nothing_", "");
+    }
+    lines.push("## Measured performance", "", "| Reply | Elapsed | First token | Reply tokens | Decode |", "| :--- | :--- | :--- | :--- | :--- |");
+    panels.concat(debateSynth.m ? [{ model: debateSynth.m + " · arbiter", status: "answered", u: debateSynth.u, arbiter: true }] : []).forEach(panel => {
+      const reading = debateProvenanceOf(panel);
+      lines.push(`| ${panel.model}${panel.arbiter ? " · arbiter" : ""} | ${reading.elapsed || "—"} | ${reading.ttft || "—"} | ${reading.tokens || "—"} | ${reading.decode || "—"} |`);
+    });
+    lines.push("");
+    lines.push("## What this is not", "");
+    lines.push("* Every reply above is as it was recorded; nothing here picks a winner or merges the answers.");
+    lines.push("* Cost is not stated: no price is configured for any model.");
+    if (debateSource === "browser") lines.push("* This copy was kept by this browser, not by the server.");
+    if (debateSource === "detached") lines.push("* This comparison is not kept by this browser; read it before the page reloads.");
+    if (debateSource === "server") lines.push(`* This copy was read back from the server's redacted export (run ${debateRunId || "unknown"}); credential-shaped text in it was replaced by the exporter.`);
+    if (debateSourceMeta && debateSourceMeta.truncated) lines.push(`* ${debateSourceMeta.dropped_chars || 0} characters of the longest replies were dropped to fit this browser's storage.`);
+    lines.push(`* ${debateRunId ? `The server's record is run ${debateRunId}.` : "The server did not save this run."}`);
+    return lines.join("\n");
+  }
+
+  function debateComparisonJson() {
+    const snapshot = debateSnapshot();
+    if (!snapshot) return "";
+    snapshot.source = debateSource;
+    return JSON.stringify(snapshot, null, 2);
+  }
+
+  function debateCopyComparison(btn) {
+    const markdown = debateComparisonMarkdown();
+    if (!markdown) {
+      showToast("There is no comparison to copy yet", "warn");
+      return;
+    }
+    const done = () => {
+      if (!btn) return;
+      const previous = btn.textContent;
+      btn.textContent = "Copied!";
+      setTimeout(() => { btn.textContent = previous; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(markdown).then(done, () => showToast("The clipboard refused; the comparison is on screen", "warn"));
+    } else {
+      showToast("This browser has no clipboard; the comparison is on screen", "warn");
+    }
+  }
+
+  function debateDownloadComparison() {
+    const json = debateComparisonJson();
+    if (!json) {
+      showToast("There is no comparison to download yet", "warn");
+      return;
+    }
+    try {
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `comparison-${debateRunId ? "run-" + debateRunId : "browser"}.json`;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } catch (_error) {
+      showToast("This browser refused the download; copy the comparison instead", "err");
+    }
+  }
+
+  function debateForgetRecord() {
+    const removed = debateRecordClear();
+    showToast(removed ? "Forgotten in this browser; the server's record, if any, is untouched" : "This browser refused to forget the copy", removed ? "info" : "warn");
+    debateSource = "detached";
+    debateSourceMeta = null;
+    renderDebateRecord();
+  }
+
+  /** Read the server's own copy of this run back from the redacted export. */
+  async function debateReadServerRecord() {
+    if (!debateRunId) {
+      showToast("The server did not save this run, so there is nothing to read back", "warn");
+      return;
+    }
+    try {
+      const response = await fetch("/api/history/export");
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const bundle = await response.json();
+      // The export nests its tables (`bundle.tables.runs`), and every string in it has been
+      // scrubbed for credentials - which is why the bar calls this the redacted copy.
+      const tables = bundle && bundle.tables ? bundle.tables : {};
+      const runs = Array.isArray(tables.runs) ? tables.runs : [];
+      const row = runs.find(entry => Number(entry.id) === Number(debateRunId) && String(entry.mode || "debate") === "debate");
+      if (!row) {
+        showToast(`The server's export has no run ${debateRunId}`, "warn");
+        return;
+      }
+      let payload = row.payload_json;
+      if (typeof payload === "string") payload = JSON.parse(payload);
+      const opinions = Array.isArray(payload.opinions) ? payload.opinions : [];
+      if (!opinions.length) {
+        showToast(`Run ${debateRunId} is on record but carries no replies`, "warn");
+        return;
+      }
+      const synthesis = payload.synthesis || null;
+      debateApplySnapshot({
+        version: 1,
+        saved_at: row.created_at || "",
+        run_id: Number(row.id),
+        run_elapsed_s: payload.total_elapsed_s === undefined ? null : payload.total_elapsed_s,
+        prompt: payload.prompt || "",
+        models: opinions.map(opinion => opinion.model),
+        judged: debateJudged.slice(),
+        panels: opinions.map((opinion, index) => ({
+          model: opinion.model,
+          status: debateRecordedStatus({ content: opinion.content, usage: opinion.usage }),
+          content: opinion.content || "",
+          usage: opinion.usage || null,
+          error: "",
+        })),
+        synthesis: synthesis
+          ? { model: synthesis.model || "", content: synthesis.content || "", usage: synthesis.usage || null }
+          : { model: "", content: "", usage: null },
+      }, "server", { fetched_at: new Date().toISOString(), run_id: Number(row.id), truncated: false, redacted: true });
+      showToast(`Read run ${debateRunId} back from the server's export`, "ok");
+    } catch (error) {
+      showToast("The server's export could not be read: " + error.message, "err");
+    }
+  }
+
+  /** Where this comparison stands: live, kept here, or read back - and how to take it away. */
+  function renderDebateRecord() {
+    const host = document.getElementById("debateRecord");
+    if (!host) return;
+    if (!debatePanels().length) {
+      host.hidden = true;
+      host.innerHTML = "";
+      return;
+    }
+    host.hidden = false;
+    host.dataset.source = debateSource;
+    const kept = debateSourceMeta && debateSourceMeta.kept_at ? " · kept at " + escapeHtml(debateSourceMeta.kept_at) : "";
+    const saved = debateRunId
+      ? `The server saved this run as <strong>run ${escapeHtml(String(debateRunId))}</strong>; its own copy is in <span class="mono">GET /api/history/export</span>.`
+      : "<strong>The server did not save this run</strong> (no run id came back), so the only copy is the one this page holds.";
+    const source = debateSource === "detached"
+      ? "This comparison is on this page only: this browser is not keeping a copy of it, and a reload will lose it."
+      : debateSource === "browser"
+        ? "This is <strong>this browser's copy</strong> of the comparison you last ran here" + kept + " - not the server's record, and not a live run."
+      : debateSource === "server"
+        ? "This was <strong>read back from the server's redacted export</strong>; it is the copy on record, not a live run."
+        : debateLocalKept
+          ? "This comparison is the one you just ran on this page; a copy is kept in this browser, so a reload restores it."
+          : "This comparison is the one you just ran on this page, and this browser refused to keep a copy of it.";
+    // A restored comparison names models that may not be resident any more: the list is live, so
+    // Start from here would compare something else, and the bar has to say that rather than let a
+    // reader believe the same two models are still ticked.
+    const listed = new Set([...document.querySelectorAll(".debate-m-chk")].map(box => box.value));
+    const missing = debatePanels().map(panel => panel.model).filter(model => listed.size && !listed.has(model));
+    const availability = missing.length
+      ? ` The models this comparison used are not all listed right now (${escapeHtml(missing.join(", "))}), so Start would compare something else.`
+      : "";
+    const truncation = debateSourceMeta && debateSourceMeta.truncated
+      ? ` ${escapeHtml(String(debateSourceMeta.dropped_chars || 0))} characters of the longest replies were dropped to fit this browser's storage.`
+      : "";
+    const criteriaNote = debateSourceMeta && debateSourceMeta.criteria_missing
+      ? " The server record does not retain custom Compare criteria; the criteria strip shows defaults, not the original criteria."
+      : "";
+    host.innerHTML = '<div class="debate-criteria-head"><strong>This comparison</strong>'
+      + '<span class="badge ' + (debateSource === "live" ? "green" : debateSource === "server" ? "indigo" : "amber") + '">'
+      + (debateSource === "live" ? "ran on this page" : debateSource === "server" ? "read from the server" : debateSource === "detached" ? "not kept here" : "kept in this browser") + "</span></div>"
+      + '<div class="debate-record-state">' + source + " " + saved + availability + truncation + criteriaNote + "</div>"
+      + '<div class="debate-record-actions">'
+      + '<button class="btn btn-xs" type="button" onclick="debateCopyComparison(this)" title="Copy every reply and the arbiter&apos;s verdict as markdown">Copy as markdown</button>'
+      + '<button class="btn btn-xs" type="button" onclick="debateDownloadComparison()" title="Download the whole comparison as JSON, one entry per reply">Download .json</button>'
+      + (debateLocalKept ? '<button class="btn btn-xs" type="button" onclick="debateForgetRecord()" title="Remove this browser&apos;s copy; the server&apos;s record is untouched">Forget this copy</button>' : "")
+      + (debateRunId && debateSource !== "server" ? '<button class="btn btn-xs" type="button" onclick="debateReadServerRecord()" title="Read this run back from the server&apos;s redacted export">Read the server&apos;s copy</button>' : "")
+      + "</div>";
+  }
+
   const DEBATE_BADGE = {
     queued: '<span class="status" data-tone="neutral">' + escapeHtml(DEBATE_STATUS.queued.label) + "</span>",
     running: '<span class="status" data-tone="busy">' + escapeHtml(DEBATE_STATUS.running.label) + "</span>",
@@ -10933,9 +11496,6 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   /** The end of a stream, attributed to the panels it actually ended. */
   function debateEnd(kind, message) {
-    if (kind === "failed") debateRunState = "failed";
-    else if (kind === "stopped") debateRunState = "stopped";
-    else if (kind === "lost" && debateRunState === "running") debateRunState = "stream-ended";
     debatePanels().forEach(slot => {
       if (slot.status === "running") {
         slot.status = kind;
@@ -10968,7 +11528,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const parts = [counts.total + (counts.total === 1 ? " panel" : " panels")];
     const add = (count, singular, plural) => { if (count) parts.push(count + " " + (count === 1 ? singular : plural)); };
     add(counts.answered, "answered", "answered");
-    add(counts.cut, "cut at the length limit", "cut at the length limit");
+    add(counts.cut, uiStatus("cut").label, uiStatus("cut").label);
     add(counts.demo, "demo text", "demo text");
     add(counts.empty, "with no reply", "with no reply");
     add(counts.running, "running", "running");
@@ -11027,451 +11587,6 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
      started - shows `—` and says why, because a zero would read as a measurement.
   */
   let debateRunElapsed = null;
-  const DEBATE_SESSION_KEY = "m5_compare_last_view_v1";
-  const DEBATE_SESSION_MAX_CHARS = 256 * 1024;
-  const DEBATE_HISTORY_LIST_MAX = 50;
-  let debateRunId = null;
-  let debateRunState = "idle";
-  let debateRestoredFrom = "";
-  let debateCriteriaFromHistory = false;
-  let debatePendingModelSelection = null;
-  let debatePendingJudgeModel = "";
-  let debateRestoredJudgeModel = "";
-  let debateUnavailableModels = [];
-  let debateSessionWriteTimer = null;
-  let debateSessionCopyBlocked = false;
-  let debateSessionCopyError = "";
-  let debateSavedFeedback = "";
-  let debateSavedFeedbackTone = "";
-  let debateSavedRows = [];
-  let debateHistoryBusy = false;
-
-  function debateSetSavedFeedback(message, tone = "") {
-    debateSavedFeedback = String(message || "");
-    debateSavedFeedbackTone = tone;
-    debateRenderSavedStatus();
-  }
-
-  function debateRenderSavedStatus() {
-    const host = document.getElementById("debateSavedStatus");
-    if (!host) return;
-    let message = debateSavedFeedback;
-    let tone = debateSavedFeedbackTone;
-    let source = "";
-    if (!message && debateSessionCopyError) {
-      message = debateSessionCopyError;
-      tone = "warn";
-    }
-    if (!message && debateRestoredFrom === "history" && debateRunId) {
-      message = `Showing server history record #${debateRunId} from the existing full export. It was not run again; loading it did not change server history or model availability. Custom Compare criteria are not in this record; the criteria strip shows defaults, not recovered criteria.`;
-      source = "history";
-    } else if (!message && debateRestoredFrom === "session") {
-      message = `Restored from this browser tab's session copy${debateRunId ? `; server history also reports run #${debateRunId}` : "; no server run id was received"}. The tab copy may contain unredacted model text.${debateCriteriaFromHistory ? " Custom Compare criteria are not in the server record; the strip shows defaults, not recovered criteria." : ""}`;
-      source = "session";
-    } else if (!message && debateRunState === "running") {
-      message = "This comparison is being kept in this tab for reload recovery; its server record is not confirmed until debate_done supplies a run id.";
-      source = "running";
-    } else if (!message && debateRunState === "completed" && debateRunId) {
-      message = `The server reported saved comparison #${debateRunId}. A tab-local copy is also kept for reloads; it is not the server export.`;
-      source = "saved";
-    } else if (!message && debateRunState === "completed-unrecorded") {
-      message = "The comparison completed, but the response supplied no saved run id. Only this tab's session copy can restore it.";
-      tone = "warn";
-      source = "unrecorded";
-    } else if (!message && ["failed", "stopped", "stream-ended", "interrupted"].includes(debateRunState)) {
-      message = `This is a partial ${debateRunState === "stopped" ? "stopped" : debateRunState === "failed" ? "failed" : "interrupted"} comparison kept in this browser tab; the server saves Compare runs only after completion${debateRunId ? ` (server record #${debateRunId} was received)` : " and no server run id was received"}.`;
-      tone = "warn";
-      source = "partial";
-    } else if (!message && debatePanels().length) {
-      message = "This comparison is kept in this tab's session storage for reloads; it is browser-local, may contain unredacted model text, and is not the server export.";
-      source = "tab";
-    } else if (!message) {
-      message = "No comparison is open in this tab. Find reads the existing full history export only when you ask; it does not run or load a model.";
-      source = "empty";
-    }
-    host.textContent = message;
-    host.dataset.tone = tone;
-    host.dataset.source = source;
-    host.dataset.runId = debateRunId ? String(debateRunId) : "";
-  }
-
-  function debateUsageSnapshot(usage) {
-    if (!usage || typeof usage !== "object" || Array.isArray(usage)) return null;
-    const out = {};
-    for (const key of ["elapsed_s", "ttft", "completion_tokens", "reasoning_tokens", "decode_tps"]) {
-      const value = usage[key];
-      if ((typeof value === "number" && Number.isFinite(value))
-        || (typeof value === "string" && value.length <= 64)) out[key] = value;
-    }
-    if (usage.demo === true || usage.demo === "true") out.demo = usage.demo;
-    if (typeof usage.finish_reason === "string" && usage.finish_reason.length <= 64) out.finish_reason = usage.finish_reason;
-    return out;
-  }
-
-  function debateSessionSnapshot() {
-    const prompt = document.getElementById("debatePrompt");
-    const judge = document.getElementById("d-judge");
-    const synth = document.getElementById("d-synth");
-    const elapsed = Number(debateRunElapsed);
-    return {
-      version: 1,
-      saved_at: new Date().toISOString(),
-      run_id: debateRunId,
-      run_state: debateRunState,
-      prompt: prompt ? String(prompt.value || "") : "",
-      selected_models: (Array.isArray(debatePendingModelSelection)
-        ? debatePendingModelSelection
-        : [...new Set(debateSelectedModels().concat(debateUnavailableModels))]).slice(0, 10),
-      include_synthesis: Boolean(synth && synth.checked),
-      judge_model: debatePendingJudgeModel || debateRestoredJudgeModel || (judge ? String(judge.value || "") : ""),
-      judged_criteria: debateJudged.slice(0, 20).map(value => String(value).slice(0, 200)),
-      criteria_from_history: debateCriteriaFromHistory,
-      panels: debatePanels().slice(0, 10).map((slot, index) => ({
-        slot: Number.isInteger(Number(index)) ? Number(index) : index,
-        model: String(slot.model || "").slice(0, 512),
-        content: String(slot.c || ""),
-        usage: debateUsageSnapshot(slot.u),
-        status: String(slot.status || "queued"),
-        error: String(slot.error || "").slice(0, 1200),
-      })),
-      synthesis: {
-        model: String(debateSynth.m || "").slice(0, 512),
-        content: String(debateSynth.c || ""),
-        usage: debateUsageSnapshot(debateSynth.u),
-      },
-      total_elapsed_s: Number.isFinite(elapsed) ? elapsed : null,
-    };
-  }
-
-  function debatePersistSessionCopy() {
-    if (debateSessionCopyBlocked || (!debatePanels().length && !debateSynth.m)) return false;
-    try {
-      const raw = JSON.stringify(debateSessionSnapshot());
-      if (raw.length > DEBATE_SESSION_MAX_CHARS) {
-        debateSessionCopyError = `This comparison is too large for the ${DEBATE_SESSION_MAX_CHARS.toLocaleString()}-character tab-copy limit; the server record, if present, is unchanged.`;
-        debateRenderSavedStatus();
-        return false;
-      }
-      sessionStorage.setItem(DEBATE_SESSION_KEY, raw);
-      debateSessionCopyError = "";
-      debateRenderSavedStatus();
-      return true;
-    } catch (_error) {
-      debateSessionCopyError = "This browser did not allow the tab-local comparison copy to be saved; any server history record is unchanged.";
-      debateRenderSavedStatus();
-      return false;
-    }
-  }
-
-  function debateScheduleSessionCopy() {
-    if (debateSessionCopyBlocked || (!debatePanels().length && !debateSynth.m)) return;
-    if (debateSessionWriteTimer) clearTimeout(debateSessionWriteTimer);
-    debateSessionWriteTimer = setTimeout(() => {
-      debateSessionWriteTimer = null;
-      debatePersistSessionCopy();
-    }, 180);
-  }
-
-  function debateReadSessionCopy() {
-    let raw = "";
-    try { raw = sessionStorage.getItem(DEBATE_SESSION_KEY) || ""; }
-    catch (_error) { return null; }
-    if (!raw) return null;
-    if (raw.length > DEBATE_SESSION_MAX_CHARS) {
-      debateSessionCopyError = "The tab-local comparison copy is larger than this pane accepts; server history was not changed.";
-      return null;
-    }
-    try {
-      const parsed = JSON.parse(raw);
-      if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.panels) || !parsed.synthesis) throw new Error("unsupported comparison snapshot");
-      return parsed;
-    } catch (_error) {
-      debateSessionCopyError = "The tab-local comparison copy could not be read; use the saved-comparison list to restore a completed server run.";
-      return null;
-    }
-  }
-
-  function debateNormalizeSnapshot(raw) {
-    if (!raw || !Array.isArray(raw.panels) || raw.panels.length > 10 || !raw.synthesis || typeof raw.synthesis !== "object") return null;
-    const allowedStatuses = new Set(Object.keys(DEBATE_STATUS));
-    const panels = [];
-    for (const item of raw.panels) {
-      const slot = Number(item && item.slot);
-      if (!Number.isInteger(slot) || slot < 0 || slot > 9 || !item || !allowedStatuses.has(String(item.status || "queued"))) return null;
-      panels.push({
-        model: typeof item.model === "string" ? item.model.slice(0, 512) : "not reported",
-        c: typeof item.content === "string" ? item.content : "",
-        u: debateUsageSnapshot(item.usage),
-        status: String(item.status || "queued"),
-        error: typeof item.error === "string" ? item.error.slice(0, 1200) : "",
-      });
-    }
-    const criteria = Array.isArray(raw.judged_criteria)
-      ? raw.judged_criteria.filter(value => typeof value === "string").slice(0, 20).map(value => value.slice(0, 200))
-      : DEBATE_JUDGED_DEFAULTS.slice();
-    const runId = Number(raw.run_id);
-    const elapsed = Number(raw.total_elapsed_s);
-    const runStates = new Set(["idle", "running", "completed", "completed-unrecorded", "failed", "stopped", "stream-ended", "interrupted"]);
-    const runState = runStates.has(String(raw.run_state || "")) ? String(raw.run_state) : "interrupted";
-    return {
-      version: 1,
-      savedAt: typeof raw.saved_at === "string" ? raw.saved_at.slice(0, 80) : "",
-      runId: Number.isSafeInteger(runId) && runId > 0 ? runId : null,
-      runState,
-      prompt: typeof raw.prompt === "string" ? raw.prompt.slice(0, 100000) : "",
-      selectedModels: Array.isArray(raw.selected_models) ? raw.selected_models.filter(value => typeof value === "string").slice(0, 10).map(value => value.slice(0, 512)) : panels.map(panel => panel.model),
-      includeSynthesis: Boolean(raw.include_synthesis),
-      judgeModel: typeof raw.judge_model === "string" ? raw.judge_model.slice(0, 512) : "",
-      criteria,
-      criteriaFromHistory: raw.criteria_from_history === true,
-      panels,
-      synthesis: {
-        model: typeof raw.synthesis.model === "string" ? raw.synthesis.model.slice(0, 512) : "",
-        content: typeof raw.synthesis.content === "string" ? raw.synthesis.content : "",
-        usage: debateUsageSnapshot(raw.synthesis.usage),
-      },
-      totalElapsed: Number.isFinite(elapsed) && elapsed > 0 ? elapsed : null,
-    };
-  }
-
-  function debateApplyPendingControls() {
-    if (Array.isArray(debatePendingModelSelection)) {
-      const boxes = [...document.querySelectorAll(".debate-m-chk")];
-      if (boxes.length || lastCatalogSignature) {
-        const wanted = new Set(debatePendingModelSelection);
-        boxes.forEach(box => { box.checked = wanted.has(box.value); });
-        debateUnavailableModels = [...wanted].filter(model => !boxes.some(box => box.value === model));
-        debatePendingModelSelection = null;
-      }
-    }
-    if (debatePendingJudgeModel) {
-      const judge = document.getElementById("d-judge");
-      if (judge && [...judge.options].some(option => option.value === debatePendingJudgeModel)) {
-        judge.value = debatePendingJudgeModel;
-        debatePendingJudgeModel = "";
-      } else if (judge && (judge.options.length || lastCatalogSignature)) {
-        debateUnavailableModels.push(debatePendingJudgeModel);
-        debatePendingJudgeModel = "";
-      }
-    }
-    updateDebateRunControl();
-    debateRenderSavedStatus();
-  }
-
-  function debateRestoreSnapshot(raw, source) {
-    const snapshot = debateNormalizeSnapshot(raw);
-    if (!snapshot) return false;
-    debateSlots = {};
-    snapshot.panels.forEach((slot, index) => {
-      let status = slot.status;
-      if (snapshot.runState === "running") status = status === "running" ? "lost" : status === "queued" ? "not-run" : status;
-      debateSlots[index] = { model: slot.model, c: slot.c, u: slot.u, status, error: slot.error };
-    });
-    debateSynth = { m: snapshot.synthesis.model, c: snapshot.synthesis.content, u: snapshot.synthesis.usage };
-    debateRunElapsed = snapshot.totalElapsed;
-    debateRunId = snapshot.runId;
-    debateRunState = snapshot.runState === "running" ? "interrupted" : snapshot.runState;
-    if (source === "history") debateRunState = "completed";
-    debateRestoredFrom = source;
-    debateCriteriaFromHistory = source === "history" || snapshot.criteriaFromHistory;
-    debateBusy = false;
-    debateSessionCopyBlocked = false;
-    debateSessionCopyError = "";
-    debateSavedFeedback = "";
-    debateSavedFeedbackTone = "";
-    debateUnavailableModels = [];
-    debatePendingModelSelection = snapshot.selectedModels;
-    debatePendingJudgeModel = snapshot.judgeModel;
-    debateRestoredJudgeModel = snapshot.judgeModel;
-    const prompt = document.getElementById("debatePrompt");
-    if (prompt) prompt.value = snapshot.prompt;
-    const synth = document.getElementById("d-synth");
-    if (synth) synth.checked = snapshot.includeSynthesis;
-    debateJudged = snapshot.criteria.length ? snapshot.criteria : DEBATE_JUDGED_DEFAULTS.slice();
-    syncDebateArbiter();
-    debateApplyPendingControls();
-    const stop = document.getElementById("debateStopBtn");
-    if (stop) stop.style.display = "none";
-    renderDebateCriteria();
-    renderDebate();
-    return true;
-  }
-
-  function debateForgetSessionCopy() {
-    try {
-      sessionStorage.removeItem(DEBATE_SESSION_KEY);
-      debateSessionCopyBlocked = true;
-      debateSessionCopyError = "";
-      debateRestoredFrom = "";
-      debateSetSavedFeedback("Forgot this tab's copy. The visible result and any server history record are unchanged.");
-    } catch (_error) {
-      debateSetSavedFeedback("This browser did not allow the tab-local copy to be removed; server history is unchanged.", "warn");
-    }
-  }
-
-  async function debateFetchHistoryExport() {
-    const response = await fetch("/api/history/export", { cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const bundle = await response.json();
-    if (!bundle || bundle.format !== "m5-agent-studio history export" || !bundle.tables || !Array.isArray(bundle.tables.runs)) {
-      throw new Error("the history export did not contain a runs table");
-    }
-    return bundle;
-  }
-
-  function debateHistoryOption(row) {
-    const id = Number(row.id);
-    const title = typeof row.title === "string" && row.title.trim() ? row.title.trim() : "Untitled comparison";
-    const created = typeof row.created_at === "string" && row.created_at ? row.created_at : "date not reported";
-    return `#${id} · ${created} · ${title}`;
-  }
-
-  async function debateFindSavedComparisons() {
-    if (debateHistoryBusy) return;
-    debateHistoryBusy = true;
-    const find = document.getElementById("debateFindSavedBtn");
-    const load = document.getElementById("debateLoadSavedBtn");
-    if (find) find.disabled = true;
-    if (load) load.disabled = true;
-    debateSetSavedFeedback("Reading saved comparisons from the existing full history export…");
-    try {
-      const bundle = await debateFetchHistoryExport();
-      debateSavedRows = bundle.tables.runs
-        .filter(row => row && row.mode === "debate" && Number.isSafeInteger(Number(row.id)) && Number(row.id) > 0)
-        .sort((a, b) => Number(b.id) - Number(a.id));
-      const select = document.getElementById("debateSavedSelect");
-      if (select) {
-        select.replaceChildren();
-        const shown = debateSavedRows.slice(0, DEBATE_HISTORY_LIST_MAX);
-        if (!shown.length) {
-          const option = document.createElement("option");
-          option.value = "";
-          option.textContent = "No completed Compare runs in this history export";
-          select.appendChild(option);
-        } else {
-          shown.forEach(row => {
-            const option = document.createElement("option");
-            option.value = String(Number(row.id));
-            option.textContent = debateHistoryOption(row);
-            select.appendChild(option);
-          });
-        }
-        select.selectedIndex = 0;
-      }
-      const count = debateSavedRows.length;
-      debateSetSavedFeedback(count
-        ? `Found ${count} saved Compare ${count === 1 ? "run" : "runs"} in the full history export${count > DEBATE_HISTORY_LIST_MAX ? `; showing the newest ${DEBATE_HISTORY_LIST_MAX}` : ""}.`
-        : "No saved Compare runs were found in this history export.", "");
-    } catch (error) {
-      debateSetSavedFeedback(`Could not read saved comparisons from GET /api/history/export (${String(error.message || error)}). Nothing was run or changed.`, "error");
-    } finally {
-      debateHistoryBusy = false;
-      if (find) find.disabled = false;
-      const select = document.getElementById("debateSavedSelect");
-      if (load) load.disabled = !select || !select.value;
-    }
-  }
-
-  function debateSavedRunSnapshot(row) {
-    if (!row || row.mode !== "debate" || !Number.isSafeInteger(Number(row.id)) || Number(row.id) <= 0) throw new Error("the selected row is not a saved Compare run");
-    const record = typeof row.payload_json === "string" ? JSON.parse(row.payload_json) : row.payload_json;
-    if (!record || !Array.isArray(record.opinions) || !record.opinions.length) throw new Error("the saved run has no panel responses to restore");
-    const panels = record.opinions.slice(0, 10).map(opinion => {
-      const slot = Number(opinion && opinion.slot);
-      if (!Number.isInteger(slot) || slot < 0 || slot > 9) throw new Error("a saved panel has an invalid slot");
-      const usage = debateUsageSnapshot(opinion.usage);
-      const content = typeof opinion.content === "string" ? opinion.content : "";
-      const status = usage && (usage.demo === true || usage.demo === "true") ? "demo"
-        : usage && String(usage.finish_reason || "") === "length" ? "cut"
-          : content.trim() ? "answered" : "empty";
-      return { slot, model: typeof opinion.model === "string" ? opinion.model : "not reported", content, usage, status, error: "" };
-    });
-    const synthesis = record.synthesis && typeof record.synthesis === "object" ? record.synthesis : {};
-    return {
-      version: 1,
-      saved_at: typeof row.created_at === "string" ? row.created_at : "",
-      run_id: Number(row.id),
-      run_state: "completed",
-      prompt: typeof record.prompt === "string" ? record.prompt : "",
-      selected_models: panels.map(panel => panel.model),
-      include_synthesis: Boolean(synthesis.model),
-      judge_model: typeof synthesis.model === "string" ? synthesis.model : "",
-      judged_criteria: DEBATE_JUDGED_DEFAULTS.slice(),
-      panels,
-      synthesis: {
-        model: typeof synthesis.model === "string" ? synthesis.model : "",
-        content: typeof synthesis.content === "string" ? synthesis.content : "",
-        usage: debateUsageSnapshot(synthesis.usage),
-      },
-      total_elapsed_s: record.total_elapsed_s,
-    };
-  }
-
-  function debateLoadSelectedSavedComparison() {
-    const select = document.getElementById("debateSavedSelect");
-    const id = Number(select && select.value);
-    const row = debateSavedRows.find(item => Number(item.id) === id);
-    try {
-      const snapshot = debateSavedRunSnapshot(row);
-      if (!debateRestoreSnapshot(snapshot, "history")) throw new Error("the saved run could not be restored");
-      if (debateUnavailableModels.length) {
-        debateSetSavedFeedback(`Loaded server record #${id}; ${debateUnavailableModels.length} original model selection(s) are not in the current catalogue and were not loaded. The saved replies remain visible. Custom Compare criteria are not in the record; the criteria strip shows defaults, not recovered criteria.`, "warn");
-      }
-    } catch (error) {
-      debateSetSavedFeedback(`Could not revisit the selected comparison (${String(error.message || error)}). The current view and server history are unchanged.`, "error");
-    }
-  }
-
-  async function debateDownloadHistoryExport() {
-    if (debateHistoryBusy) return;
-    debateHistoryBusy = true;
-    const download = document.getElementById("debateExportHistoryBtn");
-    if (download) download.disabled = true;
-    debateSetSavedFeedback("Preparing the existing full history export…");
-    try {
-      const response = await fetch("/api/history/export", { cache: "no-store" });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const contentType = response.headers.get("content-type") || "";
-      if (!/application\/json/i.test(contentType)) throw new Error("the history export was not JSON");
-      const blob = await response.blob();
-      if (!blob.size) throw new Error("the history export was empty");
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = "studio-history-export.json";
-      anchor.rel = "noopener";
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      debateSetSavedFeedback("Started downloading the full history export (all exported tables; the server applies best-effort credential redaction).", "");
-    } catch (error) {
-      debateSetSavedFeedback(`Could not download GET /api/history/export (${String(error.message || error)}). Nothing was run or changed.`, "error");
-    } finally {
-      debateHistoryBusy = false;
-      if (download) download.disabled = false;
-    }
-  }
-
-  function debateBindSavedControls() {
-    const find = document.getElementById("debateFindSavedBtn");
-    const load = document.getElementById("debateLoadSavedBtn");
-    const select = document.getElementById("debateSavedSelect");
-    const exportButton = document.getElementById("debateExportHistoryBtn");
-    const forget = document.getElementById("debateForgetSessionBtn");
-    if (find) find.addEventListener("click", debateFindSavedComparisons);
-    if (load) load.addEventListener("click", debateLoadSelectedSavedComparison);
-    if (select) select.addEventListener("change", () => { if (load) load.disabled = !select.value; });
-    if (exportButton) exportButton.addEventListener("click", debateDownloadHistoryExport);
-    if (forget) forget.addEventListener("click", debateForgetSessionCopy);
-    debateRenderSavedStatus();
-  }
-
-  window.addEventListener("pagehide", () => {
-    if (debateSessionWriteTimer) clearTimeout(debateSessionWriteTimer);
-    debateSessionWriteTimer = null;
-    debatePersistSessionCopy();
-  });
 
   /** One field of the response, or `null` - never a zero standing in for a silence. */
   function debateFigure(value, suffix) {
@@ -11626,8 +11741,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     renderDebateSummary();
     renderDebateResults();
     renderDebateProvenance();
-    debateRenderSavedStatus();
-    debateScheduleSessionCopy();
+    renderDebateRecord();
   }
 
   function runDebate() {
@@ -11643,16 +11757,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     models.forEach((model, index) => (debateSlots[index] = { model, c: "", u: null, status: "queued", error: "" }));
     debateSynth = { m: "", c: "", u: null };
     debateRunElapsed = null;
-    debateRunId = null;
-    debateRunState = "running";
-    debateRestoredFrom = "";
-    debateCriteriaFromHistory = false;
-    debateRestoredJudgeModel = "";
-    debateSessionCopyBlocked = false;
-    debateSessionCopyError = "";
-    debateSavedFeedback = "";
-    debateSavedFeedbackTone = "";
-    debateUnavailableModels = [];
+    debateRunId = 0;
+    debateSource = "live";
+    debateSourceMeta = null;
     renderDebate();
     updateDebateRunControl();
     document.getElementById("debateStopBtn").style.display = "inline-flex";
@@ -11687,20 +11794,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       },
       synthesis_start(d) { debateSynth.m = d.model; renderDebate(); },
       synthesis_done(d) { debateSynth.u = d.usage; renderDebate(); },
-      // The run's own total and id are from debate_done; this page does not time or persist it.
+      // The run's own total, as the server measured it. Nothing here is timed by the page.
       debate_done(d) {
         debateRunElapsed = d.total_elapsed_s;
-        const id = Number(d.run_id);
-        debateRunId = Number.isSafeInteger(id) && id > 0 ? id : null;
-        debateRunState = debateRunId ? "completed" : "completed-unrecorded";
+        debateRunId = Number(d.run_id || 0);
         renderDebate();
       },
       stopped() { debateEnd("stopped", ""); },
-      closed() {
-        // The server uses debate_done as its terminal event. A normally closed stream after that
-        // is not a lost run; only a close before debate_done leaves an interrupted comparison.
-        if (debateRunState !== "completed" && debateRunState !== "completed-unrecorded") debateEnd("lost", "");
-      },
+      closed() { debateEnd("lost", ""); },
       error(d) {
         showToast("Compare error: " + d.message, "err");
         debateEnd("failed", String(d.message || "the server reported an error"));
@@ -11710,30 +11811,33 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       document.getElementById("debateStopBtn").style.display = "none";
       // Nothing may keep saying "running" after the stream is gone.
       if (debatePanels().some(slot => slot.status === "running" || slot.status === "queued")) debateEnd("lost", "");
+      // A comparison is worth keeping whatever way it ended: the failed and the stopped ones are
+      // the ones a reader most wants back.
+      debateRecordWrite();
+      renderDebateRecord();
       updateDebateRunControl();
-      renderDebate();
     });
   }
 
   // The criteria are stated before anything runs, and Start's hint obeys the same predicate that
   // enables it - a button that silently does nothing was its own defect.
   (function initDebatePane() {
-    debateBindSavedControls();
-    const savedView = debateReadSessionCopy();
-    if (savedView) {
-      if (!debateRestoreSnapshot(savedView, "session")) {
-        debateSessionCopyError = "The tab-local comparison copy is incomplete or unsupported; completed server runs can still be loaded from history.";
-        renderDebateCriteria();
-        renderDebate();
-      }
-    } else {
-      renderDebateCriteria();
-      renderDebate();
+    debateBindHistoryControls();
+    renderDebateCriteria();
+    renderDebate();
+    // A reload used to be a deletion. The copy this browser kept is drawn back with its source
+    // stated on the record bar, because a restored comparison must never pass for a live one.
+    const keptComparison = debateRecordRead();
+    if (keptComparison) {
+      debateRestoreModels = (keptComparison.models || []).slice();
+      debateApplySnapshot(keptComparison, "browser", {
+        kept_at: keptComparison.saved_at ? new Date(keptComparison.saved_at).toLocaleString() : "",
+        truncated: Boolean(keptComparison.truncated),
+        dropped_chars: keptComparison.dropped_chars || 0,
+      });
     }
     const prompt = document.getElementById("debatePrompt");
     if (prompt) prompt.addEventListener("input", updateDebateRunControl);
-    const judge = document.getElementById("d-judge");
-    if (judge) judge.addEventListener("change", () => { debateRestoredJudgeModel = ""; });
     // Enter adds a criterion, from one listener on the strip rather than an inline handler on the
     // input: the strip is rewritten on every add, and a delegated listener survives that.
     const criteria = document.getElementById("debateCriteria");
@@ -11959,7 +12063,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function renderChatTool(tool) {
     // The status is a word, not a border colour: colour alone is not a status.
-    const status = tool.ok ? "OK" : "FAILED";
+    const status = tool.ok ? uiStatus("ok").label : uiStatus("failed").label;
     const args = JSON.stringify(tool.args || {}, null, 1);
     const step = Number(tool.step) || 1;
     const elapsed = Number(tool.elapsed_ms) || 0;
@@ -12036,7 +12140,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       lines.push("Tool calls in this conversation:");
       shown.forEach((tool) => {
         const step = Math.max(1, Number(tool.step) || 1);
-        lines.push(`- ${tool.ok ? "OK" : "FAILED"} ${tool.tool} - step ${step}, ${Number(tool.elapsed_ms) || 0} ms: ${chatHandoffClip(tool.preview, 200) || "(no output)"}`);
+        lines.push(`- ${tool.ok ? uiStatus("ok").label : uiStatus("failed").label} ${tool.tool} - step ${step}, ${Number(tool.elapsed_ms) || 0} ms: ${chatHandoffClip(tool.preview, 200) || "(no output)"}`);
       });
       if (stats.callsList.length > shown.length) {
         lines.push(`(${stats.callsList.length - shown.length} earlier call(s) are in the Chat transcript.)`);
@@ -12413,15 +12517,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <code>0xranx/OpenContext</code> FTS5 Memory + <code>codegraph-rust</code> Zero-RAM AST Graph + <code>mksglu/context-mode</code> 98% KV-Cache Sandbox!
         </div>
         <div class="starter-grid">
-          <div class="starter-card" onclick="fillHarnessStarter('Run codegraph_architecture and codegraph_quality on this workspace, then run codegraph_impact on stream_any_model and save key architectural findings to OpenContext via oc_save_doc.')">
+          <div class="starter-card" role="button" tabindex="0" data-key-activate onclick="fillHarnessStarter('Run codegraph_architecture and codegraph_quality on this workspace, then run codegraph_impact on stream_any_model and save key architectural findings to OpenContext via oc_save_doc.')">
             <strong style="font-size:12.6px; color:#67e8f9;">1. AST CodeGraph + OpenContext Audit</strong>
             <div style="font-size:11.6px; color:var(--text-dim); margin-top:4px;">Maps hub modules, complexity hotspots &amp; blast-radius callers, then persists to <code>oc://doc/</code>.</div>
           </div>
-          <div class="starter-card" onclick="fillHarnessStarter('Create a standalone token_bucket.py rate limiter with async acquire/try_acquire, write unit tests in test_token_bucket.py, and run python3 -m unittest until all tests pass.')">
+          <div class="starter-card" role="button" tabindex="0" data-key-activate onclick="fillHarnessStarter('Create a standalone token_bucket.py rate limiter with async acquire/try_acquire, write unit tests in test_token_bucket.py, and run python3 -m unittest until all tests pass.')">
             <strong style="font-size:12.6px; color:#a7f3d0;">2. Autonomous TDD / GSD 3-Wave Spec</strong>
             <div style="font-size:11.6px; color:var(--text-dim); margin-top:4px;">Click <strong>GSD 3-Wave Spec</strong> to run Wave 1 <code>PLAN.md</code> &rarr; Fresh Wave 2 Execute &rarr; Fresh Wave 3 Verify!</div>
           </div>
-          <div class="starter-card" onclick="fillHarnessStarter('Search the codebase with grep_search for error-handling and security edge cases, read key sections, and call delegate_subagent to run an independent Critic audit.')">
+          <div class="starter-card" role="button" tabindex="0" data-key-activate onclick="fillHarnessStarter('Search the codebase with grep_search for error-handling and security edge cases, read key sections, and call delegate_subagent to run an independent Critic audit.')">
             <strong style="font-size:12.6px; color:#fde68a;">3. Multi-Model Security &amp; Bug Audit</strong>
             <div style="font-size:11.6px; color:var(--text-dim); margin-top:4px;">Lead model inspects code + delegates adversarial review to Sub-Agent Critic.</div>
           </div>
@@ -12442,7 +12546,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     harnessSnapshot = null;
     closeHarnessEventStream();
     document.getElementById("harnessActiveLabel").textContent = "New Harness Draft — choose workspace, worktree isolation, & policy, then run your task below.";
-    setStatus("harnessActiveStatusBadge", "neutral", "NEW DRAFT");
+    setStatus("harnessActiveStatusBadge", "neutral", uiStatus("draft").label);
     harnessGrantSnapshot = null;
     harnessGrantConfirm = "";
     harnessApprovalRequests.clear();
@@ -12539,10 +12643,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       return;
     }
     box.innerHTML = harnessSessions.map(s => {
-      const stIcon = s.status === "running" ? "Running" : s.status === "waiting_approval" ? "Needs Approval" : s.status === "completed" ? "Done" : s.status;
+      const stIcon = harnessStatusBadge(s).label;
       const wtTag = s.use_worktree && s.branch_name ? `<span class="badge cyan" style="font-size:9.8px; padding:1px 5px;">WT</span>` : "";
       return `
-        <div class="chronicle-item ${s.id === activeHarnessId ? 'active' : ''}" onclick="selectHarnessSession('${escapeHtml(s.id)}')">
+        <div class="chronicle-item ${s.id === activeHarnessId ? 'active' : ''}" role="button" tabindex="0" data-key-activate onclick="selectHarnessSession('${escapeHtml(s.id)}')">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:5px;">
             <div class="chronicle-title">${escapeHtml(s.title)}</div>
             <button class="btn btn-xs btn-danger" style="padding:1px 5px; min-height:20px; font-size:10px;" onclick="event.stopPropagation(); deleteHarnessSession('${escapeHtml(s.id)}')" title="Delete session & cleanup worktree" aria-label="Delete Harness session">${UI_ICONS.close}</button>
@@ -12575,11 +12679,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       : `Direct Workspace -> ${sess.worktree_dir}`;
     document.getElementById("harnessActiveLabel").textContent = `${sess.id} • ${wtInfo}`;
     const b = document.getElementById("harnessActiveStatusBadge");
-    setStatus(
-      b,
-      sess.status === "completed" ? "ok" : sess.status === "waiting_approval" ? "warn" : "info",
-      (sess.status || "idle").toUpperCase(),
-    );
+    const sessBadge = harnessStatusBadge(sess);
+    setStatus(b, sessBadge.cls, sessBadge.label);
     updateHarnessCtxBadge(sess.ctx_metrics);
     if (sess.policy) document.getElementById("harnessPolicy").value = sess.policy;
     if (sess.lead_model && unifiedCatalog.some(x => x.id === sess.lead_model)) document.getElementById("harnessLeadModel").value = sess.lead_model;
@@ -12681,6 +12782,56 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   let harnessLastResyncAt = 0;
 
   /* M5-P1-07-PURE-BEGIN */
+  // One word per state, everywhere. Six panes used to invent their own: the same failed run read
+  // `FAILED`, `ERROR`, `Check failed` and `failed`, the same running workflow was green in one pane
+  // and busy in another, and a stop said `CANCELLED` here and `stopped by you` there. A state is
+  // named once, with its tone, and every pane draws it from this table - the terminology inventory
+  // reads this object as the whole vocabulary and fails when a pane restates a state in its own
+  // words. Tones come from STATUS_TONES, so a state cannot invent a colour either.
+  const UI_STATUS = {
+    ready: { label: "ready", tone: "info" },
+    queued: { label: "queued", tone: "neutral" },
+    running: { label: "running", tone: "busy" },
+    "waiting-approval": { label: "waiting approval", tone: "warn" },
+    paused: { label: "paused", tone: "warn" },
+    blocked: { label: "blocked", tone: "danger" },
+    completed: { label: "completed", tone: "ok" },
+    failed: { label: "failed", tone: "danger" },
+    stopped: { label: "stopped by you", tone: "warn" },
+    partial: { label: "recovered, partial", tone: "warn" },
+    unavailable: { label: "unavailable", tone: "danger" },
+    "not-run": { label: "not run", tone: "neutral" },
+    answered: { label: "answered", tone: "ok" },
+    cut: { label: "cut at the length limit", tone: "warn" },
+    demo: { label: "demo text", tone: "warn" },
+    empty: { label: "no reply", tone: "warn" },
+    lost: { label: "stream ended", tone: "warn" },
+    draft: { label: "new draft", tone: "neutral" },
+    checking: { label: "checking", tone: "neutral" },
+    loading: { label: "loading", tone: "neutral" },
+    connecting: { label: "connecting", tone: "busy" },
+    streaming: { label: "streaming", tone: "busy" },
+    unloaded: { label: "unloaded", tone: "neutral" },
+    ok: { label: "ok", tone: "ok" },
+    "over-cap": { label: "over cap", tone: "danger" },
+    check: { label: "check", tone: "warn" },
+    absent: { label: "—", tone: "neutral" },
+    live: { label: "live", tone: "ok" },
+    offline: { label: "offline", tone: "danger" },
+    "demo-data": { label: "demo data", tone: "warn" },
+    "needs-you": { label: "needs you", tone: "warn" },
+    "needs-load": { label: "needs load", tone: "warn" },
+    "needs-key": { label: "needs key", tone: "danger" },
+    halted: { label: "halted", tone: "neutral" },
+    configured: { label: "configured", tone: "ok" },
+  };
+  /** The word and the tone for a state. An unknown state is a caller's bug, not a new word. */
+  function uiStatus(state) {
+    const hit = UI_STATUS[state];
+    if (!hit) throw new Error(`unknown ui status: ${state}`);
+    return hit;
+  }
+
   function harnessEventCursor(events) {
     let cursor = 0;
     for (const ev of events || []) {
@@ -12723,25 +12874,32 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return [...bySeq.keys()].sort((a, b) => a - b).map(seq => bySeq.get(seq));
   }
 
+  // The run states the server actually reports, mapped to the shared vocabulary. This map used to
+  // hold its own words in capitals, and it is where the drift started: FAILED and ERROR were two
+  // words for one outcome, CANCELLED and stopped by you were two spellings of one, and READY was
+  // both pending and idle.
+  const HARNESS_STATUS_STATE = {
+    waiting_approval: "waiting-approval",
+    running: "running",
+    paused: "paused",
+    blocked: "blocked",
+    pending: "queued",
+    idle: "ready",
+    completed: "completed",
+    cancelled: "stopped",
+    failed: "failed",
+    error: "failed",
+  };
   function harnessStatusBadge(state) {
     const status = String((state && (state.status || state.task_status)) || "idle").toLowerCase();
-    // Tones, not colour names: the old map painted failed, error and cancelled the
-    // same amber as paused, so a failed run and a paused one were the same colour
-    // with different words. Failure is danger now, cancellation is neutral.
-    const map = {
-      waiting_approval: ["warn", "WAITING APPROVAL"],
-      running: ["busy", "WORKFLOW RUNNING"],
-      paused: ["warn", "PAUSED"],
-      blocked: ["danger", "BLOCKED"],
-      pending: ["info", "READY"],
-      idle: ["info", "READY"],
-      completed: ["ok", "COMPLETED"],
-      cancelled: ["neutral", "CANCELLED"],
-      failed: ["danger", "FAILED"],
-      error: ["danger", "ERROR"],
-    };
-    const hit = map[status] || ["info", status.toUpperCase()];
-    return { cls: hit[0], label: hit[1] };
+    const name = HARNESS_STATUS_STATE[status];
+    if (!name) {
+      // A state this table has never seen is drawn as the server's own word rather than mapped
+      // onto a word that would be wrong; the pane still says something true.
+      return { cls: "neutral", label: status.replace(/_/g, " ") };
+    }
+    const hit = uiStatus(name);
+    return { cls: hit.tone, label: hit.label };
   }
   /* M5-P1-07-PURE-END */
 
@@ -12770,7 +12928,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (type === "turn/start") return `${ev.policy || "standard"} policy${ev.resumed_from_step ? ` · resumed from step ${ev.resumed_from_step}` : ""} · ${clip(ev.prompt, 70)}`;
     if (type === "step/start") return `step ${Number(ev.step) || "?"} · ${ev.model || "?"}`;
     if (type === "assistant/message") return `step ${Number(ev.step) || "?"} · ${ev.model || "?"}${ev.tool_calls && ev.tool_calls.length ? ` · ${ev.tool_calls.length} tool call(s)` : ""}`;
-    if (type === "tool/result") return `${ev.tool || "tool"} · ${ev.ok === false ? "FAILED" : "OK"} · ${Number(ev.elapsed_ms) || 0} ms`;
+    if (type === "tool/result") return `${ev.tool || "tool"} · ${ev.ok === false ? uiStatus("failed").label : uiStatus("ok").label} · ${Number(ev.elapsed_ms) || 0} ms`;
     if (type === "approval/request") return `${ev.tool || "tool"} needs a decision (${ev.approval_id || "?"})`;
     if (type === "approval/decision") return `${ev.approval_id || "?"} ${ev.decision === "approve" ? "approved" : "rejected"}`;
     if (type === "turn/end") return `turn ended in ${Number(ev.elapsed_s) || 0}s · ${Number(ev.steps) || 0} step(s) · ${ev.state || "completed"}`;
@@ -13685,7 +13843,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function appendWorkflowApprovalCard(target, d) {
     const statusBadge = document.getElementById("harnessActiveStatusBadge");
-    if (statusBadge) setStatus(statusBadge, "warn", "WAITING APPROVAL");
+    if (statusBadge) setStatus(statusBadge, uiStatus("waiting-approval").tone, uiStatus("waiting-approval").label);
     const card = document.createElement("div");
     card.id = `apr-card-${d.approval_id}`;
     card.className = "h-tool-card wait";
@@ -13696,7 +13854,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function updateWorkflowApprovalCard(d) {
     const statusBadge = document.getElementById("harnessActiveStatusBadge");
-    if (statusBadge) setStatus(statusBadge, "ok", "WORKFLOW RUNNING");
+    if (statusBadge) setStatus(statusBadge, "busy", uiStatus("running").label);
     const decided = d.decision === "approve" ? "approve" : "reject";
     const card = document.getElementById(`apr-card-${d.approval_id}`);
     if (card) {
@@ -15105,10 +15263,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         st.el.querySelector(`#h-live-md-${d.step}`).innerHTML = d.clean_content ? renderMarkdown(d.clean_content) : "";
         const u = d.usage || {};
         const b = st.el.querySelector(`[id^="h-live-badge-"]`);
-        if (b) setStatus(b, "ok", u.decode_tps ? `${u.decode_tps} tok/s • ${u.completion_tokens || 0} tok` : "Step Done");
+        if (b) setStatus(b, "ok", u.decode_tps ? `${u.decode_tps} tok/s • ${u.completion_tokens || 0} tok` : uiStatus("completed").label);
       },
       approval_required(d) {
-        setStatus("harnessActiveStatusBadge", "warn", "WAITING APPROVAL");
+        setStatus("harnessActiveStatusBadge", uiStatus("waiting-approval").tone, uiStatus("waiting-approval").label);
         const toolsBox = ensureLiveStepCard(d.step, "").el.querySelector(`#h-live-tools-${d.step}`);
         const aprDiv = document.createElement("div");
         aprDiv.id = `apr-card-${d.approval_id}`;
@@ -15265,14 +15423,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       strip.innerHTML = mcpServers.map(s => {
         const on = s.enabled;
         const tCount = s.active_tool_count || 0;
-        return `<span class="skill-pill ${on ? 'active' : ''}" style="${on ? 'border-color:var(--amber); background:rgba(245,158,11,0.18); color:#fef3c7;' : ''}" onclick="toggleMcpServerEnabled('${escapeHtml(s.alias)}', ${!on})" title="${escapeHtml(s.transport.toUpperCase())} • Click to toggle">${on ? UI_ICONS.check + ' ' : ''}${escapeHtml(s.alias)} (${tCount})</span>`;
+        return `<span class="skill-pill ${on ? 'active' : ''}" role="button" tabindex="0" data-key-activate style="${on ? 'border-color:var(--amber); background:rgba(245,158,11,0.18); color:#fef3c7;' : ''}" onclick="toggleMcpServerEnabled('${escapeHtml(s.alias)}', ${!on})" title="${escapeHtml(s.transport.toUpperCase())} • Click to toggle">${on ? UI_ICONS.check + ' ' : ''}${escapeHtml(s.alias)} (${tCount})</span>`;
       }).join("");
     }
 
     // Preset Chips (Cloud vs Custom)
     const cloudChips = [], customChips = [];
     for (const [k, p] of Object.entries(mcpPresets)) {
-      const chipHtml = `<span class="chip" onclick="selectMcpPreset('${escapeHtml(k)}')">${escapeHtml(p.name)}</span>`;
+      const chipHtml = `<span class="chip" role="button" tabindex="0" data-key-activate onclick="selectMcpPreset('${escapeHtml(k)}')">${escapeHtml(p.name)}</span>`;
       if (p.category === "cloud") cloudChips.push(chipHtml);
       else customChips.push(chipHtml);
     }
@@ -15493,7 +15651,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail || "Call failed");
-      out.textContent = `(${d.elapsed_ms}ms • ${d.ok ? "OK" : "ERROR"})\n${d.output || ""}`;
+      out.textContent = `(${d.elapsed_ms}ms • ${d.ok ? uiStatus("ok").label : uiStatus("failed").label})\n${d.output || ""}`;
     } catch (e) {
       out.textContent = "Error: " + e.message;
     } finally {
@@ -15583,7 +15741,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         const st = ensureWaveStep(d.step, "");
         st.el.querySelector(`#gsd-md-${d.step}`).innerHTML = d.clean_content ? renderMarkdown(d.clean_content) : "";
         const b = st.el.querySelector(".badge");
-        if (b) setStatus(b, "ok", "Done");
+        if (b) setStatus(b, uiStatus("completed").tone, uiStatus("completed").label);
       },
       gsd_wave_done(d) {
         const key = d.wave === 1 ? 1 : (d.wave === 3 ? 99 : null);
@@ -15851,7 +16009,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const sdlcBtn = document.getElementById("harnessSdlcBtn");
     if (sdlcBtn) sdlcBtn.disabled = true;
     document.getElementById("harnessAbortBtn").style.display = "inline-flex";
-    setStatus("harnessActiveStatusBadge", "busy", "SDLC RUNNING");
+    setStatus("harnessActiveStatusBadge", "busy", uiStatus("running").label);
 
     setHarnessRunActive(true);
     consumeSSE(url, payload, {

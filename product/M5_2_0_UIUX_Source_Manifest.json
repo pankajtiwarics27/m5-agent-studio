@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "d873dff577c00aac1f5d66013a6d3624f9738b1860316c9884613bbf00e13c00",
-      "bytes": 712835,
-      "lines": 12397
+      "sha256": "46d3647583ce9e5fa1625d19175478dfc17197197a753b1322129c060446ee0a",
+      "bytes": 722666,
+      "lines": 12555
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "4910dcad626a94b70d92bfc3bf5ed2799907b28b7ede0fad4f94346288ea2290",
-      "bytes": 3452240,
-      "lines": 75447
+      "sha256": "844a7221437a9ec23cdc78f3aa1e11327d46eca2a100bd6e011bb884607078d6",
+      "bytes": 3462071,
+      "lines": 75605
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -138,15 +138,15 @@
     {
       "path": "scripts/uiux_chat_context_inventory.py",
       "role": "builds and checks the P2-05 Chat context inventory",
-      "sha256": "cca51452e5a1d27640d45d1584e485b8a8bd20fd034798e87ebf90381baa842f",
-      "bytes": 29039,
+      "sha256": "f628cd44e67f79fec94cf13e6f4f7593744bc830331056d70687227df9254889",
+      "bytes": 29071,
       "lines": 634
     },
     {
       "path": "tests/test_chat_context.py",
       "role": "checks the P2-05 context, tool-event and streaming-time contracts",
-      "sha256": "1363f1db37a7f5c4a75c2ab24c06b3d9096cddba5e7f69099aabb395a53a6c72",
-      "bytes": 17044,
+      "sha256": "e0a49b563affc168b7e85d9afeddb5475f05404634e49626ea8109a2abf9ae2e",
+      "bytes": 17108,
       "lines": 498
     },
     {
@@ -250,8 +250,8 @@
     {
       "path": "scripts/uiux_chat_handoff_inventory.py",
       "role": "builds and checks the mainline P2-06 handoff inventory",
-      "sha256": "94d5dcaac117e483b5aae008d677a918bcf14140a83d4aff563c8c4dde6c008a",
-      "bytes": 27197,
+      "sha256": "7dac7892e3514b8f5a840340100a31abc7b2a117df9313f8af77958721b68a89",
+      "bytes": 27229,
       "lines": 614
     },
     {
@@ -327,9 +327,9 @@
     {
       "path": "tests/test_screenshot_capture_browser.py",
       "role": "runs browser-backed UI and screenshot safety regressions",
-      "sha256": "f699d82526dda47d86d64a75a337efa28082f8b3dee04dc06969345787ee2647",
-      "bytes": 25196,
-      "lines": 646
+      "sha256": "a30aeee29eff42f001b44534b1bc3f314e049cbce1f1c83e024d59e2d80ceb62",
+      "bytes": 26075,
+      "lines": 666
     },
     {
       "path": "tests/test_uiux_source_manifest.py",
@@ -344,12 +344,33 @@
       "sha256": "029e038d4d50209738733d146015417bc6e9f2b877b0503d3c0a2b7c07fcf15a",
       "bytes": 4084,
       "lines": 34
+    },
+    {
+      "path": "scripts/compare_history_walk.mjs",
+      "role": "browser walk for the additive saved-Compare history browser against a throwaway demo",
+      "sha256": "5093eca39e71f4736466613eb997e994783fbc3f7480556f1422626ebd6bca4c",
+      "bytes": 12132,
+      "lines": 230
+    },
+    {
+      "path": "tests/test_compare_history.py",
+      "role": "checks history browsing, route reuse, mode filtering and separate restoration",
+      "sha256": "c814345c77334011290832d027d57afb977ee2135b5b39d8fb108367b66adaa2",
+      "bytes": 3363,
+      "lines": 72
+    },
+    {
+      "path": "docs/uiux-2-0-compare-history-browser.md",
+      "role": "scope and verification note for additive Compare history browsing",
+      "sha256": "13760adc0db2de6012b15195a736d83e18804e84053d3d01415cf00e9e472e2d",
+      "bytes": 1938,
+      "lines": 21
     }
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "d873dff577c00aac1f5d66013a6d3624f9738b1860316c9884613bbf00e13c00",
-    "lines": 12397,
+    "sha256": "46d3647583ce9e5fa1625d19175478dfc17197197a753b1322129c060446ee0a",
+    "lines": 12555,
     "tab_count": 6,
     "tabs": [
       {

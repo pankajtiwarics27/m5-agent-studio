@@ -369,7 +369,7 @@ def build_inventory() -> dict:
         "no panel keeps saying it is running after the stream is gone",
         'handlers.stopped' not in run
         and "stopped() { debateEnd(\"stopped\", \"\"); }" in run
-        and 'if (debateRunState !== "completed" && debateRunState !== "completed-unrecorded") debateEnd("lost", "");' in run
+        and "closed() { debateEnd(\"lost\", \"\"); }" in run
         and "debateEnd(\"failed\"" in run
         and run.count('debateEnd("lost", "")') >= 2
         and 'slot.status = "not-run"' in end

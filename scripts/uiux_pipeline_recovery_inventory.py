@@ -427,8 +427,8 @@ def build_inventory() -> dict:
     check(
         "a restored card is marked, and a partial seat is not drawn as if it finished",
         'card.dataset.recovered = "true"' in apply_recovered
-        and "Recovered · partial" in apply_recovered
-        and 'Stopped mid-seat' in finalizer,
+        and 'uiStatus("partial").label' in apply_recovered
+        and 'uiStatus("stopped").label' in finalizer,
         apply_recovered[-300:],
     )
     check(

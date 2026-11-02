@@ -184,8 +184,8 @@ def test_a_panel_state_read_from_the_event_is_a_finding(sources):
 def test_a_stream_that_leaves_a_panel_running_is_a_finding(sources):
     broken = sources(
         html_transform=lambda html: html.replace(
-            'if (debatePanels().some(slot => slot.status === "running" || slot.status === "queued")) debateEnd("lost", "");',
-            "if (false) {}",
+            'closed() { debateEnd("lost", ""); },',
+            "closed() { debateEnd(\"stopped\", \"\"); },",
             1,
         )
     )

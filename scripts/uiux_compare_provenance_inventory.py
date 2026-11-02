@@ -233,7 +233,8 @@ def build_inventory() -> dict:
     )
     check(
         "the run's total elapsed time comes from the debate_done event, not from a timer",
-        "debate_done(d) {" in run and "debateRunElapsed = d.total_elapsed_s;" in run
+        "debate_done(d) {" in run
+        and "debateRunElapsed = d.total_elapsed_s;" in run
         and "debateRunElapsed = null" in run
         and "let debateRunElapsed = null;" in html,
         "a total this page measured would be the network and the renderer, named as the run",

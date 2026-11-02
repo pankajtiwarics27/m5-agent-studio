@@ -339,8 +339,8 @@ def test_a_collapsing_row_is_caught(sources):
 def test_a_card_that_bypasses_the_status_component_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            '      setStatus(pill, row.tone, row.tone === "ok" ? "OK"',
-            '      pill.textContent = row.tone; void (row.tone === "ok" ? "OK"',
+            '      setStatus(pill, row.tone, row.tone === "ok" ? uiStatus("ok").label',
+            '      pill.textContent = row.tone; void (row.tone === "ok" ? uiStatus("ok").label',
             1,
         )
     )

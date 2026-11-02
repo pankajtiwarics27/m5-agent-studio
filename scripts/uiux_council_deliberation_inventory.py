@@ -323,7 +323,7 @@ def build_inventory() -> dict:
     check(
         "six verdicts, and a cut reply is not drawn as an answer",
         all(f'"{verdict}"' in verdict_of for verdict in VERDICTS if verdict not in ("not-run",))
-        and "cut at the length limit" in verdict_of
+        and 'uiStatus("cut").label' in verdict_of
         and 'cappedBy === "length"' in verdict_of
         and "token budget" in verdict_of,
         "a runtime's own length limit and this run's budget are two different cuts",

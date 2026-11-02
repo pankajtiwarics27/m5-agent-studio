@@ -28,16 +28,16 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 
 | State | Tone | Label |
 |---|---|---|
-| `waiting_approval` | `warn` | WAITING APPROVAL |
-| `running` | `busy` | WORKFLOW RUNNING |
-| `paused` | `warn` | PAUSED |
-| `blocked` | `danger` | BLOCKED |
-| `pending` | `info` | READY |
-| `idle` | `info` | READY |
-| `completed` | `ok` | COMPLETED |
-| `cancelled` | `neutral` | CANCELLED |
-| `failed` | `danger` | FAILED |
-| `error` | `danger` | ERROR |
+| `waiting_approval` | `warn` | waiting approval |
+| `running` | `busy` | running |
+| `paused` | `warn` | paused |
+| `blocked` | `danger` | blocked |
+| `pending` | `neutral` | queued |
+| `idle` | `info` | ready |
+| `completed` | `ok` | completed |
+| `cancelled` | `warn` | stopped by you |
+| `failed` | `danger` | failed |
+| `error` | `danger` | failed |
 
 10 states, 6 tones, 4 bases, 22 surfaces using the component, 6 of them live regions.
 
@@ -45,28 +45,28 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| `#sdlcProgressBadge` | `neutral` | no | 1825 |
-| `#onboardingSummary` | `neutral` | yes | 1972 |
-| `#startRecentSummary` | `neutral` | yes | 2012 |
-| `#startHealthSummary` | `neutral` | yes | 2039 |
-| `#startWorkspaceSummary` | `neutral` | yes | 2057 |
-| `#harnessActiveStatusBadge` | `info` | yes | 2181 |
-| `#hallStatusBadge` | `warn` | yes | 2257 |
-| `#councilReadinessCount` | `neutral` | no | 2270 |
-| (unnamed) | `ok` | no | 2537 |
-| `#dockerStateBadge` | `neutral` | no | 2584 |
-| (unnamed) | `warn` | no | 4581 |
-| (unnamed) | `warn` | no | 4660 |
-| (unnamed) | `neutral` | no | 7213 |
-| (unnamed) | `busy` | no | 7214 |
-| (unnamed) | `ok` | no | 7215 |
-| (unnamed) | `warn` | no | 7216 |
-| (unnamed) | `warn` | no | 7217 |
-| (unnamed) | `warn` | no | 7218 |
-| (unnamed) | `danger` | no | 7219 |
-| (unnamed) | `warn` | no | 7220 |
-| (unnamed) | `warn` | no | 7221 |
-| (unnamed) | `neutral` | no | 7222 |
+| `#sdlcProgressBadge` | `neutral` | no | 1836 |
+| `#onboardingSummary` | `neutral` | yes | 1983 |
+| `#startRecentSummary` | `neutral` | yes | 2023 |
+| `#startHealthSummary` | `neutral` | yes | 2050 |
+| `#startWorkspaceSummary` | `neutral` | yes | 2068 |
+| `#harnessActiveStatusBadge` | `info` | yes | 2192 |
+| `#hallStatusBadge` | `info` | yes | 2268 |
+| `#councilReadinessCount` | `neutral` | no | 2281 |
+| (unnamed) | `ok` | no | 2550 |
+| `#dockerStateBadge` | `neutral` | no | 2597 |
+| (unnamed) | `warn` | no | 4605 |
+| (unnamed) | `warn` | no | 4688 |
+| (unnamed) | `neutral` | no | 7776 |
+| (unnamed) | `busy` | no | 7777 |
+| (unnamed) | `ok` | no | 7778 |
+| (unnamed) | `warn` | no | 7779 |
+| (unnamed) | `warn` | no | 7780 |
+| (unnamed) | `warn` | no | 7781 |
+| (unnamed) | `danger` | no | 7782 |
+| (unnamed) | `warn` | no | 7783 |
+| (unnamed) | `warn` | no | 7784 |
+| (unnamed) | `neutral` | no | 7785 |
 
 ## Writers
 

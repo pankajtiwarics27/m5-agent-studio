@@ -153,7 +153,7 @@ def read_frontend(html: str) -> dict:
             in stats,
             "prints_the_context_line": "chatContextLine(stats.context)" in brief,
             "says_nothing_ran": "nothing has run" in brief,
-            "statuses_are_words": '"OK" : "FAILED"' in brief,
+            "statuses_are_words": 'uiStatus("ok").label : uiStatus("failed").label' in brief,
             "says_step_and_time": "step ${step}" in brief and "ms" in brief,
             "bounds_the_calls": ".slice(-8)" in brief,
             "admits_the_bound": "earlier call(s) are in the Chat transcript" in brief,
