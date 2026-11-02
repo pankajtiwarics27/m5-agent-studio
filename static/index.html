@@ -505,6 +505,12 @@
   .debate-summary[data-state="mixed"] { color: var(--amber); }
   .debate-summary[data-state="ok"] { color: var(--emerald); }
   .debate-results { margin: 0 20px 16px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
+  .debate-provenance table { width: 100%; border-collapse: collapse; font-size: 11.8px; }
+  .debate-provenance th { text-align: left; color: var(--text-faint); font-size: 10.4px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--border); }
+  .debate-provenance td { padding: 5px 10px 5px 0; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--text-dim); }
+  .debate-provenance td.mono { font-family: var(--mono); font-size: 11px; color: var(--text); white-space: nowrap; }
+  .debate-provenance tr:last-child td { border-bottom: none; }
+  .debate-provenance-note { color: var(--text-faint); font-size: 11.2px; line-height: 1.45; padding-top: 2px; }
   .debate-results-basis { margin-top: 9px; color: var(--text-faint); font-size: 11.4px; line-height: 1.5; }
   .debate-panel-note { font-size: 11.6px; color: var(--amber); margin-bottom: 8px; }
   .debate-run-hint { font-size: 11.5px; color: var(--text-faint); }
@@ -2434,6 +2440,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div id="debateGrid" class="debate-grid"></div>
         <!-- What the run left, read against the criteria above. -->
         <div id="debateResults" class="debate-results" role="region" aria-label="Comparison results" hidden></div>
+        <!-- UIUX-P4-05: what the response said about each reply, and this page times nothing. -->
+        <div id="debateProvenance" class="debate-results debate-provenance" role="region" aria-label="Measured performance per reply" hidden></div>
       </div>
     </section>
 
@@ -7330,6 +7338,122 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       + judged + " (yours to judge). This table reports what each reply carried and how it ended - not which reply is better.</div>";
   }
 
+  /* ── UIUX-P4-05: measured performance, taken from the response ─────────────
+     The pane printed one figure and it was the arbiter's `decode_tps` in a green
+     badge, with nothing saying where it came from or what it measured - and a
+     demo verdict carried 29.5 or 42.1 tok/s that no model ever ran for.
+
+     Every number below is read from the `usage` object the server sends with
+     `panel_done` / `synthesis_done` (`elapsed_s`, `ttft`, `completion_tokens`,
+     `reasoning_tokens`, `decode_tps`), so a figure on screen is a figure the
+     response carried. This page times nothing: a browser clock would measure the
+     network, the renderer and a throttled background tab and call it the model.
+
+     A demo reply carries `demo: true` and figures the demo path invented, so it
+     is given none. A stage that never reported - failed, stopped, lost, never
+     started - shows `—` and says why, because a zero would read as a measurement.
+  */
+  let debateRunElapsed = null;
+
+  /** One field of the response, or `null` - never a zero standing in for a silence. */
+  function debateFigure(value, suffix) {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    if (!Number.isFinite(number) || number <= 0) return null;
+    const text = Number.isInteger(number) ? String(number) : String(Math.round(number * 100) / 100);
+    return text + (suffix || "");
+  }
+
+  function debateIsDemo(usage) {
+    return Boolean(usage) && (usage.demo === true || usage.demo === "true");
+  }
+
+  /** Why a panel has no figures, in the panel's own terms. */
+  function debateNoFigures(state) {
+    const reasons = {
+      failed: "the provider failed before it reported any figure",
+      stopped: "you stopped the run before the runtime reported",
+      lost: "the stream ended before the runtime reported",
+      "not-run": "this panel never started, so nothing was measured",
+      running: "this panel is still streaming; its figures arrive with the reply",
+      queued: "this panel has not started",
+      demo: "demo text: the reply is the server's, so it carries no measured figure",
+    };
+    return reasons[state] || "the response carried no usage for this panel";
+  }
+
+  /** What one reply's usage says, field by field, with nothing invented. */
+  function debateProvenanceOf(panel) {
+    const usage = panel.u || null;
+    const state = panel.status;
+    if (panel.arbiter && !usage) return { note: debateNoFigures(debateBusy ? "running" : "arbiter-waiting") };
+    if (debateIsDemo(usage) || state === "demo") return { note: debateNoFigures("demo") };
+    if (!usage) return { note: debateNoFigures(state) };
+    const tokens = debateFigure(usage.completion_tokens, "");
+    const reasoning = debateFigure(usage.reasoning_tokens, "");
+    return {
+      note: "",
+      elapsed: debateFigure(usage.elapsed_s, " s"),
+      ttft: debateFigure(usage.ttft, " s"),
+      tokens: tokens ? tokens + " tokens" + (reasoning ? " (" + reasoning + " reasoning)" : "") : null,
+      decode: debateFigure(usage.decode_tps, " tok/s"),
+    };
+  }
+
+  function renderDebateProvenance() {
+    const host = document.getElementById("debateProvenance");
+    if (!host) return;
+    const panels = debatePanels();
+    const arbiter = debateSynth.m
+      ? [{ model: debateSynth.m, status: debateIsDemo(debateSynth.u) ? "demo" : "answered", u: debateSynth.u, arbiter: true }]
+      : [];
+    if (!panels.length && !arbiter.length) {
+      host.hidden = true;
+      host.innerHTML = "";
+      return;
+    }
+    host.hidden = false;
+    const rows = panels.concat(arbiter).map(panel => {
+      const reading = debateProvenanceOf(panel);
+      const cell = value => '<td class="mono">' + (value ? escapeHtml(value) : "—") + "</td>";
+      const name = escapeHtml(panel.model) + (panel.arbiter ? " · arbiter" : "");
+      const row = "<tr><td>" + name + "</td>" + cell(reading.elapsed) + cell(reading.ttft)
+        + cell(reading.tokens) + cell(reading.decode)
+        + '<td class="mono" title="No price is configured for any model">—</td></tr>';
+      return reading.note
+        ? row + '<tr><td colspan="6" class="debate-provenance-note">' + escapeHtml(reading.note) + "</td></tr>"
+        : row;
+    }).join("");
+    const total = debateFigure(debateRunElapsed, " s");
+    host.innerHTML = '<div class="debate-criteria-head"><strong>What the response said about each reply</strong></div>'
+      + '<div class="debate-criteria-basis">Read from the usage the server sent with each reply '
+      + "(<span class=\"mono\">elapsed_s</span>, <span class=\"mono\">ttft</span>, "
+      + "<span class=\"mono\">completion_tokens</span>, <span class=\"mono\">decode_tps</span>), "
+      + "so every figure here is a figure the response carried: this page times nothing. Decode is the "
+      + "runtime's own figure for the stage, not a rate measured by the browser.</div>"
+      + '<table><thead><tr><th scope="col">Model</th><th scope="col">Elapsed</th>'
+      + '<th scope="col">First token</th><th scope="col">Reply tokens</th>'
+      + '<th scope="col">Decode</th><th scope="col">Cost</th></tr></thead><tbody>' + rows + "</tbody></table>"
+      + '<div class="debate-results-basis"><strong>Cost: not known.</strong> No price is configured for any '
+      + "model, so no reply here is given one. "
+      + (total ? "The run took " + escapeHtml(total) + ", as the server measured it."
+        : "The run's own elapsed time is not reported until the run ends.")
+      + "</div>";
+  }
+
+  /** The arbiter's badge: the same figure the table reads, or a refusal. */
+  function debateArbiterBadge(usage) {
+    if (debateIsDemo(usage)) {
+      return '<span class="badge amber" title="The server wrote this verdict; the figures a demo reply carries are the demo path\'s, so none is shown.">demo text · no figures</span>';
+    }
+    if (!usage) return '<span class="badge indigo">synthesizing…</span>';
+    const parts = [debateFigure(usage.decode_tps, " tok/s"), debateFigure(usage.elapsed_s, " s"), debateFigure(usage.completion_tokens, " tokens")].filter(Boolean);
+    const title = "As the runtime reported it in this reply's usage; this page times nothing.";
+    return parts.length
+      ? '<span class="badge green" title="' + title + '">' + escapeHtml(parts.join(" · ")) + "</span>"
+      : '<span class="badge amber" title="' + title + '">figures not reported</span>';
+  }
+
   function updateDebateRunControl() {
     const prompt = (document.getElementById("debatePrompt") || {}).value || "";
     const models = debateSelectedModels();
@@ -7379,10 +7503,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     }
     const synthesis = document.getElementById("debateSynthesisArea");
     if (synthesis) {
-      synthesis.innerHTML = !debateSynth.m ? "" : `<div class="stage-output-card" style="border-color:var(--accent);"><div class="stage-output-head"><strong>Arbiter Verdict (${escapeHtml(debateSynth.m)})</strong><span class="badge ${debateSynth.u?'green':'indigo'}">${debateSynth.u?debateSynth.u.decode_tps+' tok/s':'Synthesizing...'}</span></div><div class="stage-output-body">${renderMarkdown(debateSynth.c)}</div></div>`;
+      synthesis.innerHTML = !debateSynth.m ? "" : `<div class="stage-output-card" style="border-color:var(--accent);"><div class="stage-output-head"><strong>Arbiter Verdict (${escapeHtml(debateSynth.m)})</strong>${debateArbiterBadge(debateSynth.u)}</div><div class="stage-output-body">${renderMarkdown(debateSynth.c)}</div></div>`;
     }
     renderDebateSummary();
     renderDebateResults();
+    renderDebateProvenance();
   }
 
   function runDebate() {
@@ -7397,6 +7522,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     debateSlots = {};
     models.forEach((model, index) => (debateSlots[index] = { model, c: "", u: null, status: "queued", error: "" }));
     debateSynth = { m: "", c: "", u: null };
+    debateRunElapsed = null;
     renderDebate();
     updateDebateRunControl();
     document.getElementById("debateStopBtn").style.display = "inline-flex";
@@ -7431,6 +7557,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       },
       synthesis_start(d) { debateSynth.m = d.model; renderDebate(); },
       synthesis_done(d) { debateSynth.u = d.usage; renderDebate(); },
+      // The run's own total, as the server measured it. Nothing here is timed by the page.
+      debate_done(d) { debateRunElapsed = d.total_elapsed_s; renderDebate(); },
       stopped() { debateEnd("stopped", ""); },
       closed() { debateEnd("lost", ""); },
       error(d) {

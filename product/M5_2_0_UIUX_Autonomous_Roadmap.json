@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 27,
+  "revision": 28,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,8 +102,8 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P4-04",
-    "next_recommended_story": "UIUX-P4-05",
+    "last_completed_story": "UIUX-P4-05",
+    "next_recommended_story": "UIUX-P4-06",
     "last_checkpoint": "2026-11-02T00:00:00Z",
     "last_session_id": "arena/661f9d49-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
@@ -297,11 +297,11 @@
         "UIUX-P4-06"
       ],
       "total": 6,
-      "done": 4,
+      "done": 5,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 2,
-      "percent_complete": 67
+      "not_started": 1,
+      "percent_complete": 83
     },
     {
       "id": "P5",
@@ -344,11 +344,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 28,
+    "done": 29,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 12,
-    "percent_complete": 70
+    "not_started": 11,
+    "percent_complete": 72
   },
   "stories": [
     {
@@ -5606,8 +5606,8 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "Compare measured performance and provenance with no loss of existing functionality.",
+      "current_behavior": "The Compare pane printed exactly one number: the arbiter's `decode_tps` in a green badge, with nothing saying where it came from, what it measured, or that a demo verdict's 29.5 / 42.1 tok/s came from the demo path rather than from a model. Latency, tokens and cost per model were absent from the pane entirely, so the side-by-side comparison compared prose and the one figure it did show was the one figure it could not back.",
+      "target_behavior": "Every figure the Compare pane prints is a figure the response carried: elapsed time, time to first token, reply tokens and decode throughput per reply, read from the `usage` object the server sends with `panel_done` / `synthesis_done`, plus the run's own total from `debate_done`. This page times nothing, a demo reply is given no figure at all, a stage that never reported says why instead of showing a zero, and cost is named as not known because no price is configured for any model.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
         "Trace relevant DOM, JS handlers, API and backend state transitions",
@@ -5649,24 +5649,95 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P4-05 (Compare measured performance and provenance). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-02T00:00:00Z",
+        "updated_at": "2026-11-02T00:00:00Z",
+        "completed_at": "2026-11-02T00:00:00Z",
+        "owner_session": "arena/f5a671d5-m5-agent-studio",
         "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
-        "known_regressions": [],
-        "decisions": [],
+        "changed_files": [
+          "docs/README.md",
+          "docs/media/compare-provenance/README.md",
+          "docs/media/compare-provenance/compare-provenance-arbiter.png",
+          "docs/media/compare-provenance/compare-provenance-demo.png",
+          "docs/media/compare-provenance/compare-provenance-light.png",
+          "docs/media/compare-provenance/compare-provenance-narrow.png",
+          "docs/media/compare-provenance/compare-provenance.png",
+          "docs/product-roadmap-status.md",
+          "docs/uiux-2-0-compare-provenance.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-program.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-tokens.md",
+          "product/M5_2_0_UIUX_Compare_Provenance.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "scripts/compare_provenance_walk.mjs",
+          "scripts/council_readiness_seed.py",
+          "scripts/uiux_compare_provenance_inventory.py",
+          "static/index.html",
+          "studio.py",
+          "tests/test_compare_provenance.py"
+        ],
+        "evidence": [
+          "`#debateProvenance` sits under the results table and states one row per reply - including the arbiter's - over six columns: model, `elapsed_s`, `ttft`, `completion_tokens` (with `reasoning_tokens` when the reply reasoned), `decode_tps` and cost. Its basis line names the four fields and says `this page times nothing`; the run's own total is `total_elapsed_s` from `debate_done` (`The run took 3.83 s, as the server measured it`).",
+          "Every field the pane prints is one `app.py` puts in a `usage` event, and the inventory reads those keys out of `app.py` and fails when the pane reads a field the server does not send. A value the response did not carry is a dash: `debateFigure` returns null for anything missing, non-finite or `<= 0`, and the cell renders `\u2014`, because a zero reads as a measurement and there was none.",
+          "No figure comes from the browser. The pane's debate functions call no clock (`performance.now`, `Date.now`, `new Date`, `Date.parse`), and the inventory fails if one appears; the run total comes from the event, not from a timer started at the click. The walk proves the same thing from the other side: it tees the `/api/debate/stream` response, parses the frames the app parses, and compares every cell with the `usage` the server sent for that reply, formatted with the same arithmetic - a client-computed rate could not match a server figure to two decimals.",
+          "A demo reply is given no figure at all. The demo path emits `demo: true` with invented numbers (29.5 / 42.1 tok/s decode, 155 tok/s prefill) and `record_perf` still stores them - that write is the runtime program's to remove - so the pane reads the flag and prints five dashes with `demo text: the reply is the server's, so it carries no measured figure`. The walk asserts a demo run's block contains no `tok/s` and neither `29.5` nor `42.1`.",
+          "The arbiter's card lost its unqualified badge: `debateArbiterBadge` prints `41.2 tok/s \u00b7 0.26 s \u00b7 58 tokens` under the title `As the runtime reported it in this reply's usage; this page times nothing.`, says `demo text \u00b7 no figures` for a demo verdict, and `figures not reported` when the usage carried none. The arbiter's row in the table states the same figures from the same `synthesis_done` usage, and the walk asserts the badge text equals the row's figures.",
+          "Cost is stated and refused in the block (`Cost: not known. No price is configured for any model, so no reply here is given one.`) and per row as a dash with that title. The pane reads no price, posts no price route, and still posts only `/api/debate/stream`.",
+          "A stage that never reported has a reason, not a blank: `the provider failed before it reported any figure`, `you stopped the run before the runtime reported`, `the stream ended before the runtime reported`, `this panel never started, so nothing was measured`, `the response carried no usage for this panel`. A run that failed claims no total, and the footer says so rather than timing itself.",
+          "`scripts/council_readiness_seed.py` gained `--resident-model <id>`: a comparison with two answering panels needs two resident models, and the saved keyless alias fails by design (a failed run never reaches the arbiter, so there would be no verdict to measure). The flag marks an existing catalogue model loaded; `FITS_MODEL` (3.80 GB) still fits under the fixture's 20.8 GB ceiling, and without the flag the fixture is unchanged.",
+          "The tree this closes is recorded in `commit_sha`: a commit cannot carry its own sha, so the closeout commit that fills that field is a second commit on the same branch."
+        ],
+        "test_results": [
+          "python3 scripts/uiux_compare_provenance_inventory.py --check -> 18 checks, 0 findings, clean",
+          "node scripts/compare_provenance_walk.mjs --screenshots docs/media/compare-provenance -> 12/12 checks passed (chromium 153 via @sparticuz/chromium + puppeteer-core 25.16, STUDIO_PYTHON=.venv/bin/python; four fixtures: plain, --resident-model Gemma-4-21B-REAP-4bit, --slow-model, --offline; every figure compared against the SSE frames the page received)",
+          "python3 -m pytest -q tests/test_compare_provenance.py -> 21 passed",
+          "node scripts/compare_criteria_walk.mjs -> 15/15; node scripts/council_readiness_walk.mjs -> 31/31; node scripts/council_deliberation_walk.mjs -> 14/14; node scripts/council_verdict_walk.mjs -> 17/17; node scripts/pipeline_artifacts_walk.mjs -> 22/22; node scripts/pipeline_recovery_walk.mjs -> 27/27 (the six walks that share this pane and this fixture, re-run because the fixture changed)",
+          "python3 -m pytest -q (full suite) -> 2324 passed, 27 skipped, 1 failed: tests/test_baseline.py::test_pinned_baseline_is_present_and_ancestral raises `Pinned commit 7904892d... is not present in this checkout`, because this sandbox checkout holds one squashed commit and cannot resolve the pinned baseline SHA; the same file's manifest check skips for the same reason, and both run in full history on CI",
+          "python3 -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py (browser env) -> 30 passed",
+          "python3 -m ruff check . -> All checks passed; python3 -m mypy -> Success: no issues found in 58 source files; python3 scripts/check_frontend_syntax.py -> JavaScript syntax OK; python3 scripts/validate_docs.py -> 5 required pages, 174 files scanned; python3 scripts/demo_tour.py --check -> up to date; python3 scripts/validate_screenshots.py -> 6 of 6 captured and consistent; python3 scripts/build_studio.py -> Built studio.py: 3,424,124 bytes; every uiux_* inventory regenerates with no findings and the source manifest, preservation signoff and roadmap status page reproduce"
+        ],
+        "visual_evidence": [
+          "docs/media/compare-provenance/compare-provenance.png",
+          "docs/media/compare-provenance/compare-provenance-arbiter.png",
+          "docs/media/compare-provenance/compare-provenance-demo.png",
+          "docs/media/compare-provenance/compare-provenance-light.png",
+          "docs/media/compare-provenance/compare-provenance-narrow.png"
+        ],
+        "known_regressions": [
+          "`ttft` is the runtime's first-token figure for the stage as `app.py` computed it; for the fixture it is 0.04 s for every reply because the stand-in runtime sends `time_to_first_token: 0.04`. Nothing in the pane rounds or invents it, but a reader should not read the fixture's equal numbers as equal hardware.",
+          "`prefill_tps` and `cached_tokens` travel in the usage object and are deliberately not printed: the pane has no reader for them that would not be a row of zeroes (the local path always sends `prefill_tps: 0.0`, `cached_tokens: 0`). They stay in the payload for a later story rather than being drawn as measured zeros.",
+          "A demo reply still writes the invented 29.5 / 42.1 tok/s to `perf_samples` through `record_perf`; the pane no longer draws them anywhere, but the store still receives them, and that write belongs to the runtime program (recorded since P4-01).",
+          "The arbiter's figures are the judge model's, so in the fixture they equal the panel's when the judge is the first model. That is the fixture answering one model the same way twice, not the pane echoing a row."
+        ],
+        "decisions": [
+          "The fields are the payload's, not the pane's invention: `elapsed_s`, `ttft`, `completion_tokens`, `reasoning_tokens`, `decode_tps` are exactly what `app.py` puts in a `usage` event, and the inventory reads that list out of `app.py` so a field the server stops sending fails the check rather than silently printing a dash forever.",
+          "A missing figure is a dash with a reason, never a zero. `debateFigure` rejects `0` as well as `null`, because `decode_tps: 0.0` reaches the pane for a reply that wrote nothing and printing `0 tok/s` would state a measurement the runtime never made.",
+          "A demo reply gets no figure rather than a labelled figure. The demo path's numbers are invented (29.5 / 42.1), so no caption makes them honest; the row says why instead.",
+          "Decode throughput is labelled as the runtime's own figure for the stage rather than re-derived, and the pane never times anything: the browser would be measuring the network, the JSON parser, the renderer and a throttled tab, and calling the sum a model's speed.",
+          "The run's total comes from `debate_done.total_elapsed_s` and is absent when the run does not finish (a provider exception ends the stream before the event). The block says `The run's own elapsed time is not reported until the run ends` rather than starting a stopwatch at the click.",
+          "Cost stays a refusal. No price table exists for any model in this app, and P4-05 could have printed per-token arithmetic from a hard-coded rate; that would be a fabricated figure in a column whose whole purpose is provenance.",
+          "The arbiter's card keeps a badge but the badge now carries the three figures it can back, under a title that says where they came from. The `Synthesizing...` placeholder became `synthesizing\u2026` only while the stream is live, which is what is actually happening.",
+          "The fixture gained `--resident-model` rather than the walk pointing two panels at the same model: a comparison whose second panel is the keyless alias fails before the arbiter runs, so the story's own anchor (`#debateSynthesisArea`) would have had no state to photograph."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
-        "readme_updated": false
+        "handoff_note": "P4-05 closed: every figure the Compare pane prints is a figure the response carried, demo replies carry none, and the run's total is the server's. Next: UIUX-P4-06 (Saved comparison and export continuity) - the pane still loses its comparison on reload, and the run already has a `run_id` from `debate_done` and a record in `GET /api/history/export` to restore from.",
+        "next_action": "Start UIUX-P4-06 from this commit; `debate_done`'s `run_id` is already handled in `runDebate`, `renderDebateProvenance` is the pattern for a block that states its own provenance, and `scripts/uiux_compare_provenance_inventory.py` with `scripts/compare_provenance_walk.mjs` are the artifact pair to extend.",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",

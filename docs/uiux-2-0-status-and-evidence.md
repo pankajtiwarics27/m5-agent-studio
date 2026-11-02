@@ -45,28 +45,28 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| `#sdlcProgressBadge` | `neutral` | no | 1800 |
-| `#onboardingSummary` | `neutral` | yes | 1947 |
-| `#startRecentSummary` | `neutral` | yes | 1987 |
-| `#startHealthSummary` | `neutral` | yes | 2014 |
-| `#startWorkspaceSummary` | `neutral` | yes | 2032 |
-| `#harnessActiveStatusBadge` | `info` | yes | 2156 |
-| `#hallStatusBadge` | `warn` | yes | 2232 |
-| `#councilReadinessCount` | `neutral` | no | 2245 |
-| (unnamed) | `ok` | no | 2495 |
-| `#dockerStateBadge` | `neutral` | no | 2542 |
-| (unnamed) | `warn` | no | 4533 |
-| (unnamed) | `warn` | no | 4612 |
-| (unnamed) | `neutral` | no | 7162 |
-| (unnamed) | `busy` | no | 7163 |
-| (unnamed) | `ok` | no | 7164 |
-| (unnamed) | `warn` | no | 7165 |
-| (unnamed) | `warn` | no | 7166 |
-| (unnamed) | `warn` | no | 7167 |
-| (unnamed) | `danger` | no | 7168 |
-| (unnamed) | `warn` | no | 7169 |
-| (unnamed) | `warn` | no | 7170 |
-| (unnamed) | `neutral` | no | 7171 |
+| `#sdlcProgressBadge` | `neutral` | no | 1806 |
+| `#onboardingSummary` | `neutral` | yes | 1953 |
+| `#startRecentSummary` | `neutral` | yes | 1993 |
+| `#startHealthSummary` | `neutral` | yes | 2020 |
+| `#startWorkspaceSummary` | `neutral` | yes | 2038 |
+| `#harnessActiveStatusBadge` | `info` | yes | 2162 |
+| `#hallStatusBadge` | `warn` | yes | 2238 |
+| `#councilReadinessCount` | `neutral` | no | 2251 |
+| (unnamed) | `ok` | no | 2503 |
+| `#dockerStateBadge` | `neutral` | no | 2550 |
+| (unnamed) | `warn` | no | 4541 |
+| (unnamed) | `warn` | no | 4620 |
+| (unnamed) | `neutral` | no | 7170 |
+| (unnamed) | `busy` | no | 7171 |
+| (unnamed) | `ok` | no | 7172 |
+| (unnamed) | `warn` | no | 7173 |
+| (unnamed) | `warn` | no | 7174 |
+| (unnamed) | `warn` | no | 7175 |
+| (unnamed) | `danger` | no | 7176 |
+| (unnamed) | `warn` | no | 7177 |
+| (unnamed) | `warn` | no | 7178 |
+| (unnamed) | `neutral` | no | 7179 |
 
 ## Writers
 
