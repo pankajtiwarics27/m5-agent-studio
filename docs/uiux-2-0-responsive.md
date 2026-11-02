@@ -73,7 +73,7 @@ not from this file.
 
 ## The checks
 
-21 checks, 1 findings — **drifted**.
+21 checks, 0 findings — **clean**.
 
 * `pass` the stylesheet carries one target-size floor, and it is 24px
 * `pass` density does not move the floor: a compact layout may look tighter, not be harder to hit
@@ -95,4 +95,4 @@ not from this file.
 * `pass` the captures the doc lists exist and were written by the walk
 * `pass` each rule is broken in a copy of the source by a test, so a rule that stopped looking fails
 * `pass` the doc is written, and reachable from the docs index
-* `FAIL` the ledger marks this story done with evidence — tracking.status='not_started'
+* `pass` the ledger marks this story done with evidence

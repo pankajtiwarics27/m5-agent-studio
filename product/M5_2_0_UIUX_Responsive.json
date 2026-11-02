@@ -161,17 +161,11 @@
     },
     {
       "check": "the ledger marks this story done with evidence",
-      "ok": false,
-      "detail": "tracking.status='not_started'"
+      "ok": true,
+      "detail": ""
     }
   ],
   "check_count": 21,
-  "findings": [
-    {
-      "check": "the ledger marks this story done with evidence",
-      "ok": false,
-      "detail": "tracking.status='not_started'"
-    }
-  ],
-  "status": "drifted"
+  "findings": [],
+  "status": "clean"
 }
