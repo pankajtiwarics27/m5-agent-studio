@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 31,
+  "revision": 32,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,13 +102,13 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P5-02",
-    "next_recommended_story": "UIUX-P5-03",
-    "last_checkpoint": "2026-11-02T05:05:00Z",
-    "last_session_id": "arena/c096ab62-m5-agent-studio",
+    "last_completed_story": "UIUX-P5-03",
+    "next_recommended_story": "UIUX-P5-04",
+    "last_checkpoint": "2026-11-02T06:30:00Z",
+    "last_session_id": "arena/d238f5be-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "14ba03c411aed9fcbe41fd232bdc692c45eeb2ee",
+    "last_verified_commit": "0bdff87a98aa733ebabdceefbf6eb2a4c07c9d28",
     "last_updated": "2026-11-02",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -316,11 +316,11 @@
         "UIUX-P5-05"
       ],
       "total": 5,
-      "done": 2,
+      "done": 3,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 3,
-      "percent_complete": 40
+      "not_started": 2,
+      "percent_complete": 60
     },
     {
       "id": "P6",
@@ -344,11 +344,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 32,
+    "done": 33,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 8,
-    "percent_complete": 80
+    "not_started": 7,
+    "percent_complete": 82
   },
   "stories": [
     {
@@ -6313,24 +6313,93 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P5-03 (Responsive and touch-target regression). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
-        "known_regressions": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-02T05:10:00Z",
+        "updated_at": "2026-11-02T06:30:00Z",
+        "completed_at": "2026-11-02T06:30:00Z",
+        "owner_session": "arena/d238f5be-m5-agent-studio",
+        "commit_sha": "0bdff87a98aa733ebabdceefbf6eb2a4c07c9d28",
+        "changed_files": [
+          "docs/README.md",
+          "docs/media/responsive/responsive-1440-debate.png",
+          "docs/media/responsive/responsive-360-chat.png",
+          "docs/media/responsive/responsive-360-start.png",
+          "docs/media/responsive/responsive-480-council.png",
+          "docs/media/responsive/responsive-768-harness.png",
+          "docs/media/responsive/responsive-landscape-debate.png",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-responsive.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-tokens.md",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Responsive.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "scripts/responsive_walk.mjs",
+          "scripts/uiux_responsive_inventory.py",
+          "scripts/uiux_tokens.py",
+          "static/index.html",
+          "studio.py",
+          "tests/test_responsive.py"
+        ],
+        "evidence": [
+          "Found by measuring rather than reading: `scripts/responsive_walk.mjs` at 1440, 1024, 768, 480 and 360, in all six panes, reported three classes of defect - controls drawn past the right edge with no scrollbar to reach them (Start's run button and two small buttons at 480 and 360, Hall's model picker and Compare's arbiter picker), hit areas under the 24px floor at every width (chips 23px, summaries 21px, the permission badge 21px, copy-with-basis 18px, an inline 20px button), and a Start pane whose shell was 589px wide inside a 360px pane.",
+          "Root causes, each proved by bisecting the pane rather than guessing: a select element is as wide as its longest option (the recent-folder picker held a /tmp path, the two model pickers held model labels), and `margin: 0 auto` on a flex item turns off the cross-axis stretch, so the shell sized to its own max-content. Two inline `min-height: 20px` styles had escaped the density tokens entirely.",
+          "`node scripts/responsive_walk.mjs --screenshots docs/media/responsive` -> 27/27 checks: zero sideways overflow at all five widths in all six panes, zero clipped controls, zero hit areas under 24x24, no status chip clipping its own text, all six rail tabs on screen and big enough at 360, the Compare composer 302px with a 118px run button, a touch tap opening a pane and a touch tap filling the task box (0 -> 181 chars), and a landscape phone (740x360) still laid out. The only horizontal strips the walk had to rely on are `div.stepper` and `div.scroll-body`, both named in its output rather than silently excused.",
+          "The walk is honest rather than optimistic: with the fixes reverted in a copy of `static/index.html` it drops to 19/27, failing exactly the eight checks that describe those defects.",
+          "`python3 scripts/uiux_responsive_inventory.py` states the contract: 21 checks, 0 findings. It pins `--target-min: 24px` as the one floor, refuses a density block that re-points it, requires each control that was under the floor to read the token, refuses an inline `min-height` under the floor, requires the select and shell shrink rules, and treats a new breakpoint as a deliberate act by failing until it is documented."
+        ],
+        "test_results": [
+          "node scripts/responsive_walk.mjs --screenshots docs/media/responsive (TMPDIR/STUDIO_SCREENSHOT_CHROME/STUDIO_PUPPETEER_CORE/LD_LIBRARY_PATH set, STUDIO_PYTHON=.venv/bin/python) -> 27/27 checks passed",
+          "node scripts/responsive_walk.mjs with the fixes reverted in a scratch copy -> 19/27, the eight expected checks fail (honesty check for the walk itself)",
+          "python3 scripts/uiux_responsive_inventory.py -> 21 checks, 0 findings - clean; --check -> 0",
+          "pytest -q tests/test_responsive.py -> 22 passed; pytest -q tests/test_keyboard_a11y.py -> 32 passed (P5-02 still clean under the new layout)",
+          "pytest -q -> 2441 passed, 27 skipped, 1 failed (tests/test_baseline.py pins a commit sha, which a squashed sandbox cannot satisfy; passes on CI)",
+          "pytest -q tests/test_screenshot_capture_browser.py (M5_REQUIRE_BROWSER_TESTS=1) -> 30 passed",
+          "ruff check . -> All checks passed; mypy -> Success: no issues found in 58 source files",
+          "python3 scripts/check_frontend_syntax.py -> JavaScript syntax OK (1 inline block(s)); demo_tour --check -> up to date; validate_screenshots -> 6/6; validate_docs -> 5 pages / 180 files",
+          "python3 scripts/uiux_tokens.py -> 46 tokens in 8 groups (a new `touch` group), 1038 references, 20 contrast pairs, lowest 4.69:1",
+          "python3 scripts/build_studio.py -> Built studio.py: 3,451,228 bytes"
+        ],
+        "visual_evidence": [
+          "docs/media/responsive/responsive-1440-debate.png - the Compare pane at desktop width, unchanged",
+          "docs/media/responsive/responsive-768-harness.png - the Harness pane at tablet width",
+          "docs/media/responsive/responsive-480-council.png - the Pipeline pane at phone width, the stepper scrolling rather than clipping",
+          "docs/media/responsive/responsive-360-start.png - the Start pane at the narrowest width, the whole task row now on screen",
+          "docs/media/responsive/responsive-360-chat.png - the Chat pane at 360",
+          "docs/media/responsive/responsive-landscape-debate.png - a rotated phone, 740x360",
+          "docs/media/screenshots/*.png - the six-pane set, unchanged and still validated 6/6"
+        ],
+        "known_regressions": [
+          "`--target-min: 24px` raises the floor, not the whole design: chips, `summary` disclosures, checkbox labels and the permission badge are now 24px tall instead of 18-23px, which makes dense rows about 4-6px taller. That is the visible cost of a finger-sized target and it is deliberate.",
+          "The pipeline stepper still overflows horizontally at phone widths; it scrolls rather than wrapping, which keeps the five stages on one line (their order is the point). The walk names it as a scroller instead of excusing it.",
+          "Carried forward: demo tok/s still written to `perf_samples`; `ttft` fixture-equal; `prefill_tps`/`cached_tokens` unprinted; restored checkpoint carries no contract; Hall readiness refresh rewrites seat pickers; `auto_unload` drops just-compared model; browser comparison copy capped at 60,000 chars; `stopped` status carries warn tone; model-residency chips (`LOADED`/`LOADING`) deliberately outside the vocabulary; `#chatMessages` stays `aria-live=\"off\"` with its reason declared."
+        ],
+        "decisions": [
+          "Fixed the class, not the instance: `select { min-width: 0; max-width: 100% }` and a definite shell width, rather than three one-off `max-width` rules. A fourth picker will now shrink on its own.",
+          "`--target-min` is a new token group (`touch`) rather than a density token, and the density block is asserted not to re-point it: how tight a layout may look and how small a thing a finger may have to hit are different questions.",
+          "The floor is 24px (WCAG 2.5.8 Target Size Minimum), not 44 or 48px: 24 is the level AA criterion, and raising every dense row to 44px would have changed the design far beyond the defect. The token is one number, so a later story can raise it in one place.",
+          "The stepper keeps one line and scrolls. Wrapping five stages into two rows would reorder the reading of a pipeline, which is worse than a horizontal scroll that the walk names.",
+          "The inventory treats breakpoints as a closed list with reasons. Otherwise a responsive story grows a private set of one-off widths that the next story has to guess at."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
-        "readme_updated": false
+        "handoff_note": "P5-03 is done at 0bdff87. `scripts/responsive_walk.mjs` is the part to reuse: it measures rendered boxes at five widths and takes the wrapping label as the hit area, and it names the scrollers it relies on instead of passing silently. `product/M5_2_0_UIUX_Responsive.json` holds the breakpoint list and the shrink rules; a story that adds a fixed width, an inline min-height under the floor, or a seventh breakpoint fails the inventory until it declares or fixes it.",
+        "next_action": "Start UIUX-P5-04 from this commit; the responsive walk and the declared breakpoints are the pattern to extend.",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",
@@ -6347,7 +6416,8 @@
         ".venv/bin/python scripts/validate_screenshots.py",
         ".venv/bin/python scripts/validate_docs.py"
       ],
-      "blocked_by_unknowns": []
+      "blocked_by_unknowns": [],
+      "status": "done"
     },
     {
       "id": "UIUX-P5-04",

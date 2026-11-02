@@ -281,7 +281,10 @@
   .ttl-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 5px; overflow: hidden; }
   .ttl-fill { height: 100%; background: var(--emerald); transition: width 0.5s linear; }
 
-  .onboarding-shell { max-width: 860px; margin: 0 auto; padding: 18px 16px 28px; }
+  /* `margin: 0 auto` on a flex item turns off the cross-axis stretch: without a definite
+     width the shell sized to its own max-content (589px) and the pane, which hides its
+     overflow, clipped the right third of the Start pane at 480 and 360. */
+  .onboarding-shell { width: 100%; max-width: 860px; margin: 0 auto; padding: 18px 16px 28px; }
   .onboarding-lede { font-size: 12.4px; line-height: 1.55; color: var(--text-dim); margin: 8px 0 14px; }
   .onboarding-steps { display: flex; flex-direction: column; gap: 8px; }
   .onboarding-step { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card); }
@@ -390,6 +393,7 @@
   .start-workspace-source { font-size: var(--text-2xs); color: var(--text-faint); }
   .start-workspace-actions { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; margin-top: var(--space-2); }
   .start-workspace-actions input { flex: 1 1 260px; min-width: 180px; font-family: var(--mono); font-size: var(--text-xs); }
+  .start-workspace-actions select { flex: 1 1 200px; }
   .badge.red { background: rgba(239, 68, 68, 0.18); color: #fca5a5; border-color: rgba(239, 68, 68, 0.45); }
 
   .config-strip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 11px; padding: 12px 14px; margin-bottom: 12px; }
@@ -405,7 +409,7 @@
   .prompt-box textarea:focus { outline: none; }
   .prompt-box:focus-within { outline: 2px solid var(--ring); outline-offset: 2px; }
   .prompt-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
-  .chip { background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); padding: 3.5px 9px; border-radius: 999px; font-size: 11.4px; cursor: pointer; }
+  .chip { background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); padding: 3.5px 9px; border-radius: 999px; font-size: 11.4px; cursor: pointer; display: inline-flex; align-items: center; min-height: var(--target-min); }
   .chip:hover, .chip.active { color: #fff; border-color: var(--cyan); background: rgba(6,182,212,0.14); }
 
   .stepper { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 13px; }
@@ -602,7 +606,7 @@
   .modal-backdrop { position: fixed; inset: 0; background: rgba(4, 6, 12, 0.76); backdrop-filter: blur(4px); z-index: 50; display: none; align-items: center; justify-content: center; padding: 16px; }
   .modal-backdrop.open { display: flex; }
   .modal { width: 100%; max-width: 760px; max-height: 88vh; background: var(--bg-elev); border: 1px solid var(--border-hi); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 55px rgba(0,0,0,0.7); }
-  .chk-lbl { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); cursor: pointer; user-select: none; }
+  .chk-lbl { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); cursor: pointer; user-select: none; min-height: var(--target-min); }
 
   /* Agentic Harness (v5.0) */
   .btn-emerald { background: rgba(16, 185, 129, 0.18); border-color: rgba(16, 185, 129, 0.48); color: #a7f3d0; }
@@ -694,6 +698,11 @@
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 10px;
+
+  /* Target size — the floor a control's hit area may not go below on a touch screen.
+     It is deliberately *not* re-pointed by density: density is how tight the layout
+     looks, and this is how small a thing a finger may have to hit. */
+  --target-min: 24px;
 
   /* Density — comfortable is the default. body[data-density="compact"] re-points
      these five values; rules read the token, never the density attribute. */
@@ -787,6 +796,11 @@ body { font-family: var(--sans); }
 .btn-danger { background: var(--bg-elev); color: var(--text); border-color: var(--rose); }
 .btn-danger:hover:not(:disabled) { background: var(--bg-hover); }
 .btn-xs { min-height: var(--control-min-h-sm); padding: 5px 9px; font-size: var(--text-xs); border-radius: var(--radius-sm); }
+/* A select element is as wide as its longest option, so a folder path or a model label can
+   push it past the pane - and the pane clips instead of scrolling. `min-width: 0` lets it
+   shrink inside the flex or grid row it is in, and `max-width: 100%` stops it at the row's
+   edge; the reader still gets the full text in the open list. */
+select { min-width: 0; max-width: 100%; }
 .kbd { font-size: var(--text-2xs); border-color: var(--border); background: var(--bg-code); color: var(--text-dim); }
 .layout { height: calc(100dvh - var(--header-height)); grid-template-columns: minmax(0, 1fr) 320px; }
 .workspace { min-width: 0; }
@@ -807,6 +821,7 @@ input, select, textarea {
 input::placeholder, textarea::placeholder { color: var(--text-faint); opacity: 1; }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); }
 button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible,
+summary { min-height: var(--target-min); }
 summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .m-card, .config-strip, .prompt-box, .stage-output-card, .step-card, .starter-card,
 .model-row, .msg, .h-step-card, .h-tool-card, .code-wrap, .diff-box {
@@ -841,7 +856,7 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .h-approval-countdown { color: #fde68a; font-variant-numeric: tabular-nums; }
 .h-approval-facts { border-top: 1px solid var(--border); padding-top: 6px; }
 .h-approval-facts dd { color: var(--text); }
-.harness-perm-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10.8px; font-weight: 700; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-dim); cursor: pointer; }
+.harness-perm-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10.8px; font-weight: 700; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-dim); cursor: pointer; min-height: var(--target-min); }
 .harness-perm-badge[data-count="0"] { color: var(--text-faint); }
 .harness-perm-badge[data-count]:not([data-count="0"]) { color: #fde68a; border-color: rgba(245,158,11,0.5); background: rgba(245,158,11,0.10); }
 .perm-summary { font-size: 11.4px; color: var(--text-dim); background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 11px; line-height: 1.5; }
@@ -999,6 +1014,7 @@ body[data-density="compact"] .harness-advanced-fields { padding-top: var(--space
 .council-settings summary { cursor: pointer; width: fit-content; font-weight: 600; }
 .council-settings-content { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding-top: 8px; }
 .council-settings-content select { max-width: 100%; }
+.council-settings-content > * { min-width: 0; }
 .council-seat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); padding-top: var(--space-3); }
 .council-seat-grid select { width: 100%; }
 body[data-density="compact"] .council-settings { padding-block: var(--strip-pad-y); }
@@ -1158,8 +1174,8 @@ body[data-density="compact"] .council-settings { padding-block: var(--strip-pad-
 .evidence[data-basis="unavailable"] { border-left-color: var(--rose); }
 .evidence-copy {
   display: block; margin-top: var(--space-2); padding: 0; border: 0; background: none;
-  color: var(--text-faint); font: inherit; text-decoration: underline; cursor: pointer;
-}
+  color: var(--text-faint); font: inherit; text-decoration: underline; cursor: pointer;  min-height: var(--target-min); display: inline-flex; align-items: center;
+  }
 .evidence-copy:hover { color: var(--text); }
 
 .toast { background: var(--bg-elev); color: var(--text); border-color: var(--border); box-shadow: 0 8px 24px rgba(0,0,0,.18); font-size: 13px; }
@@ -2088,7 +2104,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <div>
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
                 <label class="field-lbl" style="margin:0;" for="harnessWorkspaceInput">Project Directory</label>
-                <button type="button" class="btn btn-xs" style="padding:1px 6px; min-height:20px; font-size:10.4px;" onclick="saveWorkspaceDirectory()" title="Save as default project directory (creates folder if missing)">Set / Create</button>
+                <button type="button" class="btn btn-xs" style="padding:3px 6px;" onclick="saveWorkspaceDirectory()" title="Save as default project directory (creates folder if missing)">Set / Create</button>
               </div>
               <input type="text" id="harnessWorkspaceInput" style="width:100%; font-family:var(--mono); font-size:11.2px;" placeholder="~/Projects/my-app" onchange="syncProjectDirInputs(this.value)" />
               <select id="harnessRecentDirsSelect" aria-label="Recent project directories" style="width:100%; margin-top:4px; font-size:11px; padding:3px 6px; display:none;" onchange="if(this.value)saveWorkspaceDirectory(this.value)"></select>
@@ -2434,7 +2450,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           </div>
           <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <label class="chk-lbl"><input type="checkbox" id="d-synth" checked onchange="syncDebateArbiter()" /> Arbiter Verdict</label>
-            <div id="debateArbiterModel"><label class="field-lbl" for="d-judge">Arbiter Model</label><select id="d-judge"></select></div>
+            <div id="debateArbiterModel" style="min-width:0;"><label class="field-lbl" for="d-judge">Arbiter Model</label><select id="d-judge"></select></div>
             <span id="debateArbiterHint" class="field-lbl" hidden>Enable Arbiter Verdict to choose an arbiter model.</span>
           </div>
         </div>
@@ -8809,7 +8825,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div class="chronicle-item ${s.id === activeHarnessId ? 'active' : ''}" role="button" tabindex="0" data-key-activate onclick="selectHarnessSession('${escapeHtml(s.id)}')">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:5px;">
             <div class="chronicle-title">${escapeHtml(s.title)}</div>
-            <button class="btn btn-xs btn-danger" style="padding:1px 5px; min-height:20px; font-size:10px;" onclick="event.stopPropagation(); deleteHarnessSession('${escapeHtml(s.id)}')" title="Delete session & cleanup worktree" aria-label="Delete Harness session">${UI_ICONS.close}</button>
+            <button class="btn btn-xs btn-danger" style="padding:1px 5px; min-height:var(--target-min); font-size:10px;" onclick="event.stopPropagation(); deleteHarnessSession('${escapeHtml(s.id)}')" title="Delete session & cleanup worktree" aria-label="Delete Harness session">${UI_ICONS.close}</button>
           </div>
           <div class="chronicle-meta">
             <span>${stIcon} ${wtTag}</span>

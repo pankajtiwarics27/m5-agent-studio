@@ -1,0 +1,171 @@
+{
+  "story": "UIUX-P5-03",
+  "title": "Responsive and touch-target regression",
+  "generated_by": "scripts/uiux_responsive_inventory.py",
+  "surface": "layout and hit areas of the six panes",
+  "panes": [
+    "start",
+    "harness",
+    "hall",
+    "council",
+    "debate",
+    "chat"
+  ],
+  "widths": [
+    1440,
+    1024,
+    768,
+    480,
+    360
+  ],
+  "target_min_px": 24,
+  "target_readers": [
+    ".chip",
+    ".chk-lbl",
+    "summary",
+    ".evidence-copy",
+    ".harness-perm-badge"
+  ],
+  "shrinkers": {
+    "select { min-width: 0; max-width: 100%; }": "a select may not be wider than the row it is in",
+    ".start-workspace-actions select { flex: 1 1 200px; }": "the recent-folder picker joins the row instead of sizing it",
+    ".council-settings-content > * { min-width: 0; }": "the Hall settings column may shrink below the model label"
+  },
+  "breakpoints": {
+    "1100": "the monitor rail folds away and the two-column layout becomes one",
+    "880": "the harness and hall sidebars fold away; the council seat grid goes to two columns",
+    "860": "the hall shell goes to one column",
+    "820": "the role grid goes to two columns",
+    "600": "phones: header, tabs, composers and the full-screen modals",
+    "390": "small phones: the tightest header and rail"
+  },
+  "inline_min_heights": [],
+  "walk": {
+    "script": "scripts/responsive_walk.mjs",
+    "checks": [
+      "at ${size.label}px no pane scrolls sideways",
+      "at ${size.label}px every control is either on screen or inside a strip that scrolls to it",
+      "at ${size.label}px every control's hit area is at least ${TARGET_MIN} by ${TARGET_MIN}",
+      "at ${size.label}px no status chip clips its own text"
+    ],
+    "check_count": 4
+  },
+  "captures": [
+    "responsive-1440-debate.png",
+    "responsive-768-harness.png",
+    "responsive-480-council.png",
+    "responsive-360-start.png",
+    "responsive-360-chat.png",
+    "responsive-landscape-debate.png"
+  ],
+  "checks": [
+    {
+      "check": "the stylesheet carries one target-size floor, and it is 24px",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "density does not move the floor: a compact layout may look tighter, not be harder to hit",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every control that was under the floor reads the token",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "no inline style drops a control back under the floor",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a select and the flex row it sits in are allowed to shrink",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the Start shell has a definite width, so `margin: 0 auto` cannot size it to its content",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the Compare arbiter picker is a flex item that may shrink below its model label",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "no pane shell is pinned to a pixel width that a narrow pane would clip",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the stylesheet has the six documented breakpoints and no others",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "each pane's layout is addressed at a narrow breakpoint, not only the shared shell",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the one strip that is allowed to overflow scrolls, so the cards past the edge are reachable",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk measures all five widths in all six panes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk measures a hit area, not a CSS declaration",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk uses a finger as well as a mouse",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk rotates the phone and checks the sideways scroll did not come back",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk names the strips that scroll, rather than silently excusing them",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk refuses to report a walk it did not perform",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the captures the doc lists exist and were written by the walk",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "each rule is broken in a copy of the source by a test, so a rule that stopped looking fails",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the doc is written, and reachable from the docs index",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the ledger marks this story done with evidence",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "check_count": 21,
+  "findings": [],
+  "status": "clean"
+}

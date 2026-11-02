@@ -24,19 +24,19 @@ is a bug in the caller, and the `error` kind is already how bugs are shown.
 
 | Container | Pane | Kind | Actions | Line |
 |---|---|---|---|---|
-| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 3305 |
-| `#startRecentState` | Start | `empty` | `Start a session`, `Open Harness` | 3364 |
-| `#startRecentState` | Start | `error` | `Retry`, `Open Harness` | 3439 |
-| `#startHealthState` | Start | `error` | `Re-check`, `Monitor rail` | 3537 |
-| `#startWorkspaceState` | Start | `error` | `Retry`, `Open Harness` | 3621 |
-| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 3942 |
-| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 3956 |
-| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 3966 |
-| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 3980 |
-| `#hallSummonState` | Council | `error` | `Retry the round`, `Check readiness`, `Ask one model` | 5268 |
-| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 8370 |
-| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 8396 |
-| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 8520 |
+| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 3321 |
+| `#startRecentState` | Start | `empty` | `Start a session`, `Open Harness` | 3380 |
+| `#startRecentState` | Start | `error` | `Retry`, `Open Harness` | 3455 |
+| `#startHealthState` | Start | `error` | `Re-check`, `Monitor rail` | 3553 |
+| `#startWorkspaceState` | Start | `error` | `Retry`, `Open Harness` | 3637 |
+| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 3958 |
+| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 3972 |
+| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 3982 |
+| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 3996 |
+| `#hallSummonState` | Council | `error` | `Retry the round`, `Check readiness`, `Ask one model` | 5284 |
+| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 8386 |
+| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 8412 |
+| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 8536 |
 
 13 call sites across 9 of 9 containers: 3 empty, 7 error, 3 recovery.
 
@@ -62,9 +62,9 @@ should not quietly become a pane rewrite:
 
 | Handler | Line |
 |---|---|
-| `installSkill()` | 4258 |
-| `openHarnessDiffModal()` | 10173 |
-| `runMcpPlayground()` | 11816 |
+| `installSkill()` | 4274 |
+| `openHarnessDiffModal()` | 10189 |
+| `runMcpPlayground()` | 11832 |
 
 ## Checks and limits
 
