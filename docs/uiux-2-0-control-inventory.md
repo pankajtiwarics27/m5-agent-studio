@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `75a860fc8a4c5a8fcd2de2009f875bfe9c04d1e621131b11029257f685aa08e5`.
+* Frontend digest: `e8dccfcb8f1206703121ecefaa0e693ac384b76fd086972c495049af1e84f3d8`.
 * Panes: 6 · controls in panes: 84 · controls in the
   shared chrome: 106 · script-rendered: 42.
 
@@ -139,7 +139,7 @@ Section `pane-debate`, 5 interactive elements.
 |---|---|---|---|---|---|
 | 1 | input | d-synth | checkbox | — | syncDebateArbiter() |
 | 2 | select | d-judge | — | — | — |
-| 3 | textarea | debatePrompt | — | Compare SQLite WAL vs DuckDB vs embedded Postgres for a local macOS telemetry & vector hybrid store handling 500 writes/sec. | — |
+| 3 | textarea | debatePrompt | — | What to compare | — |
 | 4 | button | debateStopBtn | — | Stop | stopActiveStream() |
 | 5 | button | debateRunBtn | — | Start Compare | runDebate() |
 

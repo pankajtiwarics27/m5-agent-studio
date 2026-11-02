@@ -1,0 +1,280 @@
+{
+  "story": "UIUX-P5-02",
+  "title": "Keyboard and screen-reader regression",
+  "generated_by": "scripts/uiux_keyboard_a11y_inventory.py",
+  "surface": "keyboard and screen-reader contract of the six panes",
+  "panes": [
+    "start",
+    "harness",
+    "hall",
+    "council",
+    "debate",
+    "chat"
+  ],
+  "activation": {
+    "attributes": [
+      "role=\"button\"",
+      "tabindex=\"0\"",
+      "data-key-activate"
+    ],
+    "keys": [
+      "Enter",
+      " "
+    ],
+    "activation_targets": [
+      {
+        "tag": "span",
+        "class": "chip"
+      },
+      {
+        "tag": "span",
+        "class": "skill-pill"
+      },
+      {
+        "tag": "div",
+        "class": "model-row"
+      },
+      {
+        "tag": "div",
+        "class": "chronicle-item"
+      },
+      {
+        "tag": "div",
+        "class": "starter-card"
+      },
+      {
+        "tag": "div",
+        "class": "starter-card"
+      },
+      {
+        "tag": "div",
+        "class": "starter-card"
+      },
+      {
+        "tag": "div",
+        "class": "chronicle-item"
+      },
+      {
+        "tag": "span",
+        "class": "skill-pill"
+      },
+      {
+        "tag": "span",
+        "class": "chip"
+      }
+    ]
+  },
+  "dismiss_only": {
+    "modal-backdrop": "a click outside the dialog closes it; Escape is the keyboard path"
+  },
+  "ring": {
+    "global_px": 2.0,
+    "composer_box_px": 2.0,
+    "stream_px": 2.0,
+    "minimum_px": 2.0
+  },
+  "tab_order": {
+    "tabs": 6,
+    "tabbable_tabs": 1,
+    "positive_tabindex": 0
+  },
+  "names": {
+    "controls": 91,
+    "unnamed": 0,
+    "live_regions": 15
+  },
+  "walk": {
+    "script": "scripts/a11y_walk.mjs",
+    "checks": [
+      "no control is mouse-only: every click target is a native control or a reachable button",
+      "the only exceptions are the modal backdrops, which Escape dismisses",
+      "every stop in the tab order has a name a screen reader can read",
+      "every stop shows where the focus is",
+      "nothing hidden or zero-sized takes focus",
+      "Enter presses a starter card, and the card is reachable by Tab",
+      "Space presses a chip, and the chip says it is a button rather than a decoration",
+      "the composer shows the focus on the box, not only inside the textarea",
+      "an overlay is a modal dialog that takes focus and keeps Tab inside it",
+      "Escape closes the overlay and gives focus back to where it was",
+      "the rail keeps one selected tab, one tabbable tab, and every pane labelled by its own tab",
+      "no control is pushed to the front of the tab order with a positive tabindex",
+      "nothing focusable hides inside an `aria-hidden` subtree",
+      "the focus ring survives the narrow layout",
+      "no page error occurred"
+    ],
+    "check_count": 15
+  },
+  "captures": [
+    "a11y-card-focus.png",
+    "a11y-chip-focus.png",
+    "a11y-composer-focus.png",
+    "a11y-overlay-focus.png",
+    "a11y-narrow-focus.png"
+  ],
+  "checks": [
+    {
+      "check": "every click target is a native control or carries the role, the tab stop and the activation hook",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the click targets that take no tab stop are only the declared dismiss-only backdrops",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the backdrops are declared, with the reason and the keyboard path beside them",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the non-native controls are the ten that were mouse-only: starter cards, preset chips, skill pills and session rows",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a chip that was already a button stays a button, and is not given the attributes it does not need",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "one delegated keydown turns Enter and Space into the click the pointer would have made",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the handler refuses to double-press a native control",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "no inline key handler runs from markup",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the global focus ring is drawn with `:focus-visible` at 2px or more",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the composer still owns the decision to hide the textarea's own ring",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the composer draws the focus on the box instead, at the width the global ring uses",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a scroll region that takes focus draws a ring of its own",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "no other selector turns a focusable element's ring off without replacing it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the rail is one tablist of six tabs, each pointing at its own pane",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "each pane is a `tabpanel` labelled by the tab that controls it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "exactly one tab is in the tab order, so a pane is one Tab away and not six",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "nothing is pushed to the front of the tab order with a positive tabindex",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every form control in the markup carries a name source a screen reader can read",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the panes announce their state instead of only drawing it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a dialog takes `aria-modal` when it opens and remembers what had focus",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "closing a dialog gives focus back to the control that opened it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Tab is trapped inside the open dialog rather than wandering into the page behind it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Escape is a registered shortcut, so it closes the top overlay and is discoverable in the list",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk presses keys on a real browser and answers the three questions per stop",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk covers all six panes and the two controls that were mouse-only",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk proves the overlay traps focus, closes on Escape and gives focus back",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk refuses to report a walk it did not perform",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the captures the doc lists exist and were written by the walk",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "each rule is broken in a copy of the source by a test, so a rule that stopped looking fails",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the doc is written, and reachable from the docs index",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the ledger marks this story done with evidence",
+      "ok": false,
+      "detail": "tracking.status='not_started'"
+    }
+  ],
+  "check_count": 31,
+  "findings": [
+    {
+      "check": "the ledger marks this story done with evidence",
+      "ok": false,
+      "detail": "tracking.status='not_started'"
+    }
+  ],
+  "status": "drifted"
+}
