@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 32,
+  "revision": 33,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,13 +102,13 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P5-03",
-    "next_recommended_story": "UIUX-P5-04",
-    "last_checkpoint": "2026-11-02T06:30:00Z",
-    "last_session_id": "arena/d238f5be-m5-agent-studio",
+    "last_completed_story": "UIUX-P5-04",
+    "next_recommended_story": "UIUX-P5-05",
+    "last_checkpoint": "2026-11-02T07:20:00Z",
+    "last_session_id": "arena/eefefbad-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "0bdff87a98aa733ebabdceefbf6eb2a4c07c9d28",
+    "last_verified_commit": "93ec00354750380093f574ac314bfa6b59e6055f",
     "last_updated": "2026-11-02",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -316,11 +316,11 @@
         "UIUX-P5-05"
       ],
       "total": 5,
-      "done": 3,
+      "done": 4,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 2,
-      "percent_complete": 60
+      "not_started": 1,
+      "percent_complete": 80
     },
     {
       "id": "P6",
@@ -344,11 +344,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 33,
+    "done": 34,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 7,
-    "percent_complete": 82
+    "not_started": 6,
+    "percent_complete": 85
   },
   "stories": [
     {
@@ -6434,7 +6434,7 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
+      "current_behavior": "Measured, not read: the transcript re-rendered every message for every token (1.6 ms a render at 2 messages, 12.0 ms at 60, 660 nodes), and the harness stream rebuilt every card for every event over a cache that sorted all of its keys on every read and kept every event it had ever seen (3.5 ms per arrival at 800 events, 2,970 nodes). Both costs grew with the length of the session, so a long answer or a long run paid for work whose only visible product was the last frame.",
       "target_behavior": "SSE performance and bounded DOM updates with no loss of existing functionality.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
@@ -6477,24 +6477,91 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P5-04 (SSE performance and bounded DOM updates). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
-        "known_regressions": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-02T06:00:00Z",
+        "updated_at": "2026-11-02T07:20:00Z",
+        "completed_at": "2026-11-02T07:20:00Z",
+        "owner_session": "arena/eefefbad-m5-agent-studio",
+        "commit_sha": "93ec00354750380093f574ac314bfa6b59e6055f",
+        "changed_files": [
+          "docs/README.md",
+          "docs/media/stream-perf/stream-chat-complete.png",
+          "docs/media/stream-perf/stream-chat-midstream.png",
+          "docs/media/stream-perf/stream-harness-window-narrow.png",
+          "docs/media/stream-perf/stream-harness-window.png",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-harness-timeline.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-stream-performance.md",
+          "docs/uiux-2-0-tokens.md",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Harness_Timeline.json",
+          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Stream_Performance.json",
+          "product/M5_2_0_UIUX_Tokens.json",
+          "scripts/stream_perf_walk.mjs",
+          "scripts/uiux_stream_perf_inventory.py",
+          "static/index.html",
+          "studio.py",
+          "tests/test_stream_perf.py"
+        ],
+        "evidence": [
+          "Cost measured before changing anything, in the pane, on the demo fixture: `renderChatMessages()` took 1.64 ms with 2 messages, 5.01 ms with 20 and 11.98 ms with 60 (660 nodes); `renderStoredHarnessEvents()` took 0.40 ms with 40 events, 1.84 ms with 200 and 3.54 ms with 800 (2,970 nodes). Both grew with the session, which is the defect: a 400-token answer at 60 messages spent about five seconds of main-thread work on frames the reader never saw.",
+          "Root causes found by profiling rather than reading: a token rebuilt the HTML of every message (`renderMarkdown` over the whole transcript), and the harness render sorted all 5,000 cached keys plus merged and re-sorted the whole log before drawing a card - the profiler put 114.6 ms of a 20-frame burst in `getBoundingClientRect`, then 11.5 ms a frame in the render itself once the sort was gone.",
+          "`node scripts/stream_perf_walk.mjs --screenshots docs/media/stream-perf` -> 15/15 checks on the built app: a real reply to the local model arrives and ends `complete` (2 messages, 551 chars) and was captured mid-stream at 289 chars; a token costs 1.00 ms on a 60-message transcript against 0.74 ms on 6 (it no longer scales with the conversation, budget 3 ms); 60 tokens scheduled in one frame cause 1 DOM rewrite; a live event appends at 0.11 ms/event with no duplicate and no out-of-order card; a full window absorbs 10 events a frame at 1.72 ms/frame; an 8,000-event log draws 300 cards in 1,201 nodes; the pane says `Showing the newest 300 of 5000 events on screen; Replay re-reads the whole log from the server.` while the timeline says `5000 events held, seq 3001-8000 \u00b7 cursor 8000`; a reader scrolled to 240 stays on their words when a 57.5px card leaves (drift 0.5px, not pulled to the bottom) and is given the fresh badge; 360px wide has no sideways scroll; no page error.",
+          "`python3 scripts/uiux_stream_perf_inventory.py` states the contract in source: 31 checks, 0 findings - one render per frame with the terminal frames synchronous, a shape-guarded single-node replacement, a declared 300-card window and 5,000-event cache each with its reason, an append plan that refuses on approval state and on a window that is not a contiguous run, one batched height read that is skipped entirely for a reader at the bottom, and the cursor still advancing past an event the cache dropped.",
+          "The walk is honest rather than optimistic: the mid-stream capture is taken at the first frame with words on it and the walk hashes both chat captures and fails if they are the same picture - the first attempt produced two identical images and the check caught it."
+        ],
+        "test_results": [
+          "node scripts/stream_perf_walk.mjs --screenshots docs/media/stream-perf (TMPDIR/STUDIO_SCREENSHOT_CHROME/STUDIO_PUPPETEER_CORE/LD_LIBRARY_PATH set, STUDIO_PYTHON=.venv/bin/python) -> 15/15 checks passed",
+          "python3 scripts/uiux_stream_perf_inventory.py -> 31 checks, 0 findings - clean; --check -> 0",
+          "pytest -q tests/test_stream_perf.py -> 37 passed (each rule broken in a copy of the source and expected to fail)",
+          "pytest -q tests/test_harness_timeline.py -> 27 passed (P3-02's cursor, dedupe, gap and scroll contract still holds under the new render path)",
+          "python3 scripts/uiux_harness_timeline_inventory.py -> 81 checks, 0 findings after the render rewrite",
+          "ruff check . -> All checks passed; mypy -> Success: no issues found in 58 source files",
+          "python3 scripts/check_frontend_syntax.py -> JavaScript syntax OK (1 inline block(s)); demo_tour.py --check -> up to date; validate_docs -> 5 pages / 181 files; validate_screenshots -> 6/6",
+          "python3 scripts/build_studio.py -> Built studio.py: 3,462,235 bytes"
+        ],
+        "visual_evidence": [
+          "docs/media/stream-perf/stream-chat-midstream.png - a reply arriving: the Generating chip, `2 chars` at 0.0s, Stop live and Send refused",
+          "docs/media/stream-perf/stream-chat-complete.png - the same turn finished (`Complete`), a different picture and checked to be one",
+          "docs/media/stream-perf/stream-harness-window.png - `Session log 5000 events`, `5000 events held, seq 3001-8000 \u00b7 cursor 8000`, and the note saying the newest 300 of 5000 are on screen",
+          "docs/media/stream-perf/stream-harness-window-narrow.png - the same bounded stream at 360px with no sideways scroll"
+        ],
+        "known_regressions": [
+          "A five-message conversation still pays about 0.7 ms a frame, and a 60-message one about 1 ms: that is the cost of drawing the message being written and it is not hidden.",
+          "Once the window is full, an arrival that is not a pure append (an approval changed, a gap forced a resync) still rebuilds the visible window at about 1.5 ms - a bounded cost, paid only when the cards on screen really did change.",
+          "The DOM now shows the newest 300 cards and not the whole log. The pane says so, the timeline count names the true total, Replay re-reads everything from the server, and the durable log, cursor and `retained_from_seq` semantics are untouched - but a reader looking for event 4,000 of 5,000 has to use Replay.",
+          "The client cache keeps 5,000 events, so a backgrounded tab that returns after more than 5,000 events gets a window rather than the whole log; the gap detection already forced a snapshot reload before this story and still does.",
+          "Carried forward: demo tok/s written to `perf_samples`; `ttft` fixture-equal; `prefill_tps`/`cached_tokens` unprinted; restored checkpoint carries no contract; Hall readiness refresh rewrites seat pickers; `auto_unload` drops just-compared model; browser comparison copy capped at 60,000 chars; `stopped` status carries warn tone; model-residency chips outside the vocabulary; `#chatMessages` stays `aria-live=\"off\"` with its reason declared."
+        ],
+        "decisions": [
+          "Coalesce by frame, not by timer: `requestAnimationFrame` is the unit the screen actually paints in, and a timer would either render work nobody sees or starve the last frame of a burst. The terminal frames bypass the queue because the frame that ends a turn is the one the reader is waiting for.",
+          "Compare shape, not content, to decide the cheap path. Hashing or diffing the transcript would cost as much as drawing it; the shape is six cheap facts per turn and it fails closed - any change it does not understand falls back to a full render.",
+          "Bound what is drawn (300 cards) and what is kept (5,000 events) at different sizes, because they answer different questions: what one screen can show, and how far back a scroll should reach without a fetch.",
+          "Say the window out loud rather than hiding it. A bounded DOM that does not admit it is bounded is a silent truncation; the note names the window, the count names the total and Replay names the way back.",
+          "Append only when the run on screen is still a contiguous run of the new window and no approval state moved. The approval rule is not an optimisation detail: those cards are already drawn, so an append would leave two versions of one approval on screen.",
+          "Batch the height read and skip it entirely for a reader at the bottom. Measurement inside a removal loop is what the profiler found; a follower is going to the bottom regardless, so the heights are only needed by the reader who is reading.",
+          "The cache keeps its own ascending key list instead of sorting on read. That is a memory cost of one array and it removed the length of the log from the cost of drawing a window."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
-        "readme_updated": false
+        "handoff_note": "P5-04 is done. `scripts/stream_perf_walk.mjs` is the part to reuse: it times a real streamed reply and synthetic bursts in-page, asserts a per-token and per-frame budget, and refuses to report a walk it did not perform. `product/M5_2_0_UIUX_Stream_Performance.json` states the contract - a render that drops the shape guard, rebuilds every message, draws the whole log, appends across an approval change, or sorts the cache on read fails the inventory before it reaches a pane.",
+        "next_action": "Start UIUX-P5-05 from this commit; the per-frame budgets and the walk's in-page timing are the pattern to extend, and the bounded DOM means any new per-card content has to fit a 300-card window.",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",
