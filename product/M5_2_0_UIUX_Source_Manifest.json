@@ -348,9 +348,9 @@
     {
       "path": "scripts/compare_history_walk.mjs",
       "role": "browser walk for the additive saved-Compare history browser against a throwaway demo",
-      "sha256": "5093eca39e71f4736466613eb997e994783fbc3f7480556f1422626ebd6bca4c",
-      "bytes": 12132,
-      "lines": 230
+      "sha256": "e342beadefdf65f956cefa2385875c3fabaa7f17be3c1eed7620dfc7ed614cc9",
+      "bytes": 12221,
+      "lines": 234
     },
     {
       "path": "tests/test_compare_history.py",

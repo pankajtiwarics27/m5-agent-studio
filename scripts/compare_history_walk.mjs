@@ -44,10 +44,14 @@ function resolveChrome() {
 }
 
 const puppeteer = await loadPuppeteer();
-const browser = await puppeteer.launch({
-  executablePath: resolveChrome(),
-  args: (process.env.STUDIO_SCREENSHOT_CHROME_ARGS || "--no-zygote --single-process --disable-gpu --no-sandbox").split(" "),
-});
+const browserArgs = [
+  "--no-zygote",
+  "--single-process",
+  "--disable-gpu",
+  "--no-sandbox",
+  ...(process.env.STUDIO_SCREENSHOT_CHROME_ARGS || "").split(" ").filter(Boolean),
+];
+const browser = await puppeteer.launch({ executablePath: resolveChrome(), args: [...new Set(browserArgs)] });
 const errors = [];
 const requests = [];
 const report = [];
