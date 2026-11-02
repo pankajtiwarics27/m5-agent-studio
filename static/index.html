@@ -513,6 +513,11 @@
   .debate-provenance-note { color: var(--text-faint); font-size: 11.2px; line-height: 1.45; padding-top: 2px; }
   .debate-results-basis { margin-top: 9px; color: var(--text-faint); font-size: 11.4px; line-height: 1.5; }
   .debate-panel-note { font-size: 11.6px; color: var(--amber); margin-bottom: 8px; }
+  .debate-record { margin: 0 20px 16px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
+  .debate-record[data-source="browser"] { border-color: var(--amber); }
+  .debate-record[data-source="server"] { border-color: var(--accent); }
+  .debate-record-state { font-size: 11.8px; line-height: 1.55; color: var(--text-dim); margin: 6px 0 0; }
+  .debate-record-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
   .debate-run-hint { font-size: 11.5px; color: var(--text-faint); }
 
   .chat-header-bar { padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--bg-elev); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -2442,6 +2447,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div id="debateResults" class="debate-results" role="region" aria-label="Comparison results" hidden></div>
         <!-- UIUX-P4-05: what the response said about each reply, and this page times nothing. -->
         <div id="debateProvenance" class="debate-results debate-provenance" role="region" aria-label="Measured performance per reply" hidden></div>
+        <!-- UIUX-P4-06: where this comparison came from, what is kept, and how it leaves the page. -->
+        <div id="debateRecord" class="debate-record" role="region" aria-label="This comparison's record and export" hidden></div>
       </div>
     </section>
 
@@ -5744,7 +5751,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     // Debate checkboxes include only Loaded Local M5 + Cloud/Combo Models
     const prevChecked = new Set([...document.querySelectorAll(".debate-m-chk:checked")].map(c => c.value));
     document.getElementById("debateModelChecks").innerHTML = unifiedCatalog.slice(0, 10).map((it, idx) => {
-      const chk = firstInit ? (idx < 3) : prevChecked.has(it.id);
+      // A comparison restored from this browser's copy names the models it compared; the list is
+      // built after that restore, so it has to honour it rather than picking the first three.
+      const chk = firstInit
+        ? (debateRestoreModels ? debateRestoreModels.includes(it.id) : idx < 3)
+        : prevChecked.has(it.id);
+      if (firstInit) debateRestoreModels = null;
       return `<label class="chk-lbl"><input type="checkbox" class="debate-m-chk" value="${escapeHtml(it.id)}" ${chk ? "checked" : ""}/> ${escapeHtml(it.label)}</label>`;
     }).join("");
     // The set of models is part of what Start will do, so a rebuilt list re-states it.
@@ -7166,6 +7178,355 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // One badge per state, spelled out: `data-tone` is a fixed vocabulary and the status-component
   // inventory reads it from the markup, so the tone is a literal here rather than an attribute
   // computed from DEBATE_STATUS. The label still comes from DEBATE_STATUS, so the two cannot drift.
+  /* ── UIUX-P4-06: the comparison has a record, and it leaves the page whole ──
+     A comparison was twenty minutes of work on screen and nothing else: reload
+     and it was gone, and the only thing the server kept was a row nobody could
+     reach from this pane. `debate_done` carries a `run_id` - `save_run` returns 0
+     when the write fails, so a run can be unsaved - and the record it writes is
+     readable back through `GET /api/history/export`.
+
+     What is here now: the pane says whether this comparison is on record, keeps
+     its own copy in this browser so a reload restores it (labelled as this
+     browser's copy every time it is drawn, because a restored run must never
+     pass for a live one), reads the server's copy back on request from the
+     redacted export, and exports the comparison whole - every panel, the
+     arbiter's verdict under its own heading, and no answer picked.
+  */
+  const DEBATE_RECORD_KEY = "m5_debate_comparison";
+  const DEBATE_RECORD_MAX_CHARS = 60000;
+  let debateRunId = 0;
+  let debateSource = "live";
+  let debateSourceMeta = null;
+  let debateLocalKept = false;
+  let debateRestoreModels = null;
+
+  /** The comparison on screen, as data: every panel, the arbiter, and where it came from. */
+  function debateSnapshot() {
+    const panels = debatePanels();
+    if (!panels.length) return null;
+    return {
+      version: 1,
+      saved_at: new Date().toISOString(),
+      run_id: Number(debateRunId || 0),
+      run_elapsed_s: debateRunElapsed,
+      prompt: (document.getElementById("debatePrompt") || {}).value || "",
+      models: panels.map(panel => panel.model),
+      judged: debateJudged.slice(),
+      panels: panels.map(panel => ({
+        model: panel.model,
+        status: panel.status,
+        content: String(panel.c || ""),
+        usage: panel.u || null,
+        error: panel.error || "",
+      })),
+      synthesis: { model: debateSynth.m || "", content: String(debateSynth.c || ""), usage: debateSynth.u || null },
+    };
+  }
+
+  /**
+   * The snapshot, made to fit a browser's storage. Only the longest replies are shortened, and the
+   * fact is recorded rather than hidden: a restored comparison that had been quietly cut would be a
+   * different comparison wearing the same labels.
+   */
+  function debateSnapshotCapped(snapshot) {
+    if (!snapshot) return null;
+    const size = () => JSON.stringify(snapshot).length;
+    let dropped = 0;
+    if (size() <= DEBATE_RECORD_MAX_CHARS) return { snapshot, dropped };
+    const capEach = Math.max(400, Math.floor(DEBATE_RECORD_MAX_CHARS / (snapshot.panels.length + 2)));
+    snapshot.panels.forEach(panel => {
+      if (panel.content.length > capEach) {
+        dropped += panel.content.length - capEach;
+        panel.content = panel.content.slice(0, capEach);
+      }
+    });
+    if (snapshot.synthesis.content.length > capEach) {
+      dropped += snapshot.synthesis.content.length - capEach;
+      snapshot.synthesis.content = snapshot.synthesis.content.slice(0, capEach);
+    }
+    snapshot.truncated = dropped > 0;
+    snapshot.dropped_chars = dropped;
+    return { snapshot, dropped };
+  }
+
+  function debateRecordWrite() {
+    const built = debateSnapshotCapped(debateSnapshot());
+    if (!built) return false;
+    try {
+      localStorage.setItem(DEBATE_RECORD_KEY, JSON.stringify(built.snapshot));
+      debateLocalKept = true;
+      return true;
+    } catch (_error) {
+      debateLocalKept = false;
+      return false;
+    }
+  }
+
+  function debateRecordRead() {
+    let raw = null;
+    try {
+      raw = localStorage.getItem(DEBATE_RECORD_KEY);
+    } catch (_error) {
+      return null;
+    }
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.panels) || !parsed.panels.length) return null;
+      return parsed;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function debateRecordClear() {
+    try {
+      localStorage.removeItem(DEBATE_RECORD_KEY);
+      debateLocalKept = false;
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  /** The status a recorded reply has, from the usage the server stored with it. */
+  function debateRecordedStatus(panel) {
+    const usage = panel.usage || {};
+    if (usage.demo === true || usage.demo === "true") return "demo";
+    if (String(usage.finish_reason || "") === "length") return "cut";
+    return String(panel.content || "").trim() ? "answered" : "empty";
+  }
+
+  /** Draw a comparison from a copy - this browser's or the server's - never as a live run. */
+  function debateApplySnapshot(snapshot, source, meta) {
+    if (!snapshot || !Array.isArray(snapshot.panels)) return false;
+    debateSlots = {};
+    snapshot.panels.forEach((panel, index) => {
+      debateSlots[index] = {
+        model: panel.model,
+        c: String(panel.content || ""),
+        u: panel.usage || null,
+        status: panel.status || debateRecordedStatus(panel),
+        error: panel.error || "",
+      };
+    });
+    debateSynth = {
+      m: (snapshot.synthesis && snapshot.synthesis.model) || "",
+      c: (snapshot.synthesis && snapshot.synthesis.content) || "",
+      u: (snapshot.synthesis && snapshot.synthesis.usage) || null,
+    };
+    debateJudged = Array.isArray(snapshot.judged) && snapshot.judged.length ? snapshot.judged.slice() : DEBATE_JUDGED_DEFAULTS.slice();
+    debateRunId = Number(snapshot.run_id || 0);
+    debateRunElapsed = snapshot.run_elapsed_s === undefined ? null : snapshot.run_elapsed_s;
+    debateSource = source;
+    debateSourceMeta = meta || null;
+    // A copy drawn back from this browser is a copy this browser holds: the Forget control has to
+    // be there for it, and the flag cannot depend on a write that happened in this page's lifetime.
+    debateLocalKept = source === "browser" ? true : debateLocalKept;
+    debateBusy = false;
+    const prompt = document.getElementById("debatePrompt");
+    if (prompt && snapshot.prompt) prompt.value = snapshot.prompt;
+    const wanted = new Set(snapshot.models || snapshot.panels.map(panel => panel.model));
+    [...document.querySelectorAll(".debate-m-chk")].forEach(box => { box.checked = wanted.has(box.value); });
+    deployDebateCriterionFocus();
+    renderDebate();
+    updateDebateRunControl();
+    return true;
+  }
+
+  function deployDebateCriterionFocus() {
+    // The criteria strip is redrawn with the comparison; nothing needs focusing here, but the
+    // strip must be redrawn or a restored comparison would be judged against the old list.
+    renderDebateCriteria();
+  }
+
+  /** The whole comparison as markdown: every reply, the arbiter separately, nothing picked. */
+  function debateComparisonMarkdown() {
+    const panels = debatePanels();
+    if (!panels.length) return "";
+    const prompt = ((document.getElementById("debatePrompt") || {}).value || "").trim();
+    const lines = ["# Comparison", "", prompt || "_no question was recorded_", ""];
+    panels.forEach((panel, index) => {
+      const meta = debateMeta(panel.status);
+      lines.push(`## Opinion ${index + 1} · ${panel.model} · ${meta.label}`, "");
+      if (panel.error) lines.push(`_${panel.error}_`, "");
+      lines.push(String(panel.c || "").trim() || "_this panel wrote nothing_", "");
+    });
+    if (debateSynth.m) {
+      lines.push(`## Arbiter verdict · ${debateSynth.m}`, "", String(debateSynth.c || "").trim() || "_the arbiter wrote nothing_", "");
+    }
+    lines.push("## Measured performance", "", "| Reply | Elapsed | First token | Reply tokens | Decode |", "| :--- | :--- | :--- | :--- | :--- |");
+    panels.concat(debateSynth.m ? [{ model: debateSynth.m + " · arbiter", status: "answered", u: debateSynth.u, arbiter: true }] : []).forEach(panel => {
+      const reading = debateProvenanceOf(panel);
+      lines.push(`| ${panel.model}${panel.arbiter ? " · arbiter" : ""} | ${reading.elapsed || "—"} | ${reading.ttft || "—"} | ${reading.tokens || "—"} | ${reading.decode || "—"} |`);
+    });
+    lines.push("");
+    lines.push("## What this is not", "");
+    lines.push("* Every reply above is as it was recorded; nothing here picks a winner or merges the answers.");
+    lines.push("* Cost is not stated: no price is configured for any model.");
+    if (debateSource === "browser") lines.push("* This copy was kept by this browser, not by the server.");
+    if (debateSource === "detached") lines.push("* This comparison is not kept by this browser; read it before the page reloads.");
+    if (debateSource === "server") lines.push(`* This copy was read back from the server's redacted export (run ${debateRunId || "unknown"}); credential-shaped text in it was replaced by the exporter.`);
+    if (debateSourceMeta && debateSourceMeta.truncated) lines.push(`* ${debateSourceMeta.dropped_chars || 0} characters of the longest replies were dropped to fit this browser's storage.`);
+    lines.push(`* ${debateRunId ? `The server's record is run ${debateRunId}.` : "The server did not save this run."}`);
+    return lines.join("\n");
+  }
+
+  function debateComparisonJson() {
+    const snapshot = debateSnapshot();
+    if (!snapshot) return "";
+    snapshot.source = debateSource;
+    return JSON.stringify(snapshot, null, 2);
+  }
+
+  function debateCopyComparison(btn) {
+    const markdown = debateComparisonMarkdown();
+    if (!markdown) {
+      showToast("There is no comparison to copy yet", "warn");
+      return;
+    }
+    const done = () => {
+      if (!btn) return;
+      const previous = btn.textContent;
+      btn.textContent = "Copied!";
+      setTimeout(() => { btn.textContent = previous; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(markdown).then(done, () => showToast("The clipboard refused; the comparison is on screen", "warn"));
+    } else {
+      showToast("This browser has no clipboard; the comparison is on screen", "warn");
+    }
+  }
+
+  function debateDownloadComparison() {
+    const json = debateComparisonJson();
+    if (!json) {
+      showToast("There is no comparison to download yet", "warn");
+      return;
+    }
+    try {
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `comparison-${debateRunId ? "run-" + debateRunId : "browser"}.json`;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } catch (_error) {
+      showToast("This browser refused the download; copy the comparison instead", "err");
+    }
+  }
+
+  function debateForgetRecord() {
+    const removed = debateRecordClear();
+    showToast(removed ? "Forgotten in this browser; the server's record, if any, is untouched" : "This browser refused to forget the copy", removed ? "info" : "warn");
+    debateSource = "detached";
+    debateSourceMeta = null;
+    renderDebateRecord();
+  }
+
+  /** Read the server's own copy of this run back from the redacted export. */
+  async function debateReadServerRecord() {
+    if (!debateRunId) {
+      showToast("The server did not save this run, so there is nothing to read back", "warn");
+      return;
+    }
+    try {
+      const response = await fetch("/api/history/export");
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const bundle = await response.json();
+      // The export nests its tables (`bundle.tables.runs`), and every string in it has been
+      // scrubbed for credentials - which is why the bar calls this the redacted copy.
+      const tables = bundle && bundle.tables ? bundle.tables : {};
+      const runs = Array.isArray(tables.runs) ? tables.runs : [];
+      const row = runs.find(entry => Number(entry.id) === Number(debateRunId) && String(entry.mode || "debate") === "debate");
+      if (!row) {
+        showToast(`The server's export has no run ${debateRunId}`, "warn");
+        return;
+      }
+      let payload = row.payload_json;
+      if (typeof payload === "string") payload = JSON.parse(payload);
+      const opinions = Array.isArray(payload.opinions) ? payload.opinions : [];
+      if (!opinions.length) {
+        showToast(`Run ${debateRunId} is on record but carries no replies`, "warn");
+        return;
+      }
+      const synthesis = payload.synthesis || null;
+      debateApplySnapshot({
+        version: 1,
+        saved_at: row.created_at || "",
+        run_id: Number(row.id),
+        run_elapsed_s: payload.total_elapsed_s === undefined ? null : payload.total_elapsed_s,
+        prompt: payload.prompt || "",
+        models: opinions.map(opinion => opinion.model),
+        judged: debateJudged.slice(),
+        panels: opinions.map((opinion, index) => ({
+          model: opinion.model,
+          status: debateRecordedStatus({ content: opinion.content, usage: opinion.usage }),
+          content: opinion.content || "",
+          usage: opinion.usage || null,
+          error: "",
+        })),
+        synthesis: synthesis
+          ? { model: synthesis.model || "", content: synthesis.content || "", usage: synthesis.usage || null }
+          : { model: "", content: "", usage: null },
+      }, "server", { fetched_at: new Date().toISOString(), run_id: Number(row.id), truncated: false, redacted: true });
+      showToast(`Read run ${debateRunId} back from the server's export`, "ok");
+    } catch (error) {
+      showToast("The server's export could not be read: " + error.message, "err");
+    }
+  }
+
+  /** Where this comparison stands: live, kept here, or read back - and how to take it away. */
+  function renderDebateRecord() {
+    const host = document.getElementById("debateRecord");
+    if (!host) return;
+    if (!debatePanels().length) {
+      host.hidden = true;
+      host.innerHTML = "";
+      return;
+    }
+    host.hidden = false;
+    host.dataset.source = debateSource;
+    const kept = debateSourceMeta && debateSourceMeta.kept_at ? " · kept at " + escapeHtml(debateSourceMeta.kept_at) : "";
+    const saved = debateRunId
+      ? `The server saved this run as <strong>run ${escapeHtml(String(debateRunId))}</strong>; its own copy is in <span class="mono">GET /api/history/export</span>.`
+      : "<strong>The server did not save this run</strong> (no run id came back), so the only copy is the one this page holds.";
+    const source = debateSource === "detached"
+      ? "This comparison is on this page only: this browser is not keeping a copy of it, and a reload will lose it."
+      : debateSource === "browser"
+        ? "This is <strong>this browser's copy</strong> of the comparison you last ran here" + kept + " - not the server's record, and not a live run."
+      : debateSource === "server"
+        ? "This was <strong>read back from the server's redacted export</strong>; it is the copy on record, not a live run."
+        : debateLocalKept
+          ? "This comparison is the one you just ran on this page; a copy is kept in this browser, so a reload restores it."
+          : "This comparison is the one you just ran on this page, and this browser refused to keep a copy of it.";
+    // A restored comparison names models that may not be resident any more: the list is live, so
+    // Start from here would compare something else, and the bar has to say that rather than let a
+    // reader believe the same two models are still ticked.
+    const listed = new Set([...document.querySelectorAll(".debate-m-chk")].map(box => box.value));
+    const missing = debatePanels().map(panel => panel.model).filter(model => listed.size && !listed.has(model));
+    const availability = missing.length
+      ? ` The models this comparison used are not all listed right now (${escapeHtml(missing.join(", "))}), so Start would compare something else.`
+      : "";
+    const truncation = debateSourceMeta && debateSourceMeta.truncated
+      ? ` ${escapeHtml(String(debateSourceMeta.dropped_chars || 0))} characters of the longest replies were dropped to fit this browser's storage.`
+      : "";
+    host.innerHTML = '<div class="debate-criteria-head"><strong>This comparison</strong>'
+      + '<span class="badge ' + (debateSource === "live" ? "green" : debateSource === "server" ? "indigo" : "amber") + '">'
+      + (debateSource === "live" ? "ran on this page" : debateSource === "server" ? "read from the server" : debateSource === "detached" ? "not kept here" : "kept in this browser") + "</span></div>"
+      + '<div class="debate-record-state">' + source + " " + saved + availability + truncation + "</div>"
+      + '<div class="debate-record-actions">'
+      + '<button class="btn btn-xs" type="button" onclick="debateCopyComparison(this)" title="Copy every reply and the arbiter&apos;s verdict as markdown">Copy as markdown</button>'
+      + '<button class="btn btn-xs" type="button" onclick="debateDownloadComparison()" title="Download the whole comparison as JSON, one entry per reply">Download .json</button>'
+      + (debateLocalKept ? '<button class="btn btn-xs" type="button" onclick="debateForgetRecord()" title="Remove this browser&apos;s copy; the server&apos;s record is untouched">Forget this copy</button>' : "")
+      + (debateRunId && debateSource !== "server" ? '<button class="btn btn-xs" type="button" onclick="debateReadServerRecord()" title="Read this run back from the server&apos;s redacted export">Read the server&apos;s copy</button>' : "")
+      + "</div>";
+  }
+
   const DEBATE_BADGE = {
     queued: '<span class="status" data-tone="neutral">' + escapeHtml(DEBATE_STATUS.queued.label) + "</span>",
     running: '<span class="status" data-tone="busy">' + escapeHtml(DEBATE_STATUS.running.label) + "</span>",
@@ -7508,6 +7869,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     renderDebateSummary();
     renderDebateResults();
     renderDebateProvenance();
+    renderDebateRecord();
   }
 
   function runDebate() {
@@ -7523,6 +7885,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     models.forEach((model, index) => (debateSlots[index] = { model, c: "", u: null, status: "queued", error: "" }));
     debateSynth = { m: "", c: "", u: null };
     debateRunElapsed = null;
+    debateRunId = 0;
+    debateSource = "live";
+    debateSourceMeta = null;
     renderDebate();
     updateDebateRunControl();
     document.getElementById("debateStopBtn").style.display = "inline-flex";
@@ -7558,7 +7923,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       synthesis_start(d) { debateSynth.m = d.model; renderDebate(); },
       synthesis_done(d) { debateSynth.u = d.usage; renderDebate(); },
       // The run's own total, as the server measured it. Nothing here is timed by the page.
-      debate_done(d) { debateRunElapsed = d.total_elapsed_s; renderDebate(); },
+      debate_done(d) {
+        debateRunElapsed = d.total_elapsed_s;
+        debateRunId = Number(d.run_id || 0);
+        renderDebate();
+      },
       stopped() { debateEnd("stopped", ""); },
       closed() { debateEnd("lost", ""); },
       error(d) {
@@ -7570,6 +7939,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       document.getElementById("debateStopBtn").style.display = "none";
       // Nothing may keep saying "running" after the stream is gone.
       if (debatePanels().some(slot => slot.status === "running" || slot.status === "queued")) debateEnd("lost", "");
+      // A comparison is worth keeping whatever way it ended: the failed and the stopped ones are
+      // the ones a reader most wants back.
+      debateRecordWrite();
+      renderDebateRecord();
       updateDebateRunControl();
     });
   }
@@ -7579,6 +7952,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   (function initDebatePane() {
     renderDebateCriteria();
     renderDebate();
+    // A reload used to be a deletion. The copy this browser kept is drawn back with its source
+    // stated on the record bar, because a restored comparison must never pass for a live one.
+    const keptComparison = debateRecordRead();
+    if (keptComparison) {
+      debateRestoreModels = (keptComparison.models || []).slice();
+      debateApplySnapshot(keptComparison, "browser", {
+        kept_at: keptComparison.saved_at ? new Date(keptComparison.saved_at).toLocaleString() : "",
+        truncated: Boolean(keptComparison.truncated),
+        dropped_chars: keptComparison.dropped_chars || 0,
+      });
+    }
     const prompt = document.getElementById("debatePrompt");
     if (prompt) prompt.addEventListener("input", updateDebateRunControl);
     // Enter adds a criterion, from one listener on the strip rather than an inline handler on the
