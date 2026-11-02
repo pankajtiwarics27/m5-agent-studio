@@ -1,0 +1,136 @@
+{
+  "schema": 1,
+  "captured_at": "2026-11-02T19:44:08.540Z",
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "device_scale_factor": 1
+  },
+  "variant": {
+    "theme": "dark",
+    "interaction": "keyboard focus on shared theme action"
+  },
+  "checks": {
+    "panes": 6,
+    "mismatches": 6,
+    "status": "mismatch"
+  },
+  "issues": [
+    "start: hover (rgb(41, 46, 51); rgb(82, 90, 98)) differs from focus (rgb(27, 30, 33); rgb(52, 57, 62))",
+    "harness: hover (rgb(41, 46, 51); rgb(82, 90, 98)) differs from focus (rgb(27, 30, 33); rgb(52, 57, 62))",
+    "hall: hover (rgb(41, 46, 51); rgb(82, 90, 98)) differs from focus (rgb(27, 30, 33); rgb(52, 57, 62))",
+    "council: hover (rgb(41, 46, 51); rgb(82, 90, 98)) differs from focus (rgb(27, 30, 33); rgb(52, 57, 62))",
+    "debate: hover (rgb(41, 46, 51); rgb(82, 90, 98)) differs from focus (rgb(27, 30, 33); rgb(52, 57, 62))",
+    "chat: hover (rgb(41, 46, 51); rgb(82, 90, 98)) differs from focus (rgb(27, 30, 33); rgb(52, 57, 62))"
+  ],
+  "shots": [
+    {
+      "id": "start",
+      "tab": "start",
+      "file": "start.png",
+      "bytes": 59378,
+      "sha256": "bf3675036c86e5c1258a3f5f01ef2048e810ae789d3f6d371cca8f0cb7e67cff",
+      "hover": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)"
+      },
+      "focus": {
+        "background": "rgb(27, 30, 33)",
+        "border": "rgb(52, 57, 62)",
+        "focusVisible": true,
+        "outlineColor": "rgb(168, 180, 255)",
+        "outlineWidth": "2px"
+      }
+    },
+    {
+      "id": "harness",
+      "tab": "harness",
+      "file": "harness.png",
+      "bytes": 65591,
+      "sha256": "2c4349799403026d98b9cf12dbc6c7cc811ba9dff84ae740ef1b70a4ae596744",
+      "hover": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)"
+      },
+      "focus": {
+        "background": "rgb(27, 30, 33)",
+        "border": "rgb(52, 57, 62)",
+        "focusVisible": true,
+        "outlineColor": "rgb(168, 180, 255)",
+        "outlineWidth": "2px"
+      }
+    },
+    {
+      "id": "hall",
+      "tab": "hall",
+      "file": "hall.png",
+      "bytes": 57969,
+      "sha256": "921d64b4e57046dfdc505e61e3244935c8c2a8cfab10ec2276ce7d78c2f80a13",
+      "hover": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)"
+      },
+      "focus": {
+        "background": "rgb(27, 30, 33)",
+        "border": "rgb(52, 57, 62)",
+        "focusVisible": true,
+        "outlineColor": "rgb(168, 180, 255)",
+        "outlineWidth": "2px"
+      }
+    },
+    {
+      "id": "council",
+      "tab": "council",
+      "file": "council.png",
+      "bytes": 55373,
+      "sha256": "cae063cd3b7f6cf7c0aaeebdb1242912bf8d3bdb9ded9a60d706e05feb61d53d",
+      "hover": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)"
+      },
+      "focus": {
+        "background": "rgb(27, 30, 33)",
+        "border": "rgb(52, 57, 62)",
+        "focusVisible": true,
+        "outlineColor": "rgb(168, 180, 255)",
+        "outlineWidth": "2px"
+      }
+    },
+    {
+      "id": "debate",
+      "tab": "debate",
+      "file": "debate.png",
+      "bytes": 60077,
+      "sha256": "4148253e637fd3ab401d53e1f1ec2309e09215569c07963c824a349ed8854c83",
+      "hover": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)"
+      },
+      "focus": {
+        "background": "rgb(27, 30, 33)",
+        "border": "rgb(52, 57, 62)",
+        "focusVisible": true,
+        "outlineColor": "rgb(168, 180, 255)",
+        "outlineWidth": "2px"
+      }
+    },
+    {
+      "id": "chat",
+      "tab": "chat",
+      "file": "chat.png",
+      "bytes": 56697,
+      "sha256": "10442cb7f1345391fe4d51ceac6ce561b0ff951e9f4d3d104d7ef0428aaaf2e5",
+      "hover": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)"
+      },
+      "focus": {
+        "background": "rgb(27, 30, 33)",
+        "border": "rgb(52, 57, 62)",
+        "focusVisible": true,
+        "outlineColor": "rgb(168, 180, 255)",
+        "outlineWidth": "2px"
+      }
+    }
+  ]
+}

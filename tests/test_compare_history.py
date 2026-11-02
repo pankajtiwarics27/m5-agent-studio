@@ -70,3 +70,12 @@ def test_no_new_history_api_or_backend_route_was_added() -> None:
     ui_routes = re.findall(r'fetch\("(/api/[^" ]+)"', history_code)
     assert ui_routes == ["/api/history/export"]
     assert '@app.get("/api/history/export")' in APP
+
+
+def test_keyboard_focus_returns_after_async_history_controls_reenable() -> None:
+    find = _between(HTML, "async function debateFindSavedComparisons", "function debateLoadSelectedSavedComparison")
+    download = _between(HTML, "async function debateDownloadFullHistoryExport", "function debateBindHistoryControls")
+    for handler in (find, download):
+        assert 'matches(":focus-visible")' in handler
+        assert "document.activeElement === document.body" in handler
+        assert "focus({ preventScroll: true })" in handler

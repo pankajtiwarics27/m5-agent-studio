@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "captured_at": "2026-11-02T19:42:43.810Z",
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "device_scale_factor": 1
+  },
+  "variant": {
+    "theme": "dark",
+    "interaction": "keyboard focus on shared theme action"
+  },
+  "checks": {
+    "panes": 6,
+    "mismatches": 0,
+    "status": "pass"
+  },
+  "issues": [],
+  "shots": [
+    {
+      "id": "start",
+      "tab": "start",
+      "file": "start.png",
+      "bytes": 155107,
+      "sha256": "b9d3c03eb67860d586942de4eafbb3bedcf97e48bffb9399a13d22799c00871a",
+      "hover": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)"
+      },
+      "focus": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)",
+        "focusVisible": true,
+        "outlineColor": "rgb(168, 180, 255)",
+        "outlineWidth": "2px"
+      }
+    },
+    {
+      "id": "harness",
+      "tab": "harness",
+      "file": "harness.png",
+      "bytes": 173077,
+      "sha256": "796dce0d255763ac9b0941895ebdf97427467b1bdcfaea9e65ac8c237024ed9b",
+      "hover": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)"
+      },
+      "focus": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)",
+        "focusVisible": true,
+        "outlineColor": "rgb(168, 180, 255)",
+        "outlineWidth": "2px"
+      }
+    },
+    {
+      "id": "hall",
+      "tab": "hall",
+      "file": "hall.png",
+      "bytes": 149721,
+      "sha256": "5422c6d899898e3ebead1884672fb2d0ecab159b7cefd8bab0c5bbf249fdd555",
+      "hover": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)"
+      },
+      "focus": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)",
+        "focusVisible": true,
+        "outlineColor": "rgb(168, 180, 255)",
+        "outlineWidth": "2px"
+      }
+    },
+    {
+      "id": "council",
+      "tab": "council",
+      "file": "council.png",
+      "bytes": 111684,
+      "sha256": "f61f789e4a9e57007239c934680913666f4502e4440cf92e7a528ce94a12139e",
+      "hover": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)"
+      },
+      "focus": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)",
+        "focusVisible": true,
+        "outlineColor": "rgb(168, 180, 255)",
+        "outlineWidth": "2px"
+      }
+    },
+    {
+      "id": "debate",
+      "tab": "debate",
+      "file": "debate.png",
+      "bytes": 146934,
+      "sha256": "6df94ad530898e4a2c3b2485190b9e7fd3923ee31808c498b3832454952db9d2",
+      "hover": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)"
+      },
+      "focus": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)",
+        "focusVisible": true,
+        "outlineColor": "rgb(168, 180, 255)",
+        "outlineWidth": "2px"
+      }
+    },
+    {
+      "id": "chat",
+      "tab": "chat",
+      "file": "chat.png",
+      "bytes": 115449,
+      "sha256": "a8ceb070d79b679e1baa53be483e359c9540b39e87100c8e7442108fb5108a8e",
+      "hover": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)"
+      },
+      "focus": {
+        "background": "rgb(41, 46, 51)",
+        "border": "rgb(82, 90, 98)",
+        "focusVisible": true,
+        "outlineColor": "rgb(168, 180, 255)",
+        "outlineWidth": "2px"
+      }
+    }
+  ]
+}
