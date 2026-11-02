@@ -108,7 +108,7 @@
     "last_session_id": "arena/661f9d49-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "fe5538008937d73addc5abe53e84ea91b104b2cb",
+    "last_verified_commit": "996d29804bb2808800c7bb48ab6cb7c4266ccfc9",
     "last_updated": "2026-11-02",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -5656,7 +5656,7 @@
         "updated_at": "2026-11-02T00:00:00Z",
         "completed_at": "2026-11-02T00:00:00Z",
         "owner_session": "arena/f5a671d5-m5-agent-studio",
-        "commit_sha": null,
+        "commit_sha": "996d29804bb2808800c7bb48ab6cb7c4266ccfc9",
         "changed_files": [
           "docs/README.md",
           "docs/media/compare-provenance/README.md",
@@ -5707,7 +5707,7 @@
           "node scripts/compare_provenance_walk.mjs --screenshots docs/media/compare-provenance -> 12/12 checks passed (chromium 153 via @sparticuz/chromium + puppeteer-core 25.16, STUDIO_PYTHON=.venv/bin/python; four fixtures: plain, --resident-model Gemma-4-21B-REAP-4bit, --slow-model, --offline; every figure compared against the SSE frames the page received)",
           "python3 -m pytest -q tests/test_compare_provenance.py -> 21 passed",
           "node scripts/compare_criteria_walk.mjs -> 15/15; node scripts/council_readiness_walk.mjs -> 31/31; node scripts/council_deliberation_walk.mjs -> 14/14; node scripts/council_verdict_walk.mjs -> 17/17; node scripts/pipeline_artifacts_walk.mjs -> 22/22; node scripts/pipeline_recovery_walk.mjs -> 27/27 (the six walks that share this pane and this fixture, re-run because the fixture changed)",
-          "python3 -m pytest -q (full suite) -> 2324 passed, 27 skipped, 1 failed: tests/test_baseline.py::test_pinned_baseline_is_present_and_ancestral raises `Pinned commit 7904892d... is not present in this checkout`, because this sandbox checkout holds one squashed commit and cannot resolve the pinned baseline SHA; the same file's manifest check skips for the same reason, and both run in full history on CI",
+          "python3 -m pytest -q (full suite) -> 2326 passed, 27 skipped, 1 failed: tests/test_baseline.py::test_pinned_baseline_is_present_and_ancestral raises `Pinned commit 7904892d... is not present in this checkout`, because this sandbox checkout holds one squashed commit and cannot resolve the pinned baseline SHA; the same file's manifest check skips for the same reason, and both run in full history on CI",
           "python3 -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py (browser env) -> 30 passed",
           "python3 -m ruff check . -> All checks passed; python3 -m mypy -> Success: no issues found in 58 source files; python3 scripts/check_frontend_syntax.py -> JavaScript syntax OK; python3 scripts/validate_docs.py -> 5 required pages, 174 files scanned; python3 scripts/demo_tour.py --check -> up to date; python3 scripts/validate_screenshots.py -> 6 of 6 captured and consistent; python3 scripts/build_studio.py -> Built studio.py: 3,424,124 bytes; every uiux_* inventory regenerates with no findings and the source manifest, preservation signoff and roadmap status page reproduce"
         ],
