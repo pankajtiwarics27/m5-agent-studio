@@ -400,7 +400,10 @@
 
   .prompt-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 13px; }
   .prompt-box textarea { width: 100%; min-height: 72px; resize: vertical; border: none; background: transparent; padding: 2px; font-size: 14px; line-height: 1.55; color: var(--text); }
+  /* The textarea's own ring is off so the box can carry it: a composer that shows no focus at
+     all is the one control a keyboard user cannot find again once they are inside it. */
   .prompt-box textarea:focus { outline: none; }
+  .prompt-box:focus-within { outline: 2px solid var(--ring); outline-offset: 2px; }
   .prompt-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
   .chip { background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); padding: 3.5px 9px; border-radius: 999px; font-size: 11.4px; cursor: pointer; }
   .chip:hover, .chip.active { color: #fff; border-color: var(--cyan); background: rgba(6,182,212,0.14); }
@@ -610,6 +613,9 @@
   .harness-main { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
   .harness-bar { padding: 9px 16px; background: var(--bg-elev); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .harness-stream { flex: 1; min-height: 96px; overflow-y: auto; padding: 14px 18px 22px; display: flex; flex-direction: column; gap: 11px; }
+  /* The stream is focusable so it can be scrolled with the arrow keys; without a ring the focus
+     lands on a region with no visible boundary and the keyboard user is lost inside it. */
+  .harness-stream:focus-visible, .hall-stream:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
   .h-turn-user { align-self: flex-end; max-width: 88%; background: rgba(99, 102, 241, 0.16); border: 1px solid rgba(99, 102, 241, 0.42); border-radius: 12px; padding: 10px 14px; }
   .h-step-card { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--cyan); border-radius: 11px; padding: 11px 14px; }
   .h-step-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 12px; }
@@ -1398,7 +1404,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div style="display:grid; grid-template-columns:1.5fr 1fr auto; gap:8px; align-items:end; margin-bottom:8px;">
             <div><label class="field-lbl">Document Title</label><input type="text" id="ocTitle" style="width:100%;" placeholder="e.g. Auth Service JWT Rotation & Edge Cases" /></div>
             <div>
-              <label class="field-lbl">Folder Namespace</label>
+              <label class="field-lbl" for="ocFolder">Folder Namespace</label>
               <select id="ocFolder" style="width:100%;">
                 <option value="architecture">architecture</option>
                 <option value="decisions" selected>decisions</option>
@@ -1501,14 +1507,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div><label class="field-lbl">Server Alias</label><input type="text" id="mcpAlias" style="width:100%; font-family:var(--mono);" placeholder="context7" /></div>
           <div><label class="field-lbl">Display Name</label><input type="text" id="mcpName" style="width:100%;" placeholder="Context7 Live Docs" /></div>
           <div>
-            <label class="field-lbl">Transport</label>
+            <label class="field-lbl" for="mcpTransport">Transport</label>
             <select id="mcpTransport" style="width:100%;" onchange="toggleMcpTransportFields()">
               <option value="http">Cloud / Custom HTTP (URL)</option>
               <option value="stdio">Custom Stdio Command</option>
             </select>
           </div>
           <div>
-            <label class="field-lbl">Approval Policy</label>
+            <label class="field-lbl" for="mcpApprovalPolicy">Approval Policy</label>
             <select id="mcpApprovalPolicy" style="width:100%;">
               <option value="auto">Auto-Run (Trusted Read/Search)</option>
               <option value="inherit">Inherit Harness Policy</option>
@@ -1522,7 +1528,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div style="display:grid; grid-template-columns:1.8fr 0.9fr 1.2fr; gap:8px; margin-bottom:8px;">
             <div><label class="field-lbl">Remote / Custom MCP URL</label><input type="text" id="mcpUrl" style="width:100%; font-family:var(--mono);" placeholder="https://mcp.context7.com/mcp" /></div>
             <div>
-              <label class="field-lbl">Auth Header</label>
+              <label class="field-lbl" for="mcpAuthHeader">Auth Header</label>
               <select id="mcpAuthHeader" style="width:100%;">
                 <option value="Authorization">Authorization: Bearer</option>
                 <option value="x-api-key">x-api-key</option>
@@ -1532,7 +1538,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <div><label class="field-lbl">API Token (Masked; blank keeps existing)</label><input type="password" id="mcpToken" style="width:100%; font-family:var(--mono);" placeholder="Optional for free servers" /></div>
           </div>
           <div style="margin-bottom:8px;">
-            <label class="field-lbl">Extra HTTP Headers JSON (Optional)</label>
+            <label class="field-lbl" for="mcpHeadersJson">Extra HTTP Headers JSON (Optional)</label>
             <input type="text" id="mcpHeadersJson" style="width:100%; font-family:var(--mono); font-size:11.6px;" placeholder='{"X-Workspace": "prod"}' />
           </div>
         </div>
@@ -1544,7 +1550,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <div><label class="field-lbl">Arguments (Shell-quoted or space-separated)</label><input type="text" id="mcpArgs" style="width:100%; font-family:var(--mono);" placeholder="-y @playwright/mcp@latest --headless" /></div>
           </div>
           <div style="margin-bottom:8px;">
-            <label class="field-lbl">Environment Variables JSON (Secrets auto-masked)</label>
+            <label class="field-lbl" for="mcpEnvJson">Environment Variables JSON (Secrets auto-masked)</label>
             <input type="text" id="mcpEnvJson" style="width:100%; font-family:var(--mono); font-size:11.6px;" placeholder='{"API_KEY": "..."}' />
           </div>
         </div>
@@ -1559,6 +1565,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       <details style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:9px 12px;">
         <summary style="cursor:pointer; font-size:12.3px; font-weight:650; color:#e9d5ff;">Paste <code>mcpServers</code> JSON Config (Claude Desktop / Cursor / Windsurf Format)</summary>
         <div style="margin-top:8px;">
+          <label class="field-lbl" for="mcpImportJsonInput" style="display:block; margin-bottom:4px;">Imported servers JSON</label>
           <textarea id="mcpImportJsonInput" rows="4" style="width:100%; font-family:var(--mono); font-size:11.4px;" placeholder='{"mcpServers": {"exa": {"url": "https://mcp.exa.ai/mcp"}, "my-script": {"command": "python3", "args": ["server.py"]}}}'></textarea>
           <div style="display:flex; justify-content:flex-end; margin-top:6px;">
             <button class="btn btn-purple btn-xs" onclick="importMcpJson()">Import &amp; Sync All</button>
@@ -1576,9 +1583,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
         <label class="field-lbl" style="color:var(--emerald);">Test an MCP tool call</label>
         <div style="display:grid; grid-template-columns:1fr 1.2fr 1.8fr auto; gap:7px; align-items:end; margin-top:6px;">
-          <div><label class="field-lbl">Server</label><select id="mcpPlayServer" style="width:100%;" onchange="populateMcpPlayTools()"></select></div>
-          <div><label class="field-lbl">Tool Name</label><select id="mcpPlayTool" style="width:100%;"></select></div>
-          <div><label class="field-lbl">JSON Arguments</label><input type="text" id="mcpPlayArgs" style="width:100%; font-family:var(--mono); font-size:11.6px;" value="{}" /></div>
+          <div><label class="field-lbl" for="mcpPlayServer">Server</label><select id="mcpPlayServer" style="width:100%;" onchange="populateMcpPlayTools()"></select></div>
+          <div><label class="field-lbl" for="mcpPlayTool">Tool Name</label><select id="mcpPlayTool" style="width:100%;"></select></div>
+          <div><label class="field-lbl" for="mcpPlayArgs">JSON Arguments</label><input type="text" id="mcpPlayArgs" style="width:100%; font-family:var(--mono); font-size:11.6px;" value="{}" /></div>
           <button id="mcpPlayBtn" class="btn btn-emerald" onclick="runMcpPlayground()">Test Call</button>
         </div>
         <pre id="mcpPlayOutput" style="display:none; margin-top:8px; padding:9px; background:var(--bg-code); border-radius:7px; font-family:var(--mono); font-size:11.3px; max-height:170px; overflow:auto; white-space:pre-wrap; color:#e2e8f0;"></pre>
@@ -1722,7 +1729,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div><label class="field-lbl">Alias (prefix)</label><input type="text" id="provAlias" style="width:100%;" placeholder="openrouter" /></div>
           <div><label class="field-lbl">Display Name</label><input type="text" id="provName" style="width:100%;" placeholder="OpenRouter" /></div>
           <div>
-            <label class="field-lbl">Wire Protocol</label>
+            <label class="field-lbl" for="provWire">Wire Protocol</label>
             <select id="provWire" style="width:100%;">
               <option value="openai">OpenAI Compatible (/chat/completions)</option>
               <option value="anthropic">Anthropic Native (/v1/messages SSE)</option>
@@ -1762,8 +1769,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           List models in priority order (comma-separated). Example: try Cloud first -> Free Cloud -> Local M5 `Qwen3.8-27B-oQ4e-mtp` if offline or rate-limited!
         </div>
         <div style="display:grid; grid-template-columns:1fr 1.2fr 2fr auto; gap:7px; align-items:end; margin-bottom:10px;">
-          <div><label class="field-lbl">Combo Alias</label><input type="text" id="comboAlias" style="width:100%;" value="hybrid-architect" /></div>
-          <div><label class="field-lbl">Label</label><input type="text" id="comboName" style="width:100%;" value="Cloud -> M5 Fallback" /></div>
+          <div><label class="field-lbl" for="comboAlias">Combo Alias</label><input type="text" id="comboAlias" style="width:100%;" value="hybrid-architect" /></div>
+          <div><label class="field-lbl" for="comboName">Label</label><input type="text" id="comboName" style="width:100%;" value="Cloud -> M5 Fallback" /></div>
           <div><label class="field-lbl">Ordered Targets</label><input type="text" id="comboTargets" style="width:100%; font-family:var(--mono); font-size:11.6px;" placeholder="openrouter::qwen/qwen3-coder:free, Qwen3.8-27B-oQ4e-mtp" /></div>
           <button class="btn btn-amber" onclick="saveCombo()">Save Combo</button>
         </div>
@@ -1788,7 +1795,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </div>
     <div style="padding:16px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:14px;">
       <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px;">
-        <label class="field-lbl">1-Click Install Skill (Zero-Node Git Fallback Built-In)</label>
+        <label class="field-lbl" for="skillInstallInput">1-Click Install Skill (Zero-Node Git Fallback Built-In)</label>
         <div style="display:flex; gap:8px; margin-top:6px;">
           <input type="text" id="skillInstallInput" style="flex:1; font-family:var(--mono); font-size:12px;" value="npx skills add https://github.com/nextlevelbuilder/ui-ux-pro-max-skill --skill ui-ux-pro-max" />
           <button id="skillInstallBtn" class="btn btn-primary" onclick="installSkill()">Install</button>
@@ -1907,7 +1914,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </div>
     <div style="padding:16px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
       <div>
-        <label class="field-lbl">Session Matter / Architecture Plan / Code Problem</label>
+        <label class="field-lbl" for="spawnRequestInput">Session Matter / Architecture Plan / Code Problem</label>
         <textarea id="spawnRequestInput" rows="4" style="width:100%;">Design an event-sourced local-first task queue on macOS with crash-safe SQLite WAL persistence, zero-polling wakeups, and backpressure.</textarea>
       </div>
       <div>
@@ -2434,7 +2441,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <!-- UIUX-P4-04: what the comparison is judged on, before it runs. -->
         <div id="debateCriteria" class="debate-criteria" role="region" aria-label="Comparison criteria"></div>
         <div class="prompt-box">
-          <textarea id="debatePrompt">Compare SQLite WAL vs DuckDB vs embedded Postgres for a local macOS telemetry &amp; vector hybrid store handling 500 writes/sec.</textarea>
+          <textarea id="debatePrompt" aria-label="What to compare">Compare SQLite WAL vs DuckDB vs embedded Postgres for a local macOS telemetry &amp; vector hybrid store handling 500 writes/sec.</textarea>
           <div class="prompt-footer">
             <span style="font-size:12px; color:var(--text-faint);">Select the models to compare; responses appear side by side.</span>
             <div style="display:flex; gap:8px; align-items:center;">
@@ -2716,6 +2723,19 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       }
     }
   }
+
+  // A control that is a `div` or a `span` for layout reasons is still a control: it can be reached
+  // with Tab, and Enter or Space presses it, because the alternative is an affordance that only a
+  // mouse can operate. The attributes are on the element (`role="button" tabindex="0"
+  // data-key-activate`) and this one handler turns the two keys into the click the pointer would
+  // have made - no inline `onkeydown`, so nothing runs from markup.
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " " && event.key !== "Spacebar") return;
+    const target = event.target && event.target.closest ? event.target.closest("[data-key-activate]") : null;
+    if (!target || target.tagName === "BUTTON" || target.tagName === "A") return;
+    event.preventDefault();
+    target.click();
+  });
 
   function openOverlay(id, options = {}) {
     const backdrop = document.getElementById(id);
@@ -4054,7 +4074,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function renderProvidersModal() {
     document.getElementById("providerPresetChips").innerHTML = Object.keys(providerPresets).map(k => {
       const p = providerPresets[k];
-      return `<span class="chip" onclick="selectProviderPreset('${escapeHtml(k)}')">${escapeHtml(p.name)}</span>`;
+      return `<span class="chip" role="button" tabindex="0" data-key-activate onclick="selectProviderPreset('${escapeHtml(k)}')">${escapeHtml(p.name)}</span>`;
     }).join("");
 
     const list = document.getElementById("configuredProvidersList");
@@ -4204,14 +4224,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       ? `<span style="font-size:11.8px; color:var(--text-dim);">0 skills — click <strong>+ Skills</strong> to install <code>ui-ux-pro-max</code></span>`
       : installedSkills.map(s => {
           const on = selectedSkills.has(s.id);
-          return `<span class="skill-pill ${on ? 'active' : ''}" onclick="toggleSkill('${escapeHtml(s.id)}')">${on ? UI_ICONS.check + ' ' : ''}${escapeHtml(s.name)}${s.has_design_engine ? ' • Design Engine' : ''}</span>`;
+          return `<span class="skill-pill ${on ? 'active' : ''}" role="button" tabindex="0" data-key-activate onclick="toggleSkill('${escapeHtml(s.id)}')">${on ? UI_ICONS.check + ' ' : ''}${escapeHtml(s.name)}${s.has_design_engine ? ' • Design Engine' : ''}</span>`;
         }).join("");
 
     document.getElementById("installedSkillsList").innerHTML = !installedSkills.length
       ? `<div style="font-size:12px; color:var(--text-faint);">No SKILL.md found yet.</div>`
       : installedSkills.map(s => {
           const on = selectedSkills.has(s.id);
-          return `<div class="model-row ${on ? 'loaded' : ''}" style="cursor:pointer;" onclick="toggleSkill('${escapeHtml(s.id)}')">
+          return `<div class="model-row ${on ? 'loaded' : ''}" style="cursor:pointer;" role="button" tabindex="0" data-key-activate onclick="toggleSkill('${escapeHtml(s.id)}')">
             <div class="model-top"><strong>${escapeHtml(s.name)}</strong><span class="badge ${on ? 'green' : ''}">${on ? 'ACTIVE' : 'OFF'}</span></div>
             <div style="font-size:11.6px; color:var(--text-dim); margin-top:3px;">${escapeHtml(s.description)}</div>
           </div>`;
@@ -4285,7 +4305,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       }
       if (!activeHallId) { await selectHallSession(hallSessions[0].id); return; }
       list.innerHTML = hallSessions.map(s => `
-        <div class="chronicle-item ${s.id === activeHallId ? 'active' : ''}" onclick="selectHallSession('${escapeHtml(s.id)}')">
+        <div class="chronicle-item ${s.id === activeHallId ? 'active' : ''}" role="button" tabindex="0" data-key-activate onclick="selectHallSession('${escapeHtml(s.id)}')">
           <div class="chronicle-title">${escapeHtml(s.title)}</div>
           <div class="chronicle-meta"><span>${s.status === 'closed' ? 'Closed' : 'Active'}</span><span>${s.participant_count} voices • ${s.message_count} msgs</span></div>
         </div>`).join("");
@@ -8657,15 +8677,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <code>0xranx/OpenContext</code> FTS5 Memory + <code>codegraph-rust</code> Zero-RAM AST Graph + <code>mksglu/context-mode</code> 98% KV-Cache Sandbox!
         </div>
         <div class="starter-grid">
-          <div class="starter-card" onclick="fillHarnessStarter('Run codegraph_architecture and codegraph_quality on this workspace, then run codegraph_impact on stream_any_model and save key architectural findings to OpenContext via oc_save_doc.')">
+          <div class="starter-card" role="button" tabindex="0" data-key-activate onclick="fillHarnessStarter('Run codegraph_architecture and codegraph_quality on this workspace, then run codegraph_impact on stream_any_model and save key architectural findings to OpenContext via oc_save_doc.')">
             <strong style="font-size:12.6px; color:#67e8f9;">1. AST CodeGraph + OpenContext Audit</strong>
             <div style="font-size:11.6px; color:var(--text-dim); margin-top:4px;">Maps hub modules, complexity hotspots &amp; blast-radius callers, then persists to <code>oc://doc/</code>.</div>
           </div>
-          <div class="starter-card" onclick="fillHarnessStarter('Create a standalone token_bucket.py rate limiter with async acquire/try_acquire, write unit tests in test_token_bucket.py, and run python3 -m unittest until all tests pass.')">
+          <div class="starter-card" role="button" tabindex="0" data-key-activate onclick="fillHarnessStarter('Create a standalone token_bucket.py rate limiter with async acquire/try_acquire, write unit tests in test_token_bucket.py, and run python3 -m unittest until all tests pass.')">
             <strong style="font-size:12.6px; color:#a7f3d0;">2. Autonomous TDD / GSD 3-Wave Spec</strong>
             <div style="font-size:11.6px; color:var(--text-dim); margin-top:4px;">Click <strong>GSD 3-Wave Spec</strong> to run Wave 1 <code>PLAN.md</code> &rarr; Fresh Wave 2 Execute &rarr; Fresh Wave 3 Verify!</div>
           </div>
-          <div class="starter-card" onclick="fillHarnessStarter('Search the codebase with grep_search for error-handling and security edge cases, read key sections, and call delegate_subagent to run an independent Critic audit.')">
+          <div class="starter-card" role="button" tabindex="0" data-key-activate onclick="fillHarnessStarter('Search the codebase with grep_search for error-handling and security edge cases, read key sections, and call delegate_subagent to run an independent Critic audit.')">
             <strong style="font-size:12.6px; color:#fde68a;">3. Multi-Model Security &amp; Bug Audit</strong>
             <div style="font-size:11.6px; color:var(--text-dim); margin-top:4px;">Lead model inspects code + delegates adversarial review to Sub-Agent Critic.</div>
           </div>
@@ -8786,7 +8806,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const stIcon = harnessStatusBadge(s).label;
       const wtTag = s.use_worktree && s.branch_name ? `<span class="badge cyan" style="font-size:9.8px; padding:1px 5px;">WT</span>` : "";
       return `
-        <div class="chronicle-item ${s.id === activeHarnessId ? 'active' : ''}" onclick="selectHarnessSession('${escapeHtml(s.id)}')">
+        <div class="chronicle-item ${s.id === activeHarnessId ? 'active' : ''}" role="button" tabindex="0" data-key-activate onclick="selectHarnessSession('${escapeHtml(s.id)}')">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:5px;">
             <div class="chronicle-title">${escapeHtml(s.title)}</div>
             <button class="btn btn-xs btn-danger" style="padding:1px 5px; min-height:20px; font-size:10px;" onclick="event.stopPropagation(); deleteHarnessSession('${escapeHtml(s.id)}')" title="Delete session & cleanup worktree" aria-label="Delete Harness session">${UI_ICONS.close}</button>
@@ -11563,14 +11583,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       strip.innerHTML = mcpServers.map(s => {
         const on = s.enabled;
         const tCount = s.active_tool_count || 0;
-        return `<span class="skill-pill ${on ? 'active' : ''}" style="${on ? 'border-color:var(--amber); background:rgba(245,158,11,0.18); color:#fef3c7;' : ''}" onclick="toggleMcpServerEnabled('${escapeHtml(s.alias)}', ${!on})" title="${escapeHtml(s.transport.toUpperCase())} • Click to toggle">${on ? UI_ICONS.check + ' ' : ''}${escapeHtml(s.alias)} (${tCount})</span>`;
+        return `<span class="skill-pill ${on ? 'active' : ''}" role="button" tabindex="0" data-key-activate style="${on ? 'border-color:var(--amber); background:rgba(245,158,11,0.18); color:#fef3c7;' : ''}" onclick="toggleMcpServerEnabled('${escapeHtml(s.alias)}', ${!on})" title="${escapeHtml(s.transport.toUpperCase())} • Click to toggle">${on ? UI_ICONS.check + ' ' : ''}${escapeHtml(s.alias)} (${tCount})</span>`;
       }).join("");
     }
 
     // Preset Chips (Cloud vs Custom)
     const cloudChips = [], customChips = [];
     for (const [k, p] of Object.entries(mcpPresets)) {
-      const chipHtml = `<span class="chip" onclick="selectMcpPreset('${escapeHtml(k)}')">${escapeHtml(p.name)}</span>`;
+      const chipHtml = `<span class="chip" role="button" tabindex="0" data-key-activate onclick="selectMcpPreset('${escapeHtml(k)}')">${escapeHtml(p.name)}</span>`;
       if (p.category === "cloud") cloudChips.push(chipHtml);
       else customChips.push(chipHtml);
     }

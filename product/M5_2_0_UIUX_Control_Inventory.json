@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "75a860fc8a4c5a8fcd2de2009f875bfe9c04d1e621131b11029257f685aa08e5",
+  "frontend_sha256": "e8dccfcb8f1206703121ecefaa0e693ac384b76fd086972c495049af1e84f3d8",
   "panes": [
     {
       "dom_id": "start",
@@ -559,6 +559,7 @@
         {
           "tag": "textarea",
           "id": "debatePrompt",
+          "aria-label": "What to compare",
           "text": "Compare SQLite WAL vs DuckDB vs embedded Postgres for a local macOS telemetry & vector hybrid store handling 500 writes/sec."
         },
         {

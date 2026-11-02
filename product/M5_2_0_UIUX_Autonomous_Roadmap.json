@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 30,
+  "revision": 31,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,13 +102,13 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P5-01",
-    "next_recommended_story": "UIUX-P5-02",
-    "last_checkpoint": "2026-11-02T00:00:00Z",
-    "last_session_id": "arena/c382938d-m5-agent-studio",
+    "last_completed_story": "UIUX-P5-02",
+    "next_recommended_story": "UIUX-P5-03",
+    "last_checkpoint": "2026-11-02T05:05:00Z",
+    "last_session_id": "arena/c096ab62-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "219d8e2524f47fcc52456b179beee92888bb448a",
+    "last_verified_commit": "14ba03c411aed9fcbe41fd232bdc692c45eeb2ee",
     "last_updated": "2026-11-02",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -316,11 +316,11 @@
         "UIUX-P5-05"
       ],
       "total": 5,
-      "done": 1,
+      "done": 2,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 4,
-      "percent_complete": 20
+      "not_started": 3,
+      "percent_complete": 40
     },
     {
       "id": "P6",
@@ -344,11 +344,11 @@
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 31,
+    "done": 32,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 9,
-    "percent_complete": 78
+    "not_started": 8,
+    "percent_complete": 80
   },
   "stories": [
     {
@@ -6161,24 +6161,81 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P5-02 (Keyboard and screen-reader regression). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
-        "known_regressions": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-02T04:00:00Z",
+        "updated_at": "2026-11-02T05:05:00Z",
+        "completed_at": "2026-11-02T05:05:00Z",
+        "owner_session": "arena/c096ab62-m5-agent-studio",
+        "commit_sha": "14ba03c411aed9fcbe41fd232bdc692c45eeb2ee",
+        "changed_files": [
+          "static/index.html",
+          "studio.py",
+          "docs/README.md",
+          "docs/uiux-2-0-keyboard-a11y.md",
+          "product/M5_2_0_UIUX_Keyboard_A11y.json",
+          "scripts/a11y_walk.mjs",
+          "scripts/uiux_keyboard_a11y_inventory.py",
+          "tests/test_keyboard_a11y.py",
+          "docs/media/keyboard-a11y/a11y-card-focus.png",
+          "docs/media/keyboard-a11y/a11y-chip-focus.png",
+          "docs/media/keyboard-a11y/a11y-composer-focus.png",
+          "docs/media/keyboard-a11y/a11y-overlay-focus.png",
+          "docs/media/keyboard-a11y/a11y-narrow-focus.png",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "docs/uiux-2-0-control-inventory.md",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "docs/uiux-2-0-route-map.md",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "docs/uiux-2-0-authorization-trace.md"
+        ],
+        "evidence": [
+          "The three defects were one defect - an affordance only a pointer could reach - and they were found by probing the seeded app with a browser rather than by reading the source: 0 unnamed focusables out of 33, 0 positive tabindex, 0 duplicate ids, but the two composers took focus with `outline: none` and nothing in its place, three `.starter-card` and twelve `.chip` elements carried `onclick` and no tab stop, and `#harnessStream` took focus without drawing a ring.",
+          "`node scripts/a11y_walk.mjs --screenshots docs/media/keyboard-a11y` starts the Compare fixture, walks each pane with real Tab presses and asks every stop for its name, its ring and its size; it then presses Enter on a starter card, Space on a preset chip, opens the command palette, Tabs inside it, closes it with Escape and checks focus came back. 15/15 checks.",
+          "The walk is honest rather than optimistic: with the fixes reverted in a copy of `static/index.html` it drops to 9/15, failing exactly the mouse-only control, the ring on both composers, the Enter/Space activation, the box ring and the narrow-layout ring. A walk that skipped itself and reported success would be the failure this story is about, so it refuses to run without a browser binary.",
+          "`python3 scripts/uiux_keyboard_a11y_inventory.py` states the contract in source: 31 checks, 0 findings. It reads every `onclick` target and requires a native control or `role=\"button\" tabindex=\"0\" data-key-activate`; the modal backdrop is the one exception and is declared with its reason and its keyboard path (Escape), which the walk proves.",
+          "`pytest -q` 2415 passed, 27 skipped (1 baseline pin fails in this squashed sandbox as it has for every story; it passes on CI), browser suite 30 passed."
+        ],
+        "test_results": [
+          "node scripts/a11y_walk.mjs --screenshots docs/media/keyboard-a11y (TMPDIR/STUDIO_SCREENSHOT_CHROME/STUDIO_PUPPETEER_CORE/LD_LIBRARY_PATH set, STUDIO_PYTHON=.venv/bin/python) -> 15/15 checks passed; 95 stops across six panes, all named and all ringed; Enter filled the harness task box; Space selected the Context7 preset (mcpAlias '' -> 'context7'); Escape closed the palette and returned focus",
+          "node scripts/a11y_walk.mjs with the fixes reverted in a scratch copy -> 9/15, the six expected checks fail (honesty check for the walk itself)",
+          "python3 scripts/uiux_keyboard_a11y_inventory.py -> 31 checks, 0 findings - clean",
+          "python3 scripts/uiux_keyboard_a11y_inventory.py --check -> 0 (artifacts not stale)",
+          "pytest -q tests/test_keyboard_a11y.py -> 32 passed",
+          "pytest -q -> 2415 passed, 27 skipped, 1 failed (tests/test_baseline.py pins a commit sha, which a squashed sandbox cannot satisfy; passes on CI)",
+          "pytest -q tests/test_screenshot_capture_browser.py (M5_REQUIRE_BROWSER_TESTS=1) -> 30 passed",
+          "ruff check . -> All checks passed; mypy -> Success: no issues found in 58 source files",
+          "python3 scripts/check_frontend_syntax.py -> JavaScript syntax OK (1 inline block(s))",
+          "python3 scripts/demo_tour.py --check -> up to date; python3 scripts/validate_screenshots.py -> 6/6; python3 scripts/validate_docs.py -> 5 pages / 179 files",
+          "python3 scripts/build_studio.py -> Built studio.py: 3,449,953 bytes"
+        ],
+        "visual_evidence": [
+          "docs/media/keyboard-a11y/a11y-card-focus.png - the harness task box after Enter pressed the first starter card, the card's ring visible",
+          "docs/media/keyboard-a11y/a11y-chip-focus.png - the MCP modal with a preset chip focused and its fields filled by the Space press",
+          "docs/media/keyboard-a11y/a11y-composer-focus.png - the Compare composer with focus in the textarea and the ring drawn on the box",
+          "docs/media/keyboard-a11y/a11y-overlay-focus.png - the command palette open as a modal dialog with focus inside it",
+          "docs/media/keyboard-a11y/a11y-narrow-focus.png - the composer ring at a 480 px viewport with no horizontal overflow",
+          "docs/media/screenshots/*.png - the six-pane set, unchanged and still validated 6/6 by scripts/validate_screenshots.py"
+        ],
+        "known_regressions": [
+          "The chat transcript is `role=\"log\"` with `aria-live=\"off\"`: a polite region on a token-by-token stream would read every token. The composer's status line announces the run's state instead, and the transcript is reachable and readable on demand. Declared in the inventory rather than silently left off - making the transcript announce is a bigger behavioural change than this story should carry.",
+          "The modal backdrop keeps its `onclick` and takes no tab stop: a click outside the dialog closes it and Escape is the keyboard path. Declared, with the walk proving Escape closes the dialog it opened.",
+          "Carried forward: demo tok/s still written to `perf_samples`; `ttft` fixture-equal; `prefill_tps`/`cached_tokens` unprinted; restored checkpoint carries no contract; Hall readiness refresh rewrites seat pickers; `auto_unload` drops just-compared model; browser comparison copy capped at 60,000 chars; `stopped` status carries warn tone; model-residency chips (`LOADED`/`LOADING`) deliberately outside the vocabulary."
+        ],
+        "decisions": [
+          "One shape rather than three: a control that is not a native control carries `role=\"button\" tabindex=\"0\" data-key-activate`, and one delegated document-level keydown turns Enter and Space into the click the pointer would have made. Per-element inline handlers were rejected because `scripts/uiux_chat_inventory.py` forbids inline `onkeydown` and because ten small handlers are ten places to forget.",
+          "Converting the elements to `<button>` outright was rejected: the starter card, chip, skill pill and session row are laid out as flex children of grids and lists, and a button would have brought its own font, padding and box model into four different layouts. The attributes keep the layout and add the contract.",
+          "The handler refuses to re-press a native `button` or `a`, because those already answer Enter themselves; pressing them twice would submit twice.",
+          "The composer keeps `outline: none` on the textarea and draws the ring on the box with `:focus-within`. The rule that suppressed the ring was not simply deleted: the textarea fills the box, so two rings would be one ring drawn twice.",
+          "Labels that were drawn beside a control but never associated with it were fixed with `for=` rather than by adding `aria-label`: the reader already has the visible text, and a second name is a second thing to keep true.",
+          "The count assertion pins ten non-native controls. It is a number that has to move when a story adds one, which is the point: it makes a new pointer-only control impossible to add quietly."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
-        "readme_updated": false
+        "handoff_note": "P5-02 is done at 14ba03c. The walk is the part to reuse: `scripts/a11y_walk.mjs` presses real Tab keys and answers name/ring/size for every stop, and it is the first walk in the program that proves a key it did not merely document. The owned exception list is in `product/M5_2_0_UIUX_Keyboard_A11y.json` (`dismiss_only`, `silent_live_regions`); a later story that adds a pointer-only control, a silenced live region or a suppressed ring will fail the inventory until it declares or fixes it.",
+        "next_action": "Start UIUX-P5-03 from this commit; the keyboard walk and the declared exceptions are the pattern to extend.",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",
@@ -6195,7 +6252,8 @@
         ".venv/bin/python scripts/validate_screenshots.py",
         ".venv/bin/python scripts/validate_docs.py"
       ],
-      "blocked_by_unknowns": []
+      "blocked_by_unknowns": [],
+      "status": "done"
     },
     {
       "id": "UIUX-P5-03",
