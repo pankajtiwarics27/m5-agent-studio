@@ -65,7 +65,7 @@ run the server never saved can be checked).
 
 ## The checks
 
-24 checks, 1 findings — **drifted**.
+24 checks, 0 findings — **clean**.
 
 * `pass` the pane states where this comparison came from, in a labelled block of its own
 * `pass` the four sources are named, and a restored comparison never passes for a live one
@@ -90,4 +90,4 @@ run the server never saved can be checked).
 * `pass` the fixture can produce a saved run and an unsaved one
 * `pass` the walk reloads, reads the server's copy, forgets it and exports
 * `pass` the captures the doc lists exist and were written by the walk
-* `FAIL` the ledger marks this story done with evidence — tracking.status='not_started'
+* `pass` the ledger marks this story done with evidence

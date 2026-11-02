@@ -37,7 +37,7 @@
   "totals": {
     "tokens": 45,
     "groups": 7,
-    "references": 1025,
+    "references": 1030,
     "theme_overrides": 18,
     "density_overrides": 5,
     "contrast_pairs": 20,
@@ -133,7 +133,7 @@
         "light": "#ffffff"
       },
       "density_override": null,
-      "references": 59
+      "references": 60
     },
     {
       "name": "--bg-hover",
@@ -163,7 +163,7 @@
         "light": "#d9dcd8"
       },
       "density_override": null,
-      "references": 145
+      "references": 146
     },
     {
       "name": "--border-hi",
@@ -193,7 +193,7 @@
         "light": "#555c62"
       },
       "density_override": null,
-      "references": 133
+      "references": 134
     },
     {
       "name": "--text-faint",
@@ -213,7 +213,7 @@
         "light": "#5969d8"
       },
       "density_override": null,
-      "references": 27
+      "references": 28
     },
     {
       "name": "--primary-text",
@@ -253,7 +253,7 @@
         "light": "#80580e"
       },
       "density_override": null,
-      "references": 44
+      "references": 45
     },
     {
       "name": "--rose",

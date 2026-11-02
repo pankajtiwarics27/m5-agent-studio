@@ -194,8 +194,8 @@ def test_a_field_the_server_does_not_send_is_a_finding(sources):
 def test_a_run_total_from_the_client_clock_is_a_finding(sources):
     broken = sources(
         html_transform=lambda html: html.replace(
-            "debate_done(d) { debateRunElapsed = d.total_elapsed_s; renderDebate(); },",
-            "debate_done(d) { debateRunElapsed = (Date.now() - 0) / 1000; renderDebate(); },",
+            "debateRunElapsed = d.total_elapsed_s;",
+            "debateRunElapsed = (Date.now() - 0) / 1000;",
             1,
         )
     )
