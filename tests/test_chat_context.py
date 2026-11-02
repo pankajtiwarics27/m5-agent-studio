@@ -255,7 +255,9 @@ def test_the_walk_writes_a_failing_tool_call_and_a_live_turn():
     assert WALK.exists(), "scripts/chat_context_walk.mjs is missing"
     source = WALK.read_text(encoding="utf-8")
     for needle in (
-        "FAILED",
+        # The failing call's word is the vocabulary's now (`failed`, not `FAILED`): UIUX-P5-01 made
+        # one state one word and it is not shouted, so the walk asserts the lowercase word.
+        '"failed"',
         "tool calls",
         "byte for byte",
         "first 500 characters",

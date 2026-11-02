@@ -418,7 +418,7 @@ async function run(args) {
     );
     record(
       "the summary counts ready assignments, names both reads, and states that an incomplete round is blocked",
-      block.count === "1/4 READY"
+      block.count === "1/4 ready"
         && /1 of 4 assignments are ready or configured/.test(block.summary)
         && /invocation is blocked/.test(block.summary)
         && block.basisHasNote
@@ -721,7 +721,7 @@ async function run(args) {
       "with no runtime, every local seat is DEMO TEXT and says the reply will not be the model's",
       demo.rows.every((row) => row.state === "demo")
         && demo.rows.every((row) => /demo text/.test(row.text))
-        && demo.count === "0/4 READY"
+        && demo.count === "0/4 ready"
         && /would receive demo text; invocation is blocked/.test(demo.summary),
       `${demo.count} — ${demo.rows[0].text}`,
     );

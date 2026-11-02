@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 34,
+  "revision": 35,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -100,15 +100,17 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": null,
-    "active_stories": [],
-    "last_completed_story": "UIUX-P5-05",
-    "next_recommended_story": "UIUX-P6-01",
-    "last_checkpoint": "2026-11-03T12:25:00Z",
-    "last_session_id": "arena/e75d2f58-m5-agent-studio",
+    "active_story": "UIUX-P6-02",
+    "active_stories": [
+      "UIUX-P6-02"
+    ],
+    "last_completed_story": "UIUX-P6-01",
+    "next_recommended_story": "UIUX-P6-02",
+    "last_checkpoint": "2026-11-03T14:40:00Z",
+    "last_session_id": "arena/fa380e39-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "8bb40916a6c4aa32516d6126ab913bbfd72f1bc0",
+    "last_verified_commit": "ad826f3eee35edde67e13bfe439fe303b7f8affc",
     "last_updated": "2026-11-03",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -124,7 +126,9 @@
       "The demo path's fabricated tok/s figures still reach `perf_samples`: `_stream_omlx_completion` yields 29.5/42.1 for text it wrote itself, `record_perf` stores them, and the throughput card and leaderboard count them. UIUX-P4-01 labels the reply and declines the badge, but it did not change the write, because that is a runtime-program defect and belongs to the M5 stories, not to a UI pull request.",
       "`syncUnifiedSelectors` offers only resident local models, so loading a model rebuilds the catalogue and can re-pick a seat whose model was not in it. The Council readiness row always describes what the round would post, but an operator's earlier pick can change under them; the fix belongs to the model selector, and is recorded rather than patched inside a story about roles and readiness.",
       "A pipeline view restored from the browser's checkpoint carries no contract: the checkpoint payload records what each seat produced, not what it was allowed, so the deliberation evidence table's `Allowed` column is empty after a reload. Widening that payload belongs to the recovery story that owns the format.",
-      "`record_perf` still stores the demo path's fabricated 29.5/42.1 tok/s in `perf_samples`; P4-02 removed every drawing of that figure from the Council pane, but the write is the runtime program's to remove."
+      "`record_perf` still stores the demo path's fabricated 29.5/42.1 tok/s in `perf_samples`; P4-02 removed every drawing of that figure from the Council pane, but the write is the runtime program's to remove.",
+      "The preservation suite proves 17 of the 21 matrix rows. The other four sit behind two harness walks that fail on tracked defects #169 and #170; the suite reports them as `known` and never as a pass, which means \"the UI is preserved\" is a claim with a visible hole in it until those two are fixed in the runtime program.",
+      "`product/M5_2_0_UIUX_Preservation_Run.json` is only as current as the last run. A story that lands after it will be described by a record that predates it; re-run `scripts/preservation_suite.py --save` when the tree moves, and do not read a passing record as a statement about a later commit."
     ]
   },
   "tab_registry": [
@@ -326,7 +330,7 @@
       "id": "P6",
       "name": "Regression QA and release",
       "title": "Regression QA and release",
-      "status": "not_started",
+      "status": "in_progress",
       "story_ids": [
         "UIUX-P6-01",
         "UIUX-P6-02",
@@ -335,20 +339,20 @@
         "UIUX-P6-05"
       ],
       "total": 5,
-      "done": 0,
+      "done": 1,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 5,
-      "percent_complete": 0
+      "not_started": 4,
+      "percent_complete": 20
     }
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 35,
+    "done": 36,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 5,
-    "percent_complete": 88
+    "not_started": 4,
+    "percent_complete": 90
   },
   "stories": [
     {
@@ -6766,8 +6770,8 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "Automated feature preservation E2E with no loss of existing functionality.",
+      "current_behavior": "Measured, not read. The ledger carried a 21-row feature-preservation matrix and the program had 17 browser walks, and nothing joined them: each story proved its own slice, no command ran the slices together, and no file recorded what happened when it did. A row could lose its proof without anything noticing - a reworded check title, a renamed test, an unmounted route or a button that lost its handler all failed silently as \"preserved\". The join, once written, found 55 provers for those 21 rows across 17 walks, with 13 further walks nothing in the matrix named and two walks that did not pass at all (`harness_evidence_walk.mjs` 27/29, `harness_timeline_walk.mjs` 20/21).",
+      "target_behavior": "One command answers \"is everything still here, and does it still answer\": every matrix row resolved to the provers that can actually fail, each walk run against its own throwaway app, a row proved only when all of its provers answer, and the run recorded in a file someone can read and re-run. A row that cannot be proved is reported as `known` with an issue behind it - never as a pass.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
         "Trace relevant DOM, JS handlers, API and backend state transitions",
@@ -6809,23 +6813,94 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P6-01 (Automated feature preservation E2E). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
-        "known_regressions": [],
-        "decisions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-03T13:05:00Z",
+        "updated_at": "2026-11-03T14:40:00Z",
+        "completed_at": "2026-11-03T14:40:00Z",
+        "owner_session": "arena/fa380e39-m5-agent-studio",
+        "commit_sha": "ad826f3eee35edde67e13bfe439fe303b7f8affc",
+        "changed_files": [
+          "docs/README.md",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-preservation-e2e.md",
+          "docs/uiux-2-0-program.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiux-2-0-terminology.md",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_E2E.json",
+          "product/M5_2_0_UIUX_Preservation_Run.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_Terminology.json",
+          "scripts/chat_context_walk.mjs",
+          "scripts/council_readiness_walk.mjs",
+          "scripts/council_verdict_walk.mjs",
+          "scripts/preservation_suite.py",
+          "scripts/start_recent_walk.mjs",
+          "scripts/uiux_preservation_e2e.py",
+          "scripts/uiux_source_manifest.py",
+          "static/index.html",
+          "studio.py",
+          "tests/test_chat_context.py",
+          "tests/test_uiux_preservation_e2e.py",
+          "docs/uiux-2-0-interaction-polish.md"
+        ],
+        "evidence": [
+          "`python3 scripts/uiux_preservation_e2e.py` -> 21/21 rows, 55 provers, 17 walks, 13 support walks, 0 findings; `--check` -> 0. A prover is a walk check title that must appear verbatim in the named script, a pytest node that must exist, a route that must be mounted, or a control that must be wired - so a reworded check, a renamed test, an unmounted route or a button that lost its handler fails the map instead of quietly deleting a proof.",
+          "`python3 scripts/preservation_suite.py --save product/M5_2_0_UIUX_Preservation_Run.json` -> 27 steps, 0 failed in 398.7 s: 17/21 rows proved, 4 `known`. Each walk runs against its own throwaway `demo_tour --serve` app, because the first version shared one server across the 14 server-reading walks and produced a wall of failures that belonged to the harness rather than the product. The recorded run is the merged tree (`d073e7d`, this branch merged with `main` at `0f38ae5`), not the earlier one: a record only describes the commit it names.",
+          "Two rows cannot be proved today and the suite says so instead of turning green: `harness_evidence_walk.mjs` (27/29, #169 - a rejected completion draws no verdict card, so the failure code, exit code and failing test are not on screen) and `harness_timeline_walk.mjs` (20/21, #170 - after pruning, the strip counts the client's 13-event cache while the server serves 9). Both are recorded as `known` with an owner, an issue and a reason; if one starts passing, the suite reports the entry as stale.",
+          "The run is a file: `product/M5_2_0_UIUX_Preservation_Run.json` names the tree it ran on (`d073e7d`), the environment, every row's status and the known defects, and `docs/uiux-2-0-preservation-e2e.md` renders it - \"we are preserved\" is now something a reader can re-run rather than a claim in prose.",
+          "`tests/test_uiux_preservation_e2e.py` (17 tests) holds the record's honesty: an untaken step is not a pass, a `known` entry must name an issue, an owner and a reason, a stale entry is reported as loudly as a failure, a drifted or empty matrix is refused, and stopping a fixture stops the app it forked.",
+          "Two small honesty fixes came with the story: the sent-context line is drawn as text rather than carried in an HTML `title` (context is untrusted, and `tests/test_uiux_chat_composer.py` already forbade interpolating it into an attribute), and a concluded council room's badge says `closed` instead of falling back to `ready` - three states, three words, in both copies of the frontend.",
+          "README and the program page were corrected to the verified count (36 of 40 stories done with recorded evidence) instead of the \"0 done\" / \"6 done\" they had carried since P1.",
+          "README.md needed no change: upstream #172 rewrote it as a 98-line overview with no per-program status section, so this story's prose went to `docs/uiux-2-0-program.md`, whose Status section now states 36 of 40 stories done with recorded evidence and names the command that proves the matrix.",
+          "Found while running the full suite on the merged tree: pytest was SIGKILLed at 25% with 318 MB of 3.9 GB available, and `pgrep -fc _demo-server` reported **62** orphaned demo apps, ~60 MB each. `demo_tour.py --serve` forks the app, so terminating the fixture left the app holding its port; fourteen of those per run is the memory the next run needs. `preservation_suite.py` now starts each fixture as a session leader and stops it with `killpg`, and the new test spawns a real grandchild to prove the difference (a parent-only terminate leaves it alive - verified). After the fix: 4 leftovers, 2,370 MB free, 27 steps still 0 failed."
+        ],
+        "test_results": [
+          "python3 scripts/preservation_suite.py --save product/M5_2_0_UIUX_Preservation_Run.json -> 27 steps, 0 failed in 398.7 s; 17/21 rows proved, 2 known defects; exit 0 [TMPDIR=/tmp/m5-runner/m5-browser/tmp, LD_LIBRARY_PATH=/tmp/m5-runner/m5-browser/libs/lib, STUDIO_SCREENSHOT_CHROME=/tmp/m5-runner/m5-browser/tmp/chromium, STUDIO_PUPPETEER_CORE=tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js, STUDIO_PYTHON=.venv/bin/python; Python 3.11.2; tree d073e7d]",
+          "python3 scripts/uiux_preservation_e2e.py --check -> 0 (21/21 rows, 55 provers, 17 walks, 13 support walks, 0 findings)",
+          "node scripts/chat_context_walk.mjs (own throwaway demo server) -> 19 of 19 checks passed, re-run after the `title` removal",
+          "pytest -q tests/test_uiux_preservation_e2e.py -> 17 passed (the seventeenth holds the fixture leak below); pytest -q tests/test_chat_context.py tests/test_uiux_chat_composer.py -> 51 passed",
+          "pytest -q -> 1 failed / 2,534 passed / 28 skipped (301.2 s). The failure is tests/test_baseline.py, whose pinned commit is not present in this clone (`Not a valid commit name`); it failed before this story too. Recorded values were written into this line immediately after that run; the only change made afterwards is this sentence.",
+          "ruff check . -> All checks passed; mypy -> Success: no issues found in 58 source files",
+          "python3 scripts/check_frontend_syntax.py -> JavaScript syntax OK (1 inline block(s)); scripts/demo_tour.py --check -> transcript up to date; scripts/validate_screenshots.py -> 6 of 6; scripts/validate_docs.py -> validation passed, 5 required pages, 185 files scanned; scripts/build_studio.py -> Built studio.py: 3,479,999 bytes",
+          "python3 scripts/check_frontend_syntax.py -> JavaScript syntax OK (1 inline block(s)); scripts/demo_tour.py --check -> transcript up to date; scripts/validate_screenshots.py -> 6 of 6; scripts/validate_docs.py -> validation passed, 5 required pages, 186 files scanned; scripts/build_studio.py -> Built studio.py: 3,480,685 bytes (the merged frontend); scripts/uiux_preservation_e2e.py --check -> 0 (21/21 rows, 55 provers, 14 support walks)"
+        ],
+        "visual_evidence": [
+          "No new committed captures: this story adds no surface and keeps the existing screenshot set untouched (6 of 6 still validated against the manifest). The mapping, the suite and its record are the evidence, and the walks they run are the ones that already own the captures.",
+          "Ad hoc, not committed: `node scripts/council_verdict_walk.mjs --screenshots <scratch>` -> 17/17 with the new `closed` badge drawn, and `node scripts/chat_composer_walk.mjs` -> all checks passed including the 390px viewport. The scratch directory was deleted; nothing is claimed as a committed capture that is not on disk."
+        ],
+        "known_regressions": [
+          "#169 (Harness: a rejected completion draws no verdict card) and #170 (Harness timeline: after a pruned log the strip counts the cache) stay open; the suite reports both rows as `known` and never as green. They are the reason 4 of the 21 rows are not proved.",
+          "Carried forward, none of them touched by this story: demo tok/s still appears in `perf_samples`; the `ttft` fixture is equal on both panels; `prefill_tps` and `cached_tokens` are never printed; a restored checkpoint carries no contract; the Hall readiness refresh rewrites seat pickers; `auto_unload` can drop the model that was just compared; the browser comparison copy is capped at 60,000 chars; a `stopped` comparison carries a warn tone; model-residency chips sit outside the status vocabulary; `#chatMessages` stays `aria-live=\"off\"` with its declared reason; the stream note's denominator is the in-memory 5,000-event cache.",
+          "tests/test_baseline.py fails in this checkout because the pinned commit is not present (`Not a valid commit name`); it is an artifact of the clone, not of this change, and the same failure was recorded before the story started.",
+          "A full run still leaks 4 demo apps (~240 MB) from walks that start their own fixture; a runner that repeats the suite several times without reaping them can run out of memory. The suite now reaps everything it starts, and the residue is stated rather than hidden."
+        ],
+        "decisions": [
+          "A row is proved by the proofs that can fail, not by the story that claims it: a walk check title must appear verbatim in the named script, a pytest node must exist, a route must be mounted, a control must be wired. Prose in the matrix is not a prover.",
+          "Every walk gets its own server. One shared demo app across 14 server-reading walks produced failures that were the harness's own; a throwaway app per walk costs seconds and removes the class.",
+          "A row that cannot be proved is `known`, never `pass`, and the entry carries an owner, an issue and a reason. When a known failure starts passing the suite says the entry is stale, because an entry nobody removes is a claim nobody checked.",
+          "The matrix is data, not a second checklist: `uiux_preservation_e2e.py` reads the ledger's own 21 rows and attaches proofs to them, so a story that adds a capability has to give it a prover to appear.",
+          "The sent-context `title` was removed rather than kept: context is untrusted text and an attribute is the wrong place for it. The walk now asserts the drawn line, which is what a reader actually reads.",
+          "A concluded council room says `closed`. The badge fell back to `ready` because the vocabulary held only `running` and `ready`, and a room that has pinned its decision is not a room waiting to be convened.",
+          "The record stamps no clock, only the tree it ran on and the environment: a timestamp would make the rendered page drift on every re-run without telling a reader anything the commit does not already say.",
+          "The story was verified, then `main` moved (#171, #172, #173) and the branch was merged before the pull request: the artifacts were regenerated from the merged sources and the suite was re-run there, because a record from the pre-merge tree describes a commit nobody will check out.",
+          "The suite owns the fixtures it starts, not the ones a walk starts for itself: after the fix, four `--_demo-server` children still survive a run because they belong to walks that spawn `demo_tour.py --serve` inside node and are SIGKILLed with it. That is the walks' fixture code, not this suite's, so it is recorded here rather than patched in a story about the matrix."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "handoff_note": "UIUX-P6-01 is done and P6 is 1/5. `python3 scripts/preservation_suite.py --save product/M5_2_0_UIUX_Preservation_Run.json` is the program's regression gate: it is the only command that answers \"is every mapped capability still reachable and still answering\" for all 21 rows, and it can only ever say `known` for the four harness rows behind #169 and #170. A story that removes a control, unmounts a route, renames a test or rewords a walk check now fails `uiux_preservation_e2e.py --check` before it reaches the suite.",
+        "next_action": "Claim UIUX-P6-02 (adversarial permission and recovery UI tests).",
         "readme_updated": false
       },
       "required_evidence": [

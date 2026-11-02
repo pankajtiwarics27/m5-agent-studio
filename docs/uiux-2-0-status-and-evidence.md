@@ -56,17 +56,17 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 | (unnamed) | `ok` | no | 2634 |
 | `#dockerStateBadge` | `neutral` | no | 2681 |
 | (unnamed) | `warn` | no | 4689 |
-| (unnamed) | `warn` | no | 4772 |
-| (unnamed) | `neutral` | no | 7870 |
-| (unnamed) | `busy` | no | 7871 |
-| (unnamed) | `ok` | no | 7872 |
+| (unnamed) | `warn` | no | 4771 |
+| (unnamed) | `neutral` | no | 7869 |
+| (unnamed) | `busy` | no | 7870 |
+| (unnamed) | `ok` | no | 7871 |
+| (unnamed) | `warn` | no | 7872 |
 | (unnamed) | `warn` | no | 7873 |
 | (unnamed) | `warn` | no | 7874 |
-| (unnamed) | `warn` | no | 7875 |
-| (unnamed) | `danger` | no | 7876 |
+| (unnamed) | `danger` | no | 7875 |
+| (unnamed) | `warn` | no | 7876 |
 | (unnamed) | `warn` | no | 7877 |
-| (unnamed) | `warn` | no | 7878 |
-| (unnamed) | `neutral` | no | 7879 |
+| (unnamed) | `neutral` | no | 7878 |
 
 ## Writers
 

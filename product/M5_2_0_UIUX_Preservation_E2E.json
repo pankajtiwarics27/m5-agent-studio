@@ -1,0 +1,615 @@
+{
+  "story": "UIUX-P6-01",
+  "generated_by": "scripts/uiux_preservation_e2e.py",
+  "executed_by": "scripts/preservation_suite.py",
+  "ledger": {
+    "path": "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
+    "matrix_rows": 21,
+    "tabs": [
+      "Chat",
+      "Compare",
+      "Council",
+      "Harness",
+      "Pipeline",
+      "Start"
+    ]
+  },
+  "rows": [
+    {
+      "tab": "Start",
+      "capability": "Guided first run",
+      "proves": "The step the server named is printed once, marked `aria-current`, and the action beside it is the action the server attached to that step.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/start_walk.mjs",
+          "check": "the lead names the server's next step"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/start_walk.mjs",
+          "check": "exactly one row is aria-current, and it is that step"
+        }
+      ],
+      "proof_count": 2
+    },
+    {
+      "tab": "Start",
+      "capability": "readiness summary",
+      "proves": "The verdict, the count and the four machine rows are the server's own answers: the pane repeats them rather than recounting them, and a simulated payload is labelled unverified.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/start_walk.mjs",
+          "check": "the lead's state is the server's verdict"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/start_health_walk.mjs",
+          "check": "the card draws four labelled rows, each with a tone"
+        }
+      ],
+      "proof_count": 2
+    },
+    {
+      "tab": "Start",
+      "capability": "run-first-task",
+      "proves": "Run is available exactly when the server says ready, is disabled with the reason in text and in its accessible name when it is not, and the launcher carries the task into the Harness composer without starting anything.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/start_walk.mjs",
+          "check": "Run explains itself in words a reader and a screen reader both get"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/start_recent_walk.mjs",
+          "check": "the launcher carries the task into the Harness composer"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/start_recent_walk.mjs",
+          "check": "the launcher starts nothing: no session created, no stream"
+        }
+      ],
+      "proof_count": 3
+    },
+    {
+      "tab": "Start",
+      "capability": "recheck",
+      "proves": "A refused preflight is presented with a cause and a Re-check that clears it and brings the list back, with focus returned to the pane rather than dropped on `<body>`.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/start_walk.mjs",
+          "check": "the error presentation offers a Re-check"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/start_walk.mjs",
+          "check": "Re-check clears the presentation and brings the list back"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/start_walk.mjs",
+          "check": "focus returns to the pane instead of falling to <body>"
+        }
+      ],
+      "proof_count": 3
+    },
+    {
+      "tab": "Start",
+      "capability": "provider settings",
+      "proves": "The providers panel still opens from the control that advertises it, and the provider routes keep their contract - the panel is a client of them, not a replacement.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/council_readiness_walk.mjs",
+          "check": "the NEEDS KEY action opens the providers panel"
+        },
+        {
+          "kind": "route",
+          "method": "GET",
+          "path": "/api/providers"
+        },
+        {
+          "kind": "route",
+          "method": "POST",
+          "path": "/api/providers"
+        }
+      ],
+      "proof_count": 3
+    },
+    {
+      "tab": "Harness",
+      "capability": "Session creation",
+      "proves": "A session is created through the route the pane already used, the durable state it writes is the state the timeline reads back, and the new session appears in Start's recent work.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/harness_timeline_walk.mjs",
+          "check": "the app creates a session, which is what writes the log this walk reads"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/start_recent_walk.mjs",
+          "check": "a created session appears in recent work"
+        },
+        {
+          "kind": "route",
+          "method": "POST",
+          "path": "/api/harness/sessions"
+        }
+      ],
+      "proof_count": 3
+    },
+    {
+      "tab": "Harness",
+      "capability": "workspace",
+      "proves": "One workspace setting, read by both panes: Start writes the directory through the Harness's own route and the Harness field and the isolation mode follow it.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/harness_settings_walk.mjs",
+          "check": "the directory row names the project directory and the isolation mode"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/start_health_walk.mjs",
+          "check": "setting a directory updates the row, the Harness field and the preflight"
+        },
+        {
+          "kind": "route",
+          "method": "POST",
+          "path": "/api/workspace/directory"
+        }
+      ],
+      "proof_count": 3
+    },
+    {
+      "tab": "Harness",
+      "capability": "policy",
+      "proves": "The execution policy is one option's own label, it moves the plan when it changes, and the approval card states the policy in force rather than a written-down copy of it.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/harness_settings_walk.mjs",
+          "check": "changing the policy moves the policy row"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/harness_permissions_walk.mjs",
+          "check": "the card names the policy that is asking, and it is the policy in force"
+        }
+      ],
+      "proof_count": 2
+    },
+    {
+      "tab": "Harness",
+      "capability": "lead/critic",
+      "proves": "Both seats are chosen in the pane, named in the plan, and a change to either moves the row that states them.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/harness_settings_walk.mjs",
+          "check": "the models row names the lead and the critic"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/harness_settings_walk.mjs",
+          "check": "changing the critic moves the models row"
+        }
+      ],
+      "proof_count": 2
+    },
+    {
+      "tab": "Harness",
+      "capability": "streamed tool events",
+      "proves": "Events arrive over the stream without a reload, each draws a card, and Replay re-reads the log from its retained floor without duplicating an event.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/harness_timeline_walk.mjs",
+          "check": "twelve policy changes on the API arrive in the view over the stream, with no reload"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/harness_timeline_walk.mjs",
+          "check": "Replay re-reads the log from its first retained event and rebuilds the view from it"
+        }
+      ],
+      "proof_count": 2
+    },
+    {
+      "tab": "Harness",
+      "capability": "approvals",
+      "proves": "An approval is one card naming the tool, the arguments, the policy, the capability and the expiry; the decision is posted with the session that owns it and records exactly what the pane said it would.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/harness_permissions_walk.mjs",
+          "check": "an approval arrives as one card that names the tool and shows the arguments"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/harness_permissions_walk.mjs",
+          "check": "the decision is posted with the session that owns the approval"
+        },
+        {
+          "kind": "route",
+          "method": "POST",
+          "path": "/api/harness/approve"
+        }
+      ],
+      "proof_count": 3
+    },
+    {
+      "tab": "Harness",
+      "capability": "diffs",
+      "proves": "The diff dialog counts the change per file with the parser the server's diff is read by, and says the diff is read now rather than frozen at a verdict.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/harness_evidence_walk.mjs",
+          "check": "the diff dialog counts the change and says it is not frozen at a verdict"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/harness_evidence_walk.mjs",
+          "check": "the change is counted per file from the same diff the server reports"
+        }
+      ],
+      "proof_count": 2
+    },
+    {
+      "tab": "Harness",
+      "capability": "worktree apply",
+      "proves": "Applying a diff still refuses the cases it always refused - uncommitted user changes, a quarantined workspace, an unjoined child, an unresolved effect - and still reports the refusal.",
+      "provers": [
+        {
+          "kind": "pytest",
+          "node": "tests/test_workspace_snapshots.py::test_worktree_apply_refuses_clobbering_uncommitted_user_changes"
+        },
+        {
+          "kind": "pytest",
+          "node": "tests/test_harness_evidence.py::test_apply_still_refuses_and_reports"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/harness_settings_walk.mjs",
+          "check": "checking the worktree box says so in the directory row"
+        },
+        {
+          "kind": "route",
+          "method": "POST",
+          "path": "/api/harness/sessions/{session_id}/apply"
+        }
+      ],
+      "proof_count": 4
+    },
+    {
+      "tab": "Harness",
+      "capability": "abort",
+      "proves": "Abort is still the button with its handler, and the abort route still resolves the approvals a run was waiting on instead of leaving them live.",
+      "provers": [
+        {
+          "kind": "pytest",
+          "node": "tests/test_security_and_quality.py::test_abort_resolves_pending_approvals_and_tombstones_replay"
+        },
+        {
+          "kind": "control",
+          "element": "harnessAbortBtn",
+          "detail": "<button id=\"harnessAbortBtn\"> is present and wired"
+        },
+        {
+          "kind": "route",
+          "method": "POST",
+          "path": "/api/harness/abort/{session_id}"
+        }
+      ],
+      "proof_count": 3
+    },
+    {
+      "tab": "Harness",
+      "capability": "compaction",
+      "proves": "The compact route is still mounted, and the event it writes is drawn as a sentence with the characters it archived rather than as a field dump.",
+      "provers": [
+        {
+          "kind": "route",
+          "method": "POST",
+          "path": "/api/harness/sessions/{session_id}/compact"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/harness_timeline_walk.mjs",
+          "check": "the row reads the event in words instead of its field names"
+        }
+      ],
+      "proof_count": 2
+    },
+    {
+      "tab": "Harness",
+      "capability": "GSD and SDLC",
+      "proves": "The SDLC surface is still in the pane with its handler, and the run still has to pass verification and state its first line before it is allowed to pass.",
+      "provers": [
+        {
+          "kind": "pytest",
+          "node": "tests/test_security_and_quality.py::test_sdlc_pass_requires_successful_verification_and_explicit_first_line_pass"
+        },
+        {
+          "kind": "control",
+          "element": "sdlcRunModeSelect",
+          "detail": "<select id=\"sdlcRunModeSelect\"> is present and wired"
+        },
+        {
+          "kind": "route",
+          "method": "POST",
+          "path": "/api/harness/sdlc/run"
+        }
+      ],
+      "proof_count": 3
+    },
+    {
+      "tab": "Council",
+      "capability": "Council Hall session spawning and chronicle browsing",
+      "proves": "A room can still be opened without invoking a seat, and a session's replies, pinned decision and dissent are still readable afterwards in the words the pane uses for them.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/council_readiness_walk.mjs",
+          "check": "Open Empty Room still creates a session without invoking a seat"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/council_verdict_walk.mjs",
+          "check": "pinning the Lead Arbiter's verdict states where the decision came from, word for word"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/council_readiness_walk.mjs",
+          "check": "Post note only remains enabled and saves the note without summoning"
+        }
+      ],
+      "proof_count": 3
+    },
+    {
+      "tab": "Pipeline",
+      "capability": "Four-stage orchestrator with architect/coder role selection",
+      "proves": "The four seats are a chain the pane states: what each seat reads, what it was allowed, and which seat it hands its output to - including the two seats the reasoning control reaches.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/pipeline_artifacts_walk.mjs",
+          "check": "every stage card carries a row naming what that seat reads"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/council_deliberation_walk.mjs",
+          "check": "the reasoning control reaches the two seats the route gives it to, and the other two say off"
+        }
+      ],
+      "proof_count": 2
+    },
+    {
+      "tab": "Compare",
+      "capability": "Multi-model selection and compare responses",
+      "proves": "Two or more models still run against one question, each panel keeps its own reply and status, and every figure shown is the figure the response carried.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/compare_criteria_walk.mjs",
+          "check": "two panels, one answering and one failing: the run line counts both and neither is drawn as slow"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/compare_provenance_walk.mjs",
+          "check": "every figure on screen is the figure the response carried for that reply"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/compare_history_walk.mjs",
+          "check": "Revisit restores separate opinions and synthesis without rerunning or changing the server copy"
+        }
+      ],
+      "proof_count": 3
+    },
+    {
+      "tab": "Chat",
+      "capability": "Active model and persona selection",
+      "proves": "The selected model and persona are what the pane says they are: with no model Send is off and says why, and with one the response mode is named beside it.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/chat_walk.mjs",
+          "check": "with no model the Send button is off and says why"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/chat_composer_walk.mjs",
+          "check": "empty conversation and labelled response mode"
+        }
+      ],
+      "proof_count": 2
+    },
+    {
+      "tab": "Chat",
+      "capability": "conversation interface",
+      "proves": "A message is answered by a labelled turn carrying its model and usage, the transcript is not read aloud on every token, and the context each answer was sent with is printed.",
+      "provers": [
+        {
+          "kind": "walk",
+          "script": "scripts/chat_walk.mjs",
+          "check": "a sent message is answered by a labelled turn with its model and its usage"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/chat_walk.mjs",
+          "check": "the transcript is a log that does not read itself aloud on every token"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/chat_context_walk.mjs",
+          "check": "every answer prints the context it was sent, composed by the pane's own helper"
+        }
+      ],
+      "proof_count": 3
+    }
+  ],
+  "totals": {
+    "matrix_rows": 21,
+    "mapped_rows": 21,
+    "provers": 55,
+    "walk_provers": 40,
+    "pytest_provers": 4,
+    "route_provers": 9,
+    "control_provers": 2,
+    "walks": 17,
+    "support_walks": 14,
+    "findings": 0
+  },
+  "walks": [
+    "chat_composer_walk.mjs",
+    "chat_context_walk.mjs",
+    "chat_walk.mjs",
+    "compare_criteria_walk.mjs",
+    "compare_history_walk.mjs",
+    "compare_provenance_walk.mjs",
+    "council_deliberation_walk.mjs",
+    "council_readiness_walk.mjs",
+    "council_verdict_walk.mjs",
+    "harness_evidence_walk.mjs",
+    "harness_permissions_walk.mjs",
+    "harness_settings_walk.mjs",
+    "harness_timeline_walk.mjs",
+    "pipeline_artifacts_walk.mjs",
+    "start_health_walk.mjs",
+    "start_recent_walk.mjs",
+    "start_walk.mjs"
+  ],
+  "needs_server": [
+    "chat_composer_walk.mjs",
+    "chat_context_walk.mjs",
+    "chat_walk.mjs",
+    "compare_history_walk.mjs",
+    "harness_settings_walk.mjs",
+    "harness_timeline_walk.mjs",
+    "start_health_walk.mjs",
+    "start_recent_walk.mjs",
+    "start_walk.mjs"
+  ],
+  "support_walks": {
+    "a11y_walk.mjs": "the accessibility walk (P5-02) proves the same reachability from the keyboard side",
+    "chat_handoff_walk.mjs": "the Chat-to-Harness handoff (P2-05) is a new journey, not a preserved capability",
+    "compare_continuity_walk.mjs": "Compare continuity (P4-06) keeps a comparison; the capability it belongs to is the comparison itself",
+    "harness_recovery_walk.mjs": "Harness pause/resume/abort recovery (P3-05) extends the abort surface rather than preserving it",
+    "keyboard_walk.mjs": "the rail's tab semantics (P1-02) are shell behaviour",
+    "overlay_walk.mjs": "the overlay controller (P1-04) is shared machinery the matrix does not enumerate",
+    "pipeline_recovery_walk.mjs": "Pipeline failure recovery (P3-07) extends a capability rather than preserving it",
+    "polish_walk.mjs": "the polish layer (P5-05) proves affordances across all six panes",
+    "presentation_walk.mjs": "the presentation contract (P1-05) is the shape failures are drawn in",
+    "responsive_walk.mjs": "the layout walk (P5-03) proves the matrix rows still fit a phone",
+    "status_walk.mjs": "the status component (P1-03) is the vocabulary every row is drawn in",
+    "stream_perf_walk.mjs": "the streaming bound (P5-04) is a cost property, not a capability",
+    "terminology_walk.mjs": "the vocabulary walk (P5-01) proves the same states say the same words",
+    "uiux_interaction_polish_walk.mjs": "the supplemental P5-05 evidence walk measures hover/focus parity and captures 72 screenshots; it proves presentation, not a capability the matrix enumerates"
+  },
+  "pytest_nodes": [
+    "tests/test_harness_evidence.py::test_apply_still_refuses_and_reports",
+    "tests/test_security_and_quality.py::test_abort_resolves_pending_approvals_and_tombstones_replay",
+    "tests/test_security_and_quality.py::test_sdlc_pass_requires_successful_verification_and_explicit_first_line_pass",
+    "tests/test_workspace_snapshots.py::test_worktree_apply_refuses_clobbering_uncommitted_user_changes"
+  ],
+  "last_run": {
+    "recorded": true,
+    "commit": "d073e7d",
+    "seconds": 398.7,
+    "totals": {
+      "rows": 21,
+      "passed_rows": 17,
+      "failed_rows": 0,
+      "not_run_rows": 0,
+      "steps": 27,
+      "failed_steps": 0,
+      "known_failures": 2,
+      "stale_known_failures": []
+    },
+    "known": [
+      {
+        "walk": "harness_evidence_walk.mjs",
+        "passed": false,
+        "known": {
+          "owner": "UIUX-P3-04",
+          "issue": "#169",
+          "reason": "the rejected half of the seed is written - the verifier returns `verification_test_failed_introduced` for `hns-592ef299` - but the trajectory draws no rejected card, so the failure code, the exit code and the failing test are not on screen (27/29)"
+        },
+        "seconds": 43.1,
+        "detail": "FAIL  a rejected completion is drawn as a rejection with the code that decided it \u2014 no card"
+      },
+      {
+        "walk": "harness_timeline_walk.mjs",
+        "passed": false,
+        "known": {
+          "owner": "UIUX-P5-04",
+          "issue": "#170",
+          "reason": "after the log is pruned the strip counts the client's cache (`13 events held`) while the server serves 9, so a resync leaves the pane stating 13 and drawing 9 - the walk's \"restores every event without duplicating one\" cannot hold while the count and the drawing disagree (20/21)"
+        },
+        "seconds": 9.8,
+        "detail": "FAIL  a resync restores every event from the server without duplicating one \u2014 count=13 cards=9 seq 1-13 state=\"following the log from seq 13 \u00b7 13 events held \u00b7 "
+      }
+    ],
+    "failed": [],
+    "environment": {
+      "python": "3.11.2",
+      "chrome": "/tmp/m5-runner/m5-browser/tmp/chromium",
+      "tmpdir": "/tmp/m5-runner/m5-browser/tmp"
+    }
+  },
+  "route_probes": [
+    {
+      "method": "GET",
+      "path": "/api/providers",
+      "row": "Start / provider settings"
+    },
+    {
+      "method": "POST",
+      "path": "/api/providers",
+      "row": "Start / provider settings"
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions",
+      "row": "Harness / Session creation"
+    },
+    {
+      "method": "POST",
+      "path": "/api/workspace/directory",
+      "row": "Harness / workspace"
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/approve",
+      "row": "Harness / approvals"
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/apply",
+      "row": "Harness / worktree apply"
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/abort/{session_id}",
+      "row": "Harness / abort"
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sessions/{session_id}/compact",
+      "row": "Harness / compaction"
+    },
+    {
+      "method": "POST",
+      "path": "/api/harness/sdlc/run",
+      "row": "Harness / GSD and SDLC"
+    }
+  ],
+  "findings": []
+}
