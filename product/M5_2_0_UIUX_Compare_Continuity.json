@@ -1,0 +1,170 @@
+{
+  "story": "UIUX-P4-06",
+  "title": "Saved comparison and export continuity",
+  "generated_by": "scripts/uiux_compare_continuity_inventory.py",
+  "surface": "#debateRecord",
+  "sources": [
+    "live",
+    "browser",
+    "server",
+    "detached"
+  ],
+  "storage": {
+    "key": "m5_debate_comparison",
+    "cap_chars": 60000,
+    "what_is_kept": "every panel with its model, status, reply and usage; the arbiter; the question; the criteria; the run id"
+  },
+  "server_record": {
+    "route": "GET /api/history/export",
+    "table": "tables.runs",
+    "match": "id and mode=debate",
+    "redacted": true
+  },
+  "exports": [
+    "markdown (clipboard)",
+    "json (download)"
+  ],
+  "routes": [
+    "/api/debate/stream",
+    "/api/history/export"
+  ],
+  "captures": [
+    "compare-record-live.png",
+    "compare-record-restored.png",
+    "compare-record-server.png",
+    "compare-record-forgotten.png",
+    "compare-record-light.png",
+    "compare-record-narrow.png"
+  ],
+  "checks": [
+    {
+      "check": "the pane states where this comparison came from, in a labelled block of its own",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the four sources are named, and a restored comparison never passes for a live one",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the run's id comes from the response, and a zero id is stated as not saved",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the bar says which models a restored comparison used, and when the list no longer offers them",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the comparison is written when a run ends, whatever way it ended",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the copy is capped, and the truncation is recorded rather than hidden",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the copy is read back on load, and the reader is told it is this browser's",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "forgetting says what it did not touch, and leaves the pane stating it keeps nothing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the server's copy is read from the export that already exists, by id and mode",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the read-back is labelled as the redacted export it is",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a recorded reply's status is derived from the usage the server stored",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the markdown export keeps every reply and the arbiter under their own headings",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the export picks no winner, and says so",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the export states which copy it is, and whether the server saved it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the JSON export carries one entry per panel with its usage, and its source",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the export is offered as a copy and as a download, and a refusal is stated",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pane touches only the two routes it is allowed to",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the bar escapes what it draws",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "only a run sets the source back to live",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the server still saves the comparison it saved before, and the export still carries it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the fixture can produce a saved run and an unsaved one",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk reloads, reads the server's copy, forgets it and exports",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the captures the doc lists exist and were written by the walk",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the ledger marks this story done with evidence",
+      "ok": false,
+      "detail": "tracking.status='not_started'"
+    }
+  ],
+  "check_count": 24,
+  "findings": [
+    {
+      "check": "the ledger marks this story done with evidence",
+      "ok": false,
+      "detail": "tracking.status='not_started'"
+    }
+  ],
+  "status": "drifted"
+}
