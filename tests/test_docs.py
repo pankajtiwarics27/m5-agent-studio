@@ -204,23 +204,24 @@ def _copy_code(root: Path, destination: Path) -> None:
     )
 
 
-def test_module_counts_in_the_readme_match_the_code(tmp_path: Path) -> None:
-    """The counts went stale twice in one afternoon; they are now checked."""
+def test_readme_avoids_volatile_module_counts(tmp_path: Path) -> None:
+    """Keep the landing page concise; the validator checks counts only when stated."""
     _copy_docs(tmp_path)
     _copy_code(ROOT, tmp_path)
+    readme = (tmp_path / "README.md").read_text(encoding="utf-8")
 
+    assert re.search(r"\d+ of \d+ shipped Python modules", readme) is None
+    assert re.search(r"`app\.py` plus \d+ small contract modules", readme) is None
     assert validate_docs(tmp_path) == []
 
 
-def test_validator_reports_a_stale_module_count(tmp_path: Path) -> None:
+def test_validator_reports_stale_module_counts_when_a_readme_states_them(tmp_path: Path) -> None:
     _copy_docs(tmp_path)
     _copy_code(ROOT, tmp_path)
     readme = tmp_path / "README.md"
-    text = readme.read_text(encoding="utf-8")
-    wired = re.search(r"(\d+) of (\d+) shipped Python modules", text)
-    assert wired is not None
     readme.write_text(
-        text.replace(wired.group(0), f"{int(wired.group(1)) - 1} of {int(wired.group(2)) - 1} shipped Python modules", 1),
+        readme.read_text(encoding="utf-8")
+        + "\n0 of 0 shipped Python modules are wired into the served app.\n",
         encoding="utf-8",
     )
 
@@ -239,14 +240,6 @@ def test_validator_reports_an_import_that_the_bundle_does_not_inline(tmp_path: P
     (tmp_path / "app.py").write_text(
         "import brand_new_subsystem\n" + app_source, encoding="utf-8"
     )
-    readme = tmp_path / "README.md"
-    text = readme.read_text(encoding="utf-8")
-    wired = re.search(r"(\d+) of (\d+) shipped Python modules", text)
-    contract = re.search(r"`app\.py` plus (\d+) small contract modules", text)
-    assert wired is not None and contract is not None
-    text = text.replace(wired.group(0), f"{int(wired.group(1)) + 1} of {int(wired.group(2)) + 1} shipped Python modules", 1)
-    text = text.replace(contract.group(0), f"`app.py` plus {int(contract.group(1)) + 1} small contract modules", 1)
-    readme.write_text(text, encoding="utf-8")
 
     errors = validate_docs(tmp_path)
 
