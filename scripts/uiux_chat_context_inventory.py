@@ -164,7 +164,7 @@ def read_frontend(html: str) -> dict:
             "skills_only_when_sent": "if (ctx.skills)" in line,
         },
         "tools": {
-            "status_word": 'const status = tool.ok ? "OK" : "FAILED";' in tool,
+            "status_word": 'const status = tool.ok ? uiStatus("ok").label : uiStatus("failed").label;' in tool,
             "status_rendered": "chat-tool-status" in tool and "${status}" in tool,
             "status_tone": 'data-tone="${tool.ok ? "ok" : "danger"}"' in tool,
             "not_colour_only": "border-color:" not in tool,

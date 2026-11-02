@@ -1080,6 +1080,10 @@ body[data-density="compact"] .council-settings { padding-block: var(--strip-pad-
   border: 1px solid var(--border-hi); background: var(--bg-card); color: var(--text);
   font: var(--weight-medium) var(--text-xs)/var(--lh-tight) var(--sans);
   white-space: nowrap;
+  /* A status is a word, not a label: a container that shouts its headings (the memory rail's
+     `.m-head`) used to shout the state inside them too, so the vocabulary said `ok` and the reader
+     saw `OK`. Case and tracking belong to the table, never to the box it lands in. */
+  text-transform: none; letter-spacing: 0;
 }
 .status::before {
   content: ""; width: 6px; height: 6px; border-radius: 50%;
@@ -1955,7 +1959,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div class="m-card">
           <div class="m-head">
             <span>Guided first run</span>
-            <span id="onboardingSummary" class="status" data-tone="neutral" role="status">Checking...</span>
+            <span id="onboardingSummary" class="status" data-tone="neutral" role="status">checking</span>
           </div>
           <p class="onboarding-lede">
             Studio checks your local configuration and tells you the one next thing to click.
@@ -1995,7 +1999,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div class="m-card" style="margin-top: 14px;">
           <div class="m-head">
             <span>Recent work and task launch</span>
-            <span id="startRecentSummary" class="status" data-tone="neutral" role="status">Reading…</span>
+            <span id="startRecentSummary" class="status" data-tone="neutral" role="status">loading</span>
           </div>
           <p class="onboarding-lede">
             The five most recent Harness sessions on this machine, newest first, plus a composer
@@ -2022,7 +2026,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div class="m-card" style="margin-top: 14px;">
           <div class="m-head">
             <span>System health</span>
-            <span id="startHealthSummary" class="status" data-tone="neutral" role="status">Reading…</span>
+            <span id="startHealthSummary" class="status" data-tone="neutral" role="status">loading</span>
           </div>
           <div id="startHealthRows" class="start-health"></div>
           <!-- The basis is a required part of the claim: a simulated payload says so. -->
@@ -2040,7 +2044,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div class="m-card" style="margin-top: 14px;">
           <div class="m-head">
             <span>Project workspace</span>
-            <span id="startWorkspaceSummary" class="status" data-tone="neutral" role="status">Reading…</span>
+            <span id="startWorkspaceSummary" class="status" data-tone="neutral" role="status">loading</span>
           </div>
           <p class="onboarding-lede">
             Where the Harness runs your task. This is the same setting the Harness pane shows;
@@ -2164,7 +2168,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <div style="display:flex; gap:6px; align-items:center;">
               <span id="harnessCtxSavingsBadge" class="badge green" style="display:none;" title="Context-Mode SQLite FTS5 KV-Cache Compression Savings">Ctx Saved 0%</span>
               <button id="harnessPermissionBadge" class="harness-perm-badge" type="button" data-count="0" hidden onclick="openHarnessGrants()" title="Permissions this session holds, and the way to take them back">No permissions</button>
-              <span id="harnessActiveStatusBadge" class="status" data-tone="info" role="status">READY</span>
+              <span id="harnessActiveStatusBadge" class="status" data-tone="info" role="status">ready</span>
             </div>
           </div>
 
@@ -2240,7 +2244,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <div style="min-width:0;">
               <div style="display:flex; align-items:center; gap:8px;">
                 <strong id="hallTitle" style="font-size:14.8px;">Spawn or select a Council Session</strong>
-                <span id="hallStatusBadge" class="status" data-tone="warn" role="status">IDLE</span>
+                <span id="hallStatusBadge" class="status" data-tone="info" role="status">ready</span>
               </div>
               <div id="hallRoster" class="avatar-stack" style="margin-top:5px;"></div>
             </div>
@@ -2507,7 +2511,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   <!-- ================= RIGHT MONITORING RAIL ================= -->
   <aside id="monitorRail" class="monitor-rail" role="complementary" aria-label="Telemetry and model monitor">
     <div class="m-card">
-      <div class="m-head"><span>M5 Unified Memory (24 GB)</span><span class="status" data-tone="ok">OK</span></div>
+      <div class="m-head"><span>M5 Unified Memory (24 GB)</span><span class="status" data-tone="ok">ok</span></div>
       <div style="display:flex; justify-content:space-between; font-size:11.6px; margin-bottom:2px;">
         <span id="ramUsedSummary" class="mono">-- / 24.0 GB</span>
         <span id="ramCeilingSummary" class="mono" style="color:var(--rose);">Cap: 20.8 GB</span>
@@ -2554,7 +2558,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </div>
 
     <div class="m-card">
-      <div class="m-head"><span>OrbStack &amp; Containers</span><span id="dockerStateBadge" class="status" data-tone="neutral">Checking</span></div>
+      <div class="m-head"><span>OrbStack &amp; Containers</span><span id="dockerStateBadge" class="status" data-tone="neutral">checking</span></div>
       <div style="display:flex; justify-content:space-between; font-size:11.4px; color:var(--text-dim); margin-bottom:4px;">
         <span>RAM: <strong id="dockerRam" class="mono" style="color:var(--text)">0.00 GB</strong></span>
         <span>CPU: <strong id="dockerCpu" class="mono" style="color:var(--text)">0.0%</strong></span>
@@ -3223,7 +3227,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       setStatus(
         summary,
         onboardingReport.ready ? "ok" : onboardingReport.blocked ? "danger" : "warn",
-        onboardingReport.ready ? "Ready" : onboardingReport.blocked ? "Blocked" : "Needs you",
+        onboardingReport.ready ? uiStatus("ready").label : onboardingReport.blocked ? uiStatus("blocked").label : uiStatus("needs-you").label,
       );
       // The list is ordered by the server (STEP_ORDER). The row it named as next is
       // marked with aria-current="step" and a chip, so the eye and the screen reader
@@ -3272,7 +3276,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         { copyText: `Preflight ${checked}: ${onboardingReport.summary}` },
       );
     } catch (error) {
-      setStatus(summary, "danger", "Check failed");
+      setStatus(summary, "danger", uiStatus("failed").label);
       const runHint = document.getElementById("onboardingRunHint");
       if (runHint) runHint.textContent = "Run the first task is off while the preflight is unreadable; the last good result is still shown.";
       // The steps below are left alone on purpose: a failed re-check does not
@@ -3336,7 +3340,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     list.innerHTML = "";
 
     if (!startRecentSessions.length) {
-      setStatus(summary, "neutral", "Nothing yet");
+      setStatus(summary, "neutral", uiStatus("not-run").label);
       return presentInto("startRecentState", {
         kind: "empty",
         title: "No recent work yet",
@@ -3409,7 +3413,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       renderStartRecent();
       return startRecentSessions;
     } catch (error) {
-      if (summary) setStatus(summary, "danger", "Unavailable");
+      if (summary) setStatus(summary, "danger", uiStatus("unavailable").label);
       // The launcher below does not depend on this list, and saying so is the
       // difference between "Start is broken" and "recent work could not be read".
       presentInto("startRecentState", {
@@ -3491,13 +3495,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       value.textContent = row.value;
       const pill = document.createElement("span");
       pill.className = "status";
-      setStatus(pill, row.tone, row.tone === "ok" ? "OK" : row.tone === "danger" ? "OVER CAP" : row.tone === "warn" ? "CHECK" : "—");
+      setStatus(pill, row.tone, row.tone === "ok" ? uiStatus("ok").label : row.tone === "danger" ? uiStatus("over-cap").label : row.tone === "warn" ? uiStatus("check").label : uiStatus("absent").label);
       line.append(label, value, pill);
       host.appendChild(line);
     });
 
     if (summary) {
-      setStatus(summary, simulated ? "warn" : (d ? "ok" : "danger"), simulated ? "Demo data" : (d ? "Live" : "Offline"));
+      setStatus(
+        summary,
+        simulated ? uiStatus("demo-data").tone : (d ? uiStatus("live").tone : uiStatus("offline").tone),
+        simulated ? uiStatus("demo-data").label : (d ? uiStatus("live").label : uiStatus("offline").label),
+      );
     }
     // One box either way: the failure gets a cause and a way back, and a successful
     // read removes it again rather than leaving a stale error under a working card.
@@ -4606,7 +4614,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     clearPresentation("hallSummonState");
     document.getElementById("hallTitle").textContent = s.title;
     const badge = document.getElementById("hallStatusBadge");
-    setStatus(badge, s.status === "active" ? "ok" : "warn", s.status.toUpperCase());
+    setStatus(
+      badge,
+      s.status === "active" ? uiStatus("running").tone : uiStatus("ready").tone,
+      s.status === "active" ? uiStatus("running").label : uiStatus("ready").label,
+    );
 
     const fileBadges = (s.context_files || []).map(f => `<span class="badge cyan">@${escapeHtml(f)}</span>`).join("");
     const roster = (s.participants || []).map(p => {
@@ -4624,7 +4636,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       // A reply the demo path wrote is not the named model's, and it earns no tok/s
       // badge: its usage line carries `demo`, so the card says what produced it.
       const meta = u.demo
-        ? `<span class="status" data-tone="warn" title="The local runtime did not answer, so the server wrote this reply itself. It is not the named model's output, and it carries no tok/s figure.">Demo reply · the runtime is offline</span>`
+        ? `<span class="status" data-tone="warn" title="The local runtime did not answer, so the server wrote this reply itself. It is not the named model's output, and it carries no tok/s figure.">${UI_STATUS.demo.label}</span>`
         : u.decode_tps ? `<span class="badge green">${u.decode_tps} tok/s • ${u.completion_tokens || 0} tok</span>` : "";
       const role = COUNCIL_ROLES[m.role_key];
       const seatTag = role ? `<span class="role-tag" data-seat="${role.seat}">Seat ${role.seat} · ${escapeHtml(role.label)}</span>` : "";
@@ -4940,7 +4952,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       }
       if (loadable) {
         return {
-          state: "needs-load", tone: "warn", tag: "NEEDS LOAD",
+          state: "needs-load", tone: "warn", tag: uiStatus("needs-load").label,
           text: `Combo "${route.alias}": ${loadable} of ${targets.length} targets answer once a model is loaded.`,
           action: { id: "check", label: "Check again", title: "Read /api/telemetry again" },
         };
@@ -4963,7 +4975,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const provider = route.provider;
       if (!provider.has_key) {
         return {
-          state: "needs-key", tone: "danger", tag: "NEEDS KEY",
+          state: "needs-key", tone: "danger", tag: uiStatus("needs-key").label,
           text: `"${provider.alias}" holds no API key, so this seat would fail when it is dispatched.`,
           action: { id: "providers", label: "Open providers", title: "Add the key for this alias" },
         };
@@ -5001,7 +5013,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (known.loaded) {
       const size = councilGigabytes(known.size_gb);
       return {
-        state: "ready", tone: "ok", tag: "READY",
+        state: "ready", tone: "ok", tag: uiStatus("ready").label,
         text: `Resident${size ? `, ${size}` : ""}.`,
         action: null,
       };
@@ -5019,7 +5031,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       };
     }
     return {
-      state: "needs-load", tone: "warn", tag: "NEEDS LOAD",
+      state: "needs-load", tone: "warn", tag: uiStatus("needs-load").label,
       text: `Not resident: ${sizeText || "an unreported size"} loads on the first token.`,
       action: { id: "load", label: "Load now", title: `Ask the runtime to load ${route.model}` },
     };
@@ -5181,9 +5193,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       sentence = `${allowed} of ${total} assignments are ready or configured; invocation is blocked until the remaining seats are ready.`;
     }
     const count = document.getElementById("councilReadinessCount");
+    // The count keeps its numbers; the word is the vocabulary's, in the reader's case.
     const countLabel = counts.configured
-      ? `${counts.ready} READY · ${counts.configured} CONFIGURED`
-      : `${counts.ready}/${total} READY`;
+      ? `${counts.ready} ${uiStatus("ready").label} · ${counts.configured} ${uiStatus("configured").label}`
+      : `${counts.ready}/${total} ${uiStatus("ready").label}`;
     if (count) setStatus(count, tone, countLabel, sentence);
     summary.textContent = sentence;
 
@@ -5836,7 +5849,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     setStatus(
       dBadge,
       dk.state === "running" ? "info" : dk.state === "idle" ? "ok" : "neutral",
-      (dk.state || "stopped").toUpperCase(),
+      dk.state === "running" ? uiStatus("running").label : dk.state === "idle" ? uiStatus("ready").label : uiStatus("halted").label,
     );
     document.getElementById("dockerRam").textContent = `${(dk.vm_footprint_gb || 0).toFixed(2)} GB`;
     document.getElementById("dockerCpu").textContent = `${(dk.total_cpu_pct || 0).toFixed(1)}%`;
@@ -6049,10 +6062,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const view = pipelineContract(stage);
     const buffer = stageBuffers[Number(stage)] || {};
     const content = typeof buffer.c === "string" ? buffer.c : "";
-    if (view.demo) return { id: "demo", label: "demo text", note: "the runtime was offline, so the server wrote this reply" };
+    if (view.demo) return { id: "demo", label: uiStatus("demo").label, note: "the runtime was offline, so the server wrote this reply" };
     if (view.capped) {
       const label = view.cappedBy === "length"
-        ? "cut at the length limit"
+        ? uiStatus("cut").label
         : (view.budget === null ? "spent its whole budget" : `spent its ${String(view.budget)}-token budget`);
       const note = view.cappedBy === "length"
         ? "the runtime stopped this reply at its length limit, and the next seat reads the cut text"
@@ -6615,13 +6628,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const buffer = stageBuffers[seat.stage];
       if (!buffer.c && !buffer.u) return;
       document.getElementById(`step-card-${seat.stage}`).classList.add("done");
-      document.getElementById(`st-state-${seat.stage}`).textContent = "Recovered";
+      document.getElementById(`st-state-${seat.stage}`).textContent = uiStatus("partial").label;
       if (buffer.u) document.getElementById(`st-tps-${seat.stage}`).textContent = `${buffer.u.decode_tps} t/s`;
       ensureStageCardMounted(seat.stage);
       const card = document.getElementById(`stage-dom-${seat.stage}`);
       if (card) card.dataset.recovered = "true";
       const pill = document.getElementById(`stage-pill-${seat.stage}`);
-      if (pill && !buffer.u) setStatus(pill, "warn", "Recovered · partial");
+      if (pill && !buffer.u) setStatus(pill, "warn", uiStatus("partial").label);
     });
     scheduleStageUpdate();
     renderCouncilArtifacts();
@@ -6964,7 +6977,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         if (st.u) {
           const pill = document.getElementById(`stage-pill-${k}`);
           const demo = st.u.demo === true || st.u.demo === "true";
-          if (demo) setStatus(pill, "info", "demo reply • the runtime was offline");
+          if (demo) setStatus(pill, "warn", uiStatus("demo").label);
           else setStatus(pill, "ok", `${st.u.decode_tps} tok/s • TTFT ${st.u.ttft}s • ${st.u.completion_tokens} tok`);
         }
         updateStageRows(k);
@@ -7035,16 +7048,16 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         stageBuffers[d.stage].u = d.usage;
         document.getElementById(`step-card-${d.stage}`).classList.remove("running");
         document.getElementById(`step-card-${d.stage}`).classList.add("done");
-        document.getElementById(`st-state-${d.stage}`).textContent = "Done";
+        document.getElementById(`st-state-${d.stage}`).textContent = uiStatus("completed").label;
         // UIUX-P4-02: a demo reply carries the server's own figures (29.5 / 42.1 tok/s for text no
         // model produced). The stepper used to print one; it now says what the reply was.
         const demo = d.usage && (d.usage.demo === true || d.usage.demo === "true");
         document.getElementById(`st-tps-${d.stage}`).textContent = demo ? "demo" : `${d.usage.decode_tps} t/s`;
         scheduleStageUpdate();
       },
-      unloading(d) { document.getElementById(`st-state-${d.stage}`).textContent = "Unloaded"; },
+      unloading(d) { document.getElementById(`st-state-${d.stage}`).textContent = uiStatus("unloaded").label; },
       council_done(d) {
-        document.getElementById("councilTotalStatus").textContent = "Done";
+        document.getElementById("councilTotalStatus").textContent = uiStatus("completed").label;
         document.getElementById("councilTotalTime").textContent = `${d.total_elapsed_s}s`;
         if (councilRun) {
           // `run_id` is 0 when save_run() could not write; drawn as "not saved".
@@ -7108,7 +7121,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         const pill = document.getElementById(`stage-pill-${n}`);
         // A card mounted for a seat that never reported usage keeps its "Connecting..." default:
         // after the run ends that reads as still connecting, which is the opposite of true.
-        if (pill && !stageBuffers[n].u) setStatus(pill, "warn", "Stopped mid-seat");
+        if (pill && !stageBuffers[n].u) setStatus(pill, "warn", uiStatus("stopped").label);
       });
       // The only copy of what survived is this one, so it is written before the page can go.
       const kept = pipelineCheckpointWrite(councilRun.endReason);
@@ -7656,7 +7669,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const parts = [counts.total + (counts.total === 1 ? " panel" : " panels")];
     const add = (count, singular, plural) => { if (count) parts.push(count + " " + (count === 1 ? singular : plural)); };
     add(counts.answered, "answered", "answered");
-    add(counts.cut, "cut at the length limit", "cut at the length limit");
+    add(counts.cut, uiStatus("cut").label, uiStatus("cut").label);
     add(counts.demo, "demo text", "demo text");
     add(counts.empty, "with no reply", "with no reply");
     add(counts.running, "running", "running");
@@ -8190,7 +8203,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function renderChatTool(tool) {
     // The status is a word, not a border colour: colour alone is not a status.
-    const status = tool.ok ? "OK" : "FAILED";
+    const status = tool.ok ? uiStatus("ok").label : uiStatus("failed").label;
     const args = JSON.stringify(tool.args || {}, null, 1);
     const step = Number(tool.step) || 1;
     const elapsed = Number(tool.elapsed_ms) || 0;
@@ -8267,7 +8280,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       lines.push("Tool calls in this conversation:");
       shown.forEach((tool) => {
         const step = Math.max(1, Number(tool.step) || 1);
-        lines.push(`- ${tool.ok ? "OK" : "FAILED"} ${tool.tool} - step ${step}, ${Number(tool.elapsed_ms) || 0} ms: ${chatHandoffClip(tool.preview, 200) || "(no output)"}`);
+        lines.push(`- ${tool.ok ? uiStatus("ok").label : uiStatus("failed").label} ${tool.tool} - step ${step}, ${Number(tool.elapsed_ms) || 0} ms: ${chatHandoffClip(tool.preview, 200) || "(no output)"}`);
       });
       if (stats.callsList.length > shown.length) {
         lines.push(`(${stats.callsList.length - shown.length} earlier call(s) are in the Chat transcript.)`);
@@ -8673,7 +8686,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     harnessSnapshot = null;
     closeHarnessEventStream();
     document.getElementById("harnessActiveLabel").textContent = "New Harness Draft — choose workspace, worktree isolation, & policy, then run your task below.";
-    setStatus("harnessActiveStatusBadge", "neutral", "NEW DRAFT");
+    setStatus("harnessActiveStatusBadge", "neutral", uiStatus("draft").label);
     harnessGrantSnapshot = null;
     harnessGrantConfirm = "";
     harnessApprovalRequests.clear();
@@ -8770,7 +8783,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       return;
     }
     box.innerHTML = harnessSessions.map(s => {
-      const stIcon = s.status === "running" ? "Running" : s.status === "waiting_approval" ? "Needs Approval" : s.status === "completed" ? "Done" : s.status;
+      const stIcon = harnessStatusBadge(s).label;
       const wtTag = s.use_worktree && s.branch_name ? `<span class="badge cyan" style="font-size:9.8px; padding:1px 5px;">WT</span>` : "";
       return `
         <div class="chronicle-item ${s.id === activeHarnessId ? 'active' : ''}" onclick="selectHarnessSession('${escapeHtml(s.id)}')">
@@ -8806,11 +8819,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       : `Direct Workspace -> ${sess.worktree_dir}`;
     document.getElementById("harnessActiveLabel").textContent = `${sess.id} • ${wtInfo}`;
     const b = document.getElementById("harnessActiveStatusBadge");
-    setStatus(
-      b,
-      sess.status === "completed" ? "ok" : sess.status === "waiting_approval" ? "warn" : "info",
-      (sess.status || "idle").toUpperCase(),
-    );
+    const sessBadge = harnessStatusBadge(sess);
+    setStatus(b, sessBadge.cls, sessBadge.label);
     updateHarnessCtxBadge(sess.ctx_metrics);
     if (sess.policy) document.getElementById("harnessPolicy").value = sess.policy;
     if (sess.lead_model && unifiedCatalog.some(x => x.id === sess.lead_model)) document.getElementById("harnessLeadModel").value = sess.lead_model;
@@ -8912,6 +8922,56 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   let harnessLastResyncAt = 0;
 
   /* M5-P1-07-PURE-BEGIN */
+  // One word per state, everywhere. Six panes used to invent their own: the same failed run read
+  // `FAILED`, `ERROR`, `Check failed` and `failed`, the same running workflow was green in one pane
+  // and busy in another, and a stop said `CANCELLED` here and `stopped by you` there. A state is
+  // named once, with its tone, and every pane draws it from this table - the terminology inventory
+  // reads this object as the whole vocabulary and fails when a pane restates a state in its own
+  // words. Tones come from STATUS_TONES, so a state cannot invent a colour either.
+  const UI_STATUS = {
+    ready: { label: "ready", tone: "info" },
+    queued: { label: "queued", tone: "neutral" },
+    running: { label: "running", tone: "busy" },
+    "waiting-approval": { label: "waiting approval", tone: "warn" },
+    paused: { label: "paused", tone: "warn" },
+    blocked: { label: "blocked", tone: "danger" },
+    completed: { label: "completed", tone: "ok" },
+    failed: { label: "failed", tone: "danger" },
+    stopped: { label: "stopped by you", tone: "warn" },
+    partial: { label: "recovered, partial", tone: "warn" },
+    unavailable: { label: "unavailable", tone: "danger" },
+    "not-run": { label: "not run", tone: "neutral" },
+    answered: { label: "answered", tone: "ok" },
+    cut: { label: "cut at the length limit", tone: "warn" },
+    demo: { label: "demo text", tone: "warn" },
+    empty: { label: "no reply", tone: "warn" },
+    lost: { label: "stream ended", tone: "warn" },
+    draft: { label: "new draft", tone: "neutral" },
+    checking: { label: "checking", tone: "neutral" },
+    loading: { label: "loading", tone: "neutral" },
+    connecting: { label: "connecting", tone: "busy" },
+    streaming: { label: "streaming", tone: "busy" },
+    unloaded: { label: "unloaded", tone: "neutral" },
+    ok: { label: "ok", tone: "ok" },
+    "over-cap": { label: "over cap", tone: "danger" },
+    check: { label: "check", tone: "warn" },
+    absent: { label: "—", tone: "neutral" },
+    live: { label: "live", tone: "ok" },
+    offline: { label: "offline", tone: "danger" },
+    "demo-data": { label: "demo data", tone: "warn" },
+    "needs-you": { label: "needs you", tone: "warn" },
+    "needs-load": { label: "needs load", tone: "warn" },
+    "needs-key": { label: "needs key", tone: "danger" },
+    halted: { label: "halted", tone: "neutral" },
+    configured: { label: "configured", tone: "ok" },
+  };
+  /** The word and the tone for a state. An unknown state is a caller's bug, not a new word. */
+  function uiStatus(state) {
+    const hit = UI_STATUS[state];
+    if (!hit) throw new Error(`unknown ui status: ${state}`);
+    return hit;
+  }
+
   function harnessEventCursor(events) {
     let cursor = 0;
     for (const ev of events || []) {
@@ -8954,25 +9014,32 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return [...bySeq.keys()].sort((a, b) => a - b).map(seq => bySeq.get(seq));
   }
 
+  // The run states the server actually reports, mapped to the shared vocabulary. This map used to
+  // hold its own words in capitals, and it is where the drift started: FAILED and ERROR were two
+  // words for one outcome, CANCELLED and stopped by you were two spellings of one, and READY was
+  // both pending and idle.
+  const HARNESS_STATUS_STATE = {
+    waiting_approval: "waiting-approval",
+    running: "running",
+    paused: "paused",
+    blocked: "blocked",
+    pending: "queued",
+    idle: "ready",
+    completed: "completed",
+    cancelled: "stopped",
+    failed: "failed",
+    error: "failed",
+  };
   function harnessStatusBadge(state) {
     const status = String((state && (state.status || state.task_status)) || "idle").toLowerCase();
-    // Tones, not colour names: the old map painted failed, error and cancelled the
-    // same amber as paused, so a failed run and a paused one were the same colour
-    // with different words. Failure is danger now, cancellation is neutral.
-    const map = {
-      waiting_approval: ["warn", "WAITING APPROVAL"],
-      running: ["busy", "WORKFLOW RUNNING"],
-      paused: ["warn", "PAUSED"],
-      blocked: ["danger", "BLOCKED"],
-      pending: ["info", "READY"],
-      idle: ["info", "READY"],
-      completed: ["ok", "COMPLETED"],
-      cancelled: ["neutral", "CANCELLED"],
-      failed: ["danger", "FAILED"],
-      error: ["danger", "ERROR"],
-    };
-    const hit = map[status] || ["info", status.toUpperCase()];
-    return { cls: hit[0], label: hit[1] };
+    const name = HARNESS_STATUS_STATE[status];
+    if (!name) {
+      // A state this table has never seen is drawn as the server's own word rather than mapped
+      // onto a word that would be wrong; the pane still says something true.
+      return { cls: "neutral", label: status.replace(/_/g, " ") };
+    }
+    const hit = uiStatus(name);
+    return { cls: hit.tone, label: hit.label };
   }
   /* M5-P1-07-PURE-END */
 
@@ -9001,7 +9068,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (type === "turn/start") return `${ev.policy || "standard"} policy${ev.resumed_from_step ? ` · resumed from step ${ev.resumed_from_step}` : ""} · ${clip(ev.prompt, 70)}`;
     if (type === "step/start") return `step ${Number(ev.step) || "?"} · ${ev.model || "?"}`;
     if (type === "assistant/message") return `step ${Number(ev.step) || "?"} · ${ev.model || "?"}${ev.tool_calls && ev.tool_calls.length ? ` · ${ev.tool_calls.length} tool call(s)` : ""}`;
-    if (type === "tool/result") return `${ev.tool || "tool"} · ${ev.ok === false ? "FAILED" : "OK"} · ${Number(ev.elapsed_ms) || 0} ms`;
+    if (type === "tool/result") return `${ev.tool || "tool"} · ${ev.ok === false ? uiStatus("failed").label : uiStatus("ok").label} · ${Number(ev.elapsed_ms) || 0} ms`;
     if (type === "approval/request") return `${ev.tool || "tool"} needs a decision (${ev.approval_id || "?"})`;
     if (type === "approval/decision") return `${ev.approval_id || "?"} ${ev.decision === "approve" ? "approved" : "rejected"}`;
     if (type === "turn/end") return `turn ended in ${Number(ev.elapsed_s) || 0}s · ${Number(ev.steps) || 0} step(s) · ${ev.state || "completed"}`;
@@ -9916,7 +9983,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function appendWorkflowApprovalCard(target, d) {
     const statusBadge = document.getElementById("harnessActiveStatusBadge");
-    if (statusBadge) setStatus(statusBadge, "warn", "WAITING APPROVAL");
+    if (statusBadge) setStatus(statusBadge, uiStatus("waiting-approval").tone, uiStatus("waiting-approval").label);
     const card = document.createElement("div");
     card.id = `apr-card-${d.approval_id}`;
     card.className = "h-tool-card wait";
@@ -9927,7 +9994,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function updateWorkflowApprovalCard(d) {
     const statusBadge = document.getElementById("harnessActiveStatusBadge");
-    if (statusBadge) setStatus(statusBadge, "ok", "WORKFLOW RUNNING");
+    if (statusBadge) setStatus(statusBadge, "busy", uiStatus("running").label);
     const decided = d.decision === "approve" ? "approve" : "reject";
     const card = document.getElementById(`apr-card-${d.approval_id}`);
     if (card) {
@@ -11336,10 +11403,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         st.el.querySelector(`#h-live-md-${d.step}`).innerHTML = d.clean_content ? renderMarkdown(d.clean_content) : "";
         const u = d.usage || {};
         const b = st.el.querySelector(`[id^="h-live-badge-"]`);
-        if (b) setStatus(b, "ok", u.decode_tps ? `${u.decode_tps} tok/s • ${u.completion_tokens || 0} tok` : "Step Done");
+        if (b) setStatus(b, "ok", u.decode_tps ? `${u.decode_tps} tok/s • ${u.completion_tokens || 0} tok` : uiStatus("completed").label);
       },
       approval_required(d) {
-        setStatus("harnessActiveStatusBadge", "warn", "WAITING APPROVAL");
+        setStatus("harnessActiveStatusBadge", uiStatus("waiting-approval").tone, uiStatus("waiting-approval").label);
         const toolsBox = ensureLiveStepCard(d.step, "").el.querySelector(`#h-live-tools-${d.step}`);
         const aprDiv = document.createElement("div");
         aprDiv.id = `apr-card-${d.approval_id}`;
@@ -11724,7 +11791,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail || "Call failed");
-      out.textContent = `(${d.elapsed_ms}ms • ${d.ok ? "OK" : "ERROR"})\n${d.output || ""}`;
+      out.textContent = `(${d.elapsed_ms}ms • ${d.ok ? uiStatus("ok").label : uiStatus("failed").label})\n${d.output || ""}`;
     } catch (e) {
       out.textContent = "Error: " + e.message;
     } finally {
@@ -11814,7 +11881,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         const st = ensureWaveStep(d.step, "");
         st.el.querySelector(`#gsd-md-${d.step}`).innerHTML = d.clean_content ? renderMarkdown(d.clean_content) : "";
         const b = st.el.querySelector(".badge");
-        if (b) setStatus(b, "ok", "Done");
+        if (b) setStatus(b, uiStatus("completed").tone, uiStatus("completed").label);
       },
       gsd_wave_done(d) {
         const key = d.wave === 1 ? 1 : (d.wave === 3 ? 99 : null);
@@ -12082,7 +12149,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const sdlcBtn = document.getElementById("harnessSdlcBtn");
     if (sdlcBtn) sdlcBtn.disabled = true;
     document.getElementById("harnessAbortBtn").style.display = "inline-flex";
-    setStatus("harnessActiveStatusBadge", "busy", "SDLC RUNNING");
+    setStatus("harnessActiveStatusBadge", "busy", uiStatus("running").label);
 
     setHarnessRunActive(true);
     consumeSSE(url, payload, {

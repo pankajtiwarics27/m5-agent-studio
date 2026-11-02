@@ -1,0 +1,409 @@
+{
+  "story": "UIUX-P5-01",
+  "title": "Cross-tab terminology and consistent statuses",
+  "generated_by": "scripts/uiux_terminology_inventory.py",
+  "surface": "UI_STATUS",
+  "tones": [
+    "ok",
+    "warn",
+    "danger",
+    "info",
+    "busy",
+    "neutral"
+  ],
+  "vocabulary": {
+    "ready": {
+      "label": "ready",
+      "tone": "info"
+    },
+    "queued": {
+      "label": "queued",
+      "tone": "neutral"
+    },
+    "running": {
+      "label": "running",
+      "tone": "busy"
+    },
+    "waiting-approval": {
+      "label": "waiting approval",
+      "tone": "warn"
+    },
+    "paused": {
+      "label": "paused",
+      "tone": "warn"
+    },
+    "blocked": {
+      "label": "blocked",
+      "tone": "danger"
+    },
+    "completed": {
+      "label": "completed",
+      "tone": "ok"
+    },
+    "failed": {
+      "label": "failed",
+      "tone": "danger"
+    },
+    "stopped": {
+      "label": "stopped by you",
+      "tone": "warn"
+    },
+    "partial": {
+      "label": "recovered, partial",
+      "tone": "warn"
+    },
+    "unavailable": {
+      "label": "unavailable",
+      "tone": "danger"
+    },
+    "not-run": {
+      "label": "not run",
+      "tone": "neutral"
+    },
+    "answered": {
+      "label": "answered",
+      "tone": "ok"
+    },
+    "cut": {
+      "label": "cut at the length limit",
+      "tone": "warn"
+    },
+    "demo": {
+      "label": "demo text",
+      "tone": "warn"
+    },
+    "empty": {
+      "label": "no reply",
+      "tone": "warn"
+    },
+    "lost": {
+      "label": "stream ended",
+      "tone": "warn"
+    },
+    "draft": {
+      "label": "new draft",
+      "tone": "neutral"
+    },
+    "checking": {
+      "label": "checking",
+      "tone": "neutral"
+    },
+    "loading": {
+      "label": "loading",
+      "tone": "neutral"
+    },
+    "connecting": {
+      "label": "connecting",
+      "tone": "busy"
+    },
+    "streaming": {
+      "label": "streaming",
+      "tone": "busy"
+    },
+    "unloaded": {
+      "label": "unloaded",
+      "tone": "neutral"
+    },
+    "ok": {
+      "label": "ok",
+      "tone": "ok"
+    },
+    "over-cap": {
+      "label": "over cap",
+      "tone": "danger"
+    },
+    "check": {
+      "label": "check",
+      "tone": "warn"
+    },
+    "absent": {
+      "label": "\u2014",
+      "tone": "neutral"
+    },
+    "live": {
+      "label": "live",
+      "tone": "ok"
+    },
+    "offline": {
+      "label": "offline",
+      "tone": "danger"
+    },
+    "demo-data": {
+      "label": "demo data",
+      "tone": "warn"
+    },
+    "needs-you": {
+      "label": "needs you",
+      "tone": "warn"
+    },
+    "needs-load": {
+      "label": "needs load",
+      "tone": "warn"
+    },
+    "needs-key": {
+      "label": "needs key",
+      "tone": "danger"
+    },
+    "halted": {
+      "label": "halted",
+      "tone": "neutral"
+    },
+    "configured": {
+      "label": "configured",
+      "tone": "ok"
+    }
+  },
+  "state_count": 35,
+  "server_states": {
+    "waiting_approval": "waiting-approval",
+    "running": "running",
+    "paused": "paused",
+    "blocked": "blocked",
+    "pending": "queued",
+    "idle": "ready",
+    "completed": "completed",
+    "cancelled": "stopped",
+    "failed": "failed",
+    "error": "failed"
+  },
+  "draws": [
+    {
+      "where": "setStatus(vocabulary)",
+      "tone": "danger",
+      "word": "@failed"
+    },
+    {
+      "where": "setStatus(vocabulary)",
+      "tone": "neutral",
+      "word": "@not-run"
+    },
+    {
+      "where": "setStatus(vocabulary)",
+      "tone": "danger",
+      "word": "@unavailable"
+    },
+    {
+      "where": "setStatus(vocabulary)",
+      "tone": "warn",
+      "word": "@partial"
+    },
+    {
+      "where": "setStatus(vocabulary)",
+      "tone": "warn",
+      "word": "@demo"
+    },
+    {
+      "where": "setStatus(vocabulary)",
+      "tone": "warn",
+      "word": "@stopped"
+    },
+    {
+      "where": "setStatus(vocabulary)",
+      "tone": "neutral",
+      "word": "@draft"
+    },
+    {
+      "where": "setStatus(vocabulary)",
+      "tone": "busy",
+      "word": "@running"
+    },
+    {
+      "where": "setStatus(vocabulary)",
+      "tone": "busy",
+      "word": "@running"
+    },
+    {
+      "where": "status chip",
+      "tone": "neutral",
+      "word": "0 / 0 Passed"
+    },
+    {
+      "where": "status chip",
+      "tone": "neutral",
+      "word": "checking"
+    },
+    {
+      "where": "status chip",
+      "tone": "neutral",
+      "word": "loading"
+    },
+    {
+      "where": "status chip",
+      "tone": "neutral",
+      "word": "loading"
+    },
+    {
+      "where": "status chip",
+      "tone": "neutral",
+      "word": "loading"
+    },
+    {
+      "where": "status chip",
+      "tone": "info",
+      "word": "ready"
+    },
+    {
+      "where": "status chip",
+      "tone": "info",
+      "word": "ready"
+    },
+    {
+      "where": "status chip",
+      "tone": "neutral",
+      "word": "\u2014"
+    },
+    {
+      "where": "status chip",
+      "tone": "ok",
+      "word": "ok"
+    },
+    {
+      "where": "status chip",
+      "tone": "neutral",
+      "word": "checking"
+    },
+    {
+      "where": "status chip",
+      "tone": "warn",
+      "word": "demo text"
+    }
+  ],
+  "not_a_status": {
+    "0 / 0 Passed": "a count of checks that ran, not a state",
+    "ESC": "a key label",
+    "PRD": "a document type",
+    "VIEW": "a mode label",
+    "MTP": "a model-architecture tag",
+    "CPU": "a hardware label",
+    "RAM": "a hardware label",
+    "PINNED": "a label on a pinned artifact",
+    "USER TASK": "a field label",
+    "LOADED": "a model-residency chip, a property of a resource rather than a state of a run",
+    "LOADING": "a model-residency chip",
+    "PASSED": "a verdict on a check, drawn as a count",
+    "Unavailable": "a provider-route label (`Unavailable provider \u00b7 alias`), not a run state"
+  },
+  "panes": [
+    "start",
+    "harness",
+    "hall",
+    "council",
+    "debate",
+    "chat"
+  ],
+  "captures": [
+    "terminology-start.png",
+    "terminology-harness.png",
+    "terminology-hall.png",
+    "terminology-council.png",
+    "terminology-debate.png",
+    "terminology-chat.png",
+    "terminology-narrow.png",
+    "terminology-light.png"
+  ],
+  "checks": [
+    {
+      "check": "there is one vocabulary object, and it carries a word and a tone per state",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "no state is spelled twice, and no two states share a word",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the vocabulary is lowercase prose, not shouted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "`uiStatus()` is the only way a caller gets a word, and an unknown state is a bug",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the Compare pane's ten states are the shared vocabulary, word for word and tone for tone",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the Harness maps the server's states onto the vocabulary rather than naming them itself",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "one outcome has one word: `error` is drawn as `failed`, `cancelled` as `stopped by you`",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a state the table has never seen keeps the server's own word instead of a wrong one",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every status word drawn anywhere is in the vocabulary or stated as not a status",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a word carries its tone wherever it is drawn, so a green `running` cannot come back",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "no status is shouted in capitals while the rest of the vocabulary is prose",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "each pane is named as drawing its words from the vocabulary, not from its own list",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the words drawn through a template are the table's, not a hand-written copy of them",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the harness session rows and the harness badge say the same word for the same state",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a waiting approval is one phrase, on the badge and on every approval card",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the same roll-up word is used for a finished stage and a finished run",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the server's own state words still reach the pane, and the vocabulary only renames the label",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk visits all six panes by keyboard and reads the words off the DOM",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the captures the doc lists exist and were written by the walk",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the ledger marks this story done with evidence",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "check_count": 20,
+  "findings": [],
+  "status": "clean"
+}

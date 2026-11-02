@@ -407,7 +407,7 @@ def build_inventory() -> dict:
         "the summary counts ready and configured assignments, and names both reads",
         'counts.ready += 1' in render
         and 'counts.configured += 1' in render
-        and "CONFIGURED" in render
+        and 'uiStatus("configured").label' in render
         and 'evidenceNote(basis, "derived"' in render
         and "GET /api/telemetry and GET /api/providers" in render
         and 'evidenceNote(basis, "unavailable"' in render,
@@ -459,7 +459,7 @@ def build_inventory() -> dict:
         "a demo reply is labelled before it is given a tok/s badge",
         "u.demo" in card_map
         and card_map.find("u.demo") < card_map.find("u.decode_tps")
-        and "Demo reply" in card_map
+        and "UI_STATUS.demo.label" in card_map
         and "not given a tok/s figure" not in card_map,
         card_map[:240],
     )

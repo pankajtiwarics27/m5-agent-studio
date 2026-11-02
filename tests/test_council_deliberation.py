@@ -219,7 +219,11 @@ def test_a_handoff_that_counts_content_alone_is_a_finding(sources):
 
 def test_a_cut_reply_drawn_as_an_answer_is_a_finding(sources):
     broken = sources(
-        html_transform=lambda html: html.replace('cut at the length limit', 'answered', 1),
+        html_transform=lambda html: html.replace(
+            '        ? uiStatus("cut").label',
+            '        ? uiStatus("answered").label',
+            1,
+        ),
     )
     assert "six verdicts, and a cut reply is not drawn as an answer" in _checks(broken)
 

@@ -35,185 +35,195 @@
       "id": "sdlcProgressBadge",
       "tone": "neutral",
       "live": false,
-      "line": 1811
+      "line": 1815
     },
     {
       "id": "onboardingSummary",
       "tone": "neutral",
       "live": true,
-      "line": 1958
+      "line": 1962
     },
     {
       "id": "startRecentSummary",
       "tone": "neutral",
       "live": true,
-      "line": 1998
+      "line": 2002
     },
     {
       "id": "startHealthSummary",
       "tone": "neutral",
       "live": true,
-      "line": 2025
+      "line": 2029
     },
     {
       "id": "startWorkspaceSummary",
       "tone": "neutral",
       "live": true,
-      "line": 2043
+      "line": 2047
     },
     {
       "id": "harnessActiveStatusBadge",
       "tone": "info",
       "live": true,
-      "line": 2167
+      "line": 2171
     },
     {
       "id": "hallStatusBadge",
-      "tone": "warn",
+      "tone": "info",
       "live": true,
-      "line": 2243
+      "line": 2247
     },
     {
       "id": "councilReadinessCount",
       "tone": "neutral",
       "live": false,
-      "line": 2256
+      "line": 2260
     },
     {
       "id": null,
       "tone": "ok",
       "live": false,
-      "line": 2510
+      "line": 2514
     },
     {
       "id": "dockerStateBadge",
       "tone": "neutral",
       "live": false,
-      "line": 2557
+      "line": 2561
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 4548
+      "line": 4556
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 4627
+      "line": 4639
     },
     {
       "id": null,
       "tone": "neutral",
       "live": false,
-      "line": 7531
+      "line": 7544
     },
     {
       "id": null,
       "tone": "busy",
       "live": false,
-      "line": 7532
+      "line": 7545
     },
     {
       "id": null,
       "tone": "ok",
       "live": false,
-      "line": 7533
+      "line": 7546
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 7534
+      "line": 7547
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 7535
+      "line": 7548
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 7536
+      "line": 7549
     },
     {
       "id": null,
       "tone": "danger",
       "live": false,
-      "line": 7537
+      "line": 7550
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 7538
+      "line": 7551
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 7539
+      "line": 7552
     },
     {
       "id": null,
       "tone": "neutral",
       "live": false,
-      "line": 7540
+      "line": 7553
     }
   ],
   "state_matrix": [
     {
       "state": "waiting_approval",
       "tone": "warn",
-      "label": "WAITING APPROVAL"
+      "label": "waiting approval",
+      "vocabulary_state": "waiting-approval"
     },
     {
       "state": "running",
       "tone": "busy",
-      "label": "WORKFLOW RUNNING"
+      "label": "running",
+      "vocabulary_state": "running"
     },
     {
       "state": "paused",
       "tone": "warn",
-      "label": "PAUSED"
+      "label": "paused",
+      "vocabulary_state": "paused"
     },
     {
       "state": "blocked",
       "tone": "danger",
-      "label": "BLOCKED"
+      "label": "blocked",
+      "vocabulary_state": "blocked"
     },
     {
       "state": "pending",
-      "tone": "info",
-      "label": "READY"
+      "tone": "neutral",
+      "label": "queued",
+      "vocabulary_state": "queued"
     },
     {
       "state": "idle",
       "tone": "info",
-      "label": "READY"
+      "label": "ready",
+      "vocabulary_state": "ready"
     },
     {
       "state": "completed",
       "tone": "ok",
-      "label": "COMPLETED"
+      "label": "completed",
+      "vocabulary_state": "completed"
     },
     {
       "state": "cancelled",
-      "tone": "neutral",
-      "label": "CANCELLED"
+      "tone": "warn",
+      "label": "stopped by you",
+      "vocabulary_state": "stopped"
     },
     {
       "state": "failed",
       "tone": "danger",
-      "label": "FAILED"
+      "label": "failed",
+      "vocabulary_state": "failed"
     },
     {
       "state": "error",
       "tone": "danger",
-      "label": "ERROR"
+      "label": "failed",
+      "vocabulary_state": "failed"
     }
   ],
   "writers": {
