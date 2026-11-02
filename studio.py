@@ -4133,7 +4133,26 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .debate-summary[data-state="ok"] { color: var(--emerald); }
   .debate-results { margin: 0 20px 16px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); }
   .debate-results-basis { margin-top: 9px; color: var(--text-faint); font-size: 11.4px; line-height: 1.5; }
+  .debate-response-evidence { display: grid; gap: 3px; min-width: 0; color: var(--text-dim); font-size: 10.8px; line-height: 1.45; overflow-wrap: anywhere; }
+  .debate-response-metrics { display: flex; flex-wrap: wrap; gap: 2px 8px; color: var(--text); }
+  .debate-response-cost { color: var(--text-faint); }
+  .debate-response-source { color: var(--text-faint); font-size: 10px; }
+  .debate-response-evidence[data-state="demo"] .debate-response-state { color: var(--amber); font-weight: 700; }
+  .debate-response-evidence[data-state="unavailable"] .debate-response-state { color: var(--amber); }
+  .debate-response-evidence[data-state="pending"] .debate-response-state { color: var(--text-faint); }
   .debate-panel-note { font-size: 11.6px; color: var(--amber); margin-bottom: 8px; }
+  @media (max-width: 600px) {
+    .debate-results { margin-left: 10px; margin-right: 10px; padding: 10px; }
+    .debate-results table { table-layout: fixed; font-size: 10px; }
+    .debate-results th, .debate-results td { padding-right: 4px; overflow-wrap: anywhere; }
+    .debate-results th:nth-child(1) { width: 22%; }
+    .debate-results th:nth-child(2) { width: 15%; }
+    .debate-results th:nth-child(3) { width: 10%; }
+    .debate-results th:nth-child(4) { width: 17%; }
+    .debate-results th:nth-child(5) { width: 36%; }
+    .debate-response-evidence { font-size: 9.6px; }
+    .debate-response-source { font-size: 9px; }
+  }
   .debate-run-hint { font-size: 11.5px; color: var(--text-faint); }
 
   .chat-header-bar { padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--bg-elev); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -10825,6 +10844,57 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return met;
   }
 
+  function debateUsageNumber(usage, key) {
+    if (!usage || usage[key] === null || usage[key] === undefined) return null;
+    const raw = usage[key];
+    if (typeof raw !== "number" && typeof raw !== "string") return null;
+    if (typeof raw === "string" && !raw.trim()) return null;
+    const value = Number(raw);
+    return Number.isFinite(value) && value >= 0 ? value : null;
+  }
+
+  // Performance belongs to the existing response event, not to the time the browser happened to
+  // observe it. Missing usage stays missing; a demo's deliberately synthetic throughput figures
+  // are suppressed; and cost stays unavailable because the response has no price field or tariff.
+  function renderDebatePerformance(usage, status, modelId, modelSource, usageSource) {
+    const identity = escapeHtml(modelId || "not reported");
+    const identitySource = escapeHtml(modelSource || "selection");
+    const source = escapeHtml(usageSource || "no usage event received");
+    const cost = '<span class="debate-response-cost">Cost: not reported — no price is configured for this model.</span>';
+    const provenance = `<span class="debate-response-source">Model ID: ${identity} (from ${identitySource}). Performance basis: ${source}; server elapsed where shown; no client-clock estimate.</span>`;
+    if (status === "demo" || (usage && (usage.demo === true || usage.demo === "true"))) {
+      return '<div class="debate-response-evidence" data-state="demo">'
+        + '<strong class="debate-response-state">No model performance</strong>'
+        + '<span>This is server demo text; synthetic usage figures are omitted.</span>'
+        + cost + provenance + '</div>';
+    }
+    if (!usage) {
+      const pending = status === "queued" || status === "running";
+      const state = pending ? "pending" : "unavailable";
+      const message = pending ? "Waiting for response usage; no client-clock estimate." : "No response usage arrived; performance is unavailable.";
+      return `<div class="debate-response-evidence" data-state="${state}">`
+        + `<strong class="debate-response-state">${pending ? "Awaiting response usage" : "Performance unavailable"}</strong>`
+        + `<span>${escapeHtml(message)}</span>` + cost + provenance + '</div>';
+    }
+    const metrics = [];
+    const ttft = debateUsageNumber(usage, "ttft");
+    const tokens = debateUsageNumber(usage, "completion_tokens");
+    const rate = debateUsageNumber(usage, "decode_tps");
+    const promptRate = debateUsageNumber(usage, "prefill_tps");
+    const elapsed = debateUsageNumber(usage, "elapsed_s");
+    if (ttft !== null) metrics.push(`<span data-metric="ttft">First token (TTFT): ${ttft.toFixed(2)} s</span>`);
+    if (tokens !== null) metrics.push(`<span data-metric="tokens">Output: ${String(tokens)} tokens</span>`);
+    if (rate !== null) metrics.push(`<span data-metric="rate">Generation: ${rate.toFixed(2)} tok/s</span>`);
+    if (promptRate !== null) metrics.push(`<span data-metric="prefill">Prompt throughput: ${promptRate.toFixed(1)} tok/s</span>`);
+    if (elapsed !== null) metrics.push(`<span data-metric="elapsed">Server elapsed: ${elapsed.toFixed(2)} s</span>`);
+    const finish = typeof usage.finish_reason === "string" ? usage.finish_reason.trim() : "";
+    if (finish) metrics.push(`<span data-metric="finish">Finish reason: ${escapeHtml(finish)}</span>`);
+    if (!metrics.length) metrics.push('<span data-metric="missing">Response usage carried no performance fields.</span>');
+    return '<div class="debate-response-evidence" data-state="reported">'
+      + '<div class="debate-response-metrics">' + metrics.join("") + '</div>'
+      + cost + provenance + '</div>';
+  }
+
   function renderDebateCriteria(focusAdd = false) {
     const host = document.getElementById("debateCriteria");
     if (!host) return;
@@ -10945,15 +11015,23 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const meta = debateMeta(slot.status);
       const met = debateCriteriaMet(slot);
       const metText = met.length ? met.join(", ") : "—";
+      const performance = renderDebatePerformance(
+        slot.u,
+        slot.status,
+        slot.model,
+        slot.modelSource || "Compare selection",
+        slot.usageSource,
+      );
       return "<tr><td>" + escapeHtml(slot.model) + '</td><td class="mono">' + escapeHtml(meta.label)
         + '</td><td class="mono">' + String(String(slot.c || "").length) + " ch</td><td>"
-        + escapeHtml(metText) + "</td></tr>";
+        + escapeHtml(metText) + '</td><td>' + performance + "</td></tr>";
     }).join("");
     const judged = debateJudged.length ? debateJudged.map(label => escapeHtml(label)).join(", ") : "your own";
     host.innerHTML = '<div class="debate-criteria-head"><strong>What this run left, read against the criteria</strong></div>'
       + '<table><thead><tr><th scope="col">Model</th><th scope="col">Status</th><th scope="col">Size</th>'
-      + '<th scope="col">Criteria it met</th></tr></thead><tbody>' + rows + "</tbody></table>"
-      + '<div class="debate-results-basis"><strong>Not settled here:</strong> cost (no price is configured for any model) and '
+      + '<th scope="col">Criteria it met</th><th scope="col">Response evidence</th></tr></thead><tbody>' + rows + "</tbody></table>"
+      + '<div class="debate-results-basis"><strong>Basis:</strong> performance is copied from each panel’s response-usage event; demo, failed, stopped and unfinished panels are not timed by this browser. '
+      + 'Cost is not reported because no model price is configured. Not settled here: cost (no price is configured for any model) and '
       + judged + " (yours to judge). This table reports what each reply carried and how it ended - not which reply is better.</div>";
   }
 
@@ -11006,7 +11084,20 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     }
     const synthesis = document.getElementById("debateSynthesisArea");
     if (synthesis) {
-      synthesis.innerHTML = !debateSynth.m ? "" : `<div class="stage-output-card" style="border-color:var(--accent);"><div class="stage-output-head"><strong>Arbiter Verdict (${escapeHtml(debateSynth.m)})</strong><span class="badge ${debateSynth.u?'green':'indigo'}">${debateSynth.u?debateSynth.u.decode_tps+' tok/s':'Synthesizing...'}</span></div><div class="stage-output-body">${renderMarkdown(debateSynth.c)}</div></div>`;
+      const usage = debateSynth.u;
+      const isDemo = Boolean(usage && (usage.demo === true || usage.demo === "true"));
+      const synthState = usage ? (isDemo ? "demo" : "answered") : (debateBusy ? "running" : "lost");
+      const badge = isDemo ? "Demo text · no model metrics"
+        : usage ? "Response usage"
+          : debateBusy ? "Awaiting response usage" : "No response usage";
+      const evidence = renderDebatePerformance(
+        usage,
+        synthState,
+        debateSynth.modelId || debateSynth.m,
+        debateSynth.modelSource || "Arbiter selection",
+        debateSynth.usageSource,
+      );
+      synthesis.innerHTML = !debateSynth.m ? "" : `<div class="stage-output-card" data-synthesis-state="${synthState}" style="border-color:var(--accent);"><div class="stage-output-head"><strong>Arbiter Verdict (${escapeHtml(debateSynth.m)})</strong><span class="badge ${usage ? (isDemo ? 'indigo' : 'green') : 'indigo'}">${escapeHtml(badge)}</span></div><div class="stage-output-body">${renderMarkdown(debateSynth.c)}${evidence}</div></div>`;
     }
     renderDebateSummary();
     renderDebateResults();
@@ -11022,8 +11113,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     }
     debateBusy = true;
     debateSlots = {};
-    models.forEach((model, index) => (debateSlots[index] = { model, c: "", u: null, status: "queued", error: "" }));
-    debateSynth = { m: "", c: "", u: null };
+    models.forEach((model, index) => (debateSlots[index] = { model, modelSource: "Compare selection", c: "", u: null, usageSource: "", status: "queued", error: "" }));
+    debateSynth = { m: "", modelId: "", modelSource: "Arbiter selection", c: "", u: null, usageSource: "" };
     renderDebate();
     updateDebateRunControl();
     document.getElementById("debateStopBtn").style.display = "inline-flex";
@@ -11032,7 +11123,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         const slot = debateSlots[d.slot];
         if (slot) {
           slot.status = "running";
-          if (d.model) slot.model = d.model;
+          if (d.model) {
+            slot.model = d.model;
+            slot.modelSource = "panel_start.model";
+          }
         }
         renderDebate();
       },
@@ -11046,7 +11140,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         if (slot) {
           const usage = d.usage || {};
           const wrote = String(slot.c || "").trim().length > 0;
+          if (d.model) {
+            slot.model = d.model;
+            slot.modelSource = "panel_done.model";
+          }
           slot.u = usage;
+          slot.usageSource = "panel_done.usage";
           // The outcome is read from the response, not from the fact that an event arrived: a
           // panel the runtime cut, a panel the server answered itself, and a panel that wrote
           // nothing are three different endings.
@@ -11056,8 +11155,20 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         }
         renderDebate();
       },
-      synthesis_start(d) { debateSynth.m = d.model; renderDebate(); },
-      synthesis_done(d) { debateSynth.u = d.usage; renderDebate(); },
+      synthesis_start(d) {
+        debateSynth.m = d.model;
+        debateSynth.modelId = d.model;
+        debateSynth.modelSource = "synthesis_start.model";
+        renderDebate();
+      },
+      synthesis_done(d) {
+        debateSynth.m = d.model || debateSynth.m;
+        debateSynth.modelId = d.model || debateSynth.modelId;
+        debateSynth.modelSource = d.model ? "synthesis_done.model" : debateSynth.modelSource;
+        debateSynth.u = d.usage;
+        debateSynth.usageSource = "synthesis_done.usage";
+        renderDebate();
+      },
       stopped() { debateEnd("stopped", ""); },
       closed() { debateEnd("lost", ""); },
       error(d) {
@@ -11070,6 +11181,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       // Nothing may keep saying "running" after the stream is gone.
       if (debatePanels().some(slot => slot.status === "running" || slot.status === "queued")) debateEnd("lost", "");
       updateDebateRunControl();
+      // An interrupted arbiter stream must not keep its pre-response "awaiting" badge after the
+      // source has closed; render once more with the finalizer's no-usage state.
+      renderDebate();
     });
   }
 

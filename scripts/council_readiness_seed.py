@@ -72,6 +72,14 @@ CATALOG = {
     FITS_MODEL: {"gb": 3.80, "loaded": False, "kind": "vlm"},
 }
 
+# UIUX-P4-05: distinct response-only values let the walk prove that each table row reads the
+# model's own usage event. They are fixture numbers, not benchmark results for these model IDs.
+RESPONSE_METRICS = {
+    LOADED_MODEL: {"time_to_first_token": 0.04, "generation_tokens_per_second": 41.2, "prompt_tokens_per_second": 180.0},
+    OVER_BUDGET_MODEL: {"time_to_first_token": 0.08, "generation_tokens_per_second": 22.4, "prompt_tokens_per_second": 115.0},
+    FITS_MODEL: {"time_to_first_token": 0.06, "generation_tokens_per_second": 55.8, "prompt_tokens_per_second": 210.0},
+}
+
 
 class RuntimeState:
     """What the stand-in runtime is serving right now."""
@@ -276,9 +284,10 @@ class _RuntimeHandler(BaseHTTPRequestHandler):
                 "usage": {
                     "completion_tokens": len(words),
                     "prompt_tokens": 128,
-                    "time_to_first_token": 0.04,
-                    "generation_tokens_per_second": 41.2,
-                    "prompt_tokens_per_second": 180.0,
+                    **RESPONSE_METRICS.get(
+                        model,
+                        {"time_to_first_token": 0.05, "generation_tokens_per_second": 30.0, "prompt_tokens_per_second": 150.0},
+                    ),
                 },
             }
             self.wfile.write(b"data: " + json.dumps(usage).encode("utf-8") + b"\n\n")

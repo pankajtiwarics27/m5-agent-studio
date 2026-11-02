@@ -1,0 +1,175 @@
+{
+  "story": "UIUX-P4-05",
+  "title": "Compare measured performance and provenance",
+  "generated_by": "scripts/uiux_compare_performance_inventory.py",
+  "surfaces": {
+    "panel_results": "#debateResults",
+    "arbiter": "#debateSynthesisArea",
+    "usage_events": [
+      "panel_done.usage",
+      "synthesis_done.usage"
+    ]
+  },
+  "fields": [
+    "ttft",
+    "completion_tokens",
+    "decode_tps",
+    "prefill_tps",
+    "elapsed_s (server measured)",
+    "finish_reason"
+  ],
+  "captures": [
+    "compare-performance-before.png",
+    "compare-performance-partial-failure.png",
+    "compare-performance.png",
+    "compare-performance-narrow.png",
+    "compare-performance-arbiter-narrow.png",
+    "compare-performance-light.png",
+    "compare-performance-demo.png",
+    "compare-performance-demo-arbiter.png",
+    "compare-performance-unavailable.png"
+  ],
+  "capture_dimensions": {
+    "compare-performance-before.png": [
+      908,
+      473
+    ],
+    "compare-performance-partial-failure.png": [
+      908,
+      639
+    ],
+    "compare-performance.png": [
+      908,
+      824
+    ],
+    "compare-performance-narrow.png": [
+      436,
+      657
+    ],
+    "compare-performance-arbiter-narrow.png": [
+      456,
+      312
+    ],
+    "compare-performance-light.png": [
+      908,
+      824
+    ],
+    "compare-performance-demo.png": [
+      908,
+      667
+    ],
+    "compare-performance-demo-arbiter.png": [
+      908,
+      192
+    ],
+    "compare-performance-unavailable.png": [
+      908,
+      433
+    ]
+  },
+  "checks": [
+    {
+      "check": "the displayed performance fields come from normalized response usage",
+      "ok": true,
+      "detail": "TTFT, output tokens, generation, prompt throughput, server elapsed and finish reason"
+    },
+    {
+      "check": "missing, null, negative and non-finite numbers stay unavailable",
+      "ok": true,
+      "detail": "only finite, non-negative response values are rendered"
+    },
+    {
+      "check": "the renderer never measures a response with a browser clock",
+      "ok": true,
+      "detail": "all displayed values are read from the response event; elapsed is explicitly server-side"
+    },
+    {
+      "check": "the source line names each model and the exact SSE usage event",
+      "ok": true,
+      "detail": "panel_done.usage and synthesis_done.usage; no client-clock estimate"
+    },
+    {
+      "check": "demo metrics are suppressed even when synthetic usage fields are present",
+      "ok": true,
+      "detail": "the server demo marker wins over fabricated rates and latencies"
+    },
+    {
+      "check": "absent usage has distinct pending and unavailable copy, never a fallback estimate",
+      "ok": true,
+      "detail": "queued/running waits; failed/stopped/lost rows state that performance is unavailable"
+    },
+    {
+      "check": "cost stays explicitly unavailable and no price is calculated",
+      "ok": true,
+      "detail": "no tariff, monetary total or pricing provenance is invented"
+    },
+    {
+      "check": "the arbiter uses the same response-evidence renderer and no bare decode_tps badge",
+      "ok": true,
+      "detail": "the arbiter badge states its evidence basis; details come from synthesis_done.usage"
+    },
+    {
+      "check": "panel and arbiter model identities retain their event provenance",
+      "ok": true,
+      "detail": "the completion event's model ID takes precedence when supplied"
+    },
+    {
+      "check": "the response-evidence column is added after all four P4-04 columns",
+      "ok": true,
+      "detail": "Model, Status, Size, Criteria it met, Response evidence"
+    },
+    {
+      "check": "the interrupted arbiter is re-rendered when the event source closes",
+      "ok": true,
+      "detail": "a closed stream cannot leave an awaiting-usage badge behind"
+    },
+    {
+      "check": "the existing Compare stream route remains the only route in the runner",
+      "ok": true,
+      "detail": "/api/debate/stream"
+    },
+    {
+      "check": "the existing Compare event contract remains in place",
+      "ok": true,
+      "detail": "all six existing SSE event names"
+    },
+    {
+      "check": "the isolated fixture uses distinct, explicitly non-benchmark response values",
+      "ok": true,
+      "detail": "three fixture outputs can be distinguished by response usage alone"
+    },
+    {
+      "check": "the browser walk exercises model rows, arbiter, cost, stopped and demo cases",
+      "ok": true,
+      "detail": "six P4-05 journeys are asserted"
+    },
+    {
+      "check": "the documented after-captures are readable PNGs from the browser walk",
+      "ok": true,
+      "detail": "compare-performance-before.png=908x473, compare-performance-partial-failure.png=908x639, compare-performance.png=908x824, compare-performance-narrow.png=436x657, compare-performance-arbiter-narrow.png=456x312, compare-performance-light.png=908x824, compare-performance-demo.png=908x667, compare-performance-demo-arbiter.png=908x192, compare-performance-unavailable.png=908x433"
+    },
+    {
+      "check": "a narrow result-table capture was taken at the tested 480 px viewport",
+      "ok": true,
+      "detail": "the walk asserts zero horizontal overflow at 480 px and captures the table element"
+    },
+    {
+      "check": "the test-only demo arbiter capture labels its synthetic payload",
+      "ok": true,
+      "detail": "the screenshot is a renderer test, not a model benchmark or live synthesis event"
+    },
+    {
+      "check": "official before/after pane captures are indexed and match the 2x viewport",
+      "ok": true,
+      "detail": "before/compare.png=(2880, 1800); after/compare.png=(2880, 1800)"
+    },
+    {
+      "check": "the story remains tracked with evidence and actual test results",
+      "ok": true,
+      "detail": "tracking.status='in_progress'"
+    }
+  ],
+  "check_count": 20,
+  "findings": [],
+  "status": "clean"
+}

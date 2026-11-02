@@ -212,6 +212,33 @@ async function readCompare(page) {
     const rows = resultsHost
       ? [...resultsHost.querySelectorAll("tbody tr")].map((row) => [...row.querySelectorAll("td")].map((cell) => clean(cell.textContent)))
       : [];
+    const performanceRows = resultsHost
+      ? [...resultsHost.querySelectorAll("tbody tr")].map((row) => {
+        const evidence = row.querySelector("td:nth-child(5) .debate-response-evidence");
+        return {
+          state: evidence ? evidence.dataset.state || "" : "",
+          metrics: evidence
+            ? Object.fromEntries([...evidence.querySelectorAll("[data-metric]")].map((node) => [node.dataset.metric, clean(node.textContent)]))
+            : {},
+          text: clean(evidence ? evidence.textContent : ""),
+          source: clean(evidence && evidence.querySelector(".debate-response-source") ? evidence.querySelector(".debate-response-source").textContent : ""),
+        };
+      })
+      : [];
+    const synthesisHost = document.querySelector("#debateSynthesisArea .stage-output-card");
+    const synthesisEvidence = synthesisHost ? synthesisHost.querySelector(".debate-response-evidence") : null;
+    const synthesis = synthesisHost
+      ? {
+        state: synthesisHost.dataset.synthesisState || "",
+        badge: clean(synthesisHost.querySelector(".stage-output-head .badge") ? synthesisHost.querySelector(".stage-output-head .badge").textContent : ""),
+        text: clean(synthesisHost.textContent),
+        evidenceState: synthesisEvidence ? synthesisEvidence.dataset.state || "" : "",
+        metrics: synthesisEvidence
+          ? Object.fromEntries([...synthesisEvidence.querySelectorAll("[data-metric]")].map((node) => [node.dataset.metric, clean(node.textContent)]))
+          : {},
+        source: clean(synthesisEvidence && synthesisEvidence.querySelector(".debate-response-source") ? synthesisEvidence.querySelector(".debate-response-source").textContent : ""),
+      }
+      : null;
     const summary = document.getElementById("debateSummary");
     const hint = document.getElementById("debateRunHint");
     const button = document.getElementById("debateRunBtn");
@@ -224,6 +251,8 @@ async function readCompare(page) {
       summaryState: summary ? summary.dataset.state || "" : "",
       resultsHidden: !resultsHost || resultsHost.hidden,
       resultsRows: rows,
+      performanceRows,
+      synthesis,
       resultsText: clean(resultsHost ? resultsHost.textContent : ""),
       hint: clean(hint ? hint.textContent : ""),
       startDisabled: Boolean(button && button.disabled),
@@ -503,8 +532,130 @@ async function run(args) {
         && /not which reply is better/.test(partial.resultsText),
       partial.resultsRows.map((row) => `${row[0]}: ${row[1]} / ${row[3]}`).join(" || "),
     );
+    const answeredEvidence = partial.performanceRows[0] || {};
+    const failedEvidence = partial.performanceRows[1] || {};
+    record(
+      "per-model performance is copied from panel_done usage, and a failed panel is not timed by the browser",
+      answeredEvidence.state === "reported"
+        && answeredEvidence.metrics.ttft === "First token (TTFT): 0.04 s"
+        && answeredEvidence.metrics.tokens === "Output: 58 tokens"
+        && answeredEvidence.metrics.rate === "Generation: 41.20 tok/s"
+        && answeredEvidence.metrics.prefill === "Prompt throughput: 180.0 tok/s"
+        && /^Server elapsed: [0-9.]+ s$/.test(answeredEvidence.metrics.elapsed || "")
+        && answeredEvidence.metrics.finish === "Finish reason: stop"
+        && /Model ID: Qwen3\.8-27B-oQ4e-mtp \(from panel_done\.model\)/.test(answeredEvidence.source)
+        && /Performance basis: panel_done\.usage/.test(answeredEvidence.source)
+        && /no client-clock estimate/.test(answeredEvidence.source)
+        && /Cost: not reported/.test(answeredEvidence.text)
+        && failedEvidence.state === "unavailable"
+        && Object.keys(failedEvidence.metrics).length === 0
+        && /No response usage arrived/.test(failedEvidence.text)
+        && /Model ID: groq::llama-3\.3-70b-versatile \(from panel_start\.model\)/.test(failedEvidence.source)
+        && /Performance basis: no usage event received/.test(failedEvidence.source),
+      `${answeredEvidence.text} || failed: ${failedEvidence.text}`,
+    );
     await shootSpan(page, "compare-partial-failure", RUN_SPAN);
     await shoot(page, "compare-criteria", "#debateCriteria");
+
+    // ── two model-specific response records and the arbiter's own usage ────
+    const secondModel = live.unloaded_fits_model;
+    // Re-arm the stand-in model through the existing authenticated model-load action so it is
+    // included in the app's loaded-model catalog. This is isolated fixture setup, not a new route
+    // or a claim about model residency on a user's machine.
+    await page.evaluate(async (models) => {
+      for (const model of models) await modelAction(model, "load");
+      await refreshTelemetry();
+    }, [loaded, secondModel]);
+    await sleep(args.settleMs * 6);
+    await page.evaluate((judge) => {
+      const synth = document.getElementById("d-synth");
+      const arbiter = document.getElementById("d-judge");
+      synth.checked = true;
+      synth.dispatchEvent(new Event("change", { bubbles: true }));
+      arbiter.value = judge;
+      arbiter.dispatchEvent(new Event("change", { bubbles: true }));
+    }, loaded);
+    const selectedPerformanceModels = await selectModels(page, [loaded, secondModel]);
+    await writePrompt(page, TASK);
+    const performance = await runCompare(page, args);
+    const firstUsage = performance.performanceRows[0] || {};
+    const secondUsage = performance.performanceRows[1] || {};
+    const arbiterUsage = performance.synthesis || {};
+    record(
+      "each model's row uses its own response usage rather than a shared or browser-clock value",
+      selectedPerformanceModels.join("|") === `${loaded}|${secondModel}`
+        && performance.summary === "2 panels · 2 answered"
+        && performance.resultsRows.length === 2
+        && performance.resultsRows[0][0] === loaded
+        && performance.resultsRows[1][0] === secondModel
+        && firstUsage.metrics.ttft === "First token (TTFT): 0.04 s"
+        && firstUsage.metrics.rate === "Generation: 41.20 tok/s"
+        && firstUsage.metrics.prefill === "Prompt throughput: 180.0 tok/s"
+        && firstUsage.metrics.tokens === "Output: 58 tokens"
+        && secondUsage.metrics.ttft === "First token (TTFT): 0.06 s"
+        && secondUsage.metrics.rate === "Generation: 55.80 tok/s"
+        && secondUsage.metrics.prefill === "Prompt throughput: 210.0 tok/s"
+        && secondUsage.metrics.tokens === "Output: 58 tokens"
+        && /Model ID: Qwen3\.8-27B-oQ4e-mtp \(from panel_done\.model\)/.test(firstUsage.source)
+        && /panel_done.usage/.test(firstUsage.source)
+        && /Model ID: Gemma-4-21B-REAP-4bit \(from panel_done\.model\)/.test(secondUsage.source)
+        && /panel_done.usage/.test(secondUsage.source)
+        && !/29\.5|42\.1/.test(firstUsage.text + secondUsage.text),
+      `selected=${selectedPerformanceModels.join("|")} || ${firstUsage.text} || ${secondUsage.text}`,
+    );
+    record(
+      "the arbiter card uses synthesis_done usage, and no bare tok/s badge survives",
+      arbiterUsage.state === "answered"
+        && arbiterUsage.badge === "Response usage"
+        && arbiterUsage.metrics.ttft === "First token (TTFT): 0.04 s"
+        && arbiterUsage.metrics.rate === "Generation: 41.20 tok/s"
+        && arbiterUsage.metrics.prefill === "Prompt throughput: 180.0 tok/s"
+        && /Model ID: Qwen3\.8-27B-oQ4e-mtp \(from synthesis_done\.model\)/.test(arbiterUsage.source)
+        && /synthesis_done.model/.test(arbiterUsage.source)
+        && /synthesis_done.usage/.test(arbiterUsage.source)
+        && !/tok\/s/.test(arbiterUsage.badge),
+      `${arbiterUsage.badge} || ${arbiterUsage.text}`,
+    );
+    record(
+      "the results keep cost unavailable instead of inventing a model price",
+      performance.performanceRows.length === 2
+        && performance.performanceRows.every((row) => /Cost: not reported — no price is configured for this model\./.test(row.text))
+        && /Cost is not reported because no model price is configured\./.test(performance.resultsText)
+        && !/\$\s?\d/.test(performance.resultsText + (arbiterUsage.text || "")),
+      performance.performanceRows.map((row) => row.text).join(" || "),
+    );
+    await shootSpan(page, "compare-performance", [...RUN_SPAN, "#debateSynthesisArea"]);
+    await page.setViewport({ width: 480, height: 1200, deviceScaleFactor: 1 });
+    await sleep(args.settleMs * 6);
+    const performanceNarrow = await readCompare(page);
+    record(
+      "the response records and arbiter evidence fit a 480 px viewport",
+      performanceNarrow.overflowing <= 0
+        && performanceNarrow.performanceRows.length === 2
+        && performanceNarrow.synthesis && performanceNarrow.synthesis.evidenceState === "reported",
+      `scrollWidth - innerWidth = ${performanceNarrow.overflowing}`,
+    );
+    if (args.screenshots) {
+      mkdirSync(args.screenshots, { recursive: true });
+      const resultsElement = await page.$("#debateResults");
+      const arbiterElement = await page.$("#debateSynthesisArea .stage-output-card");
+      if (resultsElement) await resultsElement.screenshot({ path: resolve(args.screenshots, "compare-performance-narrow.png") });
+      if (arbiterElement) await arbiterElement.screenshot({ path: resolve(args.screenshots, "compare-performance-arbiter-narrow.png") });
+    }
+    await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+    await page.evaluate(() => applyTheme("light"));
+    await sleep(args.settleMs * 4);
+    const performanceLight = await readCompare(page);
+    record(
+      "the response evidence and its provenance remain visible in the light theme",
+      performanceLight.performanceRows.length === 2
+        && performanceLight.performanceRows[0].state === "reported"
+        && performanceLight.synthesis && performanceLight.synthesis.evidenceState === "reported"
+        && /panel_done.usage/.test(performanceLight.performanceRows[0].source),
+      `${performanceLight.performanceRows.map((row) => row.state).join(" / ")} · ${performanceLight.synthesis ? performanceLight.synthesis.badge : "no arbiter"}`,
+    );
+    await shootSpan(page, "compare-performance-light", [...RUN_SPAN, "#debateSynthesisArea"]);
+    await page.evaluate(() => applyTheme("dark"));
 
     // ── every panel failing ────────────────────────────────────────────────
     await selectModels(page, [keyless]);
@@ -561,7 +712,17 @@ async function run(args) {
         && stopped.resultsRows[0][3] === "answered, size",
       `${stopped.summary} || ${stopped.cards[0].note.slice(0, 90)} || ${stopped.resultsRows.map((row) => row[3]).join(",")}`,
     );
+    record(
+      "a stopped panel keeps its partial text but receives no invented performance figures",
+      stopped.performanceRows[0].state === "unavailable"
+        && Object.keys(stopped.performanceRows[0].metrics).length === 0
+        && /No response usage arrived/.test(stopped.performanceRows[0].text)
+        && /Model ID: Qwen3\.8-27B-oQ4e-mtp \(from panel_start\.model\)/.test(stopped.performanceRows[0].source)
+        && /no usage event received/.test(stopped.performanceRows[0].source),
+      stopped.performanceRows[0].text,
+    );
     await shootSpan(stopPage, "compare-stopped", RUN_SPAN);
+    await shootSpan(stopPage, "compare-performance-unavailable", ["#debateSummary", "#debateGrid", "#debateResults"]);
 
     // ── narrow and light ───────────────────────────────────────────────────
     await page.setViewport({ width: 480, height: 900, deviceScaleFactor: 1 });
@@ -611,14 +772,54 @@ async function run(args) {
         && /not which reply is better/.test(demo.resultsText),
       `${demo.summary} || ${demo.cards.map((card) => `${card.model}: ${card.pill}`).join(" · ")} || ${demo.resultsRows.map((row) => row[3]).join(",")}`,
     );
+    const demoEvidence = demo.performanceRows.filter((row) => row.state === "demo");
+    const demoPanelsHonest = demoEvidence.length > 0
+      && demoEvidence.every((row) => Object.keys(row.metrics).length === 0
+        && /No model performance/.test(row.text)
+        && /synthetic usage figures are omitted/.test(row.text));
     await shootSpan(offlinePage, "compare-offline", RUN_SPAN);
+    await shootSpan(offlinePage, "compare-performance-demo", RUN_SPAN);
+    await offlinePage.evaluate(() => {
+      // The offline server only advertises one fallback, so there is no arbiter event to consume.
+      // Seed the same explicitly marked demo usage shape directly into the renderer to exercise
+      // its arbiter branch; the values below are test-only synthetic data, never benchmark claims.
+      debateSynth = {
+        m: "fixture-only demo arbiter",
+        modelSource: "synthesis_done.model",
+        modelId: "fixture-only-demo-arbiter",
+        c: "Fixture demo arbiter output.",
+        u: { demo: true, decode_tps: 42.1, ttft: 0.01, completion_tokens: 99, elapsed_s: 0.01, finish_reason: "stop" },
+        usageSource: "synthesis_done.usage",
+      };
+      renderDebate();
+    });
+    const demoWithArbiter = await readCompare(offlinePage);
+    record(
+      "demo usage suppresses synthetic speed and latency values on panels and the arbiter",
+      demoPanelsHonest
+        && demoWithArbiter.synthesis
+        && demoWithArbiter.synthesis.evidenceState === "demo"
+        && Object.keys(demoWithArbiter.synthesis.metrics).length === 0
+        && !/29\.5|42\.1|tok\/s/.test(demoWithArbiter.synthesis.text)
+        && /Demo text/.test(demoWithArbiter.synthesis.badge)
+        && /Model ID: fixture-only-demo-arbiter \(from synthesis_done.model\)/.test(demoWithArbiter.synthesis.source)
+        && /synthesis_done.usage/.test(demoWithArbiter.synthesis.source),
+      `${demoEvidence.length} demo panel(s), no figures; arbiter=${demoWithArbiter.synthesis ? demoWithArbiter.synthesis.evidenceState : "none"}, ${demoWithArbiter.synthesis ? demoWithArbiter.synthesis.badge : ""}`,
+    );
+    await shootSpan(offlinePage, "compare-performance-demo-arbiter", ["#debateSynthesisArea"]);
 
     record("no page error occurred", pageErrors.length === 0, pageErrors.slice(0, 3).join(" | "));
-    const unexpected = posts.filter((path) => path !== "/api/debate/stream");
+    const fixtureLoadRoute = /^\/api\/models\/[^/]+\/load$/;
+    const unexpected = posts.filter((path) => path !== "/api/debate/stream" && !fixtureLoadRoute.test(path));
     record(
       "the pane posts only the comparison it already posted",
-      unexpected.length === 0,
+      posts.includes("/api/debate/stream") && unexpected.length === 0,
       [...new Set(posts)].join(", "),
+    );
+    record(
+      "fixture model loading uses only the existing model-load route, not a new Compare endpoint",
+      posts.some((path) => fixtureLoadRoute.test(path)) && unexpected.length === 0,
+      [...new Set(posts.filter((path) => fixtureLoadRoute.test(path)))].join(", "),
     );
   } finally {
     await browser.close();
