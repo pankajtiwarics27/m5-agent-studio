@@ -1,0 +1,153 @@
+{
+  "story": "UIUX-P4-05",
+  "title": "Compare measured performance and provenance",
+  "generated_by": "scripts/uiux_compare_provenance_inventory.py",
+  "surface": "#debateProvenance",
+  "fields": [
+    {
+      "field": "elapsed_s",
+      "column": "Elapsed",
+      "unit": "s",
+      "source": "the usage the server sent with panel_done / synthesis_done"
+    },
+    {
+      "field": "ttft",
+      "column": "First token",
+      "unit": "s",
+      "source": "the usage the server sent with panel_done / synthesis_done"
+    },
+    {
+      "field": "completion_tokens",
+      "column": "Reply tokens",
+      "unit": "tokens",
+      "source": "the usage the server sent with panel_done / synthesis_done"
+    },
+    {
+      "field": "decode_tps",
+      "column": "Decode",
+      "unit": "tok/s",
+      "source": "the usage the server sent with panel_done / synthesis_done"
+    }
+  ],
+  "columns": [
+    "Model",
+    "Elapsed",
+    "First token",
+    "Reply tokens",
+    "Decode",
+    "Cost"
+  ],
+  "refusals": [
+    "cost - no price is configured for any model, so no reply is given one",
+    "demo text - the reply is the server's, so it carries no measured figure",
+    "failed, stopped, lost and never-started panels - no usage arrived, so the cell is a dash",
+    "the client clock - this page times nothing"
+  ],
+  "stream_events": [
+    "panel_done",
+    "synthesis_done",
+    "debate_done"
+  ],
+  "captures": [
+    "compare-provenance.png",
+    "compare-provenance-arbiter.png",
+    "compare-provenance-demo.png",
+    "compare-provenance-light.png",
+    "compare-provenance-narrow.png"
+  ],
+  "checks": [
+    {
+      "check": "the pane states a performance block of its own, drawn under the results",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a figure is a figure the response carried: every field printed is one the app yields",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pane prints no figure the browser timed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the run's total elapsed time comes from the debate_done event, not from a timer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a figure the response did not carry is a dash, never a zero",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a stage that never reported says why, in its own terms",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a demo reply is given no figure, and the demo path's numbers appear nowhere",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the table states one row per reply, including the arbiter's, and the six columns",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the block names the fields it reads, and says this page times nothing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "cost is stated as not known, with the reason, and per row as a dash",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the arbiter's card states its figures from its own usage, and never an unqualified tok/s",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the run's total is stated on the block, and a run that failed claims none",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every value the block draws is escaped, and it posts no route of its own",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the fixture can produce two answering panels, a stopped run and a demo reply",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the fixture reports the same fields the app forwards, so the walk can compare them",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk compares the page with the frames the server sent, cell by cell",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the captures the doc lists exist and were written by the walk",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the ledger marks this story done with evidence",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "check_count": 18,
+  "findings": [],
+  "status": "clean"
+}

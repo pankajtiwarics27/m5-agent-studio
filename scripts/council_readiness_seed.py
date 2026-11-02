@@ -289,10 +289,18 @@ class _RuntimeHandler(BaseHTTPRequestHandler):
 
 
 def start_runtime(
-    cap_model: str = "", reasoning_model: str = "", slow_model: str = ""
+    cap_model: str = "",
+    reasoning_model: str = "",
+    slow_model: str = "",
+    resident_model: str = "",
 ) -> tuple[ThreadingHTTPServer, RuntimeState, str]:
     """Serve the stand-in admin API on loopback and return its base URL."""
     state = RuntimeState()
+    # UIUX-P4-05: a *second* resident model, so a comparison can have two panels that answer.
+    # One local model means the only way to have two panels is to point the second at the saved
+    # keyless alias, which fails — and a comparison that fails has no arbiter verdict to measure.
+    if resident_model and resident_model in state.models:
+        state.load(resident_model)
     handler = type(
         "RuntimeHandler",
         (_RuntimeHandler,),
@@ -368,6 +376,11 @@ def main(argv: list[str] | None = None) -> int:
         default="",
         help="a model the stand-in runtime answers slowly, so a comparison can be stopped mid-panel",
     )
+    parser.add_argument(
+        "--resident-model",
+        default="",
+        help="a second catalogue model the stand-in runtime reports as loaded, so two panels can answer",
+    )
     parser.add_argument("--port", type=int, default=0, help="port to bind on 127.0.0.1 (0 picks one)")
     parser.add_argument("--root", default="", help="reuse a directory as the throwaway environment")
     parser.add_argument("--ready-file", default="", help="also write the ready line to this file")
@@ -380,6 +393,7 @@ def main(argv: list[str] | None = None) -> int:
             cap_model=args.cap_model,
             reasoning_model=args.reasoning_model,
             slow_model=args.slow_model,
+            resident_model=args.resident_model,
         )
 
     try:
@@ -409,6 +423,7 @@ def main(argv: list[str] | None = None) -> int:
         "capped_model": args.cap_model,
         "reasoning_model": args.reasoning_model,
         "slow_model": args.slow_model,
+        "resident_model": args.resident_model,
         "seeded_at": round(time.time(), 3),
         "root": str(environment.root),
     }
