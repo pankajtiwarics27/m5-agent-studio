@@ -240,7 +240,6 @@ def build_inventory() -> dict:
     )
 
     # ── the panes draw from it ──────────────────────────────────────────────
-    debate_status = function_body(html, "debateStatusBlock") or ""
     block_match = re.search(r"const DEBATE_STATUS = \{(.*?)\n  \};", html, re.S)
     debate_block = block_match.group(1) if block_match else ""
     debate_pairs = dict(
