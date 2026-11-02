@@ -369,9 +369,9 @@
     {
       "path": "scripts/preservation_suite.py",
       "role": "runs every prover in the preservation matrix against its own throwaway app and records the result",
-      "sha256": "319b466191c27b8b5293d49a0e1ab24a564bda9f5cae493b837076b087153662",
-      "bytes": 20646,
-      "lines": 483
+      "sha256": "da4f706e8ebffcb488da9da821d227bdcfa453590a6cf5e5390b80f3d43331a8",
+      "bytes": 21464,
+      "lines": 501
     },
     {
       "path": "scripts/uiux_preservation_e2e.py",
@@ -383,9 +383,9 @@
     {
       "path": "tests/test_uiux_preservation_e2e.py",
       "role": "checks the matrix mapper and the run record: a known failure is never green and an untaken step is never a pass",
-      "sha256": "b7c2311c68fc2017711a091e63cb1bc8bc26e77f2c7eb879fe6e24902d7c92c1",
-      "bytes": 11437,
-      "lines": 264
+      "sha256": "6889bbd998d7308e68fa0ca86e7ff48dcefe72cfbcc829f395bc84d7fd2f0b99",
+      "bytes": 13358,
+      "lines": 315
     }
   ],
   "frontend": {

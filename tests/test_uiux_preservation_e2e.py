@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -262,3 +264,52 @@ def test_every_known_failure_names_an_owner_an_issue_and_a_reason() -> None:
         assert re.match(r"^#\d+$", known["issue"]), known
         assert re.match(r"^UIUX-P\d-\d\d$", known["owner"]), known
         assert len(known["reason"]) > 60, known
+
+
+def test_stopping_a_fixture_stops_the_app_it_forked() -> None:
+    """The leak that OOM-killed a run: the app is a child of the fixture, not the fixture.
+
+    `demo_tour.py --serve` forks the server. Terminating the parent leaves the child holding its
+    port and ~60 MB of RSS, and the suite starts fourteen of them per run; on a 4 GB runner the
+    leak is the memory the next run needs. `stop_server` signals the session, so the whole tree
+    goes - which is what this test checks, with a real grandchild rather than a mock.
+    """
+    suite = _load_suite()
+    script = (
+        "import subprocess, sys, time\n"
+        "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(120)'])\n"
+        "print(child.pid, flush=True)\n"
+        "time.sleep(120)\n"
+    )
+    process = subprocess.Popen(  # noqa: S603 - fixed argv, local python only
+        [sys.executable, "-c", script],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        start_new_session=True,
+    )
+    assert process.stdout is not None
+    grandchild = int(process.stdout.readline().strip())
+    try:
+        suite.stop_server(process)
+        assert process.poll() is not None, "the fixture survived its own stop"
+        assert not _alive(grandchild), "the server the fixture forked outlived it - that is the leak"
+    finally:
+        for pid in (grandchild, process.pid):
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+
+
+def _alive(pid: int) -> bool:
+    """True while the pid is a live, non-zombie process."""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    try:
+        status = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8").split()[2]
+    except OSError:  # pragma: no cover - no procfs
+        return True
+    return status != "Z"

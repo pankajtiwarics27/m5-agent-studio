@@ -32,6 +32,7 @@ import importlib.util
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -108,6 +109,11 @@ def start_server(env: dict) -> tuple[subprocess.Popen, str, str]:
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         text=True,
+        # The fixture forks the app into a child of its own. Signalling the parent alone leaves that
+        # child holding its port and ~60 MB of RSS; fourteen of those per run is the memory the next
+        # run needs, and on this runner it was enough to get the suite OOM-killed. A session leader
+        # makes the whole tree reachable with one `killpg`.
+        start_new_session=True,
     )
     assert process.stdout is not None
     deadline = time.time() + 60
@@ -121,8 +127,28 @@ def start_server(env: dict) -> tuple[subprocess.Popen, str, str]:
         if line.startswith("{"):
             payload = json.loads(line)
             return process, payload["url"], payload["token"]
-    process.kill()
+    stop_server(process)
     raise RuntimeError("the demo server never printed its address")
+
+
+def stop_server(process: subprocess.Popen) -> None:
+    """Stop the fixture *and* the app it forked, then wait for the port to be free."""
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        if process.poll() is not None:
+            break
+        try:
+            os.killpg(os.getpgid(process.pid), sig)
+        except (ProcessLookupError, PermissionError):  # pragma: no cover - already gone
+            break
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:  # pragma: no cover - escalate on the next pass
+            continue
+        break
+    try:
+        process.stdout.close()  # type: ignore[union-attr]
+    except Exception:  # pragma: no cover - a closed pipe is not a failure
+        pass
 
 
 def probe_route(base_url: str, token: str, method: str, path: str) -> dict:
@@ -365,11 +391,7 @@ def main(argv: list[str] | None = None) -> int:
                     walk_args = ["--base-url", walk_base, "--token", walk_token]
                 result = run_walk(name, walk_args, env, args.timeout)
                 if walk_server is not None:
-                    walk_server.terminate()
-                    try:
-                        walk_server.wait(timeout=10)
-                    except subprocess.TimeoutExpired:  # pragma: no cover
-                        walk_server.kill()
+                    stop_server(walk_server)
                 known = KNOWN_FAILURES.get(name)
                 if known:
                     result["known"] = known
@@ -380,11 +402,7 @@ def main(argv: list[str] | None = None) -> int:
                 results["walks"][name] = result
     finally:
         if server is not None:
-            server.terminate()
-            try:
-                server.wait(timeout=10)
-            except subprocess.TimeoutExpired:  # pragma: no cover
-                server.kill()
+            stop_server(server)
 
     rows = coverage(plan["rows"], results)
     failed = [row for row in rows if row["status"] == "fail"]

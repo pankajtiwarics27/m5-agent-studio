@@ -94,7 +94,7 @@ than succeed. That is what "existing endpoint and permission semantics" means in
 
 ## The last recorded run
 
-Recorded by `scripts/preservation_suite.py --save product/M5_2_0_UIUX_Preservation_Run.json` at `ad826f3` in 389.8s:
+Recorded by `scripts/preservation_suite.py --save product/M5_2_0_UIUX_Preservation_Run.json` at `d073e7d` in 398.7s:
 
 * 17 of 21 rows proved, 2 known defects, 0 unexplained failures
 * python 3.11.2; chrome `/tmp/m5-runner/m5-browser/tmp/chromium`

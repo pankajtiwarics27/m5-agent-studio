@@ -521,8 +521,8 @@
   ],
   "last_run": {
     "recorded": true,
-    "commit": "ad826f3",
-    "seconds": 389.8,
+    "commit": "d073e7d",
+    "seconds": 398.7,
     "totals": {
       "rows": 21,
       "passed_rows": 17,
@@ -542,7 +542,7 @@
           "issue": "#169",
           "reason": "the rejected half of the seed is written - the verifier returns `verification_test_failed_introduced` for `hns-592ef299` - but the trajectory draws no rejected card, so the failure code, the exit code and the failing test are not on screen (27/29)"
         },
-        "seconds": 43.0,
+        "seconds": 43.1,
         "detail": "FAIL  a rejected completion is drawn as a rejection with the code that decided it \u2014 no card"
       },
       {
