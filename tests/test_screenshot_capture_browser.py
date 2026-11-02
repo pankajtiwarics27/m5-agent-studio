@@ -29,6 +29,7 @@ DEMO = ROOT / "scripts" / "demo_tour.py"
 WALK = ROOT / "scripts" / "keyboard_walk.mjs"
 ACCESSIBILITY_WALK = ROOT / "tests" / "browser" / "accessibility_walk.mjs"
 OVERLAY_WALK = ROOT / "scripts" / "overlay_walk.mjs"
+COMPARE_HISTORY_WALK = ROOT / "scripts" / "compare_history_walk.mjs"
 TOKEN = "synthetic-screenshot-token-0123456789"
 TABS = ("start", "harness", "hall", "council", "debate", "chat")
 
@@ -643,4 +644,23 @@ def test_chat_loading_stream_success_stop_failure_retry_and_mobile(
     report = json.loads(result.stdout)
     assert report["failed"] == 0
     assert report["passed"] >= 10
+    assert demo["token"] not in result.stdout + result.stderr
+
+
+def test_compare_history_browser_browse_export_and_error_recovery(browser_env: dict[str, str]) -> None:
+    """Prior-run history is mocked in the browser; this walk sends no model or history writes."""
+    with isolated_demo(browser_env) as demo:
+        result = subprocess.run(
+            ["node", str(COMPARE_HISTORY_WALK), "--base-url", demo["url"], "--token", demo["token"], "--json"],
+            cwd=ROOT,
+            env=browser_env,
+            capture_output=True,
+            text=True,
+            timeout=90,
+            check=False,
+        )
+    assert result.returncode == 0, result.stdout + result.stderr
+    report = json.loads(result.stdout)
+    assert report["failed"] == 0, report["checks"]
+    assert report["passed"] == 8
     assert demo["token"] not in result.stdout + result.stderr

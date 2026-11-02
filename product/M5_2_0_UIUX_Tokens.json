@@ -37,7 +37,7 @@
   "totals": {
     "tokens": 46,
     "groups": 8,
-    "references": 1038,
+    "references": 1049,
     "theme_overrides": 18,
     "density_overrides": 5,
     "contrast_pairs": 20,
@@ -126,7 +126,7 @@
         "light": "#ffffff"
       },
       "density_override": null,
-      "references": 32
+      "references": 33
     },
     {
       "name": "--bg-card",
@@ -136,7 +136,7 @@
         "light": "#ffffff"
       },
       "density_override": null,
-      "references": 60
+      "references": 61
     },
     {
       "name": "--bg-hover",
@@ -166,7 +166,7 @@
         "light": "#d9dcd8"
       },
       "density_override": null,
-      "references": 146
+      "references": 148
     },
     {
       "name": "--border-hi",
@@ -186,7 +186,7 @@
         "light": "#202326"
       },
       "density_override": null,
-      "references": 71
+      "references": 73
     },
     {
       "name": "--text-dim",
@@ -196,7 +196,7 @@
         "light": "#555c62"
       },
       "density_override": null,
-      "references": 134
+      "references": 135
     },
     {
       "name": "--text-faint",
@@ -206,7 +206,7 @@
         "light": "#687077"
       },
       "density_override": null,
-      "references": 107
+      "references": 109
     },
     {
       "name": "--accent",
@@ -256,7 +256,7 @@
         "light": "#80580e"
       },
       "density_override": null,
-      "references": 45
+      "references": 46
     },
     {
       "name": "--rose",
@@ -266,7 +266,7 @@
         "light": "#a4313a"
       },
       "density_override": null,
-      "references": 29
+      "references": 30
     },
     {
       "name": "--purple",

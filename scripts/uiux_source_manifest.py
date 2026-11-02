@@ -96,6 +96,9 @@ TRACKED_FILES: tuple[tuple[str, str], ...] = (
     ("tests/test_screenshot_capture_browser.py", "runs browser-backed UI and screenshot safety regressions"),
     ("tests/test_uiux_source_manifest.py", "checks the completeness and hashes of this source manifest"),
     ("docs/uiux-2-0-p2-04-evidence.md", "maps P2-04 acceptance criteria to captured and executed evidence"),
+    ("scripts/compare_history_walk.mjs", "browser walk for the additive saved-Compare history browser against a throwaway demo"),
+    ("tests/test_compare_history.py", "checks history browsing, route reuse, mode filtering and separate restoration"),
+    ("docs/uiux-2-0-compare-history-browser.md", "scope and verification note for additive Compare history browsing"),
 )
 
 BUTTON_RE = re.compile(

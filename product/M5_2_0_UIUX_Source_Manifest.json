@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "c1f622f01afa92627cd95af92f313246eb5a55b62339999880e04a8c7ee4345e",
-      "bytes": 711823,
-      "lines": 12358
+      "sha256": "d29b148eaec4452965cac9f145905bb233e1081cc5017193fab56102414389a4",
+      "bytes": 723941,
+      "lines": 12571
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "c6d0ae379b924df5165ec668a95f36ba26e8328a2b30276a20f6b2c92392eea6",
-      "bytes": 3451228,
-      "lines": 75408
+      "sha256": "660b97148516b3c6f9b9d31266a7b6ddf495cf62615465412dd56fbe310c583b",
+      "bytes": 3463346,
+      "lines": 75621
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -327,9 +327,9 @@
     {
       "path": "tests/test_screenshot_capture_browser.py",
       "role": "runs browser-backed UI and screenshot safety regressions",
-      "sha256": "f699d82526dda47d86d64a75a337efa28082f8b3dee04dc06969345787ee2647",
-      "bytes": 25196,
-      "lines": 646
+      "sha256": "a30aeee29eff42f001b44534b1bc3f314e049cbce1f1c83e024d59e2d80ceb62",
+      "bytes": 26075,
+      "lines": 666
     },
     {
       "path": "tests/test_uiux_source_manifest.py",
@@ -344,12 +344,33 @@
       "sha256": "029e038d4d50209738733d146015417bc6e9f2b877b0503d3c0a2b7c07fcf15a",
       "bytes": 4084,
       "lines": 34
+    },
+    {
+      "path": "scripts/compare_history_walk.mjs",
+      "role": "browser walk for the additive saved-Compare history browser against a throwaway demo",
+      "sha256": "e342beadefdf65f956cefa2385875c3fabaa7f17be3c1eed7620dfc7ed614cc9",
+      "bytes": 12221,
+      "lines": 234
+    },
+    {
+      "path": "tests/test_compare_history.py",
+      "role": "checks history browsing, route reuse, mode filtering and separate restoration",
+      "sha256": "c814345c77334011290832d027d57afb977ee2135b5b39d8fb108367b66adaa2",
+      "bytes": 3363,
+      "lines": 72
+    },
+    {
+      "path": "docs/uiux-2-0-compare-history-browser.md",
+      "role": "scope and verification note for additive Compare history browsing",
+      "sha256": "13760adc0db2de6012b15195a736d83e18804e84053d3d01415cf00e9e472e2d",
+      "bytes": 1938,
+      "lines": 21
     }
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "c1f622f01afa92627cd95af92f313246eb5a55b62339999880e04a8c7ee4345e",
-    "lines": 12358,
+    "sha256": "d29b148eaec4452965cac9f145905bb233e1081cc5017193fab56102414389a4",
+    "lines": 12571,
     "tab_count": 6,
     "tabs": [
       {
@@ -395,7 +416,7 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 65,
+    "fetch_call_count": 66,
     "api_literal_count": 54,
     "api_literals": [
       "/api/cache/clear-ssd",

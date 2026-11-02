@@ -12,7 +12,7 @@
     "document_line": "line in static/index.html, which is what a reader of that file needs"
   },
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "c1f622f01afa92627cd95af92f313246eb5a55b62339999880e04a8c7ee4345e",
+  "frontend_sha256": "d29b148eaec4452965cac9f145905bb233e1081cc5017193fab56102414389a4",
   "app_sha256": "101c7e45395067a29ab9a43a8f464ee138278808cb9db40b972ed439a2f95086",
   "caller_resolution": {
     "complete": true,
@@ -20,9 +20,9 @@
     "statement": "No unsupported caller edges were detected by this lexical scan. A missing observed caller is not proof of absence."
   },
   "totals": {
-    "fetch_call_sites": 65,
-    "resolved_urls": 73,
-    "exact_matches": 71,
+    "fetch_call_sites": 66,
+    "resolved_urls": 74,
+    "exact_matches": 72,
     "dynamic_matches": 2,
     "dynamic_method_matches": 0,
     "forwarded_call_sites": 1,
@@ -39,14 +39,14 @@
     "resolved_from": {
       "assignment": 1,
       "forwarded": 1,
-      "literal": 63
+      "literal": 64
     }
   },
   "calls": [
     {
       "handler": "refreshOnboarding",
       "script_line": 662,
-      "document_line": 3255,
+      "document_line": 3284,
       "method": "GET",
       "url_argument": "url",
       "resolved_from": "assignment",
@@ -81,7 +81,7 @@
     {
       "handler": "loadStartRecent",
       "script_line": 841,
-      "document_line": 3434,
+      "document_line": 3463,
       "method": "GET",
       "url_argument": "\"/api/harness/sessions\"",
       "resolved_from": "literal",
@@ -104,7 +104,7 @@
     {
       "handler": "loadProviders",
       "script_line": 1458,
-      "document_line": 4051,
+      "document_line": 4080,
       "method": "GET",
       "url_argument": "\"/api/providers\"",
       "resolved_from": "literal",
@@ -127,7 +127,7 @@
     {
       "handler": "fetchRemoteModels",
       "script_line": 1542,
-      "document_line": 4135,
+      "document_line": 4164,
       "method": "POST",
       "url_argument": "\"/api/providers/fetch-models\"",
       "resolved_from": "literal",
@@ -150,7 +150,7 @@
     {
       "handler": "saveProvider",
       "script_line": 1566,
-      "document_line": 4159,
+      "document_line": 4188,
       "method": "POST",
       "url_argument": "\"/api/providers\"",
       "resolved_from": "literal",
@@ -173,7 +173,7 @@
     {
       "handler": "removeProvider",
       "script_line": 1586,
-      "document_line": 4179,
+      "document_line": 4208,
       "method": "DELETE",
       "url_argument": "`/api/providers/${encodeURIComponent(alias)}`",
       "resolved_from": "literal",
@@ -196,7 +196,7 @@
     {
       "handler": "saveCombo",
       "script_line": 1593,
-      "document_line": 4186,
+      "document_line": 4215,
       "method": "POST",
       "url_argument": "\"/api/combos\"",
       "resolved_from": "literal",
@@ -219,7 +219,7 @@
     {
       "handler": "removeCombo",
       "script_line": 1608,
-      "document_line": 4201,
+      "document_line": 4230,
       "method": "DELETE",
       "url_argument": "`/api/combos/${encodeURIComponent(alias)}`",
       "resolved_from": "literal",
@@ -242,7 +242,7 @@
     {
       "handler": "loadSkills",
       "script_line": 1624,
-      "document_line": 4217,
+      "document_line": 4246,
       "method": "GET",
       "url_argument": "\"/api/skills\"",
       "resolved_from": "literal",
@@ -265,7 +265,7 @@
     {
       "handler": "installSkill",
       "script_line": 1673,
-      "document_line": 4266,
+      "document_line": 4295,
       "method": "POST",
       "url_argument": "\"/api/skills/install\"",
       "resolved_from": "literal",
@@ -288,7 +288,7 @@
     {
       "handler": "openSpawnModal",
       "script_line": 1689,
-      "document_line": 4282,
+      "document_line": 4311,
       "method": "GET",
       "url_argument": "\"/api/workspace/files\"",
       "resolved_from": "literal",
@@ -311,7 +311,7 @@
     {
       "handler": "confirmSpawnSession",
       "script_line": 1710,
-      "document_line": 4303,
+      "document_line": 4332,
       "method": "POST",
       "url_argument": "\"/api/hall/sessions\"",
       "resolved_from": "literal",
@@ -334,7 +334,7 @@
     {
       "handler": "refreshHallSessions",
       "script_line": 1721,
-      "document_line": 4314,
+      "document_line": 4343,
       "method": "GET",
       "url_argument": "\"/api/hall/sessions\"",
       "resolved_from": "literal",
@@ -357,7 +357,7 @@
     {
       "handler": "selectHallSession",
       "script_line": 1740,
-      "document_line": 4333,
+      "document_line": 4362,
       "method": "GET",
       "url_argument": "`/api/hall/sessions/${encodeURIComponent(id)}`",
       "resolved_from": "literal",
@@ -380,7 +380,7 @@
     {
       "handler": "postHumanHallMessage",
       "script_line": 2108,
-      "document_line": 4701,
+      "document_line": 4730,
       "method": "POST",
       "url_argument": "\"/api/hall/sessions\"",
       "resolved_from": "literal",
@@ -403,7 +403,7 @@
     {
       "handler": "postHumanHallMessage",
       "script_line": 2112,
-      "document_line": 4705,
+      "document_line": 4734,
       "method": "POST",
       "url_argument": "`/api/hall/sessions/${encodeURIComponent(activeHallId)}/message`",
       "resolved_from": "literal",
@@ -426,7 +426,7 @@
     {
       "handler": "councilSeatAction",
       "script_line": 2505,
-      "document_line": 5098,
+      "document_line": 5127,
       "method": "POST",
       "url_argument": "`/api/models/${encodeURIComponent(model)}/load`",
       "resolved_from": "literal",
@@ -449,7 +449,7 @@
     {
       "handler": "refreshTelemetry",
       "script_line": 3224,
-      "document_line": 5817,
+      "document_line": 5846,
       "method": "GET",
       "url_argument": "\"/api/telemetry\"",
       "resolved_from": "literal",
@@ -472,7 +472,7 @@
     {
       "handler": "modelAction",
       "script_line": 3315,
-      "document_line": 5908,
+      "document_line": 5937,
       "method": "POST",
       "url_argument": "`/api/models/${encodeURIComponent(id)}/${act}`",
       "resolved_from": "literal",
@@ -499,7 +499,7 @@
     {
       "handler": "unloadAllModels",
       "script_line": 3316,
-      "document_line": 5909,
+      "document_line": 5938,
       "method": "POST",
       "url_argument": "\"/api/models/unload-all\"",
       "resolved_from": "literal",
@@ -522,7 +522,7 @@
     {
       "handler": "clearSsdCache",
       "script_line": 3317,
-      "document_line": 5910,
+      "document_line": 5939,
       "method": "POST",
       "url_argument": "\"/api/cache/clear-ssd\"",
       "resolved_from": "literal",
@@ -545,7 +545,7 @@
     {
       "handler": "consumeSSE",
       "script_line": 3325,
-      "document_line": 5918,
+      "document_line": 5947,
       "method": "POST",
       "url_argument": "url",
       "resolved_from": "forwarded",
@@ -678,7 +678,30 @@
     {
       "handler": "reloadSavedPipelineRun",
       "script_line": 4130,
-      "document_line": 6723,
+      "document_line": 6752,
+      "method": "GET",
+      "url_argument": "\"/api/history/export\"",
+      "resolved_from": "literal",
+      "urls": [
+        {
+          "kind": "exact",
+          "route": "/api/history/export",
+          "candidates": [
+            {
+              "method": "GET",
+              "path": "/api/history/export"
+            }
+          ],
+          "url": "/api/history/export",
+          "forwarded_via": []
+        }
+      ],
+      "unresolved_edges": []
+    },
+    {
+      "handler": "debateFetchHistoryBundle",
+      "script_line": 4769,
+      "document_line": 7391,
       "method": "GET",
       "url_argument": "\"/api/history/export\"",
       "resolved_from": "literal",
@@ -700,8 +723,8 @@
     },
     {
       "handler": "debateReadServerRecord",
-      "script_line": 4894,
-      "document_line": 7487,
+      "script_line": 5074,
+      "document_line": 7696,
       "method": "GET",
       "url_argument": "\"/api/history/export\"",
       "resolved_from": "literal",
@@ -723,8 +746,8 @@
     },
     {
       "handler": "openExternalHarnessModal",
-      "script_line": 6075,
-      "document_line": 8668,
+      "script_line": 6259,
+      "document_line": 8881,
       "method": "GET",
       "url_argument": "\"/api/harness/external-configs\"",
       "resolved_from": "literal",
@@ -746,8 +769,8 @@
     },
     {
       "handler": "saveWorkspaceDirectory",
-      "script_line": 6183,
-      "document_line": 8776,
+      "script_line": 6367,
+      "document_line": 8989,
       "method": "POST",
       "url_argument": "\"/api/workspace/directory\"",
       "resolved_from": "literal",
@@ -769,8 +792,8 @@
     },
     {
       "handler": "loadHarnessSessions",
-      "script_line": 6205,
-      "document_line": 8798,
+      "script_line": 6389,
+      "document_line": 9011,
       "method": "GET",
       "url_argument": "\"/api/harness/sessions\"",
       "resolved_from": "literal",
@@ -792,8 +815,8 @@
     },
     {
       "handler": "selectHarnessSession",
-      "script_line": 6287,
-      "document_line": 8880,
+      "script_line": 6471,
+      "document_line": 9093,
       "method": "GET",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(id)}`",
       "resolved_from": "literal",
@@ -815,8 +838,8 @@
     },
     {
       "handler": "patchActiveHarnessSettings",
-      "script_line": 6299,
-      "document_line": 8892,
+      "script_line": 6483,
+      "document_line": 9105,
       "method": "PATCH",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}`",
       "resolved_from": "literal",
@@ -838,8 +861,8 @@
     },
     {
       "handler": "deleteHarnessSession",
-      "script_line": 6312,
-      "document_line": 8905,
+      "script_line": 6496,
+      "document_line": 9118,
       "method": "DELETE",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(id)}`",
       "resolved_from": "literal",
@@ -861,8 +884,8 @@
     },
     {
       "handler": "harnessFetchEventPage",
-      "script_line": 6732,
-      "document_line": 9325,
+      "script_line": 6916,
+      "document_line": 9538,
       "method": "GET",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/events?cursor=${cursor}&limit=${limit || 500}`",
       "resolved_from": "literal",
@@ -884,8 +907,8 @@
     },
     {
       "handler": "harnessResyncFromSnapshot",
-      "script_line": 6792,
-      "document_line": 9385,
+      "script_line": 6976,
+      "document_line": 9598,
       "method": "GET",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`",
       "resolved_from": "literal",
@@ -907,8 +930,8 @@
     },
     {
       "handler": "openHarnessEventStream",
-      "script_line": 6838,
-      "document_line": 9431,
+      "script_line": 7022,
+      "document_line": 9644,
       "method": "GET",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/events/stream?cursor=${harnessCursor}`",
       "resolved_from": "literal",
@@ -930,8 +953,8 @@
     },
     {
       "handler": "openHarnessEventStream",
-      "script_line": 6877,
-      "document_line": 9470,
+      "script_line": 7061,
+      "document_line": 9683,
       "method": "GET",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`",
       "resolved_from": "literal",
@@ -953,8 +976,8 @@
     },
     {
       "handler": "refreshHarnessGrants",
-      "script_line": 7116,
-      "document_line": 9709,
+      "script_line": 7300,
+      "document_line": 9922,
       "method": "GET",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/grants`",
       "resolved_from": "literal",
@@ -976,8 +999,8 @@
     },
     {
       "handler": "revokeHarnessGrant",
-      "script_line": 7253,
-      "document_line": 9846,
+      "script_line": 7437,
+      "document_line": 10059,
       "method": "POST",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/grants/revoke`",
       "resolved_from": "literal",
@@ -999,8 +1022,8 @@
     },
     {
       "handler": "confirmLiveHarnessApproval",
-      "script_line": 7461,
-      "document_line": 10054,
+      "script_line": 7645,
+      "document_line": 10267,
       "method": "GET",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`",
       "resolved_from": "literal",
@@ -1022,8 +1045,8 @@
     },
     {
       "handler": "resolveHarnessApproval",
-      "script_line": 7523,
-      "document_line": 10116,
+      "script_line": 7707,
+      "document_line": 10329,
       "method": "POST",
       "url_argument": "\"/api/harness/approve\"",
       "resolved_from": "literal",
@@ -1045,8 +1068,8 @@
     },
     {
       "handler": "abortHarnessRun",
-      "script_line": 7559,
-      "document_line": 10152,
+      "script_line": 7743,
+      "document_line": 10365,
       "method": "POST",
       "url_argument": "`/api/harness/abort/${encodeURIComponent(sessionId)}`",
       "resolved_from": "literal",
@@ -1068,8 +1091,8 @@
     },
     {
       "handler": "openHarnessDiffModal",
-      "script_line": 7580,
-      "document_line": 10173,
+      "script_line": 7764,
+      "document_line": 10386,
       "method": "GET",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/diff`",
       "resolved_from": "literal",
@@ -1091,8 +1114,8 @@
     },
     {
       "handler": "applyHarnessWorktree",
-      "script_line": 7603,
-      "document_line": 10196,
+      "script_line": 7787,
+      "document_line": 10409,
       "method": "POST",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/apply`",
       "resolved_from": "literal",
@@ -1114,8 +1137,8 @@
     },
     {
       "handler": "refreshHarnessEvidence",
-      "script_line": 7900,
-      "document_line": 10493,
+      "script_line": 8084,
+      "document_line": 10706,
       "method": "GET",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/task`",
       "resolved_from": "literal",
@@ -1137,8 +1160,8 @@
     },
     {
       "handler": "refreshHarnessEvidence",
-      "script_line": 7907,
-      "document_line": 10500,
+      "script_line": 8091,
+      "document_line": 10713,
       "method": "GET",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/diff`",
       "resolved_from": "literal",
@@ -1160,8 +1183,8 @@
     },
     {
       "handler": "refreshHarnessRecovery",
-      "script_line": 8559,
-      "document_line": 11152,
+      "script_line": 8743,
+      "document_line": 11365,
       "method": "GET",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/task`",
       "resolved_from": "literal",
@@ -1183,8 +1206,8 @@
     },
     {
       "handler": "refreshHarnessRecovery",
-      "script_line": 8568,
-      "document_line": 11161,
+      "script_line": 8752,
+      "document_line": 11374,
       "method": "GET",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`",
       "resolved_from": "literal",
@@ -1206,8 +1229,8 @@
     },
     {
       "handler": "harnessRecoveryPost",
-      "script_line": 8598,
-      "document_line": 11191,
+      "script_line": 8782,
+      "document_line": 11404,
       "method": "POST",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(sessionId)}/${path}`",
       "resolved_from": "literal",
@@ -1265,8 +1288,8 @@
     },
     {
       "handler": "loadMcpServers",
-      "script_line": 8946,
-      "document_line": 11539,
+      "script_line": 9130,
+      "document_line": 11752,
       "method": "GET",
       "url_argument": "\"/api/mcp/servers\"",
       "resolved_from": "literal",
@@ -1288,8 +1311,8 @@
     },
     {
       "handler": "saveMcpServer",
-      "script_line": 9137,
-      "document_line": 11730,
+      "script_line": 9321,
+      "document_line": 11943,
       "method": "POST",
       "url_argument": "\"/api/mcp/servers\"",
       "resolved_from": "literal",
@@ -1311,8 +1334,8 @@
     },
     {
       "handler": "importMcpJson",
-      "script_line": 9161,
-      "document_line": 11754,
+      "script_line": 9345,
+      "document_line": 11967,
       "method": "POST",
       "url_argument": "\"/api/mcp/import-json\"",
       "resolved_from": "literal",
@@ -1334,8 +1357,8 @@
     },
     {
       "handler": "syncMcpServer",
-      "script_line": 9175,
-      "document_line": 11768,
+      "script_line": 9359,
+      "document_line": 11981,
       "method": "POST",
       "url_argument": "`/api/mcp/servers/${encodeURIComponent(alias)}/sync`",
       "resolved_from": "literal",
@@ -1357,8 +1380,8 @@
     },
     {
       "handler": "toggleMcpServerEnabled",
-      "script_line": 9189,
-      "document_line": 11782,
+      "script_line": 9373,
+      "document_line": 11995,
       "method": "PATCH",
       "url_argument": "`/api/mcp/servers/${encodeURIComponent(alias)}`",
       "resolved_from": "literal",
@@ -1380,8 +1403,8 @@
     },
     {
       "handler": "changeMcpApprovalPolicy",
-      "script_line": 9197,
-      "document_line": 11790,
+      "script_line": 9381,
+      "document_line": 12003,
       "method": "PATCH",
       "url_argument": "`/api/mcp/servers/${encodeURIComponent(alias)}`",
       "resolved_from": "literal",
@@ -1403,8 +1426,8 @@
     },
     {
       "handler": "toggleMcpSingleTool",
-      "script_line": 9210,
-      "document_line": 11803,
+      "script_line": 9394,
+      "document_line": 12016,
       "method": "PATCH",
       "url_argument": "`/api/mcp/servers/${encodeURIComponent(alias)}`",
       "resolved_from": "literal",
@@ -1426,8 +1449,8 @@
     },
     {
       "handler": "deleteMcpServer",
-      "script_line": 9218,
-      "document_line": 11811,
+      "script_line": 9402,
+      "document_line": 12024,
       "method": "DELETE",
       "url_argument": "`/api/mcp/servers/${encodeURIComponent(alias)}`",
       "resolved_from": "literal",
@@ -1449,8 +1472,8 @@
     },
     {
       "handler": "runMcpPlayground",
-      "script_line": 9231,
-      "document_line": 11824,
+      "script_line": 9415,
+      "document_line": 12037,
       "method": "POST",
       "url_argument": "`/api/mcp/servers/${encodeURIComponent(alias)}/call`",
       "resolved_from": "literal",
@@ -1472,8 +1495,8 @@
     },
     {
       "handler": "compactActiveHarness",
-      "script_line": 9247,
-      "document_line": 11840,
+      "script_line": 9431,
+      "document_line": 12053,
       "method": "POST",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/compact`",
       "resolved_from": "literal",
@@ -1495,8 +1518,8 @@
     },
     {
       "handler": "loadOpenContextDocs",
-      "script_line": 9395,
-      "document_line": 11988,
+      "script_line": 9579,
+      "document_line": 12201,
       "method": "GET",
       "url_argument": "\"/api/opencontext/docs\"",
       "resolved_from": "literal",
@@ -1518,8 +1541,8 @@
     },
     {
       "handler": "searchOpenContextUI",
-      "script_line": 9404,
-      "document_line": 11997,
+      "script_line": 9588,
+      "document_line": 12210,
       "method": "GET",
       "url_argument": "`/api/opencontext/search?q=${encodeURIComponent(q)}`",
       "resolved_from": "literal",
@@ -1541,8 +1564,8 @@
     },
     {
       "handler": "saveOpenContextDoc",
-      "script_line": 9458,
-      "document_line": 12051,
+      "script_line": 9642,
+      "document_line": 12264,
       "method": "POST",
       "url_argument": "\"/api/opencontext/docs\"",
       "resolved_from": "literal",
@@ -1564,8 +1587,8 @@
     },
     {
       "handler": "togglePinOpenContextDoc",
-      "script_line": 9470,
-      "document_line": 12063,
+      "script_line": 9654,
+      "document_line": 12276,
       "method": "PATCH",
       "url_argument": "`/api/opencontext/docs/${encodeURIComponent(id)}`",
       "resolved_from": "literal",
@@ -1587,8 +1610,8 @@
     },
     {
       "handler": "deleteOpenContextDoc",
-      "script_line": 9478,
-      "document_line": 12071,
+      "script_line": 9662,
+      "document_line": 12284,
       "method": "DELETE",
       "url_argument": "`/api/opencontext/docs/${encodeURIComponent(id)}`",
       "resolved_from": "literal",
@@ -1610,8 +1633,8 @@
     },
     {
       "handler": "runOpenContextLintUI",
-      "script_line": 9487,
-      "document_line": 12080,
+      "script_line": 9671,
+      "document_line": 12293,
       "method": "GET",
       "url_argument": "\"/api/opencontext/lint\"",
       "resolved_from": "literal",
@@ -1633,8 +1656,8 @@
     },
     {
       "handler": "refreshCodeGraphOverview",
-      "script_line": 9501,
-      "document_line": 12094,
+      "script_line": 9685,
+      "document_line": 12307,
       "method": "GET",
       "url_argument": "`/api/codegraph/analyze?workspace_dir=${encodeURIComponent(ws)}`",
       "resolved_from": "literal",
@@ -1656,8 +1679,8 @@
     },
     {
       "handler": "runCodeGraphPlayground",
-      "script_line": 9524,
-      "document_line": 12117,
+      "script_line": 9708,
+      "document_line": 12330,
       "method": "POST",
       "url_argument": "\"/api/codegraph/query\"",
       "resolved_from": "literal",
@@ -1679,8 +1702,8 @@
     },
     {
       "handler": "refreshSdlcBoard",
-      "script_line": 9562,
-      "document_line": 12155,
+      "script_line": 9746,
+      "document_line": 12368,
       "method": "GET",
       "url_argument": "`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/sdlc`",
       "resolved_from": "literal",
@@ -1975,6 +1998,7 @@
       "method": "GET",
       "path": "/api/history/export",
       "callers": [
+        "debateFetchHistoryBundle",
         "debateReadServerRecord",
         "reloadSavedPipelineRun"
       ],
