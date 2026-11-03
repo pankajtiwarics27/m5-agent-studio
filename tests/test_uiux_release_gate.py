@@ -13,6 +13,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -187,3 +188,53 @@ def test_the_gate_carries_no_clock_so_two_runs_agree(gate, payload) -> None:
     text = json.dumps(payload, sort_keys=True)
     for marker in ("generated_at", "timestamp", "checked_at", "2026-"):
         assert marker not in text, f"the gate embeds {marker!r}, so --check would fail on the next run"
+
+
+def test_the_gate_says_which_recorded_regressions_no_longer_stand(payload: dict) -> None:
+    """The 45 carried lines are history; the gate has to distinguish them from what is still true."""
+    resolved = payload["resolved_regressions"]
+    assert resolved, "the program closed at least one regression after the gate existed"
+    recorded = [row["regression"] for row in payload["known_regressions"]]
+    for row in resolved:
+        assert any(row["matches"] in text for text in recorded), row
+        assert row["what"] and row["closed_by"], row
+        proof = re.findall(r"`(tests/[\w./]+\.py)`", row["proof"])
+        assert proof, row
+        for path in proof:
+            assert (PROJECT_ROOT / path).is_file(), path
+
+
+def test_a_resolution_whose_recorded_wording_vanished_is_a_finding(gate, payload) -> None:
+    """The ledger's wording is the reference point: if it moves, the claim of closure must fail."""
+    moved = [dict(row, regression=row["regression"].replace("29.5 / 42.1", "some other figure")) for row in payload["known_regressions"]]
+    findings = gate.resolution_findings(moved)
+    assert any(finding["check"] == "resolution-reference" for finding in findings), findings
+    assert gate.resolution_findings(payload["known_regressions"]) == []
+
+
+def test_the_closed_regression_is_proved_by_a_test_that_exists(payload: dict) -> None:
+    proof = " ".join(row["proof"] for row in payload["resolved_regressions"])
+    assert "test_perf_samples_honesty.py" in proof
+    assert (PROJECT_ROOT / "tests" / "test_perf_samples_honesty.py").is_file()
+
+
+def test_the_tree_carries_the_bytes_its_generators_produce(gate) -> None:
+    """Two generators cannot `--check`: the gate runs them and compares the bytes instead."""
+    assert gate.GENERATED_WITHOUT_CHECK
+    assert gate.regenerated_findings() == []
+
+
+def test_a_stale_generated_file_is_a_finding_and_the_tree_is_left_as_it_was(gate) -> None:
+    """The check must not quietly "fix" the tree it was asked to inspect."""
+    script, artifact, _owns = gate.GENERATED_WITHOUT_CHECK[0]
+    path = PROJECT_ROOT / artifact
+    original = path.read_bytes()
+    try:
+        path.write_bytes(original + b"\nstale line from a test\n")
+        stale = path.read_bytes()
+        findings = gate.regenerated_findings()
+        assert any(finding["check"] == "generated-file" for finding in findings), findings
+        assert path.read_bytes() == stale, "the check rewrote the file instead of restoring what it found"
+    finally:
+        path.write_bytes(original)
+    assert gate.regenerated_findings() == []

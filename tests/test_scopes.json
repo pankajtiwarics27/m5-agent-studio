@@ -90,6 +90,7 @@
       "test_context_*.py",
       "test_db_maintenance.py",
       "test_history_privacy.py",
+      "test_perf_samples_honesty.py",
       "test_runtime_persistence.py",
       "test_side_effect_ledger.py",
       "test_storage_contracts.py"
@@ -174,36 +175,125 @@
     "poetry.lock"
   ],
   "source_areas": {
-    "onboarding_preflight.py": ["ui.start"],
-    "workflow_state.py": ["ui.harness"],
-    "workflow_checkpoints.py": ["ui.harness", "ui.pipeline"],
-    "workflow_orchestration.py": ["ui.harness", "ui.pipeline"],
-    "workflow_tracing.py": ["ui.harness", "ui.pipeline"],
-    "task_events.py": ["ui.harness"],
-    "runtime_persistence.py": ["ui.harness", "storage.history"],
-    "history_privacy.py": ["storage.history", "ui.compare"],
-    "execution_spine.py": ["ui.harness", "security.execution"],
-    "execution_profiles.py": ["ui.harness", "security.execution"],
-    "sandbox_boundary.py": ["security.execution"],
-    "scoped_grants.py": ["ui.harness", "security.execution"],
-    "side_effect_ledger.py": ["ui.harness", "security.execution", "storage.history"],
-    "mcp_client.py": ["security.execution", "models.providers"],
-    "private_network_gateway.py": ["security.network"],
-    "routing_policy.py": ["models.providers", "security.network"],
-    "provider_switching.py": ["models.providers"],
-    "local_provider_adapters.py": ["models.providers"],
-    "model_admission.py": ["models.providers", "ui.council"],
-    "resource_admission.py": ["ui.council"],
-    "comparison_board.py": ["ui.compare", "storage.history"],
-    "context_store.py": ["ui.chat", "storage.history"],
-    "context_reassembly.py": ["ui.chat", "storage.history"],
-    "edit_transactions.py": ["ui.harness", "security.execution"],
-    "edit_rollback.py": ["ui.harness", "security.execution"],
-    "workspace_snapshots.py": ["ui.harness", "security.execution"],
-    "workspace_quarantine.py": ["ui.harness", "security.execution"],
-    "security_release_gate.py": ["security.execution", "quality.docs-ci"],
-    "release_manager.py": ["quality.docs-ci"],
-    "supply_chain.py": ["quality.docs-ci"],
-    "static/index.html": ["ui.start", "ui.harness", "ui.council", "ui.pipeline", "ui.compare", "ui.chat", "ui.shared"]
+    "onboarding_preflight.py": [
+      "ui.start"
+    ],
+    "workflow_state.py": [
+      "ui.harness"
+    ],
+    "workflow_checkpoints.py": [
+      "ui.harness",
+      "ui.pipeline"
+    ],
+    "workflow_orchestration.py": [
+      "ui.harness",
+      "ui.pipeline"
+    ],
+    "workflow_tracing.py": [
+      "ui.harness",
+      "ui.pipeline"
+    ],
+    "task_events.py": [
+      "ui.harness"
+    ],
+    "runtime_persistence.py": [
+      "ui.harness",
+      "storage.history"
+    ],
+    "history_privacy.py": [
+      "storage.history",
+      "ui.compare"
+    ],
+    "execution_spine.py": [
+      "ui.harness",
+      "security.execution"
+    ],
+    "execution_profiles.py": [
+      "ui.harness",
+      "security.execution"
+    ],
+    "sandbox_boundary.py": [
+      "security.execution"
+    ],
+    "scoped_grants.py": [
+      "ui.harness",
+      "security.execution"
+    ],
+    "side_effect_ledger.py": [
+      "ui.harness",
+      "security.execution",
+      "storage.history"
+    ],
+    "mcp_client.py": [
+      "security.execution",
+      "models.providers"
+    ],
+    "private_network_gateway.py": [
+      "security.network"
+    ],
+    "routing_policy.py": [
+      "models.providers",
+      "security.network"
+    ],
+    "provider_switching.py": [
+      "models.providers"
+    ],
+    "local_provider_adapters.py": [
+      "models.providers"
+    ],
+    "model_admission.py": [
+      "models.providers",
+      "ui.council"
+    ],
+    "resource_admission.py": [
+      "ui.council"
+    ],
+    "comparison_board.py": [
+      "ui.compare",
+      "storage.history"
+    ],
+    "context_store.py": [
+      "ui.chat",
+      "storage.history"
+    ],
+    "context_reassembly.py": [
+      "ui.chat",
+      "storage.history"
+    ],
+    "edit_transactions.py": [
+      "ui.harness",
+      "security.execution"
+    ],
+    "edit_rollback.py": [
+      "ui.harness",
+      "security.execution"
+    ],
+    "workspace_snapshots.py": [
+      "ui.harness",
+      "security.execution"
+    ],
+    "workspace_quarantine.py": [
+      "ui.harness",
+      "security.execution"
+    ],
+    "security_release_gate.py": [
+      "security.execution",
+      "quality.docs-ci"
+    ],
+    "release_manager.py": [
+      "quality.docs-ci"
+    ],
+    "supply_chain.py": [
+      "quality.docs-ci"
+    ],
+    "static/index.html": [
+      "ui.start",
+      "ui.harness",
+      "ui.council",
+      "ui.pipeline",
+      "ui.compare",
+      "ui.chat",
+      "ui.shared"
+    ]
   }
 }

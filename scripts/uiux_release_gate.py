@@ -168,6 +168,45 @@ ACCEPTANCE: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ),
 )
 
+#: Generated files whose scripts ignore `--check` and rewrite their output unconditionally. The gate
+#: proves the committed bytes are what those scripts produce by running them and comparing: a file that
+#: a source change has left stale is exactly the drift CI's "Verify generated artifacts are
+#: reproducible" step catches, and this story found it the hard way - changing `app.py` moved
+#: `docs/subsystem-dependency-inventory.md`, and nothing in this gate noticed.
+GENERATED_WITHOUT_CHECK: tuple[tuple[str, str, str], ...] = (
+    (
+        "scripts/generate_route_matrix.py",
+        "docs/route-security-matrix.md",
+        "the route security matrix, rebuilt from the decorators in `app.py`",
+    ),
+    (
+        "scripts/generate_subsystem_inventory.py",
+        "docs/subsystem-dependency-inventory.md",
+        "the subsystem inventory, rebuilt from the same decorators and their tables",
+    ),
+)
+
+#: Regressions the program recorded and that have since been closed, with the proof that closed them.
+#: The ledger's own story entries are history and are not rewritten; this is where a reader learns
+#: which of the carried lines still stands, and where to check the claim. `matches` must appear in the
+#: ledger's text - the build fails closed if the recorded wording moves out from under it.
+RESOLVED: tuple[dict[str, str], ...] = (
+    {
+        "story": "UIUX-P4-01",
+        "matches": "fabricated tok/s figures (29.5 / 42.1)",
+        "what": "the demo path's invented throughput figures no longer reach `perf_samples`",
+        "closed_by": (
+            "`record_perf(..., demo=...)` returns before it writes, and all four call sites pass the flag "
+            "from the usage line that carries it; `studio.py` is regenerated from `app.py`"
+        ),
+        "proof": (
+            "`tests/test_perf_samples_honesty.py` - no sample for a demo reply, a measured reply still "
+            "stored, the throughput summary never averaging a demo row, every call site passing the flag, "
+            "and the bundle carrying the same refusal"
+        ),
+    },
+)
+
 #: What the gate does not run, and why. Named so a reader cannot mistake silence for coverage.
 NOT_RUN: tuple[tuple[str, str], ...] = (
     (
@@ -351,6 +390,53 @@ def known_regressions(document: dict[str, object]) -> list[dict[str, str]]:
     return rows
 
 
+def regenerated_findings() -> list[dict[str, str]]:
+    """Run the generators that cannot check, and leave the tree exactly as it was found."""
+    findings: list[dict[str, str]] = []
+    for script, artifact, owns in GENERATED_WITHOUT_CHECK:
+        path = PROJECT_ROOT / artifact
+        if not path.exists():
+            findings.append({"check": "generated-missing", "detail": f"`{artifact}` does not exist"})
+            continue
+        original = path.read_bytes()
+        subprocess.run(  # noqa: S603 - fixed argv, repository script
+            [sys.executable, script],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=600,
+            check=False,
+        )
+        produced = path.read_bytes()
+        if produced != original:
+            path.write_bytes(original)
+            findings.append(
+                {
+                    "check": "generated-file",
+                    "detail": f"`{artifact}` is not what `{script}` produces ({owns}); regenerate it in this commit",
+                }
+            )
+    return findings
+
+
+def resolution_findings(recorded: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Every claim that a carried regression is now closed must still point at one that was recorded."""
+    findings: list[dict[str, str]] = []
+    for resolved in RESOLVED:
+        if not any(resolved["matches"] in row["regression"] for row in recorded):
+            findings.append(
+                {
+                    "check": "resolution-reference",
+                    "detail": f"{resolved['story']}: `{resolved['matches']}` is no longer a recorded regression",
+                }
+            )
+        if not (PROJECT_ROOT / "tests" / "test_perf_samples_honesty.py").exists() and resolved["story"] == "UIUX-P4-01":
+            findings.append(
+                {"check": "resolution-proof", "detail": f"{resolved['story']}: the named proof test is missing"}
+            )
+    return findings
+
+
 def build() -> dict[str, object]:
     document = ledger()
     checks = []
@@ -371,6 +457,10 @@ def build() -> dict[str, object]:
                 findings.append({"check": "artifact-missing", "detail": artifact})
 
     findings.extend(ledger_findings(document))
+
+    recorded = known_regressions(document)
+    findings.extend(resolution_findings(recorded))
+    findings.extend(regenerated_findings())
     gates = phase_gates(document, checks)
     for gate in gates:
         if not gate["met"] and gate["id"] != "P6":
@@ -409,8 +499,12 @@ def build() -> dict[str, object]:
             for criterion, evidence, artifacts in ACCEPTANCE
         ],
         "inventory": inventory(document),
-        "known_regressions": known_regressions(document),
+        "known_regressions": recorded,
+        "resolved_regressions": [dict(row) for row in RESOLVED],
         "open_risks": document.get("session_state", {}).get("open_risks", []),  # type: ignore[union-attr]
+        "regenerated_without_check": [
+            {"script": script, "artifact": artifact, "owns": owns} for script, artifact, owns in GENERATED_WITHOUT_CHECK
+        ],
         "not_run": [{"what": what, "why": why} for what, why in NOT_RUN],
         "handover": {
             "what_this_program_changed": [
@@ -464,7 +558,9 @@ def build() -> dict[str, object]:
             "gates": len(gates),
             "gates_met": sum(1 for gate in gates if gate["met"]),
             "acceptance_criteria": len(ACCEPTANCE),
-            "known_regressions": len(known_regressions(document)),
+            "known_regressions": len(recorded),
+            "resolved_regressions": len(RESOLVED),
+            "regenerated_files": len(GENERATED_WITHOUT_CHECK),
             "findings": len(findings),
         },
         "findings": findings,
@@ -557,6 +653,35 @@ def render_doc(payload: dict[str, object]) -> str:
         lines.append("None recorded.")
     lines += [
         "",
+        "## Closed after the gate",
+        "",
+        "The ledger's story entries are history and are left as they were written. These are the carried "
+        "lines that no longer stand, and where the proof lives; the lines themselves stay in the table "
+        "above so a reader can see what was recorded and when it stopped being true.",
+        "",
+        "| Story | No longer true | Closed by | Proof |",
+        "|---|---|---|---|",
+    ]
+    if payload["resolved_regressions"]:  # type: ignore[truthy-bool]
+        for row in payload["resolved_regressions"]:  # type: ignore[union-attr]
+            lines.append(f"| {row['story']} | {_cell(row['what'])} | {_cell(row['closed_by'])} | {_cell(row['proof'])} |")
+    else:
+        lines.append("| - | nothing yet | - | - |")
+    lines += [
+        "",
+        "## Generated files that cannot check themselves",
+        "",
+        "Two generators ignore `--check` and rewrite their output unconditionally, so the gate runs them and "
+        "compares the bytes, restoring the file if the two differ. CI's `Verify generated artifacts are "
+        "reproducible` step is the other half of this.",
+        "",
+        "| Script | Artifact | What it owns |",
+        "|---|---|---|",
+    ]
+    for row in payload["regenerated_without_check"]:  # type: ignore[union-attr]
+        lines.append(f"| `{row['script']}` | `{row['artifact']}` | {_cell(row['owns'])} |")
+    lines += [
+        "",
         "## What this gate does not run",
         "",
         "| Not run here | Why |",
@@ -623,6 +748,15 @@ def render_handover(payload: dict[str, object]) -> str:
     lines += [f"* {item}" for item in handover["where_the_evidence_lives"]]
     lines += ["", "## What is not claimed", ""]
     lines += [f"* {item}" for item in handover["what_is_not_claimed"]]
+    lines += [
+        "",
+        "## Fixed after the gate",
+        "",
+    ]
+    for row in payload["resolved_regressions"]:  # type: ignore[union-attr]
+        lines.append(f"* {row['story']}: {row['what']} - closed by {row['closed_by']}. Proof: {row['proof']}.")
+    if not payload["resolved_regressions"]:  # type: ignore[truthy-bool]
+        lines.append("* Nothing yet.")
     lines += [
         "",
         "## Known regressions",

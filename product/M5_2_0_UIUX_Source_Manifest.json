@@ -19,16 +19,16 @@
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "101c7e45395067a29ab9a43a8f464ee138278808cb9db40b972ed439a2f95086",
-      "bytes": 1005782,
-      "lines": 21699
+      "sha256": "0e6ecd89d84b7779f91513d8077934b08c8e90bccda919a6fac49ff6e44e2962",
+      "bytes": 1006548,
+      "lines": 21712
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "c9ebe322168d66c01e1e53cd218fd82b0f42ca961d792b5711da304643d8e167",
-      "bytes": 3497881,
-      "lines": 76275
+      "sha256": "310eda92a61298b75086e2c5aa64f7f86f04ad90a198098626ec3bb1ead5f222",
+      "bytes": 3498647,
+      "lines": 76288
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -446,16 +446,16 @@
     {
       "path": "scripts/uiux_release_gate.py",
       "role": "runs every artifact's --check, computes the seven phase gates, maps the five acceptance criteria to evidence and carries the known regressions into a handover",
-      "sha256": "013e0fddc170ee4d008c02272bf9867cc2f706697c8224b9447b8c35c6f94223",
-      "bytes": 37130,
-      "lines": 697
+      "sha256": "22f3bcb1e4dc25815088572dda3a8b54c7ab174d744f504996a998c75529b183",
+      "bytes": 43475,
+      "lines": 831
     },
     {
       "path": "tests/test_uiux_release_gate.py",
       "role": "falsifies the ledger one way at a time and checks the release gate refuses to call a program finished",
-      "sha256": "aa0c75f2e2a84824da97017eb13116d872a34d792b0f46a87393065242787b1d",
-      "bytes": 7770,
-      "lines": 189
+      "sha256": "d0ef1a26398faad92e50448f58221ad7b663610462ec4fc6aab970bf90a684c6",
+      "bytes": 10352,
+      "lines": 240
     }
   ],
   "frontend": {
@@ -568,7 +568,7 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "101c7e45395067a29ab9a43a8f464ee138278808cb9db40b972ed439a2f95086",
+    "sha256": "0e6ecd89d84b7779f91513d8077934b08c8e90bccda919a6fac49ff6e44e2962",
     "route_count": 115,
     "by_method": {
       "DELETE": 5,

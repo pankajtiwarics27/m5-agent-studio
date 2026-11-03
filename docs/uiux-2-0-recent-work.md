@@ -12,14 +12,14 @@ Start shows the five most recent Harness sessions as buttons that open them wher
 
 | Status | Tone | Label | Written at |
 |---|---|---|---|
-| `blocked` | danger | blocked | app.py:13542 (1×) |
-| `cancelled` | warn | stopped by you | app.py:13417 (7×) |
-| `completed` | ok | completed | app.py:18602 (4×) |
-| `error` | danger | failed | app.py:18733 (4×) |
+| `blocked` | danger | blocked | app.py:13555 (1×) |
+| `cancelled` | warn | stopped by you | app.py:13430 (7×) |
+| `completed` | ok | completed | app.py:18615 (4×) |
+| `error` | danger | failed | app.py:18746 (4×) |
 | `idle` | info | ready | app.py:2199 (2×) |
-| `paused` | warn | paused | app.py:11593 (11×) |
-| `running` | busy | running | app.py:7882 (10×) |
-| `waiting_approval` | warn | waiting approval | app.py:7765 (1×) |
+| `paused` | warn | paused | app.py:11606 (11×) |
+| `running` | busy | running | app.py:7895 (10×) |
+| `waiting_approval` | warn | waiting approval | app.py:7778 (1×) |
 
 8 of 8 statuses the server writes have a row in `harnessStatusBadge()`, the table every harness surface paints a run state with. A status without one would appear on Start as a bare lowercase word while the Harness showed a badge — two vocabularies for one state.
 
