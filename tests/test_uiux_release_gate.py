@@ -4,7 +4,7 @@ The gate's whole claim is that its lines were executed on this tree. So the test
 things: they execute it and compare the result with the committed artifacts, and they falsify the
 ledger one way at a time to prove the gate's bookkeeping checks actually fail closed.
 
-The gate runs nineteen `--check` subprocesses (about twenty seconds), so the expensive fixture is
+The gate runs thirty-seven `--check` subprocesses (about half a minute), so the expensive fixture is
 module-scoped and the negative tests work on in-memory copies rather than on the tree.
 """
 
@@ -73,7 +73,7 @@ def test_the_check_mode_passes_on_the_committed_tree() -> None:
 def test_the_gate_has_no_findings_because_every_check_passed(payload: dict) -> None:
     assert payload["findings"] == []
     assert payload["program_state"]["complete"], "the gate reported a finished program only after the last story closed"
-    assert payload["totals"]["checks"] == 19
+    assert payload["totals"]["checks"] == 37
     assert payload["totals"]["checks_passed"] == payload["totals"]["checks"]
     for check in payload["checks"]:
         assert check["exit_code"] == 0, check

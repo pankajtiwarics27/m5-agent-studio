@@ -37,11 +37,57 @@
       ]
     },
     {
+      "script": "scripts/uiux_control_inventory.py",
+      "command": "python3 scripts/uiux_control_inventory.py --check",
+      "exit_code": 0,
+      "summary": "UI control inventory is up to date: 194 markup controls across 6 panes (106 in the chrome, 42 rendered by script)",
+      "story": "UIUX-P0-02",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Control_Inventory.json"
+      ],
+      "owns": "every control in the markup and in the script templates",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
+          "totals": {
+            "panes": 6,
+            "markup_controls": 194,
+            "pane_controls": 88,
+            "chrome_controls": 106,
+            "script_rendered_controls": 42,
+            "script_rendered_by_function": {
+              "ensureStageCardMounted": 1,
+              "harnessEvidenceChangeHtml": 1,
+              "openSpawnModal": 1,
+              "refreshOnboarding": 1,
+              "renderCommandPaletteList": 1,
+              "renderDebateCriteria": 3,
+              "renderDebateRecord": 4,
+              "renderDeliberationEvidence": 1,
+              "renderHallVerdict": 1,
+              "renderHarnessApprovalCardHtml": 3,
+              "renderHarnessGrants": 4,
+              "renderHarnessRecoveryEventHtml": 1,
+              "renderHarnessSidebar": 1,
+              "renderHarnessTimeline": 1,
+              "renderHarnessVerdictCardHtml": 2,
+              "renderMarkdown": 1,
+              "renderMcpUI": 7,
+              "renderOpenContextDocs": 3,
+              "renderProvidersModal": 3,
+              "renderTelemetry": 1,
+              "syncUnifiedSelectors": 1
+            }
+          }
+        }
+      ]
+    },
+    {
       "script": "scripts/uiux_route_map.py",
       "command": "python3 scripts/uiux_route_map.py --check",
       "exit_code": 0,
       "summary": "UI route map is up to date: 66 call sites, 72 exact and 2 dynamic URL and 0 unknown-method matches, 0 findings, 46 routes without an observed caller, 0 unknown",
-      "story": "UIUX-P0-02",
+      "story": "UIUX-P0-03",
       "artifacts": [
         "product/M5_2_0_UIUX_Route_Map.json"
       ],
@@ -80,7 +126,7 @@
       "command": "python3 scripts/uiux_authorization_trace.py --check",
       "exit_code": 0,
       "summary": "UI authorization trace is up to date: 46 state-changing routes, 20 with an authority subsystem, 39 with durable state, 23 that can leave the machine",
-      "story": "UIUX-P0-03",
+      "story": "UIUX-P0-04",
       "artifacts": [
         "product/M5_2_0_UIUX_Authorization_Trace.json"
       ],
@@ -143,292 +189,6 @@
       ]
     },
     {
-      "script": "scripts/uiux_control_inventory.py",
-      "command": "python3 scripts/uiux_control_inventory.py --check",
-      "exit_code": 0,
-      "summary": "UI control inventory is up to date: 194 markup controls across 6 panes (106 in the chrome, 42 rendered by script)",
-      "story": "UIUX-P0-02",
-      "artifacts": [
-        "product/M5_2_0_UIUX_Control_Inventory.json"
-      ],
-      "owns": "every control in the markup and in the script templates",
-      "totals": [
-        {
-          "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
-          "totals": {
-            "panes": 6,
-            "markup_controls": 194,
-            "pane_controls": 88,
-            "chrome_controls": 106,
-            "script_rendered_controls": 42,
-            "script_rendered_by_function": {
-              "ensureStageCardMounted": 1,
-              "harnessEvidenceChangeHtml": 1,
-              "openSpawnModal": 1,
-              "refreshOnboarding": 1,
-              "renderCommandPaletteList": 1,
-              "renderDebateCriteria": 3,
-              "renderDebateRecord": 4,
-              "renderDeliberationEvidence": 1,
-              "renderHallVerdict": 1,
-              "renderHarnessApprovalCardHtml": 3,
-              "renderHarnessGrants": 4,
-              "renderHarnessRecoveryEventHtml": 1,
-              "renderHarnessSidebar": 1,
-              "renderHarnessTimeline": 1,
-              "renderHarnessVerdictCardHtml": 2,
-              "renderMarkdown": 1,
-              "renderMcpUI": 7,
-              "renderOpenContextDocs": 3,
-              "renderProvidersModal": 3,
-              "renderTelemetry": 1,
-              "syncUnifiedSelectors": 1
-            }
-          }
-        }
-      ]
-    },
-    {
-      "script": "scripts/uiux_presentation_inventory.py",
-      "command": "python3 scripts/uiux_presentation_inventory.py --check",
-      "exit_code": 0,
-      "summary": "presentations OK: 3 kinds, 13 call sites across 9 containers, 3 raw writers left, 0 findings",
-      "story": "UIUX-P1-01",
-      "artifacts": [
-        "product/M5_2_0_UIUX_Presentations.json"
-      ],
-      "owns": "the three presentation kinds and their hosts",
-      "totals": [
-        {
-          "artifact": "product/M5_2_0_UIUX_Presentations.json",
-          "totals": {
-            "kinds": 3,
-            "surfaces": 13,
-            "containers": 9,
-            "wired_containers": 9,
-            "by_kind": {
-              "empty": 3,
-              "error": 7,
-              "recovery": 3
-            },
-            "remaining_raw_writers": 3,
-            "findings": 0
-          }
-        }
-      ]
-    },
-    {
-      "script": "scripts/uiux_status_components.py",
-      "command": "python3 scripts/uiux_status_components.py --check",
-      "exit_code": 0,
-      "summary": "status and evidence components OK: 10 states, 6 tones, 22 surfaces, 27 setStatus call sites, 0 findings",
-      "story": "UIUX-P1-02",
-      "artifacts": [
-        "product/M5_2_0_UIUX_Status_Components.json"
-      ],
-      "owns": "one status vocabulary across the surfaces that speak it",
-      "totals": [
-        {
-          "artifact": "product/M5_2_0_UIUX_Status_Components.json",
-          "totals": {
-            "tones": 6,
-            "bases": 4,
-            "status_surfaces": 22,
-            "live_regions": 6,
-            "states": 10,
-            "set_status_calls": 27,
-            "findings": 0
-          }
-        }
-      ]
-    },
-    {
-      "script": "scripts/uiux_overlay_inventory.py",
-      "command": "python3 scripts/uiux_overlay_inventory.py --check",
-      "exit_code": 0,
-      "summary": "overlays OK: 11 dialogs through the controller, 4 registry entries, 6 rail shortcuts, 0 findings",
-      "story": "UIUX-P1-03",
-      "artifacts": [
-        "product/M5_2_0_UIUX_Overlays.json"
-      ],
-      "owns": "dialogs, their shortcuts and the inspector",
-      "totals": [
-        {
-          "artifact": "product/M5_2_0_UIUX_Overlays.json",
-          "totals": {
-            "dialogs": 11,
-            "dialogs_via_controller": 11,
-            "registry_entries": 4,
-            "rail_shortcuts": 6,
-            "advertised_controls": 1,
-            "findings": 0
-          }
-        }
-      ]
-    },
-    {
-      "script": "scripts/uiux_polish_inventory.py",
-      "command": "python3 scripts/uiux_polish_inventory.py --check",
-      "exit_code": 0,
-      "summary": "polish OK: 93 radius rules, 17 timed rules, 30 hover rules, 2 press rules, 8 captures, 0 findings",
-      "story": "UIUX-P1-05",
-      "artifacts": [
-        "product/M5_2_0_UIUX_Polish.json"
-      ],
-      "owns": "radius, motion and press rules",
-      "totals": [
-        {
-          "artifact": "product/M5_2_0_UIUX_Polish.json",
-          "totals": {
-            "radius_rules": 93,
-            "motion_rules": 17,
-            "press_rules": 2,
-            "hover_rules": 30,
-            "captures": 8,
-            "findings": 0
-          }
-        }
-      ]
-    },
-    {
-      "script": "scripts/uiux_tokens.py",
-      "command": "python3 scripts/uiux_tokens.py --check",
-      "exit_code": 0,
-      "summary": "Design tokens are up to date: 53 tokens in 8 groups, 1192 references, 22 contrast pairs (lowest 4.69:1)",
-      "story": "UIUX-P1-04",
-      "artifacts": [
-        "product/M5_2_0_UIUX_Tokens.json"
-      ],
-      "owns": "the design tokens and their contrast floors",
-      "totals": [
-        {
-          "artifact": "product/M5_2_0_UIUX_Tokens.json",
-          "totals": {
-            "tokens": 53,
-            "groups": 8,
-            "references": 1192,
-            "theme_overrides": 20,
-            "density_overrides": 5,
-            "contrast_pairs": 22,
-            "lowest_contrast_ratio": 4.69
-          }
-        }
-      ]
-    },
-    {
-      "script": "scripts/uiux_onboarding_inventory.py",
-      "command": "python3 scripts/uiux_onboarding_inventory.py --check",
-      "exit_code": 0,
-      "summary": "onboarding OK: 13 cases, next step actionable in every one, 7 actions, 0 findings",
-      "story": "UIUX-P2-01",
-      "artifacts": [
-        "product/M5_2_0_UIUX_Onboarding.json"
-      ],
-      "owns": "the preflight's steps, cases and next action",
-      "totals": [
-        {
-          "artifact": "product/M5_2_0_UIUX_Onboarding.json",
-          "totals": {
-            "cases": 13,
-            "steps_per_case": 6,
-            "next_step_is_actionable_always": true,
-            "actions": 7,
-            "findings": 0
-          }
-        }
-      ]
-    },
-    {
-      "script": "scripts/uiux_recent_work_inventory.py",
-      "command": "python3 scripts/uiux_recent_work_inventory.py --check",
-      "exit_code": 0,
-      "summary": "recent work OK: 8 server statuses all toned, limit 5, 1 route read, 0 writes, 0 findings",
-      "story": "UIUX-P5-05",
-      "artifacts": [
-        "product/M5_2_0_UIUX_Recent_Work.json"
-      ],
-      "owns": "the recent-work strip's statuses and limit",
-      "totals": [
-        {
-          "artifact": "product/M5_2_0_UIUX_Recent_Work.json",
-          "totals": {
-            "server_statuses": 8,
-            "statuses_with_tone": 8,
-            "recent_limit": 5,
-            "routes_read": 1,
-            "write_methods": 0,
-            "findings": 0
-          }
-        }
-      ]
-    },
-    {
-      "script": "scripts/uiux_chat_inventory.py",
-      "command": "python3 scripts/uiux_chat_inventory.py --check",
-      "exit_code": 0,
-      "summary": "chat OK: 2 roles, 5 send reasons, 9 route fields, 0 findings",
-      "story": "UIUX-P2-02",
-      "artifacts": [
-        "product/M5_2_0_UIUX_Chat.json"
-      ],
-      "owns": "the chat roles, reasons and tones",
-      "totals": [
-        {
-          "artifact": "product/M5_2_0_UIUX_Chat.json",
-          "totals": {
-            "roles": 2,
-            "reasons": 5,
-            "tones": 4,
-            "server_fields": 9,
-            "findings": 0
-          }
-        }
-      ]
-    },
-    {
-      "script": "scripts/uiux_chat_context_inventory.py",
-      "command": "python3 scripts/uiux_chat_context_inventory.py --check",
-      "exit_code": 0,
-      "summary": "chat context OK: 8 context fields, 6 chat_tool fields, 0 findings",
-      "story": "UIUX-P2-04",
-      "artifacts": [
-        "product/M5_2_0_UIUX_Chat_Context.json"
-      ],
-      "owns": "the context and tool-event fields chat renders",
-      "totals": [
-        {
-          "artifact": "product/M5_2_0_UIUX_Chat_Context.json",
-          "totals": {
-            "context_fields": 8,
-            "tool_event_fields": 6,
-            "tool_status_tone": 2,
-            "findings": 0
-          }
-        }
-      ]
-    },
-    {
-      "script": "scripts/uiux_chat_handoff_inventory.py",
-      "command": "python3 scripts/uiux_chat_handoff_inventory.py --check",
-      "exit_code": 0,
-      "summary": "chat handoff OK: 53 checks, 4 reasons, 0 findings",
-      "story": "UIUX-P2-05",
-      "artifacts": [
-        "product/M5_2_0_UIUX_Chat_Handoff.json"
-      ],
-      "owns": "the Chat-to-Harness brief",
-      "totals": [
-        {
-          "artifact": "product/M5_2_0_UIUX_Chat_Handoff.json",
-          "totals": {
-            "reasons": 4,
-            "checks": 53,
-            "findings": 0
-          }
-        }
-      ]
-    },
-    {
       "script": "scripts/uiux_preservation_signoff.py",
       "command": "python3 scripts/uiux_preservation_signoff.py --check",
       "exit_code": 0,
@@ -461,6 +221,602 @@
             "route_walk_depth": 2,
             "screenshots_captured": 6,
             "screenshots_planned": 6
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_tokens.py",
+      "command": "python3 scripts/uiux_tokens.py --check",
+      "exit_code": 0,
+      "summary": "Design tokens are up to date: 53 tokens in 8 groups, 1192 references, 22 contrast pairs (lowest 4.69:1)",
+      "story": "UIUX-P1-01",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Tokens.json"
+      ],
+      "owns": "the design tokens and their contrast floors",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Tokens.json",
+          "totals": {
+            "tokens": 53,
+            "groups": 8,
+            "references": 1192,
+            "theme_overrides": 20,
+            "density_overrides": 5,
+            "contrast_pairs": 22,
+            "lowest_contrast_ratio": 4.69
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_status_components.py",
+      "command": "python3 scripts/uiux_status_components.py --check",
+      "exit_code": 0,
+      "summary": "status and evidence components OK: 10 states, 6 tones, 22 surfaces, 27 setStatus call sites, 0 findings",
+      "story": "UIUX-P1-03",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Status_Components.json"
+      ],
+      "owns": "one status vocabulary across the surfaces that speak it",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Status_Components.json",
+          "totals": {
+            "tones": 6,
+            "bases": 4,
+            "status_surfaces": 22,
+            "live_regions": 6,
+            "states": 10,
+            "set_status_calls": 27,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_overlay_inventory.py",
+      "command": "python3 scripts/uiux_overlay_inventory.py --check",
+      "exit_code": 0,
+      "summary": "overlays OK: 11 dialogs through the controller, 4 registry entries, 6 rail shortcuts, 0 findings",
+      "story": "UIUX-P1-04",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Overlays.json"
+      ],
+      "owns": "dialogs, their shortcuts and the inspector",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Overlays.json",
+          "totals": {
+            "dialogs": 11,
+            "dialogs_via_controller": 11,
+            "registry_entries": 4,
+            "rail_shortcuts": 6,
+            "advertised_controls": 1,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_presentation_inventory.py",
+      "command": "python3 scripts/uiux_presentation_inventory.py --check",
+      "exit_code": 0,
+      "summary": "presentations OK: 3 kinds, 13 call sites across 9 containers, 3 raw writers left, 0 findings",
+      "story": "UIUX-P1-05",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Presentations.json"
+      ],
+      "owns": "the three presentation kinds and their hosts",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Presentations.json",
+          "totals": {
+            "kinds": 3,
+            "surfaces": 13,
+            "containers": 9,
+            "wired_containers": 9,
+            "by_kind": {
+              "empty": 3,
+              "error": 7,
+              "recovery": 3
+            },
+            "remaining_raw_writers": 3,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_onboarding_inventory.py",
+      "command": "python3 scripts/uiux_onboarding_inventory.py --check",
+      "exit_code": 0,
+      "summary": "onboarding OK: 13 cases, next step actionable in every one, 7 actions, 0 findings",
+      "story": "UIUX-P2-01",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Onboarding.json"
+      ],
+      "owns": "the preflight's steps, cases and next action",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Onboarding.json",
+          "totals": {
+            "cases": 13,
+            "steps_per_case": 6,
+            "next_step_is_actionable_always": true,
+            "actions": 7,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_recent_work_inventory.py",
+      "command": "python3 scripts/uiux_recent_work_inventory.py --check",
+      "exit_code": 0,
+      "summary": "recent work OK: 8 server statuses all toned, limit 5, 1 route read, 0 writes, 0 findings",
+      "story": "UIUX-P2-02",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Recent_Work.json"
+      ],
+      "owns": "the recent-work strip's statuses and limit",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Recent_Work.json",
+          "totals": {
+            "server_statuses": 8,
+            "statuses_with_tone": 8,
+            "recent_limit": 5,
+            "routes_read": 1,
+            "write_methods": 0,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_start_health_inventory.py",
+      "command": "python3 scripts/uiux_start_health_inventory.py --check",
+      "exit_code": 0,
+      "summary": "start health OK: 4 rows, 3 bases, 4 tones, 2 routes, 0 findings",
+      "story": "UIUX-P2-03",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Start_Health.json"
+      ],
+      "owns": "the Start pane's health strip",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Start_Health.json",
+          "totals": {
+            "health_rows": 4,
+            "bases": 3,
+            "tones": 4,
+            "routes": 2,
+            "simulated_sources": 1,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_chat_inventory.py",
+      "command": "python3 scripts/uiux_chat_inventory.py --check",
+      "exit_code": 0,
+      "summary": "chat OK: 2 roles, 5 send reasons, 9 route fields, 0 findings",
+      "story": "UIUX-P2-04",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Chat.json"
+      ],
+      "owns": "the chat roles, reasons and tones",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Chat.json",
+          "totals": {
+            "roles": 2,
+            "reasons": 5,
+            "tones": 4,
+            "server_fields": 9,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_chat_context_inventory.py",
+      "command": "python3 scripts/uiux_chat_context_inventory.py --check",
+      "exit_code": 0,
+      "summary": "chat context OK: 8 context fields, 6 chat_tool fields, 0 findings",
+      "story": "UIUX-P2-05",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Chat_Context.json"
+      ],
+      "owns": "the context and tool-event fields chat renders",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Chat_Context.json",
+          "totals": {
+            "context_fields": 8,
+            "tool_event_fields": 6,
+            "tool_status_tone": 2,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_chat_handoff_inventory.py",
+      "command": "python3 scripts/uiux_chat_handoff_inventory.py --check",
+      "exit_code": 0,
+      "summary": "chat handoff OK: 53 checks, 4 reasons, 0 findings",
+      "story": "UIUX-P2-06",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Chat_Handoff.json"
+      ],
+      "owns": "the Chat-to-Harness brief",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Chat_Handoff.json",
+          "totals": {
+            "reasons": 4,
+            "checks": 53,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_harness_settings_inventory.py",
+      "command": "python3 scripts/uiux_harness_settings_inventory.py --check",
+      "exit_code": 0,
+      "summary": "harness settings OK: 81 checks, 4 reasons, 0 findings",
+      "story": "UIUX-P3-01",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Harness_Settings.json"
+      ],
+      "owns": "the Harness settings the server decides",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Harness_Settings.json",
+          "totals": {
+            "reasons": 4,
+            "plan_rows": 4,
+            "preserved_controls": 11,
+            "named_controls": 10,
+            "checks": 81,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_harness_timeline_inventory.py",
+      "command": "python3 scripts/uiux_harness_timeline_inventory.py --check",
+      "exit_code": 0,
+      "summary": "harness timeline OK: 81 checks, 43 event types, 0 findings",
+      "story": "UIUX-P3-02",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Harness_Timeline.json"
+      ],
+      "owns": "the event timeline and its cursor semantics",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Harness_Timeline.json",
+          "totals": {
+            "modes": 4,
+            "gap_reasons": 6,
+            "strip_controls": 8,
+            "functions": 10,
+            "event_types_emitted": 43,
+            "event_types_with_a_card": 16,
+            "event_types_described_by_name": 23,
+            "event_types_with_only_the_generic_preview": 20,
+            "checks": 81,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_harness_permissions_inventory.py",
+      "command": "python3 scripts/uiux_harness_permissions_inventory.py --check",
+      "exit_code": 0,
+      "summary": "harness permissions OK: 124 checks, 18 capability mappings, 0 findings",
+      "story": "UIUX-P3-03",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Harness_Permissions.json"
+      ],
+      "owns": "the permission prompts and their capability mappings",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Harness_Permissions.json",
+          "totals": {
+            "checks": 124,
+            "functions": 19,
+            "card_paths": 4,
+            "surface_lists": 5,
+            "capability_map_tools": 18,
+            "routes": 4,
+            "routes_called": 54,
+            "routes_unmounted": 0,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_harness_evidence_inventory.py",
+      "command": "python3 scripts/uiux_harness_evidence_inventory.py --check",
+      "exit_code": 0,
+      "summary": "harness evidence OK: 116 checks, 6 record sections, 0 findings",
+      "story": "UIUX-P3-04",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Harness_Evidence.json"
+      ],
+      "owns": "the evidence record's six sections",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Harness_Evidence.json",
+          "totals": {
+            "checks": 116,
+            "functions": 25,
+            "record_sections": 6,
+            "routes": 3,
+            "routes_called": 54,
+            "routes_unmounted": 0,
+            "styles": 15,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_harness_recovery_inventory.py",
+      "command": "python3 scripts/uiux_harness_recovery_inventory.py --check",
+      "exit_code": 0,
+      "summary": "harness recovery OK: 44 checks, 8 states, 11 refusals, 0 findings",
+      "story": "UIUX-P3-05",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Harness_Recovery.json"
+      ],
+      "owns": "the Harness recovery states and refusals",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Harness_Recovery.json",
+          "totals": {
+            "checks": 44,
+            "states": 8,
+            "actions": 6,
+            "refusals": 11,
+            "preserved_routes": 7
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_pipeline_artifacts_inventory.py",
+      "command": "python3 scripts/uiux_pipeline_artifacts_inventory.py --check",
+      "exit_code": 0,
+      "summary": "28 checks, 0 findings — clean",
+      "story": "UIUX-P3-06",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Pipeline_Artifacts.json"
+      ],
+      "owns": "the Pipeline artifacts and their diffs",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Pipeline_Artifacts.json",
+          "totals": {}
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_pipeline_recovery_inventory.py",
+      "command": "python3 scripts/uiux_pipeline_recovery_inventory.py --check",
+      "exit_code": 0,
+      "summary": "33 checks, 0 findings — clean",
+      "story": "UIUX-P3-07",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Pipeline_Recovery.json"
+      ],
+      "owns": "pause, cancel, resume and the Pipeline's recovery",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Pipeline_Recovery.json",
+          "totals": {}
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_council_participants_inventory.py",
+      "command": "python3 scripts/uiux_council_participants_inventory.py --check",
+      "exit_code": 0,
+      "summary": "38 checks, 0 findings — clean",
+      "story": "UIUX-P4-01",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Council_Participants.json"
+      ],
+      "owns": "the Council's seats and participants",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Council_Participants.json",
+          "totals": {}
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_council_deliberation_inventory.py",
+      "command": "python3 scripts/uiux_council_deliberation_inventory.py --check",
+      "exit_code": 0,
+      "summary": "25 checks, 0 findings — clean",
+      "story": "UIUX-P4-02",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Council_Deliberation.json"
+      ],
+      "owns": "the deliberation's stages and disagreement",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Council_Deliberation.json",
+          "totals": {}
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_council_verdict_inventory.py",
+      "command": "python3 scripts/uiux_council_verdict_inventory.py --check",
+      "exit_code": 0,
+      "summary": "24 checks, 0 findings — clean",
+      "story": "UIUX-P4-03",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Council_Verdict.json"
+      ],
+      "owns": "the verdict and its dissent",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Council_Verdict.json",
+          "totals": {}
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_compare_criteria_inventory.py",
+      "command": "python3 scripts/uiux_compare_criteria_inventory.py --check",
+      "exit_code": 0,
+      "summary": "27 checks, 0 findings — clean",
+      "story": "UIUX-P4-04",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Compare_Criteria.json"
+      ],
+      "owns": "the Compare criteria table",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Compare_Criteria.json",
+          "totals": {}
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_compare_provenance_inventory.py",
+      "command": "python3 scripts/uiux_compare_provenance_inventory.py --check",
+      "exit_code": 0,
+      "summary": "18 checks, 0 findings — clean",
+      "story": "UIUX-P4-05",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Compare_Provenance.json"
+      ],
+      "owns": "measured provenance for every Compare claim",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Compare_Provenance.json",
+          "totals": {}
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_compare_continuity_inventory.py",
+      "command": "python3 scripts/uiux_compare_continuity_inventory.py --check",
+      "exit_code": 0,
+      "summary": "24 checks, 0 findings — clean",
+      "story": "UIUX-P4-06",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Compare_Continuity.json"
+      ],
+      "owns": "Compare's continuity across runs",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Compare_Continuity.json",
+          "totals": {}
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_terminology_inventory.py",
+      "command": "python3 scripts/uiux_terminology_inventory.py --check",
+      "exit_code": 0,
+      "summary": "20 checks, 0 findings — clean",
+      "story": "UIUX-P5-01",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Terminology.json"
+      ],
+      "owns": "one name per concept across the panes",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Terminology.json",
+          "totals": {}
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_keyboard_a11y_inventory.py",
+      "command": "python3 scripts/uiux_keyboard_a11y_inventory.py --check",
+      "exit_code": 0,
+      "summary": "31 checks, 0 findings — clean",
+      "story": "UIUX-P5-02",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Keyboard_A11y.json"
+      ],
+      "owns": "the keyboard walks, shortcuts and focus surfaces",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Keyboard_A11y.json",
+          "totals": {}
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_responsive_inventory.py",
+      "command": "python3 scripts/uiux_responsive_inventory.py --check",
+      "exit_code": 0,
+      "summary": "21 checks, 0 findings — clean",
+      "story": "UIUX-P5-03",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Responsive.json"
+      ],
+      "owns": "the narrow-viewport rules and their breakpoints",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Responsive.json",
+          "totals": {}
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_stream_perf_inventory.py",
+      "command": "python3 scripts/uiux_stream_perf_inventory.py --check",
+      "exit_code": 0,
+      "summary": "38 checks, 0 findings — clean",
+      "story": "UIUX-P5-04",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Stream_Performance.json"
+      ],
+      "owns": "bounded streaming and its rendering budget",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Stream_Performance.json",
+          "totals": {}
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_polish_inventory.py",
+      "command": "python3 scripts/uiux_polish_inventory.py --check",
+      "exit_code": 0,
+      "summary": "polish OK: 93 radius rules, 17 timed rules, 30 hover rules, 2 press rules, 8 captures, 0 findings",
+      "story": "UIUX-P5-05",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Polish.json"
+      ],
+      "owns": "radius, motion and press rules",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Polish.json",
+          "totals": {
+            "radius_rules": 93,
+            "motion_rules": 17,
+            "press_rules": 2,
+            "hover_rules": 30,
+            "captures": 8,
+            "findings": 0
           }
         }
       ]
@@ -594,9 +950,9 @@
       "total": 6,
       "proving_checks": [
         "scripts/uiux_source_manifest.py",
+        "scripts/uiux_control_inventory.py",
         "scripts/uiux_route_map.py",
         "scripts/uiux_authorization_trace.py",
-        "scripts/uiux_control_inventory.py",
         "scripts/uiux_preservation_signoff.py"
       ],
       "met": true
@@ -614,11 +970,10 @@
       "done": 5,
       "total": 5,
       "proving_checks": [
-        "scripts/uiux_presentation_inventory.py",
+        "scripts/uiux_tokens.py",
         "scripts/uiux_status_components.py",
         "scripts/uiux_overlay_inventory.py",
-        "scripts/uiux_polish_inventory.py",
-        "scripts/uiux_tokens.py"
+        "scripts/uiux_presentation_inventory.py"
       ],
       "met": true
     },
@@ -637,6 +992,8 @@
       "total": 6,
       "proving_checks": [
         "scripts/uiux_onboarding_inventory.py",
+        "scripts/uiux_recent_work_inventory.py",
+        "scripts/uiux_start_health_inventory.py",
         "scripts/uiux_chat_inventory.py",
         "scripts/uiux_chat_context_inventory.py",
         "scripts/uiux_chat_handoff_inventory.py"
@@ -657,7 +1014,15 @@
       ],
       "done": 7,
       "total": 7,
-      "proving_checks": [],
+      "proving_checks": [
+        "scripts/uiux_harness_settings_inventory.py",
+        "scripts/uiux_harness_timeline_inventory.py",
+        "scripts/uiux_harness_permissions_inventory.py",
+        "scripts/uiux_harness_evidence_inventory.py",
+        "scripts/uiux_harness_recovery_inventory.py",
+        "scripts/uiux_pipeline_artifacts_inventory.py",
+        "scripts/uiux_pipeline_recovery_inventory.py"
+      ],
       "met": true
     },
     {
@@ -673,7 +1038,14 @@
       ],
       "done": 6,
       "total": 6,
-      "proving_checks": [],
+      "proving_checks": [
+        "scripts/uiux_council_participants_inventory.py",
+        "scripts/uiux_council_deliberation_inventory.py",
+        "scripts/uiux_council_verdict_inventory.py",
+        "scripts/uiux_compare_criteria_inventory.py",
+        "scripts/uiux_compare_provenance_inventory.py",
+        "scripts/uiux_compare_continuity_inventory.py"
+      ],
       "met": true
     },
     {
@@ -689,7 +1061,11 @@
       "done": 5,
       "total": 5,
       "proving_checks": [
-        "scripts/uiux_recent_work_inventory.py"
+        "scripts/uiux_terminology_inventory.py",
+        "scripts/uiux_keyboard_a11y_inventory.py",
+        "scripts/uiux_responsive_inventory.py",
+        "scripts/uiux_stream_perf_inventory.py",
+        "scripts/uiux_polish_inventory.py"
       ],
       "met": true
     },
@@ -1031,8 +1407,8 @@
     ]
   },
   "totals": {
-    "checks": 19,
-    "checks_passed": 19,
+    "checks": 37,
+    "checks_passed": 37,
     "gates": 7,
     "gates_met": 7,
     "acceptance_criteria": 5,

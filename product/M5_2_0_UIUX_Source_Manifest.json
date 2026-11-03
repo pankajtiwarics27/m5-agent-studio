@@ -446,15 +446,15 @@
     {
       "path": "scripts/uiux_release_gate.py",
       "role": "runs every artifact's --check, computes the seven phase gates, maps the five acceptance criteria to evidence and carries the known regressions into a handover",
-      "sha256": "d57e5d38bdec3a29f3c3ed27c41e2f813596d11f043a3a590f8c01a471953784",
-      "bytes": 33520,
-      "lines": 655
+      "sha256": "4f5b2fbf532f0a600bc538648a819eaad469ad080d4e455185faf6273d06b0ce",
+      "bytes": 36434,
+      "lines": 691
     },
     {
       "path": "tests/test_uiux_release_gate.py",
       "role": "falsifies the ledger one way at a time and checks the release gate refuses to call a program finished",
-      "sha256": "f7befbb197bc304b80766d798a8ea4975c5a185d9d0ca4a3d2cbd1b3c22e24c1",
-      "bytes": 7729,
+      "sha256": "886ddbd635212cc652bfe2e272b2f3e362ccccd183665197b4743b5496968daa",
+      "bytes": 7732,
       "lines": 189
     }
   ],
