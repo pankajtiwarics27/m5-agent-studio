@@ -230,15 +230,17 @@ def test_the_contrast_floors_hold_when_recomputed_here() -> None:
 
 
 def test_the_dark_accent_is_a_graphic_and_never_a_label() -> None:
-    """The reason the label is `--text` rather than the tone.
+    """Labels are `--text`, never the tone — and the markup is what proves it.
 
-    `--accent` measures about 3.3:1 on `--bg-card` in the dark theme: fine for a
-    dot that repeats the words, below the 4.5:1 a label needs. If someone later
-    paints the label with the tone, this test explains why it breaks.
+    Before UIV2-04 the dark `--accent` measured about 3.3:1 on `--bg-card`, below
+    the 4.5:1 a label needs, so the ratio alone kept the tone out of labels. The
+    approved V2 palette sets dark `--accent` to `#93A0FF`, which measures 7.0:1 on
+    `--bg-card` — AA-capable — so since UIV2-04 the guarantee is the shared label
+    rule asserted below (`color: var(--text)`), while the tone must stay a valid
+    graphic (at or above the 3:1 graphic floor).
     """
     payload = _payload()
     rows = {(row["theme"], row["tone"]): row["ratio"] for row in payload["contrast"]["tone_graphics"]}
-    assert rows[("dark", "busy")] < payload["contrast"]["text_floor"]
     assert rows[("dark", "busy")] >= payload["contrast"]["graphic_floor"]
     style = FRONTEND.read_text(encoding="utf-8")
     assert "  border: 1px solid var(--border-hi); background: var(--bg-card); color: var(--text);" in style

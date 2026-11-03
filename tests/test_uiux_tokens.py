@@ -165,11 +165,13 @@ def test_a_token_whose_only_reader_is_removed_is_refused(
 
 
 def test_a_theme_missing_a_colour_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # UIV2-04 re-pointed the light palette to the approved V2 tokens; the anchor
+    # is the current light --primary-text declaration.
     module = _patched(
         monkeypatch,
         tmp_path,
-        "  --primary-text: #ffffff;\n  --bg: #f7f7f5;",
-        "  --bg: #f7f7f5;",
+        "  --primary-text: #ffffff;",
+        "",
     )
     with pytest.raises(module.TokenError, match="primary-text"):
         module.read_tokens()
@@ -181,8 +183,8 @@ def test_a_theme_that_repoints_a_non_colour_is_refused(
     module = _patched(
         monkeypatch,
         tmp_path,
-        "  --bg: #f7f7f5;",
-        "  --bg: #f7f7f5;\n  --radius-md: 4px;",
+        "  --bg: #F8F9FB;",
+        "  --bg: #F8F9FB;\n  --radius-md: 4px;",
     )
     with pytest.raises(module.TokenError, match="non-colour"):
         module.read_tokens()
@@ -202,9 +204,10 @@ def test_density_must_repoint_exactly_its_own_tokens(
 
 
 def test_a_contrast_regression_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    # --text-faint is the tightest pair in the tree (4.69:1 in the light theme).
-    # Darkening it just past the floor proves the check measures rather than trusts.
-    module = _patched(monkeypatch, tmp_path, "  --text-faint: #969da4;", "  --text-faint: #6a7078;")
+    # --text-faint is the tightest pair in the tree (4.70:1, #67717F on #F8F9FB, in the
+    # light theme after UIV2-04). Moving it to #70798a drops the pair to 4.16:1, past
+    # the 4.5:1 floor, which proves the check measures rather than trusts.
+    module = _patched(monkeypatch, tmp_path, "  --text-faint: #67717F;", "  --text-faint: #70798a;")
     with pytest.raises(module.TokenError, match="contrast"):
         module.read_tokens()
 

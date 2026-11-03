@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "05ea9a0c451fa1d35b5e9d7b368b7391963966921416ff578d580f90b2c5d9cd",
+  "frontend_sha256": "6442f54749cf321ed53bd6818f549072ae37bf3da2a3fa952003794f9b600e77",
   "panes": [
     {
       "dom_id": "start",

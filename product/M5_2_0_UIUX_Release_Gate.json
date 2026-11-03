@@ -245,7 +245,7 @@
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 22,
-            "lowest_contrast_ratio": 4.69
+            "lowest_contrast_ratio": 4.7
           }
         }
       ]
@@ -891,7 +891,7 @@
           "artifact": "product/M5_2_0_UIUX_Screenshot_Review.json",
           "totals": {
             "sets": 28,
-            "files": 329,
+            "files": 348,
             "reviewed_sets": 28,
             "sets_eyed": 8,
             "files_eyed": 24,
@@ -1145,7 +1145,7 @@
     "e2e_findings": 0,
     "refusals": 12,
     "refusal_statuses": 9,
-    "captures": 329,
+    "captures": 348,
     "capture_sets": 28,
     "reviewed_sets": 28,
     "screenshot_findings": 0,

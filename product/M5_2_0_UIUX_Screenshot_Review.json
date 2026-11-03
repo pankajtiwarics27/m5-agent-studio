@@ -10,7 +10,7 @@
   "luminance_measured": true,
   "totals": {
     "sets": 28,
-    "files": 329,
+    "files": 348,
     "reviewed_sets": 28,
     "sets_eyed": 8,
     "files_eyed": 24,
@@ -23,54 +23,54 @@
     "grid": {
       "start": {
         "sets": 11,
-        "files": 50,
-        "dark": 13,
-        "light": 15,
-        "narrow": 10,
-        "desktop": 40
+        "files": 53,
+        "dark": 14,
+        "light": 17,
+        "narrow": 11,
+        "desktop": 42
       },
       "harness": {
         "sets": 15,
-        "files": 62,
-        "dark": 11,
-        "light": 12,
-        "narrow": 8,
-        "desktop": 50
+        "files": 65,
+        "dark": 12,
+        "light": 14,
+        "narrow": 9,
+        "desktop": 52
       },
       "hall": {
         "sets": 9,
-        "files": 57,
-        "dark": 14,
-        "light": 17,
-        "narrow": 13,
-        "desktop": 40
+        "files": 60,
+        "dark": 15,
+        "light": 19,
+        "narrow": 14,
+        "desktop": 42
       },
       "pipeline": {
         "sets": 6,
-        "files": 35,
-        "dark": 9,
-        "light": 10,
-        "narrow": 5,
-        "desktop": 30
+        "files": 38,
+        "dark": 10,
+        "light": 12,
+        "narrow": 6,
+        "desktop": 32
       },
       "compare": {
         "sets": 10,
-        "files": 50,
-        "dark": 11,
-        "light": 15,
-        "narrow": 10,
-        "desktop": 39
+        "files": 53,
+        "dark": 12,
+        "light": 17,
+        "narrow": 11,
+        "desktop": 41
       },
       "chat": {
         "sets": 12,
-        "files": 53,
-        "dark": 12,
-        "light": 14,
-        "narrow": 8,
-        "desktop": 44
+        "files": 56,
+        "dark": 13,
+        "light": 16,
+        "narrow": 9,
+        "desktop": 46
       }
     },
-    "uncounted_files": 24,
+    "uncounted_files": 25,
     "gaps": []
   },
   "published": {
@@ -82,74 +82,74 @@
       {
         "file": "screenshots/start.png",
         "name": "start.png",
-        "bytes": 477087,
-        "sha256": "6fa7c95f98d4e8fb680c16d6012c782a39541e1158e148ec06c91b45c0176d5c",
+        "bytes": 351272,
+        "sha256": "67cdb348ce36bbb942bbba414e4899f6e4b222a4a86350ad2fe886e26cf4453d",
         "width": 2880,
         "height": 1800,
         "css_width": 1440,
         "theme": null,
         "theme_measured": "light",
-        "luminance": 0.9684
+        "luminance": 0.9707
       },
       {
         "file": "screenshots/harness.png",
         "name": "harness.png",
-        "bytes": 521006,
-        "sha256": "c211b3f3f582f29e263a3ef644d384150f682f79b961e4216a3f07f4af8c80eb",
+        "bytes": 394258,
+        "sha256": "bacf5806e96b5edc86c459ceb64fa81644fc9f5fd494835798b8347643d9a003",
         "width": 2880,
         "height": 1800,
         "css_width": 1440,
         "theme": null,
         "theme_measured": "light",
-        "luminance": 0.9689
+        "luminance": 0.972
       },
       {
         "file": "screenshots/hall.png",
         "name": "hall.png",
-        "bytes": 478222,
-        "sha256": "a9a827f2b23243bf3fbe1b76f2056f0f4fef2db1bdc970b7806f579856c13d3a",
+        "bytes": 343089,
+        "sha256": "82c68c9bec6360bee9011964f3e5baf0d67360ed193f90e142a12cf3f3afde54",
         "width": 2880,
         "height": 1800,
         "css_width": 1440,
         "theme": null,
         "theme_measured": "light",
-        "luminance": 0.9699
+        "luminance": 0.9718
       },
       {
         "file": "screenshots/pipeline.png",
         "name": "pipeline.png",
-        "bytes": 323778,
-        "sha256": "a6f7b46618770e9a301d24d65e7afda6659263a71fc8716347b2dc27f2e9c6e0",
+        "bytes": 255061,
+        "sha256": "801ef76e5f6f10af5967f3f30ee9bcba268b4ac082cd9ee9306cf8de77ac18b0",
         "width": 2880,
         "height": 1800,
         "css_width": 1440,
         "theme": null,
         "theme_measured": "light",
-        "luminance": 0.9679
+        "luminance": 0.9729
       },
       {
         "file": "screenshots/compare.png",
         "name": "compare.png",
-        "bytes": 452309,
-        "sha256": "929b4ea3dbd843f4d49a8fda5bb8183382e5da884d79099426f13f53e96cfc1c",
+        "bytes": 339189,
+        "sha256": "8656bb3d285bb71700c0621c5e56b772b7bf8e5f3fc97a92a26cb4d95dc29edc",
         "width": 2880,
         "height": 1800,
         "css_width": 1440,
         "theme": null,
         "theme_measured": "light",
-        "luminance": 0.9711
+        "luminance": 0.9738
       },
       {
         "file": "screenshots/chat.png",
         "name": "chat.png",
-        "bytes": 333212,
-        "sha256": "3c08993ed686fa7c0616980e77db275be4dcc80f1ac810b052c3ee0a0ecb9679",
+        "bytes": 264938,
+        "sha256": "709633a76bdf33c30f43d913b76b35f53a8c3af151c889fa78aa365f1f9d6561",
         "width": 2880,
         "height": 1800,
         "css_width": 1440,
         "theme": null,
         "theme_measured": "light",
-        "luminance": 0.9682
+        "luminance": 0.9738
       }
     ]
   },
@@ -1901,11 +1901,11 @@
     {
       "set": "screenshots",
       "directory": "docs/media/screenshots",
-      "story": "UIUX-P0-01 (published set, re-shot by UIUX-P6-03)",
+      "story": "UIUX-P0-01 (published set, re-shot by UIUX-P6-03, re-shot again by UIV2-04)",
       "producer": "scripts/capture_screenshots.mjs",
       "producer_from": "curated",
       "index": {
-        "captured_at": "2026-11-03T01:50:30.012Z",
+        "captured_at": "2026-11-04T01:35:46.832Z",
         "viewport": {
           "width": 1440,
           "height": 900,
@@ -1918,7 +1918,7 @@
         ]
       },
       "reviewed": true,
-      "note": "Re-shot on this tree: the set the README shows was twenty-two stories old and showed a Compare pane without the P5-03 criteria table or the P5-04 readiness strip, plus a horizontal overflow the later stories fixed. Re-captured with `scripts/capture_screenshots.mjs`, `validate_screenshots.py` -> 6 of 6, and all six opened: every pane draws its own empty state with a cause and a next step, nothing is clipped at 1440x900, and the inspector fits.",
+      "note": "Re-shot on this tree: the set the README shows was twenty-two stories old and showed a Compare pane without the P5-03 criteria table or the P5-04 readiness strip, plus a horizontal overflow the later stories fixed. Re-captured with `scripts/capture_screenshots.mjs`, `validate_screenshots.py` -> 6 of 6, and all six opened: every pane draws its own empty state with a cause and a next step, nothing is clipped at 1440x900, and the inspector fits. Re-shot once more for UIV2-04 (approved V2 palette in the m5-redesign-system token block): same six panes, same viewport and OS-default theme, only the colour tokens changed; opened again and the indigo accent, canvas, surface and border roles read as the approved north-star values in both themes (the light/dark after-sets live under uiv2-v2/after-uiv2-04).",
       "eye": [
         "start.png",
         "harness.png",
@@ -1934,50 +1934,50 @@
         {
           "file": "screenshots/chat.png",
           "name": "chat.png",
-          "bytes": 333212,
-          "sha256": "3c08993ed686fa7c0616980e77db275be4dcc80f1ac810b052c3ee0a0ecb9679",
+          "bytes": 264938,
+          "sha256": "709633a76bdf33c30f43d913b76b35f53a8c3af151c889fa78aa365f1f9d6561",
           "width": 2880,
           "height": 1800,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.9682
+          "luminance": 0.9738
         },
         {
           "file": "screenshots/compare.png",
           "name": "compare.png",
-          "bytes": 452309,
-          "sha256": "929b4ea3dbd843f4d49a8fda5bb8183382e5da884d79099426f13f53e96cfc1c",
+          "bytes": 339189,
+          "sha256": "8656bb3d285bb71700c0621c5e56b772b7bf8e5f3fc97a92a26cb4d95dc29edc",
           "width": 2880,
           "height": 1800,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.9711
+          "luminance": 0.9738
         },
         {
           "file": "screenshots/hall.png",
           "name": "hall.png",
-          "bytes": 478222,
-          "sha256": "a9a827f2b23243bf3fbe1b76f2056f0f4fef2db1bdc970b7806f579856c13d3a",
+          "bytes": 343089,
+          "sha256": "82c68c9bec6360bee9011964f3e5baf0d67360ed193f90e142a12cf3f3afde54",
           "width": 2880,
           "height": 1800,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.9699
+          "luminance": 0.9718
         },
         {
           "file": "screenshots/harness.png",
           "name": "harness.png",
-          "bytes": 521006,
-          "sha256": "c211b3f3f582f29e263a3ef644d384150f682f79b961e4216a3f07f4af8c80eb",
+          "bytes": 394258,
+          "sha256": "bacf5806e96b5edc86c459ceb64fa81644fc9f5fd494835798b8347643d9a003",
           "width": 2880,
           "height": 1800,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.9689
+          "luminance": 0.972
         },
         {
           "file": "screenshots/p4-01-narrow-dark/hall.png",
@@ -1994,26 +1994,26 @@
         {
           "file": "screenshots/pipeline.png",
           "name": "pipeline.png",
-          "bytes": 323778,
-          "sha256": "a6f7b46618770e9a301d24d65e7afda6659263a71fc8716347b2dc27f2e9c6e0",
+          "bytes": 255061,
+          "sha256": "801ef76e5f6f10af5967f3f30ee9bcba268b4ac082cd9ee9306cf8de77ac18b0",
           "width": 2880,
           "height": 1800,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.9679
+          "luminance": 0.9729
         },
         {
           "file": "screenshots/start.png",
           "name": "start.png",
-          "bytes": 477087,
-          "sha256": "6fa7c95f98d4e8fb680c16d6012c782a39541e1158e148ec06c91b45c0176d5c",
+          "bytes": 351272,
+          "sha256": "67cdb348ce36bbb942bbba414e4899f6e4b222a4a86350ad2fe886e26cf4453d",
           "width": 2880,
           "height": 1800,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.9684
+          "luminance": 0.9707
         }
       ]
     },
@@ -3566,14 +3566,18 @@
       "producer": "scripts/capture_screenshots.mjs",
       "producer_from": "README",
       "index": {
-        "captured_at": "2026-11-03T17:53:08.097Z",
+        "captured_at": "2026-11-04T01:36:16.743Z",
         "viewport": {
-          "width": 1280,
-          "height": 800,
+          "width": 1440,
+          "height": 900,
           "device_scale_factor": 1
         },
         "theme": "dark",
         "folders": [
+          "uiv2-v2/after-uiv2-04/1440x900-dark",
+          "uiv2-v2/after-uiv2-04/1440x900-light",
+          "uiv2-v2/after-uiv2-04/390x844-light",
+          "uiv2-v2/after-uiv2-04/overlay-1440x900-light",
           "uiv2-v2/baseline/1280x800-dark",
           "uiv2-v2/baseline/1280x800-light",
           "uiv2-v2/baseline/1440x900-dark",
@@ -3596,7 +3600,7 @@
         ]
       },
       "reviewed": true,
-      "note": "Two V2-program sets. `baseline/` is the running app at pinned HEAD 9a584a3, captured from a disposable git-archive copy via demo_tour.py --serve with scripts/capture_screenshots.mjs (six tabs x 1640x900/1440x900/1280x800/390x844 in light and dark) plus the MCP hub overlay opened through the real header select. Opened and read: the 1440x900-light start, harness, hall and compare panes (checklist-heavy Start, dense Harness composer, four council role cards, criteria-table Compare, persistent right telemetry rail in all of them), the 390x844-light chat pane (mobile single column, three-option persona picker), and the 1440x900-light MCP overlay (one 860px dialog holding presets, form, servers and test call). `reference/` is the encoded approved three-region reference rendered by scripts/uiux_v2_reference_capture.mjs from wireframe.html; opened: harness at 1440x900-light (four regions with annotated widths, telemetry as header popover) and harness at 390x844-light (single column, annotations hidden). The baseline set is current-state evidence; the reference set is the proposed target and is gated on explicit user approval in the V2 ledger.",
+      "note": "Two V2-program sets. `baseline/` is the running app at pinned HEAD 9a584a3, captured from a disposable git-archive copy via demo_tour.py --serve with scripts/capture_screenshots.mjs (six tabs x 1640x900/1440x900/1280x800/390x844 in light and dark) plus the MCP hub overlay opened through the real header select. Opened and read: the 1440x900-light start, harness, hall and compare panes (checklist-heavy Start, dense Harness composer, four council role cards, criteria-table Compare, persistent right telemetry rail in all of them), the 390x844-light chat pane (mobile single column, three-option persona picker), and the 1440x900-light MCP overlay (one 860px dialog holding presets, form, servers and test call). `reference/` is the encoded approved three-region reference rendered by scripts/uiux_v2_reference_capture.mjs from wireframe.html; opened: harness at 1440x900-light (four regions with annotated widths, telemetry as header popover) and harness at 390x844-light (single column, annotations hidden). The baseline set is current-state evidence; the reference set is the target approved by the user at the UIV2-03 gate. `after-uiv2-04/` is the running app re-shot at the UIV2-04 commit after the approved palette landed: six panes at 1440x900 light, 1440x900 dark and 390x844 light plus the MCP overlay at 1440x900 light, opened and read against `baseline/` — the indigo accent (#4F5FE8 light / #93A0FF dark), canvas, surface and border roles now match the approved tokens while layout is unchanged.",
       "eye": [
         "baseline/1440x900-light/start.png",
         "baseline/1440x900-light/harness.png",
@@ -3611,6 +3615,234 @@
       "theme_claim": "light and dark, desktop 1280-1640 and narrow 390",
       "known_failing_producer": false,
       "files": [
+        {
+          "file": "uiv2-v2/after-uiv2-04/1440x900-dark/chat.png",
+          "name": "chat.png",
+          "bytes": 109798,
+          "sha256": "2d6c685df9f9368863030c3ccb6d3c591058b69c0e9e2dbe9d1e075f1ee32d53",
+          "width": 1440,
+          "height": 900,
+          "css_width": 1440,
+          "theme": "dark",
+          "theme_measured": "dark",
+          "luminance": 0.121
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/1440x900-dark/compare.png",
+          "name": "compare.png",
+          "bytes": 140803,
+          "sha256": "c534da50383bff2938b09a0f4fb42cc27fcfd56b35212c738a87abedd511bef4",
+          "width": 1440,
+          "height": 900,
+          "css_width": 1440,
+          "theme": "dark",
+          "theme_measured": "dark",
+          "luminance": 0.1382
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/1440x900-dark/hall.png",
+          "name": "hall.png",
+          "bytes": 143601,
+          "sha256": "e760ec39aac171f78f7719d275d5023819eead92d8efff6fc2d1887ffd4054fa",
+          "width": 1440,
+          "height": 900,
+          "css_width": 1440,
+          "theme": "dark",
+          "theme_measured": "dark",
+          "luminance": 0.1434
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/1440x900-dark/harness.png",
+          "name": "harness.png",
+          "bytes": 166336,
+          "sha256": "71478cca05f3d7eef6ef26046e7a862427aebea0268b6394716bf79fcbac7cc2",
+          "width": 1440,
+          "height": 900,
+          "css_width": 1440,
+          "theme": "dark",
+          "theme_measured": "dark",
+          "luminance": 0.1369
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/1440x900-dark/pipeline.png",
+          "name": "pipeline.png",
+          "bytes": 106919,
+          "sha256": "369838480551fe26ad76ea9b867793f408acb79a2c340c7f5952578112831af1",
+          "width": 1440,
+          "height": 900,
+          "css_width": 1440,
+          "theme": "dark",
+          "theme_measured": "dark",
+          "luminance": 0.1249
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/1440x900-dark/start.png",
+          "name": "start.png",
+          "bytes": 148918,
+          "sha256": "b82416308f8f188d36d75eea0954dcda79306088178838bf9cab385ce75b2138",
+          "width": 1440,
+          "height": 900,
+          "css_width": 1440,
+          "theme": "dark",
+          "theme_measured": "dark",
+          "luminance": 0.1424
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/1440x900-light/chat.png",
+          "name": "chat.png",
+          "bytes": 108371,
+          "sha256": "300df55ee9c2adbb7ebfd64e75f7697f68fa6bb355b2433bc4e904ff6eb91693",
+          "width": 1440,
+          "height": 900,
+          "css_width": 1440,
+          "theme": "light",
+          "theme_measured": "light",
+          "luminance": 0.9738
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/1440x900-light/compare.png",
+          "name": "compare.png",
+          "bytes": 138766,
+          "sha256": "f7e4665d2b540ae5924c0b20cf67e729cb6e6f39b0e79ef0a9dba67e1b8354b3",
+          "width": 1440,
+          "height": 900,
+          "css_width": 1440,
+          "theme": "light",
+          "theme_measured": "light",
+          "luminance": 0.9738
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/1440x900-light/hall.png",
+          "name": "hall.png",
+          "bytes": 141732,
+          "sha256": "042ab7146f3453be19dc8839a7e2cfd214cbc06bc5bed137b0cbe029b42b2098",
+          "width": 1440,
+          "height": 900,
+          "css_width": 1440,
+          "theme": "light",
+          "theme_measured": "light",
+          "luminance": 0.9719
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/1440x900-light/harness.png",
+          "name": "harness.png",
+          "bytes": 163044,
+          "sha256": "b67f3811cfa7a66e04a5c367e3d7d597186c009065c471b531511779d198a6f2",
+          "width": 1440,
+          "height": 900,
+          "css_width": 1440,
+          "theme": "light",
+          "theme_measured": "light",
+          "luminance": 0.9718
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/1440x900-light/pipeline.png",
+          "name": "pipeline.png",
+          "bytes": 105301,
+          "sha256": "a33ccc79599b59eb68913afbf8c792386dc338d3f1806ce66d46f6502dec1218",
+          "width": 1440,
+          "height": 900,
+          "css_width": 1440,
+          "theme": "light",
+          "theme_measured": "light",
+          "luminance": 0.973
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/1440x900-light/start.png",
+          "name": "start.png",
+          "bytes": 146784,
+          "sha256": "8078eced9468ab0da562063f8710ec1a6047f026741e003b6cd5cb886f66bae8",
+          "width": 1440,
+          "height": 900,
+          "css_width": 1440,
+          "theme": "light",
+          "theme_measured": "light",
+          "luminance": 0.9705
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/390x844-light/chat.png",
+          "name": "chat.png",
+          "bytes": 52532,
+          "sha256": "90958904ccddc9f3a98ab530c3f2358244dc53451a666692e69018ffadbbedc1",
+          "width": 390,
+          "height": 844,
+          "css_width": 390,
+          "theme": "light",
+          "theme_measured": "light",
+          "luminance": 0.9562
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/390x844-light/compare.png",
+          "name": "compare.png",
+          "bytes": 55900,
+          "sha256": "334bdfd4998575b85710b4735a1d292db04765b1fa835f59eb7cc240dde4bf04",
+          "width": 390,
+          "height": 844,
+          "css_width": 390,
+          "theme": "light",
+          "theme_measured": "light",
+          "luminance": 0.9608
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/390x844-light/hall.png",
+          "name": "hall.png",
+          "bytes": 53839,
+          "sha256": "b98d65eb9d92907499eb0c2daf2cdc7af876cf030fd82a3dd1d054431fd3b9e8",
+          "width": 390,
+          "height": 844,
+          "css_width": 390,
+          "theme": "light",
+          "theme_measured": "light",
+          "luminance": 0.9588
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/390x844-light/harness.png",
+          "name": "harness.png",
+          "bytes": 60105,
+          "sha256": "818c57295fa01424ca7043ca770e874e006522875a2c1882fa549232352eeebe",
+          "width": 390,
+          "height": 844,
+          "css_width": 390,
+          "theme": "light",
+          "theme_measured": "light",
+          "luminance": 0.9579
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/390x844-light/pipeline.png",
+          "name": "pipeline.png",
+          "bytes": 50895,
+          "sha256": "10da155cd903ab251aa5f5ce00b5c48d2875e9ef0a87e50aa855ef3fb65effa2",
+          "width": 390,
+          "height": 844,
+          "css_width": 390,
+          "theme": "light",
+          "theme_measured": "light",
+          "luminance": 0.9547
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/390x844-light/start.png",
+          "name": "start.png",
+          "bytes": 55403,
+          "sha256": "d5aea3cff157c2b24cb5c48da15fcc7e1a556b69e34ce021bd2be7264ede6e7c",
+          "width": 390,
+          "height": 844,
+          "css_width": 390,
+          "theme": "light",
+          "theme_measured": "light",
+          "luminance": 0.954
+        },
+        {
+          "file": "uiv2-v2/after-uiv2-04/overlay-1440x900-light/mcp-hub.png",
+          "name": "mcp-hub.png",
+          "bytes": 156922,
+          "sha256": "da8ea3866997ccc7f312fea993753fbaa2ca5b65cfb19f7fa98b822c79e4db79",
+          "width": 1440,
+          "height": 900,
+          "css_width": 1440,
+          "theme": "light",
+          "theme_measured": "light",
+          "luminance": 0.8247
+        },
         {
           "file": "uiv2-v2/baseline/1280x800-dark/chat.png",
           "name": "chat.png",

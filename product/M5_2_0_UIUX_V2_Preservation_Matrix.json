@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_v2_preservation_matrix.py --check",
   "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
   "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
-  "frontend_sha256": "05ea9a0c451fa1d35b5e9d7b368b7391963966921416ff578d580f90b2c5d9cd",
+  "frontend_sha256": "6442f54749cf321ed53bd6818f549072ae37bf3da2a3fa952003794f9b600e77",
   "app_sha256": "0e6ecd89d84b7779f91513d8077934b08c8e90bccda919a6fac49ff6e44e2962",
   "totals": {
     "controls": 194,
@@ -2426,7 +2426,7 @@
       "classification": "absent_registry__existing_picker",
       "picker": {
         "status": "existing",
-        "evidence": "select#chatPersona at static/index.html:2590 with 3 hard-coded <option> values",
+        "evidence": "select#chatPersona at static/index.html:2596 with 3 hard-coded <option> values",
         "options": [
           "Principal Engineer &amp; UI Architect",
           "Bug &amp; UX Auditor",

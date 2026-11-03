@@ -35,133 +35,133 @@
       "id": "sdlcProgressBadge",
       "tone": "neutral",
       "live": false,
-      "line": 1924
+      "line": 1930
     },
     {
       "id": "onboardingSummary",
       "tone": "neutral",
       "live": true,
-      "line": 2071
+      "line": 2077
     },
     {
       "id": "startRecentSummary",
       "tone": "neutral",
       "live": true,
-      "line": 2111
+      "line": 2117
     },
     {
       "id": "startHealthSummary",
       "tone": "neutral",
       "live": true,
-      "line": 2138
+      "line": 2144
     },
     {
       "id": "startWorkspaceSummary",
       "tone": "neutral",
       "live": true,
-      "line": 2156
+      "line": 2162
     },
     {
       "id": "harnessActiveStatusBadge",
       "tone": "info",
       "live": true,
-      "line": 2280
+      "line": 2286
     },
     {
       "id": "hallStatusBadge",
       "tone": "info",
       "live": true,
-      "line": 2357
+      "line": 2363
     },
     {
       "id": "councilReadinessCount",
       "tone": "neutral",
       "live": false,
-      "line": 2370
+      "line": 2376
     },
     {
       "id": null,
       "tone": "ok",
       "live": false,
-      "line": 2639
+      "line": 2645
     },
     {
       "id": "dockerStateBadge",
       "tone": "neutral",
       "live": false,
-      "line": 2686
+      "line": 2692
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 4895
+      "line": 4901
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 4977
+      "line": 4983
     },
     {
       "id": null,
       "tone": "neutral",
-      "live": false,
-      "line": 8135
-    },
-    {
-      "id": null,
-      "tone": "busy",
-      "live": false,
-      "line": 8136
-    },
-    {
-      "id": null,
-      "tone": "ok",
-      "live": false,
-      "line": 8137
-    },
-    {
-      "id": null,
-      "tone": "warn",
-      "live": false,
-      "line": 8138
-    },
-    {
-      "id": null,
-      "tone": "warn",
-      "live": false,
-      "line": 8139
-    },
-    {
-      "id": null,
-      "tone": "warn",
-      "live": false,
-      "line": 8140
-    },
-    {
-      "id": null,
-      "tone": "danger",
       "live": false,
       "line": 8141
     },
     {
       "id": null,
-      "tone": "warn",
+      "tone": "busy",
       "live": false,
       "line": 8142
     },
     {
       "id": null,
-      "tone": "warn",
+      "tone": "ok",
       "live": false,
       "line": 8143
     },
     {
       "id": null,
-      "tone": "neutral",
+      "tone": "warn",
       "live": false,
       "line": 8144
+    },
+    {
+      "id": null,
+      "tone": "warn",
+      "live": false,
+      "line": 8145
+    },
+    {
+      "id": null,
+      "tone": "warn",
+      "live": false,
+      "line": 8146
+    },
+    {
+      "id": null,
+      "tone": "danger",
+      "live": false,
+      "line": 8147
+    },
+    {
+      "id": null,
+      "tone": "warn",
+      "live": false,
+      "line": 8148
+    },
+    {
+      "id": null,
+      "tone": "warn",
+      "live": false,
+      "line": 8149
+    },
+    {
+      "id": null,
+      "tone": "neutral",
+      "live": false,
+      "line": 8150
     }
   ],
   "state_matrix": [
@@ -237,12 +237,12 @@
       {
         "theme": "dark",
         "pair": "--text on --bg-card",
-        "ratio": 12.98
+        "ratio": 15.43
       },
       {
         "theme": "light",
         "pair": "--text on --bg-card",
-        "ratio": 15.79
+        "ratio": 15.65
       }
     ],
     "tone_graphics": [
@@ -250,19 +250,19 @@
         "theme": "dark",
         "tone": "busy",
         "token": "--accent",
-        "ratio": 3.3
+        "ratio": 7.0
       },
       {
         "theme": "light",
         "tone": "busy",
         "token": "--accent",
-        "ratio": 4.73
+        "ratio": 5.08
       },
       {
         "theme": "dark",
         "tone": "danger",
         "token": "--rose",
-        "ratio": 5.43
+        "ratio": 5.87
       },
       {
         "theme": "light",
@@ -274,7 +274,7 @@
         "theme": "dark",
         "tone": "info",
         "token": "--cyan",
-        "ratio": 6.92
+        "ratio": 7.47
       },
       {
         "theme": "light",
@@ -286,19 +286,19 @@
         "theme": "dark",
         "tone": "neutral",
         "token": "--text-dim",
-        "ratio": 7.56
+        "ratio": 8.05
       },
       {
         "theme": "light",
         "tone": "neutral",
         "token": "--text-dim",
-        "ratio": 6.79
+        "ratio": 5.9
       },
       {
         "theme": "dark",
         "tone": "ok",
         "token": "--emerald",
-        "ratio": 6.53
+        "ratio": 7.05
       },
       {
         "theme": "light",
@@ -310,7 +310,7 @@
         "theme": "dark",
         "tone": "warn",
         "token": "--amber",
-        "ratio": 7.2
+        "ratio": 7.78
       },
       {
         "theme": "light",

@@ -507,20 +507,49 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-04: Introduce restrained light and dark theme tokens. Required outcome: Neutral developer workspace with one indigo accent; deliberate contrast, typography, semantic states and accessible dark counterpart. Specific gate: Light palette: canvas #F8F9FB, surface #FFFFFF, secondary #F1F3F5, text #1B2430, muted #596579, border #DDE2E8, primary #4F5FE8; dark: canvas #111318, surface #1A1D24, secondary #242832, text #F3F5F7, muted #AAB4C3, border #343B48, primary #93A0FF; verify WCAG AA contrast; status colors semantic only. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-04T09:55:00+05:30",
+        "completed_at": "2026-11-04T10:20:00+05:30",
         "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
+        "changed_files": [
+          "static/index.html (m5-redesign-system token block only: approved V2 palette, both themes)",
+          "studio.py (regenerated, byte-synced with static/index.html)",
+          "docs/media/screenshots/ (6 panes recaptured at 1440x900@2 + index.json)",
+          "docs/media/uiv2-v2/after-uiv2-04/ (19 after-screenshots: 6 panes x 1440x900-light/1440x900-dark/390x844-light + MCP overlay 1440x900-light)",
+          "docs/media/uiv2-v2/README.md",
+          "scripts/uiux_screenshot_review.py (authored REVIEWS notes for the re-shot published set and the after set)",
+          "regenerated pinned artifacts: Source_Manifest, Screenshot_Review, Preservation_Signoff, Release_Gate (+ docs), Control_Inventory/Route_Map/Authorization_Trace/Tokens/V2 matrix as applicable",
+          "product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json"
+        ],
+        "tests_executed": [
+          "python scripts/uiux_tokens.py --check : 53 tokens in 8 groups, 1192 references, 22 contrast pairs, lowest 4.7:1 against role floors (exit 0)",
+          "all uiux_* --check (source_manifest, control_inventory, route_map, authorization_trace, preservation_signoff, screenshot_review, v2_preservation_matrix, tokens) : exit 0",
+          "python scripts/uiux_release_gate.py --check : 37/37 checks, 7/7 gates, 0 findings (exit 0)",
+          "python3 scripts/validate_screenshots.py : 6 of 6 recaptured and consistent with the manifest (exit 0)",
+          "python3 scripts/validate_docs.py : passed, 197 files scanned; validate_governance.py : exit 0",
+          "ruff check . : all checks passed; compileall on tracked .py : clean; check_frontend_syntax.py : 1 inline block OK; demo_tour.py --check : up to date",
+          "python -m pytest -q in a disposable full clone at the story commit : full suite result recorded in the PR body",
+          "browser legs (STUDIO_SCREENSHOT_CHROME/PUPPETEER_CORE set): recorded in the PR body"
+        ],
+        "visual_evidence": [
+          "docs/media/uiv2-v2/after-uiv2-04/1440x900-light, 1440x900-dark, 390x844-light/{start,harness,hall,pipeline,compare,chat}.png + index.json",
+          "docs/media/uiv2-v2/after-uiv2-04/overlay-1440x900-light/mcp-hub.png + index.json",
+          "docs/media/screenshots/ (canonical published set recaptured at the story commit, 1440x900@2)",
+          "before/after comparison: docs/media/uiv2-v2/baseline/ (UIV2-01) vs docs/media/uiv2-v2/after-uiv2-04/",
+          "product/M5_2_0_UIUX_Screenshot_Review.json + docs/uiux-2-0-screenshot-review.md : 348 captures, 28 sets, 28 reviewed, 0 findings"
+        ],
+        "acceptance_evidence": [
+          "AC1 (exact approved palettes, WCAG AA, semantic status colors only): light canvas #F8F9FB / surface #FFFFFF / secondary #F1F3F5 / text #1B2430 / muted #596579 / border #DDE2E8 / primary #4F5FE8; dark canvas #111318 / surface #1A1D24 / secondary #242832 / text #F3F5F7 / muted #AAB4C3 / border #343B48 / primary #93A0FF \u2014 all set in the m5-redesign-system block of static/index.html, parsed and verified by scripts/uiux_tokens.py --check (22 contrast pairs, lowest 4.7:1; text role floor 7:1, dim 4.5:1, primary-text on accent 4.5:1). Status hues untouched (color denotes meaning). After-screenshots in both themes confirm the rendered result.",
+          "AC2 (visual conformance, no checkbox completion): canonical 6-pane set recaptured in the same commit (validate_screenshots 6/6) + 19 after-images under uiv2-v2/after-uiv2-04; screenshot review regenerated with 0 findings. Layout conformance to the three-region reference is the P1 shell story (UIV2-05), not claimed here.",
+          "AC3 (preservation): only colour tokens changed \u2014 control inventory 194 controls before and after, route map call sites unchanged, no handler/markup/route edits; studio.py regenerated byte-synced; full check suite green (see tests_executed)"
+        ],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "UIV2-04 done: the approved V2 palette (light + dark) is now the m5-redesign-system token block in static/index.html; every var() consumer (1192 references) works unchanged, semantic status colors untouched. WCAG verified by uiux_tokens.py (22 pairs, lowest 4.7:1). Canonical screenshots recaptured and 19 after-images committed; screenshot review 0 findings; release gate 37/37 checks, 7/7 gates. No controls/routes/handlers changed.",
+        "exact_next_action": "Start UIV2-05 (dependency UIV2-04 done): build the responsive shared shell and navigation \u2014 persistent slim nav 192-224px at >=1440, central min 640px, inspector 272-320px as a drawer, header <=64px, collapse at 1280/800/390, minimize the two-row skills/MCP chrome. Verify no horizontal overflow, all 6 tabs reachable, and recapture before/after screenshots.",
+        "updated_at": "2026-11-04T10:20:00+05:30"
       }
     },
     {
@@ -2680,11 +2709,11 @@
       "id": "P1",
       "name": "Design system and application shell",
       "total": 4,
-      "done": 0,
+      "done": 1,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 4,
-      "percent_complete": 0
+      "not_started": 3,
+      "percent_complete": 25
     },
     {
       "id": "P2",
@@ -2739,11 +2768,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 3,
+    "done": 4,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 27,
-    "percent_complete": 10
+    "not_started": 26,
+    "percent_complete": 13
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",
