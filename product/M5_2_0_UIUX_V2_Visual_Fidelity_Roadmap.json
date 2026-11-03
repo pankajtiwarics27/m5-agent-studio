@@ -309,7 +309,7 @@
         "attempt_count": 1,
         "started_at": "2026-11-03T19:05:00+05:30",
         "completed_at": "2026-11-03T19:05:00+05:30",
-        "commit_sha": null,
+        "commit_sha": "2d54b6957739db8aa0cbb5e47cc23bcb4be48f47",
         "changed_files": [
           "scripts/uiux_v2_preservation_matrix.py",
           "product/M5_2_0_UIUX_V2_Preservation_Matrix.json",
