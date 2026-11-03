@@ -81,7 +81,7 @@ The captures it writes: `stream-chat-midstream.png`, `stream-chat-complete.png`,
 
 ## The checks
 
-38 checks, 0 findings — **clean**.
+40 checks, 0 findings — **clean**.
 
 * `pass` a token schedules a render for the next frame instead of drawing one
 * `pass` the schedule is a flag, so a hundred tokens in one frame queue one render
@@ -101,6 +101,8 @@ The captures it writes: `stream-chat-midstream.png`, `stream-chat-complete.png`,
 * `pass` the note is updated as the window slides, so it never counts cards it is not showing
 * `pass` the timeline's own list is windowed by the same number
 * `pass` the append is refused when approval state moved, because those cards are already drawn
+* `pass` the append is refused for a window drawn for another session
+* `pass` a re-read of the log drops the drawn window, so nothing is appended over a log it never saw
 * `pass` the append is also refused for an approval event, which changes a card that already exists
 * `pass` the run on screen may slide forward: cards leaving are counted, cards arriving are added
 * `pass` an appended card is one node, and the rebuild is what it replaces

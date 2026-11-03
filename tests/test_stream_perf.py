@@ -271,8 +271,14 @@ def test_a_timeline_that_draws_every_cached_event_is_a_finding(sources):
 
 
 def test_an_append_that_ignores_approval_state_is_a_finding(sources):
+    """The decision moved into `harnessStreamAppendWindow`: the mutation follows it there."""
+
     def blind(html: str) -> str:
-        return swap(html, "    if (harnessRenderedPending !== livePending.size) return null;\n", "")
+        return swap(
+            html,
+            "    if (Number(rendered && rendered.pending) !== Number(shown && shown.pending)) return null;\n",
+            "",
+        )
 
     report = sources(html_transform=blind)
     assert "the append is refused when approval state moved, because those cards are already drawn" in failing(report)
@@ -292,7 +298,7 @@ def test_an_append_that_swallows_an_approval_event_is_a_finding(sources):
 
 def test_an_append_that_cannot_slide_is_a_finding(sources):
     def sticky(html: str) -> str:
-        return swap(html, "    const dropped = rendered.filter(seq => seq < shownSeqs[0]).length;", "    const dropped = 0;")
+        return swap(html, "    const dropped = drawn.filter(seq => seq < incoming[0]).length;", "    const dropped = 0;")
 
     report = sources(html_transform=sticky)
     assert "the run on screen may slide forward: cards leaving are counted, cards arriving are added" in failing(report)

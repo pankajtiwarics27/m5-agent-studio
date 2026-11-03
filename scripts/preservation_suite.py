@@ -51,24 +51,11 @@ BOGUS_ID = "00000000-0000-0000-0000-000000000000"
 # pass, and if the walk starts passing the entry itself fails the run - a stale exemption is how
 # a suite slowly stops meaning anything.
 KNOWN_FAILURES: dict[str, dict[str, str]] = {
-    "harness_evidence_walk.mjs": {
-        "owner": "UIUX-P3-04",
-        "issue": "#169",
-        "reason": (
-            "the rejected half of the seed is written - the verifier returns `verification_test_failed_introduced` "
-            "for `hns-592ef299` - but the trajectory draws no rejected card, so the failure code, the exit code "
-            "and the failing test are not on screen (27/29)"
-        ),
-    },
-    "harness_timeline_walk.mjs": {
-        "owner": "UIUX-P5-04",
-        "issue": "#170",
-        "reason": (
-            "after the log is pruned the strip counts the client's cache (`13 events held`) while the server serves "
-            "9, so a resync leaves the pane stating 13 and drawing 9 - the walk's \"restores every event without "
-            "duplicating one\" cannot hold while the count and the drawing disagree (20/21)"
-        ),
-    },
+    # Empty as of the harness window fix: both entries this map carried (#169, a rejected
+    # completion that drew no card; #170, a resync that left 13 events held and 9 drawn) were the
+    # same defect - a drawn window that outlived the log it was drawn from - and both walks pass
+    # now. The mechanism stays: an entry is an admission, not an excuse, and the next walk this
+    # suite finds broken gets one rather than a comment.
 }
 
 

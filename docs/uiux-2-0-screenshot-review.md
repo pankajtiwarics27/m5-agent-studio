@@ -79,10 +79,10 @@ manifest and the UI's own tab list; this review does not replace it.
 * **`docs/media/council-participants`** — Four pre-round seats with exact model ids, locality and readiness, and the shared-memory disclosure; a seat that is not ready says why instead of looking idle.
 * **`docs/media/council-verdict`** — The verdict card states the winner, the tally and the seats that dissented.
 * **`docs/media/harness`** — Task creation, workspace and run settings with the diff, approval and abort controls still reachable.
-* **`docs/media/harness-evidence`** — The verification-and-artifacts surface. Its walk draws no verdict card for a rejected completion (#169, a known failure in the preservation map), so these five captures are evidence of the layout, not of that state.
+* **`docs/media/harness-evidence`** — The verification-and-artifacts surface, re-taken from the fixed build: `rejected-card` and `rejected-record` show the rejected completion (#169, closed) with the code that decided it, the exit code and the failing test classified as introduced.
 * **`docs/media/harness-permissions`** — The four approval states, including the session-scoped refusal the server enforces.
 * **`docs/media/harness-recovery`** — The seven recovery states of a Harness run: each carries the server's reason, what was kept and the action that moves it, and none of them reuses the ok tone.
-* **`docs/media/harness-timeline`** — The durable log and the cursor discipline. Its walk counts the cache after the log is pruned (#170, a known failure), so the captures show the layout rather than the count.
+* **`docs/media/harness-timeline`** — The durable log and the cursor discipline, re-taken from the fixed build: `pruned` shows the strip saying 9 events held over the retained floor seq 5-13 (#170, closed), and `replayed` the window a resync draws after the whole log is re-read.
 * **`docs/media/keyboard-a11y`** — Tab order and focus rings on the shell's own controls; the ring is the same 2px in both themes.
 * **`docs/media/pipeline-artifacts`** — The artifact list distinguishes what the run produced from what it only named.
 * **`docs/media/pipeline-recovery`** — The pipeline's recovery states, each with a way forward rather than a retry that would fail the same way.

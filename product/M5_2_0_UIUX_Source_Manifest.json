@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "84388445398bd2d980c5fdaf804b07bdd312be1fe0173fb65bf3507e0e41d7d9",
-      "bytes": 758476,
-      "lines": 13225
+      "sha256": "05ea9a0c451fa1d35b5e9d7b368b7391963966921416ff578d580f90b2c5d9cd",
+      "bytes": 760933,
+      "lines": 13261
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "d1e06eeb99b0839b221234456c5277a3cce639ffd9154a2b91ea57095d8ec023",
-      "bytes": 3499270,
-      "lines": 76297
+      "sha256": "931f55d7871bfbc0a9b42f7955b6c7cd4f6f5412332e1d99da6690d0cc9aec58",
+      "bytes": 3501727,
+      "lines": 76333
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -369,9 +369,9 @@
     {
       "path": "scripts/preservation_suite.py",
       "role": "runs every prover in the preservation matrix against its own throwaway app and records the result",
-      "sha256": "da4f706e8ebffcb488da9da821d227bdcfa453590a6cf5e5390b80f3d43331a8",
-      "bytes": 21464,
-      "lines": 501
+      "sha256": "e203234af95e244fe95f8203bbdc4077b621bc215ed15d73d3c20cfc6903bc04",
+      "bytes": 21026,
+      "lines": 488
     },
     {
       "path": "scripts/uiux_preservation_e2e.py",
@@ -383,9 +383,9 @@
     {
       "path": "tests/test_uiux_preservation_e2e.py",
       "role": "checks the matrix mapper and the run record: a known failure is never green and an untaken step is never a pass",
-      "sha256": "6889bbd998d7308e68fa0ca86e7ff48dcefe72cfbcc829f395bc84d7fd2f0b99",
-      "bytes": 13358,
-      "lines": 315
+      "sha256": "d086016c0866fda410815b3225ece20eb392c61f5555aae9f8bb9603d2931184",
+      "bytes": 13821,
+      "lines": 322
     },
     {
       "path": "scripts/uiux_adversarial_inventory.py",
@@ -418,9 +418,9 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "35d5bf4d391610f01ee0794b7402fa1a94650912524166a0d4affcb88f460be3",
-      "bytes": 44917,
-      "lines": 1003
+      "sha256": "79d9b26dc54f9e2d1f6ba419aeef1b7ce28492f112462a3a24bfb9db8b481653",
+      "bytes": 45030,
+      "lines": 1004
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",
@@ -446,9 +446,9 @@
     {
       "path": "scripts/uiux_release_gate.py",
       "role": "runs every artifact's --check, computes the seven phase gates, maps the five acceptance criteria to evidence and carries the known regressions into a handover",
-      "sha256": "a9b1512f6d8e9e39d527d3a091b94bd8cb2774ec7c9030fc6168d99c87fdb868",
-      "bytes": 44345,
-      "lines": 848
+      "sha256": "8d295ae1cbdc2e7535e1e404c2de7627cb36f9bd7adaa57f16cae5e08006809f",
+      "bytes": 45630,
+      "lines": 870
     },
     {
       "path": "tests/test_uiux_release_gate.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "84388445398bd2d980c5fdaf804b07bdd312be1fe0173fb65bf3507e0e41d7d9",
-    "lines": 13225,
+    "sha256": "05ea9a0c451fa1d35b5e9d7b368b7391963966921416ff578d580f90b2c5d9cd",
+    "lines": 13261,
     "tab_count": 6,
     "tabs": [
       {

@@ -1078,7 +1078,7 @@
       "producer_from": "README",
       "index": null,
       "reviewed": true,
-      "note": "The verification-and-artifacts surface. Its walk draws no verdict card for a rejected completion (#169, a known failure in the preservation map), so these five captures are evidence of the layout, not of that state.",
+      "note": "The verification-and-artifacts surface, re-taken from the fixed build: `rejected-card` and `rejected-record` show the rejected completion (#169, closed) with the code that decided it, the exit code and the failing test classified as introduced.",
       "eye": [],
       "re_taken": false,
       "theme_claim": "dark",
@@ -1087,8 +1087,8 @@
         {
           "file": "harness-evidence/no-verdict.png",
           "name": "no-verdict.png",
-          "bytes": 215532,
-          "sha256": "98f94ab318a5b3e624490e0788a65824944b2396d632fd7c130ecd41f10fe274",
+          "bytes": 216141,
+          "sha256": "340ecf8d2b4a3f7057bda009443def7331ca5ab32cb8caa3b2c1d16348c13bbc",
           "width": 1440,
           "height": 900,
           "css_width": 1440,
@@ -1099,20 +1099,20 @@
         {
           "file": "harness-evidence/rejected-card.png",
           "name": "rejected-card.png",
-          "bytes": 219109,
-          "sha256": "fe58f6f8b7aa1479bce3a02700e124dbd12c0c933a7c033f9d8c777b7eeacb02",
+          "bytes": 220360,
+          "sha256": "2a8e2707661b717c244b3d330cfbaeef993fd2ab69a0cda13c8b1c5fb9462af7",
           "width": 1440,
           "height": 900,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.9694
+          "luminance": 0.9697
         },
         {
           "file": "harness-evidence/rejected-record.png",
           "name": "rejected-record.png",
-          "bytes": 234617,
-          "sha256": "6a6523b660e9488d5b602582d810cc599836c0b3c0c9d01bdb70cce1c0304fbb",
+          "bytes": 234120,
+          "sha256": "828a014a2a7eca58a5563d4af774cb8374a3d54caa147ed0d8dea964caed0f32",
           "width": 1440,
           "height": 900,
           "css_width": 1440,
@@ -1123,26 +1123,26 @@
         {
           "file": "harness-evidence/verdict-card.png",
           "name": "verdict-card.png",
-          "bytes": 211989,
-          "sha256": "129a9939177beda8596473ab1aef99e8608c02584ab3fc43cc31333c7c5ff90c",
+          "bytes": 210743,
+          "sha256": "bc56c4f3aa45a2b98ec8b74b1e73dac034c4dcc67aedf8f659f30e403a70406b",
           "width": 1440,
           "height": 900,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.9687
+          "luminance": 0.9692
         },
         {
           "file": "harness-evidence/verdict-record.png",
           "name": "verdict-record.png",
-          "bytes": 224201,
-          "sha256": "b7b85d1b67e6df7485d2a07897f3600f8bec13ced5cfea2b6956c4ee8dadc0e9",
+          "bytes": 221776,
+          "sha256": "c411d982ff9759a59a0f1755486791e1182f89133be63b9b6ae58fb1f365382d",
           "width": 1440,
           "height": 900,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.7212
+          "luminance": 0.7214
         }
       ]
     },
@@ -1320,7 +1320,7 @@
       "producer_from": "README",
       "index": null,
       "reviewed": true,
-      "note": "The durable log and the cursor discipline. Its walk counts the cache after the log is pruned (#170, a known failure), so the captures show the layout rather than the count.",
+      "note": "The durable log and the cursor discipline, re-taken from the fixed build: `pruned` shows the strip saying 9 events held over the retained floor seq 5-13 (#170, closed), and `replayed` the window a resync draws after the whole log is re-read.",
       "eye": [],
       "re_taken": false,
       "theme_claim": "dark",
@@ -1329,50 +1329,50 @@
         {
           "file": "harness-timeline/log-open.png",
           "name": "log-open.png",
-          "bytes": 174131,
-          "sha256": "a5a5338eb4eb2ed320ca9b9535a7d63c5213cd5d4034cc96116c2cbcafa85806",
+          "bytes": 175088,
+          "sha256": "72fb585dc9cb411592f0b7bf4e6383434fc2abb5189569cf1a323bc441c9895d",
           "width": 1440,
           "height": 900,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.97
+          "luminance": 0.9697
         },
         {
           "file": "harness-timeline/pruned.png",
           "name": "pruned.png",
-          "bytes": 216638,
-          "sha256": "532d95e7c097cad5738cf806fb03b2733c164402f277135c558298769b7e7d3d",
+          "bytes": 215949,
+          "sha256": "7fe76f104a718ac46a37f1efc325174d21789efd46d036cfaa6b028acbb8ad30",
           "width": 1440,
           "height": 900,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.968
+          "luminance": 0.9678
         },
         {
           "file": "harness-timeline/replayed.png",
           "name": "replayed.png",
-          "bytes": 212660,
-          "sha256": "dee3b4a4a0fe56ae8de4b3cfe28190cf6590f115312077ebaa5ef6870d4ab9ae",
+          "bytes": 210305,
+          "sha256": "917616cced725727a2cb976d08293d837dcfe5420ff426c58c63da2938a4197f",
           "width": 1440,
           "height": 900,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.9684
+          "luminance": 0.9682
         },
         {
           "file": "harness-timeline/short-window.png",
           "name": "short-window.png",
-          "bytes": 143302,
-          "sha256": "534ecfc425ad93764d4c34e81e4ab1ebe0e650316e0c98123eabe64c62ede40b",
+          "bytes": 143918,
+          "sha256": "44aeb18642a06d79410788e3c594adf95238d000546d9ef1e17f14e789abdfa4",
           "width": 1440,
           "height": 560,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.9661
+          "luminance": 0.9658
         }
       ]
     },

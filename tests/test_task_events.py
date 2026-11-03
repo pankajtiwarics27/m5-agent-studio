@@ -478,6 +478,36 @@ const out = vm.runInContext(`
     merged: harnessMergeEvents([ev(2), ev(1)], [ev(2), ev(3), { seq: 'bad' }, null]),
     dedupeReplay: harnessMergeEvents([ev(1), ev(2)], [ev(2), ev(2)]),
     cursorOf: harnessEventCursor([ev(4), { seq: 'x' }, ev(9)]),
+    // #169: a window drawn for one session must not answer for another. Every session's log
+    // starts at seq 1, so the seq lists below are identical and only the session differs.
+    appendWindowSwitch: harnessStreamAppendWindow(
+      { session: 'hns-other', seqs: [1, 2, 3, 4], pending: 0, decisions: 0 },
+      { session: 'hns-active', seqs: [1, 2, 3, 4], pending: 0, decisions: 0 },
+    ),
+    appendWindowExtend: harnessStreamAppendWindow(
+      { session: 'hns-active', seqs: [1, 2, 3], pending: 0, decisions: 0 },
+      { session: 'hns-active', seqs: [1, 2, 3, 4], pending: 0, decisions: 0 },
+    ),
+    appendWindowSlide: harnessStreamAppendWindow(
+      { session: 'hns-active', seqs: [1, 2, 3], pending: 0, decisions: 0 },
+      { session: 'hns-active', seqs: [2, 3, 4], pending: 0, decisions: 0 },
+    ),
+    appendWindowPending: harnessStreamAppendWindow(
+      { session: 'hns-active', seqs: [1, 2], pending: 0, decisions: 0 },
+      { session: 'hns-active', seqs: [1, 2, 3], pending: 1, decisions: 0 },
+    ),
+    appendWindowShrank: harnessStreamAppendWindow(
+      { session: 'hns-active', seqs: [1, 2, 3], pending: 0, decisions: 0 },
+      { session: 'hns-active', seqs: [1, 2], pending: 0, decisions: 0 },
+    ),
+    appendWindowEmpty: harnessStreamAppendWindow(
+      { session: '', seqs: [], pending: 0, decisions: 0 },
+      { session: 'hns-active', seqs: [1], pending: 0, decisions: 0 },
+    ),
+    appendWindowUnanchored: harnessStreamAppendWindow(
+      { session: 'hns-active', seqs: [1, 2, 3], pending: 0, decisions: 0 },
+      { session: 'hns-active', seqs: [1, 2, 4, 5], pending: 0, decisions: 0 },
+    ),
     statusWaiting: harnessStatusBadge({ status: 'waiting_approval' }),
     statusPaused: harnessStatusBadge({ status: 'paused', task_status: 'paused' }),
     statusCompleted: harnessStatusBadge({ task_status: 'completed' }),
@@ -499,6 +529,28 @@ def _node_pure_helpers() -> dict[str, object]:
     )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout.strip().splitlines()[-1])
+
+
+def test_frontend_append_window_never_answers_for_another_session(isolated_env: Path) -> None:
+    """#169: a session switch redraws the window instead of reusing the one on screen.
+
+    The walk that found this selected a verified session and then a rejected one. Both logs hold
+    `session/init`, `turn/start`, `turn/end` and one verdict at seq 1-4, so the seq list the pane
+    compares was identical - and the drawn window, which belonged to the verified session,
+    answered "already on screen" for the rejected one. The pane went on showing `Completion
+    verified` and the rejection was never drawn.
+    """
+    out = _node_pure_helpers()
+    # The window belongs to a session: another session's window is never appended to.
+    assert out["appendWindowSwitch"] is None
+    # Within one session the incremental path still holds: append, slide, and refuse when the
+    # conditions that make a window meaningful (pending approvals, a shrinking log) changed.
+    assert out["appendWindowExtend"] == {"dropped": 0, "from": 3}
+    assert out["appendWindowSlide"] == {"dropped": 1, "from": 2}
+    assert out["appendWindowPending"] is None
+    assert out["appendWindowShrank"] is None
+    assert out["appendWindowEmpty"] is None
+    assert out["appendWindowUnanchored"] is None
 
 
 def test_frontend_gap_predicate_requires_snapshot_resync_and_merges_without_duplicates() -> None:

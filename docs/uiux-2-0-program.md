@@ -305,9 +305,11 @@ nodes, mounted routes, wired controls — runs each browser walk against its own
 throwaway app, and records the run in
 [`product/M5_2_0_UIUX_Preservation_Run.json`](../product/M5_2_0_UIUX_Preservation_Run.json),
 which [`uiux-2-0-preservation-e2e.md`](uiux-2-0-preservation-e2e.md) renders.
-The last run: **27 steps, 0 failed — 17 of 21 rows proved**, with the remaining
-four rows reported as `known` behind two harness defects (#169, #170) rather
-than as passes.
+The last run: **27 steps, 0 failed in 393.2 s — 21 of 21 rows proved, no known
+defects**. The two rows that were reported as `known` when the map was written
+(#169, a rejected completion that drew no card; #170, a resync that left 13
+events held and 9 drawn) were one defect — a drawn window that outlived the log
+it was drawn from — and both walks pass now.
 
 Still open: `UIUX-P6-02` (adversarial permission and recovery UI tests),
 `UIUX-P6-03` (full visual screenshot review), `UIUX-P6-04` (README, docs and
