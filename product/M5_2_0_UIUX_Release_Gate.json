@@ -1,0 +1,1048 @@
+{
+  "schema_version": 1,
+  "document_type": "uiux_release_gate",
+  "program": "M5 2.0 UI/UX transformation",
+  "story": "UIUX-P6-05",
+  "generated_by": "scripts/uiux_release_gate.py",
+  "regenerate_with": "python3 scripts/uiux_release_gate.py",
+  "check_with": "python3 scripts/uiux_release_gate.py --check",
+  "statement": "A release gate is the list of checks that ran, with their exit codes. Every line below was executed by this script on the tree it names; nothing here is a report of a run that happened somewhere else, and the checks this gate does not run are named.",
+  "program_state": {
+    "total_stories": 40,
+    "done": 40,
+    "in_progress": 0,
+    "blocked": 0,
+    "not_started": 0,
+    "percent_complete": 100,
+    "complete": true,
+    "revision": 44,
+    "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4"
+  },
+  "checks": [
+    {
+      "script": "scripts/uiux_source_manifest.py",
+      "command": "python3 scripts/uiux_source_manifest.py --check",
+      "exit_code": 0,
+      "summary": "UI source manifest is up to date: 64 files, 6 tabs, 115 routes, pinned to 73bc5e417c15",
+      "story": "UIUX-P0-01",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Source_Manifest.json"
+      ],
+      "owns": "every file, tab and route the UI is made of, hashed",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Source_Manifest.json",
+          "totals": {}
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_route_map.py",
+      "command": "python3 scripts/uiux_route_map.py --check",
+      "exit_code": 0,
+      "summary": "UI route map is up to date: 66 call sites, 72 exact and 2 dynamic URL and 0 unknown-method matches, 0 findings, 46 routes without an observed caller, 0 unknown",
+      "story": "UIUX-P0-02",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Route_Map.json"
+      ],
+      "owns": "which browser call reaches which route",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Route_Map.json",
+          "totals": {
+            "fetch_call_sites": 66,
+            "resolved_urls": 74,
+            "exact_matches": 72,
+            "dynamic_matches": 2,
+            "dynamic_method_matches": 0,
+            "forwarded_call_sites": 1,
+            "unresolved_call_sites": 0,
+            "unresolved_caller_edges": 0,
+            "unresolved_method_edges": 0,
+            "findings": 0,
+            "routes": 115,
+            "routes_with_resolved_or_possible_caller": 69,
+            "routes_with_certain_caller": 60,
+            "routes_only_possible_caller": 9,
+            "routes_no_caller_observed": 46,
+            "routes_unknown_frontend_caller": 0,
+            "resolved_from": {
+              "assignment": 1,
+              "forwarded": 1,
+              "literal": 64
+            }
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_authorization_trace.py",
+      "command": "python3 scripts/uiux_authorization_trace.py --check",
+      "exit_code": 0,
+      "summary": "UI authorization trace is up to date: 46 state-changing routes, 20 with an authority subsystem, 39 with durable state, 23 that can leave the machine",
+      "story": "UIUX-P0-03",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Authorization_Trace.json"
+      ],
+      "owns": "who guards every state-changing route",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "totals": {
+            "routes_in_app": 115,
+            "state_changing_routes_in_app": 77,
+            "traced_routes": 46,
+            "route_map_unresolved_call_sites": 0,
+            "route_map_unresolved_caller_edges": 0,
+            "route_map_unresolved_method_edges": 0,
+            "traced_by_method": {
+              "DELETE": 5,
+              "PATCH": 3,
+              "POST": 38
+            },
+            "routes_with_authority_subsystem": 20,
+            "routes_with_authority_directly": 13,
+            "routes_with_state_subsystem": 39,
+            "routes_with_state_directly": 16,
+            "routes_with_durable_writes": 3,
+            "routes_that_can_leave_the_machine": 23,
+            "distinct_handler_refusals": 9,
+            "refusals_by_status": {
+              "400": 84,
+              "401": 46,
+              "403": 52,
+              "404": 19,
+              "409": 16,
+              "413": 46,
+              "429": 6,
+              "500": 1,
+              "502": 1,
+              "503": 9,
+              "507": 3
+            },
+            "shared_refusals_by_status": {
+              "400": 46,
+              "401": 46,
+              "403": 46,
+              "413": 46,
+              "429": 6
+            },
+            "handler_refusals_by_status": {
+              "400": 38,
+              "403": 6,
+              "404": 19,
+              "409": 16,
+              "500": 1,
+              "502": 1,
+              "503": 9,
+              "507": 3,
+              "dynamic": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_control_inventory.py",
+      "command": "python3 scripts/uiux_control_inventory.py --check",
+      "exit_code": 0,
+      "summary": "UI control inventory is up to date: 194 markup controls across 6 panes (106 in the chrome, 42 rendered by script)",
+      "story": "UIUX-P0-02",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Control_Inventory.json"
+      ],
+      "owns": "every control in the markup and in the script templates",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
+          "totals": {
+            "panes": 6,
+            "markup_controls": 194,
+            "pane_controls": 88,
+            "chrome_controls": 106,
+            "script_rendered_controls": 42,
+            "script_rendered_by_function": {
+              "ensureStageCardMounted": 1,
+              "harnessEvidenceChangeHtml": 1,
+              "openSpawnModal": 1,
+              "refreshOnboarding": 1,
+              "renderCommandPaletteList": 1,
+              "renderDebateCriteria": 3,
+              "renderDebateRecord": 4,
+              "renderDeliberationEvidence": 1,
+              "renderHallVerdict": 1,
+              "renderHarnessApprovalCardHtml": 3,
+              "renderHarnessGrants": 4,
+              "renderHarnessRecoveryEventHtml": 1,
+              "renderHarnessSidebar": 1,
+              "renderHarnessTimeline": 1,
+              "renderHarnessVerdictCardHtml": 2,
+              "renderMarkdown": 1,
+              "renderMcpUI": 7,
+              "renderOpenContextDocs": 3,
+              "renderProvidersModal": 3,
+              "renderTelemetry": 1,
+              "syncUnifiedSelectors": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_presentation_inventory.py",
+      "command": "python3 scripts/uiux_presentation_inventory.py --check",
+      "exit_code": 0,
+      "summary": "presentations OK: 3 kinds, 13 call sites across 9 containers, 3 raw writers left, 0 findings",
+      "story": "UIUX-P1-01",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Presentations.json"
+      ],
+      "owns": "the three presentation kinds and their hosts",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Presentations.json",
+          "totals": {
+            "kinds": 3,
+            "surfaces": 13,
+            "containers": 9,
+            "wired_containers": 9,
+            "by_kind": {
+              "empty": 3,
+              "error": 7,
+              "recovery": 3
+            },
+            "remaining_raw_writers": 3,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_status_components.py",
+      "command": "python3 scripts/uiux_status_components.py --check",
+      "exit_code": 0,
+      "summary": "status and evidence components OK: 10 states, 6 tones, 22 surfaces, 27 setStatus call sites, 0 findings",
+      "story": "UIUX-P1-02",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Status_Components.json"
+      ],
+      "owns": "one status vocabulary across the surfaces that speak it",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Status_Components.json",
+          "totals": {
+            "tones": 6,
+            "bases": 4,
+            "status_surfaces": 22,
+            "live_regions": 6,
+            "states": 10,
+            "set_status_calls": 27,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_overlay_inventory.py",
+      "command": "python3 scripts/uiux_overlay_inventory.py --check",
+      "exit_code": 0,
+      "summary": "overlays OK: 11 dialogs through the controller, 4 registry entries, 6 rail shortcuts, 0 findings",
+      "story": "UIUX-P1-03",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Overlays.json"
+      ],
+      "owns": "dialogs, their shortcuts and the inspector",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Overlays.json",
+          "totals": {
+            "dialogs": 11,
+            "dialogs_via_controller": 11,
+            "registry_entries": 4,
+            "rail_shortcuts": 6,
+            "advertised_controls": 1,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_polish_inventory.py",
+      "command": "python3 scripts/uiux_polish_inventory.py --check",
+      "exit_code": 0,
+      "summary": "polish OK: 93 radius rules, 17 timed rules, 30 hover rules, 2 press rules, 8 captures, 0 findings",
+      "story": "UIUX-P1-05",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Polish.json"
+      ],
+      "owns": "radius, motion and press rules",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Polish.json",
+          "totals": {
+            "radius_rules": 93,
+            "motion_rules": 17,
+            "press_rules": 2,
+            "hover_rules": 30,
+            "captures": 8,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_tokens.py",
+      "command": "python3 scripts/uiux_tokens.py --check",
+      "exit_code": 0,
+      "summary": "Design tokens are up to date: 53 tokens in 8 groups, 1192 references, 22 contrast pairs (lowest 4.69:1)",
+      "story": "UIUX-P1-04",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Tokens.json"
+      ],
+      "owns": "the design tokens and their contrast floors",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Tokens.json",
+          "totals": {
+            "tokens": 53,
+            "groups": 8,
+            "references": 1192,
+            "theme_overrides": 20,
+            "density_overrides": 5,
+            "contrast_pairs": 22,
+            "lowest_contrast_ratio": 4.69
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_onboarding_inventory.py",
+      "command": "python3 scripts/uiux_onboarding_inventory.py --check",
+      "exit_code": 0,
+      "summary": "onboarding OK: 13 cases, next step actionable in every one, 7 actions, 0 findings",
+      "story": "UIUX-P2-01",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Onboarding.json"
+      ],
+      "owns": "the preflight's steps, cases and next action",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Onboarding.json",
+          "totals": {
+            "cases": 13,
+            "steps_per_case": 6,
+            "next_step_is_actionable_always": true,
+            "actions": 7,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_recent_work_inventory.py",
+      "command": "python3 scripts/uiux_recent_work_inventory.py --check",
+      "exit_code": 0,
+      "summary": "recent work OK: 8 server statuses all toned, limit 5, 1 route read, 0 writes, 0 findings",
+      "story": "UIUX-P5-05",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Recent_Work.json"
+      ],
+      "owns": "the recent-work strip's statuses and limit",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Recent_Work.json",
+          "totals": {
+            "server_statuses": 8,
+            "statuses_with_tone": 8,
+            "recent_limit": 5,
+            "routes_read": 1,
+            "write_methods": 0,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_chat_inventory.py",
+      "command": "python3 scripts/uiux_chat_inventory.py --check",
+      "exit_code": 0,
+      "summary": "chat OK: 2 roles, 5 send reasons, 9 route fields, 0 findings",
+      "story": "UIUX-P2-02",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Chat.json"
+      ],
+      "owns": "the chat roles, reasons and tones",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Chat.json",
+          "totals": {
+            "roles": 2,
+            "reasons": 5,
+            "tones": 4,
+            "server_fields": 9,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_chat_context_inventory.py",
+      "command": "python3 scripts/uiux_chat_context_inventory.py --check",
+      "exit_code": 0,
+      "summary": "chat context OK: 8 context fields, 6 chat_tool fields, 0 findings",
+      "story": "UIUX-P2-04",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Chat_Context.json"
+      ],
+      "owns": "the context and tool-event fields chat renders",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Chat_Context.json",
+          "totals": {
+            "context_fields": 8,
+            "tool_event_fields": 6,
+            "tool_status_tone": 2,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_chat_handoff_inventory.py",
+      "command": "python3 scripts/uiux_chat_handoff_inventory.py --check",
+      "exit_code": 0,
+      "summary": "chat handoff OK: 53 checks, 4 reasons, 0 findings",
+      "story": "UIUX-P2-05",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Chat_Handoff.json"
+      ],
+      "owns": "the Chat-to-Harness brief",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Chat_Handoff.json",
+          "totals": {
+            "reasons": 4,
+            "checks": 53,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_preservation_signoff.py",
+      "command": "python3 scripts/uiux_preservation_signoff.py --check",
+      "exit_code": 0,
+      "summary": "UI preservation sign-off is up to date: historical-approval-unbound, 21 capabilities across 6 panes, 194 markup controls, 46 state-changing routes traced",
+      "story": "UIUX-P0-06",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Preservation_Signoff.json"
+      ],
+      "owns": "the owner-approved preservation matrix and the digests it binds",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "totals": {
+            "panes": 6,
+            "preserved_capabilities": 21,
+            "markup_controls": 194,
+            "chrome_controls": 106,
+            "pane_controls": 88,
+            "script_rendered_controls": 42,
+            "routes": 115,
+            "routes_with_resolved_or_possible_caller": 69,
+            "routes_no_caller_observed": 46,
+            "routes_unknown_frontend_caller": 0,
+            "route_map_unresolved_call_sites": 0,
+            "route_map_unresolved_caller_edges": 0,
+            "route_map_unresolved_method_edges": 0,
+            "state_changing_routes_traced": 46,
+            "pane_routes_reached": 38,
+            "pane_routes_excluded": 34,
+            "route_walk_depth": 2,
+            "screenshots_captured": 6,
+            "screenshots_planned": 6
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_preservation_e2e.py",
+      "command": "python3 scripts/uiux_preservation_e2e.py --check",
+      "exit_code": 0,
+      "summary": "preservation map OK: 21/21 rows, 55 provers, 17 walks, 15 support walks, 0 findings",
+      "story": "UIUX-P6-01",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Preservation_E2E.json"
+      ],
+      "owns": "a prover for every row of the matrix",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Preservation_E2E.json",
+          "totals": {
+            "matrix_rows": 21,
+            "mapped_rows": 21,
+            "provers": 55,
+            "walk_provers": 40,
+            "pytest_provers": 4,
+            "route_provers": 9,
+            "control_provers": 2,
+            "walks": 17,
+            "support_walks": 15,
+            "findings": 0
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_adversarial_inventory.py",
+      "command": "python3 scripts/uiux_adversarial_inventory.py --check",
+      "exit_code": 0,
+      "summary": "adversarial refusals OK: 12 refusals across 9 statuses, 21/35 writes guarded, 4 presentation hosts, 0 findings",
+      "story": "UIUX-P6-02",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Adversarial.json"
+      ],
+      "owns": "every refusal a write can meet, and where it is drawn",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Adversarial.json",
+          "totals": {
+            "refusals": 12,
+            "statuses": 9,
+            "real": 5,
+            "injected": 4,
+            "server_only": 3,
+            "mutating_writes": 35,
+            "guarded_writes": 21,
+            "reporting_writes": 14,
+            "presentation_hosts": 4
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_screenshot_review.py",
+      "command": "python3 scripts/uiux_screenshot_review.py --check",
+      "exit_code": 0,
+      "summary": "screenshot review OK: 240 captures in 27 sets, 27 reviewed (16 files opened), 3 re-shot, 0 findings",
+      "story": "UIUX-P6-03",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Screenshot_Review.json"
+      ],
+      "owns": "every committed capture, traced, hashed and themed",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Screenshot_Review.json",
+          "totals": {
+            "sets": 27,
+            "files": 240,
+            "reviewed_sets": 27,
+            "sets_eyed": 7,
+            "files_eyed": 16,
+            "re_taken_sets": 3,
+            "published_sets": 1,
+            "findings": 0,
+            "observations": 22
+          }
+        }
+      ]
+    },
+    {
+      "script": "scripts/uiux_docs_verification.py",
+      "command": "python3 scripts/uiux_docs_verification.py --check",
+      "exit_code": 0,
+      "summary": "README and onboarding OK: 5 pages, 21 links, 40 commands classified, 7/7 claims verified, 0 findings",
+      "story": "UIUX-P6-04",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Readme_Onboarding.json"
+      ],
+      "owns": "the reader pages, their links, their commands and their claims",
+      "totals": [
+        {
+          "artifact": "product/M5_2_0_UIUX_Readme_Onboarding.json",
+          "totals": {
+            "pages": 5,
+            "links": 21,
+            "commands": 40,
+            "claims": 7,
+            "claims_verified": 7,
+            "findings": 0,
+            "by_kind": {
+              "needs-network": 9,
+              "illustrative": 5,
+              "writes": 12,
+              "runs": 14
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "gates": [
+    {
+      "id": "P0",
+      "sentence": "Inventory and preservation baseline recorded: pinned HEAD, every tab and control enumerated, frontend handler to API route map, backend authorization trace, baseline screenshots and test results, owner-approved preservation matrix. No redesign before this.",
+      "story_ids": [
+        "UIUX-P0-01",
+        "UIUX-P0-02",
+        "UIUX-P0-03",
+        "UIUX-P0-04",
+        "UIUX-P0-05",
+        "UIUX-P0-06"
+      ],
+      "done": 6,
+      "total": 6,
+      "proving_checks": [
+        "scripts/uiux_source_manifest.py",
+        "scripts/uiux_route_map.py",
+        "scripts/uiux_authorization_trace.py",
+        "scripts/uiux_control_inventory.py",
+        "scripts/uiux_preservation_signoff.py"
+      ],
+      "met": true
+    },
+    {
+      "id": "P1",
+      "sentence": "Design tokens, navigation shell, shared status/evidence components and accessible overlays exist with no route or capability change and with keyboard coverage.",
+      "story_ids": [
+        "UIUX-P1-01",
+        "UIUX-P1-02",
+        "UIUX-P1-03",
+        "UIUX-P1-04",
+        "UIUX-P1-05"
+      ],
+      "done": 5,
+      "total": 5,
+      "proving_checks": [
+        "scripts/uiux_presentation_inventory.py",
+        "scripts/uiux_status_components.py",
+        "scripts/uiux_overlay_inventory.py",
+        "scripts/uiux_polish_inventory.py",
+        "scripts/uiux_tokens.py"
+      ],
+      "met": true
+    },
+    {
+      "id": "P2",
+      "sentence": "Start and Chat journeys are usable end to end, including empty, loading, streaming, error and recovery states, with an explicit Chat-to-Harness handoff.",
+      "story_ids": [
+        "UIUX-P2-01",
+        "UIUX-P2-02",
+        "UIUX-P2-03",
+        "UIUX-P2-04",
+        "UIUX-P2-05",
+        "UIUX-P2-06"
+      ],
+      "done": 6,
+      "total": 6,
+      "proving_checks": [
+        "scripts/uiux_onboarding_inventory.py",
+        "scripts/uiux_chat_inventory.py",
+        "scripts/uiux_chat_context_inventory.py",
+        "scripts/uiux_chat_handoff_inventory.py"
+      ],
+      "met": true
+    },
+    {
+      "id": "P3",
+      "sentence": "Harness and Pipeline surface durable task state, approvals, diffs, artifacts and pause/cancel/resume/recovery without inventing client-side state.",
+      "story_ids": [
+        "UIUX-P3-01",
+        "UIUX-P3-02",
+        "UIUX-P3-03",
+        "UIUX-P3-04",
+        "UIUX-P3-05",
+        "UIUX-P3-06",
+        "UIUX-P3-07"
+      ],
+      "done": 7,
+      "total": 7,
+      "proving_checks": [],
+      "met": true
+    },
+    {
+      "id": "P4",
+      "sentence": "Council and Compare present participants, stages, disagreement and measured provenance without collapsing the two workflows into one.",
+      "story_ids": [
+        "UIUX-P4-01",
+        "UIUX-P4-02",
+        "UIUX-P4-03",
+        "UIUX-P4-04",
+        "UIUX-P4-05",
+        "UIUX-P4-06"
+      ],
+      "done": 6,
+      "total": 6,
+      "proving_checks": [],
+      "met": true
+    },
+    {
+      "id": "P5",
+      "sentence": "Cross-tab consistency and accessibility/responsive regression are demonstrated: keyboard walks, screen-reader labels, touch targets, bounded SSE rendering.",
+      "story_ids": [
+        "UIUX-P5-01",
+        "UIUX-P5-02",
+        "UIUX-P5-03",
+        "UIUX-P5-04",
+        "UIUX-P5-05"
+      ],
+      "done": 5,
+      "total": 5,
+      "proving_checks": [
+        "scripts/uiux_recent_work_inventory.py"
+      ],
+      "met": true
+    },
+    {
+      "id": "P6",
+      "sentence": "Automated preservation end-to-end tests, adversarial permission/recovery UI tests, full screenshot review, README/onboarding verification and a release gate with a handover report.",
+      "story_ids": [
+        "UIUX-P6-01",
+        "UIUX-P6-02",
+        "UIUX-P6-03",
+        "UIUX-P6-04",
+        "UIUX-P6-05"
+      ],
+      "done": 5,
+      "total": 5,
+      "proving_checks": [
+        "scripts/uiux_preservation_e2e.py",
+        "scripts/uiux_adversarial_inventory.py",
+        "scripts/uiux_screenshot_review.py",
+        "scripts/uiux_docs_verification.py"
+      ],
+      "met": true
+    }
+  ],
+  "acceptance": [
+    {
+      "criterion": "All mapped existing controls remain reachable and functionally equivalent",
+      "evidence": "the control inventory enumerates every control; preservation e2e proves a prover for every matrix row; the browser job replays the retained journeys",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Control_Inventory.json#/totals",
+        "product/M5_2_0_UIUX_Preservation_E2E.json#/totals",
+        "CI: Browser safety regressions"
+      ]
+    },
+    {
+      "criterion": "No console errors on tested journeys",
+      "evidence": "the adversarial walk and the journey walks assert a clean console; the browser job runs them",
+      "artifacts": [
+        "tests/browser/",
+        "CI: Browser safety regressions"
+      ]
+    },
+    {
+      "criterion": "Keyboard operation and focus states work",
+      "evidence": "keyboard walks drive every pane with the keyboard and check the focus ring; the P5 inventory records the shortcuts and the focus surfaces",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Overlays.json#/totals",
+        "tests/browser/",
+        "CI: Browser safety regressions"
+      ]
+    },
+    {
+      "criterion": "Failure and recovery states are actionable and honest",
+      "evidence": "the adversarial inventory maps every refusal to the words the pane uses; the presentations inventory proves the recovery surface; the per-story recovery artifacts cover each pane",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Adversarial.json#/totals",
+        "product/M5_2_0_UIUX_Presentations.json#/totals"
+      ]
+    },
+    {
+      "criterion": "Target UI behavior is demonstrable by screenshot or test",
+      "evidence": "240 committed captures in 27 reviewed sets, and the tests beside every generator",
+      "artifacts": [
+        "product/M5_2_0_UIUX_Screenshot_Review.json#/totals",
+        "CI: test (3.11, 3.12, 3.13)"
+      ]
+    }
+  ],
+  "inventory": {
+    "tabs": 6,
+    "routes": 115,
+    "markup_controls": 194,
+    "chrome_controls": 106,
+    "script_rendered_controls": 42,
+    "capabilities": 21,
+    "e2e_rows": 21,
+    "e2e_findings": 0,
+    "refusals": 12,
+    "refusal_statuses": 9,
+    "captures": 240,
+    "capture_sets": 27,
+    "reviewed_sets": 27,
+    "screenshot_findings": 0,
+    "doc_pages": 5,
+    "doc_commands": 40,
+    "doc_claims": 7,
+    "stories_done": 40,
+    "distinct_files_changed": 400
+  },
+  "known_regressions": [
+    {
+      "story": "UIUX-P4-01",
+      "regression": "The demo path's usage line still reports fabricated tok/s figures (29.5 / 42.1) and `record_perf` still stores them, because the flag the pane now reads (`demo`) does not stop the write; the pane no longer draws a figure for a demo reply, but the perf samples and the throughput card still count it. Recorded as an open risk for the runtime program rather than fixed inside a UI pull request."
+    },
+    {
+      "story": "UIUX-P4-01",
+      "regression": "`syncUnifiedSelectors` rebuilds the seat pickers from the catalogue, which lists only resident local models; loading a model can therefore re-pick a seat whose model was not in the catalogue. The row stays true to what the round would post, but the operator's earlier choice can change under them."
+    },
+    {
+      "story": "UIUX-P4-02",
+      "regression": "A pipeline view restored from the browser's checkpoint has no contract: the checkpoint stores what each seat produced (content, reasoning, usage), not what it was allowed, so the `Allowed` column reads `-` after a reload. Absence is drawn as absence rather than filled in, but the fix is to widen the checkpoint payload, which belongs to the recovery story that owns that format."
+    },
+    {
+      "story": "UIUX-P4-03",
+      "regression": "The four Hall seat pickers are rewritten by a readiness refresh while a round runs: after the round the selectors can name models that did not answer (a cloud alias rather than the local models the summons posted). The verdict table is unaffected - it names the model each stored message carries - and the walk re-selects the models before its capture, but the pickers disagreeing with the transcript is a real defect this story found and did not fix; it belongs to the readiness refresh that rewrites them."
+    },
+    {
+      "story": "UIUX-P4-03",
+      "regression": "Shared wording is a lexical measure: a seat that makes the same point in different words reads as `not in the decision` and is named under Dissent. The block says so in its basis line and prints the percentage, so a reader can discount it, but the pane cannot tell disagreement from paraphrasing and does not claim to."
+    },
+    {
+      "story": "UIUX-P4-04",
+      "regression": "A comparison runs with `auto_unload: true`, so the local model it just compared can leave the catalogue: the checkbox strip is rebuilt from telemetry and stops offering it, while its card and its row stay on screen. The result is honest but confusing on a screenshot, and it is the picker's refresh behaviour (recorded under P4-01) rather than this story's; the walk's captures clip the run line, panels and results for that reason."
+    },
+    {
+      "story": "UIUX-P4-04",
+      "regression": "The server has no per-panel error event: one provider exception ends the whole `run_stages` run, so a failed comparison always leaves the panels behind it `not run` rather than failing one and carrying on. The pane says exactly that and does not pretend to have a partial panel failure it cannot observe."
+    },
+    {
+      "story": "UIUX-P4-04",
+      "regression": "Three of the ten states cannot be produced by the app in this environment: `queued` appears only between the click and the first `panel_start`, `empty` needs a runtime that finishes without words, and `stream ended` needs a socket that drops mid-run. They are asserted in the pane's vocabulary and in the inventory, and the fixture can produce six of the ten (answered, cut, demo, failed, stopped, not-run)."
+    },
+    {
+      "story": "UIUX-P4-05",
+      "regression": "`ttft` is the runtime's first-token figure for the stage as `app.py` computed it; for the fixture it is 0.04 s for every reply because the stand-in runtime sends `time_to_first_token: 0.04`. Nothing in the pane rounds or invents it, but a reader should not read the fixture's equal numbers as equal hardware."
+    },
+    {
+      "story": "UIUX-P4-05",
+      "regression": "`prefill_tps` and `cached_tokens` travel in the usage object and are deliberately not printed: the pane has no reader for them that would not be a row of zeroes (the local path always sends `prefill_tps: 0.0`, `cached_tokens: 0`). They stay in the payload for a later story rather than being drawn as measured zeros."
+    },
+    {
+      "story": "UIUX-P4-05",
+      "regression": "A demo reply still writes the invented 29.5 / 42.1 tok/s to `perf_samples` through `record_perf`; the pane no longer draws them anywhere, but the store still receives them, and that write belongs to the runtime program (recorded since P4-01)."
+    },
+    {
+      "story": "UIUX-P4-05",
+      "regression": "The arbiter's figures are the judge model's, so in the fixture they equal the panel's when the judge is the first model. That is the fixture answering one model the same way twice, not the pane echoing a row."
+    },
+    {
+      "story": "UIUX-P4-06",
+      "regression": "The browser's copy restores the comparison, not the run: the model checkboxes are rebuilt from the live strip, so a restored comparison whose models the runtime has since unloaded comes back with those models listed in its cards (correct) but not ticked (also correct, and stated on the bar) - pressing Start would compare something else, which the bar says in as many words."
+    },
+    {
+      "story": "UIUX-P4-06",
+      "regression": "`Forget this copy` is per browser: another browser or profile still holds its own copy of the same run, and the bar only ever speaks for this one."
+    },
+    {
+      "story": "UIUX-P4-06",
+      "regression": "The server's copy is the redacted export, so a comparison that happened to contain credential-shaped text comes back with that text replaced by the exporter. The bar and the markdown state this rather than pretending the read-back is byte-identical."
+    },
+    {
+      "story": "UIUX-P4-06",
+      "regression": "A demo reply still writes the invented 29.5 / 42.1 tok/s to `perf_samples` through `record_perf` (recorded since P4-01); the record bar restores a demo reply with the `demo` status and no figure, so the copy does not amplify it."
+    },
+    {
+      "story": "UIUX-P4-06",
+      "regression": "The copy cap can shorten the longest replies of a very large comparison; the bar states the number of characters dropped, but the dropped text is not recoverable from this browser - the server's copy, when there is one, is the complete one."
+    },
+    {
+      "story": "UIUX-P5-01",
+      "regression": "`stopped` carries the warn tone, where the Harness used to draw `CANCELLED` neutral. A stop is not a failure (that is `danger`) and it is not a normal completion either; the Panes now agree on one tone, and Compare - which already used warn - is unchanged."
+    },
+    {
+      "story": "UIUX-P5-01",
+      "regression": "Model-residency chips stay outside the vocabulary: `LOADED`/`LOADING` describe what a model is, not what a run did, and they are drawn as `badge` chips rather than the status component. The inventory lists them as a stated exception rather than folding them into a table whose meaning is 'where does this stand'."
+    },
+    {
+      "story": "UIUX-P5-01",
+      "regression": "A few counts keep their own words (`0 / 4 ready`, `2 ready · 1 configured`): the numbers are the value and the trailing word is the vocabulary's. The walk accepts a chip built from vocabulary words plus digits and separators, and fails on anything else."
+    },
+    {
+      "story": "UIUX-P5-01",
+      "regression": "`scripts/status_walk.mjs` still exercises the component with arbitrary words (`COMPLETED`/`FAILED` as literals in its own probe) because it is testing the writer, not the vocabulary; no pane draws those words any more."
+    },
+    {
+      "story": "UIUX-P5-01",
+      "regression": "A server state the vocabulary has never seen is shown as the server's own word. That is intentional - the alternative is a wrong word - but it means a new backend state reaches the reader before the table learns its name."
+    },
+    {
+      "story": "UIUX-P5-02",
+      "regression": "The chat transcript is `role=\"log\"` with `aria-live=\"off\"`: a polite region on a token-by-token stream would read every token. The composer's status line announces the run's state instead, and the transcript is reachable and readable on demand. Declared in the inventory rather than silently left off - making the transcript announce is a bigger behavioural change than this story should carry."
+    },
+    {
+      "story": "UIUX-P5-02",
+      "regression": "The modal backdrop keeps its `onclick` and takes no tab stop: a click outside the dialog closes it and Escape is the keyboard path. Declared, with the walk proving Escape closes the dialog it opened."
+    },
+    {
+      "story": "UIUX-P5-02",
+      "regression": "Carried forward: demo tok/s still written to `perf_samples`; `ttft` fixture-equal; `prefill_tps`/`cached_tokens` unprinted; restored checkpoint carries no contract; Hall readiness refresh rewrites seat pickers; `auto_unload` drops just-compared model; browser comparison copy capped at 60,000 chars; `stopped` status carries warn tone; model-residency chips (`LOADED`/`LOADING`) deliberately outside the vocabulary."
+    },
+    {
+      "story": "UIUX-P5-03",
+      "regression": "`--target-min: 24px` raises the floor, not the whole design: chips, `summary` disclosures, checkbox labels and the permission badge are now 24px tall instead of 18-23px, which makes dense rows about 4-6px taller. That is the visible cost of a finger-sized target and it is deliberate."
+    },
+    {
+      "story": "UIUX-P5-03",
+      "regression": "The pipeline stepper still overflows horizontally at phone widths; it scrolls rather than wrapping, which keeps the five stages on one line (their order is the point). The walk names it as a scroller instead of excusing it."
+    },
+    {
+      "story": "UIUX-P5-03",
+      "regression": "Carried forward: demo tok/s still written to `perf_samples`; `ttft` fixture-equal; `prefill_tps`/`cached_tokens` unprinted; restored checkpoint carries no contract; Hall readiness refresh rewrites seat pickers; `auto_unload` drops just-compared model; browser comparison copy capped at 60,000 chars; `stopped` status carries warn tone; model-residency chips (`LOADED`/`LOADING`) deliberately outside the vocabulary; `#chatMessages` stays `aria-live=\"off\"` with its reason declared."
+    },
+    {
+      "story": "UIUX-P5-04",
+      "regression": "A five-message conversation still pays about 0.7 ms a frame, and a 60-message one about 1 ms: that is the cost of drawing the message being written and it is not hidden."
+    },
+    {
+      "story": "UIUX-P5-04",
+      "regression": "Once the window is full, an arrival that is not a pure append (an approval changed, a gap forced a resync) still rebuilds the visible window at about 1.5 ms - a bounded cost, paid only when the cards on screen really did change."
+    },
+    {
+      "story": "UIUX-P5-04",
+      "regression": "The DOM now shows the newest 300 cards and not the whole log. The pane says so, the timeline count names the true total, Replay re-reads everything from the server, and the durable log, cursor and `retained_from_seq` semantics are untouched - but a reader looking for event 4,000 of 5,000 has to use Replay."
+    },
+    {
+      "story": "UIUX-P5-04",
+      "regression": "The client cache keeps 5,000 events, so a backgrounded tab that returns after more than 5,000 events gets a window rather than the whole log; the gap detection already forced a snapshot reload before this story and still does."
+    },
+    {
+      "story": "UIUX-P5-04",
+      "regression": "Carried forward: demo tok/s written to `perf_samples`; `ttft` fixture-equal; `prefill_tps`/`cached_tokens` unprinted; restored checkpoint carries no contract; Hall readiness refresh rewrites seat pickers; `auto_unload` drops just-compared model; browser comparison copy capped at 60,000 chars; `stopped` status carries warn tone; model-residency chips outside the vocabulary; `#chatMessages` stays `aria-live=\"off\"` with its reason declared."
+    },
+    {
+      "story": "UIUX-P5-05",
+      "regression": "Carried forward, none of them touched by this story: demo tok/s still appears in `perf_samples`; the `ttft` fixture is equal on both panels; `prefill_tps` and `cached_tokens` are never printed; a restored checkpoint carries no contract; the Hall readiness refresh rewrites seat pickers; `auto_unload` can drop the model that was just compared; the browser comparison copy is capped at 60,000 chars; a `stopped` comparison carries a warn tone; model-residency chips sit outside the status vocabulary; `#chatMessages` stays `aria-live=\"off\"` with its declared reason; the stream note's denominator is the in-memory 5,000-event cache."
+    },
+    {
+      "story": "UIUX-P5-05",
+      "regression": "tests/test_baseline.py fails in this checkout because the pinned commit is not present (`Not a valid commit name`); it is an artifact of the clone, not of this change, and the same failure was recorded before the story started."
+    },
+    {
+      "story": "UIUX-P6-01",
+      "regression": "#169 (Harness: a rejected completion draws no verdict card) and #170 (Harness timeline: after a pruned log the strip counts the cache) stay open; the suite reports both rows as `known` and never as green. They are the reason 4 of the 21 rows are not proved."
+    },
+    {
+      "story": "UIUX-P6-01",
+      "regression": "Carried forward, none of them touched by this story: demo tok/s still appears in `perf_samples`; the `ttft` fixture is equal on both panels; `prefill_tps` and `cached_tokens` are never printed; a restored checkpoint carries no contract; the Hall readiness refresh rewrites seat pickers; `auto_unload` can drop the model that was just compared; the browser comparison copy is capped at 60,000 chars; a `stopped` comparison carries a warn tone; model-residency chips sit outside the status vocabulary; `#chatMessages` stays `aria-live=\"off\"` with its declared reason; the stream note's denominator is the in-memory 5,000-event cache."
+    },
+    {
+      "story": "UIUX-P6-01",
+      "regression": "tests/test_baseline.py fails in this checkout because the pinned commit is not present (`Not a valid commit name`); it is an artifact of the clone, not of this change, and the same failure was recorded before the story started."
+    },
+    {
+      "story": "UIUX-P6-01",
+      "regression": "A full run still leaks 4 demo apps (~240 MB) from walks that start their own fixture; a runner that repeats the suite several times without reaping them can run out of memory. The suite now reaps everything it starts, and the residue is stated rather than hidden."
+    },
+    {
+      "story": "UIUX-P6-02",
+      "regression": "Carried forward unchanged from P6-01: demo tok/s, fixture-equal ttft, unprinted prefill_tps/cached_tokens, the checkpoint contract, Hall seat pickers, auto_unload, the 60,000-char copy cap, `stopped` warn tone, residency chips, `aria-live=\"off\"`, the 5,000-event denominator."
+    },
+    {
+      "story": "UIUX-P6-02",
+      "regression": "The refusal is also announced as a toast with the server's reason (the inline box carries the actions). This is deliberate - a pane behind a backdrop or scrolled away still announces - but it means the same sentence can appear twice when the dialog is open."
+    },
+    {
+      "story": "UIUX-P6-03",
+      "regression": "Observed, not fixed: the Harness empty state scrolls under the composer at 900px, so the third starter card sits below the fold in the refreshed capture. It is the pane's own focusable scroll region (`.harness-stream { overflow-y: auto }`), not a clip, and fixing the fold would be a pane layout change with its own evidence burden."
+    },
+    {
+      "story": "UIUX-P6-03",
+      "regression": "22 capture sets carry no `index.json`: their captures cannot be shown to be the bytes their walk produced, only that they exist and that their theme is what their name claims."
+    },
+    {
+      "story": "UIUX-P6-03",
+      "regression": "The published set has no narrow variant. Narrow coverage comes from `polish`, `responsive`, `uiux-p5-05` and `screenshots/p4-01-narrow-dark` (420x1200), which the review counts under their own sets."
+    },
+    {
+      "story": "UIUX-P6-03",
+      "regression": "Pre-existing and not this story's: the Python 3.12 CI job failed once on `tests/test_trusted_transformations.py::test_http_endpoints_and_standalone_studio_bundle_parity` (`assert eval_json[\"ab_gate_passed\"] is True`). That gate compares `benefit_justifies_cost`, which includes `overhead_med <= TT_MAX_OVERHEAD_MS_CEILING` measured in wall-clock milliseconds, so a busy runner can fail it; the same test passed in the 3.11 and 3.13 jobs and eight local runs, and this story touches no transformation code. The job was re-run by pushing the ledger edit - not by relaxing the test."
+    }
+  ],
+  "open_risks": [
+    "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
+    "Tab labels in this ledger (Start, Harness, Council, Pipeline, Compare, Chat) are NOT the DOM ids in static/index.html (start, harness, hall, council, debate, chat): 'Council' is data-tab=hall and 'Pipeline' is data-tab=council, while data-tab=council is the Pipeline pane. tab_registry records the mapping and tests/test_uiux_roadmap.py fails if it drifts. A session that greps for a 'pipeline' tab will not find one.",
+    "static/index.html is a single 4576-line vanilla file with inline script and CSS, and studio.py embeds a regenerated copy. Any story that edits the frontend must run scripts/build_studio.py and let the drift check pass, or the standalone build silently diverges.",
+    "Screenshot capture needs a Chrome/Chromium binary and puppeteer-core, neither vendored. Stories that claim visual evidence must capture it on a machine that has them, and must not mark visual evidence as passed when the capture was skipped.",
+    "The six panes share one shell, one integration strip and one telemetry rail. A story scoped to one pane can regress another; the feature-preservation matrix is the checklist, and P5-01..P5-03 plus P6-01/P6-02 are the regression gates.",
+    "A parallel session owns the optional M5 P6 stories (the lessons/retrieval work). If a UI story surfaces a backend defect, it is recorded as a new M5 story or an open risk, never fixed inside a UI pull request.",
+    "The program's prose had drifted from the code at the pin: the program page still said 102 routes and 11 pinned files while app.py mounts 115 and the manifest now pins 12. Counts in docs are re-derived from the artifacts, not remembered.",
+    "PR #104 was closed rather than merged: its UIUX-P0-03 work was ported to #109 and landed there, but the runtime-program benchmark diagnostics that branch also carried still need their own pull request in the runtime program.",
+    "UIUX-P0-05 cannot be closed in this environment: the six baseline screenshots need Chrome/Chromium and puppeteer-core, neither of which is vendored. The test-results half is capturable here; the visual half needs a machine with a browser, and the owner has said they will capture there.",
+    "Two sessions are closing UI/UX stories against the same static/index.html at the same time. P3-01 and the P2-04 work merged without a source conflict because they own different panes, but every generated artifact conflicted: resolve those by regenerating from the merged source rather than by choosing a side, and re-run the full suite on the merged tree, because each story's own numbers describe its own commit.",
+    "The demo path's fabricated tok/s figures still reach `perf_samples`: `_stream_omlx_completion` yields 29.5/42.1 for text it wrote itself, `record_perf` stores them, and the throughput card and leaderboard count them. UIUX-P4-01 labels the reply and declines the badge, but it did not change the write, because that is a runtime-program defect and belongs to the M5 stories, not to a UI pull request.",
+    "`syncUnifiedSelectors` offers only resident local models, so loading a model rebuilds the catalogue and can re-pick a seat whose model was not in it. The Council readiness row always describes what the round would post, but an operator's earlier pick can change under them; the fix belongs to the model selector, and is recorded rather than patched inside a story about roles and readiness.",
+    "A pipeline view restored from the browser's checkpoint carries no contract: the checkpoint payload records what each seat produced, not what it was allowed, so the deliberation evidence table's `Allowed` column is empty after a reload. Widening that payload belongs to the recovery story that owns the format.",
+    "`record_perf` still stores the demo path's fabricated 29.5/42.1 tok/s in `perf_samples`; P4-02 removed every drawing of that figure from the Council pane, but the write is the runtime program's to remove.",
+    "The preservation suite proves 17 of the 21 matrix rows. The other four sit behind two harness walks that fail on tracked defects #169 and #170; the suite reports them as `known` and never as a pass, which means \"the UI is preserved\" is a claim with a visible hole in it until those two are fixed in the runtime program.",
+    "`product/M5_2_0_UIUX_Preservation_Run.json` is only as current as the last run. A story that lands after it will be described by a record that predates it; re-run `scripts/preservation_suite.py --save` when the tree moves, and do not read a passing record as a statement about a later commit."
+  ],
+  "not_run": [
+    {
+      "what": "the full test suite (`pytest -q`)",
+      "why": "CI runs it on 3.11, 3.12 and 3.13 on every push; a script that ran it here would report one interpreter's result as if it were three, and this checkout is shallow, so three local ancestor assertions cannot run at all"
+    },
+    {
+      "what": "the browser suites (`tests/browser/`, `tests/test_uiux_adversarial_browser.py`)",
+      "why": "they need a Chromium binary and puppeteer-core, neither vendored; CI installs them and runs `Browser safety regressions` on every push"
+    },
+    {
+      "what": "a new screenshot capture",
+      "why": "captures are taken by the story that changes a pixel and reviewed by `uiux_screenshot_review.py`; this story changes none"
+    },
+    {
+      "what": "the ledger's own acceptance verdict",
+      "why": "whether a criterion is satisfied is the reviewer's and the owner's call; the gate puts the evidence in one place and says so"
+    }
+  ],
+  "handover": {
+    "what_this_program_changed": [
+      "One shell for six panes: a rail, a workspace and an inspector, with the tab registry, the shortcuts and the focus order recorded in `product/M5_2_0_UIUX_Source_Manifest.json`.",
+      "One status vocabulary: nine states drawn from six tones, with every surface that speaks it enumerated in `product/M5_2_0_UIUX_Status_Components.json`.",
+      "Design tokens as the only place a colour, radius, spacing or motion value is decided, with measured contrast floors (`product/M5_2_0_UIUX_Tokens.json`).",
+      "Presentations for the empty, error and recovery cases, hosted rather than re-invented in each pane (`product/M5_2_0_UIUX_Presentations.json`).",
+      "Journeys that report what the server actually did: the preflight's next action, durable task state in Harness and Pipeline, Council's deliberation, Compare's provenance, Chat's handoff to Harness.",
+      "A preservation harness, an adversarial harness, a screenshot review and a documentation verification, each with its own generator and its own failing mode."
+    ],
+    "what_held": [
+      "Endpoints, authorization contracts, approvals, event-cursor semantics, action admission, sandbox controls, workspace edits and session recovery: 21 capabilities across 6 panes, each with a prover, and no route removed.",
+      "No new dependency, no CDN, no framework migration, no new outbound request.",
+      "Untrusted text stays text: the adversarial inventory maps all 12 refusals and no pane decides authority locally."
+    ],
+    "verify_in_five_minutes": [
+      "python3 scripts/uiux_release_gate.py --check",
+      "python3 scripts/demo_tour.py --check && python3 scripts/validate_screenshots.py",
+      "python3 scripts/uiux_preservation_e2e.py --check && python3 scripts/uiux_adversarial_inventory.py --check",
+      "python3 scripts/uiux_docs_verification.py --check && python3 scripts/validate_docs.py",
+      "python3 -m pytest -q tests/test_uiux_release_gate.py"
+    ],
+    "where_the_evidence_lives": [
+      "`product/M5_2_0_UIUX_*.json` - one artifact per story, each with a `--check` mode.",
+      "`docs/uiux-2-0-*.md` - one generated page per artifact, plus this gate and this handover.",
+      "`docs/media/` - 240 committed captures in 27 sets, reviewed by `uiux_screenshot_review.py`.",
+      "CI: `test (3.11)`, `test (3.12)`, `test (3.13)` and `Browser safety regressions` on every push."
+    ],
+    "what_is_not_claimed": [
+      "That the interface is beautiful, or that the copy is good: those are the owner's calls.",
+      "That every pane was photographed in every theme and width: the coverage grid names the combinations nobody has looked at yet, and they are 0 findings only because they are holes rather than contradictions.",
+      "That the program's verdict is the gate's: this file lists evidence with exit codes, and the acceptance verdict belongs to the reviewer."
+    ]
+  },
+  "totals": {
+    "checks": 19,
+    "checks_passed": 19,
+    "gates": 7,
+    "gates_met": 7,
+    "acceptance_criteria": 5,
+    "known_regressions": 45,
+    "findings": 1
+  },
+  "findings": [
+    {
+      "check": "ledger-evidence",
+      "detail": "UIUX-P6-05: done without a commit sha"
+    }
+  ]
+}
