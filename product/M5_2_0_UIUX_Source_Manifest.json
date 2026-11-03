@@ -428,6 +428,20 @@
       "sha256": "5cc40e205487000292486379e6e85b8bb180044664b06e2d62bb83496c4f4b67",
       "bytes": 9895,
       "lines": 210
+    },
+    {
+      "path": "scripts/uiux_docs_verification.py",
+      "role": "checks the README and the onboarding pages against the tree: links, classified commands, and the claims that name a route or a file",
+      "sha256": "9d1cefaaff447b26a10590471f7bc4e24533b1d8363cc286d61fd117af874017",
+      "bytes": 25387,
+      "lines": 508
+    },
+    {
+      "path": "tests/test_uiux_docs_verification.py",
+      "role": "runs the commands the docs tell a reader to run, and reads the live preflight the Quickstart describes",
+      "sha256": "79de4290f26b833e7bcd369b68659adde5927f76019c256bd268581ebf911416",
+      "bytes": 8769,
+      "lines": 212
     }
   ],
   "frontend": {
