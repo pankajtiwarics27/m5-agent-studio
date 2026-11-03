@@ -1,22 +1,22 @@
 {
   "story": "UIUX-P6-01",
   "kind": "preservation-suite-run",
-  "commit": "d073e7dd05e3394ac3ae98febad2e53e4eacdac2",
+  "commit": "10459c26079d00edd4338474d36b1ea1cb942ff0",
   "environment": {
     "python": "3.11.2",
-    "chrome": "/tmp/m5-runner/m5-browser/tmp/chromium",
-    "tmpdir": "/tmp/m5-runner/m5-browser/tmp"
+    "chrome": "/tmp/browser/tmp/chromium",
+    "tmpdir": "/tmp/browser/tmp"
   },
   "only": "",
-  "seconds": 398.7,
+  "seconds": 393.2,
   "totals": {
     "rows": 21,
-    "passed_rows": 17,
+    "passed_rows": 21,
     "failed_rows": 0,
     "not_run_rows": 0,
     "steps": 27,
     "failed_steps": 0,
-    "known_failures": 2,
+    "known_failures": 0,
     "stale_known_failures": []
   },
   "routes": [
@@ -87,8 +87,8 @@
   "pytest": {
     "step": "pytest tests/test_harness_evidence.py::test_apply_still_refuses_and_reports tests/test_security_and_quality.py::test_abort_resolves_pending_approvals_and_tombstones_replay tests/test_security_and_quality.py::test_sdlc_pass_requires_successful_verification_and_explicit_first_line_pass tests/test_workspace_snapshots.py::test_worktree_apply_refuses_clobbering_uncommitted_user_changes",
     "passed": true,
-    "detail": "4 passed, 1 warning in 2.02s",
-    "seconds": 2.4,
+    "detail": "4 passed, 1 warning in 1.99s",
+    "seconds": 2.3,
     "nodes": [
       "tests/test_harness_evidence.py::test_apply_still_refuses_and_reports",
       "tests/test_security_and_quality.py::test_abort_resolves_pending_approvals_and_tombstones_replay",
@@ -101,21 +101,21 @@
       "walk": "chat_composer_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 6.5,
+      "seconds": 2.5,
       "detail": "PASS no browser error or outbound request"
     },
     {
       "walk": "chat_context_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 11.2,
+      "seconds": 11.0,
       "detail": "19 of 19 checks passed"
     },
     {
       "walk": "chat_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 15.8,
+      "seconds": 15.6,
       "detail": "21 of 21 checks passed"
     },
     {
@@ -136,14 +136,14 @@
       "walk": "compare_provenance_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 29.0,
+      "seconds": 28.3,
       "detail": "12/12 checks passed"
     },
     {
       "walk": "council_deliberation_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 20.1,
+      "seconds": 19.3,
       "detail": "14/14 checks passed"
     },
     {
@@ -157,19 +157,15 @@
       "walk": "council_verdict_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 98.6,
+      "seconds": 98.5,
       "detail": "17/17 checks passed"
     },
     {
       "walk": "harness_evidence_walk.mjs",
-      "passed": false,
-      "known": {
-        "owner": "UIUX-P3-04",
-        "issue": "#169",
-        "reason": "the rejected half of the seed is written - the verifier returns `verification_test_failed_introduced` for `hns-592ef299` - but the trajectory draws no rejected card, so the failure code, the exit code and the failing test are not on screen (27/29)"
-      },
-      "seconds": 43.1,
-      "detail": "FAIL  a rejected completion is drawn as a rejection with the code that decided it \u2014 no card"
+      "passed": true,
+      "known": null,
+      "seconds": 43.4,
+      "detail": "29/29 checks passed"
     },
     {
       "walk": "harness_permissions_walk.mjs",
@@ -187,20 +183,16 @@
     },
     {
       "walk": "harness_timeline_walk.mjs",
-      "passed": false,
-      "known": {
-        "owner": "UIUX-P5-04",
-        "issue": "#170",
-        "reason": "after the log is pruned the strip counts the client's cache (`13 events held`) while the server serves 9, so a resync leaves the pane stating 13 and drawing 9 - the walk's \"restores every event without duplicating one\" cannot hold while the count and the drawing disagree (20/21)"
-      },
-      "seconds": 9.8,
-      "detail": "FAIL  a resync restores every event from the server without duplicating one \u2014 count=13 cards=9 seq 1-13 state=\"following the log from seq 13 \u00b7 13 events held \u00b7 "
+      "passed": true,
+      "known": null,
+      "seconds": 9.9,
+      "detail": "21/21 checks passed"
     },
     {
       "walk": "pipeline_artifacts_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 12.1,
+      "seconds": 12.3,
       "detail": "22/22 checks passed"
     },
     {
@@ -253,7 +245,7 @@
     },
     {
       "row": "Harness / Session creation",
-      "status": "known",
+      "status": "pass",
       "proofs": 3
     },
     {
@@ -273,7 +265,7 @@
     },
     {
       "row": "Harness / streamed tool events",
-      "status": "known",
+      "status": "pass",
       "proofs": 2
     },
     {
@@ -283,7 +275,7 @@
     },
     {
       "row": "Harness / diffs",
-      "status": "known",
+      "status": "pass",
       "proofs": 2
     },
     {
@@ -298,7 +290,7 @@
     },
     {
       "row": "Harness / compaction",
-      "status": "known",
+      "status": "pass",
       "proofs": 2
     },
     {

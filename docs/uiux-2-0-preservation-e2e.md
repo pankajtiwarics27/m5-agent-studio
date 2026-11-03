@@ -95,15 +95,10 @@ than succeed. That is what "existing endpoint and permission semantics" means in
 
 ## The last recorded run
 
-Recorded by `scripts/preservation_suite.py --save product/M5_2_0_UIUX_Preservation_Run.json` at `d073e7d` in 398.7s:
+Recorded by `scripts/preservation_suite.py --save product/M5_2_0_UIUX_Preservation_Run.json` at `10459c2` in 393.2s:
 
-* 17 of 21 rows proved, 2 known defects, 0 unexplained failures
-* python 3.11.2; chrome `/tmp/m5-runner/m5-browser/tmp/chromium`
-
-| Walk | Tracked as | What it shows |
-|---|---|---|
-| `harness_evidence_walk.mjs` | #169 (`UIUX-P3-04`) | the rejected half of the seed is written - the verifier returns `verification_test_failed_introduced` for `hns-592ef299` - but the trajectory draws no rejected card, so the failure code, the exit code and the failing test are not on screen (27/29) |
-| `harness_timeline_walk.mjs` | #170 (`UIUX-P5-04`) | after the log is pruned the strip counts the client's cache (`13 events held`) while the server serves 9, so a resync leaves the pane stating 13 and drawing 9 - the walk's "restores every event without duplicating one" cannot hold while the count and the drawing disagree (20/21) |
+* 21 of 21 rows proved, 0 known defects, 0 unexplained failures
+* python 3.11.2; chrome `/tmp/browser/tmp/chromium`
 
 A record is evidence of one run, not a badge: it names the commit and the machine it ran on, and it is replaced by the next run rather than edited.
 

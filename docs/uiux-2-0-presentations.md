@@ -63,8 +63,8 @@ should not quietly become a pane rewrite:
 | Handler | Line |
 |---|---|
 | `installSkill()` | 4564 |
-| `openHarnessDiffModal()` | 10990 |
-| `runMcpPlayground()` | 12670 |
+| `openHarnessDiffModal()` | 11026 |
+| `runMcpPlayground()` | 12706 |
 
 ## Checks and limits
 

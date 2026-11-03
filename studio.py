@@ -12902,6 +12902,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // costs more than drawing one.
   const HARNESS_RENDER_WINDOW = 300;
   const HARNESS_CACHE_LIMIT = 5000;
+  // Which session the drawn window belongs to. Seq numbers restart at 1 in every session's log, so
+  // a bare list of seqs describes two different screens equally well: without this, the window a
+  // reader leaves behind answers for the one they open (a rejected turn kept drawing the previous
+  // session's verified card, and the rejection never appeared at all).
+  let harnessRenderedSession = "";
   let harnessRenderedSeqs = [];
   let harnessRenderedPending = 0;
   let harnessRenderedDecisions = 0;
@@ -13349,6 +13354,34 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return seqs.map(seq => bySeq.get(seq));
   }
 
+  // Can the next render append to the window that is on screen, or must it draw again?
+  // The window is a claim about what the reader can see, and a claim about one session is not a
+  // claim about another: every session's log starts at seq 1, so two screens can share every seq
+  // number and hold different cards. Comparing seqs alone let a selection inherit the previous
+  // session's window - a rejected turn kept showing the verified card, and the rejection that the
+  // contract turned on was never drawn (Harness: #169).
+  function harnessStreamAppendWindow(rendered, shown) {
+    const drawn = Array.isArray(rendered && rendered.seqs) ? rendered.seqs : [];
+    if (!drawn.length) return null;
+    if (String((rendered && rendered.session) || "") !== String((shown && shown.session) || "")) return null;
+    if (Number(rendered && rendered.pending) !== Number(shown && shown.pending)) return null;
+    if (Number(rendered && rendered.decisions) !== Number(shown && shown.decisions)) return null;
+    const incoming = Array.isArray(shown && shown.seqs) ? shown.seqs : [];
+    if (incoming.length < drawn.length) return null;
+    // The card that was drawn last has to still be on screen: it anchors the run the reader has.
+    const tail = incoming.indexOf(drawn[drawn.length - 1]);
+    if (tail < 0) return null;
+    const dropped = drawn.filter(seq => seq < incoming[0]).length;
+    const shared = drawn.length - dropped;
+    // Where the cards that stayed begin in the new window: the last drawn card anchors them.
+    const kept = tail + 1 - shared;
+    if (shared < 0 || kept < 0) return null;
+    for (let i = 0; i < shared; i += 1) {
+      if (drawn[dropped + i] !== incoming[kept + i]) return null;
+    }
+    return { dropped, from: tail + 1 };
+  }
+
   // The run states the server actually reports, mapped to the shared vocabulary. This map used to
   // hold its own words in capitals, and it is where the drift started: FAILED and ERROR were two
   // words for one outcome, CANCELLED and stopped by you were two spellings of one, and READY was
@@ -13610,6 +13643,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     harnessEventOrder = [];
     harnessCachedSnapshot = null;
     harnessCursor = 0;
+    // A re-read of the log invalidates the window, not just the cache it was built from. The
+    // incremental path may only ever add cards to the end of what is drawn, and a re-read can
+    // bring back events that belong *before* it - the head a pruned log had lost, a gap the
+    // server filled. Kept, the window said "already on screen" for a log the pane had never
+    // shown: after a resync the strip said 13 events held and 9 cards were drawn (#170).
+    harnessRenderedSession = "";
+    harnessRenderedSeqs = [];
+    harnessRenderedPending = 0;
+    harnessRenderedDecisions = 0;
   }
 
   // Keep `harnessEventOrder` ascending without sorting it: events almost always arrive in seq order,
@@ -14317,23 +14359,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // drops its oldest card as it takes a new one - and that is a removal and an append, not a
   // rebuild of every card between them.
   function harnessStreamAppendPlan(shown, livePending, decisions) {
-    const rendered = harnessRenderedSeqs;
-    if (!rendered.length || shown.length < rendered.length) return null;
-    if (harnessRenderedPending !== livePending.size) return null;
-    if (harnessRenderedDecisions !== Object.keys(decisions).length) return null;
-    const shownSeqs = shown.map(ev => Number((ev && ev.seq) || 0));
-    // The card that was drawn last has to still be on screen: it anchors the run the reader has.
-    const tail = shownSeqs.indexOf(rendered[rendered.length - 1]);
-    if (tail < 0) return null;
-    const dropped = rendered.filter(seq => seq < shownSeqs[0]).length;
-    const shared = rendered.length - dropped;
-    if (shared < 0 || tail + 1 - shared < 0) return null;
-    for (let i = 0; i < shared; i += 1) {
-      if (rendered[dropped + i] !== shownSeqs[tail + 1 - shared + i]) return null;
-    }
-    const appended = shown.slice(tail + 1);
+    const plan = harnessStreamAppendWindow(
+      { session: harnessRenderedSession, seqs: harnessRenderedSeqs, pending: harnessRenderedPending, decisions: harnessRenderedDecisions },
+      { session: activeHarnessId, seqs: shown.map(ev => Number((ev && ev.seq) || 0)), pending: livePending.size, decisions: Object.keys(decisions).length },
+    );
+    if (!plan) return null;
+    const appended = shown.slice(plan.from);
     if (appended.some(ev => String((ev && ev.type) || "").startsWith("approval/"))) return null;
-    return { dropped, appended };
+    return { dropped: plan.dropped, appended };
   }
 
   // The pane says how much of the log is not on screen, in the same words whether the note is drawn
@@ -14371,6 +14404,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const stream = document.getElementById("harnessStream");
     const ordered = harnessMergeEvents([], events || []);
     if (!ordered.length) {
+      harnessRenderedSession = "";
       harnessRenderedSeqs = [];
       renderHarnessStarter();
       renderHarnessTimeline();
@@ -14413,6 +14447,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         : leaving.reduce((total, card) => total + card.getBoundingClientRect().height, 0);
       for (const card of leaving) card.remove();
       if (plan.appended.length) stream.insertAdjacentHTML("beforeend", plan.appended.map(cardHtml).join(""));
+      harnessRenderedSession = activeHarnessId;
       harnessRenderedSeqs = shown.map((ev) => Number(ev.seq) || 0);
       harnessRenderedPending = livePending.size;
       harnessRenderedDecisions = Object.keys(decisions).length;
@@ -14438,6 +14473,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (shown.length < ordered.length) htmlParts.push(harnessWindowNoteHtml(shown.length, ordered.length));
     for (const ev of shown) htmlParts.push(cardHtml(ev));
     stream.innerHTML = htmlParts.join("");
+    harnessRenderedSession = activeHarnessId;
     harnessRenderedSeqs = shown.map((ev) => Number(ev.seq) || 0);
     harnessRenderedPending = livePending.size;
     harnessRenderedDecisions = Object.keys(decisions).length;

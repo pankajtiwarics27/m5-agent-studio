@@ -134,6 +134,16 @@
       "detail": ""
     },
     {
+      "check": "the append is refused for a window drawn for another session",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a re-read of the log drops the drawn window, so nothing is appended over a log it never saw",
+      "ok": true,
+      "detail": ""
+    },
+    {
       "check": "the append is also refused for an approval event, which changes a card that already exists",
       "ok": true,
       "detail": ""
@@ -234,7 +244,7 @@
       "detail": ""
     }
   ],
-  "check_count": 38,
+  "check_count": 40,
   "findings": [],
   "status": "clean"
 }

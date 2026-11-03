@@ -522,47 +522,24 @@
   ],
   "last_run": {
     "recorded": true,
-    "commit": "d073e7d",
-    "seconds": 398.7,
+    "commit": "10459c2",
+    "seconds": 393.2,
     "totals": {
       "rows": 21,
-      "passed_rows": 17,
+      "passed_rows": 21,
       "failed_rows": 0,
       "not_run_rows": 0,
       "steps": 27,
       "failed_steps": 0,
-      "known_failures": 2,
+      "known_failures": 0,
       "stale_known_failures": []
     },
-    "known": [
-      {
-        "walk": "harness_evidence_walk.mjs",
-        "passed": false,
-        "known": {
-          "owner": "UIUX-P3-04",
-          "issue": "#169",
-          "reason": "the rejected half of the seed is written - the verifier returns `verification_test_failed_introduced` for `hns-592ef299` - but the trajectory draws no rejected card, so the failure code, the exit code and the failing test are not on screen (27/29)"
-        },
-        "seconds": 43.1,
-        "detail": "FAIL  a rejected completion is drawn as a rejection with the code that decided it \u2014 no card"
-      },
-      {
-        "walk": "harness_timeline_walk.mjs",
-        "passed": false,
-        "known": {
-          "owner": "UIUX-P5-04",
-          "issue": "#170",
-          "reason": "after the log is pruned the strip counts the client's cache (`13 events held`) while the server serves 9, so a resync leaves the pane stating 13 and drawing 9 - the walk's \"restores every event without duplicating one\" cannot hold while the count and the drawing disagree (20/21)"
-        },
-        "seconds": 9.8,
-        "detail": "FAIL  a resync restores every event from the server without duplicating one \u2014 count=13 cards=9 seq 1-13 state=\"following the log from seq 13 \u00b7 13 events held \u00b7 "
-      }
-    ],
+    "known": [],
     "failed": [],
     "environment": {
       "python": "3.11.2",
-      "chrome": "/tmp/m5-runner/m5-browser/tmp/chromium",
-      "tmpdir": "/tmp/m5-runner/m5-browser/tmp"
+      "chrome": "/tmp/browser/tmp/chromium",
+      "tmpdir": "/tmp/browser/tmp"
     }
   },
   "route_probes": [

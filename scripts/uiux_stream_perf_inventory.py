@@ -172,6 +172,9 @@ def build_inventory() -> dict:
     render_chat = function_body(html, "renderChatMessages")
     render_stream = function_body(html, "renderStoredHarnessEvents")
     append_plan = function_body(html, "harnessStreamAppendPlan")
+    # The decision itself lives in a pure helper so a test can ask it what it would do without a
+    # DOM; the checks below read the plan and that helper together, because they are one decision.
+    append_window = function_body(html, "harnessStreamAppendWindow")
     cached = function_body(html, "harnessCachedEvents")
     remember = function_body(html, "harnessRememberEvents")
     merge = function_body(html, "harnessMergeEvents")
@@ -299,9 +302,26 @@ def build_inventory() -> dict:
     # ── 4. a live event is one card in, one card out ────────────────────────
     check(
         "the append is refused when approval state moved, because those cards are already drawn",
-        "harnessRenderedPending !== livePending.size" in append_plan
-        and "harnessRenderedDecisions !== Object.keys(decisions).length" in append_plan,
+        "pending: harnessRenderedPending" in append_plan
+        and "decisions: harnessRenderedDecisions" in append_plan
+        and "Number(rendered && rendered.pending) !== Number(shown && shown.pending)" in append_window
+        and "Number(rendered && rendered.decisions) !== Number(shown && shown.decisions)" in append_window,
         "the append does not check the approval state",
+    )
+    # #169/#170: the plan is a claim about one session and one read of the log. A window that
+    # survived a session switch or a re-read answered "already drawn" for cards that were not.
+    check(
+        "the append is refused for a window drawn for another session",
+        "session: harnessRenderedSession" in append_plan
+        and "session: activeHarnessId" in append_plan
+        and 'String((rendered && rendered.session) || "") !== String((shown && shown.session) || "")' in append_window,
+        "a window could be inherited across a session switch",
+    )
+    check(
+        "a re-read of the log drops the drawn window, so nothing is appended over a log it never saw",
+        "harnessRenderedSession = \"\";" in function_body(html, "harnessResetEventCache")
+        and "harnessRenderedSeqs = [];" in function_body(html, "harnessResetEventCache"),
+        "the cache is reset but the window it was drawn from is kept",
     )
     check(
         "the append is also refused for an approval event, which changes a card that already exists",
@@ -310,8 +330,9 @@ def build_inventory() -> dict:
     )
     check(
         "the run on screen may slide forward: cards leaving are counted, cards arriving are added",
-        "const dropped = rendered.filter(seq => seq < shownSeqs[0]).length;" in append_plan
-        and "const appended = shown.slice(tail + 1);" in append_plan,
+        "const dropped = drawn.filter(seq => seq < incoming[0]).length;" in append_window
+        and "return { dropped, from: tail + 1 };" in append_window
+        and "const appended = shown.slice(plan.from);" in append_plan,
         "the plan only handles a window that has not moved",
     )
     check(

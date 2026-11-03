@@ -274,11 +274,11 @@
       "handler": "installSkill"
     },
     {
-      "line": 10990,
+      "line": 11026,
       "handler": "openHarnessDiffModal"
     },
     {
-      "line": 12670,
+      "line": 12706,
       "handler": "runMcpPlayground"
     }
   ],

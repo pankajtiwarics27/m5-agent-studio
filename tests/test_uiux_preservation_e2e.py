@@ -257,8 +257,15 @@ def test_a_walk_that_never_ran_is_not_a_pass() -> None:
 
 
 def test_every_known_failure_names_an_owner_an_issue_and_a_reason() -> None:
+    """An entry is checkable, and an empty map is the honest state after a fix.
+
+    The map carried two entries (#169, #170) until both walks passed. An exemption that outlives
+    its defect is the same lie as a pass that never ran, so emptiness is allowed - and when it is
+    empty the mechanism has to still be in the file, which `stale_known_failures` reads.
+    """
     suite = _load_suite()
-    assert suite.KNOWN_FAILURES, "the list is empty, so the suite should not carry it at all"
+    source = (PROJECT_ROOT / "scripts" / "preservation_suite.py").read_text(encoding="utf-8")
+    assert "KNOWN_FAILURES" in source, "the suite no longer carries the mechanism at all"
     for walk, known in suite.KNOWN_FAILURES.items():
         assert (PROJECT_ROOT / "scripts" / walk).is_file(), walk
         assert re.match(r"^#\d+$", known["issue"]), known

@@ -243,9 +243,9 @@ REVIEWS: dict[str, dict[str, object]] = {
     "harness-evidence": {
         "story": "UIUX-P3-04",
         "note": (
-            "The verification-and-artifacts surface. Its walk draws no verdict card for a rejected "
-            "completion (#169, a known failure in the preservation map), so these five captures are "
-            "evidence of the layout, not of that state."
+            "The verification-and-artifacts surface, re-taken from the fixed build: `rejected-card` "
+            "and `rejected-record` show the rejected completion (#169, closed) with the code that "
+            "decided it, the exit code and the failing test classified as introduced."
         ),
         "eye": [],
         "re_taken": False,
@@ -261,8 +261,9 @@ REVIEWS: dict[str, dict[str, object]] = {
     "harness-timeline": {
         "story": "UIUX-P3-02",
         "note": (
-            "The durable log and the cursor discipline. Its walk counts the cache after the log is "
-            "pruned (#170, a known failure), so the captures show the layout rather than the count."
+            "The durable log and the cursor discipline, re-taken from the fixed build: `pruned` shows "
+            "the strip saying 9 events held over the retained floor seq 5-13 (#170, closed), and "
+            "`replayed` the window a resync draws after the whole log is re-read."
         ),
         "eye": [],
         "re_taken": False,
