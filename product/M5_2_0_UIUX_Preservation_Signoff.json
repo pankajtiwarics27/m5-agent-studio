@@ -25,11 +25,11 @@
     "current_inputs_match_approval": null,
     "approved_inputs": null,
     "current_inputs": {
-      "ledger_content_sha256": "9da9c78af0c4618de5b92ae7c4b2b4bdd46938961f52a5c73502a2afb5056b0a",
-      "source_manifest_sha256": "f5e28e1360466c8d447ce9ed58466fcd6af408663176fb82dd436e88efd2722f",
+      "ledger_content_sha256": "94886a77365b320a370c583f4755649f652b2d492a4c8aba97f46769115d09fd",
+      "source_manifest_sha256": "7f5f2e430e3073c83f63acb2f4f0f93a19617801acda9743c9acdb5969fa4fe1",
       "control_inventory_sha256": "2a4360feb38dfb4cb6bffefe96723316bd2294ce9e5fa6de3f98f44378e54eac",
-      "route_map_sha256": "f5c2cf04eac00b855330db7aab7c0ca03b19e1f78ff5cc4adbb10517f98ab712",
-      "authorization_trace_sha256": "6622ace1671d85dbd0983528ba6dfed5ca01cac0857b1cd3f0eabcc9bd937bf4",
+      "route_map_sha256": "df26490ba0596793de4cf2f8e0f47e4f29121f69d99482014d4539711bb3f075",
+      "authorization_trace_sha256": "8d7a4a60a24d436a1cbae9c8b2292c38db883d8d1e3f1e6ad67405aecfe29d0a",
       "frontend_sha256": "84388445398bd2d980c5fdaf804b07bdd312be1fe0173fb65bf3507e0e41d7d9",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
       "screenshot_index_sha256": "5f69ab5e7bbd18713befa62912c8353a0c2100d009550fcd8034677e1d98f594",
@@ -39,11 +39,11 @@
     "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "5e20dc075680b89610fd7a4c37fec867bb78950381d0165656e28bb47fc0dc9c",
-    "source_manifest_sha256": "f5e28e1360466c8d447ce9ed58466fcd6af408663176fb82dd436e88efd2722f",
+    "ledger_sha256": "107fd926530bc7e80b7f339e8a21b8357b2436dcb145d02ed93773951ccce786",
+    "source_manifest_sha256": "7f5f2e430e3073c83f63acb2f4f0f93a19617801acda9743c9acdb5969fa4fe1",
     "control_inventory_sha256": "2a4360feb38dfb4cb6bffefe96723316bd2294ce9e5fa6de3f98f44378e54eac",
-    "route_map_sha256": "f5c2cf04eac00b855330db7aab7c0ca03b19e1f78ff5cc4adbb10517f98ab712",
-    "authorization_trace_sha256": "6622ace1671d85dbd0983528ba6dfed5ca01cac0857b1cd3f0eabcc9bd937bf4",
+    "route_map_sha256": "df26490ba0596793de4cf2f8e0f47e4f29121f69d99482014d4539711bb3f075",
+    "authorization_trace_sha256": "8d7a4a60a24d436a1cbae9c8b2292c38db883d8d1e3f1e6ad67405aecfe29d0a",
     "frontend_sha256": "84388445398bd2d980c5fdaf804b07bdd312be1fe0173fb65bf3507e0e41d7d9"
   },
   "approval_request": [

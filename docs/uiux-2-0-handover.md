@@ -48,6 +48,10 @@ python3 -m pytest -q tests/test_uiux_release_gate.py
 * That every pane was photographed in every theme and width: the coverage grid names the combinations nobody has looked at yet, and they are 0 findings only because they are holes rather than contradictions.
 * That the program's verdict is the gate's: this file lists evidence with exit codes, and the acceptance verdict belongs to the reviewer.
 
+## Fixed after the gate
+
+* UIUX-P4-01: the demo path's invented throughput figures no longer reach `perf_samples` - closed by `record_perf(..., demo=...)` returns before it writes, and all four call sites pass the flag from the usage line that carries it; `studio.py` is regenerated from `app.py`. Proof: `tests/test_perf_samples_honesty.py` - no sample for a demo reply, a measured reply still stored, the throughput summary never averaging a demo row, every call site passing the flag, and the bundle carrying the same refusal.
+
 ## Known regressions
 
 Recorded as they were found, each against the story that found it. None of them blocks the program; all of them are things a next session would want to know before it trusts a screen.

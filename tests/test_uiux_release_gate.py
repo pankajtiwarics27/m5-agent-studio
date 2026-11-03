@@ -13,6 +13,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -187,3 +188,31 @@ def test_the_gate_carries_no_clock_so_two_runs_agree(gate, payload) -> None:
     text = json.dumps(payload, sort_keys=True)
     for marker in ("generated_at", "timestamp", "checked_at", "2026-"):
         assert marker not in text, f"the gate embeds {marker!r}, so --check would fail on the next run"
+
+
+def test_the_gate_says_which_recorded_regressions_no_longer_stand(payload: dict) -> None:
+    """The 45 carried lines are history; the gate has to distinguish them from what is still true."""
+    resolved = payload["resolved_regressions"]
+    assert resolved, "the program closed at least one regression after the gate existed"
+    recorded = [row["regression"] for row in payload["known_regressions"]]
+    for row in resolved:
+        assert any(row["matches"] in text for text in recorded), row
+        assert row["what"] and row["closed_by"], row
+        proof = re.findall(r"`(tests/[\w./]+\.py)`", row["proof"])
+        assert proof, row
+        for path in proof:
+            assert (PROJECT_ROOT / path).is_file(), path
+
+
+def test_a_resolution_whose_recorded_wording_vanished_is_a_finding(gate, payload) -> None:
+    """The ledger's wording is the reference point: if it moves, the claim of closure must fail."""
+    moved = [dict(row, regression=row["regression"].replace("29.5 / 42.1", "some other figure")) for row in payload["known_regressions"]]
+    findings = gate.resolution_findings(moved)
+    assert any(finding["check"] == "resolution-reference" for finding in findings), findings
+    assert gate.resolution_findings(payload["known_regressions"]) == []
+
+
+def test_the_closed_regression_is_proved_by_a_test_that_exists(payload: dict) -> None:
+    proof = " ".join(row["proof"] for row in payload["resolved_regressions"])
+    assert "test_perf_samples_honesty.py" in proof
+    assert (PROJECT_ROOT / "tests" / "test_perf_samples_honesty.py").is_file()

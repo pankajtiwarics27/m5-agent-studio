@@ -2666,7 +2666,19 @@ def record_perf(
     ttft: float | None,
     completion_tokens: int = 0,
     cached_tokens: int = 0,
+    demo: bool = False,
 ) -> None:
+    """Store one runtime sample, unless no runtime ran.
+
+    The demo path emits a reply this app wrote and a usage line whose figures are constants beside
+    it (29.5 or 42.1 tok/s, 155 prefill, 0.32 s to first token). Those constants are labelled `demo`
+    on the wire so no surface draws them as measurements; this is the same refusal one layer down,
+    because `perf_samples` is what the throughput card averages and what a later runtime report would
+    read. A fabricated sample in that table is indistinguishable from a measured one, so it is not
+    written at all.
+    """
+    if demo:
+        return
     if not decode_tps and not completion_tokens:
         return
     try:
@@ -17739,6 +17751,7 @@ def _workflow_orchestrator(client: httpx.AsyncClient, workflow: str) -> Workflow
             usage.get("ttft"),
             usage.get("completion_tokens", 0),
             usage.get("cached_tokens", 0),
+            demo=bool(usage.get("demo")),
         )
 
     async def unload_model(model: str) -> None:
@@ -18123,7 +18136,7 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
                     yield _sse("token", {"kind": "reasoning", "text": item["text"]})
                 elif item["type"] == "usage":
                     usage_info = item
-                    record_perf("hall", model, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"])
+                    record_perf("hall", model, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"], demo=bool(item.get("demo")))
 
             if not "".join(buf).strip() and rbuf and is_local_omlx_model(model):
                 async for item in stream_any_model(client, model, messages, temperature=0.0, max_tokens=4096, reasoning_mode="off"):
@@ -18517,7 +18530,7 @@ async def api_chat_stream(request: Request) -> StreamingResponse:
                         yield _sse("token", {"kind": "reasoning", "text": item["text"]})
                     elif item["type"] == "usage":
                         usage_info = item
-                        record_perf("chat", model, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"])
+                        record_perf("chat", model, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"], demo=bool(item.get("demo")))
 
                 raw_step_text = "".join(step_content_buf)
                 cleaned_prose, tool_calls = extract_tool_calls(raw_step_text)
@@ -31358,7 +31371,7 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         yield _sse("step_content", {"step": step_idx, "text": item["text"]})
                     elif item["type"] == "usage":
                         usage_pkt = item
-                        record_perf("harness", active_target, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"])
+                        record_perf("harness", active_target, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"], demo=bool(item.get("demo")))
 
                 post_stream_boundary = sm.check_safe_boundary(
                     session_id,

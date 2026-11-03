@@ -83,7 +83,7 @@ Each story in the program carries the same five criteria. The gate does not deci
 | refusal states | 12 across 9 statuses |
 | committed captures | 240 in 27 sets, 27 reviewed |
 | reader pages verified | 5 (40 commands, 7 claims) |
-| files this program changed | 401 |
+| files this program changed | 403 |
 
 ## Known regressions the program recorded
 
@@ -134,6 +134,14 @@ Each story in the program carries the same five criteria. The gate does not deci
 | UIUX-P6-03 | 22 capture sets carry no `index.json`: their captures cannot be shown to be the bytes their walk produced, only that they exist and that their theme is what their name claims. |
 | UIUX-P6-03 | The published set has no narrow variant. Narrow coverage comes from `polish`, `responsive`, `uiux-p5-05` and `screenshots/p4-01-narrow-dark` (420x1200), which the review counts under their own sets. |
 | UIUX-P6-03 | Pre-existing and not this story's: the Python 3.12 CI job failed once on `tests/test_trusted_transformations.py::test_http_endpoints_and_standalone_studio_bundle_parity` (`assert eval_json["ab_gate_passed"] is True`). That gate compares `benefit_justifies_cost`, which includes `overhead_med <= TT_MAX_OVERHEAD_MS_CEILING` measured in wall-clock milliseconds, so a busy runner can fail it; the same test passed in the 3.11 and 3.13 jobs and eight local runs, and this story touches no transformation code. The job was re-run by pushing the ledger edit - not by relaxing the test. |
+
+## Closed after the gate
+
+The ledger's story entries are history and are left as they were written. These are the carried lines that no longer stand, and where the proof lives; the lines themselves stay in the table above so a reader can see what was recorded and when it stopped being true.
+
+| Story | No longer true | Closed by | Proof |
+|---|---|---|---|
+| UIUX-P4-01 | the demo path's invented throughput figures no longer reach `perf_samples` | `record_perf(..., demo=...)` returns before it writes, and all four call sites pass the flag from the usage line that carries it; `studio.py` is regenerated from `app.py` | `tests/test_perf_samples_honesty.py` - no sample for a demo reply, a measured reply still stored, the throughput summary never averaging a demo row, every call site passing the flag, and the bundle carrying the same refusal |
 
 ## What this gate does not run
 
