@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "ce5da2c11a9cb25a844e4a40deb290da8cd9d23249646eaf787576f70c155bc7",
-      "bytes": 741280,
-      "lines": 12873
+      "sha256": "84388445398bd2d980c5fdaf804b07bdd312be1fe0173fb65bf3507e0e41d7d9",
+      "bytes": 758476,
+      "lines": 13225
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "d0fdfc50ad4d855a3f43862595ed9486fa984ee5531c37acd7555b2967d21a37",
-      "bytes": 3480685,
-      "lines": 75923
+      "sha256": "c9ebe322168d66c01e1e53cd218fd82b0f42ca961d792b5711da304643d8e167",
+      "bytes": 3497881,
+      "lines": 76275
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -306,8 +306,8 @@
     {
       "path": "tests/test_presentations.py",
       "role": "shared Chat, Start and overlay presentation contract tests",
-      "sha256": "09cf0a2c4b0a464944db0df65c451ba26cb54ab1d44837c23ded65d2b3bf2889",
-      "bytes": 11650,
+      "sha256": "e2a61b25000bf8fe9985747017690a778f2d4e29057aae71705e2fc0afc44293",
+      "bytes": 11686,
       "lines": 302
     },
     {
@@ -320,9 +320,9 @@
     {
       "path": "tests/test_uiux_chat_composer.py",
       "role": "checks supplemental Chat hierarchy, API and recovery contracts",
-      "sha256": "9c0ef3142a77b95ab979e7feab15d2fe02cbbd85bd883383d696678da956aa3a",
-      "bytes": 5453,
-      "lines": 137
+      "sha256": "c55bb2d93d89666a494f0d23f638318b42e160c2d67073c93fac695a04ebe24c",
+      "bytes": 5553,
+      "lines": 138
     },
     {
       "path": "tests/test_screenshot_capture_browser.py",
@@ -376,9 +376,9 @@
     {
       "path": "scripts/uiux_preservation_e2e.py",
       "role": "maps each preservation-matrix row to the walk, test, route and control that proves it",
-      "sha256": "1e81390efb72ff586ceff85563c731d748f35ae8f96b77b3c02b8072b2086e12",
-      "bytes": 38546,
-      "lines": 823
+      "sha256": "43cf73e806015be03a0a6b0258e50c6a445964f0b5891cdef4c154cf95098e03",
+      "bytes": 38719,
+      "lines": 824
     },
     {
       "path": "tests/test_uiux_preservation_e2e.py",
@@ -386,12 +386,40 @@
       "sha256": "6889bbd998d7308e68fa0ca86e7ff48dcefe72cfbcc829f395bc84d7fd2f0b99",
       "bytes": 13358,
       "lines": 315
+    },
+    {
+      "path": "scripts/uiux_adversarial_inventory.py",
+      "role": "maps every refusal a write can meet to the words the pane uses and the proof that both halves hold",
+      "sha256": "44e2f8c88dd9b1b28e20b831f9fe482724598334095fb932119161495941b6d7",
+      "bytes": 33403,
+      "lines": 621
+    },
+    {
+      "path": "scripts/adversarial_walk.mjs",
+      "role": "attacks the running app and checks that each refusal is drawn as a refusal",
+      "sha256": "d16acc4970e39f1fc3a1292b5c677800f5a7c8f8df33ff1a8624e78bdd647a07",
+      "bytes": 33155,
+      "lines": 692
+    },
+    {
+      "path": "tests/test_uiux_adversarial.py",
+      "role": "checks the server's refusal contract, the shell's refusal rules and the inventory's own failure modes",
+      "sha256": "3f643eef0d2b7422e6744f49b7af59116951b61ec4588b1e266a77b732c217c0",
+      "bytes": 15514,
+      "lines": 336
+    },
+    {
+      "path": "tests/test_uiux_adversarial_browser.py",
+      "role": "runs the adversarial walk against a throwaway app in CI's browser job",
+      "sha256": "f800af1f12280d656b7dec48f2bf158de540b80239acf2308160d0686f69067a",
+      "bytes": 4254,
+      "lines": 111
     }
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "ce5da2c11a9cb25a844e4a40deb290da8cd9d23249646eaf787576f70c155bc7",
-    "lines": 12873,
+    "sha256": "84388445398bd2d980c5fdaf804b07bdd312be1fe0173fb65bf3507e0e41d7d9",
+    "lines": 13225,
     "tab_count": 6,
     "tabs": [
       {

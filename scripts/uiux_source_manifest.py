@@ -102,6 +102,10 @@ TRACKED_FILES: tuple[tuple[str, str], ...] = (
     ("scripts/preservation_suite.py", "runs every prover in the preservation matrix against its own throwaway app and records the result"),
     ("scripts/uiux_preservation_e2e.py", "maps each preservation-matrix row to the walk, test, route and control that proves it"),
     ("tests/test_uiux_preservation_e2e.py", "checks the matrix mapper and the run record: a known failure is never green and an untaken step is never a pass"),
+    ("scripts/uiux_adversarial_inventory.py", "maps every refusal a write can meet to the words the pane uses and the proof that both halves hold"),
+    ("scripts/adversarial_walk.mjs", "attacks the running app and checks that each refusal is drawn as a refusal"),
+    ("tests/test_uiux_adversarial.py", "checks the server's refusal contract, the shell's refusal rules and the inventory's own failure modes"),
+    ("tests/test_uiux_adversarial_browser.py", "runs the adversarial walk against a throwaway app in CI's browser job"),
 )
 
 BUTTON_RE = re.compile(

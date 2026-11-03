@@ -52,7 +52,7 @@
         "Re-check",
         "Providers"
       ],
-      "line": 3418
+      "line": 3423
     },
     {
       "container": "startRecentState",
@@ -65,7 +65,7 @@
         "Start a session",
         "Open Harness"
       ],
-      "line": 3477
+      "line": 3482
     },
     {
       "container": "startRecentState",
@@ -78,7 +78,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 3552
+      "line": 3557
     },
     {
       "container": "startHealthState",
@@ -91,7 +91,7 @@
         "Re-check",
         "Monitor rail"
       ],
-      "line": 3650
+      "line": 3655
     },
     {
       "container": "startWorkspaceState",
@@ -104,7 +104,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 3734
+      "line": 3739
     },
     {
       "container": "hallStream",
@@ -118,7 +118,7 @@
         "Ask one model",
         "Configure providers"
       ],
-      "line": 4055
+      "line": 4217
     },
     {
       "container": "debateSynthesisArea",
@@ -130,20 +130,20 @@
       "actions": [
         "Start Compare"
       ],
-      "line": 4069
+      "line": 4231
     },
     {
       "container": "chatState",
       "pane": "Chat",
       "kind": "error",
-      "title": "The reply stopped",
+      "title": "Send the same message again",
       "has_cause": true,
       "has_context": true,
       "actions": [
         "Retry",
         "Dismiss"
       ],
-      "line": 4079
+      "line": 4250
     },
     {
       "container": "harnessStreamState",
@@ -156,7 +156,7 @@
         "Reconnect now",
         "Reload from snapshot"
       ],
-      "line": 4093
+      "line": 4273
     },
     {
       "container": "hallSummonState",
@@ -170,7 +170,7 @@
         "Check readiness",
         "Ask one model"
       ],
-      "line": 5380
+      "line": 5615
     },
     {
       "container": "chatState",
@@ -183,7 +183,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 8676
+      "line": 8942
     },
     {
       "container": "chatState",
@@ -196,7 +196,7 @@
         "Back to Chat",
         "Open Harness"
       ],
-      "line": 8702
+      "line": 8968
     },
     {
       "container": "chatState",
@@ -209,7 +209,7 @@
         "Undo",
         "Dismiss"
       ],
-      "line": 8874
+      "line": 9140
     }
   ],
   "containers": [
@@ -270,15 +270,15 @@
   ],
   "remaining_raw_writers": [
     {
-      "line": 4371,
+      "line": 4564,
       "handler": "installSkill"
     },
     {
-      "line": 10704,
+      "line": 10990,
       "handler": "openHarnessDiffModal"
     },
     {
-      "line": 12347,
+      "line": 12670,
       "handler": "runMcpPlayground"
     }
   ],

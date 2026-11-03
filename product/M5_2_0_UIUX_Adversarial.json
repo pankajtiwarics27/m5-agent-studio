@@ -1,0 +1,504 @@
+{
+  "schema_version": "1.0.0",
+  "document_type": "m5_uiux_adversarial_refusals",
+  "program": "M5 2.0 UI/UX transformation",
+  "story": "UIUX-P6-02",
+  "generated_by": "scripts/uiux_adversarial_inventory.py",
+  "regenerate_with": "python3 scripts/uiux_adversarial_inventory.py",
+  "check_with": "python3 scripts/uiux_adversarial_inventory.py --check",
+  "statement": "Every refusal the server can answer a write with, the server's own detail for it, what the pane promises to keep, and the walk check or pytest node that proves both halves. A write that does not read the status is a finding, and so is a refusal whose reason the UI invented.",
+  "totals": {
+    "refusals": 12,
+    "statuses": 9,
+    "real": 5,
+    "injected": 4,
+    "server_only": 3,
+    "mutating_writes": 35,
+    "guarded_writes": 21,
+    "reporting_writes": 14,
+    "presentation_hosts": 4
+  },
+  "refusals": [
+    {
+      "status": 400,
+      "when": "the Host header is not in STUDIO_ALLOWED_HOSTS",
+      "detail": "Host is not permitted; configure STUDIO_ALLOWED_HOSTS explicitly.",
+      "source": "app.py security_boundary (host allowlist)",
+      "reachable": "server-only: a browser that reached the page passed this check already",
+      "panes": [
+        "shell"
+      ],
+      "kept": "nothing was read or written; the page is not this host",
+      "contract": "not drawn in a pane - the request never reached a handler, and the browser that could see it is not on an allowed host",
+      "proof": {
+        "kind": "pytest",
+        "node": "tests/test_remote_protections.py::test_disallowed_host_header_is_rejected_even_without_auth"
+      },
+      "proof_summary": "tests/test_remote_protections.py::test_disallowed_host_header_is_rejected_even_without_auth"
+    },
+    {
+      "status": 401,
+      "when": "the bearer token is missing or wrong",
+      "detail": "Authentication required. Send `Authorization: Bearer <STUDIO_API_TOKEN>`.",
+      "source": "app.py security_boundary (bearer check)",
+      "reachable": "real: the walk swaps the browser's token for a wrong one",
+      "panes": [
+        "Harness",
+        "Council",
+        "Chat",
+        "Pipeline",
+        "Compare",
+        "Start"
+      ],
+      "kept": "the pane keeps its state and the reader's text; nothing was sent",
+      "contract": "error presentation naming 401, the boundary's detail as the cause, a Kept: line, and a 'Re-enter the token' action that keeps the pane",
+      "proof": {
+        "kind": "walk",
+        "check": "a wrong token is reported as 401 with the boundary's own detail and a way to re-enter it"
+      },
+      "proof_summary": "scripts/adversarial_walk.mjs"
+    },
+    {
+      "status": 401,
+      "when": "a stream is refused before it opens (/api/chat/stream and the other SSE routes)",
+      "detail": "Authentication required. Send `Authorization: Bearer <STUDIO_API_TOKEN>`.",
+      "source": "app.py security_boundary, read by consumeSSE()",
+      "reachable": "real: the walk sends from a browser whose token is wrong",
+      "panes": [
+        "Chat",
+        "Pipeline",
+        "Compare",
+        "Council"
+      ],
+      "kept": "the message, the transcript and the partial reply are kept",
+      "contract": "the pane states the server's reason instead of `HTTP 401`",
+      "proof": {
+        "kind": "walk",
+        "check": "a refused chat stream shows the server's reason, not \"HTTP 401\""
+      },
+      "proof_summary": "scripts/adversarial_walk.mjs"
+    },
+    {
+      "status": 403,
+      "when": "a state-changing request carries a cross-origin Origin header",
+      "detail": "Cross-origin state-changing request rejected.",
+      "source": "app.py security_boundary (origin check)",
+      "reachable": "injected: a page cannot forge Origin, so the walk replaces the response at the network layer with this text",
+      "panes": [
+        "Council",
+        "Harness"
+      ],
+      "kept": "the spawn dialog stays open with the request text; the round is not created",
+      "contract": "error presentation naming 403 with the server's detail, and the reader's text still in the control",
+      "proof": {
+        "kind": "walk",
+        "check": "an injected cross-origin 403 on the Council spawn keeps the modal open with the reader's text"
+      },
+      "proof_summary": "scripts/adversarial_walk.mjs"
+    },
+    {
+      "status": 403,
+      "when": "a worktree apply is asked of a session whose policy is read-only 'plan'",
+      "detail": "Cannot apply worktree changes while session policy is read-only 'plan'.",
+      "source": "app.py _apply_worktree_to_main (PermissionError) -> 403",
+      "reachable": "real: the walk creates a plan-policy session and presses Apply",
+      "panes": [
+        "Harness"
+      ],
+      "kept": "the session, its worktree and the main workspace are unchanged; the diff stays open",
+      "contract": "the refusal is drawn inside the diff dialog where the button is, and nothing claims the apply happened",
+      "proof": {
+        "kind": "walk",
+        "check": "a read-only session's refused apply is drawn with the server's own reason, not as \"Applied!\""
+      },
+      "proof_summary": "scripts/adversarial_walk.mjs"
+    },
+    {
+      "status": 403,
+      "when": "an approval decision carries a session id that did not raise the request",
+      "detail": "Approval is scoped to its originating session; session_id must match.",
+      "source": "app.py api_approve_harness_tool",
+      "reachable": "server-only: the pane sends its own session id, so a browser cannot make this without forging the body",
+      "panes": [
+        "Harness"
+      ],
+      "kept": "the pending approval is still pending and no decision was recorded",
+      "contract": "not drawn: the pane cannot produce the condition, and the approval card's preflight rejects a stale slot before it posts",
+      "proof": {
+        "kind": "pytest",
+        "node": "tests/test_security_and_quality.py::test_approve_endpoint_rejects_cross_session_submission"
+      },
+      "proof_summary": "tests/test_security_and_quality.py::test_approve_endpoint_rejects_cross_session_submission"
+    },
+    {
+      "status": 404,
+      "when": "the session or artifact the write names is no longer on the server",
+      "detail": null,
+      "detail_pattern": "Harness session '\\{session_id\\}' not found\\.",
+      "source": "app.py get_harness_session_db -> KeyError -> 404 in apply, compact, patch, delete",
+      "reachable": "real: the walk deletes a session underneath the open pane and presses Compact",
+      "panes": [
+        "Harness",
+        "Council",
+        "Pipeline",
+        "Compare",
+        "Start"
+      ],
+      "kept": "the pane keeps what it had; the server's message names what is gone",
+      "contract": "recovery presentation naming 404, the server's message as the cause, and a Reload from the server action",
+      "proof": {
+        "kind": "walk",
+        "check": "a compact on a session the server no longer has says 404 and keeps the reader's place"
+      },
+      "proof_summary": "scripts/adversarial_walk.mjs"
+    },
+    {
+      "status": 409,
+      "when": "an approval id is decided twice, or a worktree apply conflicts",
+      "detail": "Approval already resolved; re-submission (replay) rejected.",
+      "source": "app.py api_approve_harness_tool (replay) and _apply_worktree_to_main (conflict)",
+      "reachable": "server-only for the approval (the card disables itself); the apply conflict is a state the walk does not manufacture",
+      "panes": [
+        "Harness"
+      ],
+      "kept": "the first decision stands; the second changed nothing",
+      "contract": "recovery presentation naming 409 with the server's detail and a Reload from the server action",
+      "proof": {
+        "kind": "pytest",
+        "node": "tests/test_security_and_quality.py::test_approve_endpoint_rejects_replay_of_resolved_id"
+      },
+      "proof_summary": "tests/test_security_and_quality.py::test_approve_endpoint_rejects_replay_of_resolved_id"
+    },
+    {
+      "status": 413,
+      "when": "the request body is over STUDIO_MAX_REQUEST_BYTES",
+      "detail": "Request body exceeds the configured size limit.",
+      "source": "app.py security_boundary (size check)",
+      "reachable": "injected: the walk replaces the response with this text rather than sending megabytes",
+      "panes": [
+        "Harness",
+        "Council",
+        "Start",
+        "Chat"
+      ],
+      "kept": "the pane and the session are unchanged; the request was not partially applied",
+      "contract": "recovery presentation naming 413 and the server's detail, and no success toast",
+      "proof": {
+        "kind": "walk",
+        "check": "an injected 413 on compaction is drawn as over the size limit, not as \"Compaction checked\""
+      },
+      "proof_summary": "scripts/adversarial_walk.mjs"
+    },
+    {
+      "status": 429,
+      "when": "the per-minute window for an expensive route is full",
+      "detail": "Rate limit exceeded for expensive workflow requests.",
+      "source": "app.py security_boundary (rate window) with a Retry-After header",
+      "reachable": "real: the walk fills the window with cheap 400s and then sends",
+      "panes": [
+        "Chat",
+        "Council",
+        "Compare",
+        "Pipeline",
+        "Harness"
+      ],
+      "kept": "the message and the transcript are kept; nothing was sent",
+      "contract": "the pane states the server's Retry-After as a countdown, and the Retry control is disabled while the window is closed",
+      "proof": {
+        "kind": "walk",
+        "check": "a full rate window is reported with the server's Retry-After as a countdown"
+      },
+      "proof_summary": "scripts/adversarial_walk.mjs"
+    },
+    {
+      "status": 503,
+      "when": "no token is configured, so the boundary cannot authenticate anything",
+      "detail": "Authentication is unavailable; configure a token and restart Studio.",
+      "source": "app.py security_boundary (token present?)",
+      "reachable": "injected: the demo always configures a token, so the walk replaces the response with this text",
+      "panes": [
+        "Harness"
+      ],
+      "kept": "nothing was written; the server needs an operator, not a retry",
+      "contract": "a presentation naming 503 with the server's detail; no retry that would fail the same way",
+      "proof": {
+        "kind": "walk",
+        "check": "an injected 503 is drawn as an error with the server's own detail"
+      },
+      "proof_summary": "scripts/adversarial_walk.mjs"
+    },
+    {
+      "status": 507,
+      "when": "a snapshot or apply cannot write because the disk is full",
+      "detail": null,
+      "detail_pattern": "SnapshotDiskFullError",
+      "source": "app.py apply/create handlers -> 507",
+      "reachable": "injected: the walk replaces the response with a disk-full detail",
+      "panes": [
+        "Harness",
+        "Start"
+      ],
+      "kept": "the workspace and the session are unchanged; the diff stays open",
+      "contract": "recovery presentation naming 507 with the server's detail and a Reload action",
+      "proof": {
+        "kind": "walk",
+        "check": "an injected 507 says the server has no room to write and is drawn as a recovery"
+      },
+      "proof_summary": "scripts/adversarial_walk.mjs"
+    }
+  ],
+  "writes": [
+    {
+      "function": "fetchRemoteModels",
+      "line": 4412,
+      "call": "fetch(\"/api/providers/fetch-models\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ alias: docume",
+      "kind": "reports",
+      "note": "toasts the server's detail and keeps the typed endpoint"
+    },
+    {
+      "function": "saveProvider",
+      "line": 4436,
+      "call": "fetch(\"/api/providers\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ alias: document.getElement",
+      "kind": "reports",
+      "note": "toasts the server's detail and leaves the form filled"
+    },
+    {
+      "function": "removeProvider",
+      "line": 4461,
+      "call": "fetch(`/api/providers/${encodeURIComponent(alias)}`, { method: \"DELETE\" })",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "saveCombo",
+      "line": 4471,
+      "call": "fetch(\"/api/combos\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ alias: document.getElementByI",
+      "kind": "reports",
+      "note": "toasts the server's detail and leaves the form filled"
+    },
+    {
+      "function": "removeCombo",
+      "line": 4488,
+      "call": "fetch(`/api/combos/${encodeURIComponent(alias)}`, { method: \"DELETE\" })",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "installSkill",
+      "line": 4556,
+      "call": "fetch(\"/api/skills/install\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ command: cmd }) })",
+      "kind": "reports",
+      "note": "throws the server's detail into the skill panel's error line"
+    },
+    {
+      "function": "confirmSpawnSession",
+      "line": 4600,
+      "call": "fetch(\"/api/hall/sessions\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ request: req, context_",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "postHumanHallMessage",
+      "line": 5008,
+      "call": "fetch(\"/api/hall/sessions\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ request: txt, context_",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "postHumanHallMessage",
+      "line": 5022,
+      "call": "fetch(`/api/hall/sessions/${encodeURIComponent(activeHallId)}/message`, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, b",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "councilSeatAction",
+      "line": 5425,
+      "call": "fetch(`/api/models/${encodeURIComponent(model)}/load`, { method: \"POST\" })",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "modelAction",
+      "line": 6244,
+      "call": "fetch(`/api/models/${encodeURIComponent(id)}/${act}`, { method: \"POST\" })",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "unloadAllModels",
+      "line": 6252,
+      "call": "fetch(\"/api/models/unload-all\", { method: \"POST\" })",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "clearSsdCache",
+      "line": 6260,
+      "call": "fetch(\"/api/cache/clear-ssd\", { method: \"POST\" })",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "consumeSSE",
+      "line": 6272,
+      "call": "fetch(url, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify(payload), signal: controller.signal })",
+      "kind": "reports",
+      "note": "reads the refusal's own detail and Retry-After before it opens the stream, so the pane shows the server's reason and the wait instead of `HTTP <status>`"
+    },
+    {
+      "function": "saveWorkspaceDirectory",
+      "line": 9393,
+      "call": "fetch(\"/api/workspace/directory\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ workspace_dir: t",
+      "kind": "reports",
+      "note": "returns {ok, message} so Start can present a failure with a cause"
+    },
+    {
+      "function": "patchActiveHarnessSettings",
+      "line": 9515,
+      "call": "fetch(`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}`, { method: \"PATCH\", headers: { \"Content-Type\": \"application/json\" }, bo",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "deleteHarnessSession",
+      "line": 9538,
+      "call": "fetch(`/api/harness/sessions/${encodeURIComponent(id)}`, { method: \"DELETE\" })",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "revokeHarnessGrant",
+      "line": 10542,
+      "call": "fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/grants/revoke`, { method: \"POST\", headers: { \"Content-Type\": \"application/json",
+      "kind": "reports",
+      "note": "renders the refusal in the grants panel and keeps the grant listed"
+    },
+    {
+      "function": "resolveHarnessApproval",
+      "line": 10917,
+      "call": "fetch(\"/api/harness/approve\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body, })",
+      "kind": "reports",
+      "note": "re-checks the live slot, then resyncs the session on a refusal and prints the server's detail"
+    },
+    {
+      "function": "abortHarnessRun",
+      "line": 10953,
+      "call": "fetch(`/api/harness/abort/${encodeURIComponent(sessionId)}`, { method: \"POST\" })",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "applyHarnessWorktree",
+      "line": 11005,
+      "call": "fetch(`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/apply`, { method: \"POST\" })",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "harnessRecoveryPost",
+      "line": 12005,
+      "call": "fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/${path}`, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, b",
+      "kind": "reports",
+      "note": "returns {ok, status, data} to its caller and never claims a resume it did not get"
+    },
+    {
+      "function": "saveMcpServer",
+      "line": 12544,
+      "call": "fetch(\"/api/mcp/servers\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify(payload), })",
+      "kind": "reports",
+      "note": "toasts the server's detail and keeps the form"
+    },
+    {
+      "function": "importMcpJson",
+      "line": 12568,
+      "call": "fetch(\"/api/mcp/import-json\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ json_text: raw, auto",
+      "kind": "reports",
+      "note": "toasts the server's detail and keeps the pasted JSON"
+    },
+    {
+      "function": "syncMcpServer",
+      "line": 12582,
+      "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}/sync`, { method: \"POST\" })",
+      "kind": "reports",
+      "note": "toasts the server's detail and re-reads the server list"
+    },
+    {
+      "function": "toggleMcpServerEnabled",
+      "line": 12598,
+      "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, { method: \"PATCH\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.string",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "changeMcpApprovalPolicy",
+      "line": 12613,
+      "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, { method: \"PATCH\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.string",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "toggleMcpSingleTool",
+      "line": 12631,
+      "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, { method: \"PATCH\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.string",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "deleteMcpServer",
+      "line": 12646,
+      "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, { method: \"DELETE\" })",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "runMcpPlayground",
+      "line": 12662,
+      "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}/call`, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.st",
+      "kind": "reports",
+      "note": "prints the server's detail in the output box"
+    },
+    {
+      "function": "compactActiveHarness",
+      "line": 12681,
+      "call": "fetch(`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/compact`, { method: \"POST\" })",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "saveOpenContextDoc",
+      "line": 12896,
+      "call": "fetch(\"/api/opencontext/docs\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify(payload), })",
+      "kind": "reports",
+      "note": "toasts the server's detail and keeps the editor contents"
+    },
+    {
+      "function": "togglePinOpenContextDoc",
+      "line": 12910,
+      "call": "fetch(`/api/opencontext/docs/${encodeURIComponent(id)}`, { method: \"PATCH\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stri",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "deleteOpenContextDoc",
+      "line": 12923,
+      "call": "fetch(`/api/opencontext/docs/${encodeURIComponent(id)}`, { method: \"DELETE\" })",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    },
+    {
+      "function": "runCodeGraphPlayground",
+      "line": 12974,
+      "call": "fetch(\"/api/codegraph/query\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ workspace_dir: ws, m",
+      "kind": "guarded",
+      "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
+    }
+  ],
+  "presentation_hosts": [
+    "chatState",
+    "hallStream",
+    "harnessApplyRefusal",
+    "harnessRefusalState"
+  ],
+  "findings": []
+}
