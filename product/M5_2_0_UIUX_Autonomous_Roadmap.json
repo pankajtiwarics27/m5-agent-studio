@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 35,
+  "revision": 36,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -106,11 +106,11 @@
     ],
     "last_completed_story": "UIUX-P6-01",
     "next_recommended_story": "UIUX-P6-02",
-    "last_checkpoint": "2026-11-03T14:40:00Z",
-    "last_session_id": "arena/fa380e39-m5-agent-studio",
+    "last_checkpoint": "2026-11-03T15:10:00Z",
+    "last_session_id": "arena/feacf753-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "ad826f3eee35edde67e13bfe439fe303b7f8affc",
+    "last_verified_commit": "fa4c1522c8b10ce069913f3e2ae560ea43d0f665",
     "last_updated": "2026-11-03",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -340,18 +340,18 @@
       ],
       "total": 5,
       "done": 1,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 4,
+      "not_started": 3,
       "percent_complete": 20
     }
   ],
   "overall_progress": {
     "total_stories": 40,
     "done": 36,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 4,
+    "not_started": 3,
     "percent_complete": 90
   },
   "stories": [
@@ -6978,13 +6978,13 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P6-02 (Adversarial permission and recovery UI tests). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
+        "status": "in_progress",
+        "progress_percent": 35,
+        "attempts": 1,
+        "started_at": "2026-11-03T15:10:00Z",
+        "updated_at": "2026-11-03T15:10:00Z",
         "completed_at": null,
-        "owner_session": null,
+        "owner_session": "arena/feacf753-m5-agent-studio",
         "commit_sha": null,
         "changed_files": [],
         "evidence": [],
@@ -6994,7 +6994,7 @@
         "decisions": [],
         "blockers": [],
         "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
+        "next_action": "Guard every write with the status before the body, and prove each refusal with an attack the browser cannot talk its way out of",
         "readme_updated": false
       },
       "required_evidence": [
