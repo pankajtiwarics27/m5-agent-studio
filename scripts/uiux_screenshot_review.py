@@ -349,6 +349,36 @@ REVIEWS: dict[str, dict[str, object]] = {
         "re_taken": False,
         "theme": "dark and light",
     },
+    "uiv2-v2": {
+        "story": "UIV2-01 (baseline) and UIV2-03 (reference fixtures)",
+        "note": (
+            "Two V2-program sets. `baseline/` is the running app at pinned HEAD 9a584a3, captured "
+            "from a disposable git-archive copy via demo_tour.py --serve with scripts/capture_screenshots.mjs "
+            "(six tabs x 1640x900/1440x900/1280x800/390x844 in light and dark) plus the MCP hub overlay "
+            "opened through the real header select. Opened and read: the 1440x900-light start, harness, "
+            "hall and compare panes (checklist-heavy Start, dense Harness composer, four council role "
+            "cards, criteria-table Compare, persistent right telemetry rail in all of them), the "
+            "390x844-light chat pane (mobile single column, three-option persona picker), and the "
+            "1440x900-light MCP overlay (one 860px dialog holding presets, form, servers and test call). "
+            "`reference/` is the encoded approved three-region reference rendered by "
+            "scripts/uiux_v2_reference_capture.mjs from wireframe.html; opened: harness at 1440x900-light "
+            "(four regions with annotated widths, telemetry as header popover) and harness at 390x844-light "
+            "(single column, annotations hidden). The baseline set is current-state evidence; the "
+            "reference set is the proposed target and is gated on explicit user approval in the V2 ledger."
+        ),
+        "eye": [
+            "baseline/1440x900-light/start.png",
+            "baseline/1440x900-light/harness.png",
+            "baseline/1440x900-light/hall.png",
+            "baseline/1440x900-light/compare.png",
+            "baseline/390x844-light/chat.png",
+            "baseline/overlay/1440x900-light/mcp-hub.png",
+            "reference/1440x900-light/harness.png",
+            "reference/390x844-light/harness.png",
+        ],
+        "re_taken": True,
+        "theme": "light and dark, desktop 1280-1640 and narrow 390",
+    },
 }
 
 

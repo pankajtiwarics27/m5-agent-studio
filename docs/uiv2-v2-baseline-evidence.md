@@ -89,7 +89,7 @@ LD_LIBRARY_PATH=/tmp/chromium-libs/lib \
 STUDIO_SCREENSHOT_CHROME=/tmp/chromium \
 STUDIO_PUPPETEER_CORE=/tmp/shot-tools/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js \
 STUDIO_SCREENSHOT_CHROME_ARGS="--no-zygote --single-process --disable-gpu" \
-node scripts/capture_screenshots.mjs --manifest /tmp/uiv2-manifest.json \
+node scripts/capture_screenshots.mjs --manifest docs/media/uiv2-v2/baseline/manifest.json \
   --base-url http://127.0.0.1:8734 --token "$TOKEN" \
   --emulate-theme light --viewport 1440x900 --out /tmp/uiv2-shots/1440x900-light
 # repeat for 1640x900 / 1280x800 / 390x844 in light, and all four viewports in dark
@@ -109,7 +109,9 @@ dispatching `change` on the real select.
 ## Screenshot inventory (53 images, all under `docs/media/uiv2-v2/baseline/`)
 
 Viewports: 1640x900, 1440x900, 1280x800, 390x844; themes: light and dark; device scale
-factor 1. Each directory's `index.json` carries the full sha256, byte size, viewport
+factor 1. File names follow the published pane convention: `pipeline.png` is the `council` tab
+(Pipeline), `compare.png` is the `debate` tab (Compare). The capture manifest is committed at
+`docs/media/uiv2-v2/baseline/manifest.json`. Each directory's `index.json` carries the full sha256, byte size, viewport
 and capture time. Full digests are in the `index.json` files next to the images.
 
 | Directory | File | Bytes | sha256 (first 16) | Theme | Interaction |
@@ -117,57 +119,56 @@ and capture time. Full digests are in the `index.json` files next to the images.
 | `1280x800-dark` | `start.png` | 135,308 | `ea68828edb6a5012…` | dark | tab switch |
 | `1280x800-dark` | `harness.png` | 137,667 | `b5e12febbb90c1c3…` | dark | tab switch |
 | `1280x800-dark` | `hall.png` | 141,193 | `66746f85db0dafdb…` | dark | tab switch |
-| `1280x800-dark` | `council.png` | 108,060 | `292d630661e8ebb3…` | dark | tab switch |
-| `1280x800-dark` | `debate.png` | 128,012 | `f8d59e04f435f21b…` | dark | tab switch |
+| `1280x800-dark` | `pipeline.png` | 108,060 | `292d630661e8ebb3…` | dark | tab switch |
+| `1280x800-dark` | `compare.png` | 128,012 | `f8d59e04f435f21b…` | dark | tab switch |
 | `1280x800-dark` | `chat.png` | 108,611 | `ada7aa7e57f5f2c5…` | dark | tab switch |
 | `1280x800-light` | `start.png` | 132,824 | `7a889a8068fddec1…` | light | tab switch |
 | `1280x800-light` | `harness.png` | 135,655 | `d3d72b3fa855df05…` | light | tab switch |
 | `1280x800-light` | `hall.png` | 139,217 | `ba0bb1573769fd59…` | light | tab switch |
-| `1280x800-light` | `council.png` | 106,121 | `1c2aae6c00dc4cbb…` | light | tab switch |
-| `1280x800-light` | `debate.png` | 125,595 | `1af13b95759a02d9…` | light | tab switch |
+| `1280x800-light` | `pipeline.png` | 106,121 | `1c2aae6c00dc4cbb…` | light | tab switch |
+| `1280x800-light` | `compare.png` | 125,595 | `1af13b95759a02d9…` | light | tab switch |
 | `1280x800-light` | `chat.png` | 107,075 | `2c99349bac77c2e2…` | light | tab switch |
 | `1440x900-dark` | `start.png` | 149,413 | `c02b3f1bc6a821ad…` | dark | tab switch |
 | `1440x900-dark` | `harness.png` | 166,486 | `e47555193fab6a6b…` | dark | tab switch |
 | `1440x900-dark` | `hall.png` | 143,801 | `43ecda690093a664…` | dark | tab switch |
-| `1440x900-dark` | `council.png` | 107,027 | `df8b8ccb9ad9cb32…` | dark | tab switch |
-| `1440x900-dark` | `debate.png` | 140,890 | `1c485c8cd7067513…` | dark | tab switch |
+| `1440x900-dark` | `pipeline.png` | 107,027 | `df8b8ccb9ad9cb32…` | dark | tab switch |
+| `1440x900-dark` | `compare.png` | 140,890 | `1c485c8cd7067513…` | dark | tab switch |
 | `1440x900-dark` | `chat.png` | 110,508 | `e2d18fd9a2e1b604…` | dark | tab switch |
 | `1440x900-light` | `start.png` | 147,017 | `0f51d7d05f00d12b…` | light | tab switch |
 | `1440x900-light` | `harness.png` | 163,210 | `34bfe694c2675c26…` | light | tab switch |
 | `1440x900-light` | `hall.png` | 141,873 | `cd85c6e2613b8679…` | light | tab switch |
-| `1440x900-light` | `council.png` | 105,488 | `16c4dae2bf72a72b…` | light | tab switch |
-| `1440x900-light` | `debate.png` | 139,072 | `d2a5419f4a8cf8f3…` | light | tab switch |
+| `1440x900-light` | `pipeline.png` | 105,488 | `16c4dae2bf72a72b…` | light | tab switch |
+| `1440x900-light` | `compare.png` | 139,072 | `d2a5419f4a8cf8f3…` | light | tab switch |
 | `1440x900-light` | `chat.png` | 108,646 | `a391af29da0c86fe…` | light | tab switch |
 | `1640x900-dark` | `start.png` | 150,926 | `04d85f8ad0280b07…` | dark | tab switch |
 | `1640x900-dark` | `harness.png` | 165,388 | `3eaf05700ac86b1a…` | dark | tab switch |
 | `1640x900-dark` | `hall.png` | 156,578 | `d2668b75d5e80bd4…` | dark | tab switch |
-| `1640x900-dark` | `council.png` | 108,157 | `9c973f84c9965eba…` | dark | tab switch |
-| `1640x900-dark` | `debate.png` | 148,540 | `55dcc6ae6aac2180…` | dark | tab switch |
+| `1640x900-dark` | `pipeline.png` | 108,157 | `9c973f84c9965eba…` | dark | tab switch |
+| `1640x900-dark` | `compare.png` | 148,540 | `55dcc6ae6aac2180…` | dark | tab switch |
 | `1640x900-dark` | `chat.png` | 111,353 | `c1a210f7a5ab070f…` | dark | tab switch |
 | `1640x900-light` | `start.png` | 148,678 | `d5183672fb38258c…` | light | tab switch |
 | `1640x900-light` | `harness.png` | 162,350 | `eeefd93e96bc1ecd…` | light | tab switch |
 | `1640x900-light` | `hall.png` | 154,418 | `c93907ed1a9b4bab…` | light | tab switch |
-| `1640x900-light` | `council.png` | 106,691 | `516cffd2b2574e46…` | light | tab switch |
-| `1640x900-light` | `debate.png` | 146,273 | `d1db6e80fd4c624c…` | light | tab switch |
+| `1640x900-light` | `pipeline.png` | 106,691 | `516cffd2b2574e46…` | light | tab switch |
+| `1640x900-light` | `compare.png` | 146,273 | `d1db6e80fd4c624c…` | light | tab switch |
 | `1640x900-light` | `chat.png` | 110,354 | `49f5e222a324efe1…` | light | tab switch |
 | `390x844-dark` | `start.png` | 57,531 | `3a205272e46255d6…` | dark | tab switch |
 | `390x844-dark` | `harness.png` | 61,461 | `f25c68b9cc598bf0…` | dark | tab switch |
 | `390x844-dark` | `hall.png` | 56,317 | `630af08b9af35832…` | dark | tab switch |
-| `390x844-dark` | `council.png` | 52,342 | `7a52791f47d100f8…` | dark | tab switch |
-| `390x844-dark` | `debate.png` | 57,041 | `4450ece9d0c62670…` | dark | tab switch |
+| `390x844-dark` | `pipeline.png` | 52,342 | `7a52791f47d100f8…` | dark | tab switch |
+| `390x844-dark` | `compare.png` | 57,041 | `4450ece9d0c62670…` | dark | tab switch |
 | `390x844-dark` | `chat.png` | 53,298 | `86824c4f26e16902…` | dark | tab switch |
 | `390x844-light` | `start.png` | 55,927 | `7770d75d89c403cb…` | light | tab switch |
 | `390x844-light` | `harness.png` | 59,913 | `42ca23c4215cfa11…` | light | tab switch |
 | `390x844-light` | `hall.png` | 54,207 | `c931eae567f24bb2…` | light | tab switch |
-| `390x844-light` | `council.png` | 51,316 | `37d5cde3c8b218d5…` | light | tab switch |
-| `390x844-light` | `debate.png` | 56,211 | `e75a733202652a32…` | light | tab switch |
+| `390x844-light` | `pipeline.png` | 51,316 | `37d5cde3c8b218d5…` | light | tab switch |
+| `390x844-light` | `compare.png` | 56,211 | `e75a733202652a32…` | light | tab switch |
 | `390x844-light` | `chat.png` | 52,893 | `12edf13ebcda4a53…` | light | tab switch |
 | `overlay/1280x800-light` | `mcp-hub.png` | 128,051 | `100c318c005c75dd…` | light | select#integrationsQuickMenu value 'mcp' -> openMcpModal() |
 | `overlay/1440x900-dark` | `mcp-hub.png` | 158,504 | `350a51b1d62e19d5…` | dark | select#integrationsQuickMenu value 'mcp' -> openMcpModal() |
 | `overlay/1440x900-light` | `mcp-hub.png` | 156,303 | `dbf026634c925c4b…` | light | select#integrationsQuickMenu value 'mcp' -> openMcpModal() |
 | `overlay/1640x900-light` | `mcp-hub.png` | 187,105 | `75347c4cea168962…` | light | select#integrationsQuickMenu value 'mcp' -> openMcpModal() |
 | `overlay/390x844-light` | `mcp-hub.png` | 66,646 | `7ff43acc471e448c…` | light | select#integrationsQuickMenu value 'mcp' -> openMcpModal() |
-
 
 ## Feature enumeration (what exists at the pin)
 
@@ -205,11 +206,11 @@ Targeted source findings for the V2 known defects:
 |---|---|---|
 | Council pinned conclusion scroll lock | user-reported; the demo runs without a provider, so no full council round was reproducible | user-reported, not reproduced |
 | Council lacks session clear control | no clear/delete handler in the hall pane; no delete route under `/api/hall/` | confirmed at source |
-| Compare and Chat uneven whitespace/alignment | `debate.png`, `chat.png` in every viewport set | confirmed in screenshots |
+| Compare and Chat uneven whitespace/alignment | `compare.png`, `chat.png` in every viewport set | confirmed in screenshots |
 | Chat persona dropdown shows only three options | 3 hard-coded options at line 2590; visible in `390x844-light/chat.png` | confirmed at source + screenshot |
 | MCP giant all-in-one dialog | `overlay/*/mcp-hub.png` — presets + form + servers + test call in one modal | confirmed in screenshots |
 | Persistent telemetry rail consumes main-task width | right rail visible in all 48 tab shots; Telemetry toggle is the only control | confirmed in screenshots |
-| Start checklist-heavy; Pipeline underutilizes canvas | `start.png` (six-step checklist cards), `council.png` (four-stage strip over a mostly empty pane) | confirmed in screenshots |
+| Start checklist-heavy; Pipeline underutilizes canvas | `start.png` (six-step checklist cards), `pipeline.png` (four-stage strip over a mostly empty pane) | confirmed in screenshots |
 
 ## Preservation statement
 

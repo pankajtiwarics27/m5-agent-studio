@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "device_scale_factor": 1
+  },
+  "captured_with": "scripts/capture_screenshots.mjs",
+  "demo_command": "python3 scripts/demo_tour.py --serve (run from a disposable git-archive copy of the pinned HEAD; see docs/uiv2-v2-baseline-evidence.md)",
+  "purpose": "UIV2-01 baseline: capture every tab at the roadmap viewports/themes from the running app. File names follow the published pane convention: pipeline.png is the council tab, compare.png is the debate tab. Override the viewport per run with --viewport and the theme with --emulate-theme; each variant set goes to its own --out directory.",
+  "shots": [
+    { "id": "start",   "tab": "start",   "title": "Start",    "file": "start.png",    "purpose": "Preflight first-run pane" },
+    { "id": "harness", "tab": "harness", "title": "Harness",  "file": "harness.png",  "purpose": "Agent session workspace" },
+    { "id": "hall",    "tab": "hall",    "title": "Council",  "file": "hall.png",     "purpose": "Multi-model council" },
+    { "id": "council", "tab": "council", "title": "Pipeline", "file": "pipeline.png", "purpose": "Four-stage pipeline" },
+    { "id": "debate",  "tab": "debate",  "title": "Compare",  "file": "compare.png",  "purpose": "Side-by-side model compare" },
+    { "id": "chat",    "tab": "chat",    "title": "Chat",     "file": "chat.png",     "purpose": "Single streaming conversation" }
+  ]
+}

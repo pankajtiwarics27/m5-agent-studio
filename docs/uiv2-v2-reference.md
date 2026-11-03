@@ -66,7 +66,7 @@ separately.
 ## Reproducible annotated wireframe and fixtures
 
 - Wireframe source (self-contained, no network): `docs/media/uiv2-v2/reference/wireframe.html`.
-  Query params: `?pane=harness|start|hall|council|debate|chat` and `&theme=light|dark`.
+  Query params: `?pane=harness|start|hall|council|debate|chat` (rendered to `pipeline.png` / `compare.png` per the published pane convention) and `&theme=light|dark`.
 - Fixture capture: `scripts/uiux_v2_reference_capture.mjs` with
   `STUDIO_SCREENSHOT_CHROME` + `STUDIO_PUPPETEER_CORE` (+ optional
   `STUDIO_SCREENSHOT_CHROME_ARGS="--no-zygote --single-process --disable-gpu"`),
@@ -88,38 +88,38 @@ separately.
 | `1280x800-light` | `harness.png` | 48,565 | `abd08de75f4b8ee3…` | light |
 | `1280x800-light` | `start.png` | 38,655 | `8be9bd92a0aacef4…` | light |
 | `1280x800-light` | `hall.png` | 41,201 | `12e4b7dbbe04d93d…` | light |
-| `1280x800-light` | `council.png` | 36,981 | `8705eb6087ccd656…` | light |
-| `1280x800-light` | `debate.png` | 39,488 | `70b0fd3d7b5c13d2…` | light |
+| `1280x800-light` | `pipeline.png` | 36,981 | `8705eb6087ccd656…` | light |
+| `1280x800-light` | `compare.png` | 39,488 | `70b0fd3d7b5c13d2…` | light |
 | `1280x800-light` | `chat.png` | 36,828 | `72ee707654fbdda8…` | light |
 | `1440x900-dark` | `harness.png` | 67,858 | `bcaa303baaa167fd…` | dark |
 | `1440x900-dark` | `start.png` | 57,422 | `2d45dd5cd9d86ef4…` | dark |
 | `1440x900-dark` | `hall.png` | 59,006 | `aa82cee3cd923c14…` | dark |
-| `1440x900-dark` | `council.png` | 55,005 | `0663ac699b859293…` | dark |
-| `1440x900-dark` | `debate.png` | 56,911 | `3438fe3d0eac41f6…` | dark |
+| `1440x900-dark` | `pipeline.png` | 55,005 | `0663ac699b859293…` | dark |
+| `1440x900-dark` | `compare.png` | 56,911 | `3438fe3d0eac41f6…` | dark |
 | `1440x900-dark` | `chat.png` | 54,397 | `a66975234c44b16a…` | dark |
 | `1440x900-light` | `harness.png` | 67,296 | `e0c8d08f5e6a1dbc…` | light |
 | `1440x900-light` | `start.png` | 57,557 | `0c4e4908140d5d96…` | light |
 | `1440x900-light` | `hall.png` | 59,096 | `a6febd6892f02e41…` | light |
-| `1440x900-light` | `council.png` | 54,715 | `411565e9858048bb…` | light |
-| `1440x900-light` | `debate.png` | 57,107 | `ed170f3e4e59dcc9…` | light |
+| `1440x900-light` | `pipeline.png` | 54,715 | `411565e9858048bb…` | light |
+| `1440x900-light` | `compare.png` | 57,107 | `ed170f3e4e59dcc9…` | light |
 | `1440x900-light` | `chat.png` | 54,311 | `addf45d1de45524b…` | light |
 | `1640x900-dark` | `harness.png` | 68,583 | `e0fe0cf795899c57…` | dark |
 | `1640x900-dark` | `start.png` | 56,960 | `a40efbac244b890a…` | dark |
 | `1640x900-dark` | `hall.png` | 59,684 | `fe66a54da0034863…` | dark |
-| `1640x900-dark` | `council.png` | 55,443 | `82f7ddcc53d7673b…` | dark |
-| `1640x900-dark` | `debate.png` | 57,441 | `4ae29cdf1689bbd9…` | dark |
+| `1640x900-dark` | `pipeline.png` | 55,443 | `82f7ddcc53d7673b…` | dark |
+| `1640x900-dark` | `compare.png` | 57,441 | `4ae29cdf1689bbd9…` | dark |
 | `1640x900-dark` | `chat.png` | 55,015 | `950fa01108a749b7…` | dark |
 | `1640x900-light` | `harness.png` | 67,962 | `416265a18206020c…` | light |
 | `1640x900-light` | `start.png` | 57,143 | `2e5e7fa768638286…` | light |
 | `1640x900-light` | `hall.png` | 59,749 | `e7fecfd97a55a8ad…` | light |
-| `1640x900-light` | `council.png` | 55,310 | `4ab38d726ef3919f…` | light |
-| `1640x900-light` | `debate.png` | 57,636 | `f7597f37b9b98694…` | light |
+| `1640x900-light` | `pipeline.png` | 55,310 | `4ab38d726ef3919f…` | light |
+| `1640x900-light` | `compare.png` | 57,636 | `f7597f37b9b98694…` | light |
 | `1640x900-light` | `chat.png` | 54,919 | `27bffcc4ba591e15…` | light |
 | `390x844-light` | `harness.png` | 30,644 | `083f2957170028f9…` | light |
 | `390x844-light` | `start.png` | 21,505 | `e4f49e40b61d3857…` | light |
 | `390x844-light` | `hall.png` | 23,159 | `99d91a8320080b40…` | light |
-| `390x844-light` | `council.png` | 18,394 | `903543830eefa357…` | light |
-| `390x844-light` | `debate.png` | 21,002 | `a7f4d6ebc1c24581…` | light |
+| `390x844-light` | `pipeline.png` | 18,394 | `903543830eefa357…` | light |
+| `390x844-light` | `compare.png` | 21,002 | `a7f4d6ebc1c24581…` | light |
 | `390x844-light` | `chat.png` | 18,428 | `8624d69b65f4ac0a…` | light |
 
 Full sha256 digests are in each set's `index.json`.

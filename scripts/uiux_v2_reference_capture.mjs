@@ -29,6 +29,9 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const PANES = ["harness", "start", "hall", "council", "debate", "chat"];
+// File names follow the published screenshot convention (pane aliases the review
+// grid uses): the `council` tab is the Pipeline pane, `debate` is Compare.
+const FILE_FOR = { council: "pipeline", debate: "compare" };
 const DEFAULT_SETS = [
   "1640x900-light", "1640x900-dark",
   "1440x900-light", "1440x900-dark",
@@ -132,7 +135,7 @@ async function main() {
       for (const { pane, png } of captured) {
         const file = `${pane}.png`;
         await writeFile(join(dir, file), png);
-        index.shots.push({ id: `ref-${pane}`, file, bytes: png.length, sha256: createHash("sha256").update(png).digest("hex") });
+        index.shots.push({ id: `ref-${pane}`, pane, file, bytes: png.length, sha256: createHash("sha256").update(png).digest("hex") });
       }
       await writeFile(join(dir, "index.json"), `${JSON.stringify(index, null, 2)}\n`);
       report.push({ set: set.name, dir, shots: index.shots.length });

@@ -32,13 +32,13 @@
     },
     {
       "id": "ref-council",
-      "file": "council.png",
+      "file": "pipeline.png",
       "bytes": 54715,
       "sha256": "411565e9858048bbf3d0b7774d0c5007b16ae034185c30a804302ba6c39de576"
     },
     {
       "id": "ref-debate",
-      "file": "debate.png",
+      "file": "compare.png",
       "bytes": 57107,
       "sha256": "ed170f3e4e59dcc924a5d8419b7c6c26e3e2b55a4ee658f2de9b30fb6f79dcaa"
     },

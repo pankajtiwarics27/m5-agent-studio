@@ -35,14 +35,14 @@
     {
       "id": "council",
       "tab": "council",
-      "file": "council.png",
+      "file": "pipeline.png",
       "bytes": 107027,
       "sha256": "df8b8ccb9ad9cb320f2f6c2d9be1f787b4593864176e3303991f7e0b792f0aca"
     },
     {
       "id": "debate",
       "tab": "debate",
-      "file": "debate.png",
+      "file": "compare.png",
       "bytes": 140890,
       "sha256": "1c485c8cd7067513f42ce94b2aad621b954070a2c6f1f3ddd31d47757e7a04dd"
     },
