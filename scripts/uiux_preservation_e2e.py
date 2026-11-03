@@ -363,6 +363,7 @@ SUPPORT_WALKS = {
     "harness_recovery_walk.mjs": "Harness pause/resume/abort recovery (P3-05) extends the abort surface rather than preserving it",
     "compare_continuity_walk.mjs": "Compare continuity (P4-06) keeps a comparison; the capability it belongs to is the comparison itself",
     "uiux_interaction_polish_walk.mjs": "the supplemental P5-05 evidence walk measures hover/focus parity and captures 72 screenshots; it proves presentation, not a capability the matrix enumerates",
+    "adversarial_walk.mjs": "the adversarial walk (P6-02) proves how a refusal is drawn, which is a contract about failures rather than a capability the matrix enumerates",
 }
 
 

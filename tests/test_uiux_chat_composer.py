@@ -76,7 +76,8 @@ def test_stop_failure_and_unexpected_close_have_distinct_recovery_states() -> No
     consume = _consume_sse()
     assert 'function stopChatStream()' in handler
     assert 'stopped() {' in handler
-    assert 'failed(message) {' in handler
+    # P6-02 widened the signature: a stream that never opened carries its status and wait.
+    assert 'failed(message, refusal) {' in handler
     assert 'closed() { this.failed("the stream closed before the model answered"); }' in handler
     for state in ("complete", "stopped", "failed"):
         assert f'asstMsg.status = "{state}"' in handler

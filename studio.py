@@ -5376,6 +5376,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     <div style="padding:14px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:10px;">
       <div id="harnessGitStatusBox" class="mono" style="font-size:11.5px; color:#fde68a; background:var(--bg-card); padding:8px 11px; border-radius: var(--radius-sm); border:1px solid var(--border); white-space:pre-wrap;"></div>
       <div id="harnessGitDiffSummary" class="mono" style="font-size:11.2px; color:var(--text-dim);"></div>
+      <!-- A refused apply is answered where the button is. Drawing it on the pane
+           behind this dialog would hide the refusal from the reader who pressed it,
+           and the dialog is exactly where the decision was made. -->
+      <div id="harnessApplyRefusal"></div>
       <div id="harnessGitDiffBox" class="diff-box" style="max-height:52vh;"></div>
       <p style="margin:0; font-size:11px; color:var(--text-faint);">This is the worktree as it is now. It is not frozen at any verdict: "Verification &amp; artifacts" says what a completion claim was checked against.</p>
     </div>
@@ -5929,6 +5933,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           </div>
 
           <!-- Trajectory Stream -->
+          <div id="harnessRefusalState"></div>
           <div id="harnessStreamState"></div>
           <div id="harnessStream" class="harness-stream"></div>
 
@@ -7676,6 +7681,163 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     clear: clearPresentation,
   };
 
+  /* ── Server refusals ────────────────────────────────────────────────────────
+     Every write can be refused, and a refusal is the server's answer, never ours:
+     a 403 from a session whose policy is read-only, a 401 from a rotated token, a
+     429 from the rate window, a 409 from a worktree that moved. The pane used to
+     draw whatever its success path drew, because the handler read the response
+     *body* and never its *status* - so an apply the server refused printed
+     "Applied!" in the ok tone. One reader, one table, one shape: the cause is the
+     server's own `detail` (or `message`) verbatim, the kept line states what the
+     refused request did not change, and the way forward is a real control.
+
+     Nothing here decides whether a write is allowed. It renders the refusal the
+     server already made - which is the rule the whole program is held to. */
+  const REFUSAL_WORDS = {
+    400: { title: "The server rejected the request" },
+    401: { title: "This browser is not signed in to Studio" },
+    403: { title: "The server refused this action" },
+    404: { title: "The server no longer has this" },
+    409: { title: "The server's state has moved" },
+    413: { title: "The request is over the size limit" },
+    429: { title: "The rate window is full" },
+    503: { title: "The server is not accepting requests" },
+    507: { title: "The server has no room to write" },
+  };
+  const REFUSAL_UNKNOWN = { title: "The server refused this action" };
+
+  function refusalWords(status) {
+    return REFUSAL_WORDS[status] || REFUSAL_UNKNOWN;
+  }
+
+  // The body is read once and defensively: an error page, a proxy's HTML and a
+  // half-written JSON body all end up in the same place - the status, with no
+  // invented explanation.
+  async function refusalReader(response) {
+    let detail = "";
+    try {
+      const body = await response.clone().json();
+      if (body && typeof body === "object") {
+        if (typeof body.detail === "string") detail = body.detail;
+        else if (typeof body.message === "string") detail = body.message;
+        else if (body.detail !== undefined) detail = String(body.detail);
+      }
+    } catch (_) { /* a refusal need not carry JSON */ }
+    const raw = Number(response.headers.get("retry-after") || 0);
+    return {
+      status: response.status,
+      detail: (detail || "").trim(),
+      retryAfterMs: Number.isFinite(raw) && raw > 0 ? Math.round(raw * 1000) : 0,
+    };
+  }
+
+  const REFUSAL_TIMERS = new Map();
+
+  // A 429 states its own wait, so the control that cannot work yet says why instead of
+  // inviting a press the server would refuse again. When the window clears the control
+  // becomes the retry it claims to be.
+  function armRetryCountdown(host, retryAfterMs) {
+    if (REFUSAL_TIMERS.has(host)) { clearTimeout(REFUSAL_TIMERS.get(host)); REFUSAL_TIMERS.delete(host); }
+    if (!(retryAfterMs > 0)) return;
+    const timer = setTimeout(() => {
+      REFUSAL_TIMERS.delete(host);
+      const box = document.getElementById(host);
+      const button = box && box.querySelector(".presentation-actions button");
+      if (!button) return;
+      button.disabled = false;
+      button.removeAttribute("aria-disabled");
+      button.removeAttribute("aria-describedby");
+      button.textContent = "Retry";
+      button.title = "The rate window has cleared; send the same request again";
+    }, retryAfterMs);
+    REFUSAL_TIMERS.set(host, timer);
+  }
+
+  // Renders the refusal where the control is, and returns null so a caller cannot
+  // fall through to its success path by forgetting to look.
+  function refuseWrite(refusal, spec) {
+    const host = spec.host;
+    if (REFUSAL_TIMERS.has(host)) { clearTimeout(REFUSAL_TIMERS.get(host)); REFUSAL_TIMERS.delete(host); }
+    const words = refusalWords(refusal.status);
+    const cause = refusal.detail || `the server answered ${refusal.status} without a reason of its own`;
+    const actions = [];
+    if (refusal.status === 401) {
+      actions.push({
+        label: "Re-enter the token",
+        title: "Ask for the API token again and keep this pane's state",
+        run: () => {
+          sessionStorage.removeItem("m5_api_token");
+          const supplied = window.prompt("Studio API token (saved for this browser session):");
+          if (!supplied) return;
+          sessionStorage.setItem("m5_api_token", supplied);
+          if (spec.retry) spec.retry();
+        },
+      });
+    }
+    if (refusal.status === 429 && refusal.retryAfterMs > 0 && spec.retry) {
+      const seconds = Math.max(1, Math.ceil(refusal.retryAfterMs / 1000));
+      actions.push({
+        label: `Retry in ${seconds}s`,
+        disabled: true,
+        reason: `the server's Retry-After asks for ${seconds}s before this route will answer again`,
+        run: () => spec.retry(),
+      });
+    }
+    if (spec.retry && !(refusal.status === 429 && refusal.retryAfterMs > 0)) {
+      actions.push({ label: "Retry", title: "Send the same write again", run: () => spec.retry() });
+    }
+    if (spec.reload) {
+      actions.push({ label: "Reload from the server", title: "Re-read the authoritative state before deciding again", run: () => spec.reload() });
+    }
+    if (!actions.length) {
+      actions.push({ label: "Dismiss", run: () => clearPresentation(host, { focus: spec.focus }) });
+    }
+    presentInto(host, {
+      kind: refusal.status === 401 || refusal.status === 403 ? "error" : "recovery",
+      title: `${words.title} (${refusal.status})`,
+      cause,
+      context: spec.kept,
+      actions,
+    });
+    armRetryCountdown(host, refusal.retryAfterMs);
+    if (spec.announce !== false) showToast(cause, refusal.status === 403 || refusal.status === 401 ? "error" : "warn");
+    return null;
+  }
+
+  /* One guarded write. `spec.request` returns the promise of a Response, so the
+     caller keeps its own URL, method and body; `spec.onRefusal` is the only
+     optional override, for a pane that answers a refusal its own way (the
+     approval card does, because a stale decision has to resync the session).
+     Returns the Response on success and null on a refusal - never a value that a
+     success path could mistake for one. */
+  async function guardedWrite(spec) {
+    let response;
+    try {
+      response = await spec.request();
+    } catch (error) {
+      const refusal = { status: 0, detail: (error && error.message) || "the request never reached the server", retryAfterMs: 0 };
+      if (spec.onRefusal) return spec.onRefusal(refusal);
+      return refuseWrite(refusal, spec);
+    }
+    if (response.ok) {
+      // The refusal this host was showing no longer applies: the write that was
+      // refused has now landed, and leaving the old box up would state a fact the
+      // server has just contradicted.
+      if (spec.host) clearPresentation(spec.host);
+      return response;
+    }
+    const refusal = await refusalReader(response);
+    if (spec.onRefusal) return spec.onRefusal(refusal);
+    if (!spec.host) {
+      // A write with no place to draw its refusal still must not look successful.
+      showToast(refusal.detail || `the server refused that (${refusal.status})`, "error");
+      return null;
+    }
+    return refuseWrite(refusal, spec);
+  }
+
+  window.M5Refusals = { reader: refusalReader, words: refusalWords, render: refuseWrite, write: guardedWrite };
+
   // The panes that start with nothing to show. Each names a cause a reader can act
   // on and the one control that would change it - not "no data" and a shrug.
   function presentHallEmpty() {
@@ -7702,17 +7864,35 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     });
   }
 
-  function presentChatError(message, onRetry) {
-    return presentInto("chatState", {
+  function presentChatError(message, onRetry, refusal) {
+    // A stream that never opened is a refusal, and a refusal has a status and, for a 429,
+    // a wait. Offering a Retry the server will refuse again is the same lie as printing
+    // the error in the ok tone, so the control states the wait it is under.
+    const status = refusal && refusal.status ? refusal.status : 0;
+    const wait = refusal && refusal.retryAfterMs ? Math.max(1, Math.ceil(refusal.retryAfterMs / 1000)) : 0;
+    const title = status === 401 ? "This browser is not signed in to Studio (401)"
+      : status === 403 ? "The server refused the reply (403)"
+        : status === 429 ? "The rate window is full (429)"
+          : "The reply stopped";
+    const written = presentInto("chatState", {
       kind: "error",
-      title: "The reply stopped",
+      title,
       cause: message || "the stream closed before the model answered",
       context: "your message and the conversation so far are kept; the partial reply is still in the transcript",
       actions: [
-        { label: "Retry", run: onRetry, title: "Send the same message again" },
+        wait > 0
+          ? {
+            label: `Retry in ${wait}s`,
+            disabled: true,
+            reason: `the server's Retry-After asks for ${wait}s before this route will answer again`,
+            run: onRetry,
+          }
+          : { label: "Retry", run: onRetry, title: "Send the same message again" },
         { label: "Dismiss", run: () => clearPresentation("chatState", { focus: "chatInput" }), title: "Hide this and keep the transcript, with the cursor back in the composer" },
       ],
     });
+    if (wait > 0) armRetryCountdown("chatState", wait * 1000);
+    return written;
   }
 
   function presentHarnessStreamInterrupted(reason) {
@@ -7900,9 +8080,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   async function removeProvider(alias) {
-    await fetch(`/api/providers/${encodeURIComponent(alias)}`, { method: "DELETE" });
+    // The provider is on the server until the server says it is gone; a refused
+    // delete used to re-read the list and leave the reader guessing which of the
+    // two answers was true.
+    const write = await guardedWrite({
+      kept: `provider \`${alias}\` and its credentials are still configured`,
+      request: () => fetch(`/api/providers/${encodeURIComponent(alias)}`, { method: "DELETE" }),
+      retry: () => removeProvider(alias),
+    });
     await loadProviders();
     await refreshTelemetry();
+    if (!write) return;
   }
 
   async function saveCombo() {
@@ -7922,9 +8110,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   async function removeCombo(alias) {
-    await fetch(`/api/combos/${encodeURIComponent(alias)}`, { method: "DELETE" });
+    const write = await guardedWrite({
+      kept: `combo \`${alias}\` is still configured`,
+      request: () => fetch(`/api/combos/${encodeURIComponent(alias)}`, { method: "DELETE" }),
+      retry: () => removeCombo(alias),
+    });
     await loadProviders();
     await refreshTelemetry();
+    if (!write) return;
   }
 
   function openProvidersModal() {
@@ -8024,7 +8217,20 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       }
     }
     const files = [...document.querySelectorAll(".ws-file-chk:checked")].map(c => c.value);
-    const sess = await (await fetch("/api/hall/sessions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request: req, context_files: files }) })).json();
+    // A refusal here used to be read as a session: `.json()` on an error body made
+    // `sess.id` undefined, the modal closed, and the request the reader had written
+    // was gone. The modal now stays open with the text in it and the refusal on the
+    // pane behind it.
+    const write = await guardedWrite({
+      host: "hallStream",
+      kept: "nothing was convened and your request is still in the spawn dialog, which stays open",
+      request: () => fetch("/api/hall/sessions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request: req, context_files: files }) }),
+      retry: () => { clearPresentation("hallStream"); confirmSpawnSession(autoConvene); },
+      reload: () => { clearPresentation("hallStream"); refreshHallSessions(); },
+      focus: "spawnRequestInput",
+    });
+    if (!write) return;
+    const sess = await write.json();
     closeSpawnModal();
     activeHallId = sess.id; activeHallData = sess;
     await refreshHallSessions(); renderActiveHall();
@@ -8419,13 +8625,34 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   async function postHumanHallMessage(autoConvene = true) {
     const inp = document.getElementById("hallHumanInput"), txt = inp.value.trim();
     if (!txt) return;
-    inp.value = "";
+    // The message is cleared only once the server has taken it: a refused write
+    // must not eat what the reader typed, and a session created from an error body
+    // used to become `activeHallId = undefined` with the text already gone.
     if (!activeHallId) {
-      const sess = await (await fetch("/api/hall/sessions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request: txt, context_files: [] }) })).json();
+      const write = await guardedWrite({
+        host: "hallStream",
+        kept: "the round was not created and your text is back in the composer",
+        request: () => fetch("/api/hall/sessions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request: txt, context_files: [] }) }),
+        retry: () => postHumanHallMessage(autoConvene),
+        reload: () => { clearPresentation("hallStream"); refreshHallSessions(); },
+        focus: "hallHumanInput",
+      });
+      if (!write) { inp.value = txt; return; }
+      const sess = await write.json();
       activeHallId = sess.id; activeHallData = sess;
+      inp.value = "";
       await refreshHallSessions(); renderActiveHall();
     } else {
-      await fetch(`/api/hall/sessions/${encodeURIComponent(activeHallId)}/message`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ author: "Human Operative", role_key: "human", content: txt }) });
+      const write = await guardedWrite({
+        host: "hallStream",
+        kept: "the round is unchanged and your text is back in the composer",
+        request: () => fetch(`/api/hall/sessions/${encodeURIComponent(activeHallId)}/message`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ author: "Human Operative", role_key: "human", content: txt }) }),
+        retry: () => postHumanHallMessage(autoConvene),
+        reload: () => { clearPresentation("hallStream"); selectHallSession(activeHallId); },
+        focus: "hallHumanInput",
+      });
+      if (!write) { inp.value = txt; return; }
+      inp.value = "";
       await selectHallSession(activeHallId);
     }
     if (autoConvene) {
@@ -8817,12 +9044,20 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (action === "load") {
       const route = councilRouteOf(councilTargetModel(key));
       const model = route.model || councilTargetModel(key);
-      try {
-        const response = await fetch(`/api/models/${encodeURIComponent(model)}/load`, { method: "POST" });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      // The refusal's own reason, not a bare status code: a 429 here means the rate
+      // window is full and says when it clears, which "HTTP 429" does not.
+      let refusal = null;
+      const write = await guardedWrite({
+        kept: `${model} keeps its current residency`,
+        request: () => fetch(`/api/models/${encodeURIComponent(model)}/load`, { method: "POST" }),
+        retry: () => councilSeatAction(key, action),
+        onRefusal: (r) => { refusal = r; return null; },
+        announce: false,
+      });
+      if (!write) {
+        showToast(refusal && refusal.detail ? refusal.detail : `The load request for ${model} failed`, "error");
+      } else {
         showToast(`Asked the runtime to load ${model}.`, "ok");
-      } catch (error) {
-        showToast(`The load request for ${model} failed: ${error.message}`, "err");
       }
       await refreshCouncilReadiness();
       return;
@@ -9628,9 +9863,32 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     }).join("");
   }
 
-  async function modelAction(id, act) { await fetch(`/api/models/${encodeURIComponent(id)}/${act}`, { method: "POST" }); refreshTelemetry(); }
-  async function unloadAllModels() { await fetch("/api/models/unload-all", { method: "POST" }); refreshTelemetry(); }
-  async function clearSsdCache() { await fetch("/api/cache/clear-ssd", { method: "POST" }); refreshTelemetry(); }
+  async function modelAction(id, act) {
+    // `refreshTelemetry()` re-reads the truth either way; what it could not say is
+    // that the request was refused, so the refusal now reaches the reader.
+    await guardedWrite({
+      kept: `\`${id}\` keeps the state the runtime reports for it`,
+      request: () => fetch(`/api/models/${encodeURIComponent(id)}/${act}`, { method: "POST" }),
+      retry: () => modelAction(id, act),
+    });
+    refreshTelemetry();
+  }
+  async function unloadAllModels() {
+    await guardedWrite({
+      kept: "every model keeps the residency the runtime reports",
+      request: () => fetch("/api/models/unload-all", { method: "POST" }),
+      retry: () => unloadAllModels(),
+    });
+    refreshTelemetry();
+  }
+  async function clearSsdCache() {
+    await guardedWrite({
+      kept: "the cache on disk is whatever the runtime reports",
+      request: () => fetch("/api/cache/clear-ssd", { method: "POST" }),
+      retry: () => clearSsdCache(),
+    });
+    refreshTelemetry();
+  }
 
   async function consumeSSE(url, payload, handlers, onFinally) {
     stopActiveStream();
@@ -9639,7 +9897,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     let receivedTerminalEvent = false;
     try {
       const resp = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      if (!resp.ok) {
+        // A stream refused before it opened is a refusal like any other: the pane
+        // shows its cause (a 429 says when the window clears), not "HTTP 429".
+        const refusal = await refusalReader(resp);
+        const error = new Error(refusal.detail || `HTTP ${refusal.status}`);
+        error.status = refusal.status;
+        error.retryAfterMs = refusal.retryAfterMs;
+        throw error;
+      }
       const reader = resp.body.getReader(), dec = new TextDecoder();
       let buf = "";
       while (true) {
@@ -9667,7 +9933,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       if (e.name === "AbortError") {
         if (!receivedTerminalEvent && handlers.stopped) await handlers.stopped();
       } else if (handlers.error) {
-        await handlers.error({ message: e.message });
+        await handlers.error({ message: e.message, status: e.status || 0, retryAfterMs: e.retryAfterMs || 0 });
       }
     } finally {
       if (activeAbort === controller) activeAbort = null;
@@ -12594,7 +12860,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         flushChatRender();
         if (chatStopRequested) document.getElementById("chatInput").focus({ preventScroll: true });
       },
-      failed(message) {
+      failed(message, refusal) {
         asstMsg.status = "failed";
         asstMsg.failedAt = Date.now();
         asstMsg.timing.endedAt = performance.now();
@@ -12603,14 +12869,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           if (index >= 0) chatHistory.splice(index, 1);
         }
         flushChatRender();
-        pendingChatFailure = message || "the stream closed before the model answered";
+        pendingChatFailure = { message: message || "the stream closed before the model answered", refusal: refusal || null };
       },
-      error(d) { this.failed(d.message || "the stream failed before the model answered"); },
+      error(d) { this.failed(d.message || "the stream failed before the model answered", { status: d.status || 0, retryAfterMs: d.retryAfterMs || 0 }); },
       closed() { this.failed("the stream closed before the model answered"); },
     }, () => { chatBusy = false; renderChatMessages();
       chatStopRequested = false;
       if (pendingChatFailure !== null && requestGeneration === chatRequestGeneration) {
-        presentChatError(pendingChatFailure, () => retryChatRequest(text, asstMsg));
+        presentChatError(pendingChatFailure.message, () => retryChatRequest(text, asstMsg), pendingChatFailure.refusal);
       }
     });
   }
@@ -12867,22 +13133,42 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   async function patchActiveHarnessSettings() {
     if (!activeHarnessId) return;
-    await fetch(`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        policy: document.getElementById("harnessPolicy").value,
-        lead_model: document.getElementById("harnessLeadModel").value,
-        critic_model: document.getElementById("harnessCriticModel").value,
+    // What the pickers show is a request, not a setting: the policy on the server
+    // is still the old one until the server says otherwise, and a refused patch
+    // used to re-read the list and leave the pickers claiming the new value.
+    const write = await guardedWrite({
+      host: "harnessRefusalState",
+      kept: "the session keeps the policy and models the server holds; the pickers are re-read from it",
+      request: () => fetch(`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          policy: document.getElementById("harnessPolicy").value,
+          lead_model: document.getElementById("harnessLeadModel").value,
+          critic_model: document.getElementById("harnessCriticModel").value,
+        }),
       }),
+      retry: () => patchActiveHarnessSettings(),
+      reload: () => { clearPresentation("harnessRefusalState"); loadHarnessSessions(); selectHarnessSession(activeHarnessId); },
     });
+    if (!write) { loadHarnessSessions(); return; }
     loadHarnessSessions();
   }
 
   async function deleteHarnessSession(id) {
-    await fetch(`/api/harness/sessions/${encodeURIComponent(id)}`, { method: "DELETE" });
-    if (activeHarnessId === id) startFreshHarnessDraft();
+    // A refused delete used to clear the pane and re-read a list that still holds
+    // the session: the row reappears, so the only thing the reader learned is that
+    // the pane is unreliable. The refusal is stated instead.
+    const write = await guardedWrite({
+      host: "harnessRefusalState",
+      kept: "the session and everything it recorded are still on the server, and its row is still in the list",
+      request: () => fetch(`/api/harness/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
+      retry: () => deleteHarnessSession(id),
+      reload: () => { clearPresentation("harnessRefusalState"); loadHarnessSessions(); },
+    });
     await loadHarnessSessions();
+    if (!write) return;
+    if (activeHarnessId === id) startFreshHarnessDraft();
   }
 
   function formatToolArgsSummary(tool, args) {
@@ -14335,9 +14621,22 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   async function applyHarnessWorktree() {
     if (!activeHarnessId) return;
-    const r = await fetch(`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/apply`, { method: "POST" });
-    const d = await r.json();
-    showToast(d.message || "Applied!", "ok");
+    // The server can refuse this - a session whose policy is read-only 'plan', a
+    // quarantined workspace, a conflicting snapshot, a full disk. A refusal that
+    // fell through to the success path printed "Applied!" over a write that never
+    // happened, so the refusal is drawn where the button is and the dialog stays
+    // open with the diff the reader was deciding on.
+    const write = await guardedWrite({
+      host: "harnessApplyRefusal",
+      kept: "the session, its worktree and the main workspace are unchanged; this diff is still here to decide on",
+      request: () => fetch(`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/apply`, { method: "POST" }),
+      retry: () => { clearPresentation("harnessApplyRefusal"); applyHarnessWorktree(); },
+      reload: () => { clearPresentation("harnessApplyRefusal"); selectHarnessSession(activeHarnessId); openHarnessDiffModal(); },
+      focus: "applyWorktreeBtn",
+    });
+    if (!write) return;
+    const d = await write.json();
+    showToast(d.message || "Applied to the main workspace.", "ok");
     closeHarnessDiffModal();
     selectHarnessSession(activeHarnessId);
   }
@@ -15921,19 +16220,31 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   async function toggleMcpServerEnabled(alias, enabled) {
-    const r = await fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled }),
+    const write = await guardedWrite({
+      kept: `server \`${alias}\` keeps the enabled state it had`,
+      request: () => fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled }),
+      }),
+      retry: () => toggleMcpServerEnabled(alias, enabled),
     });
-    const d = await r.json();
-    if (r.ok) { mcpServers = d.servers || []; renderMcpUI(); }
+    if (!write) { loadMcpServers(); return; }
+    const d = await write.json();
+    mcpServers = d.servers || []; renderMcpUI();
   }
 
   async function changeMcpApprovalPolicy(alias, approval_policy) {
-    const r = await fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ approval_policy }),
+    // This is a permission setting: a refused change that drew nothing left the
+    // reader believing tools had been loosened or tightened when neither happened.
+    const write = await guardedWrite({
+      kept: `server \`${alias}\` keeps the approval policy it had`,
+      request: () => fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ approval_policy }),
+      }),
+      retry: () => changeMcpApprovalPolicy(alias, approval_policy),
     });
-    const d = await r.json();
-    if (r.ok) { mcpServers = d.servers || []; renderMcpUI(); }
+    if (!write) { loadMcpServers(); return; }
+    const d = await write.json();
+    mcpServers = d.servers || []; renderMcpUI();
   }
 
   async function toggleMcpSingleTool(alias, toolName, checked) {
@@ -15942,17 +16253,29 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const allNames = (srv.tools || []).map(t => t.name);
     const curSet = new Set((srv.enabled_tools && srv.enabled_tools.length) ? srv.enabled_tools : allNames);
     if (checked) curSet.add(toolName); else curSet.delete(toolName);
-    const r = await fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled_tools: [...curSet] }),
+    const write = await guardedWrite({
+      kept: `server \`${alias}\` keeps the tools it had enabled`,
+      request: () => fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled_tools: [...curSet] }),
+      }),
+      retry: () => toggleMcpSingleTool(alias, toolName, checked),
     });
-    const d = await r.json();
-    if (r.ok) { mcpServers = d.servers || []; renderMcpUI(); }
+    if (!write) { loadMcpServers(); return; }
+    const d = await write.json();
+    mcpServers = d.servers || []; renderMcpUI();
   }
 
   async function deleteMcpServer(alias) {
-    const r = await fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, { method: "DELETE" });
-    const d = await r.json();
-    if (r.ok) { mcpServers = d.servers || []; renderMcpUI(); }
+    // `if (r.ok)` answered a refusal with nothing at all: no row changed and no
+    // word said, which reads exactly like a click that missed.
+    const write = await guardedWrite({
+      kept: `server \`${alias}\` is still registered with its tools`,
+      request: () => fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, { method: "DELETE" }),
+      retry: () => deleteMcpServer(alias),
+    });
+    if (!write) return;
+    const d = await write.json();
+    mcpServers = d.servers || []; renderMcpUI();
   }
 
   async function runMcpPlayground() {
@@ -15979,8 +16302,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   async function compactActiveHarness() {
     if (!activeHarnessId) { showToast("Select or run a Harness session first.", "warn"); return; }
-    const r = await fetch(`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/compact`, { method: "POST" });
-    const d = await r.json();
+    const write = await guardedWrite({
+      host: "harnessRefusalState",
+      kept: "the session, its messages and its checkpoint are unchanged",
+      request: () => fetch(`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/compact`, { method: "POST" }),
+      retry: () => compactActiveHarness(),
+      reload: () => { clearPresentation("harnessRefusalState"); selectHarnessSession(activeHarnessId); },
+    });
+    if (!write) return;
+    const d = await write.json();
     showToast(d.message || "Compaction checked.", "ok");
     if (d.session) {
       updateHarnessHeaderBanner(d.session);
@@ -16202,17 +16532,27 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   async function togglePinOpenContextDoc(id, pinned) {
-    const r = await fetch(`/api/opencontext/docs/${encodeURIComponent(id)}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pinned }),
+    const write = await guardedWrite({
+      kept: `\`${id}\` keeps the pin state it had`,
+      request: () => fetch(`/api/opencontext/docs/${encodeURIComponent(id)}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pinned }),
+      }),
+      retry: () => togglePinOpenContextDoc(id, pinned),
     });
-    const d = await r.json();
-    if (r.ok) { ocDocs = d.docs || []; renderOpenContextDocs(ocDocs); }
+    if (!write) return;
+    const d = await write.json();
+    ocDocs = d.docs || []; renderOpenContextDocs(ocDocs);
   }
 
   async function deleteOpenContextDoc(id) {
-    const r = await fetch(`/api/opencontext/docs/${encodeURIComponent(id)}`, { method: "DELETE" });
-    const d = await r.json();
-    if (r.ok) { ocDocs = d.docs || []; document.getElementById("ocDocsCountBadge").textContent = ocDocs.length; renderOpenContextDocs(ocDocs); }
+    const write = await guardedWrite({
+      kept: `document \`${id}\` is still in the store`,
+      request: () => fetch(`/api/opencontext/docs/${encodeURIComponent(id)}`, { method: "DELETE" }),
+      retry: () => deleteOpenContextDoc(id),
+    });
+    if (!write) return;
+    const d = await write.json();
+    ocDocs = d.docs || []; document.getElementById("ocDocsCountBadge").textContent = ocDocs.length; renderOpenContextDocs(ocDocs);
   }
 
   async function runOpenContextLintUI() {
@@ -16256,11 +16596,23 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const query = document.getElementById("cgQueryInput").value.trim();
     const out = document.getElementById("cgReportOutput");
     out.textContent = "Querying AST CodeGraph...";
-    const r = await fetch("/api/codegraph/query", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ workspace_dir: ws, mode, query }),
+    const write = await guardedWrite({
+      kept: "the workspace and its index are unchanged",
+      request: () => fetch("/api/codegraph/query", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspace_dir: ws, mode, query }),
+      }),
+      retry: () => runCodeGraphPlayground(),
+      onRefusal: (refusal) => {
+        // A refused query used to print "(undefined ms)" and an empty report, which
+        // looks like a workspace with no symbols rather than a request that failed.
+        out.textContent = `Refused (${refusal.status}): ${refusal.detail || "the server gave no reason"}`;
+        return null;
+      },
+      announce: false,
     });
-    const d = await r.json();
+    if (!write) return;
+    const d = await write.json();
     out.textContent = `(${d.elapsed_ms} ms)\n${d.report || ""}`;
   }
 
