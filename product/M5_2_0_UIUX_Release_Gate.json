@@ -1153,7 +1153,7 @@
     "doc_commands": 40,
     "doc_claims": 7,
     "stories_done": 40,
-    "distinct_files_changed": 403
+    "distinct_files_changed": 404
   },
   "known_regressions": [
     {
@@ -1364,6 +1364,18 @@
     "The preservation suite proves 17 of the 21 matrix rows. The other four sit behind two harness walks that fail on tracked defects #169 and #170; the suite reports them as `known` and never as a pass, which means \"the UI is preserved\" is a claim with a visible hole in it until those two are fixed in the runtime program.",
     "`product/M5_2_0_UIUX_Preservation_Run.json` is only as current as the last run. A story that lands after it will be described by a record that predates it; re-run `scripts/preservation_suite.py --save` when the tree moves, and do not read a passing record as a statement about a later commit."
   ],
+  "regenerated_without_check": [
+    {
+      "script": "scripts/generate_route_matrix.py",
+      "artifact": "docs/route-security-matrix.md",
+      "owns": "the route security matrix, rebuilt from the decorators in `app.py`"
+    },
+    {
+      "script": "scripts/generate_subsystem_inventory.py",
+      "artifact": "docs/subsystem-dependency-inventory.md",
+      "owns": "the subsystem inventory, rebuilt from the same decorators and their tables"
+    }
+  ],
   "not_run": [
     {
       "what": "the full test suite (`pytest -q`)",
@@ -1423,6 +1435,7 @@
     "acceptance_criteria": 5,
     "known_regressions": 45,
     "resolved_regressions": 1,
+    "regenerated_files": 2,
     "findings": 0
   },
   "findings": []

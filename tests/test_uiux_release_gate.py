@@ -216,3 +216,25 @@ def test_the_closed_regression_is_proved_by_a_test_that_exists(payload: dict) ->
     proof = " ".join(row["proof"] for row in payload["resolved_regressions"])
     assert "test_perf_samples_honesty.py" in proof
     assert (PROJECT_ROOT / "tests" / "test_perf_samples_honesty.py").is_file()
+
+
+def test_the_tree_carries_the_bytes_its_generators_produce(gate) -> None:
+    """Two generators cannot `--check`: the gate runs them and compares the bytes instead."""
+    assert gate.GENERATED_WITHOUT_CHECK
+    assert gate.regenerated_findings() == []
+
+
+def test_a_stale_generated_file_is_a_finding_and_the_tree_is_left_as_it_was(gate) -> None:
+    """The check must not quietly "fix" the tree it was asked to inspect."""
+    script, artifact, _owns = gate.GENERATED_WITHOUT_CHECK[0]
+    path = PROJECT_ROOT / artifact
+    original = path.read_bytes()
+    try:
+        path.write_bytes(original + b"\nstale line from a test\n")
+        stale = path.read_bytes()
+        findings = gate.regenerated_findings()
+        assert any(finding["check"] == "generated-file" for finding in findings), findings
+        assert path.read_bytes() == stale, "the check rewrote the file instead of restoring what it found"
+    finally:
+        path.write_bytes(original)
+    assert gate.regenerated_findings() == []

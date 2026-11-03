@@ -168,6 +168,24 @@ ACCEPTANCE: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ),
 )
 
+#: Generated files whose scripts ignore `--check` and rewrite their output unconditionally. The gate
+#: proves the committed bytes are what those scripts produce by running them and comparing: a file that
+#: a source change has left stale is exactly the drift CI's "Verify generated artifacts are
+#: reproducible" step catches, and this story found it the hard way - changing `app.py` moved
+#: `docs/subsystem-dependency-inventory.md`, and nothing in this gate noticed.
+GENERATED_WITHOUT_CHECK: tuple[tuple[str, str, str], ...] = (
+    (
+        "scripts/generate_route_matrix.py",
+        "docs/route-security-matrix.md",
+        "the route security matrix, rebuilt from the decorators in `app.py`",
+    ),
+    (
+        "scripts/generate_subsystem_inventory.py",
+        "docs/subsystem-dependency-inventory.md",
+        "the subsystem inventory, rebuilt from the same decorators and their tables",
+    ),
+)
+
 #: Regressions the program recorded and that have since been closed, with the proof that closed them.
 #: The ledger's own story entries are history and are not rewritten; this is where a reader learns
 #: which of the carried lines still stands, and where to check the claim. `matches` must appear in the
@@ -372,6 +390,35 @@ def known_regressions(document: dict[str, object]) -> list[dict[str, str]]:
     return rows
 
 
+def regenerated_findings() -> list[dict[str, str]]:
+    """Run the generators that cannot check, and leave the tree exactly as it was found."""
+    findings: list[dict[str, str]] = []
+    for script, artifact, owns in GENERATED_WITHOUT_CHECK:
+        path = PROJECT_ROOT / artifact
+        if not path.exists():
+            findings.append({"check": "generated-missing", "detail": f"`{artifact}` does not exist"})
+            continue
+        original = path.read_bytes()
+        subprocess.run(  # noqa: S603 - fixed argv, repository script
+            [sys.executable, script],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=600,
+            check=False,
+        )
+        produced = path.read_bytes()
+        if produced != original:
+            path.write_bytes(original)
+            findings.append(
+                {
+                    "check": "generated-file",
+                    "detail": f"`{artifact}` is not what `{script}` produces ({owns}); regenerate it in this commit",
+                }
+            )
+    return findings
+
+
 def resolution_findings(recorded: list[dict[str, str]]) -> list[dict[str, str]]:
     """Every claim that a carried regression is now closed must still point at one that was recorded."""
     findings: list[dict[str, str]] = []
@@ -413,6 +460,7 @@ def build() -> dict[str, object]:
 
     recorded = known_regressions(document)
     findings.extend(resolution_findings(recorded))
+    findings.extend(regenerated_findings())
     gates = phase_gates(document, checks)
     for gate in gates:
         if not gate["met"] and gate["id"] != "P6":
@@ -454,6 +502,9 @@ def build() -> dict[str, object]:
         "known_regressions": recorded,
         "resolved_regressions": [dict(row) for row in RESOLVED],
         "open_risks": document.get("session_state", {}).get("open_risks", []),  # type: ignore[union-attr]
+        "regenerated_without_check": [
+            {"script": script, "artifact": artifact, "owns": owns} for script, artifact, owns in GENERATED_WITHOUT_CHECK
+        ],
         "not_run": [{"what": what, "why": why} for what, why in NOT_RUN],
         "handover": {
             "what_this_program_changed": [
@@ -509,6 +560,7 @@ def build() -> dict[str, object]:
             "acceptance_criteria": len(ACCEPTANCE),
             "known_regressions": len(recorded),
             "resolved_regressions": len(RESOLVED),
+            "regenerated_files": len(GENERATED_WITHOUT_CHECK),
             "findings": len(findings),
         },
         "findings": findings,
@@ -615,6 +667,19 @@ def render_doc(payload: dict[str, object]) -> str:
             lines.append(f"| {row['story']} | {_cell(row['what'])} | {_cell(row['closed_by'])} | {_cell(row['proof'])} |")
     else:
         lines.append("| - | nothing yet | - | - |")
+    lines += [
+        "",
+        "## Generated files that cannot check themselves",
+        "",
+        "Two generators ignore `--check` and rewrite their output unconditionally, so the gate runs them and "
+        "compares the bytes, restoring the file if the two differ. CI's `Verify generated artifacts are "
+        "reproducible` step is the other half of this.",
+        "",
+        "| Script | Artifact | What it owns |",
+        "|---|---|---|",
+    ]
+    for row in payload["regenerated_without_check"]:  # type: ignore[union-attr]
+        lines.append(f"| `{row['script']}` | `{row['artifact']}` | {_cell(row['owns'])} |")
     lines += [
         "",
         "## What this gate does not run",

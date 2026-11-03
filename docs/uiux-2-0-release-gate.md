@@ -83,7 +83,7 @@ Each story in the program carries the same five criteria. The gate does not deci
 | refusal states | 12 across 9 statuses |
 | committed captures | 240 in 27 sets, 27 reviewed |
 | reader pages verified | 5 (40 commands, 7 claims) |
-| files this program changed | 403 |
+| files this program changed | 404 |
 
 ## Known regressions the program recorded
 
@@ -142,6 +142,15 @@ The ledger's story entries are history and are left as they were written. These 
 | Story | No longer true | Closed by | Proof |
 |---|---|---|---|
 | UIUX-P4-01 | the demo path's invented throughput figures no longer reach `perf_samples` | `record_perf(..., demo=...)` returns before it writes, and all four call sites pass the flag from the usage line that carries it; `studio.py` is regenerated from `app.py` | `tests/test_perf_samples_honesty.py` - no sample for a demo reply, a measured reply still stored, the throughput summary never averaging a demo row, every call site passing the flag, and the bundle carrying the same refusal |
+
+## Generated files that cannot check themselves
+
+Two generators ignore `--check` and rewrite their output unconditionally, so the gate runs them and compares the bytes, restoring the file if the two differ. CI's `Verify generated artifacts are reproducible` step is the other half of this.
+
+| Script | Artifact | What it owns |
+|---|---|---|
+| `scripts/generate_route_matrix.py` | `docs/route-security-matrix.md` | the route security matrix, rebuilt from the decorators in `app.py` |
+| `scripts/generate_subsystem_inventory.py` | `docs/subsystem-dependency-inventory.md` | the subsystem inventory, rebuilt from the same decorators and their tables |
 
 ## What this gate does not run
 
