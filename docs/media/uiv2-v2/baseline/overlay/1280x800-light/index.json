@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "captured_at": "2026-11-03T17:53:36.779Z",
+  "viewport": {
+    "width": 1280,
+    "height": 800,
+    "device_scale_factor": 1
+  },
+  "variant": {
+    "theme": "light",
+    "density": null
+  },
+  "interaction": "select#integrationsQuickMenu value 'mcp' -> openMcpModal()",
+  "shots": [
+    {
+      "id": "mcp-hub",
+      "tab": "overlay",
+      "file": "mcp-hub.png",
+      "bytes": 128051,
+      "sha256": "100c318c005c75ddd7c0654936923efe456eee63cbba82d6b41a88461d07b820"
+    }
+  ]
+}
