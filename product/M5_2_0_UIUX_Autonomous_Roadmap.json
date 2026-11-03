@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 36,
+  "revision": 37,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -100,17 +100,15 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": "UIUX-P6-02",
-    "active_stories": [
-      "UIUX-P6-02"
-    ],
-    "last_completed_story": "UIUX-P6-01",
-    "next_recommended_story": "UIUX-P6-02",
-    "last_checkpoint": "2026-11-03T15:10:00Z",
+    "active_story": null,
+    "active_stories": [],
+    "last_completed_story": "UIUX-P6-02",
+    "next_recommended_story": "UIUX-P6-03",
+    "last_checkpoint": "2026-11-03T16:05:00Z",
     "last_session_id": "arena/feacf753-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "fa4c1522c8b10ce069913f3e2ae560ea43d0f665",
+    "last_verified_commit": "2655677e72208e30218d983900de9b24bc66f8a5",
     "last_updated": "2026-11-03",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -339,20 +337,20 @@
         "UIUX-P6-05"
       ],
       "total": 5,
-      "done": 1,
-      "in_progress": 1,
+      "done": 2,
+      "in_progress": 0,
       "blocked": 0,
       "not_started": 3,
-      "percent_complete": 20
+      "percent_complete": 40
     }
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 36,
-    "in_progress": 1,
+    "done": 37,
+    "in_progress": 0,
     "blocked": 0,
     "not_started": 3,
-    "percent_complete": 90
+    "percent_complete": 92
   },
   "stories": [
     {
@@ -6935,8 +6933,8 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "Adversarial permission and recovery UI tests with no loss of existing functionality.",
+      "current_behavior": "Measured, not read. The panes drew their success path over the server's answer, because the handler read the response body and never its status. A worktree apply the server refused with 403 `Cannot apply worktree changes while session policy is read-only 'plan'.` printed \"Applied!\" in the ok tone and closed the diff dialog; a compaction on a session the server no longer had printed \"Compaction checked.\"; a refused delete cleared the pane and re-read a list that still held the row; five MCP/OpenContext writes answered a refusal with `if (r.ok) { ... }` and nothing else. An attack on the running app found 12 refusals a write can meet across 9 statuses, and of the 35 mutating writes in the shell 17 had nothing between the click and the success path.",
+      "target_behavior": "A refusal is drawn as a refusal, where the action was, in the server's own words, with what was kept and a way forward - and never as an ok-tone success. It is proved by attacking the running app: 15 checks (16 with --screenshots) over refusals the server really produces (403 read-only, 404 gone, 401 wrong token and its recovery, 429 with Retry-After, a refused stream) and refusals a page cannot forge, injected at the network layer with app.py's own text; 0 page errors.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
         "Trace relevant DOM, JS handlers, API and backend state transitions",
@@ -6978,24 +6976,104 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P6-02 (Adversarial permission and recovery UI tests). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 35,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-11-03T15:10:00Z",
-        "updated_at": "2026-11-03T15:10:00Z",
-        "completed_at": null,
+        "updated_at": "2026-11-03T16:05:00Z",
+        "completed_at": "2026-11-03T16:05:00Z",
         "owner_session": "arena/feacf753-m5-agent-studio",
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
-        "known_regressions": [],
-        "decisions": [],
+        "commit_sha": "2655677e72208e30218d983900de9b24bc66f8a5",
+        "changed_files": [
+          ".github/workflows/ci.yml",
+          "docs/README.md",
+          "docs/media/adversarial/adversarial-dark-apply-refusal.png",
+          "docs/media/adversarial/adversarial-dark-before-apply-applied.png",
+          "docs/media/adversarial/adversarial-dark-injected-503.png",
+          "docs/media/adversarial/adversarial-dark-narrow-apply-refusal.png",
+          "docs/media/adversarial/adversarial-dark-rate-limit.png",
+          "docs/media/adversarial/adversarial-light-apply-refusal.png",
+          "docs/media/adversarial/adversarial-light-before-apply-applied.png",
+          "docs/media/adversarial/adversarial-light-injected-503.png",
+          "docs/media/adversarial/adversarial-light-narrow-apply-refusal.png",
+          "docs/media/adversarial/adversarial-light-rate-limit.png",
+          "docs/uiux-2-0-adversarial.md",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-overlays.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-preservation-e2e.md",
+          "docs/uiux-2-0-program.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "product/M5_2_0_UIUX_Adversarial.json",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Onboarding.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_E2E.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "scripts/adversarial_walk.mjs",
+          "scripts/uiux_adversarial_inventory.py",
+          "scripts/uiux_preservation_e2e.py",
+          "scripts/uiux_source_manifest.py",
+          "static/index.html",
+          "studio.py",
+          "tests/test_presentations.py",
+          "tests/test_uiux_adversarial.py",
+          "tests/test_uiux_adversarial_browser.py",
+          "tests/test_uiux_chat_composer.py"
+        ],
+        "evidence": [
+          "`node scripts/adversarial_walk.mjs` (own throwaway demo app, ~30 s) -> 15/15 checks passed, no page error; `--theme dark --screenshots docs/media/adversarial` and `--theme light --screenshots ...` -> 16/16 each, the sixteenth being that the page reports the theme that was asked for. Real refusals: 403 on a read-only session's apply (drawn inside the diff dialog, which stays open, with the server's sentence, a Kept: line, Retry and Reload), 404 on a session deleted underneath the pane, 401 with the boundary's detail then the token re-entered and the same write landing (and the stale refusal cleared), 429 with `Retry in 41s` disabled, a refused Chat stream. Injected with app.py's own text: 503, 507, 413, cross-origin 403.",
+          "`node scripts/adversarial_walk.mjs` against the pre-story handler (applyHarnessWorktree reverted to read the body only) -> 12/16, FAIL `a read-only session's refused apply is drawn with the server's own reason, not as \"Applied!\"` with detail `no presentation | cause:  | dialog open: undefined | toasts: ok:Applied!`. The walk discriminates; the check is not a tautology.",
+          "`python3 scripts/uiux_adversarial_inventory.py --check` -> `adversarial refusals OK: 12 refusals across 9 statuses, 21/35 writes guarded, 4 presentation hosts, 0 findings`. The 12 refusal details are quoted from app.py and compared verbatim, so a reworded server message fails the map instead of leaving the pane's promise untested.",
+          "`pytest -q tests/test_uiux_adversarial.py` -> 16 passed (server contract via TestClient: 403 read-only verbatim, 404 on a deleted session, 503 with no token; shell rules; artifact agreement; `--check` subprocess; and two negative tests that prove the inventory fails on reverted shell code and on a missing host).",
+          "`pytest -q tests/test_uiux_adversarial_browser.py` with STUDIO_SCREENSHOT_CHROME/STUDIO_PUPPETEER_CORE set -> 1 passed in 29.97 s (one isolated demo app, one walk run, the required 15 titles checked). In CI's browser job it runs under `-p scripts.browser_ci_no_skips`.",
+          "`pytest -q` -> 4 failed / 2,547 passed / 29 skipped (276.1 s); after fixing the two source assertions the story changed and regenerating artifacts, `pytest -q tests/test_uiux_*.py tests/test_presentations.py` -> 259 passed, 2 skipped. The one remaining failure is tests/test_baseline.py, whose pinned commit is not in this clone (`Not a valid commit name`); it failed before this story too.",
+          "`ruff check .` -> All checks passed; `mypy` -> Success: no issues found in 58 source files; `check_frontend_syntax.py` -> JavaScript syntax OK; `build_studio.py --check` -> no drift; `demo_tour.py --check` -> up to date; `validate_screenshots.py` -> 6 of 6 published captures untouched; `validate_docs.py` -> passed; `uiux_preservation_e2e.py --check` -> 21/21 rows, 55 provers, 15 support walks, 0 findings."
+        ],
+        "test_results": [
+          "node scripts/adversarial_walk.mjs -> 15/15, exit 0 [TMPDIR=/tmp/m5-runner/m5-browser/tmp, LD_LIBRARY_PATH=/tmp/m5-runner/m5-browser/libs/lib, STUDIO_SCREENSHOT_CHROME=/tmp/m5-runner/m5-browser/tmp/chromium, STUDIO_PUPPETEER_CORE=tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js, STUDIO_PYTHON=.venv/bin/python; Python 3.11.2; tree 2655677]",
+          "node scripts/adversarial_walk.mjs --theme dark --screenshots docs/media/adversarial -> 16/16; --theme light -> 16/16 (same environment)",
+          "node scripts/adversarial_walk.mjs against the reverted apply handler -> 12/16, the refused-apply check FAILing with `toasts: ok:Applied!` (scratch tree, reverted afterwards; check_frontend_syntax.py green after the restore)",
+          "pytest -q tests/test_uiux_adversarial.py -> 16 passed; pytest -q tests/test_uiux_adversarial_browser.py -> 1 passed in 29.97 s",
+          "pytest -q -> 4 failed / 2,547 passed / 29 skipped in 276.13 s (three of the four were stale assertions and artifacts this story then fixed; test_baseline.py is the pre-existing pin failure)",
+          "pytest -q tests/test_uiux_*.py tests/test_presentations.py -> 259 passed, 2 skipped",
+          "ruff check . -> All checks passed; mypy -> 58 source files clean; check_frontend_syntax.py, build_studio.py --check, demo_tour.py --check, validate_screenshots.py, validate_docs.py, uiux_preservation_e2e.py --check, uiux_adversarial_inventory.py --check, uiux_source_manifest.py --check, uiux_coordination.py -> all clean"
+        ],
+        "visual_evidence": [
+          "docs/media/adversarial/adversarial-dark-apply-refusal.png (dark, 1440x900: the 403 read-only apply refusal drawn inside the diff dialog, which stays open)",
+          "docs/media/adversarial/adversarial-light-apply-refusal.png (light, 1440x900)",
+          "docs/media/adversarial/adversarial-dark-narrow-apply-refusal.png (dark, 390x740: the same refusal, actions still reachable)",
+          "docs/media/adversarial/adversarial-light-narrow-apply-refusal.png (light, 390x740)",
+          "docs/media/adversarial/adversarial-dark-injected-503.png and -light- (the boundary's own `Authentication is unavailable` detail)",
+          "docs/media/adversarial/adversarial-dark-rate-limit.png and -light- (the 429 with `Retry in Ns` disabled)",
+          "docs/media/adversarial/adversarial-dark-before-apply-applied.png and -light- (the same refused write on the pre-story handler: dialog closed, ok-tone toast \"Applied!\")",
+          "All ten were taken by scripts/adversarial_walk.mjs on this tree; the walk fails when the page reports a theme other than the one asked for. validate_screenshots.py still validates the 6 published captures (this story adds none to the published suite)."
+        ],
+        "known_regressions": [
+          "Carried forward unchanged from P6-01: demo tok/s, fixture-equal ttft, unprinted prefill_tps/cached_tokens, the checkpoint contract, Hall seat pickers, auto_unload, the 60,000-char copy cap, `stopped` warn tone, residency chips, `aria-live=\"off\"`, the 5,000-event denominator.",
+          "The refusal is also announced as a toast with the server's reason (the inline box carries the actions). This is deliberate - a pane behind a backdrop or scrolled away still announces - but it means the same sentence can appear twice when the dialog is open."
+        ],
+        "decisions": [
+          "The refusal is drawn where the action was. The apply control lives in the diff dialog, so the 403 is drawn inside that dialog and the dialog stays open - a refusal on the pane behind it is hidden from the reader who pressed the button, and the diff they were deciding on would vanish with it.",
+          "A guarded write returns null instead of a response, so a caller cannot fall through to its success path by forgetting a flag. That is why `if (!write) return;` is the first line after every guarded call, and why the success toast is below it.",
+          "A 429 is not offered a Retry that the server will refuse again: the control says `Retry in Ns`, is disabled, and re-enables itself as `Retry` when the server's own Retry-After expires.",
+          "The walk is written to fail on the pre-story code and that was checked by reverting the handler (12/16, `toasts: ok:Applied!`) - a check that cannot fail is not evidence.",
+          "The demo fixture cannot create a worktree session (`use_worktree: true` 500s on it), so the walk opens the diff dialog and reveals the Apply control a worktree session would show; the click, the request and the refusal are the app's own. The check says so rather than implying a worktree session existed.",
+          "Injected refusals are labelled `injected` in the walk and in the map with the reason the browser cannot produce them: a page cannot forge an Origin header, exceed the body limit without sending megabytes, or run a server with no token. The boundary's real contract is proved by the pytest nodes."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Guard every write with the status before the body, and prove each refusal with an attack the browser cannot talk its way out of",
-        "readme_updated": false
+        "handoff_note": "Every refusal now goes through refusalReader -> refuseWrite -> the shared presentation builder, and no caller can fall through to its success path, because guardedWrite returns null. Re-run `node scripts/adversarial_walk.mjs` (self-starting) after touching any write handler, and `python3 scripts/uiux_adversarial_inventory.py --check` after adding one: a new fetch() that never reads the status is a finding, not a style question.",
+        "next_action": "UIUX-P6-03: full screenshot review of the six panes on the tree this program changed",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",
