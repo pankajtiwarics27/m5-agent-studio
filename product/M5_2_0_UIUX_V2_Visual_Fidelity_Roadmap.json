@@ -192,7 +192,7 @@
         "attempt_count": 1,
         "started_at": "2026-11-03T18:30:00+05:30",
         "completed_at": "2026-11-03T18:30:00+05:30",
-        "commit_sha": null,
+        "commit_sha": "2fd07d744336e4fc218db3f497bcc75df16454d6",
         "changed_files": [
           "product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json",
           "docs/uiv2-v2-baseline-evidence.md",
