@@ -123,7 +123,7 @@ starts one isolated demo app and fails the job when any check fails or when the 
 checking one of the refusals above. `M5_REQUIRE_BROWSER_TESTS=1` makes a missing browser a
 failure instead of a skip, so the job cannot pass by not running.
 
-The committed captures in [`docs/media/adversarial`](../docs/media/adversarial) come from this
+The committed captures in `docs/media/adversarial` come from this
 walk on this tree, once per theme, and the walk fails the run when the page reports a theme
 other than the one asked for: the refused apply with its cause, *Kept:* line and both actions
 at 1440x900 and at 390x740, the injected 503, the rate-limited Chat send, and — for contrast —

@@ -390,8 +390,8 @@
     {
       "path": "scripts/uiux_adversarial_inventory.py",
       "role": "maps every refusal a write can meet to the words the pane uses and the proof that both halves hold",
-      "sha256": "b45c2c0f22869c103bef6a56435aabae4c639614455e6de1aaf3c51d034966aa",
-      "bytes": 33432,
+      "sha256": "44e2f8c88dd9b1b28e20b831f9fe482724598334095fb932119161495941b6d7",
+      "bytes": 33403,
       "lines": 621
     },
     {
