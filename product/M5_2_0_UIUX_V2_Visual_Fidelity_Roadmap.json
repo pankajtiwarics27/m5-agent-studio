@@ -304,20 +304,40 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-02: Map feature preservation and persona/MCP/session contracts. Required outcome: Trace every visible control and important hidden flow from DOM handler through backend; identify persona registry, council session deletion capabilities and MCP credentials handling. Specific gate: Produce machine-readable control-to-handler-to-API-to-test matrix; distinguish existing, partial, absent and unknown; no fabricated API. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-03T19:05:00+05:30",
+        "completed_at": "2026-11-03T19:05:00+05:30",
         "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
+        "changed_files": [
+          "scripts/uiux_v2_preservation_matrix.py",
+          "product/M5_2_0_UIUX_V2_Preservation_Matrix.json",
+          "docs/uiv2-v2-preservation-matrix.md",
+          "product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json"
+        ],
+        "tests_executed": [
+          "python3 scripts/uiux_v2_preservation_matrix.py : wrote matrix + doc, 194 controls, api_status existing=33/no-api=83/no-handler=78, 0 absent-route, 0 unknown (exit 0)",
+          "python3 scripts/uiux_v2_preservation_matrix.py --check : up to date (exit 0); the generator hard-asserts the three contract classifications, so drift fails the build",
+          "ruff check scripts/uiux_v2_preservation_matrix.py : all checks passed",
+          "python3 -m py_compile scripts/uiux_v2_preservation_matrix.py : exit 0",
+          "python3 scripts/validate_docs.py : passed, 195 files scanned (exit 0)",
+          "full suite at the same pin (UIV2-01 evidence): pytest -q 2612 passed/29 skipped + browser legs 32 passed in disposable clone"
+        ],
+        "visual_evidence": [
+          "docs/media/uiv2-v2/baseline/ (53 screenshots from the running app at the pin, captured under UIV2-01) \u2014 the visual side of this story changes no UI",
+          "docs/uiv2-v2-preservation-matrix.md"
+        ],
+        "acceptance_evidence": [
+          "AC1 (machine-readable control->handler->API->test matrix; existing/partial/absent/unknown; no fabricated API): product/M5_2_0_UIUX_V2_Preservation_Matrix.json \u2014 194 controls with handler, resolved calls, api_status and covering test files; contracts: chat_persona_registry=absent_registry__existing_picker (3 hard-coded options, no registry), council_session_deletion=partial__lifecycle_without_delete (close exists, no DELETE under /api/hall), mcp_credential_handling=existing__masked (auth_token in SQLite/keyring, API returns only masked_token/has_token, UI field type=password). Every resolved call was matched against mounted @app routes; 0 absent-route, 0 unknown",
+          "AC2 (visual conformance not checkbox-claimed): no UI changed in this story; conformance gate remains UIV2-03 with explicit user approval",
+          "AC3 (preservation): no product code edited \u2014 only a new generator script, its generated artifacts and this ledger; suite green at the pin"
+        ],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "UIV2-02 complete. The V2 preservation matrix traces all 194 markup controls to handlers, API routes and test files; 33 controls reach mounted routes (all existing), 83 are client-side, 78 have no inline handler. Contracts: persona registry ABSENT (picker has 3 hard-coded options); Council session delete ABSENT (only /close exists); MCP credentials EXISTING and masked (keyring/SQLite storage, masked_token-only API, password field). No code edits; generator --check is a drift gate.",
+        "exact_next_action": "UIV2-03: encode the approved three-region Harness reference and per-tab layouts as annotated wireframes + screenshot fixtures, then STOP at the approval gate \u2014 structural implementation requires explicit user approval of the reference (no inferred approval).",
+        "updated_at": "2026-11-03T19:05:00+05:30"
       }
     },
     {
@@ -386,7 +406,7 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-03: Approve precise reference wireframes and visual test harness. Required outcome: Encode the exact approved three-region Harness structure and per-tab reference layouts as reproducible annotated references and screenshot fixtures. Specific gate: Reference must show persistent nav, central task, contextual inspector; user review/explicit approval required before structural implementation; no inferred approval. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
+        "status": "blocked",
         "progress_percent": 0,
         "attempt_count": 0,
         "started_at": null,
@@ -397,9 +417,11 @@
         "visual_evidence": [],
         "acceptance_evidence": [],
         "known_regressions": [],
-        "blockers": [],
+        "blockers": [
+          "Awaiting explicit user approval of the encoded three-region reference wireframes (P0 gate). The user-approved conceptual reference and the seven current-state screenshots are the inputs; approval has not been given for an encoded artifact yet."
+        ],
         "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "exact_next_action": "Encode reference wireframes/fixtures from design_north_star, present to user, obtain explicit approval; only then start P1 shell work. Do not edit the frontend before approval."
       }
     },
     {
@@ -2630,11 +2652,11 @@
       "id": "P0",
       "name": "Source verification and visual contract",
       "total": 3,
-      "done": 1,
+      "done": 2,
       "in_progress": 0,
-      "blocked": 0,
-      "not_started": 2,
-      "percent_complete": 33
+      "blocked": 1,
+      "not_started": 0,
+      "percent_complete": 67
     },
     {
       "id": "P1",
@@ -2699,11 +2721,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 1,
+    "done": 2,
     "in_progress": 0,
-    "blocked": 0,
-    "not_started": 29,
-    "percent_complete": 3
+    "blocked": 1,
+    "not_started": 27,
+    "percent_complete": 7
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",

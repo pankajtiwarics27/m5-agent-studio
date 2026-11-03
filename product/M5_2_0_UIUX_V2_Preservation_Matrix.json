@@ -1,0 +1,2492 @@
+{
+  "schema_version": 1,
+  "document_type": "m5_uiux_v2_preservation_matrix",
+  "program": "M5-UIUX-V2-VISUAL-CONFORMANCE",
+  "story": "UIV2-02",
+  "generator": "scripts/uiux_v2_preservation_matrix.py",
+  "regenerate_with": "python3 scripts/uiux_v2_preservation_matrix.py",
+  "check_with": "python3 scripts/uiux_v2_preservation_matrix.py --check",
+  "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
+  "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
+  "frontend_sha256": "05ea9a0c451fa1d35b5e9d7b368b7391963966921416ff578d580f90b2c5d9cd",
+  "app_sha256": "0e6ecd89d84b7779f91513d8077934b08c8e90bccda919a6fac49ff6e44e2962",
+  "totals": {
+    "controls": 194,
+    "by_pane": {
+      "start": 11,
+      "harness": 23,
+      "hall": 18,
+      "council": 16,
+      "debate": 9,
+      "chat": 11
+    },
+    "chrome_controls": 106,
+    "api_status_counts": {
+      "existing": 33,
+      "no-api": 83,
+      "no-handler": 78
+    },
+    "mounted_routes": 115,
+    "fetch_call_sites": 66
+  },
+  "controls": [
+    {
+      "pane": "start",
+      "id": "onboardingRunBtn",
+      "tag": "button",
+      "text": "Run the first task",
+      "handler": "startGuidedFirstTask",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "start",
+      "id": null,
+      "tag": "button",
+      "text": "Re-check",
+      "handler": "refreshOnboarding",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/onboarding/preflight",
+          "kind": "exact"
+        },
+        {
+          "method": "GET",
+          "route": "/api/onboarding/preflight",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_demo_tour.py",
+        "test_onboarding_preflight.py",
+        "test_presentations.py",
+        "test_start_readiness.py",
+        "test_uiux_docs_verification.py",
+        "test_uiux_route_map.py"
+      ]
+    },
+    {
+      "pane": "start",
+      "id": null,
+      "tag": "button",
+      "text": "Providers",
+      "handler": "openProvidersModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "start",
+      "id": "startTaskInput",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "start",
+      "id": "startTaskBtn",
+      "tag": "button",
+      "text": "Open in Harness",
+      "handler": "launchTaskFromStart",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "start",
+      "id": null,
+      "tag": "button",
+      "text": "Refresh",
+      "handler": "loadStartRecent",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/harness/sessions",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_child_delegation.py",
+        "test_durable_task_state_machine.py",
+        "test_harness_approval_ui.py",
+        "test_harness_evidence.py",
+        "test_harness_permissions.py",
+        "test_harness_recovery.py",
+        "test_harness_settings.py",
+        "test_harness_timeline.py",
+        "test_mcp_idempotency_reconciliation.py",
+        "test_portable_handoff_and_switching.py",
+        "test_process_supervision.py",
+        "test_recovery_guard.py",
+        "test_routing_experiments.py",
+        "test_scoped_grants.py",
+        "test_security_incident_containment.py",
+        "test_single_agent_vertical_slice.py",
+        "test_start_recent.py",
+        "test_task_events.py",
+        "test_uiux_adversarial.py",
+        "test_workspace_snapshots.py"
+      ]
+    },
+    {
+      "pane": "start",
+      "id": null,
+      "tag": "button",
+      "text": "Re-check health",
+      "handler": "refreshTelemetry",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/telemetry",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_perf_samples_honesty.py",
+        "test_start_health.py"
+      ]
+    },
+    {
+      "pane": "start",
+      "id": null,
+      "tag": "button",
+      "text": "Monitor rail",
+      "handler": "toggleMonitorRail",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "start",
+      "id": "startWorkspaceInput",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "start",
+      "id": "startWorkspaceRecent",
+      "tag": "select",
+      "text": "Recent folders\u2026",
+      "handler": "if",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "start",
+      "id": "startWorkspaceBtn",
+      "tag": "button",
+      "text": "Set / Create",
+      "handler": "saveStartWorkspace",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": null,
+      "tag": "button",
+      "text": "Approve",
+      "handler": "resolveHarnessApproval",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/harness/approve",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_harness_approval_ui.py",
+        "test_harness_permissions.py",
+        "test_scoped_grants.py",
+        "test_security_and_quality.py",
+        "test_single_agent_vertical_slice.py",
+        "test_task_events.py",
+        "test_uiux_preservation_e2e.py"
+      ]
+    },
+    {
+      "pane": "harness",
+      "id": null,
+      "tag": "button",
+      "text": "+ New session",
+      "handler": "startFreshHarnessDraft",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": null,
+      "tag": "button",
+      "text": "Set / Create",
+      "handler": "saveWorkspaceDirectory",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/workspace/directory",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_demo_isolation.py",
+        "test_harness_settings.py",
+        "test_screenshot_capture_browser.py",
+        "test_start_health.py"
+      ]
+    },
+    {
+      "pane": "harness",
+      "id": "harnessWorkspaceInput",
+      "tag": "input",
+      "text": null,
+      "handler": "syncProjectDirInputs",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessRecentDirsSelect",
+      "tag": "select",
+      "text": null,
+      "handler": "if",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessUseWorktree",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessLeadModel",
+      "tag": "select",
+      "text": null,
+      "handler": "handleModelSelectChange",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessCriticModel",
+      "tag": "select",
+      "text": null,
+      "handler": "handleModelSelectChange",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessPolicy",
+      "tag": "select",
+      "text": "Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only)",
+      "handler": "patchActiveHarnessSettings",
+      "calls": [
+        {
+          "method": "PATCH",
+          "route": "/api/harness/sessions/{session_id}",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_child_delegation.py",
+        "test_durable_task_state_machine.py",
+        "test_harness_approval_ui.py",
+        "test_harness_evidence.py",
+        "test_harness_permissions.py",
+        "test_harness_recovery.py",
+        "test_harness_settings.py",
+        "test_harness_timeline.py",
+        "test_mcp_idempotency_reconciliation.py",
+        "test_portable_handoff_and_switching.py",
+        "test_process_supervision.py",
+        "test_recovery_guard.py",
+        "test_routing_experiments.py",
+        "test_scoped_grants.py",
+        "test_security_incident_containment.py",
+        "test_single_agent_vertical_slice.py",
+        "test_start_recent.py",
+        "test_task_events.py",
+        "test_uiux_adversarial.py",
+        "test_workspace_snapshots.py"
+      ]
+    },
+    {
+      "pane": "harness",
+      "id": null,
+      "tag": "summary",
+      "text": "Run settings",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessEfficiencyMode",
+      "tag": "select",
+      "text": "Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessReasoning",
+      "tag": "select",
+      "text": "Off (Fastest) Low Medium xHigh",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessMaxSteps",
+      "tag": "select",
+      "text": "6 steps 10 steps 16 steps 24 steps",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessSessionActionSelect",
+      "tag": "select",
+      "text": "Session Actions\u2026 Inspect Git Status & Diff Permissions & Revocations Compact Session Context (\u22642 KB) Open Agile SDLC Product Board Verification & Artifacts",
+      "handler": "runHarnessSessionAction",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessAbortBtn",
+      "tag": "button",
+      "text": "Abort",
+      "handler": "abortHarnessRun",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/harness/abort/{session_id}",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_harness_recovery.py",
+        "test_security_and_quality.py",
+        "test_uiux_preservation_e2e.py",
+        "test_worker_leases_and_fencing.py"
+      ]
+    },
+    {
+      "pane": "harness",
+      "id": "harnessPermissionBadge",
+      "tag": "button",
+      "text": "No permissions",
+      "handler": "openHarnessGrants",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessTimelineToggle",
+      "tag": "button",
+      "text": "Session log",
+      "handler": "toggleHarnessTimeline",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessTimelineJump",
+      "tag": "button",
+      "text": "Jump to latest \u2193",
+      "handler": "jumpToLatestHarnessEvent",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessTimelineReplay",
+      "tag": "button",
+      "text": "Replay log",
+      "handler": "replayHarnessLog",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessTimelineResync",
+      "tag": "button",
+      "text": "Resync",
+      "handler": "harnessResyncFromSnapshot",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/harness/sessions/{session_id}/state",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_child_delegation.py",
+        "test_durable_task_state_machine.py",
+        "test_harness_approval_ui.py",
+        "test_harness_evidence.py",
+        "test_harness_permissions.py",
+        "test_harness_recovery.py",
+        "test_harness_settings.py",
+        "test_harness_timeline.py",
+        "test_mcp_idempotency_reconciliation.py",
+        "test_portable_handoff_and_switching.py",
+        "test_process_supervision.py",
+        "test_recovery_guard.py",
+        "test_routing_experiments.py",
+        "test_scoped_grants.py",
+        "test_security_incident_containment.py",
+        "test_single_agent_vertical_slice.py",
+        "test_start_recent.py",
+        "test_task_events.py",
+        "test_uiux_adversarial.py",
+        "test_workspace_snapshots.py"
+      ]
+    },
+    {
+      "pane": "harness",
+      "id": "harnessPromptInput",
+      "tag": "textarea",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessWorkflowMode",
+      "tag": "select",
+      "text": "Autonomous Turn (Step Loop) Plan, Build, Verify (GSD 3-Wave) Agile SDLC Factory (Full Build) Agile SDLC Board & Backlog\u2026",
+      "handler": "syncHarnessWorkflowModeUI",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessRunBtn",
+      "tag": "button",
+      "text": "Run",
+      "handler": "executeHarnessSelectedWorkflow",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": null,
+      "tag": "button",
+      "text": "+ Spawn Council Session",
+      "handler": "openSpawnModal",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/workspace/files",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": "hallFullRoundBtn",
+      "tag": "button",
+      "text": "Run full round",
+      "handler": "runHallFullRound",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": "hallConcludeBtn",
+      "tag": "button",
+      "text": "Finish and pin summary",
+      "handler": "summonConclusion",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": null,
+      "tag": "summary",
+      "text": "Council role models",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": "councilReadinessRefresh",
+      "tag": "button",
+      "text": "Check again",
+      "handler": "refreshCouncilReadiness",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": "hallSeatArch",
+      "tag": "select",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": "hallSeatCoder",
+      "tag": "select",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": "hallSeatCritic",
+      "tag": "select",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": "hallSeatJudge",
+      "tag": "select",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": "hallReasoningSelect",
+      "tag": "select",
+      "text": "Reasoning: Off Reasoning: Low Reasoning: Medium",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": "hallStopBtn",
+      "tag": "button",
+      "text": "Stop",
+      "handler": "stopActiveStream",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": null,
+      "tag": "summary",
+      "text": "Ask one model",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": "hallRoleSelect",
+      "tag": "select",
+      "text": "1. Architect / Strategist 2. Builder / Deep Analyst 3. Adversarial Critic 4. Lead Arbiter",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": "hallModelSelect",
+      "tag": "select",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": "hallSummonBtn",
+      "tag": "button",
+      "text": "Ask one model",
+      "handler": "summonSingleAgent",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": "hallHumanInput",
+      "tag": "textarea",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": "hallSendModeSelect",
+      "tag": "select",
+      "text": "Send & run 4-LLM round Post note only",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "hall",
+      "id": "hallSendBtn",
+      "tag": "button",
+      "text": "Send",
+      "handler": "submitHallComposer",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": "c-arch",
+      "tag": "select",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": "c-coder",
+      "tag": "select",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": "c-critic",
+      "tag": "select",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": "c-judge",
+      "tag": "select",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": "c-unload",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": "c-reasoning",
+      "tag": "select",
+      "text": "Off \u2014 Direct Fast (~29 tok/s) Low \u2014 Bounded (900t cap) Medium \u2014 Deep (1800t cap)",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": "councilPrompt",
+      "tag": "textarea",
+      "text": "Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks, with graceful cancellation and unit tests.",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": null,
+      "tag": "button",
+      "text": "Token Bucket",
+      "handler": "setCouncilPreset",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": null,
+      "tag": "button",
+      "text": "Portfolio Actor",
+      "handler": "setCouncilPreset",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": "councilStopBtn",
+      "tag": "button",
+      "text": "Stop",
+      "handler": "stopActiveStream",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": "councilRunBtn",
+      "tag": "button",
+      "text": "Run pipeline",
+      "handler": "runCouncil",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": "step-card-0",
+      "tag": "button",
+      "text": "VIEWAll Stages Ready",
+      "handler": "selectStageFilter",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": "step-card-1",
+      "tag": "button",
+      "text": "1 \u2022 ARCHITECTSpec Idle",
+      "handler": "selectStageFilter",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": "step-card-2",
+      "tag": "button",
+      "text": "2 \u2022 CODERDraft Idle",
+      "handler": "selectStageFilter",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": "step-card-3",
+      "tag": "button",
+      "text": "3 \u2022 CRITICAudit Idle",
+      "handler": "selectStageFilter",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "council",
+      "id": "step-card-4",
+      "tag": "button",
+      "text": "4 \u2022 JUDGEFinal Idle",
+      "handler": "selectStageFilter",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "debate",
+      "id": "d-synth",
+      "tag": "input",
+      "text": null,
+      "handler": "syncDebateArbiter",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "debate",
+      "id": "d-judge",
+      "tag": "select",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "debate",
+      "id": "debatePrompt",
+      "tag": "textarea",
+      "text": "Compare SQLite WAL vs DuckDB vs embedded Postgres for a local macOS telemetry & vector hybrid store handling 500 writes/sec.",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "debate",
+      "id": "debateStopBtn",
+      "tag": "button",
+      "text": "Stop",
+      "handler": "stopActiveStream",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "debate",
+      "id": "debateRunBtn",
+      "tag": "button",
+      "text": "Start Compare",
+      "handler": "runDebate",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "debate",
+      "id": "debateHistoryFindBtn",
+      "tag": "button",
+      "text": "Find saved comparisons",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "debate",
+      "id": "debateHistorySelect",
+      "tag": "select",
+      "text": "Find saved comparisons to populate this list",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "debate",
+      "id": "debateHistoryLoadBtn",
+      "tag": "button",
+      "text": "Revisit selected",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "debate",
+      "id": "debateHistoryExportBtn",
+      "tag": "button",
+      "text": "Download full history export",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chat",
+      "id": "chatModel",
+      "tag": "select",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chat",
+      "id": "chatPersona",
+      "tag": "select",
+      "text": "Principal Engineer & UI Architect Bug & UX Auditor Code Only (Zero Fluff)",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chat",
+      "id": "chatReasoning",
+      "tag": "select",
+      "text": "Off Low Medium",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chat",
+      "id": "chatToolsEnabled",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chat",
+      "id": "chatUnload",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chat",
+      "id": "chatClearBtn",
+      "tag": "button",
+      "text": "Clear",
+      "handler": "clearChat",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chat",
+      "id": "chatHandoffBtn",
+      "tag": "button",
+      "text": "Open in Harness",
+      "handler": "handOffChatToHarness",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chat",
+      "id": "chatJumpLatest",
+      "tag": "button",
+      "text": "Jump to latest \u2193",
+      "handler": "jumpToLatestChatTurn",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chat",
+      "id": "chatInput",
+      "tag": "textarea",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chat",
+      "id": "chatStopBtn",
+      "tag": "button",
+      "text": "Stop",
+      "handler": "stopChatStream",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chat",
+      "id": "chatSendBtn",
+      "tag": "button",
+      "text": "Send",
+      "handler": "sendChat",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "tab-start",
+      "tag": "button",
+      "text": "Start",
+      "handler": "switchTab",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "tab-harness",
+      "tag": "button",
+      "text": "Harness",
+      "handler": "switchTab",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "tab-hall",
+      "tag": "button",
+      "text": "Council",
+      "handler": "switchTab",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "tab-council",
+      "tag": "button",
+      "text": "Pipeline",
+      "handler": "switchTab",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "tab-debate",
+      "tag": "button",
+      "text": "Compare",
+      "handler": "switchTab",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "tab-chat",
+      "tag": "button",
+      "text": "Chat",
+      "handler": "switchTab",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Search \u2318K",
+      "handler": "openCommandPalette",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "densityToggleBtn",
+      "tag": "button",
+      "text": "Density: comfortable",
+      "handler": "toggleDensity",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "themeToggleBtn",
+      "tag": "button",
+      "text": "Light",
+      "handler": "toggleTheme",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "cmdSearchInput",
+      "tag": "input",
+      "text": null,
+      "handler": "renderCommandPaletteList",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "ctxTabBtn-oc",
+      "tag": "button",
+      "text": "Knowledge",
+      "handler": "switchCtxTab",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "ctxTabBtn-cg",
+      "tag": "button",
+      "text": "Code graph",
+      "handler": "switchCtxTab",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "ctxTabBtn-gsd",
+      "tag": "button",
+      "text": "Planning",
+      "handler": "switchCtxTab",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Close",
+      "handler": "closeContextModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "ocDocId",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "ocTitle",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "ocFolder",
+      "tag": "select",
+      "text": "architecture decisions preferences postmortems",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "ocPinned",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "ocContent",
+      "tag": "textarea",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "ocSearchInput",
+      "tag": "input",
+      "text": null,
+      "handler": "searchOpenContextUI",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/opencontext/search",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_context_store.py",
+        "test_demo_tour.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Wiki Lint",
+      "handler": "runOpenContextLintUI",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/opencontext/lint",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_context_store.py",
+        "test_demo_tour.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Clear",
+      "handler": "resetOcForm",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Save to OpenContext",
+      "handler": "saveOpenContextDoc",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/opencontext/docs",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_context_store.py",
+        "test_demo_tour.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Scan Workspace Graph",
+      "handler": "refreshCodeGraphOverview",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/codegraph/analyze",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "cgWorkspaceInput",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "cgModeSelect",
+      "tag": "select",
+      "text": "codegraph_architecture (Hubs & God Nodes) codegraph_path (Graphify Shortest Path A -> B) codegraph_impact (Caller Blast-Radius) codegraph_context (Symbol Search) codegraph_quality (Complexity Hotspots) ponytail-debt (Shortcut & Rationale Ledger)",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "cgQueryInput",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Run Query",
+      "handler": "runCodeGraphPlayground",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/codegraph/query",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Refresh",
+      "handler": "loadMcpServers",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/mcp/servers",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_demo_tour.py",
+        "test_durable_intent_ledger.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Close",
+      "handler": "closeMcpModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpAlias",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpName",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpTransport",
+      "tag": "select",
+      "text": "Cloud / Custom HTTP (URL) Custom Stdio Command",
+      "handler": "toggleMcpTransportFields",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpApprovalPolicy",
+      "tag": "select",
+      "text": "Auto-Run (Trusted Read/Search) Inherit Harness Policy Always Ask Human Approval",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpUrl",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpAuthHeader",
+      "tag": "select",
+      "text": "Authorization: Bearer x-api-key None (Zero-Key)",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpToken",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpHeadersJson",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpCommand",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpArgs",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpEnvJson",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpSaveBtn",
+      "tag": "button",
+      "text": "Save & Sync Tools",
+      "handler": "saveMcpServer",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/mcp/servers",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_demo_tour.py",
+        "test_durable_intent_ledger.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "summary",
+      "text": "Paste mcpServers JSON Config (Claude Desktop / Cursor / Windsurf Format)",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpImportJsonInput",
+      "tag": "textarea",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Import & Sync All",
+      "handler": "importMcpJson",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/mcp/import-json",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpPlayServer",
+      "tag": "select",
+      "text": null,
+      "handler": "populateMcpPlayTools",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpPlayTool",
+      "tag": "select",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpPlayArgs",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpPlayBtn",
+      "tag": "button",
+      "text": "Test Call",
+      "handler": "runMcpPlayground",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/mcp/servers/{alias}/call",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_demo_tour.py",
+        "test_durable_intent_ledger.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Close",
+      "handler": "closeExternalHarnessModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Copy YAML",
+      "handler": "copyPreText",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Copy Python",
+      "handler": "copyPreText",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Copy Commands",
+      "handler": "copyPreText",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "applyWorktreeBtn",
+      "tag": "button",
+      "text": "Apply Worktree to Main Workspace",
+      "handler": "applyHarnessWorktree",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/harness/sessions/{session_id}/apply",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_child_delegation.py",
+        "test_durable_task_state_machine.py",
+        "test_harness_approval_ui.py",
+        "test_harness_evidence.py",
+        "test_harness_permissions.py",
+        "test_harness_recovery.py",
+        "test_harness_settings.py",
+        "test_harness_timeline.py",
+        "test_mcp_idempotency_reconciliation.py",
+        "test_portable_handoff_and_switching.py",
+        "test_process_supervision.py",
+        "test_recovery_guard.py",
+        "test_routing_experiments.py",
+        "test_scoped_grants.py",
+        "test_security_incident_containment.py",
+        "test_single_agent_vertical_slice.py",
+        "test_start_recent.py",
+        "test_task_events.py",
+        "test_uiux_adversarial.py",
+        "test_workspace_snapshots.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Refresh",
+      "handler": "openHarnessDiffModal",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/harness/sessions/{session_id}/diff",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_child_delegation.py",
+        "test_durable_task_state_machine.py",
+        "test_harness_approval_ui.py",
+        "test_harness_evidence.py",
+        "test_harness_permissions.py",
+        "test_harness_recovery.py",
+        "test_harness_settings.py",
+        "test_harness_timeline.py",
+        "test_mcp_idempotency_reconciliation.py",
+        "test_portable_handoff_and_switching.py",
+        "test_process_supervision.py",
+        "test_recovery_guard.py",
+        "test_routing_experiments.py",
+        "test_scoped_grants.py",
+        "test_security_incident_containment.py",
+        "test_single_agent_vertical_slice.py",
+        "test_start_recent.py",
+        "test_task_events.py",
+        "test_uiux_adversarial.py",
+        "test_workspace_snapshots.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Verification & artifacts",
+      "handler": "openHarnessEvidenceModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Close",
+      "handler": "closeHarnessDiffModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Refresh",
+      "handler": "refreshHarnessEvidence",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/harness/sessions/{session_id}/task",
+          "kind": "exact"
+        },
+        {
+          "method": "GET",
+          "route": "/api/harness/sessions/{session_id}/diff",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_child_delegation.py",
+        "test_durable_task_state_machine.py",
+        "test_harness_approval_ui.py",
+        "test_harness_evidence.py",
+        "test_harness_permissions.py",
+        "test_harness_recovery.py",
+        "test_harness_settings.py",
+        "test_harness_timeline.py",
+        "test_mcp_idempotency_reconciliation.py",
+        "test_portable_handoff_and_switching.py",
+        "test_process_supervision.py",
+        "test_recovery_guard.py",
+        "test_routing_experiments.py",
+        "test_scoped_grants.py",
+        "test_security_incident_containment.py",
+        "test_single_agent_vertical_slice.py",
+        "test_start_recent.py",
+        "test_task_events.py",
+        "test_uiux_adversarial.py",
+        "test_workspace_snapshots.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Close",
+      "handler": "closeHarnessEvidenceModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Refresh",
+      "handler": "refreshHarnessGrants",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/harness/sessions/{session_id}/grants",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_child_delegation.py",
+        "test_durable_task_state_machine.py",
+        "test_harness_approval_ui.py",
+        "test_harness_evidence.py",
+        "test_harness_permissions.py",
+        "test_harness_recovery.py",
+        "test_harness_settings.py",
+        "test_harness_timeline.py",
+        "test_mcp_idempotency_reconciliation.py",
+        "test_portable_handoff_and_switching.py",
+        "test_process_supervision.py",
+        "test_recovery_guard.py",
+        "test_routing_experiments.py",
+        "test_scoped_grants.py",
+        "test_security_incident_containment.py",
+        "test_single_agent_vertical_slice.py",
+        "test_start_recent.py",
+        "test_task_events.py",
+        "test_uiux_adversarial.py",
+        "test_workspace_snapshots.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Close",
+      "handler": "closeHarnessGrants",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Close",
+      "handler": "closeProvidersModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "provAlias",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "provName",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "provWire",
+      "tag": "select",
+      "text": "OpenAI Compatible (/chat/completions) Anthropic Native (/v1/messages SSE)",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "provUrl",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "provKey",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "fetchModelsBtn",
+      "tag": "button",
+      "text": "Fetch Live Models from Endpoint",
+      "handler": "fetchRemoteModels",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/providers/fetch-models",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "provModels",
+      "tag": "textarea",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Save & Enable Provider",
+      "handler": "saveProvider",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/providers",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_demo_isolation.py",
+        "test_demo_tour.py",
+        "test_history_privacy.py",
+        "test_remote_protections.py",
+        "test_security_and_quality.py",
+        "test_uiux_adversarial.py",
+        "test_uiux_authorization_trace.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": "comboAlias",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "comboName",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "comboTargets",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Save Combo",
+      "handler": "saveCombo",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/combos",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_demo_tour.py",
+        "test_remote_protections.py",
+        "test_security_and_quality.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Rescan",
+      "handler": "loadSkills",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/skills",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Close",
+      "handler": "closeSkillsModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "skillInstallInput",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "skillInstallBtn",
+      "tag": "button",
+      "text": "Install",
+      "handler": "installSkill",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/skills/install",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Refresh",
+      "handler": "refreshSdlcBoard",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/harness/sessions/{session_id}/sdlc",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_child_delegation.py",
+        "test_durable_task_state_machine.py",
+        "test_harness_approval_ui.py",
+        "test_harness_evidence.py",
+        "test_harness_permissions.py",
+        "test_harness_recovery.py",
+        "test_harness_settings.py",
+        "test_harness_timeline.py",
+        "test_mcp_idempotency_reconciliation.py",
+        "test_portable_handoff_and_switching.py",
+        "test_process_supervision.py",
+        "test_recovery_guard.py",
+        "test_routing_experiments.py",
+        "test_scoped_grants.py",
+        "test_security_incident_containment.py",
+        "test_single_agent_vertical_slice.py",
+        "test_start_recent.py",
+        "test_task_events.py",
+        "test_uiux_adversarial.py",
+        "test_workspace_snapshots.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Close",
+      "handler": "closeSdlcModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "sdlcWorkspaceInput",
+      "tag": "input",
+      "text": null,
+      "handler": "syncProjectDirInputs",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Set Directory",
+      "handler": "saveWorkspaceDirectory",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/workspace/directory",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_demo_isolation.py",
+        "test_harness_settings.py",
+        "test_screenshot_capture_browser.py",
+        "test_start_health.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": "sdlcVisionInput",
+      "tag": "textarea",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "sdlcMaxStories",
+      "tag": "select",
+      "text": "3 stories 5 stories 8 stories",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "sdlcRunModeSelect",
+      "tag": "select",
+      "text": "Full Workflow (Research \u2192 PRD \u2192 Arch \u2192 Sprints + QA) 1. Research & Plan Backlog Only (.sdlc/backlog.json) Resume Pending Sprints (passes:false stories)",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Launch SDLC",
+      "handler": "startSdlcSelectedMode",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Research",
+      "handler": "switchSdlcArtifact",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "PRD",
+      "handler": "switchSdlcArtifact",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Arch",
+      "handler": "switchSdlcArtifact",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Feedback",
+      "handler": "switchSdlcArtifact",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "sdlcFeedbackAutoImpl",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "sdlcFeedbackInput",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "sdlcInspirationQuery",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Research & Iterate",
+      "handler": "submitSdlcFeedback",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Close",
+      "handler": "closeSpawnModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "spawnRequestInput",
+      "tag": "textarea",
+      "text": "Design an event-sourced local-first task queue on macOS with crash-safe SQLite WAL persistence, zero-polling wakeups, and backpressure.",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Cancel",
+      "handler": "closeSpawnModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Open Empty Room",
+      "handler": "confirmSpawnSession",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/hall/sessions",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_council_participants.py",
+        "test_demo_tour.py",
+        "test_uiux_preservation_signoff.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": "spawnConveneBtn",
+      "tag": "button",
+      "text": "Spawn & Convene 4-LLM Council",
+      "handler": "confirmSpawnSession",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/hall/sessions",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_council_participants.py",
+        "test_demo_tour.py",
+        "test_uiux_preservation_signoff.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": "integrationsQuickMenu",
+      "tag": "select",
+      "text": "Tools & Integrations\u2026 Cloud & Local Providers MCP Tools Hub Agent Skills (SKILL.md) Knowledge & CodeGraph External Harness CLI Bridge",
+      "handler": "openIntegrationFromMenu",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "monitorToggleBtn",
+      "tag": "button",
+      "text": "Telemetry",
+      "handler": "toggleMonitorRail",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Unload models",
+      "handler": "unloadAllModels",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/models/unload-all",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "omlxLoadModelPicker",
+      "tag": "select",
+      "text": "+ Load model on demand\u2026",
+      "handler": "toggleCustomLoadInput",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Load",
+      "handler": "loadSelectedOmlxModel",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "omlxCustomModelInput",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Clear SSD",
+      "handler": "clearSsdCache",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/cache/clear-ssd",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_local_integration_contracts.py"
+      ]
+    }
+  ],
+  "contracts": {
+    "chat_persona_registry": {
+      "question": "Is there a chat persona registry behind the picker?",
+      "classification": "absent_registry__existing_picker",
+      "picker": {
+        "status": "existing",
+        "evidence": "select#chatPersona at static/index.html:2590 with 3 hard-coded <option> values",
+        "options": [
+          "Principal Engineer &amp; UI Architect",
+          "Bug &amp; UX Auditor",
+          "Code Only (Zero Fluff)"
+        ]
+      },
+      "registry": {
+        "status": "absent",
+        "evidence": "no PERSONA/PERSONAS constant or registry object in the inline script; the picker is the whole contract"
+      }
+    },
+    "council_session_deletion": {
+      "question": "Can a Council (hall) session be deleted or cleared through the API?",
+      "classification": "partial__lifecycle_without_delete",
+      "routes": [
+        "GET /api/hall/sessions",
+        "GET /api/hall/sessions/{session_id}",
+        "POST /api/hall/sessions",
+        "POST /api/hall/sessions/{session_id}/close",
+        "POST /api/hall/sessions/{session_id}/message",
+        "POST /api/hall/sessions/{session_id}/summon"
+      ],
+      "delete": {
+        "status": "absent",
+        "evidence": "no @app.delete under /api/hall in app.py; the hall pane exposes no clear control either"
+      },
+      "close": {
+        "status": "existing",
+        "evidence": "POST /api/hall/sessions/{session_id}/close exists (app.py)"
+      }
+    },
+    "mcp_credential_handling": {
+      "question": "How are MCP credentials stored and exposed?",
+      "classification": "existing__masked",
+      "routes": [
+        "DELETE /api/mcp/servers/{alias}",
+        "GET /api/mcp/servers",
+        "PATCH /api/mcp/servers/{alias}",
+        "POST /api/mcp/import-json",
+        "POST /api/mcp/servers",
+        "POST /api/mcp/servers/{alias}/call",
+        "POST /api/mcp/servers/{alias}/sync"
+      ],
+      "storage": {
+        "status": "existing",
+        "evidence": "mcp_servers.auth_token column in the SQLite store, resolved through _keyring_read (keyring-backed)"
+      },
+      "api_surface": {
+        "status": "existing",
+        "evidence": "GET /api/mcp/servers answers with list_mcp_servers(include_secret=False); rows expose only has_token and masked_token (_mask_secret), never auth_token"
+      },
+      "ui_field": {
+        "status": "existing",
+        "evidence": "input#mcpToken is type=\"password\" with placeholder \"Optional for free servers\"; blank keeps the stored value"
+      }
+    }
+  },
+  "not_verified": [
+    "This is a static trace: a handler that exists is not proof its route is reachable in every state, and script-rendered controls from template strings are not re-walked here.",
+    "tests lists files whose source mentions the route literal; it proves a test mentions the route, not that every branch of the handler is covered.",
+    "46 mounted routes have no observed frontend caller (see the route map); absence of an observed caller is not absence of a caller."
+  ]
+}
