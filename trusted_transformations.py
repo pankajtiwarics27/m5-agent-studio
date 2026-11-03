@@ -87,6 +87,11 @@ TT_MAX_DEMAND_RECORDS = 128
 TT_MAX_EXECUTION_RECORDS = 512
 TT_MAX_AB_REPORTS = 32
 TT_MAX_OVERHEAD_MS_CEILING = 50.0
+#: The transform runs inside the operation it qualifies, so its cost is judged against that operation's
+#: own cost on the machine doing the measuring: an absolute millisecond ceiling reports how loaded the
+#: runner was, not whether the transform is proportionate. The floor above still applies, so a fast
+#: machine cannot fail on noise, and this ratio can only relax it.
+TT_OVERHEAD_BASELINE_RATIO = 1.0
 
 _TT_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 _TT_PROMPT_INJECTION_RE = re.compile(
@@ -1394,20 +1399,22 @@ def compare_transformation_ab_runs(
     lat_delta = round(qual_lat - base_lat, 4)
 
     overhead_med = round(float(statistics.median(r.transform_overhead_ms for r in qual_runs)), 4)
+    overhead_allowance = round(max(TT_MAX_OVERHEAD_MS_CEILING, TT_OVERHEAD_BASELINE_RATIO * base_lat), 4)
+    within_overhead = overhead_med <= overhead_allowance
     unauth_total = sum(r.unauthorized_relaxations for r in scen_runs)
 
     if expect_blocking_lift:
         benefit_justifies_cost = bool(
             unauth_total == 0
             and sr_delta > 0.0
-            and overhead_med <= TT_MAX_OVERHEAD_MS_CEILING
+            and within_overhead
         )
     else:
         benefit_justifies_cost = bool(
             unauth_total == 0
             and sr_delta >= 0.0
             and tok_delta <= 0.0
-            and overhead_med <= TT_MAX_OVERHEAD_MS_CEILING
+            and within_overhead
         )
 
     return {
@@ -1439,6 +1446,8 @@ def compare_transformation_ab_runs(
             "latency_ms_median": lat_delta,
         },
         "unauthorized_relaxations": unauth_total,
+        "overhead_allowance_ms": overhead_allowance,
+        "overhead_within_allowance": within_overhead,
         "benefit_justifies_cost": benefit_justifies_cost,
     }
 

@@ -192,6 +192,23 @@ GENERATED_WITHOUT_CHECK: tuple[tuple[str, str, str], ...] = (
 #: ledger's text - the build fails closed if the recorded wording moves out from under it.
 RESOLVED: tuple[dict[str, str], ...] = (
     {
+        "story": "UIUX-P6-03",
+        "matches": "a busy runner can fail it",
+        "what": (
+            "the A/B gate no longer reports a loaded runner as a property of the transform: the overhead "
+            "allowance is the larger of a 50 ms floor and the baseline operation's own median latency"
+        ),
+        "closed_by": (
+            "`compare_transformation_ab_runs` now computes `overhead_allowance_ms` and "
+            "`overhead_within_allowance`, and reports them per scenario; the floor still applies on a fast "
+            "machine and a disproportionate transform still fails"
+        ),
+        "proof": (
+            "`tests/test_trusted_transformations.py` - a slow runner (400 ms baseline, 125 ms overhead) "
+            "passes where it used to fail, and a transform costing three times the work it wraps fails"
+        ),
+    },
+    {
         "story": "UIUX-P4-01",
         "matches": "fabricated tok/s figures (29.5 / 42.1)",
         "what": "the demo path's invented throughput figures no longer reach `perf_samples`",

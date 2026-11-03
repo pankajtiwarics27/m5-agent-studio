@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "310eda92a61298b75086e2c5aa64f7f86f04ad90a198098626ec3bb1ead5f222",
-      "bytes": 3498647,
-      "lines": 76288
+      "sha256": "d1e06eeb99b0839b221234456c5277a3cce639ffd9154a2b91ea57095d8ec023",
+      "bytes": 3499270,
+      "lines": 76297
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -446,9 +446,9 @@
     {
       "path": "scripts/uiux_release_gate.py",
       "role": "runs every artifact's --check, computes the seven phase gates, maps the five acceptance criteria to evidence and carries the known regressions into a handover",
-      "sha256": "22f3bcb1e4dc25815088572dda3a8b54c7ab174d744f504996a998c75529b183",
-      "bytes": 43475,
-      "lines": 831
+      "sha256": "a9b1512f6d8e9e39d527d3a091b94bd8cb2774ec7c9030fc6168d99c87fdb868",
+      "bytes": 44345,
+      "lines": 848
     },
     {
       "path": "tests/test_uiux_release_gate.py",
