@@ -83,7 +83,7 @@ Each story in the program carries the same five criteria. The gate does not deci
 | refusal states | 12 across 9 statuses |
 | committed captures | 240 in 27 sets, 27 reviewed |
 | reader pages verified | 5 (40 commands, 7 claims) |
-| files this program changed | 404 |
+| files this program changed | 406 |
 
 ## Known regressions the program recorded
 
@@ -141,6 +141,7 @@ The ledger's story entries are history and are left as they were written. These 
 
 | Story | No longer true | Closed by | Proof |
 |---|---|---|---|
+| UIUX-P6-03 | the A/B gate no longer reports a loaded runner as a property of the transform: the overhead allowance is the larger of a 50 ms floor and the baseline operation's own median latency | `compare_transformation_ab_runs` now computes `overhead_allowance_ms` and `overhead_within_allowance`, and reports them per scenario; the floor still applies on a fast machine and a disproportionate transform still fails | `tests/test_trusted_transformations.py` - a slow runner (400 ms baseline, 125 ms overhead) passes where it used to fail, and a transform costing three times the work it wraps fails |
 | UIUX-P4-01 | the demo path's invented throughput figures no longer reach `perf_samples` | `record_perf(..., demo=...)` returns before it writes, and all four call sites pass the flag from the usage line that carries it; `studio.py` is regenerated from `app.py` | `tests/test_perf_samples_honesty.py` - no sample for a demo reply, a measured reply still stored, the throughput summary never averaging a demo row, every call site passing the flag, and the bundle carrying the same refusal |
 
 ## Generated files that cannot check themselves

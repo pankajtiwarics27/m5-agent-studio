@@ -734,3 +734,75 @@ def test_http_endpoints_and_standalone_studio_bundle_parity(
         )
         assert r_revoke.status_code == 200
         assert out_sha in r_revoke.json()["invalidated_artifact_digests"]
+
+
+def _ab_run(
+    run_id: str,
+    variant: str,
+    *,
+    verified: bool,
+    tokens: int = 300,
+    latency_ms: float = 1.0,
+    overhead_ms: float = 0.0,
+    scenario_id: str = "slow-runner-scenario",
+) -> tt.TransformationEvalRun:
+    return tt.TransformationEvalRun(
+        run_id=run_id,
+        scenario_id=scenario_id,
+        transform_id="structured_test_report_extract_v1",
+        variant=variant,
+        task_digest="0" * 64,
+        verified_completed=verified,
+        unauthorized_relaxations=0,
+        steps=2,
+        total_tokens=tokens,
+        latency_ms=latency_ms,
+        transform_overhead_ms=overhead_ms,
+    )
+
+
+def test_the_overhead_allowance_scales_with_the_machine_that_measures_it() -> None:
+    """A loaded runner is slower at everything, including the baseline the transform is judged against.
+
+    Before this, the gate compared the transform's median cost to an absolute 50 ms and so reported the
+    runner's load as a property of the transform: the same suite passed on a laptop and failed on a busy
+    CI machine, twice, on the same commit.
+    """
+    slow = [
+        _ab_run("b1", "baseline_strict_taint", verified=False, latency_ms=400.0),
+        _ab_run("b2", "baseline_strict_taint", verified=False, latency_ms=400.0),
+        _ab_run("q1", "qualified_transform", verified=True, latency_ms=430.0, overhead_ms=120.0),
+        _ab_run("q2", "qualified_transform", verified=True, latency_ms=430.0, overhead_ms=130.0),
+    ]
+    report = tt.compare_transformation_ab_runs("slow-runner-scenario", slow)
+    assert report["qualified_transform"]["transform_overhead_ms_median"] == pytest.approx(125.0)
+    assert report["overhead_allowance_ms"] == pytest.approx(400.0)
+    assert report["overhead_within_allowance"] is True
+    assert report["benefit_justifies_cost"] is True
+    assert tt.TT_MAX_OVERHEAD_MS_CEILING == 50.0, "the floor still applies on a fast machine"
+
+
+def test_the_overhead_allowance_still_rejects_a_disproportionate_transform() -> None:
+    """Scaling the allowance must not turn the gate into a rubber stamp."""
+    expensive = [
+        _ab_run("b1", "baseline_strict_taint", verified=False, latency_ms=40.0),
+        _ab_run("b2", "baseline_strict_taint", verified=False, latency_ms=40.0),
+        # The floor governs here, and 60 ms is over it.
+        _ab_run("q1", "qualified_transform", verified=True, latency_ms=100.0, overhead_ms=60.0),
+        _ab_run("q2", "qualified_transform", verified=True, latency_ms=100.0, overhead_ms=60.0),
+    ]
+    report = tt.compare_transformation_ab_runs("slow-runner-scenario", expensive)
+    assert report["overhead_allowance_ms"] == pytest.approx(tt.TT_MAX_OVERHEAD_MS_CEILING)
+    assert report["benefit_justifies_cost"] is False
+
+    disproportionate = [
+        _ab_run("b1", "baseline_strict_taint", verified=False, latency_ms=300.0),
+        _ab_run("b2", "baseline_strict_taint", verified=False, latency_ms=300.0),
+        # Over the scaled allowance too: the transform costs three times the work it wraps.
+        _ab_run("q1", "qualified_transform", verified=True, latency_ms=900.0, overhead_ms=900.0),
+        _ab_run("q2", "qualified_transform", verified=True, latency_ms=900.0, overhead_ms=900.0),
+    ]
+    report = tt.compare_transformation_ab_runs("slow-runner-scenario", disproportionate)
+    assert report["overhead_allowance_ms"] == pytest.approx(300.0)
+    assert report["overhead_within_allowance"] is False
+    assert report["benefit_justifies_cost"] is False
