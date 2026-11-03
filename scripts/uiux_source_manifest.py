@@ -106,6 +106,8 @@ TRACKED_FILES: tuple[tuple[str, str], ...] = (
     ("scripts/adversarial_walk.mjs", "attacks the running app and checks that each refusal is drawn as a refusal"),
     ("tests/test_uiux_adversarial.py", "checks the server's refusal contract, the shell's refusal rules and the inventory's own failure modes"),
     ("tests/test_uiux_adversarial_browser.py", "runs the adversarial walk against a throwaway app in CI's browser job"),
+    ("scripts/uiux_screenshot_review.py", "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels"),
+    ("tests/test_uiux_screenshot_review.py", "breaks the media tree one way at a time and checks the screenshot review notices"),
 )
 
 BUTTON_RE = re.compile(

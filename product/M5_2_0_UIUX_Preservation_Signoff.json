@@ -25,22 +25,22 @@
     "current_inputs_match_approval": null,
     "approved_inputs": null,
     "current_inputs": {
-      "ledger_content_sha256": "546998eed5aacc7683c80b2cc41fecc6a480460e651221e0f11e339daa0d0ae4",
-      "source_manifest_sha256": "9fae03bc64b84d554121754835fad5f2f70cbd0943b45e81c6b092df773b90cb",
+      "ledger_content_sha256": "6a5fdf1e18a2710d82f571e6e9ac141149f4a8796b648909a98b92ebd31bfbba",
+      "source_manifest_sha256": "0cdbd7198619395b49f79b5969b6059d6d472de320a0e5f3a8c93548969c6e22",
       "control_inventory_sha256": "2a4360feb38dfb4cb6bffefe96723316bd2294ce9e5fa6de3f98f44378e54eac",
       "route_map_sha256": "f5c2cf04eac00b855330db7aab7c0ca03b19e1f78ff5cc4adbb10517f98ab712",
       "authorization_trace_sha256": "6622ace1671d85dbd0983528ba6dfed5ca01cac0857b1cd3f0eabcc9bd937bf4",
       "frontend_sha256": "84388445398bd2d980c5fdaf804b07bdd312be1fe0173fb65bf3507e0e41d7d9",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
-      "screenshot_index_sha256": "0fa81561ac870619a2517fcf6f382055a98c9eb573e35c07bcde0faf4d2b1941",
+      "screenshot_index_sha256": "5f69ab5e7bbd18713befa62912c8353a0c2100d009550fcd8034677e1d98f594",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
       "route_map_generator_sha256": "923981fc78ff0f844e67691bfa966963f3959be1b9650eaf49f3b58b0a14d555"
     },
     "changed_inputs": null
   },
   "inputs": {
-    "ledger_sha256": "3744569e9f34b22496337df6e870623f301d1c96c2abbdefb59270b3a527b85a",
-    "source_manifest_sha256": "9fae03bc64b84d554121754835fad5f2f70cbd0943b45e81c6b092df773b90cb",
+    "ledger_sha256": "3afa385466d45e0191b027f282c5277526867ce84d26e6edd0ea7085f32cbc38",
+    "source_manifest_sha256": "0cdbd7198619395b49f79b5969b6059d6d472de320a0e5f3a8c93548969c6e22",
     "control_inventory_sha256": "2a4360feb38dfb4cb6bffefe96723316bd2294ce9e5fa6de3f98f44378e54eac",
     "route_map_sha256": "f5c2cf04eac00b855330db7aab7c0ca03b19e1f78ff5cc4adbb10517f98ab712",
     "authorization_trace_sha256": "6622ace1671d85dbd0983528ba6dfed5ca01cac0857b1cd3f0eabcc9bd937bf4",
