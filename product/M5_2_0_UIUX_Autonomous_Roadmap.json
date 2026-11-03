@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 38,
+  "revision": 39,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -100,17 +100,15 @@
     "handoff": "Before context runs out: write tracking.handoff_note and next_action, update session_state.last_checkpoint and open_risks, and leave the tree green."
   },
   "session_state": {
-    "active_story": "UIUX-P6-03",
-    "active_stories": [
-      "UIUX-P6-03"
-    ],
-    "last_completed_story": "UIUX-P6-02",
-    "next_recommended_story": "UIUX-P6-03",
-    "last_checkpoint": "2026-11-03T17:05:00Z",
+    "active_story": null,
+    "active_stories": [],
+    "last_completed_story": "UIUX-P6-03",
+    "next_recommended_story": "UIUX-P6-04",
+    "last_checkpoint": "2026-11-03T18:40:00Z",
     "last_session_id": "arena/57419a42-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "cee91596a9b52ea04cbfc41dc1318bf13f99e9c3",
+    "last_verified_commit": "bf2bf306fed5a2255c1d900ac5ff41b781b6eec3",
     "last_updated": "2026-11-03",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -339,20 +337,20 @@
         "UIUX-P6-05"
       ],
       "total": 5,
-      "done": 2,
-      "in_progress": 1,
+      "done": 3,
+      "in_progress": 0,
       "blocked": 0,
       "not_started": 2,
-      "percent_complete": 40
+      "percent_complete": 60
     }
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 37,
-    "in_progress": 1,
+    "done": 38,
+    "in_progress": 0,
     "blocked": 0,
     "not_started": 2,
-    "percent_complete": 92
+    "percent_complete": 95
   },
   "stories": [
     {
@@ -7109,8 +7107,8 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "Full visual screenshot review with no loss of existing functionality.",
+      "current_behavior": "Measured, not read. The program had committed 228 PNGs across 27 capture sets and no pass had looked at them together. The six images the README shows were taken on 2026-11-01, before twenty-two UI stories: the Compare capture had no P5-03 criteria table and no P5-04 readiness strip, and the published panes carried a horizontal overflow the later responsive work fixed by giving the inspector its proper width. Three sets (`keyboard-a11y`, `responsive`, `stream-perf`) and the P6-02 refusal set had no README naming a producer; 22 sets carry no `index.json`, so their capture time and checksums were recorded nowhere; and nothing checked that a capture named `dark` was dark.",
+      "target_behavior": "Every committed capture traced to the script that made it, hashed against the index beside it, measured for the theme its name claims, and read by a person who wrote down what it shows - with the published set re-captured on the current tree, a dark variant photographed for the first time, and a coverage grid that says which pane has never been photographed in which theme or width. A set with no review is a failure, not a gap.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
         "Trace relevant DOM, JS handlers, API and backend state transitions",
@@ -7152,24 +7150,90 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P6-03 (Full visual screenshot review). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 30,
+        "status": "done",
+        "progress_percent": 100,
         "attempts": 1,
         "started_at": "2026-11-03T17:05:00Z",
-        "updated_at": "2026-11-03T17:05:00Z",
-        "completed_at": null,
+        "updated_at": "2026-11-03T18:40:00Z",
+        "completed_at": "2026-11-03T18:40:00Z",
         "owner_session": "arena/57419a42-m5-agent-studio",
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
-        "known_regressions": [],
-        "decisions": [],
+        "commit_sha": "bf2bf306fed5a2255c1d900ac5ff41b781b6eec3",
+        "changed_files": [
+          "docs/README.md",
+          "docs/media/adversarial/README.md",
+          "docs/media/screenshots/chat.png",
+          "docs/media/screenshots/compare.png",
+          "docs/media/screenshots/hall.png",
+          "docs/media/screenshots/harness.png",
+          "docs/media/screenshots/index.json",
+          "docs/media/screenshots/pipeline.png",
+          "docs/media/screenshots/start.png",
+          "docs/media/uiux-p6-03/after-dark/chat.png",
+          "docs/media/uiux-p6-03/after-dark/compare.png",
+          "docs/media/uiux-p6-03/after-dark/hall.png",
+          "docs/media/uiux-p6-03/after-dark/harness.png",
+          "docs/media/uiux-p6-03/after-dark/index.json",
+          "docs/media/uiux-p6-03/after-dark/pipeline.png",
+          "docs/media/uiux-p6-03/after-dark/start.png",
+          "docs/media/uiux-p6-03/before/chat.png",
+          "docs/media/uiux-p6-03/before/compare.png",
+          "docs/media/uiux-p6-03/before/hall.png",
+          "docs/media/uiux-p6-03/before/harness.png",
+          "docs/media/uiux-p6-03/before/index.json",
+          "docs/media/uiux-p6-03/before/pipeline.png",
+          "docs/media/uiux-p6-03/before/start.png",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-program.md",
+          "docs/uiux-2-0-screenshot-review.md",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Screenshot_Review.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "scripts/uiux_screenshot_review.py",
+          "scripts/uiux_source_manifest.py",
+          "tests/test_uiux_screenshot_review.py"
+        ],
+        "evidence": [
+          "Before, measured: 228 captures in 27 sets with 3 sets naming no producer, 22 with no `index.json`, and the published set 22 stories stale. After: 240 captures in 27 sets, all 27 reviewed, 0 findings, 22 observations recorded (the sets that still carry no index).",
+          "`node scripts/capture_screenshots.mjs --base-url ... --token ...` against `scripts/demo_tour.py --serve` re-shot the six published panes on this tree; `python3 scripts/validate_screenshots.py` -> `6 of 6 captured and consistent with the manifest`. The Compare capture now shows the P5-03 criteria table and the P5-04 `Ready: 1 model, one question.` strip.",
+          "The same command with `--emulate-theme dark --out docs/media/uiux-p6-03/after-dark` photographed all six panes in the dark theme, which the published set never had (mean luminance 0.126-0.152 against the published set's 0.968-0.971).",
+          "`git show cee9159:docs/media/screenshots/*.png` restored the replaced set into `docs/media/uiux-p6-03/before`, with `index.json` recording where it came from and recomputed checksums - the story's own before/after rather than a memory of one.",
+          "`python3 scripts/uiux_screenshot_review.py --check` -> `screenshot review OK: 240 captures in 27 sets, 27 reviewed (16 files opened), 3 re-shot, 0 findings`. The 16 opened files are listed per set in the artifact and named in `visual_evidence`.",
+          "The check that made this worth writing: mean luminance measured with `identify` per file, compared to the theme in the filename (dark < 0.35, light > 0.45, with the program's own measurements - dark 0.09-0.17, light 0.52-0.97 - sitting in the gap). A light capture named `dark` fails the run, and there is a test that renames one to prove it.",
+          "Coverage grid, computed from the captures: start 36 captures across 10 sets, harness 48/14, hall 43/8, pipeline 21/5, compare 36/9, chat 39/11; no pane is unphotographed and 19 state shots (a dialog, a refusal, a token sheet) are counted under their set rather than a pane."
+        ],
+        "test_results": [
+          "python3 scripts/uiux_screenshot_review.py --check -> 0 (240 captures, 27 sets, 27 reviewed, 0 findings) [Python 3.11.2, ImageMagick identify present; tree bf2bf30]",
+          "node scripts/capture_screenshots.mjs (published set, base-url + token from scripts/demo_tour.py --serve) -> six panes written, index.json rewritten; python3 scripts/validate_screenshots.py -> 6 of 6",
+          "node scripts/capture_screenshots.mjs --emulate-theme dark --out docs/media/uiux-p6-03/after-dark -> six panes written, index.json with variant.theme dark",
+          "pytest -q tests/test_uiux_screenshot_review.py -> 14 passed in 56.4 s (13 positive rules and six negative tests that break a copy of the media tree)",
+          "pytest -q -> 2,564 passed, 29 skipped, 1 failed in 381.8 s; the failure is tests/test_baseline.py, whose pinned commit is not in this clone (`Not a valid commit name`), and it failed before this story",
+          "pytest -q tests/test_uiux_*.py tests/test_docs.py -> 272 passed, 2 skipped; ruff check . -> All checks passed; mypy -> 58 source files clean; validate_screenshots.py, validate_docs.py, build_studio.py --check, demo_tour.py --check, check_frontend_syntax.py, uiux_preservation_e2e.py --check, uiux_adversarial_inventory.py --check, uiux_source_manifest.py --check -> all clean"
+        ],
+        "visual_evidence": [
+          "docs/media/screenshots/{start,harness,hall,pipeline,compare,chat}.png - the published set, re-captured on this tree and all six opened: each pane draws its own empty state with a cause and a next step, no horizontal overflow, the inspector fits.",
+          "docs/media/uiux-p6-03/after-dark/{start,harness,hall,pipeline,compare,chat}.png - the same six panes in the dark theme (opened: after-dark/compare.png).",
+          "docs/media/uiux-p6-03/before/{start,harness,hall,pipeline,compare,chat}.png - the replaced published set, extracted from cee9159 (opened: before/harness.png, before/compare.png).",
+          "Spot review of the program's other evidence, opened in this session: docs/media/harness-recovery/paused-panel.png (`Paused at a safe boundary` with cause, kept and both actions), docs/media/presentations/start-error.png (`Could not read the preflight`, `Failed to fetch`, what was kept, Re-check/Providers), docs/media/responsive/responsive-360-start.png (rail as a tab row at 360px, cards stacked, no horizontal scroll), docs/media/polish/polish-dark-hover-primary.png (loaded runtime in the inspector, nothing clipped at 1440x900).",
+          "Every file above was opened by eye in this session; the remaining 224 captures are checked mechanically (producer, index, checksums, dimensions, measured theme) and the artifact says which are which."
+        ],
+        "known_regressions": [
+          "Observed, not fixed: the Harness empty state scrolls under the composer at 900px, so the third starter card sits below the fold in the refreshed capture. It is the pane's own focusable scroll region (`.harness-stream { overflow-y: auto }`), not a clip, and fixing the fold would be a pane layout change with its own evidence burden.",
+          "22 capture sets carry no `index.json`: their captures cannot be shown to be the bytes their walk produced, only that they exist and that their theme is what their name claims.",
+          "The published set has no narrow variant. Narrow coverage comes from `polish`, `responsive`, `uiux-p5-05` and `screenshots/p4-01-narrow-dark` (420x1200), which the review counts under their own sets."
+        ],
+        "decisions": [
+          "The published set was re-shot rather than re-described. A review that leaves the README showing a pane the tree no longer draws has reviewed nothing.",
+          "The dark variant was photographed into `docs/media/uiux-p6-03/after-dark`, not into the published directory: `manifest.json` defines one published set, and a second one would silently change what the README's images promise.",
+          "The replaced set is the story's own before. It comes from `git show` at cee9159 with recomputed checksums, so the before/after is two captures of the same six panes rather than a paragraph.",
+          "Theme is checked in the pixels, not in the filename. `identify` median luminance separates the program's dark captures (0.09-0.17) from its light ones (0.52-0.97) with a wide gap; thresholds that split the gap cannot be tuned to one set.",
+          "A set with no review entry fails `--check`. The review is data, not an appendix: the next capture cannot ship without someone writing down what it shows.",
+          "A missing `index.json` is an observation, not a finding. Twenty-two sets were produced by walks that write no index; that weakens the evidence (no recorded capture time or checksum) but it is not a false claim, and the artifact says so per set instead of failing the program on history."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Re-capture the stale published set on this tree and review every committed capture",
-        "readme_updated": false
+        "handoff_note": "Re-run `python3 scripts/uiux_screenshot_review.py` after adding or re-shooting any capture: a new set with no entry in `REVIEWS` fails `--check`, which is the point. The published set is re-shot with `node scripts/capture_screenshots.mjs` against `scripts/demo_tour.py --serve`; `validate_screenshots.py` still owns that set, and this review does not replace it.",
+        "next_action": "UIUX-P6-04: verify the README and the onboarding path against the tree this program produced",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",
