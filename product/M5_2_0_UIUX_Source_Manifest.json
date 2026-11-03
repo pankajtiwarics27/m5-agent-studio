@@ -414,6 +414,20 @@
       "sha256": "f800af1f12280d656b7dec48f2bf158de540b80239acf2308160d0686f69067a",
       "bytes": 4254,
       "lines": 111
+    },
+    {
+      "path": "scripts/uiux_screenshot_review.py",
+      "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
+      "sha256": "929245580a2b5cf03593aaaa47df243dc4c3632969ae6ca97068e2a5210c18db",
+      "bytes": 44527,
+      "lines": 999
+    },
+    {
+      "path": "tests/test_uiux_screenshot_review.py",
+      "role": "breaks the media tree one way at a time and checks the screenshot review notices",
+      "sha256": "5cc40e205487000292486379e6e85b8bb180044664b06e2d62bb83496c4f4b67",
+      "bytes": 9895,
+      "lines": 210
     }
   ],
   "frontend": {

@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "captured_at": "2026-11-01T21:24:50.737Z",
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "device_scale_factor": 2
+  },
+  "variant": {
+    "theme": null,
+    "density": null
+  },
+  "source": "the committed docs/media/screenshots set at cee9159, extracted with `git show` before UIUX-P6-03 replaced it; captured_at is the timestamp that set recorded for itself",
+  "shots": [
+    {
+      "id": "start",
+      "tab": "start",
+      "file": "start.png",
+      "bytes": 476133,
+      "sha256": "c58f16923b2246c0eafaa84c70a87ce34db1c51a90b4b9b4601a2715dd298c08"
+    },
+    {
+      "id": "harness",
+      "tab": "harness",
+      "file": "harness.png",
+      "bytes": 516475,
+      "sha256": "8f719c582afdf8ca4aa156c97c5545ed830be9cf1c704395b2e2c19a159df7c8"
+    },
+    {
+      "id": "hall",
+      "tab": "hall",
+      "file": "hall.png",
+      "bytes": 480751,
+      "sha256": "b9513e8e60c329a17f45c105cf7f18662d052017428411e90a6c01bcc4c619b3"
+    },
+    {
+      "id": "council",
+      "tab": "council",
+      "file": "pipeline.png",
+      "bytes": 323070,
+      "sha256": "35d3fa91cd489ebf13384dbed79b23f2846fb70cb6c32a3ab22d0f1976df5f39"
+    },
+    {
+      "id": "debate",
+      "tab": "debate",
+      "file": "compare.png",
+      "bytes": 343826,
+      "sha256": "c4d969db44d19ddc307d4bf16be6f593b22a871d94491e4d0c91690ea9972f2a"
+    },
+    {
+      "id": "chat",
+      "tab": "chat",
+      "file": "chat.png",
+      "bytes": 334413,
+      "sha256": "81a1df1cdc03c062547e488c5fe861347fd135336ebf7d76c6d90fd7531ebd3b"
+    }
+  ]
+}
