@@ -418,16 +418,16 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "929245580a2b5cf03593aaaa47df243dc4c3632969ae6ca97068e2a5210c18db",
-      "bytes": 44527,
-      "lines": 999
+      "sha256": "35d5bf4d391610f01ee0794b7402fa1a94650912524166a0d4affcb88f460be3",
+      "bytes": 44917,
+      "lines": 1003
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",
       "role": "breaks the media tree one way at a time and checks the screenshot review notices",
-      "sha256": "5cc40e205487000292486379e6e85b8bb180044664b06e2d62bb83496c4f4b67",
-      "bytes": 9895,
-      "lines": 210
+      "sha256": "6d0b60efdaf454d2128f53536a5bc2e720a7ec64e40e35cf39c02e9396ebcf68",
+      "bytes": 10801,
+      "lines": 226
     },
     {
       "path": "scripts/uiux_docs_verification.py",
@@ -442,6 +442,20 @@
       "sha256": "79de4290f26b833e7bcd369b68659adde5927f76019c256bd268581ebf911416",
       "bytes": 8769,
       "lines": 212
+    },
+    {
+      "path": "scripts/uiux_release_gate.py",
+      "role": "runs every artifact's --check, computes the seven phase gates, maps the five acceptance criteria to evidence and carries the known regressions into a handover",
+      "sha256": "013e0fddc170ee4d008c02272bf9867cc2f706697c8224b9447b8c35c6f94223",
+      "bytes": 37130,
+      "lines": 697
+    },
+    {
+      "path": "tests/test_uiux_release_gate.py",
+      "role": "falsifies the ledger one way at a time and checks the release gate refuses to call a program finished",
+      "sha256": "aa0c75f2e2a84824da97017eb13116d872a34d792b0f46a87393065242787b1d",
+      "bytes": 7770,
+      "lines": 189
     }
   ],
   "frontend": {

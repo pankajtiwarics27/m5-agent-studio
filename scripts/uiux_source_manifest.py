@@ -110,6 +110,8 @@ TRACKED_FILES: tuple[tuple[str, str], ...] = (
     ("tests/test_uiux_screenshot_review.py", "breaks the media tree one way at a time and checks the screenshot review notices"),
     ("scripts/uiux_docs_verification.py", "checks the README and the onboarding pages against the tree: links, classified commands, and the claims that name a route or a file"),
     ("tests/test_uiux_docs_verification.py", "runs the commands the docs tell a reader to run, and reads the live preflight the Quickstart describes"),
+    ("scripts/uiux_release_gate.py", "runs every artifact's --check, computes the seven phase gates, maps the five acceptance criteria to evidence and carries the known regressions into a handover"),
+    ("tests/test_uiux_release_gate.py", "falsifies the ledger one way at a time and checks the release gate refuses to call a program finished"),
 )
 
 BUTTON_RE = re.compile(
