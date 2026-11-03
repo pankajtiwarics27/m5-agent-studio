@@ -16,13 +16,14 @@ state without restating a pane's private spelling.
 
 ## The vocabulary
 
-`UI_STATUS` is `35` entries: one word, one tone, one place. A caller
+`UI_STATUS` is `36` entries: one word, one tone, one place. A caller
 asks for a state and gets both, so a green `running` cannot come back, and an unknown state
 throws instead of printing itself.
 
 | State | Word the reader sees | Tone |
 | :--- | :--- | :--- |
 | `ready` | ready | `info` |
+| `closed` | closed | `neutral` |
 | `queued` | queued | `neutral` |
 | `running` | running | `busy` |
 | `waiting-approval` | waiting approval | `warn` |

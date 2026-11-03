@@ -202,20 +202,6 @@ def _overlay_walk(base: str, env: dict[str, str], token: str = TOKEN):
     )
 
 
-def _chat_walk(base: str, env: dict[str, str], token: str = TOKEN):
-    return subprocess.run(
-        ["node", str(CHAT_WALK), "--base-url", base, "--token", token, "--json"],
-        cwd=ROOT, env=env, capture_output=True, text=True, timeout=90, check=False,
-    )
-
-
-def _compare_history_walk(base: str, env: dict[str, str], token: str = TOKEN):
-    return subprocess.run(
-        ["node", str(COMPARE_HISTORY_WALK), "--base-url", base, "--token", token, "--json"],
-        cwd=ROOT, env=env, capture_output=True, text=True, timeout=90, check=False,
-    )
-
-
 def test_capture_positive_and_cross_origin_frame_is_not_seeded(
     tmp_path: Path, browser_env: dict[str, str]
 ) -> None:
@@ -494,22 +480,6 @@ def test_real_isolated_demo_captures_all_six_panes(
         assert overlay_result["passed"] == 81
         assert overlay_result["blocked"] == 3
         assert banner["token"] not in overlays.stdout + overlays.stderr
-        # The P6 preservation journey composes the real pane shell with existing
-        # deterministic Chat and Compare failure/recovery walks. Their model and
-        # history responses are synthetic; neither walk contacts a provider or
-        # mutates durable history.
-        chat = _chat_walk(banner["url"], browser_env, token=banner["token"])
-        assert chat.returncode == 0, chat.stdout + chat.stderr
-        chat_result = json.loads(chat.stdout)
-        assert chat_result["failed"] == 0
-        assert chat_result["passed"] >= 10
-        assert banner["token"] not in chat.stdout + chat.stderr
-        compare = _compare_history_walk(banner["url"], browser_env, token=banner["token"])
-        assert compare.returncode == 0, compare.stdout + compare.stderr
-        compare_result = json.loads(compare.stdout)
-        assert compare_result["failed"] == 0
-        assert compare_result["passed"] == 8
-        assert banner["token"] not in compare.stdout + compare.stderr
         assert sentinel.read_bytes() == before
         assert [p for p in store.rglob("*") if p.is_file()] == [sentinel]
     finally:

@@ -251,12 +251,14 @@ async function run(args) {
       };
     });
 
+    // The line is the evidence; it is not duplicated into a `title`. `tests/test_uiux_chat_composer.py`
+    // forbids interpolating a context - which can carry a directory and a persona from the reader's
+    // own configuration - into an HTML attribute at all, so a title here would be a defect, not a
+    // convenience. What has to hold is that the text drawn is the text that was composed.
     record(
       "every answer prints the context it was sent, composed by the pane's own helper",
-      drawn.contextData === "sent"
-        && drawn.contextText === `Context: ${written.expectedLine}`
-        && drawn.contextTitle === written.expectedLine,
-      `"${drawn.contextText.slice(0, 60)}…" title matches=${drawn.contextTitle === written.expectedLine}`,
+      drawn.contextData === "sent" && drawn.contextText === `Context: ${written.expectedLine}`,
+      `"${drawn.contextText.slice(0, 70)}…" matches the composed line`,
     );
     const ctx = written.snapshot;
     const lineNamesContext = [
@@ -288,8 +290,8 @@ async function run(args) {
     record(
       "every tool call carries a status word with a tone, not a colour",
       drawn.rows.length === 2
-        && drawn.rows[0].status === "OK" && drawn.rows[0].tone === "ok" && drawn.rows[0].toolStatus === "ok"
-        && drawn.rows[1].status === "FAILED" && drawn.rows[1].tone === "danger" && drawn.rows[1].toolStatus === "failed",
+        && drawn.rows[0].status === "ok" && drawn.rows[0].tone === "ok" && drawn.rows[0].toolStatus === "ok"
+        && drawn.rows[1].status === "failed" && drawn.rows[1].tone === "danger" && drawn.rows[1].toolStatus === "failed",
       drawn.rows.map((row) => `${row.status}/${row.tone}/${row.toolStatus}`).join(" "),
     );
     record(

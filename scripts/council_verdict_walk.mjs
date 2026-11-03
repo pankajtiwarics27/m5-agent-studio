@@ -341,7 +341,7 @@ async function conclude(page, args) {
   for (let attempt = 0; attempt < 200; attempt += 1) {
     await sleep(args.settleMs);
     const verdict = await readVerdict(page);
-    if (!verdict.hidden && verdict.summaryLine.includes("decision pinned") && verdict.status === "CLOSED") return verdict;
+    if (!verdict.hidden && verdict.summaryLine.includes("decision pinned") && verdict.status === "closed") return verdict;
   }
   return readVerdict(page);
 }
@@ -531,8 +531,8 @@ async function run(args) {
       `${pinned.space.join(" ")} | banner ${pinned.bannerVisible} ${pinned.bannerText.slice(0, 60)}`,
     );
     record(
-      "the session's status reads CLOSED once a decision is pinned",
-      pinned.status === "CLOSED",
+      "the session's status reads closed once a decision is pinned",
+      pinned.status === "closed",
       `badge: ${pinned.status}`,
     );
     // The capture is the whole Hall pane, and the seat pickers are part of it: a readiness refresh

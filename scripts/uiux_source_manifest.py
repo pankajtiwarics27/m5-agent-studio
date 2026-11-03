@@ -99,6 +99,9 @@ TRACKED_FILES: tuple[tuple[str, str], ...] = (
     ("scripts/compare_history_walk.mjs", "browser walk for the additive saved-Compare history browser against a throwaway demo"),
     ("tests/test_compare_history.py", "checks history browsing, route reuse, mode filtering and separate restoration"),
     ("docs/uiux-2-0-compare-history-browser.md", "scope and verification note for additive Compare history browsing"),
+    ("scripts/preservation_suite.py", "runs every prover in the preservation matrix against its own throwaway app and records the result"),
+    ("scripts/uiux_preservation_e2e.py", "maps each preservation-matrix row to the walk, test, route and control that proves it"),
+    ("tests/test_uiux_preservation_e2e.py", "checks the matrix mapper and the run record: a known failure is never green and an untaken step is never a pass"),
 )
 
 BUTTON_RE = re.compile(
