@@ -1,0 +1,2722 @@
+{
+  "document_type": "autonomous_uiux_visual_fidelity_roadmap",
+  "schema_version": "2.0.0",
+  "product": "M5 2.0 Agent Studio",
+  "roadmap_id": "M5-UIUX-V2-VISUAL-CONFORMANCE",
+  "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
+  "branch": "main",
+  "created_at": "2026-11-03",
+  "source_commit_sha": "9a584a36f1fbe29ba467562dd12a705626769f00",
+  "source_commit_status": "PINNED 2026-11-03 by session arena/74aace20-m5-agent-studio: HEAD = 9a584a36f1fbe29ba467562dd12a705626769f00, worktree clean, equals origin/main (0 commits ahead). Frontend sha256 05ea9a0c451fa1d35b5e9d7b368b7391963966921416ff578d580f90b2c5d9cd and app.py sha256 0e6ecd89d84b7779f91513d8077934b08c8e90bccda919a6fac49ff6e44e2962 match the hashes pinned in the existing UIUX source manifest, so those inventories describe this HEAD.",
+  "based_on": "User-provided seven screenshots 2026-11-03, user-approved conceptual three-region Harness reference, prior UIUX roadmap supplied as input",
+  "previous_roadmap": "M5_2_0_UIUX_Autonomous_Roadmap.json",
+  "baseline": {
+    "status": "SCREENSHOT_VERIFIED_ONLY",
+    "notes": "Screenshots establish layout and visible defects; backend contract and current Git HEAD require live agent inspection. Prior roadmap completion is not visual acceptance.",
+    "known_defects": [
+      "Council pinned conclusion scroll lock (user-reported)",
+      "Council lacks session clear control (user-reported)",
+      "Compare and Chat uneven whitespace/alignment",
+      "Chat persona dropdown shows only three (screenshot/user report; authoritative registry unknown)",
+      "MCP giant all-in-one dialog",
+      "Persistent telemetry rail consumes main-task width",
+      "Start checklist-heavy; Pipeline underutilizes canvas"
+    ],
+    "pin_note": "HEAD pinned to 9a584a36f1fbe29ba467562dd12a705626769f00 on 2026-11-03; baseline screenshots captured from the running demo app (disposable copy per #108/#117) at 1640x900/1440x900/1280x800/390x844 in light and dark, six tabs plus the MCP hub overlay: docs/media/uiv2-v2/baseline/ (53 PNGs + index.json per set). Evidence doc: docs/uiv2-v2-baseline-evidence.md."
+  },
+  "design_north_star": {
+    "style": "Quiet, focused, minimal developer workspace with Claude Code/Cowork-like clarity, not a pixel clone or brand imitation",
+    "approved_harness_layout": "Desktop: slim global nav | session/workspace list | main active task Plan\u2192Execute\u2192Verify + timeline + composer | context inspector. Global telemetry is a header popover, not permanent right rail.",
+    "layout_constraints": {
+      "desktop_min_width_px": 1440,
+      "nav_width_px": [
+        192,
+        224
+      ],
+      "inspector_width_px": [
+        272,
+        320
+      ],
+      "main_min_width_px": 640,
+      "header_max_height_px": 64,
+      "breakpoints_px": [
+        390,
+        800,
+        1280,
+        1440
+      ]
+    },
+    "light_tokens": {
+      "canvas": "#F8F9FB",
+      "surface": "#FFFFFF",
+      "secondary": "#F1F3F5",
+      "text": "#1B2430",
+      "muted": "#596579",
+      "border": "#DDE2E8",
+      "accent": "#4F5FE8"
+    },
+    "dark_tokens": {
+      "canvas": "#111318",
+      "surface": "#1A1D24",
+      "secondary": "#242832",
+      "text": "#F3F5F7",
+      "muted": "#AAB4C3",
+      "border": "#343B48",
+      "accent": "#93A0FF"
+    },
+    "design_principles": [
+      "Task content wins over diagnostics",
+      "One dominant action per state",
+      "Progressive disclosure for expert controls",
+      "Typography and whitespace convey hierarchy, not many colored cards",
+      "Color denotes meaning; neutral UI otherwise",
+      "Readable long-form content and predictable scrolling",
+      "Do not imply unimplemented Cowork computer-control capabilities",
+      "Light and dark are separately verified, not inverted automatically"
+    ]
+  },
+  "global_agent_system_prompt": "You are a senior frontend engineer, product designer, accessibility engineer, and adversarial QA auditor. The user explicitly REJECTED the prior UI as too dense and structurally unlike the approved reference. Your job is NOT to check off stories or simply restyle existing controls. Match the precise approved three-region Harness information architecture and consistent minimalist six-tab UX while retaining all existing features. Before each story inspect current HEAD, previous tracking and real handlers/API; capture before screenshots. Implement the smallest safe change. Run app and compare actual screenshots to approved reference at specified viewports; inspect interaction and scroll behavior. Record exact tests, command outputs, screenshots and any defects. A story is DONE only when its functional acceptance, visual acceptance, accessibility and non-regression gates all pass and evidence paths exist. Otherwise mark BLOCKED, explain why, and give exact next action. Never invent backend support, test results, persona names, performance measurements, or visual approval. Never bypass admission or sandbox. Do not modify user workspace files. The source commit must be pinned before code changes. Stop after reference approval gate if approval is missing.",
+  "completion_policy": {
+    "allowed_statuses": [
+      "not_started",
+      "in_progress",
+      "blocked",
+      "done"
+    ],
+    "done_requires": [
+      "Pinned commit SHA and changed files",
+      "Evidence of actual app running",
+      "Before and after screenshots with exact viewport/theme",
+      "Acceptance-by-acceptance pass/fail evidence",
+      "Relevant test commands and real results",
+      "All preservation checks for impacted controls",
+      "Keyboard/scroll/long-content verification",
+      "Human visual approval at P0 reference and final P6 gate"
+    ],
+    "not_done_if": [
+      "Only CSS or markup was changed",
+      "Only unit tests pass but layout differs",
+      "No running-app screenshot exists",
+      "Known critical regression remains",
+      "UI claims a nonexistent backend capability",
+      "A required human approval has not been given"
+    ],
+    "progress_rule": "Completion calculated only from story tracking.status == done; blocked and in_progress are not complete."
+  },
+  "reference_assets": {
+    "user_screenshots": [
+      "image (3).png",
+      "image (4).png",
+      "image (5).png",
+      "image (6).png",
+      "image (7).png",
+      "image (8).png",
+      "image (9).png"
+    ],
+    "role": "Current-state screenshots only; NOT approved target screenshots",
+    "approved_target": "The previously shared three-region Harness concept, to be converted to actual screenshot/wireframe at P0-03 and approved by user",
+    "approval_required": true
+  },
+  "global_non_regression": [
+    "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+    "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+    "Do not rewrite to React without a measured justification and separately approved migration",
+    "No cosmetic completion: functionality and visual reference must both pass"
+  ],
+  "stories": [
+    {
+      "id": "UIV2-01",
+      "phase": "P0",
+      "title": "Pin repository HEAD and capture complete baseline",
+      "priority": "P0",
+      "dependencies": [],
+      "component": "Audit",
+      "source_evidence": "Source-level inspection required",
+      "target_behavior": "Record HEAD, worktree, original 40-story roadmap status, actual handlers/API routes and baseline screenshots for all six tabs and MCP hub.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Capture 1440x900 and 1640x900 light screenshots, 1280x800, 390x844; enumerate existing features and known failures; no code edits.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-01: Pin repository HEAD and capture complete baseline. Required outcome: Record HEAD, worktree, original 40-story roadmap status, actual handlers/API routes and baseline screenshots for all six tabs and MCP hub. Specific gate: Capture 1440x900 and 1640x900 light screenshots, 1280x800, 390x844; enumerate existing features and known failures; no code edits. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-03T18:30:00+05:30",
+        "completed_at": "2026-11-03T18:30:00+05:30",
+        "commit_sha": null,
+        "changed_files": [
+          "product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json",
+          "docs/uiv2-v2-baseline-evidence.md",
+          "docs/media/uiv2-v2/baseline/ (53 PNGs + 13 index.json + README.md)"
+        ],
+        "tests_executed": [
+          "python -m pytest -q (disposable full clone at pin): 2612 passed, 29 skipped, 472s; initial test_baseline failure was shallow-clone ancestry, passes 3/3 after git fetch --unshallow",
+          "python -m pytest -q tests/test_screenshot_capture_browser.py tests/test_uiux_adversarial_browser.py (browser env set): 32 passed, 121s",
+          "ruff check . : all checks passed (exit 0)",
+          "python -m mypy : no issues in 58 source files (exit 0)",
+          "python -m compileall -q on all git-tracked .py : exit 0",
+          "python scripts/check_frontend_syntax.py : JavaScript syntax OK, 1 inline block (exit 0)",
+          "python scripts/demo_tour.py --check : transcript up to date (exit 0)",
+          "python scripts/validate_docs.py : 5 required pages, 192 files scanned (exit 0)",
+          "python scripts/validate_screenshots.py : 6 of 6 consistent (exit 0)",
+          "python scripts/validate_governance.py : 7 required files (exit 0)",
+          "python scripts/validate_security_signoff.py : consistent (exit 0)",
+          "python scripts/uiux_source_manifest.py --check : 64 files, 6 tabs, 115 routes (exit 0)",
+          "python scripts/uiux_control_inventory.py --check : 194 controls (exit 0)",
+          "python scripts/uiux_route_map.py --check : 66 call sites, 0 findings (exit 0)",
+          "python scripts/uiux_authorization_trace.py --check : 46 state-changing routes (exit 0)",
+          "python scripts/uiux_preservation_signoff.py --check : up to date (exit 0)",
+          "python scripts/build_studio.py : studio.py byte-identical after regen (no drift)",
+          "generate_route_matrix/generate_subsystem_inventory/generate_roadmap_status.py : no drift"
+        ],
+        "visual_evidence": [
+          "docs/media/uiv2-v2/baseline/1640x900-light/{start,harness,hall,council,debate,chat}.png + index.json",
+          "docs/media/uiv2-v2/baseline/1440x900-light/... (same six) + index.json",
+          "docs/media/uiv2-v2/baseline/1280x800-light/... + index.json",
+          "docs/media/uiv2-v2/baseline/390x844-light/... + index.json",
+          "docs/media/uiv2-v2/baseline/1640x900-dark/... + 1440x900-dark/... + 1280x800-dark/... + 390x844-dark/... + index.json each",
+          "docs/media/uiv2-v2/baseline/overlay/{1640x900-light,1440x900-light,1440x900-dark,1280x800-light,390x844-light}/mcp-hub.png + index.json",
+          "docs/uiv2-v2-baseline-evidence.md (source pin, isolation protocol, capture recipe, sha256 table, defect verification)"
+        ],
+        "acceptance_evidence": [
+          "AC1 (1440x900+1640x900 light, 1280x800, 390x844 screenshots; features and known failures enumerated; no code edits): captured 48 tab shots + 5 MCP overlay shots from the running demo at the pinned commit; feature enumeration and defect table in docs/uiv2-v2-baseline-evidence.md; git status shows only docs/media/ledger additions, zero code edits",
+          "AC2 (visual conformance is not claimed by checkbox): baseline is recorded as SCREENSHOT_VERIFIED_ONLY; conformance to the approved reference is gated at UIV2-03, which requires explicit user approval",
+          "AC3 (impacted features preserved): no code changed; full verification table green at the pin (see tests_executed)"
+        ],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "UIV2-01 complete. HEAD pinned to 9a584a36f1fbe29ba467562dd12a705626769f00 (== origin/main). 53 baseline screenshots (6 tabs x 4 viewports x light+dark, plus MCP hub overlay x5) captured from the real running app in a disposable copy per #108/#117; real checkout untouched (clean, no .harnesses). All repo checks green in a disposable clone at the pin. Known defects verified: persona picker = 3 hard-coded options (source), no Council session-clear (source: only /close exists), MCP all-in-one modal, persistent telemetry rail, checklist-heavy Start, uneven Compare/Chat (screenshots). Council pinned-conclusion scroll lock remains user-reported only (demo has no provider to reproduce a full round).",
+        "exact_next_action": "Start UIV2-02 (dependency UIV2-01 done): produce the machine-readable control->handler->API->test preservation matrix for the V2 program, distinguishing existing/partial/absent/unknown (persona registry: absent; council delete: absent; MCP credential handling: existing), building on product/M5_2_0_UIUX_Control_Inventory.json, Route_Map, Authorization_Trace and docs/uiv2-v2-baseline-evidence.md. Then UIV2-03 needs explicit user approval of the encoded reference before any structural change.",
+        "updated_at": "2026-11-03T18:30:00+05:30"
+      }
+    },
+    {
+      "id": "UIV2-02",
+      "phase": "P0",
+      "title": "Map feature preservation and persona/MCP/session contracts",
+      "priority": "P0",
+      "dependencies": [
+        "UIV2-01"
+      ],
+      "component": "Audit",
+      "source_evidence": "Source-level inspection required",
+      "target_behavior": "Trace every visible control and important hidden flow from DOM handler through backend; identify persona registry, council session deletion capabilities and MCP credentials handling.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Produce machine-readable control-to-handler-to-API-to-test matrix; distinguish existing, partial, absent and unknown; no fabricated API.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-02: Map feature preservation and persona/MCP/session contracts. Required outcome: Trace every visible control and important hidden flow from DOM handler through backend; identify persona registry, council session deletion capabilities and MCP credentials handling. Specific gate: Produce machine-readable control-to-handler-to-API-to-test matrix; distinguish existing, partial, absent and unknown; no fabricated API. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-03",
+      "phase": "P0",
+      "title": "Approve precise reference wireframes and visual test harness",
+      "priority": "P0",
+      "dependencies": [
+        "UIV2-01",
+        "UIV2-02"
+      ],
+      "component": "Audit",
+      "source_evidence": "Source-level inspection required",
+      "target_behavior": "Encode the exact approved three-region Harness structure and per-tab reference layouts as reproducible annotated references and screenshot fixtures.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Reference must show persistent nav, central task, contextual inspector; user review/explicit approval required before structural implementation; no inferred approval.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-03: Approve precise reference wireframes and visual test harness. Required outcome: Encode the exact approved three-region Harness structure and per-tab reference layouts as reproducible annotated references and screenshot fixtures. Specific gate: Reference must show persistent nav, central task, contextual inspector; user review/explicit approval required before structural implementation; no inferred approval. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-04",
+      "phase": "P1",
+      "title": "Introduce restrained light and dark theme tokens",
+      "priority": "P0",
+      "dependencies": [
+        "UIV2-03"
+      ],
+      "component": "Shared shell",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Neutral developer workspace with one indigo accent; deliberate contrast, typography, semantic states and accessible dark counterpart.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Light palette: canvas #F8F9FB, surface #FFFFFF, secondary #F1F3F5, text #1B2430, muted #596579, border #DDE2E8, primary #4F5FE8; dark: canvas #111318, surface #1A1D24, secondary #242832, text #F3F5F7, muted #AAB4C3, border #343B48, primary #93A0FF; verify WCAG AA contrast; status colors semantic only.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-04: Introduce restrained light and dark theme tokens. Required outcome: Neutral developer workspace with one indigo accent; deliberate contrast, typography, semantic states and accessible dark counterpart. Specific gate: Light palette: canvas #F8F9FB, surface #FFFFFF, secondary #F1F3F5, text #1B2430, muted #596579, border #DDE2E8, primary #4F5FE8; dark: canvas #111318, surface #1A1D24, secondary #242832, text #F3F5F7, muted #AAB4C3, border #343B48, primary #93A0FF; verify WCAG AA contrast; status colors semantic only. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-05",
+      "phase": "P1",
+      "title": "Build responsive shared shell and navigation",
+      "priority": "P0",
+      "dependencies": [
+        "UIV2-04"
+      ],
+      "component": "Shared shell",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Desktop app shell with persistent slim nav, central flexible content, optional contextual inspector; minimize two-row skills/MCP chrome.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "At >=1440px nav 192-224px, inspector 272-320px when open, central min-width 640px; no horizontal overflow; compact header <=64px; collapses at narrower widths; all 6 tabs accessible.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-05: Build responsive shared shell and navigation. Required outcome: Desktop app shell with persistent slim nav, central flexible content, optional contextual inspector; minimize two-row skills/MCP chrome. Specific gate: At >=1440px nav 192-224px, inspector 272-320px when open, central min-width 640px; no horizontal overflow; compact header <=64px; collapses at narrower widths; all 6 tabs accessible. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-06",
+      "phase": "P1",
+      "title": "Implement context-aware inspector and telemetry drawer",
+      "priority": "P0",
+      "dependencies": [
+        "UIV2-05"
+      ],
+      "component": "Shared shell",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Replace permanently expanded global telemetry rail with tab-specific inspector and header resource popover/drawer.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Harness inspector tabs Approvals/Changes/Verification/Resources; Council People/Evidence; Pipeline Stage/Artifacts; Compare Evaluation; Chat hidden by default; preserve full telemetry details and model load/unload actions.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-06: Implement context-aware inspector and telemetry drawer. Required outcome: Replace permanently expanded global telemetry rail with tab-specific inspector and header resource popover/drawer. Specific gate: Harness inspector tabs Approvals/Changes/Verification/Resources; Council People/Evidence; Pipeline Stage/Artifacts; Compare Evaluation; Chat hidden by default; preserve full telemetry details and model load/unload actions. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-07",
+      "phase": "P1",
+      "title": "Shared controls, typography, empty states and dialog patterns",
+      "priority": "P0",
+      "dependencies": [
+        "UIV2-04",
+        "UIV2-05"
+      ],
+      "component": "Shared shell",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Consistent input sizing, buttons, headings, chips, cards, tables, focus states, confirmation dialogs, scroll areas and disclosure controls.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Primary action clear on every page; 8px spacing scale; 14-16px body, 20-24px page titles; minimum 44px touch targets where feasible; never use pale low-contrast accent text.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-07: Shared controls, typography, empty states and dialog patterns. Required outcome: Consistent input sizing, buttons, headings, chips, cards, tables, focus states, confirmation dialogs, scroll areas and disclosure controls. Specific gate: Primary action clear on every page; 8px spacing scale; 14-16px body, 20-24px page titles; minimum 44px touch targets where feasible; never use pale low-contrast accent text. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-08",
+      "phase": "P2",
+      "title": "Harness three-region task cockpit exact structural layout",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-05",
+        "UIV2-06",
+        "UIV2-07"
+      ],
+      "component": "Harness",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Left sessions/workspace, center active engineering task with Plan Execute Verify and composer, right contextual inspector.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "At 1440x900 three regions simultaneously visible and screenshot matches approved structural reference; task content primary; top settings collapsible; no permanent global telemetry rail.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-08: Harness three-region task cockpit exact structural layout. Required outcome: Left sessions/workspace, center active engineering task with Plan Execute Verify and composer, right contextual inspector. Specific gate: At 1440x900 three regions simultaneously visible and screenshot matches approved structural reference; task content primary; top settings collapsible; no permanent global telemetry rail. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-09",
+      "phase": "P2",
+      "title": "Harness activity timeline, durable recovery and approvals",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-08"
+      ],
+      "component": "Harness",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Human-readable event stream with filters, tool detail, approvals, checkpoint and verification evidence; maintain durable event semantics.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Stream reconnect preserves cursor and scroll; no missing/duplicated event display; pending approval stays prominent; blocked sandbox cannot be represented as safe/ready.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-09: Harness activity timeline, durable recovery and approvals. Required outcome: Human-readable event stream with filters, tool detail, approvals, checkpoint and verification evidence; maintain durable event semantics. Specific gate: Stream reconnect preserves cursor and scroll; no missing/duplicated event display; pending approval stays prominent; blocked sandbox cannot be represented as safe/ready. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-10",
+      "phase": "P2",
+      "title": "Harness task composer and Cowork-style project flow",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-08"
+      ],
+      "component": "Harness",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Simple task brief, workspace, optional attachments/context, plan preview, permissions and start; advanced execution settings behind disclosure.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Do not imply desktop automation exists; all actions use current admitted tools; user sees planned action, approval, progress, outcome; cannot silently escalate execution policy.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-10: Harness task composer and Cowork-style project flow. Required outcome: Simple task brief, workspace, optional attachments/context, plan preview, permissions and start; advanced execution settings behind disclosure. Specific gate: Do not imply desktop automation exists; all actions use current admitted tools; user sees planned action, approval, progress, outcome; cannot silently escalate execution policy. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-11",
+      "phase": "P2",
+      "title": "Harness session navigation and safe lifecycle controls",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-08"
+      ],
+      "component": "Harness",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Search/filter sessions, new session, active state, resume, pause/cancel when supported, clear distinction between archive and delete.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Deletion only if backend supports it; confirmation shows irreversible scope; active running sessions protected; persisted sessions and user workspace never silently removed.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-11: Harness session navigation and safe lifecycle controls. Required outcome: Search/filter sessions, new session, active state, resume, pause/cancel when supported, clear distinction between archive and delete. Specific gate: Deletion only if backend supports it; confirmation shows irreversible scope; active running sessions protected; persisted sessions and user workspace never silently removed. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-12",
+      "phase": "P3",
+      "title": "Fix Council pinned conclusion scroll locking",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-05",
+        "UIV2-07"
+      ],
+      "component": "Council",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Pinned conclusion becomes readable in an independently scrollable, resizable/expandable panel; page and session scroll never freeze.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Reproduce current defect first; verify long 10k+ character conclusion scrolls by wheel, trackpad, keyboard, touch; pin/unpin, close/reopen, viewport resize; background scroll lock only while a true modal is open and always restored.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-12: Fix Council pinned conclusion scroll locking. Required outcome: Pinned conclusion becomes readable in an independently scrollable, resizable/expandable panel; page and session scroll never freeze. Specific gate: Reproduce current defect first; verify long 10k+ character conclusion scrolls by wheel, trackpad, keyboard, touch; pin/unpin, close/reopen, viewport resize; background scroll lock only while a true modal is open and always restored. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-13",
+      "phase": "P3",
+      "title": "Council clear session and clear-all with safety",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-02",
+        "UIV2-12"
+      ],
+      "component": "Council",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Add per-session delete and clear-all sessions with appropriate confirmation and accurate persistence.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Inspect backend API first; add authorized endpoint only if needed; distinguish delete/archive; running session confirmation/guard; delete one does not delete others; clear all excludes user workspace files; restart verifies persistence.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-13: Council clear session and clear-all with safety. Required outcome: Add per-session delete and clear-all sessions with appropriate confirmation and accurate persistence. Specific gate: Inspect backend API first; add authorized endpoint only if needed; distinguish delete/archive; running session confirmation/guard; delete one does not delete others; clear all excludes user workspace files; restart verifies persistence. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-14",
+      "phase": "P3",
+      "title": "Council session list, participants and readable conclusion",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-12",
+        "UIV2-13"
+      ],
+      "component": "Council",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Readable list, participant roles, compact pinned summary, disagreements, evidence and full expandable conclusion.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Main conversation retains >=640px width at desktop; long conclusion does not obscure controls; role chips wrap gracefully; accessible disclosure and no nested-scroll trap.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-14: Council session list, participants and readable conclusion. Required outcome: Readable list, participant roles, compact pinned summary, disagreements, evidence and full expandable conclusion. Specific gate: Main conversation retains >=640px width at desktop; long conclusion does not obscure controls; role chips wrap gracefully; accessible disclosure and no nested-scroll trap. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-15",
+      "phase": "P3",
+      "title": "Council state consistency and streaming recovery",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-14"
+      ],
+      "component": "Council",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Protect participant selections and role models during catalog refresh; preserve stream state and conclusion during reconnect.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Regression reproductions for catalog-refresh selection drift, reconnect, closed/open sessions; no silent model substitution; user receives explicit error state.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-15: Council state consistency and streaming recovery. Required outcome: Protect participant selections and role models during catalog refresh; preserve stream state and conclusion during reconnect. Specific gate: Regression reproductions for catalog-refresh selection drift, reconnect, closed/open sessions; no silent model substitution; user receives explicit error state. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-16",
+      "phase": "P4",
+      "title": "Compare balanced question-first layout",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-05",
+        "UIV2-07"
+      ],
+      "component": "Compare / Chat",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Comparison prompt and model selection are primary; evaluation criteria collapsible; response cards aligned side-by-side when multiple models.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "At 1440px no oversized criteria panel above fold; matching response card widths/heights where appropriate; clear one-model state; measured and user-judged criteria visually distinguished.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-16: Compare balanced question-first layout. Required outcome: Comparison prompt and model selection are primary; evaluation criteria collapsible; response cards aligned side-by-side when multiple models. Specific gate: At 1440px no oversized criteria panel above fold; matching response card widths/heights where appropriate; clear one-model state; measured and user-judged criteria visually distinguished. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-17",
+      "phase": "P4",
+      "title": "Compare results and evidence inspector",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-16",
+        "UIV2-06"
+      ],
+      "component": "Compare / Chat",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Consistent side-by-side response typography, verdict provenance, latency and model metrics with explicit missing data.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Never fabricate pricing, correctness or quality scores; one-model comparison not falsely called multi-model; long outputs scroll/read; responsive stack without truncation.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-17: Compare results and evidence inspector. Required outcome: Consistent side-by-side response typography, verdict provenance, latency and model metrics with explicit missing data. Specific gate: Never fabricate pricing, correctness or quality scores; one-model comparison not falsely called multi-model; long outputs scroll/read; responsive stack without truncation. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-18",
+      "phase": "P4",
+      "title": "Chat focused balanced conversation layout",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-05",
+        "UIV2-06",
+        "UIV2-07"
+      ],
+      "component": "Compare / Chat",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Center conversation in a readable column, compact model/persona controls, sticky composer, contextual options without dead whitespace.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "At >=1440px readable message width 720-900px centered; no permanent blank telemetry rail; composer visible with keyboard; messages and code blocks never clipped; empty state concise.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-18: Chat focused balanced conversation layout. Required outcome: Center conversation in a readable column, compact model/persona controls, sticky composer, contextual options without dead whitespace. Specific gate: At >=1440px readable message width 720-900px centered; no permanent blank telemetry rail; composer visible with keyboard; messages and code blocks never clipped; empty state concise. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-19",
+      "phase": "P4",
+      "title": "Chat persona registry audit and complete supported picker",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-02",
+        "UIV2-18"
+      ],
+      "component": "Compare / Chat",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Replace three hardcoded personas with discoverable picker sourced from authoritative supported personas, with search and descriptions.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Enumerate actual persona definitions; all valid backend-supported personas appear; unsupported personas never invented; default/missing/deleted persona fallback safe; selection persisted per existing semantics; test registry changes.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-19: Chat persona registry audit and complete supported picker. Required outcome: Replace three hardcoded personas with discoverable picker sourced from authoritative supported personas, with search and descriptions. Specific gate: Enumerate actual persona definitions; all valid backend-supported personas appear; unsupported personas never invented; default/missing/deleted persona fallback safe; selection persisted per existing semantics; test registry changes. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-20",
+      "phase": "P4",
+      "title": "Chat streaming, tools, handoff and recovery UX",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-18",
+        "UIV2-19"
+      ],
+      "component": "Compare / Chat",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Tool call disclosure, streaming/cancel state, code copy, errors, retry where safe and explicit handoff to Harness.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Maintain existing authorization and read-only Chat semantics; never duplicate tool effects on retry; preserve messages and scroll position; task handoff shows exact context included.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-20: Chat streaming, tools, handoff and recovery UX. Required outcome: Tool call disclosure, streaming/cancel state, code copy, errors, retry where safe and explicit handoff to Harness. Specific gate: Maintain existing authorization and read-only Chat semantics; never duplicate tool effects on retry; preserve messages and scroll position; task handoff shows exact context included. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-21",
+      "phase": "P5",
+      "title": "MCP hub searchable catalog and connected-server dashboard",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-05",
+        "UIV2-07",
+        "UIV2-02"
+      ],
+      "component": "MCP / Start / Pipeline",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Replace giant modal with dedicated responsive hub with Catalog, Connected, Activity tabs and search/filter.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Presets presented as scan-friendly cards with trust, local/remote, auth requirement, policy; connected list shows status/errors; no exposed secrets; dialog no longer requires scrolling through all configuration at once.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-21: MCP hub searchable catalog and connected-server dashboard. Required outcome: Replace giant modal with dedicated responsive hub with Catalog, Connected, Activity tabs and search/filter. Specific gate: Presets presented as scan-friendly cards with trust, local/remote, auth requirement, policy; connected list shows status/errors; no exposed secrets; dialog no longer requires scrolling through all configuration at once. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-22",
+      "phase": "P5",
+      "title": "MCP guided connect wizard and advanced configuration",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-21"
+      ],
+      "component": "MCP / Start / Pipeline",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Stepwise preset selection, credentials/transport, policy review, connection test and confirmation; advanced JSON isolated.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "No credential logging, masking on read, unchanged-token semantics, test result visible, explicit consent for risky local commands, keyboard complete, no bypass of admission or sandbox.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-22: MCP guided connect wizard and advanced configuration. Required outcome: Stepwise preset selection, credentials/transport, policy review, connection test and confirmation; advanced JSON isolated. Specific gate: No credential logging, masking on read, unchanged-token semantics, test result visible, explicit consent for risky local commands, keyboard complete, no bypass of admission or sandbox. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-23",
+      "phase": "P5",
+      "title": "MCP tool discovery, approval and test-call experience",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-21",
+        "UIV2-22"
+      ],
+      "component": "MCP / Start / Pipeline",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Tool browser, read/write risk badges, approval policy explanation, test call with JSON validation and result inspector.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "User can distinguish configured vs discovered vs available vs denied; test calls go through same authorization; no auto-run of untrusted write tools; helpful failure messages.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-23: MCP tool discovery, approval and test-call experience. Required outcome: Tool browser, read/write risk badges, approval policy explanation, test call with JSON validation and result inspector. Specific gate: User can distinguish configured vs discovered vs available vs denied; test calls go through same authorization; no auto-run of untrusted write tools; helpful failure messages. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-24",
+      "phase": "P5",
+      "title": "Start concise command center",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-05",
+        "UIV2-07"
+      ],
+      "component": "MCP / Start / Pipeline",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Replace checklist-first landing with new task, recent sessions, readiness summary and next actionable blocker; detailed diagnostics collapsible.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Primary new-task action visible above fold; do not claim local backend ready solely because port responds; readiness contradictions explained; no hidden required setup.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-24: Start concise command center. Required outcome: Replace checklist-first landing with new task, recent sessions, readiness summary and next actionable blocker; detailed diagnostics collapsible. Specific gate: Primary new-task action visible above fold; do not claim local backend ready solely because port responds; readiness contradictions explained; no hidden required setup. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-25",
+      "phase": "P5",
+      "title": "Pipeline stage-focused workspace and artifacts",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-05",
+        "UIV2-06",
+        "UIV2-07"
+      ],
+      "component": "MCP / Start / Pipeline",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Four stages presented as useful timeline with selected-stage detail, logs, artifacts and recovery; no empty expanse below stage strip.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Current 4-stage model/controls preserved; selected stage has meaningful states; failures/retry and checkpoints visible; no fake progress; no new backend stage invented.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-25: Pipeline stage-focused workspace and artifacts. Required outcome: Four stages presented as useful timeline with selected-stage detail, logs, artifacts and recovery; no empty expanse below stage strip. Specific gate: Current 4-stage model/controls preserved; selected stage has meaningful states; failures/retry and checkpoints visible; no fake progress; no new backend stage invented. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-26",
+      "phase": "P6",
+      "title": "Cross-tab visual regression reference gate",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-08",
+        "UIV2-14",
+        "UIV2-17",
+        "UIV2-20",
+        "UIV2-23",
+        "UIV2-24",
+        "UIV2-25"
+      ],
+      "component": "Release QA",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Capture actual running UI and compare against approved reference screenshots in light/dark and responsive viewports.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Required 1640x900,1440x900,1280x800,390x844 screenshots; annotate differences; human approval of structural fidelity; cannot mark done using source inspection alone.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-26: Cross-tab visual regression reference gate. Required outcome: Capture actual running UI and compare against approved reference screenshots in light/dark and responsive viewports. Specific gate: Required 1640x900,1440x900,1280x800,390x844 screenshots; annotate differences; human approval of structural fidelity; cannot mark done using source inspection alone. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-27",
+      "phase": "P6",
+      "title": "Functional preservation and defect closure",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-09",
+        "UIV2-11",
+        "UIV2-15",
+        "UIV2-17",
+        "UIV2-20",
+        "UIV2-23",
+        "UIV2-25"
+      ],
+      "component": "Release QA",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Run complete control/API mapping and all historical known defects including Council scroll and session deletion.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "All mapped critical flows pass; prior 17/21 preservation baseline reverified, outstanding 4 explicitly resolved or block release; no blanket green if tests missing.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-27: Functional preservation and defect closure. Required outcome: Run complete control/API mapping and all historical known defects including Council scroll and session deletion. Specific gate: All mapped critical flows pass; prior 17/21 preservation baseline reverified, outstanding 4 explicitly resolved or block release; no blanket green if tests missing. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-28",
+      "phase": "P6",
+      "title": "Accessibility, scroll and responsive adversarial suite",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-26",
+        "UIV2-27"
+      ],
+      "component": "Release QA",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Keyboard-only navigation, screen reader semantics, contrast, zoom, nested scrolling, long content and reduced motion.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "No focus traps except intentional modal; Esc restores focus and scroll; 200% zoom no inaccessible controls; long conclusions and dialogs readable; color contrast measured.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-28: Accessibility, scroll and responsive adversarial suite. Required outcome: Keyboard-only navigation, screen reader semantics, contrast, zoom, nested scrolling, long content and reduced motion. Specific gate: No focus traps except intentional modal; Esc restores focus and scroll; 200% zoom no inaccessible controls; long conclusions and dialogs readable; color contrast measured. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-29",
+      "phase": "P6",
+      "title": "Performance and backend safety regression gate",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-26",
+        "UIV2-27"
+      ],
+      "component": "Release QA",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Test high-frequency SSE updates, memory, layout stability, permissions and recovery without introducing a frontend framework by default.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Record actual metrics with environment; no unbounded DOM growth; no new unauthorized execution path; no regression to crash recovery/ledger/fencing; blocked isolation remains blocked.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-29: Performance and backend safety regression gate. Required outcome: Test high-frequency SSE updates, memory, layout stability, permissions and recovery without introducing a frontend framework by default. Specific gate: Record actual metrics with environment; no unbounded DOM growth; no new unauthorized execution path; no regression to crash recovery/ledger/fencing; blocked isolation remains blocked. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    },
+    {
+      "id": "UIV2-30",
+      "phase": "P6",
+      "title": "Release review, truthful README and agent handoff",
+      "priority": "P1",
+      "dependencies": [
+        "UIV2-26",
+        "UIV2-27",
+        "UIV2-28",
+        "UIV2-29"
+      ],
+      "component": "Release QA",
+      "source_evidence": "User screenshots and user feedback; source-level confirmation pending",
+      "target_behavior": "Pin final SHA, summarize changes, screenshot proof, defects, rollback, release decision and next work.",
+      "implementation_steps": [
+        "Read current source and all related event handlers and API contracts; pin HEAD and check dependencies",
+        "Reproduce existing behavior and defect with screenshots and minimal test fixture",
+        "Design or verify target against approved visual contract before coding",
+        "Implement small isolated compatible change, retaining existing semantics",
+        "Verify empty/loading/streaming/success/error/reconnect/long-content states where applicable",
+        "Test at 1640x900, 1440x900, 1280x800, 390x844 in light and dark where applicable",
+        "Record test commands, outcomes, screenshots, accessibility checks, changed files and rollback",
+        "Mark done only if every acceptance criterion has actual evidence; otherwise block"
+      ],
+      "acceptance_criteria": [
+        "Release only with approved visual reference and passing critical tests; otherwise status blocked; README claims only verified behavior; no premature completion.",
+        "User-facing result must visually conform to approved target; no UI-only checkbox completion",
+        "All impacted existing features work and preserve authorization/session behavior"
+      ],
+      "visual_test": {
+        "viewports": [
+          "1640x900",
+          "1440x900",
+          "1280x800",
+          "390x844"
+        ],
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "states": [
+          "empty",
+          "populated",
+          "long-content",
+          "error",
+          "loading",
+          "recovery"
+        ],
+        "requires_actual_app_screenshot": true,
+        "reference_comparison_required": true
+      },
+      "tests_required": [
+        "Targeted unit/DOM tests",
+        "API integration and error handling",
+        "Browser end-to-end interaction and keyboard test",
+        "Scroll and focus regression where applicable",
+        "Before/after screenshot comparison",
+        "Preservation matrix checks for all impacted controls"
+      ],
+      "non_regression": [
+        "Preserve all existing six-tab functions, backend APIs, user sessions and workspace data unless separately authorized",
+        "Never weaken tool authorization, sandbox boundaries, action ledger, lease fencing, or model memory admission",
+        "Do not rewrite to React without a measured justification and separately approved migration",
+        "No cosmetic completion: functionality and visual reference must both pass"
+      ],
+      "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
+      "agent_prompt": "Implement UIV2-30: Release review, truthful README and agent handoff. Required outcome: Pin final SHA, summarize changes, screenshot proof, defects, rollback, release decision and next work. Specific gate: Release only with approved visual reference and passing critical tests; otherwise status blocked; README claims only verified behavior; no premature completion. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
+      "tracking": {
+        "status": "not_started",
+        "progress_percent": 0,
+        "attempt_count": 0,
+        "started_at": null,
+        "completed_at": null,
+        "commit_sha": null,
+        "changed_files": [],
+        "tests_executed": [],
+        "visual_evidence": [],
+        "acceptance_evidence": [],
+        "known_regressions": [],
+        "blockers": [],
+        "handoff_summary": "",
+        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+      }
+    }
+  ],
+  "phases": [
+    {
+      "id": "P0",
+      "name": "Source verification and visual contract",
+      "total": 3,
+      "done": 1,
+      "in_progress": 0,
+      "blocked": 0,
+      "not_started": 2,
+      "percent_complete": 33
+    },
+    {
+      "id": "P1",
+      "name": "Design system and application shell",
+      "total": 4,
+      "done": 0,
+      "in_progress": 0,
+      "blocked": 0,
+      "not_started": 4,
+      "percent_complete": 0
+    },
+    {
+      "id": "P2",
+      "name": "Harness and Cowork-style task UX",
+      "total": 4,
+      "done": 0,
+      "in_progress": 0,
+      "blocked": 0,
+      "not_started": 4,
+      "percent_complete": 0
+    },
+    {
+      "id": "P3",
+      "name": "Council correctness and usability",
+      "total": 4,
+      "done": 0,
+      "in_progress": 0,
+      "blocked": 0,
+      "not_started": 4,
+      "percent_complete": 0
+    },
+    {
+      "id": "P4",
+      "name": "Compare and Chat layout and personas",
+      "total": 5,
+      "done": 0,
+      "in_progress": 0,
+      "blocked": 0,
+      "not_started": 5,
+      "percent_complete": 0
+    },
+    {
+      "id": "P5",
+      "name": "MCP hub and Start/Pipeline refinement",
+      "total": 5,
+      "done": 0,
+      "in_progress": 0,
+      "blocked": 0,
+      "not_started": 5,
+      "percent_complete": 0
+    },
+    {
+      "id": "P6",
+      "name": "Cross-tab QA and release gate",
+      "total": 5,
+      "done": 0,
+      "in_progress": 0,
+      "blocked": 0,
+      "not_started": 5,
+      "percent_complete": 0
+    }
+  ],
+  "progress": {
+    "total": 30,
+    "done": 1,
+    "in_progress": 0,
+    "blocked": 0,
+    "not_started": 29,
+    "percent_complete": 3
+  },
+  "session_recovery_protocol": [
+    "Read global prompt and tracking",
+    "Pin current HEAD and check worktree before editing",
+    "Load current story and dependency evidence",
+    "Reproduce baseline, collect screenshots",
+    "Implement and run functional/visual/a11y checks",
+    "Update evidence and status truthfully",
+    "Commit only verified code and record SHA",
+    "Resume next dependency-ready story; never skip blocked gates"
+  ],
+  "first_session": {
+    "story_id": "UIV2-01",
+    "instructions": "Start with source verification and screenshots. Do not edit frontend until UIV2-03 target reference is approved."
+  }
+}
