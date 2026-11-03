@@ -108,6 +108,8 @@ TRACKED_FILES: tuple[tuple[str, str], ...] = (
     ("tests/test_uiux_adversarial_browser.py", "runs the adversarial walk against a throwaway app in CI's browser job"),
     ("scripts/uiux_screenshot_review.py", "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels"),
     ("tests/test_uiux_screenshot_review.py", "breaks the media tree one way at a time and checks the screenshot review notices"),
+    ("scripts/uiux_docs_verification.py", "checks the README and the onboarding pages against the tree: links, classified commands, and the claims that name a route or a file"),
+    ("tests/test_uiux_docs_verification.py", "runs the commands the docs tell a reader to run, and reads the live preflight the Quickstart describes"),
 )
 
 BUTTON_RE = re.compile(

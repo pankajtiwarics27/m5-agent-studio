@@ -1,0 +1,591 @@
+{
+  "schema_version": "1.0.0",
+  "document_type": "m5_uiux_readme_onboarding_verification",
+  "program": "M5 2.0 UI/UX transformation",
+  "story": "UIUX-P6-04",
+  "generated_by": "scripts/uiux_docs_verification.py",
+  "regenerate_with": "python3 scripts/uiux_docs_verification.py",
+  "check_with": "python3 scripts/uiux_docs_verification.py --check",
+  "runs_with": "python3 -m pytest -q tests/test_uiux_docs_verification.py",
+  "statement": "The README, the Quickstart, the demo page, the onboarding contract and the Start page's own document, checked against the tree: every relative link resolves, every fenced command is classified with a reason, and every claim is compared with the source or artifact that owns it. The commands that are safe to execute are executed by the test beside this script.",
+  "pages": [
+    "README.md",
+    "docs/quickstart.md",
+    "docs/demo.md",
+    "docs/onboarding-preflight.md",
+    "docs/uiux-2-0-start.md"
+  ],
+  "totals": {
+    "pages": 5,
+    "links": 21,
+    "commands": 40,
+    "claims": 7,
+    "claims_verified": 7,
+    "findings": 0,
+    "by_kind": {
+      "needs-network": 9,
+      "illustrative": 5,
+      "writes": 12,
+      "runs": 14
+    }
+  },
+  "links": [
+    {
+      "page": "README.md",
+      "target": "AGENTS.md",
+      "resolved": "AGENTS.md",
+      "resolves": true
+    },
+    {
+      "page": "README.md",
+      "target": "CONTRIBUTING.md",
+      "resolved": "CONTRIBUTING.md",
+      "resolves": true
+    },
+    {
+      "page": "README.md",
+      "target": "LICENSE",
+      "resolved": "LICENSE",
+      "resolves": true
+    },
+    {
+      "page": "README.md",
+      "target": "SECURITY.md",
+      "resolved": "SECURITY.md",
+      "resolves": true
+    },
+    {
+      "page": "README.md",
+      "target": "docs/README.md",
+      "resolved": "docs/README.md",
+      "resolves": true
+    },
+    {
+      "page": "README.md",
+      "target": "docs/architecture.md",
+      "resolved": "docs/architecture.md",
+      "resolves": true
+    },
+    {
+      "page": "README.md",
+      "target": "docs/configuration-contracts.md",
+      "resolved": "docs/configuration-contracts.md",
+      "resolves": true
+    },
+    {
+      "page": "README.md",
+      "target": "docs/privacy.md",
+      "resolved": "docs/privacy.md",
+      "resolves": true
+    },
+    {
+      "page": "README.md",
+      "target": "docs/quickstart.md",
+      "resolved": "docs/quickstart.md",
+      "resolves": true
+    },
+    {
+      "page": "README.md",
+      "target": "docs/supported-hardware.md",
+      "resolved": "docs/supported-hardware.md",
+      "resolves": true
+    },
+    {
+      "page": "docs/quickstart.md",
+      "target": "../BASELINE.md",
+      "resolved": "docs/../BASELINE.md",
+      "resolves": true
+    },
+    {
+      "page": "docs/quickstart.md",
+      "target": "../SECURITY.md",
+      "resolved": "docs/../SECURITY.md",
+      "resolves": true
+    },
+    {
+      "page": "docs/quickstart.md",
+      "target": "configuration-contracts.md",
+      "resolved": "docs/configuration-contracts.md",
+      "resolves": true
+    },
+    {
+      "page": "docs/quickstart.md",
+      "target": "demo.md",
+      "resolved": "docs/demo.md",
+      "resolves": true
+    },
+    {
+      "page": "docs/quickstart.md",
+      "target": "onboarding-preflight.md",
+      "resolved": "docs/onboarding-preflight.md",
+      "resolves": true
+    },
+    {
+      "page": "docs/quickstart.md",
+      "target": "packaging-rollback.md",
+      "resolved": "docs/packaging-rollback.md",
+      "resolves": true
+    },
+    {
+      "page": "docs/demo.md",
+      "target": "demo-isolation-safety.md",
+      "resolved": "docs/demo-isolation-safety.md",
+      "resolves": true
+    },
+    {
+      "page": "docs/demo.md",
+      "target": "media/demo-transcript.md",
+      "resolved": "docs/media/demo-transcript.md",
+      "resolves": true
+    },
+    {
+      "page": "docs/demo.md",
+      "target": "media/screenshots/manifest.json",
+      "resolved": "docs/media/screenshots/manifest.json",
+      "resolves": true
+    },
+    {
+      "page": "docs/demo.md",
+      "target": "media/tokens/README.md",
+      "resolved": "docs/media/tokens/README.md",
+      "resolves": true
+    },
+    {
+      "page": "docs/demo.md",
+      "target": "quickstart.md",
+      "resolved": "docs/quickstart.md",
+      "resolves": true
+    }
+  ],
+  "commands": [
+    {
+      "page": "README.md",
+      "command": "git clone https://github.com/pankajtiwarics27/m5-agent-studio.git",
+      "normalized": "git clone https://github.com/pankajtiwarics27/m5-agent-studio.git",
+      "kind": "needs-network",
+      "reason": "clones a public repository; this checkout already is that repository",
+      "executes": false
+    },
+    {
+      "page": "README.md",
+      "command": "cd m5-agent-studio",
+      "normalized": "cd m5-agent-studio",
+      "kind": "illustrative",
+      "reason": "a directory change in the reader's shell, not a command with an exit code",
+      "executes": false
+    },
+    {
+      "page": "README.md",
+      "command": "python3 -m venv .venv",
+      "normalized": "python3 -m venv .venv",
+      "kind": "writes",
+      "reason": "creates (and activates) a virtualenv beside the checkout",
+      "executes": false
+    },
+    {
+      "page": "README.md",
+      "command": ". .venv/bin/activate",
+      "normalized": ". .venv/bin/activate",
+      "kind": "illustrative",
+      "reason": "a shell builtin that changes the reader's environment",
+      "executes": false
+    },
+    {
+      "page": "README.md",
+      "command": "python -m pip install -e '.[dev]'",
+      "normalized": "python -m pip install -e '.[dev]'",
+      "kind": "writes",
+      "reason": "installs packages into the reader's environment",
+      "executes": false
+    },
+    {
+      "page": "README.md",
+      "command": "python app.py",
+      "normalized": "python app.py",
+      "kind": "needs-network",
+      "reason": "starts the server and waits for a browser",
+      "executes": false
+    },
+    {
+      "page": "README.md",
+      "command": "python scripts/demo_tour.py",
+      "normalized": "python scripts/demo_tour.py",
+      "kind": "runs",
+      "reason": "prints the offline, provider-free tour and exits",
+      "executes": true
+    },
+    {
+      "page": "README.md",
+      "command": "ruff check .",
+      "normalized": "ruff check .",
+      "kind": "runs",
+      "reason": "read-only lint over the tree",
+      "executes": true
+    },
+    {
+      "page": "README.md",
+      "command": "mypy",
+      "normalized": "mypy",
+      "kind": "runs",
+      "reason": "read-only type check over the pinned contract modules",
+      "executes": true
+    },
+    {
+      "page": "README.md",
+      "command": "python -m pytest -q",
+      "normalized": "python -m pytest -q",
+      "kind": "runs",
+      "reason": "the whole suite - it cannot run itself from inside itself; CI runs it on every push",
+      "executes": false
+    },
+    {
+      "page": "README.md",
+      "command": "python scripts/check_frontend_syntax.py",
+      "normalized": "python scripts/check_frontend_syntax.py",
+      "kind": "runs",
+      "reason": "parses the inline script; read-only",
+      "executes": true
+    },
+    {
+      "page": "README.md",
+      "command": "python scripts/validate_docs.py",
+      "normalized": "python scripts/validate_docs.py",
+      "kind": "runs",
+      "reason": "reads every page and checks its links; read-only",
+      "executes": true
+    },
+    {
+      "page": "README.md",
+      "command": "python scripts/build_studio.py",
+      "normalized": "python scripts/build_studio.py",
+      "kind": "writes",
+      "reason": "regenerates the tracked studio.py from its sources",
+      "executes": false
+    },
+    {
+      "page": "docs/quickstart.md",
+      "command": "python3 -m venv .venv && . .venv/bin/activate",
+      "normalized": "python3 -m venv .venv && . .venv/bin/activate",
+      "kind": "writes",
+      "reason": "creates (and activates) a virtualenv beside the checkout",
+      "executes": false
+    },
+    {
+      "page": "docs/quickstart.md",
+      "command": "python -m pip install 'fastapi>=0.115,<1' 'uvicorn>=0.32,<1' 'httpx>=0.28,<0.29'   'httpcore>=1.0,<2' 'keyring>=25,<27'",
+      "normalized": "python -m pip install 'fastapi>=0.115,<1' 'uvicorn>=0.32,<1' 'httpx>=0.28,<0.29'   'httpcore>=1.0,<2' 'keyring>=25,<27'",
+      "kind": "writes",
+      "reason": "installs packages into the reader's environment",
+      "executes": false
+    },
+    {
+      "page": "docs/quickstart.md",
+      "command": "python3 studio.py",
+      "normalized": "python3 studio.py",
+      "kind": "needs-network",
+      "reason": "starts the generated bundle and waits for a browser",
+      "executes": false
+    },
+    {
+      "page": "docs/quickstart.md",
+      "command": "git clone https://github.com/pankajtiwarics27/m5-agent-studio.git",
+      "normalized": "git clone https://github.com/pankajtiwarics27/m5-agent-studio.git",
+      "kind": "needs-network",
+      "reason": "clones a public repository; this checkout already is that repository",
+      "executes": false
+    },
+    {
+      "page": "docs/quickstart.md",
+      "command": "cd m5-agent-studio",
+      "normalized": "cd m5-agent-studio",
+      "kind": "illustrative",
+      "reason": "a directory change in the reader's shell, not a command with an exit code",
+      "executes": false
+    },
+    {
+      "page": "docs/quickstart.md",
+      "command": "python3 -m venv .venv && . .venv/bin/activate",
+      "normalized": "python3 -m venv .venv && . .venv/bin/activate",
+      "kind": "writes",
+      "reason": "creates (and activates) a virtualenv beside the checkout",
+      "executes": false
+    },
+    {
+      "page": "docs/quickstart.md",
+      "command": "python -m pip install -e '.[dev]'",
+      "normalized": "python -m pip install -e '.[dev]'",
+      "kind": "writes",
+      "reason": "installs packages into the reader's environment",
+      "executes": false
+    },
+    {
+      "page": "docs/quickstart.md",
+      "command": "python3 app.py",
+      "normalized": "python3 app.py",
+      "kind": "needs-network",
+      "reason": "starts the server and waits for a browser",
+      "executes": false
+    },
+    {
+      "page": "docs/quickstart.md",
+      "command": "export OMLX_BASE_URL=http://127.0.0.1:8000   # default",
+      "normalized": "export OMLX_BASE_URL=http://127.0.0.1:8000",
+      "kind": "illustrative",
+      "reason": "an environment variable for the reader's shell, with the default it already has",
+      "executes": false
+    },
+    {
+      "page": "docs/demo.md",
+      "command": "python3 scripts/demo_tour.py",
+      "normalized": "python3 scripts/demo_tour.py",
+      "kind": "runs",
+      "reason": "prints the offline, provider-free tour and exits",
+      "executes": true
+    },
+    {
+      "page": "docs/demo.md",
+      "command": "python3 scripts/demo_tour.py --write    # regenerate it",
+      "normalized": "python3 scripts/demo_tour.py --write",
+      "kind": "writes",
+      "reason": "regenerates the committed demo transcript",
+      "executes": false
+    },
+    {
+      "page": "docs/demo.md",
+      "command": "python3 scripts/demo_tour.py --check    # exit 1 if it drifted; CI runs this",
+      "normalized": "python3 scripts/demo_tour.py --check",
+      "kind": "runs",
+      "reason": "compares the committed transcript with what the tour prints; read-only",
+      "executes": true
+    },
+    {
+      "page": "docs/demo.md",
+      "command": "python3 scripts/demo_tour.py --json     # machine-readable observations",
+      "normalized": "python3 scripts/demo_tour.py --json",
+      "kind": "runs",
+      "reason": "prints the tour's observations as JSON; read-only",
+      "executes": true
+    },
+    {
+      "page": "docs/demo.md",
+      "command": "python3 scripts/demo_tour.py --serve",
+      "normalized": "python3 scripts/demo_tour.py --serve",
+      "kind": "needs-network",
+      "reason": "serves a seeded demo on a loopback port and stays in the foreground until stopped",
+      "executes": false
+    },
+    {
+      "page": "docs/demo.md",
+      "command": "python3 scripts/demo_tour.py --serve",
+      "normalized": "python3 scripts/demo_tour.py --serve",
+      "kind": "needs-network",
+      "reason": "serves a seeded demo on a loopback port and stays in the foreground until stopped",
+      "executes": false
+    },
+    {
+      "page": "docs/demo.md",
+      "command": "npm i puppeteer-core",
+      "normalized": "npm i puppeteer-core",
+      "kind": "writes",
+      "reason": "installs node packages into the reader's environment",
+      "executes": false
+    },
+    {
+      "page": "docs/demo.md",
+      "command": "STUDIO_SCREENSHOT_CHROME=\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\"   node scripts/capture_screenshots.mjs --base-url http://127.0.0.1:PORT --token TOKEN",
+      "normalized": "STUDIO_SCREENSHOT_CHROME=\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\"   node scripts/capture_screenshots.mjs --base-url http://127.0.0.1:PORT --token TOKEN",
+      "kind": "needs-network",
+      "reason": "captures from a running demo; needs a server, a browser and the libraries the environment names",
+      "executes": false
+    },
+    {
+      "page": "docs/demo.md",
+      "command": "python3 scripts/validate_screenshots.py",
+      "normalized": "python3 scripts/validate_screenshots.py",
+      "kind": "runs",
+      "reason": "hashes the published set against its manifest and index; read-only",
+      "executes": true
+    },
+    {
+      "page": "docs/demo.md",
+      "command": "npm i puppeteer-core @sparticuz/chromium          # in a scratch directory",
+      "normalized": "npm i puppeteer-core @sparticuz/chromium",
+      "kind": "writes",
+      "reason": "installs the pinned browser tooling into a scratch directory",
+      "executes": false
+    },
+    {
+      "page": "docs/demo.md",
+      "command": "node -e 'require(\"@sparticuz/chromium\").executablePath().then(console.log)'   # extracts the binary",
+      "normalized": "node -e 'require(\"@sparticuz/chromium\").executablePath().then(console.log)'",
+      "kind": "writes",
+      "reason": "unpacks the pinned Chromium into the reader's temporary directory",
+      "executes": false
+    },
+    {
+      "page": "docs/demo.md",
+      "command": "tar xf <extracted al2023.tar> -C /path/to/chromium-libs                        # libnss3, libnspr4, ...",
+      "normalized": "tar xf <extracted al2023.tar> -C /path/to/chromium-libs",
+      "kind": "illustrative",
+      "reason": "extracts the NSS libraries; the paths in it are the reader's, not this checkout's",
+      "executes": false
+    },
+    {
+      "page": "docs/demo.md",
+      "command": "LD_LIBRARY_PATH=/path/to/chromium-libs/lib STUDIO_SCREENSHOT_CHROME=/path/to/chromium STUDIO_PUPPETEER_CORE=/scratch/node_modules/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js STUDIO_SCREENSHOT_CHROME_ARGS=\"--no-zygote --single-process --disable-gpu\"   node scripts/capture_screenshots.mjs --base-url http://127.0.0.1:PORT --token TOKEN",
+      "normalized": "LD_LIBRARY_PATH=/path/to/chromium-libs/lib STUDIO_SCREENSHOT_CHROME=/path/to/chromium STUDIO_PUPPETEER_CORE=/scratch/node_modules/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js STUDIO_SCREENSHOT_CHROME_ARGS=\"--no-zygote --single-process --disable-gpu\"   node scripts/capture_screenshots.mjs --base-url http://127.0.0.1:PORT --token TOKEN",
+      "kind": "needs-network",
+      "reason": "captures from a running demo; needs a server, a browser and the libraries the environment names",
+      "executes": false
+    },
+    {
+      "page": "docs/demo.md",
+      "command": "python3 scripts/validate_screenshots.py        # CI runs this",
+      "normalized": "python3 scripts/validate_screenshots.py",
+      "kind": "runs",
+      "reason": "hashes the published set against its manifest and index; read-only",
+      "executes": true
+    },
+    {
+      "page": "docs/onboarding-preflight.md",
+      "command": "python -m pytest -q tests/test_onboarding_preflight.py     # 29 passed",
+      "normalized": "python -m pytest -q tests/test_onboarding_preflight.py",
+      "kind": "runs",
+      "reason": "one test module; read-only apart from temporary directories",
+      "executes": true
+    },
+    {
+      "page": "docs/onboarding-preflight.md",
+      "command": "python scripts/check_frontend_syntax.py                    # inline JS parses",
+      "normalized": "python scripts/check_frontend_syntax.py",
+      "kind": "runs",
+      "reason": "parses the inline script; read-only",
+      "executes": true
+    },
+    {
+      "page": "docs/onboarding-preflight.md",
+      "command": "python scripts/smoke_local.py                              # loopback startup + auth",
+      "normalized": "python scripts/smoke_local.py",
+      "kind": "runs",
+      "reason": "starts a disposable loopback server, checks the auth path, stops it and exits",
+      "executes": true
+    },
+    {
+      "page": "docs/onboarding-preflight.md",
+      "command": "python scripts/build_studio.py                             # regenerate studio.py",
+      "normalized": "python scripts/build_studio.py",
+      "kind": "writes",
+      "reason": "regenerates the tracked studio.py from its sources",
+      "executes": false
+    }
+  ],
+  "claims": [
+    {
+      "id": "preflight-six-steps",
+      "page": "docs/quickstart.md",
+      "claim": "the Start tab lists six ordered steps: authentication, model source, model availability, workspace, execution mode, first task",
+      "check": "order",
+      "words": [
+        "authentication",
+        "model source",
+        "model availability",
+        "workspace",
+        "execution mode",
+        "first task"
+      ],
+      "expect": [
+        "auth",
+        "model-source",
+        "model-available",
+        "workspace",
+        "execution",
+        "first-task"
+      ],
+      "locator": "product/M5_2_0_UIUX_Onboarding.json#/steps_contract/order",
+      "verified": true,
+      "detail": "the artifact's order is auth -> model-source -> model-available -> workspace -> execution -> first-task, which the page names 6/6 of, in that order"
+    },
+    {
+      "id": "preflight-exactly-one-next",
+      "page": "docs/quickstart.md",
+      "claim": "exactly one step is highlighted as the next action",
+      "check": "artifact-true",
+      "artifact": "product/M5_2_0_UIUX_Onboarding.json",
+      "path": [
+        "totals",
+        "next_step_is_actionable_always"
+      ],
+      "locator": "product/M5_2_0_UIUX_Onboarding.json#/totals/next_step_is_actionable_always (13 preflight cases)",
+      "verified": true,
+      "detail": "totals/next_step_is_actionable_always = True"
+    },
+    {
+      "id": "default-port",
+      "page": "README.md",
+      "claim": "the server is at http://127.0.0.1:3000",
+      "check": "source-contains",
+      "source": "app.py",
+      "needles": [
+        "\"STUDIO_PORT\", 3000",
+        "uvicorn.run(app, host=STUDIO_HOST, port=STUDIO_PORT"
+      ],
+      "locator": "app.py `_config_int(env, \"STUDIO_PORT\", 3000, 1, 65535)` and the `uvicorn.run` call",
+      "verified": true,
+      "detail": "all anchors present"
+    },
+    {
+      "id": "token-path",
+      "page": "docs/quickstart.md",
+      "claim": "the bearer token is written to ~/.config/m5-agent-studio/api-token, file 0600 and directory 0700",
+      "check": "source-contains",
+      "source": "app.py",
+      "needles": [
+        "\"m5-agent-studio\" / \"api-token\"",
+        "0o600",
+        "0o700"
+      ],
+      "locator": "app.py token creation (path, mode 0600, directory 0700)",
+      "verified": true,
+      "detail": "all anchors present"
+    },
+    {
+      "id": "studio-is-generated",
+      "page": "README.md",
+      "claim": "studio.py is generated from app.py and static/index.html and must be rebuilt after source changes",
+      "check": "generator-inputs",
+      "locator": "scripts/build_studio.py INLINED_MODULES and its two source reads",
+      "verified": true,
+      "detail": "builder reads app.py + static/index.html and inlines the modules"
+    },
+    {
+      "id": "preflight-is-offline",
+      "page": "docs/quickstart.md",
+      "claim": "nothing in the preflight contacts the network, except the Check local models button",
+      "check": "source-contains",
+      "source": "app.py",
+      "needles": [
+        "Read-only and offline by default",
+        "probe == \"local\"",
+        "_onboarding_probe_local_models"
+      ],
+      "locator": "app.py `api_onboarding_preflight` docstring and its single `probe=local` branch",
+      "verified": true,
+      "detail": "all anchors present"
+    },
+    {
+      "id": "start-doc-matches-artifact",
+      "page": "docs/uiux-2-0-start.md",
+      "claim": "the Start page documents the same number of preflight cases the inventory proves",
+      "check": "doc-contains-count",
+      "artifact": "product/M5_2_0_UIUX_Onboarding.json",
+      "path": [
+        "totals",
+        "cases"
+      ],
+      "locator": "product/M5_2_0_UIUX_Onboarding.json#/totals/cases",
+      "verified": true,
+      "detail": "artifact says 13; the page says yes"
+    }
+  ],
+  "findings": []
+}

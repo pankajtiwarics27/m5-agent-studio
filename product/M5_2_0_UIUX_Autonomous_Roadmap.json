@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 40,
+  "revision": 42,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -102,13 +102,13 @@
   "session_state": {
     "active_story": null,
     "active_stories": [],
-    "last_completed_story": "UIUX-P6-03",
-    "next_recommended_story": "UIUX-P6-04",
-    "last_checkpoint": "2026-11-03T19:15:00Z",
+    "last_completed_story": "UIUX-P6-04",
+    "next_recommended_story": "UIUX-P6-05",
+    "last_checkpoint": "2026-11-03T21:10:00Z",
     "last_session_id": "arena/57419a42-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
-    "last_verified_commit": "bf2bf306fed5a2255c1d900ac5ff41b781b6eec3",
+    "last_verified_commit": "6c850e62cf2d2bf8a16bd5d114ca51caca971694",
     "last_updated": "2026-11-03",
     "open_risks": [
       "The plan was authored from GitHub web extracts, not a local checkout: baseline.readme, baseline.frontend and baseline.roadmap say 'retrieved live', tests say 'not executed', and the backend API contracts were 'not fully audited'. UIUX-P0-01 to P0-06 exist to replace that with measured evidence; until they close, every current-behaviour statement in this ledger is a hypothesis.",
@@ -337,20 +337,20 @@
         "UIUX-P6-05"
       ],
       "total": 5,
-      "done": 3,
+      "done": 4,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 2,
-      "percent_complete": 60
+      "not_started": 1,
+      "percent_complete": 80
     }
   ],
   "overall_progress": {
     "total_stories": 40,
-    "done": 38,
+    "done": 39,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 2,
-    "percent_complete": 95
+    "not_started": 1,
+    "percent_complete": 98
   },
   "stories": [
     {
@@ -7268,8 +7268,8 @@
         "app.py",
         "README.md"
       ],
-      "current_behavior": "Inspect and record exact current handlers, routes, edge cases and UI behavior before editing; unverified beyond initial inventory.",
-      "target_behavior": "README docs and user onboarding verification with no loss of existing functionality.",
+      "current_behavior": "Measured, not read. The five pages a reader follows instructions from - `README.md`, `docs/quickstart.md`, `docs/demo.md`, `docs/onboarding-preflight.md`, `docs/uiux-2-0-start.md` - had never been checked against the tree they describe. `scripts/validate_docs.py` validated required pages, relative links and anchors across 190 files, but it ran none of the commands the pages tell a reader to run, and nothing compared the Quickstart's six-step description of the Start tab, the default port, the token path and its modes, or the preflight's case count with the source or artifact that owns them. A page can therefore go on instructing a reader to run a script that was renamed, or to expect a pane the code stopped honouring, and every existing check still passes.",
+      "target_behavior": "Every page a reader acts on is treated as part of the tree: each relative link resolved, each fenced command classified with a stated reason - and the read-only ones actually executed by a test, with their exit codes asserted - and each factual claim about the preflight, the port, the token file or the generated bundle compared with the source or artifact that owns it. A new command in the README cannot appear without someone deciding what it does, and an onboarding step is verified against a running server rather than against prose.",
       "implementation_steps": [
         "Confirm HEAD, worktree and prerequisite evidence",
         "Trace relevant DOM, JS handlers, API and backend state transitions",
@@ -7311,24 +7311,60 @@
       "rollback_strategy": "Revert only this story commit; do not modify user workspace data or durable state schemas.",
       "agent_prompt": "Implement UIUX-P6-04 (README docs and user onboarding verification). Verify dependencies, pin HEAD, inventory impacted controls and API routes, preserve all current behavior, make a small compatible change, execute targeted and baseline tests, record screenshots, and mark done only with passing evidence. Never invent a test result.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempts": 0,
-        "started_at": null,
-        "updated_at": null,
-        "completed_at": null,
-        "owner_session": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "evidence": [],
-        "test_results": [],
-        "visual_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempts": 1,
+        "started_at": "2026-11-03T20:05:00Z",
+        "updated_at": "2026-11-03T21:10:00Z",
+        "completed_at": "2026-11-03T21:10:00Z",
+        "owner_session": "arena/57419a42-m5-agent-studio",
+        "commit_sha": "6c850e62cf2d2bf8a16bd5d114ca51caca971694",
+        "changed_files": [
+          "docs/README.md",
+          "docs/product-roadmap-status.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-program.md",
+          "docs/uiux-2-0-readme-onboarding.md",
+          "product/M5_2_0_UIUX_Autonomous_Roadmap.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Readme_Onboarding.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "scripts/uiux_docs_verification.py",
+          "scripts/uiux_source_manifest.py",
+          "tests/test_uiux_docs_verification.py"
+        ],
+        "evidence": [
+          "Before, measured: no check existed for documentation truth. `scripts/validate_docs.py` passed over 5 required pages and 190 scanned files while running none of the 40 fenced commands on the five reader pages, and no test compared a documented port, token path, step order or case count with the code or artifact that owns it.",
+          "After: `python scripts/uiux_docs_verification.py` -> `7/7 claims verified, 40 commands, 0 findings` (exit 0). 40 fenced commands across 5 pages classified - runs 14, writes 12, needs-network 9, illustrative 5, unclassified 0 - and 21 relative links all resolving to files in the tree.",
+          "The 7 claims are compared with their owners, not with the page: the preflight's `steps_contract.order` (auth -> model-source -> model-available -> workspace -> execution -> first-task) and the Quickstart's naming of all six; `totals.next_step_is_actionable_always`; `STUDIO_PORT` default 3000 and the `uvicorn.run` call in `app.py`; the token path `m5-agent-studio/api-token` with file mode 0600 and directory 0700; `scripts/build_studio.py` reading `app.py` + `static/index.html` and inlining `INLINED_MODULES`; the single `probe=local` network branch of `api_onboarding_preflight`; and `totals.cases` = 13 against `docs/uiux-2-0-start.md`.",
+          "The 11 distinct read-only commands the pages instruct are executed by `tests/test_uiux_docs_verification.py` with exit-code assertions - `demo_tour.py` (default, `--check`, `--json`), `validate_screenshots.py`, `check_frontend_syntax.py`, `validate_docs.py`, `smoke_local.py`, `pytest -q tests/test_onboarding_preflight.py`, `ruff check .`, `mypy` - via this environment's interpreter, since the pages say `python` as an activated-venv shorthand. 18 tests, all pass; nothing that writes, installs, starts a server or rewrites a tracked generated file is executed.",
+          "Onboarding verified against a live server, not prose: the same test starts `scripts/demo_tour.py --serve`, sends the bearer token to `/api/onboarding/preflight`, and asserts the six step ids in the artifact's order, that the report names exactly one next step and that step is present once in the list, and that every status is one of `ready`/`optional`/`action-required`/`blocked`.",
+          "Negative paths covered without touching the tree: a page that is missing is read as empty (a claim then fails), an unclassified command is a finding (the check exits 1), and a command whose kind is `runs` but which appears in the forbidden-token list fails the policy test.",
+          "No pixel changed, and that is the story's visual evidence: `git diff --stat` for `static/index.html` and `app.py` against the P6-03 merge is empty, so there is no before/after image to take. The published capture set the pages describe still validates - `python3 scripts/validate_screenshots.py` -> `6 of 6 captured and consistent with the manifest` - and the new test asserts that same count against `M5_2_0_UIUX_Screenshot_Review.json`."
+        ],
+        "test_results": [
+          "`.venv/bin/python scripts/uiux_docs_verification.py --check` -> `README and onboarding OK: 5 pages, 21 links, 40 commands classified, 7/7 claims verified, 0 findings`, exit 0.",
+          "`.venv/bin/python -m pytest -q tests/test_uiux_docs_verification.py` -> `18 passed in 7.37s`, exit 0.",
+          "`.venv/bin/python -m pytest -q` (whole suite, 3.11.9, Linux x86_64) -> `3 failed, 2580 passed, 29 skipped, 1 warning in 397.37s`, exit 1. All three failures are local-only and share one cause: this checkout is a shallow clone without commit `73bc5e4` (`git cat-file -t 73bc5e4` -> `Not a valid object name`), so `tests/test_baseline.py::test_pinned_baseline_is_present_and_ancestral` and both `tests/test_uiux_preservation_signoff.py` ancestor tests cannot run here; CI clones the full history and runs them. No new failure.",
+          "`.venv/bin/python -m ruff check .` -> `All checks passed!`, exit 0. `.venv/bin/python -m mypy` -> `Success: no issues found in 58 source files`, exit 0.",
+          "`.venv/bin/python scripts/check_frontend_syntax.py` -> `JavaScript syntax OK (1 inline block(s))`, exit 0. `.venv/bin/python scripts/validate_docs.py` -> `Documentation validation passed (5 required pages, 190 files scanned)`, exit 0. `.venv/bin/python scripts/validate_screenshots.py` -> `Screenshots validated: 6 of 6 captured and consistent with the manifest`, exit 0.",
+          "Regenerated in the documented order and each re-checked with `--check`, all exit 0: source manifest (62 files, 6 tabs, 115 routes), route map, authorization trace, control inventory, presentations, status components, overlays, polish, tokens, onboarding, recent work, chat, chat context, chat handoff, preservation sign-off, preservation e2e (21/21 rows), adversarial inventory, screenshot review (240 captures), docs verification."
+        ],
+        "visual_evidence": [
+          "No screenshot taken, and none is owed: this story changes no markup, style or handler. `static/index.html` and `app.py` are byte-identical to the P6-03 merge, which is why the published before/after set from that story stands unchanged and still validates 6 of 6.",
+          "What the story does prove visually-adjacent is behavioural: the Start pane's preflight, as documented, is exercised through its own API on a live seeded instance, and the six-step order the Quickstart describes is the order the server returns."
+        ],
         "known_regressions": [],
-        "decisions": [],
+        "decisions": [
+          "A documentation page is verified by executing what it instructs, not by reading it: `runs` commands are executed by the test, and every other command must carry a stated reason, so silence about a new command is a finding.",
+          "The pages say `python` because they assume an activated virtualenv; the test substitutes this environment's interpreter rather than rewriting the docs, and says so in the test module's docstring. The command's meaning is unchanged.",
+          "No UI change was made for a P2 story whose subject is documentation: adding a docs-only badge or a link to the verification page inside the app would be a UI change nobody asked for, and the docs index and program table carry the pointer instead.",
+          "The generator reads the same five pages `scripts/validate_docs.py` already renders, rather than widening that script: link and anchor checking belongs to one owner, and command execution belongs to a test that can assert exit codes."
+        ],
         "blockers": [],
-        "handoff_note": "",
-        "next_action": "Trace impacted handlers and capture baseline evidence",
-        "readme_updated": false
+        "handoff_note": "The last story is UIUX-P6-05 (release gate and handover report, P0). It can now cite a complete evidence set: P6-04 closed the documentation gap, so the release gate's preservation end-to-end rows, adversarial refusals, screenshot review and onboarding verification all have a generator and a test. Note for the next session: this checkout is shallow, so the two ancestor assertions in `tests/test_uiux_preservation_signoff.py` and the one in `tests/test_baseline.py` fail locally and pass in CI; report them as environment, not as a regression, exactly as this story did.",
+        "next_action": "None - story complete. Next: UIUX-P6-05 (release gate and handover report).",
+        "readme_updated": true
       },
       "required_evidence": [
         "Commands actually run, with exit codes and the environment they ran in",
