@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M5 V2 reference wireframe — three-region Harness</title>
+<style>
+  :root, html[data-theme="light"] {
+    --canvas:#F8F9FB; --surface:#FFFFFF; --secondary:#F1F3F5; --text:#1B2430;
+    --muted:#596579; --border:#DDE2E8; --accent:#4F5FE8;
+  }
+  html[data-theme="dark"] {
+    --canvas:#111318; --surface:#1A1D24; --secondary:#242832; --text:#F3F5F7;
+    --muted:#AAB4C3; --border:#343B48; --accent:#93A0FF;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--canvas); color:var(--text);
+         font:13px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .ann { position:absolute; font:10px/1.2 ui-monospace, monospace; color:var(--accent);
+         background:var(--surface); border:1px dashed var(--accent); border-radius:4px;
+         padding:1px 5px; white-space:nowrap; z-index:5; }
+  /* ---- shell: header + 4-region body (desktop >= 1440) ---- */
+  header { height:56px; max-height:64px; display:flex; align-items:center; gap:10px;
+           padding:0 14px; background:var(--surface); border-bottom:1px solid var(--border); }
+  header .logo { font-weight:700; }
+  header .spacer { flex:1; }
+  header .hbtn { border:1px solid var(--border); border-radius:6px; padding:4px 9px;
+                color:var(--muted); background:var(--secondary); }
+  #telemetryPopover { position:absolute; top:52px; right:14px; width:280px; background:var(--surface);
+           border:1px solid var(--border); border-radius:8px; padding:10px; display:none;
+           box-shadow:0 6px 24px rgba(0,0,0,.12); }
+  #telemetryPopover.open { display:block; }
+  #body { display:grid; grid-template-columns: 208px 240px minmax(640px,1fr) 296px;
+          height: calc(100vh - 56px); }
+  #body > * { border-right:1px solid var(--border); background:var(--surface); overflow:hidden; }
+  #body > *:last-child { border-right:none; }
+  nav.col { padding:10px; }
+  nav.col .item { display:flex; gap:8px; align-items:center; padding:7px 9px; border-radius:7px;
+                  color:var(--muted); }
+  nav.col .item.active { background:var(--secondary); color:var(--text); font-weight:600; }
+  aside.sessions { padding:10px; }
+  aside.sessions h3, section.main h3, aside.inspector h3 { margin:2px 4px 8px; font-size:11px;
+                  text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  .card { background:var(--canvas); border:1px solid var(--border); border-radius:8px;
+          padding:9px 10px; margin:0 4px 8px; }
+  .card b { display:block; margin-bottom:2px; }
+  .dim { color:var(--muted); }
+  section.main { padding:14px 16px; background:var(--canvas); position:relative; }
+  .stages { display:flex; gap:8px; margin-bottom:12px; }
+  .stage { flex:1; border:1px solid var(--border); border-radius:8px; padding:8px 10px;
+           background:var(--surface); }
+  .stage .dot { display:inline-block; width:8px; height:8px; border-radius:50%;
+                background:var(--border); margin-right:6px; }
+  .stage.done .dot { background:var(--accent); }
+  .timeline { border-left:2px solid var(--border); margin:0 4px 12px 6px; padding-left:12px; }
+  .timeline .ev { margin-bottom:8px; position:relative; }
+  .timeline .ev::before { content:""; position:absolute; left:-17px; top:4px; width:8px; height:8px;
+           border-radius:50%; background:var(--surface); border:2px solid var(--accent); }
+  .composer { border:1px solid var(--border); border-radius:10px; background:var(--surface); padding:10px; }
+  .composer .box { min-height:56px; color:var(--muted); }
+  .composer .row { display:flex; gap:8px; margin-top:8px; align-items:center; }
+  .btn { border:1px solid var(--border); background:var(--surface); color:var(--text);
+         border-radius:7px; padding:6px 12px; }
+  .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  aside.inspector { padding:10px; background:var(--surface); }
+  .kv { display:flex; justify-content:space-between; padding:4px 2px; border-bottom:1px solid var(--border); }
+  /* ---- narrower breakpoints ---- */
+  @media (max-width:1439px) { #body { grid-template-columns: 208px 220px minmax(0,1fr); }
+    aside.inspector { display:none; } }
+  @media (max-width:1279px) { #body { grid-template-columns: 64px minmax(0,1fr); }
+    aside.sessions { display:none; } nav.col .item span.lbl { display:none; } }
+  @media (max-width:799px) { #body { grid-template-columns: minmax(0,1fr); display:block; }
+    nav.col { display:flex; gap:4px; border-bottom:1px solid var(--border); }
+    nav.col .item span.lbl { display:inline; } aside.sessions, aside.inspector { display:none; }
+    header { flex-wrap:wrap; height:auto; padding:8px 10px; }
+    .ann { display:none; } }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">M5 Studio</span>
+  <span class="hbtn" id="telemetryBtn" onclick="document.getElementById('telemetryPopover').classList.toggle('open')">Telemetry ▾</span>
+  <span class="spacer"></span>
+  <span class="hbtn">Search ⌘K</span>
+  <span class="hbtn" id="themeBtn" onclick="flipTheme()">Theme</span>
+  <div id="telemetryPopover">
+    <b>Telemetry</b> — header popover, not a permanent rail.
+    <div class="kv"><span>Memory</span><span class="dim">4.8 / 24.0 GB</span></div>
+    <div class="kv"><span>Throughput</span><span class="dim">20.8k tok/s</span></div>
+    <div class="kv"><span>Containers</span><span class="dim">2 running</span></div>
+  </div>
+</header>
+<div id="body">
+  <nav class="col" id="nav">
+    <div class="item active"><span>◈</span><span class="lbl">Harness</span></div>
+    <div class="item"><span>✦</span><span class="lbl">Start</span></div>
+    <div class="item"><span>👥</span><span class="lbl">Council</span></div>
+    <div class="item"><span>⚙</span><span class="lbl">Pipeline</span></div>
+    <div class="item"><span>⚖</span><span class="lbl">Compare</span></div>
+    <div class="item"><span>💬</span><span class="lbl">Chat</span></div>
+  </nav>
+  <aside class="sessions" id="sessions">
+    <h3>Sessions</h3>
+    <div class="card"><b>Refactor auth module</b><span class="dim">running · 3 steps</span></div>
+    <div class="card"><b>Telemetry store spike</b><span class="dim">done · pinned</span></div>
+    <div class="card"><b>+ New session</b></div>
+  </aside>
+  <section class="main" id="main">
+    <!-- per-pane bodies injected by the tiny script below from PANES -->
+    <div id="paneBody"></div>
+    <span class="ann" style="top:6px; right:10px;">main ≥ 640px · Plan → Execute → Verify</span>
+  </section>
+  <aside class="inspector" id="inspector">
+    <h3>Inspector</h3>
+    <div class="kv"><span>Workspace</span><span class="dim">~/project</span></div>
+    <div class="kv"><span>Model</span><span class="dim">combo</span></div>
+    <div class="kv"><span>Permissions</span><span class="dim">ask-before-bash</span></div>
+    <h3 style="margin-top:12px;">Approvals</h3>
+    <div class="card"><b>Edit src/auth.py</b><span class="dim">waiting</span><br>
+      <span class="btn">Approve</span> <span class="btn">Reject</span></div>
+    <h3 style="margin-top:12px;">Context</h3>
+    <div class="card dim">Pinned docs, diff summary, tool ledger — contextual, not a permanent rail.</div>
+  </aside>
+</div>
+<span class="ann" style="top:62px; left:8px;">nav 192–224px</span>
+<span class="ann" style="top:62px; left:216px;">session list</span>
+<span class="ann" style="top:62px; right:304px;">inspector 272–320px</span>
+<script>
+  const params = new URLSearchParams(location.search);
+  const theme = params.get('theme');
+  if (theme) document.documentElement.dataset.theme = theme;
+  window.flipTheme = () => {
+    const el = document.documentElement;
+    el.dataset.theme = el.dataset.theme === 'dark' ? 'light' : 'dark';
+  };
+  const PANES = {
+    harness: `<h3>Active task</h3>
+      <div class="stages">
+        <div class="stage done"><span class="dot"></span><b>Plan</b><div class="dim">3 steps pinned</div></div>
+        <div class="stage done"><span class="dot"></span><b>Execute</b><div class="dim">step 2 of 3</div></div>
+        <div class="stage"><span class="dot"></span><b>Verify</b><div class="dim">pending</div></div>
+      </div>
+      <div class="timeline">
+        <div class="ev"><b>Read workspace map</b><div class="dim">tool · workspace · ok</div></div>
+        <div class="ev"><b>Edit src/auth.py</b><div class="dim">awaiting approval</div></div>
+        <div class="ev"><b>Run test suite</b><div class="dim">queued</div></div>
+      </div>
+      <div class="composer"><div class="box">Describe the next step, or approve the pending edit…</div>
+        <div class="row"><span class="btn primary">Run</span><span class="btn">Attach context</span><span class="spacer" style="flex:1"></span><span class="dim">one dominant action per state</span></div>
+      </div>`,
+    start: `<h3>Command center</h3>
+      <div class="card"><b>Next: connect a model source</b><span class="dim">the one thing to do now</span><br><span class="btn primary" style="margin-top:6px; display:inline-block;">Open providers</span></div>
+      <div class="card dim">Server protected · workspace writable · execution off (safe default) — collapsed into one status line, not six cards.</div>`,
+    hall: `<h3>Council — “tradeoffs of fully offline”</h3>
+      <div class="card"><b>Pinned conclusion</b><span class="dim">Lead Arbiter · 4 voices · scrolls with the transcript, never locks it</span></div>
+      <div class="timeline">
+        <div class="ev"><b>Architect</b><div class="dim">thesis…</div></div>
+        <div class="ev"><b>Red-Team Critic</b><div class="dim">objection…</div></div>
+      </div>
+      <div class="composer"><div class="row"><span class="btn">Run full round</span><span class="btn">Clear session</span></div></div>`,
+    council: `<h3>Pipeline</h3>
+      <div class="stages">
+        <div class="stage done"><span class="dot"></span><b>Spec</b></div>
+        <div class="stage done"><span class="dot"></span><b>Build</b></div>
+        <div class="stage"><span class="dot"></span><b>Review</b></div>
+        <div class="stage"><span class="dot"></span><b>Verify</b></div>
+      </div>
+      <div class="card"><b>Artifacts</b><span class="dim">PLAN.md, diff, test log — the canvas carries the stage, not a checklist</span></div>`,
+    debate: `<h3>Compare</h3>
+      <div class="composer"><div class="box">One question, judged against named criteria…</div>
+        <div class="row"><span class="btn primary">Start compare</span><span class="dim">2 models selected</span></div></div>
+      <div class="card" style="margin-top:10px;"><b>Results side by side</b><span class="dim">equal columns, evidence in the inspector — balanced whitespace</span></div>`,
+    chat: `<h3>Chat</h3>
+      <div class="card"><b>Conversation</b><span class="dim">focused single column, balanced margins; persona picker lists every registered persona</span></div>
+      <div class="composer"><div class="box">Message your model…</div>
+        <div class="row"><span class="btn primary">Send</span></div></div>`,
+  };
+  const pane = params.get('pane') || 'harness';
+  document.getElementById('paneBody').innerHTML = PANES[pane] || PANES.harness;
+  document.querySelectorAll('#nav .item').forEach((el, i) => {
+    const names = ['harness','start','hall','council','debate','chat'];
+    el.classList.toggle('active', names[i] === pane);
+  });
+</script>
+</body>
+</html>

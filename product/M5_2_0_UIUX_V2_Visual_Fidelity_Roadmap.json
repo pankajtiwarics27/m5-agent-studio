@@ -407,21 +407,40 @@
       "agent_prompt": "Implement UIV2-03: Approve precise reference wireframes and visual test harness. Required outcome: Encode the exact approved three-region Harness structure and per-tab reference layouts as reproducible annotated references and screenshot fixtures. Specific gate: Reference must show persistent nav, central task, contextual inspector; user review/explicit approval required before structural implementation; no inferred approval. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
         "status": "blocked",
-        "progress_percent": 0,
-        "attempt_count": 0,
+        "progress_percent": 50,
+        "attempt_count": 1,
         "started_at": null,
         "completed_at": null,
         "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
+        "changed_files": [
+          "docs/uiv2-v2-reference.md",
+          "docs/media/uiv2-v2/reference/wireframe.html",
+          "docs/media/uiv2-v2/reference/ (36 fixture PNGs + 6 index.json)",
+          "scripts/uiux_v2_reference_capture.mjs",
+          "product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json"
+        ],
+        "tests_executed": [
+          "node scripts/uiux_v2_reference_capture.mjs (HeadlessChrome 153 via @sparticuz/chromium + puppeteer-core 25.16.0): 36 fixtures captured, 6 panes x 6 sets, exit 0; script fails on partial sets / unapplied theme / missing pane",
+          "node --check scripts/uiux_v2_reference_capture.mjs : syntax OK",
+          "python3 scripts/validate_docs.py : passed, 196 files scanned (exit 0)",
+          "python3 scripts/check_frontend_syntax.py : exit 0 (frontend untouched)"
+        ],
+        "visual_evidence": [
+          "docs/media/uiv2-v2/reference/<viewport>-<theme>/<pane>.png \u2014 36 rendered fixtures of docs/media/uiv2-v2/reference/wireframe.html (harness/start/hall/council/debate/chat at 1640x900, 1440x900 light+dark, 1280x800, 390x844) with per-set index.json sha256",
+          "docs/uiv2-v2-reference.md \u2014 annotated structure spec, tokens, per-tab intent, defect mapping, approval gate"
+        ],
+        "acceptance_evidence": [
+          "AC1 (reference shows persistent nav + central task + contextual inspector; reproducible annotated references and screenshot fixtures): encoded as wireframe.html + docs/uiv2-v2-reference.md + 36 fixtures; nav 192-224px / main >=640px / inspector 272-320px / header <=64px annotated; telemetry as header popover",
+          "AC2 (user review/explicit approval required before structural implementation; no inferred approval): NOT YET GIVEN \u2014 story stays blocked at the approval gate; the conceptual reference was approved by the user, this encoded artifact still needs explicit approval",
+          "AC3 (preservation): no frontend or backend file edited; only docs/media/scripts/ledger added"
+        ],
         "known_regressions": [],
         "blockers": [
-          "Awaiting explicit user approval of the encoded three-region reference wireframes (P0 gate). The user-approved conceptual reference and the seven current-state screenshots are the inputs; approval has not been given for an encoded artifact yet."
+          "Awaiting explicit user approval of the encoded reference (docs/uiv2-v2-reference.md + docs/media/uiv2-v2/reference/ fixtures). Per the roadmap global prompt: stop at this gate; no structural implementation until approval is recorded here."
         ],
-        "handoff_summary": "",
-        "exact_next_action": "Encode reference wireframes/fixtures from design_north_star, present to user, obtain explicit approval; only then start P1 shell work. Do not edit the frontend before approval."
+        "handoff_summary": "UIV2-03 encoding complete, approval gate open. The approved three-region Harness concept is encoded as an annotated wireframe (wireframe.html) with the north-star tokens, rendered to 36 fixtures across the roadmap viewports/themes. Per-tab intents mapped to verified defects. No frontend edits made. Waiting on explicit user approval of this encoded artifact.",
+        "exact_next_action": "Present docs/uiv2-v2-reference.md + fixtures to the user and obtain explicit approval; record it in this story (status done) and only then start P1 UIV2-04 (theme tokens). If rejected, iterate the wireframe with the user before any code.",
+        "updated_at": "2026-11-03T19:40:00+05:30"
       }
     },
     {
