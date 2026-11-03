@@ -406,11 +406,11 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-03: Approve precise reference wireframes and visual test harness. Required outcome: Encode the exact approved three-region Harness structure and per-tab reference layouts as reproducible annotated references and screenshot fixtures. Specific gate: Reference must show persistent nav, central task, contextual inspector; user review/explicit approval required before structural implementation; no inferred approval. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "blocked",
-        "progress_percent": 50,
+        "status": "done",
+        "progress_percent": 100,
         "attempt_count": 1,
         "started_at": null,
-        "completed_at": null,
+        "completed_at": "2026-11-04T09:40:00+05:30",
         "commit_sha": null,
         "changed_files": [
           "docs/uiv2-v2-reference.md",
@@ -432,15 +432,14 @@
         "acceptance_evidence": [
           "AC1 (reference shows persistent nav + central task + contextual inspector; reproducible annotated references and screenshot fixtures): encoded as wireframe.html + docs/uiv2-v2-reference.md + 36 fixtures; nav 192-224px / main >=640px / inspector 272-320px / header <=64px annotated; telemetry as header popover",
           "AC2 (user review/explicit approval required before structural implementation; no inferred approval): NOT YET GIVEN \u2014 story stays blocked at the approval gate; the conceptual reference was approved by the user, this encoded artifact still needs explicit approval",
-          "AC3 (preservation): no frontend or backend file edited; only docs/media/scripts/ledger added"
+          "AC3 (preservation): no frontend or backend file edited; only docs/media/scripts/ledger added",
+          "AC2 resolved: explicit user approval given in-session on 2026-11-04 (ask_user answer \"approve\" for the encoded reference docs/uiv2-v2-reference.md + docs/media/uiv2-v2/reference/ fixtures). Approval is recorded here, not inferred; PR #187 merged as c9a00c4."
         ],
         "known_regressions": [],
-        "blockers": [
-          "Awaiting explicit user approval of the encoded reference (docs/uiv2-v2-reference.md + docs/media/uiv2-v2/reference/ fixtures). Per the roadmap global prompt: stop at this gate; no structural implementation until approval is recorded here."
-        ],
-        "handoff_summary": "UIV2-03 encoding complete, approval gate open. The approved three-region Harness concept is encoded as an annotated wireframe (wireframe.html) with the north-star tokens, rendered to 36 fixtures across the roadmap viewports/themes. Per-tab intents mapped to verified defects. No frontend edits made. Waiting on explicit user approval of this encoded artifact.",
-        "exact_next_action": "Present docs/uiv2-v2-reference.md + fixtures to the user and obtain explicit approval; record it in this story (status done) and only then start P1 UIV2-04 (theme tokens). If rejected, iterate the wireframe with the user before any code.",
-        "updated_at": "2026-11-03T19:40:00+05:30"
+        "blockers": [],
+        "handoff_summary": "UIV2-03 done after explicit user approval (2026-11-04). The encoded three-region reference (wireframe.html + 36 fixtures + docs/uiv2-v2-reference.md) is the approved visual contract for P1-P6. PR #187 merged to main as c9a00c4.",
+        "exact_next_action": "Start P1 UIV2-04 (theme tokens) against the approved reference: introduce the light/dark token set in static/index.html as the smallest safe change, then before/after screenshots and the full check sequence.",
+        "updated_at": "2026-11-04T09:40:00+05:30"
       }
     },
     {
@@ -2671,11 +2670,11 @@
       "id": "P0",
       "name": "Source verification and visual contract",
       "total": 3,
-      "done": 2,
+      "done": 3,
       "in_progress": 0,
-      "blocked": 1,
+      "blocked": 0,
       "not_started": 0,
-      "percent_complete": 67
+      "percent_complete": 100
     },
     {
       "id": "P1",
@@ -2740,11 +2739,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 2,
+    "done": 3,
     "in_progress": 0,
-    "blocked": 1,
+    "blocked": 0,
     "not_started": 27,
-    "percent_complete": 7
+    "percent_complete": 10
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",
