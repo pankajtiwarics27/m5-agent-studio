@@ -273,6 +273,15 @@ def test_session_state_names_a_ready_next_story() -> None:
 
     next_id = state["next_recommended_story"]
     stories = _by_id()
+    if next_id is None:
+        # A finished program has nothing left to recommend, and saying so is the honest state:
+        # every story `done` is the only thing that licenses a null recommendation.
+        open_stories = [sid for sid, story in stories.items() if story["tracking"]["status"] != "done"]
+        assert not open_stories, (
+            f"next_recommended_story is null but {open_stories} are not done; name the next one"
+        )
+        assert state["active_story"] is None, "a finished program cannot have an active story"
+        return
     assert next_id in stories, f"next_recommended_story {next_id!r} is not a story"
     next_story = stories[next_id]
     assert next_story["tracking"]["status"] in {"not_started", "in_progress"}

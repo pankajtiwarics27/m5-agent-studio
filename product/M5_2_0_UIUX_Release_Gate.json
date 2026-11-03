@@ -777,7 +777,7 @@
     "doc_commands": 40,
     "doc_claims": 7,
     "stories_done": 40,
-    "distinct_files_changed": 400
+    "distinct_files_changed": 401
   },
   "known_regressions": [
     {
@@ -1037,12 +1037,7 @@
     "gates_met": 7,
     "acceptance_criteria": 5,
     "known_regressions": 45,
-    "findings": 1
+    "findings": 0
   },
-  "findings": [
-    {
-      "check": "ledger-evidence",
-      "detail": "UIUX-P6-05: done without a commit sha"
-    }
-  ]
+  "findings": []
 }
