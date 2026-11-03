@@ -1286,6 +1286,10 @@
     },
     {
       "story": "UIUX-P5-04",
+      "regression": "The strip and the window note count what the view holds, not what the log holds: both read `harnessCachedEvents()`, which is bounded at 5,000 events and, after a prune, holds only the retained range - so `9 events held` means this view holds nine over the retained floor, not that the log holds nine. Since #183 the count and the drawn cards cannot disagree (the walk asserts count == cards after a pruned resync), but the number is still the view's. Whether it should name the log's `retained_from_seq`..`latest_seq` instead is an open decision, tracked as #185, and is not claimed here."
+    },
+    {
+      "story": "UIUX-P5-04",
       "regression": "Carried forward: demo tok/s written to `perf_samples`; `ttft` fixture-equal; `prefill_tps`/`cached_tokens` unprinted; restored checkpoint carries no contract; Hall readiness refresh rewrites seat pickers; `auto_unload` drops just-compared model; browser comparison copy capped at 60,000 chars; `stopped` status carries warn tone; model-residency chips outside the vocabulary; `#chatMessages` stays `aria-live=\"off\"` with its reason declared."
     },
     {
@@ -1447,7 +1451,7 @@
     "gates": 7,
     "gates_met": 7,
     "acceptance_criteria": 5,
-    "known_regressions": 45,
+    "known_regressions": 46,
     "resolved_regressions": 3,
     "regenerated_files": 2,
     "findings": 0
