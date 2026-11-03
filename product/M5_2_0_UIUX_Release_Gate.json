@@ -23,7 +23,7 @@
       "script": "scripts/uiux_source_manifest.py",
       "command": "python3 scripts/uiux_source_manifest.py --check",
       "exit_code": 0,
-      "summary": "UI source manifest is up to date: 64 files, 6 tabs, 115 routes, pinned to 73bc5e417c15",
+      "failure_output": null,
       "story": "UIUX-P0-01",
       "artifacts": [
         "product/M5_2_0_UIUX_Source_Manifest.json"
@@ -40,7 +40,7 @@
       "script": "scripts/uiux_control_inventory.py",
       "command": "python3 scripts/uiux_control_inventory.py --check",
       "exit_code": 0,
-      "summary": "UI control inventory is up to date: 194 markup controls across 6 panes (106 in the chrome, 42 rendered by script)",
+      "failure_output": null,
       "story": "UIUX-P0-02",
       "artifacts": [
         "product/M5_2_0_UIUX_Control_Inventory.json"
@@ -86,7 +86,7 @@
       "script": "scripts/uiux_route_map.py",
       "command": "python3 scripts/uiux_route_map.py --check",
       "exit_code": 0,
-      "summary": "UI route map is up to date: 66 call sites, 72 exact and 2 dynamic URL and 0 unknown-method matches, 0 findings, 46 routes without an observed caller, 0 unknown",
+      "failure_output": null,
       "story": "UIUX-P0-03",
       "artifacts": [
         "product/M5_2_0_UIUX_Route_Map.json"
@@ -125,7 +125,7 @@
       "script": "scripts/uiux_authorization_trace.py",
       "command": "python3 scripts/uiux_authorization_trace.py --check",
       "exit_code": 0,
-      "summary": "UI authorization trace is up to date: 46 state-changing routes, 20 with an authority subsystem, 39 with durable state, 23 that can leave the machine",
+      "failure_output": null,
       "story": "UIUX-P0-04",
       "artifacts": [
         "product/M5_2_0_UIUX_Authorization_Trace.json"
@@ -192,7 +192,7 @@
       "script": "scripts/uiux_preservation_signoff.py",
       "command": "python3 scripts/uiux_preservation_signoff.py --check",
       "exit_code": 0,
-      "summary": "UI preservation sign-off is up to date: historical-approval-unbound, 21 capabilities across 6 panes, 194 markup controls, 46 state-changing routes traced",
+      "failure_output": null,
       "story": "UIUX-P0-06",
       "artifacts": [
         "product/M5_2_0_UIUX_Preservation_Signoff.json"
@@ -229,7 +229,7 @@
       "script": "scripts/uiux_tokens.py",
       "command": "python3 scripts/uiux_tokens.py --check",
       "exit_code": 0,
-      "summary": "Design tokens are up to date: 53 tokens in 8 groups, 1192 references, 22 contrast pairs (lowest 4.69:1)",
+      "failure_output": null,
       "story": "UIUX-P1-01",
       "artifacts": [
         "product/M5_2_0_UIUX_Tokens.json"
@@ -254,7 +254,7 @@
       "script": "scripts/uiux_status_components.py",
       "command": "python3 scripts/uiux_status_components.py --check",
       "exit_code": 0,
-      "summary": "status and evidence components OK: 10 states, 6 tones, 22 surfaces, 27 setStatus call sites, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P1-03",
       "artifacts": [
         "product/M5_2_0_UIUX_Status_Components.json"
@@ -279,7 +279,7 @@
       "script": "scripts/uiux_overlay_inventory.py",
       "command": "python3 scripts/uiux_overlay_inventory.py --check",
       "exit_code": 0,
-      "summary": "overlays OK: 11 dialogs through the controller, 4 registry entries, 6 rail shortcuts, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P1-04",
       "artifacts": [
         "product/M5_2_0_UIUX_Overlays.json"
@@ -303,7 +303,7 @@
       "script": "scripts/uiux_presentation_inventory.py",
       "command": "python3 scripts/uiux_presentation_inventory.py --check",
       "exit_code": 0,
-      "summary": "presentations OK: 3 kinds, 13 call sites across 9 containers, 3 raw writers left, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P1-05",
       "artifacts": [
         "product/M5_2_0_UIUX_Presentations.json"
@@ -332,7 +332,7 @@
       "script": "scripts/uiux_onboarding_inventory.py",
       "command": "python3 scripts/uiux_onboarding_inventory.py --check",
       "exit_code": 0,
-      "summary": "onboarding OK: 13 cases, next step actionable in every one, 7 actions, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P2-01",
       "artifacts": [
         "product/M5_2_0_UIUX_Onboarding.json"
@@ -355,7 +355,7 @@
       "script": "scripts/uiux_recent_work_inventory.py",
       "command": "python3 scripts/uiux_recent_work_inventory.py --check",
       "exit_code": 0,
-      "summary": "recent work OK: 8 server statuses all toned, limit 5, 1 route read, 0 writes, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P2-02",
       "artifacts": [
         "product/M5_2_0_UIUX_Recent_Work.json"
@@ -379,7 +379,7 @@
       "script": "scripts/uiux_start_health_inventory.py",
       "command": "python3 scripts/uiux_start_health_inventory.py --check",
       "exit_code": 0,
-      "summary": "start health OK: 4 rows, 3 bases, 4 tones, 2 routes, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P2-03",
       "artifacts": [
         "product/M5_2_0_UIUX_Start_Health.json"
@@ -403,7 +403,7 @@
       "script": "scripts/uiux_chat_inventory.py",
       "command": "python3 scripts/uiux_chat_inventory.py --check",
       "exit_code": 0,
-      "summary": "chat OK: 2 roles, 5 send reasons, 9 route fields, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P2-04",
       "artifacts": [
         "product/M5_2_0_UIUX_Chat.json"
@@ -426,7 +426,7 @@
       "script": "scripts/uiux_chat_context_inventory.py",
       "command": "python3 scripts/uiux_chat_context_inventory.py --check",
       "exit_code": 0,
-      "summary": "chat context OK: 8 context fields, 6 chat_tool fields, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P2-05",
       "artifacts": [
         "product/M5_2_0_UIUX_Chat_Context.json"
@@ -448,7 +448,7 @@
       "script": "scripts/uiux_chat_handoff_inventory.py",
       "command": "python3 scripts/uiux_chat_handoff_inventory.py --check",
       "exit_code": 0,
-      "summary": "chat handoff OK: 53 checks, 4 reasons, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P2-06",
       "artifacts": [
         "product/M5_2_0_UIUX_Chat_Handoff.json"
@@ -469,7 +469,7 @@
       "script": "scripts/uiux_harness_settings_inventory.py",
       "command": "python3 scripts/uiux_harness_settings_inventory.py --check",
       "exit_code": 0,
-      "summary": "harness settings OK: 81 checks, 4 reasons, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P3-01",
       "artifacts": [
         "product/M5_2_0_UIUX_Harness_Settings.json"
@@ -493,7 +493,7 @@
       "script": "scripts/uiux_harness_timeline_inventory.py",
       "command": "python3 scripts/uiux_harness_timeline_inventory.py --check",
       "exit_code": 0,
-      "summary": "harness timeline OK: 81 checks, 43 event types, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P3-02",
       "artifacts": [
         "product/M5_2_0_UIUX_Harness_Timeline.json"
@@ -521,7 +521,7 @@
       "script": "scripts/uiux_harness_permissions_inventory.py",
       "command": "python3 scripts/uiux_harness_permissions_inventory.py --check",
       "exit_code": 0,
-      "summary": "harness permissions OK: 124 checks, 18 capability mappings, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P3-03",
       "artifacts": [
         "product/M5_2_0_UIUX_Harness_Permissions.json"
@@ -548,7 +548,7 @@
       "script": "scripts/uiux_harness_evidence_inventory.py",
       "command": "python3 scripts/uiux_harness_evidence_inventory.py --check",
       "exit_code": 0,
-      "summary": "harness evidence OK: 116 checks, 6 record sections, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P3-04",
       "artifacts": [
         "product/M5_2_0_UIUX_Harness_Evidence.json"
@@ -574,7 +574,7 @@
       "script": "scripts/uiux_harness_recovery_inventory.py",
       "command": "python3 scripts/uiux_harness_recovery_inventory.py --check",
       "exit_code": 0,
-      "summary": "harness recovery OK: 44 checks, 8 states, 11 refusals, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P3-05",
       "artifacts": [
         "product/M5_2_0_UIUX_Harness_Recovery.json"
@@ -597,7 +597,7 @@
       "script": "scripts/uiux_pipeline_artifacts_inventory.py",
       "command": "python3 scripts/uiux_pipeline_artifacts_inventory.py --check",
       "exit_code": 0,
-      "summary": "28 checks, 0 findings — clean",
+      "failure_output": null,
       "story": "UIUX-P3-06",
       "artifacts": [
         "product/M5_2_0_UIUX_Pipeline_Artifacts.json"
@@ -614,7 +614,7 @@
       "script": "scripts/uiux_pipeline_recovery_inventory.py",
       "command": "python3 scripts/uiux_pipeline_recovery_inventory.py --check",
       "exit_code": 0,
-      "summary": "33 checks, 0 findings — clean",
+      "failure_output": null,
       "story": "UIUX-P3-07",
       "artifacts": [
         "product/M5_2_0_UIUX_Pipeline_Recovery.json"
@@ -631,7 +631,7 @@
       "script": "scripts/uiux_council_participants_inventory.py",
       "command": "python3 scripts/uiux_council_participants_inventory.py --check",
       "exit_code": 0,
-      "summary": "38 checks, 0 findings — clean",
+      "failure_output": null,
       "story": "UIUX-P4-01",
       "artifacts": [
         "product/M5_2_0_UIUX_Council_Participants.json"
@@ -648,7 +648,7 @@
       "script": "scripts/uiux_council_deliberation_inventory.py",
       "command": "python3 scripts/uiux_council_deliberation_inventory.py --check",
       "exit_code": 0,
-      "summary": "25 checks, 0 findings — clean",
+      "failure_output": null,
       "story": "UIUX-P4-02",
       "artifacts": [
         "product/M5_2_0_UIUX_Council_Deliberation.json"
@@ -665,7 +665,7 @@
       "script": "scripts/uiux_council_verdict_inventory.py",
       "command": "python3 scripts/uiux_council_verdict_inventory.py --check",
       "exit_code": 0,
-      "summary": "24 checks, 0 findings — clean",
+      "failure_output": null,
       "story": "UIUX-P4-03",
       "artifacts": [
         "product/M5_2_0_UIUX_Council_Verdict.json"
@@ -682,7 +682,7 @@
       "script": "scripts/uiux_compare_criteria_inventory.py",
       "command": "python3 scripts/uiux_compare_criteria_inventory.py --check",
       "exit_code": 0,
-      "summary": "27 checks, 0 findings — clean",
+      "failure_output": null,
       "story": "UIUX-P4-04",
       "artifacts": [
         "product/M5_2_0_UIUX_Compare_Criteria.json"
@@ -699,7 +699,7 @@
       "script": "scripts/uiux_compare_provenance_inventory.py",
       "command": "python3 scripts/uiux_compare_provenance_inventory.py --check",
       "exit_code": 0,
-      "summary": "18 checks, 0 findings — clean",
+      "failure_output": null,
       "story": "UIUX-P4-05",
       "artifacts": [
         "product/M5_2_0_UIUX_Compare_Provenance.json"
@@ -716,7 +716,7 @@
       "script": "scripts/uiux_compare_continuity_inventory.py",
       "command": "python3 scripts/uiux_compare_continuity_inventory.py --check",
       "exit_code": 0,
-      "summary": "24 checks, 0 findings — clean",
+      "failure_output": null,
       "story": "UIUX-P4-06",
       "artifacts": [
         "product/M5_2_0_UIUX_Compare_Continuity.json"
@@ -733,7 +733,7 @@
       "script": "scripts/uiux_terminology_inventory.py",
       "command": "python3 scripts/uiux_terminology_inventory.py --check",
       "exit_code": 0,
-      "summary": "20 checks, 0 findings — clean",
+      "failure_output": null,
       "story": "UIUX-P5-01",
       "artifacts": [
         "product/M5_2_0_UIUX_Terminology.json"
@@ -750,7 +750,7 @@
       "script": "scripts/uiux_keyboard_a11y_inventory.py",
       "command": "python3 scripts/uiux_keyboard_a11y_inventory.py --check",
       "exit_code": 0,
-      "summary": "31 checks, 0 findings — clean",
+      "failure_output": null,
       "story": "UIUX-P5-02",
       "artifacts": [
         "product/M5_2_0_UIUX_Keyboard_A11y.json"
@@ -767,7 +767,7 @@
       "script": "scripts/uiux_responsive_inventory.py",
       "command": "python3 scripts/uiux_responsive_inventory.py --check",
       "exit_code": 0,
-      "summary": "21 checks, 0 findings — clean",
+      "failure_output": null,
       "story": "UIUX-P5-03",
       "artifacts": [
         "product/M5_2_0_UIUX_Responsive.json"
@@ -784,7 +784,7 @@
       "script": "scripts/uiux_stream_perf_inventory.py",
       "command": "python3 scripts/uiux_stream_perf_inventory.py --check",
       "exit_code": 0,
-      "summary": "38 checks, 0 findings — clean",
+      "failure_output": null,
       "story": "UIUX-P5-04",
       "artifacts": [
         "product/M5_2_0_UIUX_Stream_Performance.json"
@@ -801,7 +801,7 @@
       "script": "scripts/uiux_polish_inventory.py",
       "command": "python3 scripts/uiux_polish_inventory.py --check",
       "exit_code": 0,
-      "summary": "polish OK: 93 radius rules, 17 timed rules, 30 hover rules, 2 press rules, 8 captures, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P5-05",
       "artifacts": [
         "product/M5_2_0_UIUX_Polish.json"
@@ -825,7 +825,7 @@
       "script": "scripts/uiux_preservation_e2e.py",
       "command": "python3 scripts/uiux_preservation_e2e.py --check",
       "exit_code": 0,
-      "summary": "preservation map OK: 21/21 rows, 55 provers, 17 walks, 15 support walks, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P6-01",
       "artifacts": [
         "product/M5_2_0_UIUX_Preservation_E2E.json"
@@ -853,7 +853,7 @@
       "script": "scripts/uiux_adversarial_inventory.py",
       "command": "python3 scripts/uiux_adversarial_inventory.py --check",
       "exit_code": 0,
-      "summary": "adversarial refusals OK: 12 refusals across 9 statuses, 21/35 writes guarded, 4 presentation hosts, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P6-02",
       "artifacts": [
         "product/M5_2_0_UIUX_Adversarial.json"
@@ -880,7 +880,7 @@
       "script": "scripts/uiux_screenshot_review.py",
       "command": "python3 scripts/uiux_screenshot_review.py --check",
       "exit_code": 0,
-      "summary": "screenshot review OK: 240 captures in 27 sets, 27 reviewed (16 files opened), 3 re-shot, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P6-03",
       "artifacts": [
         "product/M5_2_0_UIUX_Screenshot_Review.json"
@@ -907,7 +907,7 @@
       "script": "scripts/uiux_docs_verification.py",
       "command": "python3 scripts/uiux_docs_verification.py --check",
       "exit_code": 0,
-      "summary": "README and onboarding OK: 5 pages, 21 links, 40 commands classified, 7/7 claims verified, 0 findings",
+      "failure_output": null,
       "story": "UIUX-P6-04",
       "artifacts": [
         "product/M5_2_0_UIUX_Readme_Onboarding.json"

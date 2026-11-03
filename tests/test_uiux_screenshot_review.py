@@ -208,3 +208,19 @@ def test_the_review_and_the_validator_agree_on_the_published_set() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
     report = json.loads(result.stdout[result.stdout.index("{"):])
     assert report.get("captured", 0) == 6 or report.get("shots") is not None or "6" in result.stdout
+
+
+def test_the_check_mode_survives_a_machine_without_imagemagick(generator, monkeypatch, capsys) -> None:
+    """A machine that cannot read pixels must still be able to check the review.
+
+    CI has no `identify`. Before this test existed, `--check` compared the generated page against the
+    committed one character for character, so it failed there while passing on a machine that could
+    measure - a check that depended on the tooling rather than on the tree. The committed page is
+    therefore compared with the committed artifact's own rendering, and the run says the pixel pass
+    did not happen instead of passing itself off as complete.
+    """
+    monkeypatch.setattr(generator, "mean_luminance", lambda paths: None)
+    assert generator.main(["--check"]) == 0
+    captured = capsys.readouterr()
+    assert "identify" in captured.err
+    assert "pixel checks were not re-run" in captured.err

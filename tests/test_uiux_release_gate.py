@@ -77,7 +77,7 @@ def test_the_gate_has_no_findings_because_every_check_passed(payload: dict) -> N
     assert payload["totals"]["checks_passed"] == payload["totals"]["checks"]
     for check in payload["checks"]:
         assert check["exit_code"] == 0, check
-        assert check["summary"], f"{check['script']} printed nothing to summarise"
+        assert check["failure_output"] is None, f"{check['script']} passed, so it must carry no failure output"
         assert check["command"].endswith("--check")
 
 
@@ -165,7 +165,7 @@ def test_the_gate_catches_a_done_story_without_evidence(gate, ledger) -> None:
 
 def test_a_failing_artifact_check_unmeets_the_phase_gate_that_it_proves(gate, ledger) -> None:
     checks = [
-        {"script": source[1], "exit_code": 0, "summary": "", "command": f"python3 {source[1]} --check"}
+        {"script": source[1], "exit_code": 0, "failure_output": None, "command": f"python3 {source[1]} --check"}
         for source in gate.SOURCES
     ]
     failing = next(source for source in gate.SOURCES if source[0] == "UIUX-P0-06")

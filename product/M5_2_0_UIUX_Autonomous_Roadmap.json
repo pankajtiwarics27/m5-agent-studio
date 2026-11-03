@@ -7461,9 +7461,11 @@
           "product/M5_2_0_UIUX_Release_Gate.json",
           "product/M5_2_0_UIUX_Source_Manifest.json",
           "scripts/uiux_release_gate.py",
+          "scripts/uiux_screenshot_review.py",
           "scripts/uiux_source_manifest.py",
           "tests/test_uiux_release_gate.py",
-          "tests/test_uiux_roadmap.py"
+          "tests/test_uiux_roadmap.py",
+          "tests/test_uiux_screenshot_review.py"
         ],
         "evidence": [
           "Before, measured: 39 artifacts, 19 generators with `--check` modes, and no single command that ran them. `release_gates` was seven sentences of prose; nothing computed whether a gate was met, nothing mapped the five acceptance criteria to evidence, and the 45 recorded known regressions were scattered across 39 story entries.",
@@ -7472,14 +7474,16 @@
           "The gate's bookkeeping checks close the ways a ledger can lie: counters that disagree with the stories, a phase counter that disagrees with its members, a `done` story without a 40-hex commit sha, and a `done` story without evidence are each a finding, and each has its own falsifying test.",
           "The five acceptance criteria are mapped to the artifact or CI job that answers each - control inventory plus preservation e2e plus `Browser safety regressions`; the browser walks' console assertions; the overlay/shortcut inventory plus the keyboard walks; the adversarial and presentation inventories; 240 reviewed captures - and the artifact records that the verdict belongs to the reviewer, not to this script.",
           "Honesty about coverage: `not_run` names the full pytest matrix, the browser suites, a new screenshot capture and the acceptance verdict itself, each with the reason. The gate carries no clock, so two runs agree and `--check` is meaningful.",
-          "Handover: `docs/uiux-2-0-handover.md` is generated from the same payload - six paragraphs on what changed, three on what held (21 capabilities, no route removed, no new dependency, 12 mapped refusals), five commands to verify in five minutes, where the evidence lives, what is not claimed, and all 45 known regressions with the story that recorded each."
+          "Handover: `docs/uiux-2-0-handover.md` is generated from the same payload - six paragraphs on what changed, three on what held (21 capabilities, no route removed, no new dependency, 12 mapped refusals), five commands to verify in five minutes, where the evidence lives, what is not claimed, and all 45 known regressions with the story that recorded each.",
+          "The gate proved itself on its first real use: running it against the committed tree turned both of the defects above from invisible into failing tests. `scripts/uiux_screenshot_review.py --check` now passes with and without ImageMagick, and `tests/test_uiux_release_gate.py` asserts that a passing check carries no words while a failing one carries its output."
         ],
         "test_results": [
           "`.venv/bin/python scripts/uiux_release_gate.py --check` -> `release gate OK: 37/37 artifact checks pass, 7/7 phase gates met, 45 known regressions, 0 findings`, exit 0.",
-          "`.venv/bin/python -m pytest -q tests/test_uiux_release_gate.py` -> 21 tests, all pass, exit 0. The module-scoped fixture runs the thirty-seven checks once; the negative tests work on deep copies of the ledger.",
-          "`.venv/bin/python -m pytest -q` (whole suite, 3.11.9, Linux x86_64) -> `1 failed, 2597 passed, 29 skipped, 1 warning in 455.48s`, exit 1. The one failure is `tests/test_baseline.py::test_pinned_baseline_is_present_and_ancestral`: this checkout is a shallow clone without commit `73bc5e4`, so `git cat-file` cannot answer. The two `tests/test_uiux_preservation_signoff.py` ancestry tests that failed the same way in the P6-04 run pass in this one. CI runs the full history and its three test jobs are the record for the suite.",
+          "`.venv/bin/python -m pytest -q tests/test_uiux_release_gate.py` -> 15 tests, all pass, exit 0. The module-scoped fixture runs the thirty-seven checks once; the negative tests work on deep copies of the ledger.",
+          "`.venv/bin/python -m pytest -q` (whole suite, 3.11.9, Linux x86_64) -> `2600 passed, 28 skipped, 1 warning in 440.28s`, exit 0. The run used the full history: this checkout was unshallowed (`git fetch --unshallow`) so the three ancestor assertions that cannot run in a shallow clone - `tests/test_baseline.py` and the two in `tests/test_uiux_preservation_signoff.py` - ran here too. The same suite also passed with ImageMagick hidden from `PATH`, the condition CI is in.",
           "`.venv/bin/ruff check .` -> `All checks passed!`; `.venv/bin/python -m mypy` -> 58 source files, no issues; `scripts/check_frontend_syntax.py`, `scripts/validate_docs.py`, `scripts/validate_screenshots.py`, `scripts/demo_tour.py --check` -> exit 0.",
-          "All 20 generators regenerated in the documented order and each re-run with `--check` -> exit 0, including the sign-off, whose ledger and manifest digests this story moves."
+          "All 20 generators regenerated in the documented order and each re-run with `--check` -> exit 0, including the sign-off, whose ledger and manifest digests this story moves.",
+          "`.venv/bin/python -m pytest -q tests/test_uiux_screenshot_review.py` -> 15 passed, including the new `test_the_check_mode_survives_a_machine_without_imagemagick`, which would have failed before this story's fix."
         ],
         "visual_evidence": [
           "No pixel changed: `static/index.html` and `app.py` are byte-identical to the P6-04 merge, so there is no before/after to take and the 240-capture set stands unchanged.",
@@ -7492,7 +7496,8 @@
           "The acceptance verdict stays with the owner and the reviewer: the gate maps each criterion to evidence and prints it, and says in the artifact that the call is not its own.",
           "Known regressions are carried, not resolved. Closing 45 recorded imperfections at the end of a program would be a silently larger change than any story that found them.",
           "Two documents from one payload: the gate page for a reviewer checking the release, the handover for whoever inherits the repository.",
-          "`tests/test_uiux_roadmap.py` now permits `next_recommended_story: null`, but only when every story is `done` and no story is active; the assertion it replaces required a story id at all times, which a finished program cannot honestly supply. The relaxation fails closed: a null recommendation with any open story is still an error, and the test says so by name."
+          "`tests/test_uiux_roadmap.py` now permits `next_recommended_story: null`, but only when every story is `done` and no story is active; the assertion it replaces required a story id at all times, which a finished program cannot honestly supply. The relaxation fails closed: a null recommendation with any open story is still an error, and the test says so by name.",
+          "The gate found two real defects the moment it ran every check, and both were fixed here rather than worked around. First, `scripts/uiux_screenshot_review.py --check` compared its generated page against the committed page character for character, so it failed on any machine without ImageMagick `identify` (CI has none) while passing on one that has it: the page is now compared with the committed artifact's own rendering, the pixel pass reports that it did not run, and a test monkeypatches the measurement away to keep it that way. Second, the gate itself copied each passing check's last printed line into its artifact, which made the artifact differ between two machines that agreed on the tree - one of those lines names whether ImageMagick is installed. A passing check now contributes only its exit code; a failing one contributes what it said, in the finding."
         ],
         "blockers": [],
         "handoff_note": "The program is complete at 40/40. What a next session should know: the ledger, the manifest and the sign-off share one pin (`73bc5e417c15`, approved by the owner as UIUX-P0-06), so any change to a pinned file means regenerating the manifest and the sign-off in the same commit; `python3 scripts/uiux_release_gate.py --check` is the single command that proves the whole program still holds; and the 45 known regressions in that artifact are the honest backlog, not a blocker.",

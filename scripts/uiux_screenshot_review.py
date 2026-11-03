@@ -955,18 +955,22 @@ def main(argv: list[str] | None = None) -> int:
         drifted = []
         committed = json.loads(JSON_PATH.read_text(encoding="utf-8")) if JSON_PATH.exists() else None
         same_json = committed is not None and committed == payload
-        if not same_json and committed is not None and not payload["luminance_measured"]:
-            # No `identify` here: compare everything except the measurements, and say so.
+        same_doc = DOC_PATH.exists() and DOC_PATH.read_text(encoding="utf-8") == doc
+        if committed is not None and not payload["luminance_measured"] and not (same_json and same_doc):
+            # No `identify` here: the committed artifact carries measurements this machine cannot take,
+            # so compare everything except those and check that the committed page is the committed
+            # artifact's own rendering. Say so rather than passing silently.
             same_json = without_pixels(committed) == without_pixels(payload)
-            if same_json:
+            same_doc = DOC_PATH.exists() and DOC_PATH.read_text(encoding="utf-8") == render_doc(committed)
+            if same_json and same_doc:
                 print(
                     "note: ImageMagick `identify` is not installed here, so the pixel checks were not re-run; "
-                    "the rest of the review matches the committed artifact.",
+                    "the rest of the review matches the committed artifact, and the committed page matches it.",
                     file=sys.stderr,
                 )
         if not same_json:
             drifted.append(str(JSON_PATH.relative_to(PROJECT_ROOT)))
-        if not DOC_PATH.exists() or DOC_PATH.read_text(encoding="utf-8") != doc:
+        if not same_doc:
             drifted.append(str(DOC_PATH.relative_to(PROJECT_ROOT)))
         if drifted or payload["findings"]:
             if drifted:

@@ -10,8 +10,10 @@ wants to know whether this program is finished should not have to run them one a
 the results in their head, and a reviewer should not have to trust a paragraph that says they were
 run. This script runs them - all of them, in the documented order - and records what each one said:
 
-* **the artifact checks**: every generator's `--check`, its exit code and its own summary line. A
-  non-zero exit is a finding, so the gate cannot report "met" over a drifted artifact;
+* **the artifact checks**: every generator's `--check` and its exit code. A non-zero exit is a
+  finding that carries what the check said, so the gate cannot report "met" over a drifted artifact;
+  a passing check contributes only its exit code, because the words a healthy generator prints are
+  its own business and one of them names whether ImageMagick is installed;
 * **the ledger**: whether the program's own bookkeeping agrees with its stories - counters, phase
   totals, a `done` story without a commit sha or evidence, a `blocked` story, an `in_progress` one;
 * **the phase gates**: the seven gate sentences in the ledger, each traced to the stories that
@@ -216,7 +218,10 @@ def run_check(script: str) -> dict[str, object]:
         "script": script,
         "command": f"python3 {script} --check",
         "exit_code": completed.returncode,
-        "summary": lines[-1] if lines else "",
+        # Only a failure keeps its words. What a passing check prints is its own business - one of
+        # them says whether ImageMagick is installed, another names the pin - and copying those lines
+        # into this artifact would make the release gate differ between two machines that agree.
+        "failure_output": lines[-1] if completed.returncode != 0 and lines else None,
     }
 
 
@@ -358,7 +363,7 @@ def build() -> dict[str, object]:
             findings.append(
                 {
                     "check": "artifact-check",
-                    "detail": f"`{result['command']}` exited {result['exit_code']}: {result['summary']}",
+                    "detail": f"`{result['command']}` exited {result['exit_code']}: {result['failure_output'] or '(no output)'}",
                 }
             )
         for artifact in artifacts:
@@ -487,7 +492,8 @@ def render_doc(payload: dict[str, object]) -> str:
         f"{totals['gates_met']}/{totals['gates']} phase gates met, {totals['findings']} findings.**",
         "",
         "Every line in the checks table below was executed by this script against this tree. The exit "
-        "code is the check's, not a summary of it.",
+        "code is the check's. What a passing check printed is not copied here: two machines that agree "
+        "on the tree can disagree on how they say so, and this artifact has to be reproducible.",
         "",
         "## The artifact checks",
         "",
