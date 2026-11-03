@@ -6,7 +6,7 @@
   "repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "branch": "main",
   "created_date": "2026-10-31",
-  "revision": 39,
+  "revision": 40,
   "lifecycle": "authorized",
   "authorization": {
     "authorized_by": "repository owner",
@@ -104,7 +104,7 @@
     "active_stories": [],
     "last_completed_story": "UIUX-P6-03",
     "next_recommended_story": "UIUX-P6-04",
-    "last_checkpoint": "2026-11-03T18:40:00Z",
+    "last_checkpoint": "2026-11-03T19:15:00Z",
     "last_session_id": "arena/57419a42-m5-agent-studio",
     "coordination_protocol": "M5_2_0_UIUX_AGENT_PROMPT.md",
     "last_readme_sync": null,
@@ -7220,7 +7220,8 @@
         "known_regressions": [
           "Observed, not fixed: the Harness empty state scrolls under the composer at 900px, so the third starter card sits below the fold in the refreshed capture. It is the pane's own focusable scroll region (`.harness-stream { overflow-y: auto }`), not a clip, and fixing the fold would be a pane layout change with its own evidence burden.",
           "22 capture sets carry no `index.json`: their captures cannot be shown to be the bytes their walk produced, only that they exist and that their theme is what their name claims.",
-          "The published set has no narrow variant. Narrow coverage comes from `polish`, `responsive`, `uiux-p5-05` and `screenshots/p4-01-narrow-dark` (420x1200), which the review counts under their own sets."
+          "The published set has no narrow variant. Narrow coverage comes from `polish`, `responsive`, `uiux-p5-05` and `screenshots/p4-01-narrow-dark` (420x1200), which the review counts under their own sets.",
+          "Pre-existing and not this story's: the Python 3.12 CI job failed once on `tests/test_trusted_transformations.py::test_http_endpoints_and_standalone_studio_bundle_parity` (`assert eval_json[\"ab_gate_passed\"] is True`). That gate compares `benefit_justifies_cost`, which includes `overhead_med <= TT_MAX_OVERHEAD_MS_CEILING` measured in wall-clock milliseconds, so a busy runner can fail it; the same test passed in the 3.11 and 3.13 jobs and eight local runs, and this story touches no transformation code. The job was re-run by pushing the ledger edit - not by relaxing the test."
         ],
         "decisions": [
           "The published set was re-shot rather than re-described. A review that leaves the README showing a pane the tree no longer draws has reviewed nothing.",
