@@ -218,6 +218,16 @@
     },
     {
       "where": "status chip",
+      "tone": "ok",
+      "word": "ok"
+    },
+    {
+      "where": "status chip",
+      "tone": "neutral",
+      "word": "checking"
+    },
+    {
+      "where": "status chip",
       "tone": "neutral",
       "word": "0 / 0 Passed"
     },
@@ -255,16 +265,6 @@
       "where": "status chip",
       "tone": "neutral",
       "word": "\u2014"
-    },
-    {
-      "where": "status chip",
-      "tone": "ok",
-      "word": "ok"
-    },
-    {
-      "where": "status chip",
-      "tone": "neutral",
-      "word": "checking"
     },
     {
       "where": "status chip",

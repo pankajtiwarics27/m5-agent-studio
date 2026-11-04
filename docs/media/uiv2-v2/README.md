@@ -1,6 +1,6 @@
 # UIV2 (visual-fidelity V2) capture sets
 
-Three capture sets produced for the V2 visual-fidelity program
+Six capture sets produced for the V2 visual-fidelity program
 (`product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json`):
 
 - `baseline/` — 53 before-screenshots of the real app at pinned HEAD
@@ -18,6 +18,26 @@ Three capture sets produced for the V2 visual-fidelity program
   `docs/media/uiv2-v2/reference/wireframe.html` (six panes × 1640x900/1440x900
   light+dark, 1280x800, 390x844 light). Spec and approval gate:
   `docs/uiv2-v2-reference.md`.
+- `before-uiv2-05/` — 20 before-screenshots of the real app at HEAD `c56c65a`
+  (UIV2-05 baseline: harness pane at 1640x900/1280x800/390x844 in light and dark,
+  plus all six panes at 1440x900 in light and dark), same recipe and isolation as
+  `baseline/`. Shell metrics measured on the running app at the same commit are in
+  `uiv2-05-shell-metrics-before.json` (header 108px at 390x844, skills strip up to
+  227px tall, inspector a permanent 320px column at 1280).
+- `after-uiv2-05/` — 22 after-screenshots of the real app at the UIV2-05 commit
+  (same matrix as `before-uiv2-05/`, plus the inspector drawer open at 1280x800
+  dark and 390x844 light), same recipe and isolation. Measured shell metrics:
+  `uiv2-05-shell-metrics-after.json` (header 56px at every width, nav 200px at
+  >=1280 and a 64px icon rail at 800-1279, inspector 320px column at >=1440 and a
+  320px drawer below that, central pane >= 736px, no horizontal overflow at any
+  viewport, all six tabs visible at every width, skills strip one 42-47px row).
+- `before-uiv2-06/` — 3 before-screenshots of the real app at `dee72ff` (UIV2-05
+  tree): harness at 1440x900 light/dark and 390x844 dark with the permanent
+  telemetry rail still expanded.
+- `after-uiv2-06/` — 10 after-screenshots of the real app at the UIV2-06 commit:
+  all six panes at 1440x900 dark (per-pane inspector tabs), harness at 1440x900
+  light and 390x844 dark, plus the header Telemetry popover open at 1440x900 in
+  light and dark (all four telemetry cards, model load/unload actions included).
 - `after-uiv2-04/` — 19 after-screenshots of the real app at the UIV2-04 commit
   (approved V2 palette applied): six tabs at 1440x900 light, 1440x900 dark and
   390x844 light, plus the MCP hub overlay at 1440x900 light, produced by

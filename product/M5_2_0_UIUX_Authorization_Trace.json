@@ -9,7 +9,7 @@
   "statement": "For state-changing route candidates resolved by the browser map: the shared gates every request passes, handler refusals, referenced authority and durable-state subsystems, and possible effects. The route map is a lexical scan, not proof of exhaustive browser coverage; a reference is evidence of a consultation, not proof of enforcement.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
   "app_sha256": "0e6ecd89d84b7779f91513d8077934b08c8e90bccda919a6fac49ff6e44e2962",
-  "route_map_sha256": "f2643719059b9ae27fca4e46f50eeeac4e7e63151edc0510e0dd5332f5cbe510",
+  "route_map_sha256": "02d2c445cc5efa1eb36cb17bfe02bb2afbe303cad24ad7c95789748b8ad79c6c",
   "totals": {
     "routes_in_app": 115,
     "state_changing_routes_in_app": 77,

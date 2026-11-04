@@ -1,0 +1,30 @@
+{
+ "schema": 1,
+ "captured_at": "2026-11-04T04:06:37.225Z",
+ "viewport": {
+  "width": 1440,
+  "height": 900,
+  "device_scale_factor": 1
+ },
+ "variant": {
+  "theme": "light",
+  "density": null
+ },
+ "shots": [
+  {
+   "id": "harness",
+   "tab": "harness",
+   "file": "harness.png",
+   "bytes": 130530,
+   "sha256": "aae04203da0750f9d3a96c41c9b43d966a0ea5400992873f269f6ce32923d2fe"
+  },
+  {
+   "id": "harness-telemetry-popover",
+   "tab": "harness",
+   "file": "harness-telemetry-popover.png",
+   "bytes": 168248,
+   "sha256": "d2ff6d73ae5e71db06fd74bc1928c9e4cb74b5370c8634979ac96e5c03a3c4b8",
+   "note": "header Telemetry popover opened (UIV2-06)"
+  }
+ ]
+}

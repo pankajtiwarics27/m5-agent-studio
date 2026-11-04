@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "6442f54749cf321ed53bd6818f549072ae37bf3da2a3fa952003794f9b600e77",
+  "frontend_sha256": "c59454fefdda4a29aef9eb2f19173046cf1abd2f7a7a0307d09db79563db79c3",
   "panes": [
     {
       "dom_id": "start",
@@ -80,9 +80,9 @@
           "tag": "button",
           "type": "button",
           "class": "btn",
-          "title": "Open the monitor rail with the full telemetry",
+          "title": "Open the contextual inspector",
           "onclick": "toggleMonitorRail()",
-          "text": "Monitor rail"
+          "text": "Inspector"
         },
         {
           "tag": "input",
@@ -700,15 +700,86 @@
     }
   ],
   "chrome": {
-    "control_count": 106,
+    "control_count": 108,
     "counts": {
-      "button": 59,
+      "button": 61,
       "input": 29,
       "select": 12,
       "summary": 1,
       "textarea": 5
     },
     "controls": [
+      {
+        "tag": "button",
+        "id": "telemetryPopoverBtn",
+        "type": "button",
+        "class": "btn",
+        "title": "Global telemetry, memory and model residency (header popover)",
+        "onclick": "toggleTelemetryPopover()",
+        "text": "Telemetry"
+      },
+      {
+        "tag": "button",
+        "class": "btn",
+        "aria-label": "Open Command Palette (Cmd+K)",
+        "onclick": "openCommandPalette()",
+        "data": {
+          "data-shortcut-action": "command-palette"
+        },
+        "text": "Search ⌘K"
+      },
+      {
+        "tag": "button",
+        "id": "densityToggleBtn",
+        "type": "button",
+        "class": "btn",
+        "title": "Toggle workspace density",
+        "onclick": "toggleDensity()",
+        "text": "Density: comfortable"
+      },
+      {
+        "tag": "button",
+        "id": "themeToggleBtn",
+        "type": "button",
+        "class": "btn",
+        "aria-label": "Switch to light theme",
+        "title": "Switch to light theme",
+        "onclick": "toggleTheme()",
+        "text": "Light"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "toggleTelemetryPopover(false)",
+        "text": "Close"
+      },
+      {
+        "tag": "select",
+        "id": "omlxLoadModelPicker",
+        "aria-label": "Select local model to load",
+        "onchange": "toggleCustomLoadInput(this.value)",
+        "text": "+ Load model on demand…"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs btn-cyan",
+        "onclick": "loadSelectedOmlxModel()",
+        "text": "Load"
+      },
+      {
+        "tag": "input",
+        "id": "omlxCustomModelInput",
+        "type": "text",
+        "placeholder": "Enter local oMLX or HF model ID…"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "clearSsdCache()",
+        "text": "Clear SSD"
+      },
       {
         "tag": "button",
         "id": "tab-start",
@@ -786,35 +857,6 @@
           "data-tab": "chat"
         },
         "text": "Chat"
-      },
-      {
-        "tag": "button",
-        "class": "btn",
-        "aria-label": "Open Command Palette (Cmd+K)",
-        "onclick": "openCommandPalette()",
-        "data": {
-          "data-shortcut-action": "command-palette"
-        },
-        "text": "Search ⌘K"
-      },
-      {
-        "tag": "button",
-        "id": "densityToggleBtn",
-        "type": "button",
-        "class": "btn",
-        "title": "Toggle workspace density",
-        "onclick": "toggleDensity()",
-        "text": "Density: comfortable"
-      },
-      {
-        "tag": "button",
-        "id": "themeToggleBtn",
-        "type": "button",
-        "class": "btn",
-        "aria-label": "Switch to light theme",
-        "title": "Switch to light theme",
-        "onclick": "toggleTheme()",
-        "text": "Light"
       },
       {
         "tag": "input",
@@ -1371,9 +1413,9 @@
         "tag": "button",
         "id": "monitorToggleBtn",
         "class": "btn btn-xs",
-        "title": "Hide telemetry and model monitor",
+        "title": "Hide the contextual inspector",
         "onclick": "toggleMonitorRail()",
-        "text": "Telemetry"
+        "text": "Inspector"
       },
       {
         "tag": "button",
@@ -1381,45 +1423,20 @@
         "title": "Unload local models to free memory",
         "onclick": "unloadAllModels()",
         "text": "Unload models"
-      },
-      {
-        "tag": "select",
-        "id": "omlxLoadModelPicker",
-        "aria-label": "Select local model to load",
-        "onchange": "toggleCustomLoadInput(this.value)",
-        "text": "+ Load model on demand…"
-      },
-      {
-        "tag": "button",
-        "type": "button",
-        "class": "btn btn-xs btn-cyan",
-        "onclick": "loadSelectedOmlxModel()",
-        "text": "Load"
-      },
-      {
-        "tag": "input",
-        "id": "omlxCustomModelInput",
-        "type": "text",
-        "placeholder": "Enter local oMLX or HF model ID…"
-      },
-      {
-        "tag": "button",
-        "class": "btn btn-xs",
-        "onclick": "clearSsdCache()",
-        "text": "Clear SSD"
       }
     ]
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 194,
+    "markup_controls": 196,
     "pane_controls": 88,
-    "chrome_controls": 106,
-    "script_rendered_controls": 42,
+    "chrome_controls": 108,
+    "script_rendered_controls": 50,
     "script_rendered_by_function": {
       "ensureStageCardMounted": 1,
       "harnessEvidenceChangeHtml": 1,
       "openSpawnModal": 1,
+      "refreshInspectorPanel": 8,
       "refreshOnboarding": 1,
       "renderCommandPaletteList": 1,
       "renderDebateCriteria": 3,

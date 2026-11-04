@@ -5,7 +5,7 @@
     "frontend": "static/index.html",
     "walk": "scripts/polish_walk.mjs",
     "style_blocks": 2,
-    "rules": 805
+    "rules": 831
   },
   "tokens": {
     "radius": [
@@ -85,7 +85,8 @@
       ".harness-timeline-row:hover",
       ".evidence-copy:hover",
       ".cmd-item:hover, .cmd-item.selected",
-      ".chip:hover, .chip.active"
+      ".chip:hover, .chip.active",
+      ".inspector-tab:hover"
     ],
     "ring_rules": [
       "button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible,\n  summary:focus-visible, [tabindex]:focus-visible",
@@ -95,7 +96,8 @@
       ".btn:hover:not(:disabled),\n.top-actions .btn:focus-visible:not(:disabled)",
       "button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible,\nsummary",
       "summary:focus-visible, [tabindex]:focus-visible",
-      ":is(input, textarea, select):focus-visible"
+      ":is(input, textarea, select):focus-visible",
+      ".inspector-tab:focus-visible"
     ],
     "composed_ring_rules": [
       ".prompt-box:focus-within"
@@ -122,10 +124,10 @@
     ]
   },
   "totals": {
-    "radius_rules": 93,
+    "radius_rules": 96,
     "motion_rules": 17,
     "press_rules": 2,
-    "hover_rules": 30,
+    "hover_rules": 31,
     "captures": 8,
     "findings": 0
   },

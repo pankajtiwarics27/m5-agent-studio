@@ -1,0 +1,30 @@
+{
+ "schema": 1,
+ "captured_at": "2026-11-04T02:55:21.509Z",
+ "viewport": {
+  "width": 1280,
+  "height": 800,
+  "device_scale_factor": 1
+ },
+ "variant": {
+  "theme": "dark",
+  "density": null
+ },
+ "shots": [
+  {
+   "id": "harness",
+   "tab": "harness",
+   "file": "harness.png",
+   "bytes": 117153,
+   "sha256": "829892101076f7a6602837270662753cae32a58f33158d28f85a49fe0959b4c4"
+  },
+  {
+   "id": "harness-drawer-open",
+   "tab": "harness",
+   "file": "harness-drawer-open.png",
+   "bytes": 177335,
+   "sha256": "3f9713194f4ab855b934b4e9f5fdf91c3aaef045e10eeb276743315c510ad841",
+   "note": "inspector drawer opened via the Telemetry toggle (UIV2-05)"
+  }
+ ]
+}
