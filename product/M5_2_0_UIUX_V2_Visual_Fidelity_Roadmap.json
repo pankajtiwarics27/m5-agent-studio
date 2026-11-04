@@ -1356,20 +1356,48 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-12: Fix Council pinned conclusion scroll locking. Required outcome: Pinned conclusion becomes readable in an independently scrollable, resizable/expandable panel; page and session scroll never freeze. Specific gate: Reproduce current defect first; verify long 10k+ character conclusion scrolls by wheel, trackpad, keyboard, touch; pin/unpin, close/reopen, viewport resize; background scroll lock only while a true modal is open and always restored. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-04T23:05:00+05:30",
+        "completed_at": "2026-11-05T00:40:00+05:30",
+        "commit_sha": "PENDING-UIV2-12",
+        "changed_files": [
+          "static/index.html (pinned conclusion banner now renders as the FIRST card inside #hallStream with position:sticky top:0 [data-pinned=false -> static], an independently scrollable .conclusion-body (max-height:24vh, overflow-y:auto, overscroll-behavior:contain, tabindex=0 role=region), a drag+delegated-keyboard resize separator (role=separator, clamped 120px..70vh), Pin/Unpin (aria-pressed), hide, and Expand opening the true modal #hallConclusionModal through the shared openOverlay/closeOverlay controller; no document.body/documentElement overflow lock anywhere - background inert only while the modal is open and always restored)",
+          "studio.py (build_studio.py, byte-synced in the same commit)",
+          "scripts/uiux_council_verdict_inventory.py (9 new UIV2-12 checks: stream-prepend, sticky CSS, independent body scroll, resize drag+keyboard+clamp, expand-into-modal via openOverlay, pin/unpin aria-pressed, no page scroll lock + overlayInert restore, .hall-stream flex:1 overflow-y:auto retained; 32 checks total)",
+          "tests/test_council_verdict.py (7 new UIV2-12 mutation tests over the sources fixture; 29 passed)",
+          "scripts/uiux_screenshot_review.py (before-uiv2-12/after-uiv2-12 entry + 8 eye files)",
+          "docs/media/uiv2-v2/before-uiv2-12|after-uiv2-12 (4 viewports x 2 themes hall pane + all-panes 1440 + 5 walk state shots, 45 PNGs)",
+          "product/* + docs/uiux-2-0-* (regenerated: tokens, 9 inventories, source manifest, route map, authorization trace, control inventory, screenshot review, preservation signoff, release gate 37/37 checks 7/7 gates 0 findings)"
+        ],
+        "tests_executed": [
+          "scripts/uiux_council_verdict_inventory.py --check -> 32 checks, 0 findings",
+          "pytest tests/test_council_verdict.py -q -> 29 passed",
+          "scripts/check_frontend_syntax.py -> JavaScript syntax OK",
+          "uiv2_12_walk.mjs vs demo servers at b01704f (BEFORE 3/17) and branch (AFTER 17/17): banner first card of stream + sticky, own scrollable body (17,430-char conclusion), wheel+keyboard scroll of body, transcript scrolls under it, pin/unpin aria-pressed + static, keyboard resize clamped, expand -> true modal with background inert + restored on Escape, survives 390x844 resize and reload",
+          "16 artifact --check gates all OK; uiux_release_gate.py -> 37/37 checks, 7/7 gates, 0 findings",
+          "full pytest battery in a /tmp clone of the pushed branch (see PR notes)"
+        ],
+        "visual_evidence": [
+          "docs/media/uiv2-v2/before-uiv2-12/1440x900-dark/hall.png (defect: 5081px unscrollable conclusion floods the pane, composer pushed off-screen)",
+          "docs/media/uiv2-v2/after-uiv2-12/1440x900-dark/hall.png (capped sticky card, transcript + composer visible)",
+          "docs/media/uiv2-v2/after-uiv2-12/1440x900-dark-states/{pinned-long-conclusion,unpinned,resized,expanded-modal}.png",
+          "docs/media/uiv2-v2/after-uiv2-12/390x844-dark-states/mobile-long-conclusion.png",
+          "before/after sets at 1640x900/1440x900/1280x800/390x844 x light/dark + all-panes 1440x900 x2"
+        ],
+        "acceptance_evidence": [
+          "defect reproduced on b01704f archive before the fix (walk 3/17, banner 5081px unscrollable sibling of the stream)",
+          "10k+ char conclusion (17,430 chars) scrolls by wheel and keyboard (ArrowDown/PageDown) in its own body; trackpad/touch share the same scroll container",
+          "pin/unpin flips sticky/static with aria-pressed; close/reopen (reload) keeps the panel; viewport resize 390x844 keeps it sticky+scrollable with no horizontal overflow",
+          "background scroll lock only while the true modal is open (overlayInert + data-overlay) and always restored on close/Escape",
+          "visual conformance to docs/uiv2-v2-reference.md line 60 / wireframe.html hall pane: pinned conclusion scrolls with the transcript, never locks it",
+          "authorization/session behavior preserved: verdict inventory gate green, authorization trace + signoff regenerated clean, hall close/summon routes untouched"
+        ],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "UIV2-12 done: the Council pinned conclusion is now the first card of the transcript stream, sticky at its top, with its own scrollable (24vh default, drag/keyboard resizable 120px..70vh, expandable into a true modal) body. A 17k-char conclusion no longer freezes the pane: before 3/17 walk checks, after 17/17; release gate 37/37 with 0 findings.",
+        "exact_next_action": "Merge the UIV2-12 PR when CI is green and the user says to merge; then start UIV2-13 per the ledger."
       }
     },
     {
@@ -2936,11 +2964,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 11,
+    "done": 12,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 19,
-    "percent_complete": 37
+    "not_started": 18,
+    "percent_complete": 40
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",

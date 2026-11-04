@@ -3885,7 +3885,18 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .hall-verdict .verdict-reading[data-reading="dissent"] { color: var(--amber); }
   .hall-verdict .verdict-reading[data-reading="same"] { color: var(--rose); }
   .hall-verdict .verdict-basis { margin-top: 8px; color: var(--text-faint); font-size: 11.4px; }
-  .conclusion-banner { margin: 0 18px 9px; padding: 11px 15px; border-radius: var(--radius-lg); background: rgba(245, 158, 11, 0.10); border: 1px solid rgba(245, 158, 11, 0.45); }
+  /* UIV2-12: the pinned conclusion is the first card of the transcript and sticks to the top of
+     the stream, so a long conclusion is read in its own scrollable body and never freezes the
+     transcript or the page. Unpinned, it scrolls away with the transcript like any other card. */
+  .conclusion-banner { position: sticky; top: 0; z-index: 6; margin: 0; padding: 11px 15px 4px; border-radius: var(--radius-lg); background: rgba(245, 158, 11, 0.10); border: 1px solid rgba(245, 158, 11, 0.45); }
+  .conclusion-banner[data-pinned="false"] { position: static; }
+  .conclusion-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 5px; }
+  .conclusion-actions { display: flex; gap: 6px; }
+  .conclusion-body { max-height: 24vh; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding-right: 6px; border-radius: var(--radius-sm); }
+  .conclusion-body:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  .conclusion-resize { height: 9px; margin: 4px -15px -4px; cursor: ns-resize; border-top: 1px solid transparent; border-radius: 0 0 var(--radius-lg) var(--radius-lg); touch-action: none; }
+  .conclusion-resize:hover { border-top-color: var(--border-hi); }
+  .conclusion-resize:focus-visible { border-top-color: var(--border-hi); outline: 2px solid var(--ring); outline-offset: 2px; }
   .hall-composer { padding: 10px 18px; background: var(--bg-elev); border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-end; }
 
   /* Monitor Rail */
@@ -5297,6 +5308,19 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   </div>
 </div>
 
+<!-- ================= PINNED COUNCIL CONCLUSION, EXPANDED (UIV2-12) ================= -->
+<!-- A true modal: opened only from the banner's Expand action, so the background scroll lock
+     (inert) exists only while this dialog is open and is always restored on close. -->
+<div id="hallConclusionModal" class="modal-backdrop" onclick="if(event.target===this)closeHallConclusionModal()">
+  <div class="modal" style="max-width:820px;" role="dialog" aria-modal="true" aria-label="Pinned Council conclusion, expanded">
+    <div style="padding:12px 14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:10px;">
+      <strong id="hallConclusionModalTitle" style="font-size:14.5px;">Pinned Council Conclusion</strong>
+      <button class="btn btn-xs" type="button" onclick="closeHallConclusionModal()" aria-label="Close expanded conclusion">Close</button>
+    </div>
+    <div id="hallConclusionModalBody" style="overflow-y:auto; max-height:70vh; padding:14px 16px;"></div>
+  </div>
+</div>
+
 <!-- ================= CONTEXT ENGINEERING & CODEGRAPH SUITE MODAL (v7.0) ================= -->
 <div id="contextModal" class="modal-backdrop" onclick="if(event.target===this)closeContextModal()">
   <div class="modal" style="max-width:900px;" role="dialog" aria-modal="true" aria-label="Knowledge and code tools">
@@ -6271,7 +6295,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
           <div id="hallStream" class="hall-stream"></div>
 
-          <div id="hallConclusionBanner" class="conclusion-banner" style="display:none;"></div>
+          <!-- The pinned conclusion renders as the first card inside #hallStream (UIV2-12): sticky
+               to the transcript's top, with its own scrollable, resizable, expandable body. -->
           <!-- The verdict area: the decision's provenance, and what each reply's wording has to do
                with it. It reads under the pinned text on purpose - the decision first, then the
                measurement of what it carries. Filled by renderHallVerdict() from the session the
@@ -6917,6 +6942,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   let hallSessions = [];
   let activeHallId = null;
   let activeHallData = null;
+  // UIV2-12: the pinned conclusion card sticks to the top of the transcript until unpinned.
+  let hallConclusionPinned = true;
 
   let stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 2:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 3:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 4:{c:"",r:"",rCount:0,m:"",u:null,k:null} };
   let rafPending = false;
@@ -8971,10 +8998,26 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     document.getElementById("hallRoster").innerHTML = roster + fileBadges;
 
     const stream = document.getElementById("hallStream");
-    if (!(s.messages || []).length && !liveCardHtml) {
+    // UIV2-12: the pinned conclusion renders as the first card of the transcript and sticks to
+    // the top of the stream, so a 10k+ character conclusion is read in its own scrollable,
+    // resizable body (and expandable into a true modal) and never locks the transcript or page.
+    const conclusionBannerHtml = s.conclusion_text ? `
+        <div id="hallConclusionBanner" class="conclusion-banner" data-pinned="${hallConclusionPinned ? "true" : "false"}">
+          <div class="conclusion-head">
+            <strong style="color:var(--text);">Pinned Council Conclusion (${escapeHtml(s.conclusion_author || '')})</strong>
+            <span class="conclusion-actions">
+              <button type="button" class="btn btn-xs" data-conclusion-action="expand" onclick="openHallConclusionModal()" title="Read the full conclusion in a scrollable dialog" aria-label="Expand pinned conclusion">Expand</button>
+              <button type="button" class="btn btn-xs" data-conclusion-action="pin" onclick="toggleHallConclusionPin(this)" aria-pressed="${hallConclusionPinned}" title="${hallConclusionPinned ? "Let the conclusion scroll away with the transcript" : "Keep the conclusion pinned to the top of the transcript"}">${hallConclusionPinned ? "Unpin" : "Pin"}</button>
+              <button type="button" class="btn btn-xs" data-conclusion-action="close" onclick="this.closest('.conclusion-banner').style.display='none'" title="Hide the pinned conclusion in this view" aria-label="Hide pinned conclusion">${UI_ICONS.close}</button>
+            </span>
+          </div>
+          <div id="hallConclusionBody" class="conclusion-body" tabindex="0" role="region" aria-label="Pinned conclusion text - scroll with wheel, trackpad, touch or arrow keys">${renderMarkdown(String(s.conclusion_text))}</div>
+          <div id="hallConclusionResize" class="conclusion-resize" role="separator" aria-orientation="horizontal" tabindex="0" aria-label="Resize the pinned conclusion panel" title="Drag, or focus and press Arrow Up or Down" onpointerdown="hallConclusionResizeStart(event)"></div>
+        </div>` : "";
+    if (!(s.messages || []).length && !liveCardHtml && !s.conclusion_text) {
       presentHallEmpty();
     } else {
-    stream.innerHTML = (s.messages || []).map(m => {
+    stream.innerHTML = conclusionBannerHtml + (s.messages || []).map(m => {
       const u = m.usage || {};
       // A reply the demo path wrote is not the named model's, and it earns no tok/s
       // badge: its usage line carries `demo`, so the card says what produced it.
@@ -8989,15 +9032,90 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     stream.scrollTop = stream.scrollHeight;
     }
 
-    const cBanner = document.getElementById("hallConclusionBanner");
-    if (s.conclusion_text) {
-      cBanner.style.display = "block";
-      cBanner.innerHTML = `<div style="margin-bottom:5px;"><strong style="color:var(--text);">Pinned Council Conclusion (${escapeHtml(s.conclusion_author || '')})</strong></div>` + renderMarkdown(s.conclusion_text);
-    } else cBanner.style.display = "none";
-
     // P4-03: the verdict area is drawn from the same session payload, after the transcript it
     // describes - so a reply and the decision's coverage of it are one screen.
     renderHallVerdict();
+  }
+
+  // UIV2-12: the pinned conclusion panel's controls. Pin/unpin only flips the sticky position;
+  // Expand opens a true modal (the overlay controller owns the background lock and restores it);
+  // the separator resizes the panel's own scroll body by drag or by arrow keys, clamped between
+  // 120px and 70% of the viewport so the transcript below always keeps room.
+  function toggleHallConclusionPin(btn) {
+    hallConclusionPinned = !hallConclusionPinned;
+    const banner = document.getElementById("hallConclusionBanner");
+    if (banner) banner.dataset.pinned = hallConclusionPinned ? "true" : "false";
+    if (btn) {
+      btn.setAttribute("aria-pressed", String(hallConclusionPinned));
+      btn.textContent = hallConclusionPinned ? "Unpin" : "Pin";
+      btn.title = hallConclusionPinned
+        ? "Let the conclusion scroll away with the transcript"
+        : "Keep the conclusion pinned to the top of the transcript";
+    }
+  }
+
+  function openHallConclusionModal() {
+    const s = activeHallData;
+    const body = document.getElementById("hallConclusionModalBody");
+    const head = document.getElementById("hallConclusionModalTitle");
+    if (body && s && s.conclusion_text) {
+      if (head) head.textContent = `Pinned Council Conclusion (${s.conclusion_author || ""})`;
+      body.innerHTML = renderMarkdown(String(s.conclusion_text));
+      body.scrollTop = 0;
+    }
+    openOverlay("hallConclusionModal");
+  }
+
+  function closeHallConclusionModal() { closeOverlay("hallConclusionModal"); }
+
+  let hallConclusionResizeDrag = null;
+
+  function hallConclusionClampHeight(h) {
+    return Math.min(Math.max(h, 120), Math.round(window.innerHeight * 0.7));
+  }
+
+  // Keyboard resize is delegated (no inline onkeydown runs from markup).
+  document.addEventListener("keydown", (event) => {
+    if (event.target && event.target.closest && event.target.closest(".conclusion-resize")) hallConclusionResizeKey(event);
+  });
+
+  function hallConclusionResizeStart(event) {
+    const banner = event.target.closest(".conclusion-banner");
+    const body = banner && banner.querySelector(".conclusion-body");
+    if (!body) return;
+    event.preventDefault();
+    hallConclusionResizeDrag = { banner, startY: event.clientY, startH: body.getBoundingClientRect().height };
+    document.addEventListener("pointermove", hallConclusionResizeMove);
+    document.addEventListener("pointerup", hallConclusionResizeEnd, { once: true });
+  }
+
+  function hallConclusionResizeMove(event) {
+    if (!hallConclusionResizeDrag) return;
+    const h = hallConclusionClampHeight(hallConclusionResizeDrag.startH + (event.clientY - hallConclusionResizeDrag.startY));
+    const body = hallConclusionResizeDrag.banner.querySelector(".conclusion-body");
+    if (body) body.style.maxHeight = `${h}px`;
+  }
+
+  function hallConclusionResizeEnd() {
+    hallConclusionResizeDrag = null;
+    document.removeEventListener("pointermove", hallConclusionResizeMove);
+  }
+
+  function hallConclusionResizeKey(event) {
+    if (!["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End"].includes(event.key)) return;
+    const banner = event.target.closest(".conclusion-banner");
+    const body = banner && banner.querySelector(".conclusion-body");
+    if (!body) return;
+    event.preventDefault();
+    const cur = body.getBoundingClientRect().height;
+    let h = cur;
+    if (event.key === "ArrowDown") h = cur + 24;
+    else if (event.key === "ArrowUp") h = cur - 24;
+    else if (event.key === "PageDown") h = cur + 120;
+    else if (event.key === "PageUp") h = cur - 120;
+    else if (event.key === "Home") h = 120;
+    else if (event.key === "End") h = Math.round(window.innerHeight * 0.7);
+    body.style.maxHeight = `${hallConclusionClampHeight(h)}px`;
   }
 
   async function postHumanHallMessage(autoConvene = true) {
