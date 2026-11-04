@@ -96,7 +96,7 @@ jobs:
       - name: Verify release evidence matches the artifact
         run: python scripts/release_supply_chain.py verify --output dist/evidence
       - name: Upload release evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-evidence-${{ matrix.python-version }}
           path: dist/evidence
