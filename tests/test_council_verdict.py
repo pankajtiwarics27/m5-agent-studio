@@ -365,8 +365,6 @@ def test_the_ledger_marks_the_story():
 
 
 def test_uiv2_12_conclusion_panel_gates_hold(payload):
-    names = [c["check"] for c in payload["checks"]]
-    wanted = [n for n in names if "conclusion" in n or "scroll" in n or "modal" in n or "sticky" in n or "stream" in n]
     by_name = {c["check"]: c["ok"] for c in payload["checks"]}
     for name in (
         "the conclusion renders as the first card of the transcript stream",
