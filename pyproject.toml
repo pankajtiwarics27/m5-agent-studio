@@ -19,7 +19,7 @@ dependencies = [
 dev = [
   "pytest>=8,<10",
   "ruff>=0.14,<0.15",
-  "mypy>=1.19,<2",
+  "mypy>=1.19,<3",
 ]
 # Advisory-database tooling for `scripts/release_supply_chain.py`. Deliberately
 # optional: it is never a runtime dependency of the shipped artifact.
