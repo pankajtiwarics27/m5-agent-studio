@@ -14,6 +14,8 @@
   ],
   "plan_rows": [
     "directory",
+    "tools",
+    "context",
     "policy",
     "models",
     "workflow"
@@ -118,6 +120,17 @@
       "rests_after_a_run": true,
       "manual_resize_is_off": true
     },
+    "uiv2_10_composer": {
+      "attach_context_button_in_the_composer_row": true,
+      "attach_opens_the_shared_context_modal": true,
+      "one_dominant_action": true,
+      "plan_names_the_admitted_tools": true,
+      "plan_names_the_pinned_context": true,
+      "run_posts_the_pickers_policy": true,
+      "policy_is_re_read_from_the_server": true,
+      "policy_change_goes_through_the_guarded_write": true,
+      "no_desktop_automation_copy_in_the_pane": true
+    },
     "preserved": {
       "harnessWorkspaceInput": true,
       "harnessRecentDirsSelect": true,
@@ -177,10 +190,10 @@
   },
   "totals": {
     "reasons": 4,
-    "plan_rows": 4,
+    "plan_rows": 6,
     "preserved_controls": 11,
     "named_controls": 10,
-    "checks": 81,
+    "checks": 90,
     "findings": 0
   },
   "findings": [],

@@ -2527,6 +2527,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
                 <option value="sdlc_modal">Agile SDLC Board &amp; Backlog…</option>
               </select>
               <button id="harnessRunBtn" class="btn btn-primary" style="height:38px;" onclick="executeHarnessSelectedWorkflow()">Run</button>
+              <button id="harnessAttachBtn" class="btn" type="button" style="height:38px;" onclick="openContextModal()" title="Pin knowledge documents or explore the code graph — pinned documents are included in this run's context">Attach context</button>
               <span id="harnessRunHint" class="harness-run-hint" data-reason="no-task" role="status" aria-live="polite"></span>
             </div>
           </div>
@@ -6194,6 +6195,29 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         value:
           `${dir || "the server's default project directory"}` +
           (worktree && worktree.checked ? " · isolated git worktree" : " · direct"),
+      },
+      {
+        // UIV2-10: the plan names the admitted tools the run will use, so the planned
+        // action is a list of real tools. There is no desktop automation here: the run
+        // can only use the skills installed in this studio and the tools the workspace
+        // admits, and the policy row below says which of those it may invoke on its own.
+        key: "tools",
+        changed: false,
+        value: (() => {
+          const names = [...selectedSkills].map((id) => ((installedSkills.find((sk) => sk.id === id) || {}).name) || id);
+          return names.length
+            ? `${names.length} skill${names.length === 1 ? "" : "s"} active: ${names.join(", ")}`
+            : "no extra skills — the run uses only the tools this workspace admits";
+        })(),
+      },
+      {
+        key: "context",
+        changed: false,
+        value: (() => {
+          const badge = document.getElementById("ocDocsCountBadge");
+          const n = badge ? Number(badge.textContent || 0) : 0;
+          return `${n} pinned doc${n === 1 ? "" : "s"} included in Harness context`;
+        })(),
       },
       {
         // The option's own label is the whole sentence: the plan prints the policy the

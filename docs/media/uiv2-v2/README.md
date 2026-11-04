@@ -80,5 +80,13 @@ Six capture sets produced for the V2 visual-fidelity program
   `blocked`, disables Run and marks the stage. Reconnect (cursor resume, seq dedupe,
   scroll preservation, gap->resync) verified in both.
 
+- `before-uiv2-10/` / `after-uiv2-10/` — 20 shell shots each (harness at
+  1640x900/1440x900/1280x800/390x844 in light and dark, plus all six panes at 1440x900
+  in light and dark) plus composer states (`1440x900-dark-composer`,
+  `390x844-dark-composer`) from the UIV2-10 walk: before (b8c44ea) the composer has
+  no Attach context action and the plan preview does not name the admitted tools or
+  pinned docs; after, the composer row has one primary Run plus Attach context
+  (shared knowledge/code modal), and the "Run will" plan lists tools and context.
+
 Each capture directory carries an `index.json` with sha256, byte size, viewport
 and theme per shot.

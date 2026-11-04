@@ -51,8 +51,8 @@
           "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
           "totals": {
             "panes": 6,
-            "markup_controls": 201,
-            "pane_controls": 93,
+            "markup_controls": 202,
+            "pane_controls": 94,
             "chrome_controls": 108,
             "script_rendered_controls": 50,
             "script_rendered_by_function": {
@@ -205,9 +205,9 @@
           "totals": {
             "panes": 6,
             "preserved_capabilities": 21,
-            "markup_controls": 201,
+            "markup_controls": 202,
             "chrome_controls": 108,
-            "pane_controls": 93,
+            "pane_controls": 94,
             "script_rendered_controls": 50,
             "routes": 115,
             "routes_with_resolved_or_possible_caller": 69,
@@ -217,7 +217,7 @@
             "route_map_unresolved_caller_edges": 0,
             "route_map_unresolved_method_edges": 0,
             "state_changing_routes_traced": 46,
-            "pane_routes_reached": 38,
+            "pane_routes_reached": 39,
             "pane_routes_excluded": 34,
             "route_walk_depth": 2,
             "screenshots_captured": 6,
@@ -481,10 +481,10 @@
           "artifact": "product/M5_2_0_UIUX_Harness_Settings.json",
           "totals": {
             "reasons": 4,
-            "plan_rows": 4,
+            "plan_rows": 6,
             "preserved_controls": 11,
             "named_controls": 10,
-            "checks": 81,
+            "checks": 90,
             "findings": 0
           }
         }
@@ -892,7 +892,7 @@
           "artifact": "product/M5_2_0_UIUX_Screenshot_Review.json",
           "totals": {
             "sets": 28,
-            "files": 521,
+            "files": 565,
             "reviewed_sets": 28,
             "sets_eyed": 8,
             "files_eyed": 28,
@@ -1138,7 +1138,7 @@
   "inventory": {
     "tabs": 6,
     "routes": 115,
-    "markup_controls": 201,
+    "markup_controls": 202,
     "chrome_controls": 108,
     "script_rendered_controls": 50,
     "capabilities": 21,
@@ -1146,7 +1146,7 @@
     "e2e_findings": 0,
     "refusals": 12,
     "refusal_statuses": 9,
-    "captures": 521,
+    "captures": 565,
     "capture_sets": 28,
     "reviewed_sets": 28,
     "screenshot_findings": 0,

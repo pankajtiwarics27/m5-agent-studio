@@ -1,0 +1,23 @@
+{
+ "schema": 1,
+ "captured_at": "2026-11-04T12:18:28.148365+00:00",
+ "viewport": {
+  "width": 390,
+  "height": 844,
+  "device_scale_factor": 1
+ },
+ "variant": {
+  "theme": "dark",
+  "density": null,
+  "note": "UIV2-10 composer states from the behavior walk (Attach context action + plan preview rows)"
+ },
+ "shots": [
+  {
+   "id": "harness-composer-390",
+   "tab": "harness",
+   "file": "harness-composer-390.png",
+   "bytes": 57769,
+   "sha256": "688e7453e6dea0f0f90d786ec240588c19098eaad2268fba8c84201b2598d252"
+  }
+ ]
+}
