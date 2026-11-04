@@ -389,7 +389,14 @@ REVIEWS: dict[str, dict[str, object]] = {
             "Approvals/Changes/Verification/Resources tabs) and `after-uiv2-06/1440x900-light/harness-telemetry-popover.png` "
             "(header Telemetry popover holding all four telemetry cards incl. the model load/unload "
             "actions), plus the per-pane inspector tabs in the 1440x900-dark set (Council "
-            "People/Evidence, Pipeline Stage/Artifacts, Compare Evaluation, Chat hidden by default)."
+            "People/Evidence, Pipeline Stage/Artifacts, Compare Evaluation, Chat hidden by default). "
+            "`before-uiv2-11/` and `after-uiv2-11/` bracket the UIV2-11 session-navigation change "
+            "(served from disposable git-archive copies at a723078 and a6b578a, four seeded sessions, one "
+            "flipped to running): opened the 1440x900-dark pair - before has no filter box and the running "
+            "row's delete is an enabled one-click button, after has the named Filter sessions box, "
+            "shown-of-total counts, the disabled (aria-disabled) delete on the running row, and the armed "
+            "Confirm delete state with its irreversible-scope note - plus the walk state shots "
+            "(filter-active, running-protected, armed-delete-scope, sessions-mobile at 390x844)."
         ),
         "eye": [
             "baseline/1440x900-light/start.png",
@@ -404,6 +411,12 @@ REVIEWS: dict[str, dict[str, object]] = {
             "after-uiv2-05/1280x800-dark/harness-drawer-open.png",
             "after-uiv2-06/1440x900-dark/harness.png",
             "after-uiv2-06/1440x900-light/harness-telemetry-popover.png",
+            "before-uiv2-11/1440x900-dark/harness.png",
+            "after-uiv2-11/1440x900-dark/harness.png",
+            "after-uiv2-11/1440x900-dark-states/filter-active.png",
+            "after-uiv2-11/1440x900-dark-states/running-protected.png",
+            "after-uiv2-11/1440x900-dark-states/armed-delete-scope.png",
+            "after-uiv2-11/390x844-dark-states/sessions-mobile.png",
         ],
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",

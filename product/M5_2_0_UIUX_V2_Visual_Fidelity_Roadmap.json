@@ -1246,20 +1246,48 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-11: Harness session navigation and safe lifecycle controls. Required outcome: Search/filter sessions, new session, active state, resume, pause/cancel when supported, clear distinction between archive and delete. Specific gate: Deletion only if backend supports it; confirmation shows irreversible scope; active running sessions protected; persisted sessions and user workspace never silently removed. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-04T20:45:00+05:30",
+        "completed_at": "2026-11-04T22:35:00+05:30",
+        "commit_sha": "dd69fa1",
+        "changed_files": [
+          "static/index.html (sidebar: named 'Filter sessions…' search box with shown-of-total counts and an empty-result message; two-press armed delete - first press arms the row's 'Confirm delete' button for 6s and renders a role=alert irreversible-scope note (record, event log, checkpoints, grants, worktree branch gone; main workspace never deleted; no archive); delete button disabled with aria-disabled + protection title for pending/running/waiting_approval/blocked sessions; guarded DELETE unchanged)",
+          "app.py (DELETE /api/harness/sessions/{id} refuses 409 for a running/waiting_approval/blocked session with a detail naming the state and 'pause or cancel it before deleting'; keyed on the session's own status so delegation purge still works; removal path unchanged - worktree branch, event log, DB row, snapshots, grants; user workspace never removed)",
+          "studio.py (build_studio.py, byte-synced in the same commit)",
+          "scripts/uiux_harness_settings_inventory.py (new uiv2_11_sessions + uiv2_11_sessions_server gate groups, 112 checks total, 0 findings)",
+          "tests/test_harness_settings.py (6 new UIV2-11 mutation tests), tests/test_uiux_adversarial.py (live 409 contract test: running session refused and kept, deletable once completed)",
+          "docs/media/uiv2-v2/before-uiv2-11/ and after-uiv2-11/ (20 shell shots each + walk states filter-active/running-protected/armed-delete-scope/sessions-mobile), README.md notes, scripts/uiux_screenshot_review.py note+eye",
+          "all regenerated product/M5_2_0_UIUX_*.json + docs/uiux-2-0-*.md artifacts incl. release gate 37/37, 7/7 gates, 0 findings; screenshot review 609 captures / 28 sets / 0 findings"
+        ],
+        "tests_executed": [
+          "headless-Chromium walk (uiv2_11_walk.mjs) against disposable demo_tour.py --serve copies (before a723078 on :8761, after a6b578a on :8762), four seeded sessions with one flipped to running: AFTER 15/15 - filter input named and narrows with shown-of-total count, empty result says 'No sessions match', clear restores, running row's delete disabled with protection title, first press arms 'Confirm delete' + role=alert scope note (Irreversible / no archive / main workspace never deleted / worktree branch), Cancel disarms, second press DELETEs 200 and removes the row, active-row highlight, + New session present, wire DELETE on the running session is 409 'a running session is protected'; BEFORE 8/15 with exactly the seven new gates failing (no filter, running row deletable in one click, running DELETE returns 200)",
+          "pytest: tests/test_harness_settings.py 50 passed (incl. 6 UIV2-11 mutations); tests/test_uiux_adversarial.py incl. new 409 test passed; settings+timeline+adversarial+start_recent subset 125 passed; manifest+release-gate test files 30 passed locally; CI run on PR #195 all 4 checks pass (test 3.11/3.12/3.13 + Browser safety regressions)",
+          "scoped mypy clean (58 files), ruff check clean, check_frontend_syntax OK, demo_tour --check OK, all scripts/uiux_*.py --check clean, uiux_release_gate 37/37 checks 7/7 gates 0 findings, uiux_screenshot_review 609/28/0, check_commit_messages OK, studio.py rebuilt byte-identically in-commit"
+        ],
+        "visual_evidence": [
+          "docs/media/uiv2-v2/before-uiv2-11/1440x900-dark/harness.png (no filter box; running Gamma row with an enabled one-click delete titled 'Delete session & cleanup worktree')",
+          "docs/media/uiv2-v2/after-uiv2-11/1440x900-dark/harness.png (named Filter sessions box, HARNESS RUNS (4), running row present)",
+          "docs/media/uiv2-v2/after-uiv2-11/1440x900-dark-states/filter-active.png (query 'alpha' -> HARNESS RUNS (1/6), only the Alpha row)",
+          "docs/media/uiv2-v2/after-uiv2-11/1440x900-dark-states/running-protected.png (running row's delete disabled, aria-disabled, protection title)",
+          "docs/media/uiv2-v2/after-uiv2-11/1440x900-dark-states/armed-delete-scope.png (row armed to 'Confirm delete' + irreversible-scope alert note with Cancel)",
+          "docs/media/uiv2-v2/after-uiv2-11/390x844-dark-states/sessions-mobile.png (mobile: filter box + sessions stack above the composer)",
+          "full matrices: after-uiv2-11/{1640x900,1440x900,1280x800,390x844}-{dark,light}/harness.png and 1440x900-{dark,light}-all/*.png vs before-uiv2-11/ (44 PNGs, screenshot review 609 captures / 28 sets / 0 findings)"
+        ],
+        "acceptance_evidence": [
+          "Deletion only if the backend supports it: DELETE /api/harness/sessions/{id} existed and still exists; guarded write with refusal/retry kept (inventory rules + mutation tests)",
+          "Confirmation shows irreversible scope: armed 'Confirm delete' + role=alert note naming record, event log, checkpoints, grants, worktree branch as gone, main workspace never deleted, no archive, cannot be undone - asserted live in the walk and pinned by inventory rules",
+          "Active running sessions protected: UI disables the delete button (aria-disabled) for pending/running/waiting_approval/blocked and the server returns 409 'a running session is protected - pause or cancel it before deleting' - proven live (walk 409 check) and by tests/test_uiux_adversarial.py (409 keeps the session listed/readable; deletable once completed)",
+          "Persisted sessions and user workspace never silently removed: removal path unchanged (worktree branch under .harnesses/wt-* only, event log files, DB row, snapshots, grants); _remove_harness_worktree only touches a registered wt-* child of the repo's .harnesses root; inventory rule 'only_the_worktree_is_removed_not_the_workspace'; no rmtree in the route",
+          "Target behavior: search/filter (named box, multi-word match on title/id/policy/status, shown-of-total, empty-result message), new session button, active state (row highlight on select), resume/pause/cancel unchanged (recovery panel + session actions), archive-vs-delete distinction stated in words in the confirmation",
+          "Visual conformance: after set matches the approved reference's sessions region (search/filter + list with active state + new-session action); 44 before/after PNGs reviewed, 0 findings",
+          "Preservation: no authorization/session behavior weakened - the 409 guard is additive and keyed on session status so delegation purge (test_child_delegation), handoff purge and the 404-after-delete adversarial tests all still pass; 125-test subset green; CI all 4 checks green on PR #195 (merge a6b578a)"
+        ],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "Harness sessions are now navigable and safely deletable: a named filter with shown-of-total counts, an active-row highlight, and a delete that takes a confirming second press while showing exactly what is irreversibly removed (and that the main workspace is never touched, there being no archive). Running/queued/waiting/blocked sessions cannot be deleted from the UI, and the server refuses their DELETE with a 409 that names the state and the way out.",
+        "exact_next_action": "UIV2-12: Fix Council pinned conclusion scroll locking (P2, deps UIV2-08 done)."
       }
     },
     {
@@ -2859,11 +2887,11 @@
       "id": "P2",
       "name": "Harness and Cowork-style task UX",
       "total": 4,
-      "done": 3,
+      "done": 4,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 1,
-      "percent_complete": 75
+      "not_started": 0,
+      "percent_complete": 100
     },
     {
       "id": "P3",
@@ -2908,11 +2936,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 10,
+    "done": 11,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 20,
-    "percent_complete": 33
+    "not_started": 19,
+    "percent_complete": 37
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",
