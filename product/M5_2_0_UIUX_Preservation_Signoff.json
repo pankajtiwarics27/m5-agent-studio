@@ -26,11 +26,11 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b",
-      "source_manifest_sha256": "98251be02a9691a3f58b48ac7f638db8cfcc10c378b1a18d4ac1657a3012a240",
-      "control_inventory_sha256": "c7e962178cc0343ebd33e5f74a639afc2ef8dc0b7ad8c8ef20182fe45aeae111",
-      "route_map_sha256": "22c28c583e3e86e0086fa79f0ba1153bf13de9fc4f8cef90452d726738a85103",
-      "authorization_trace_sha256": "723ec73d7a650d7047eb0432fda58cbf654818e191518c6f7073b5b0cb9e855a",
-      "frontend_sha256": "a3c45e31ab6dfb1f4182d87836e876fa6aa4762ced40cbd53417ad8e8fef4830",
+      "source_manifest_sha256": "c2d4edd18ac34fa9451b61d7507b5105b2cfbad284cc268f5f0f15f336b5c1a7",
+      "control_inventory_sha256": "e317111056e1308d60e647779fa3939ecf13c5d7aa74e125594c5c22181675f8",
+      "route_map_sha256": "c39c37ca12ea79bcb249f42114b7729248d986a86bf8f6469ebaf3239d6ab1af",
+      "authorization_trace_sha256": "c62d4140baee89b6ac909032864b3b2a7f90b567e75e43dc629b2ab76ffd7ae1",
+      "frontend_sha256": "6328f8e813bf4f9831955968298f6c2da801a51a1d6f37fd0eea9a7c8219761f",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
       "screenshot_index_sha256": "16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -40,11 +40,11 @@
   },
   "inputs": {
     "ledger_sha256": "1adcb5f5fe82d14855291246cfe4ed08aafb57ab7143703a1ce5e3c5fc0ea43c",
-    "source_manifest_sha256": "98251be02a9691a3f58b48ac7f638db8cfcc10c378b1a18d4ac1657a3012a240",
-    "control_inventory_sha256": "c7e962178cc0343ebd33e5f74a639afc2ef8dc0b7ad8c8ef20182fe45aeae111",
-    "route_map_sha256": "22c28c583e3e86e0086fa79f0ba1153bf13de9fc4f8cef90452d726738a85103",
-    "authorization_trace_sha256": "723ec73d7a650d7047eb0432fda58cbf654818e191518c6f7073b5b0cb9e855a",
-    "frontend_sha256": "a3c45e31ab6dfb1f4182d87836e876fa6aa4762ced40cbd53417ad8e8fef4830"
+    "source_manifest_sha256": "c2d4edd18ac34fa9451b61d7507b5105b2cfbad284cc268f5f0f15f336b5c1a7",
+    "control_inventory_sha256": "e317111056e1308d60e647779fa3939ecf13c5d7aa74e125594c5c22181675f8",
+    "route_map_sha256": "c39c37ca12ea79bcb249f42114b7729248d986a86bf8f6469ebaf3239d6ab1af",
+    "authorization_trace_sha256": "c62d4140baee89b6ac909032864b3b2a7f90b567e75e43dc629b2ab76ffd7ae1",
+    "frontend_sha256": "6328f8e813bf4f9831955968298f6c2da801a51a1d6f37fd0eea9a7c8219761f"
   },
   "approval_request": [
     {
@@ -55,7 +55,7 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "202 markup controls (108 chrome, 94 panes) plus 50 rendered by script"
+      "evidence": "203 markup controls (108 chrome, 95 panes) plus 53 rendered by script"
     },
     {
       "id": 3,
@@ -76,10 +76,10 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 202,
+    "markup_controls": 203,
     "chrome_controls": 108,
-    "pane_controls": 94,
-    "script_rendered_controls": 50,
+    "pane_controls": 95,
+    "script_rendered_controls": 53,
     "routes": 115,
     "routes_with_resolved_or_possible_caller": 69,
     "routes_no_caller_observed": 46,
@@ -401,10 +401,10 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 29,
+      "control_count": 30,
       "counts": {
         "button": 16,
-        "input": 2,
+        "input": 3,
         "select": 9,
         "summary": 1,
         "textarea": 1
@@ -423,6 +423,13 @@
           "text": "+ New session",
           "onclick": "startFreshHarnessDraft()",
           "handler": "startFreshHarnessDraft"
+        },
+        {
+          "tag": "input",
+          "id": "harnessSessionFilter",
+          "text": null,
+          "onclick": null,
+          "handler": null
         },
         {
           "tag": "button",

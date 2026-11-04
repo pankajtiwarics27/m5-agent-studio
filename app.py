@@ -12561,6 +12561,19 @@ async def api_delete_harness_session(session_id: str) -> JSONResponse:
         sess = get_harness_session_db(session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    # UIV2-11: an active running session is protected from deletion. Pausing or cancelling
+    # it first is the only way to remove it, so a stray or double-clicked delete cannot
+    # fence a live lease out from under a run. The session's own status is the liveness
+    # signal (a child delegation may run under the task state while the session stays
+    # idle, and purging such a session must keep working).
+    if sess.get("status") in {"running", "waiting_approval", "blocked"}:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"session {session_id} is {sess.get('status')}; "
+                "a running session is protected - pause or cancel it before deleting"
+            ),
+        )
     _HARNESS_ABORT_FLAGS.add(session_id)
     del_reports = await get_process_supervisor().contain_by_scope_async(
         session_id=session_id,

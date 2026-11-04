@@ -12,16 +12,16 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "a3c45e31ab6dfb1f4182d87836e876fa6aa4762ced40cbd53417ad8e8fef4830",
-      "bytes": 794241,
-      "lines": 13783
+      "sha256": "6328f8e813bf4f9831955968298f6c2da801a51a1d6f37fd0eea9a7c8219761f",
+      "bytes": 798638,
+      "lines": 13854
     },
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "0e6ecd89d84b7779f91513d8077934b08c8e90bccda919a6fac49ff6e44e2962",
-      "bytes": 1006548,
-      "lines": 21712
+      "sha256": "81f500f4152992e498bfb48f3e6e224399a4f1a30bd75c10fd87ce0309035b9d",
+      "bytes": 1007289,
+      "lines": 21725
     },
     {
       "path": "studio.py",
@@ -404,9 +404,9 @@
     {
       "path": "tests/test_uiux_adversarial.py",
       "role": "checks the server's refusal contract, the shell's refusal rules and the inventory's own failure modes",
-      "sha256": "3f643eef0d2b7422e6744f49b7af59116951b61ec4588b1e266a77b732c217c0",
-      "bytes": 15514,
-      "lines": 336
+      "sha256": "42ece6866fef973bef446ee0cfb956eedb97984a01a3f1e9e86807b645ed05df",
+      "bytes": 17271,
+      "lines": 369
     },
     {
       "path": "tests/test_uiux_adversarial_browser.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "a3c45e31ab6dfb1f4182d87836e876fa6aa4762ced40cbd53417ad8e8fef4830",
-    "lines": 13783,
+    "sha256": "6328f8e813bf4f9831955968298f6c2da801a51a1d6f37fd0eea9a7c8219761f",
+    "lines": 13854,
     "tab_count": 6,
     "tabs": [
       {
@@ -568,7 +568,7 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "0e6ecd89d84b7779f91513d8077934b08c8e90bccda919a6fac49ff6e44e2962",
+    "sha256": "81f500f4152992e498bfb48f3e6e224399a4f1a30bd75c10fd87ce0309035b9d",
     "route_count": 115,
     "by_method": {
       "DELETE": 5,

@@ -6012,6 +6012,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <aside class="harness-sidebar">
           <div style="padding:11px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
             <button class="btn" style="width:100%; justify-content:center;" onclick="startFreshHarnessDraft()">+ New session</button>
+            <input type="search" id="harnessSessionFilter" aria-label="Filter harness sessions by title, id, status or policy" placeholder="Filter sessions…" oninput="renderHarnessSidebar()" style="width:100%; font-size:11.2px;" />
             <div>
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
                 <label class="field-lbl" style="margin:0;" for="harnessWorkspaceInput">Project Directory</label>
@@ -13324,6 +13325,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   let harnessSessions = [];
   let activeHarnessId = null;
+  // UIV2-11: deleting a session is irreversible, so it takes two presses - the first arms
+  // the row's button ("Confirm delete") and shows the scope, the second does the delete.
+  let harnessDeleteArmedId = null;
+  let harnessDeleteArmedTimer = 0;
   let activeHarnessSession = null;
 
   function copyPreText(elId, btn) {
@@ -13485,20 +13490,81 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     } catch (e) {}
   }
 
+  // UIV2-11: a session that is running, queued or waiting on an approval is protected - its
+  // row's delete button is disabled and the server refuses the DELETE with a 409, so the
+  // only way to remove such a session is to pause or cancel it first.
+  const HARNESS_LIVE_SESSION_STATUSES = new Set(["pending", "running", "waiting_approval", "blocked"]);
+
+  function harnessSessionFilterText() {
+    const el = document.getElementById("harnessSessionFilter");
+    return ((el && el.value) || "").trim().toLowerCase();
+  }
+
+  function harnessSessionMatches(s, query) {
+    if (!query) return true;
+    const hay = `${s.title || ""} ${s.id || ""} ${s.policy || ""} ${s.status || ""} ${harnessStatusBadge(s).label}`.toLowerCase();
+    return query.split(/\s+/).every((token) => hay.includes(token));
+  }
+
+  function harnessDeleteScopeNote() {
+    // Shown while the delete is armed: the confirmation has to say what is gone for good and
+    // what is never touched, so "delete" cannot be mistaken for an archive.
+    return "Irreversible: deletes this session's record, event log, checkpoints, scoped grants and its isolated worktree branch. Files in your main workspace are never deleted - there is no archive; delete cannot be undone.";
+  }
+
+  function disarmHarnessDelete() {
+    clearTimeout(harnessDeleteArmedTimer);
+    harnessDeleteArmedId = null;
+  }
+
+  function armHarnessDelete(id) {
+    if (harnessDeleteArmedId === id) {
+      disarmHarnessDelete();
+      renderHarnessSidebar();
+      return;
+    }
+    harnessDeleteArmedId = id;
+    renderHarnessSidebar();
+    clearTimeout(harnessDeleteArmedTimer);
+    harnessDeleteArmedTimer = setTimeout(() => {
+      harnessDeleteArmedId = null;
+      renderHarnessSidebar();
+    }, 6000);
+  }
+
   function renderHarnessSidebar() {
     const box = document.getElementById("harnessSessionsList");
+    const count = document.getElementById("harnessRunsCount");
+    const query = harnessSessionFilterText();
     if (!harnessSessions.length) {
+      if (count) count.textContent = "0";
       box.innerHTML = `<div style="padding:12px; font-size:11.8px; color:var(--text-faint);">No sessions yet. Start a new session to begin.</div>`;
       return;
     }
-    box.innerHTML = harnessSessions.map(s => {
+    const shown = harnessSessions.filter((s) => harnessSessionMatches(s, query));
+    if (count) count.textContent = query ? `${shown.length}/${harnessSessions.length}` : `${harnessSessions.length}`;
+    if (!shown.length) {
+      box.innerHTML = `<div style="padding:12px; font-size:11.8px; color:var(--text-faint);">No sessions match &ldquo;${escapeHtml(query)}&rdquo;.</div>`;
+      return;
+    }
+    const items = shown.map(s => {
       const stIcon = harnessStatusBadge(s).label;
       const wtTag = s.use_worktree && s.branch_name ? `<span class="badge cyan" style="font-size:9.8px; padding:1px 5px;">WT</span>` : "";
+      const live = HARNESS_LIVE_SESSION_STATUSES.has(s.status);
+      const armed = harnessDeleteArmedId === s.id;
+      let delBtn;
+      if (live) {
+        delBtn = `<button class="btn btn-xs btn-danger" disabled style="padding:1px 5px; min-height:var(--target-min); font-size:10px; opacity:0.45; cursor:not-allowed;" title="A ${escapeHtml(s.status)} session is protected - pause or cancel it before deleting" aria-label="Delete Harness session (protected while ${escapeHtml(s.status)})" aria-disabled="true">${UI_ICONS.close}</button>`;
+      } else if (armed) {
+        delBtn = `<button class="btn btn-xs btn-danger" style="padding:1px 5px; min-height:var(--target-min); font-size:10px; font-weight:700;" onclick="event.stopPropagation(); deleteHarnessSession('${escapeHtml(s.id)}')" title="${escapeHtml(harnessDeleteScopeNote())}" aria-label="Confirm irreversible delete of Harness session">Confirm delete</button>`;
+      } else {
+        delBtn = `<button class="btn btn-xs btn-danger" style="padding:1px 5px; min-height:var(--target-min); font-size:10px;" onclick="event.stopPropagation(); armHarnessDelete('${escapeHtml(s.id)}')" title="Delete session… (asks for confirmation; irreversible - record, log, checkpoints, grants and worktree branch)" aria-label="Delete Harness session">${UI_ICONS.close}</button>`;
+      }
       return `
         <div class="chronicle-item ${s.id === activeHarnessId ? 'active' : ''}" role="button" tabindex="0" data-key-activate onclick="selectHarnessSession('${escapeHtml(s.id)}')">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:5px;">
             <div class="chronicle-title">${escapeHtml(s.title)}</div>
-            <button class="btn btn-xs btn-danger" style="padding:1px 5px; min-height:var(--target-min); font-size:10px;" onclick="event.stopPropagation(); deleteHarnessSession('${escapeHtml(s.id)}')" title="Delete session & cleanup worktree" aria-label="Delete Harness session">${UI_ICONS.close}</button>
+            ${delBtn}
           </div>
           <div class="chronicle-meta">
             <span>${stIcon} ${wtTag}</span>
@@ -13506,6 +13572,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           </div>
         </div>`;
     }).join("");
+    const scopeNote = harnessDeleteArmedId
+      ? `<div id="harnessDeleteScopeNote" role="alert" style="padding:8px 11px; border-top:1px solid var(--border); font-size:10.8px; color:var(--text-faint); display:flex; gap:8px; align-items:flex-start; justify-content:space-between;">${escapeHtml(harnessDeleteScopeNote())}<button type="button" class="btn btn-xs" style="flex:none;" onclick="disarmHarnessDelete(); renderHarnessSidebar();" aria-label="Cancel the armed delete">Cancel</button></div>`
+      : "";
+    box.innerHTML = items + scopeNote;
   }
 
   function updateHarnessCtxBadge(metrics) {
@@ -13611,6 +13681,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     // A refused delete used to clear the pane and re-read a list that still holds
     // the session: the row reappears, so the only thing the reader learned is that
     // the pane is unreliable. The refusal is stated instead.
+    disarmHarnessDelete();
     const write = await guardedWrite({
       host: "harnessRefusalState",
       kept: "the session and everything it recorded are still on the server, and its row is still in the list",
@@ -26315,6 +26386,19 @@ async def api_delete_harness_session(session_id: str) -> JSONResponse:
         sess = get_harness_session_db(session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    # UIV2-11: an active running session is protected from deletion. Pausing or cancelling
+    # it first is the only way to remove it, so a stray or double-clicked delete cannot
+    # fence a live lease out from under a run. The session's own status is the liveness
+    # signal (a child delegation may run under the task state while the session stays
+    # idle, and purging such a session must keep working).
+    if sess.get("status") in {"running", "waiting_approval", "blocked"}:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"session {session_id} is {sess.get('status')}; "
+                "a running session is protected - pause or cancel it before deleting"
+            ),
+        )
     _HARNESS_ABORT_FLAGS.add(session_id)
     del_reports = await get_process_supervisor().contain_by_scope_async(
         session_id=session_id,

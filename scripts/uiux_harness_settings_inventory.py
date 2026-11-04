@@ -203,6 +203,14 @@ def read_frontend(html: str) -> dict:
     hint = element(html, "harnessRunHint")
     patch = function_body(html, "patchActiveHarnessSettings")
     pane = html.split('id="pane-harness"', 1)[-1].split('id="pane-hall"', 1)[0]
+    # UIV2-11: the sessions region of the sidebar - filter, active state, and a delete that
+    # is confirmed, scoped and refused while a session is running.
+    sidebar = function_body(html, "renderHarnessSidebar")
+    matches = function_body(html, "harnessSessionMatches")
+    arm = function_body(html, "armHarnessDelete")
+    scope = function_body(html, "harnessDeleteScopeNote")
+    delete_fn = function_body(html, "deleteHarnessSession")
+    filter_input = element(html, "harnessSessionFilter")
     return {
         "functions": {
             name: bool(function_body(html, name))
@@ -337,6 +345,53 @@ def read_frontend(html: str) -> dict:
                 re.I,
             ),
         },
+        "uiv2_11_sessions": {
+            "filter_input_is_a_named_search_box": 'type="search"' in filter_input
+            and "aria-label=" in filter_input
+            and "Filter harness sessions" in filter_input,
+            "the_filter_re_renders_the_list": 'oninput="renderHarnessSidebar()"' in filter_input,
+            "the_list_is_filtered_by_the_query": "harnessSessions.filter(" in sidebar
+            and "harnessSessionMatches(s, query)" in sidebar,
+            "the_match_reads_title_id_policy_status": all(
+                needle in matches
+                for needle in ("s.title", "s.id", "s.policy", "s.status", "harnessStatusBadge(s).label")
+            ),
+            "every_word_of_the_query_must_match": "query.split(" in matches and ".every(" in matches,
+            "the_count_says_shown_of_total": "`${shown.length}/${harnessSessions.length}`" in sidebar,
+            "an_empty_filter_result_says_so": "No sessions match" in sidebar,
+            "a_live_session_disables_its_delete": 'new Set(["pending", "running", "waiting_approval", "blocked"])' in html
+            and "HARNESS_LIVE_SESSION_STATUSES.has(s.status)" in sidebar
+            and "disabled" in sidebar
+            and 'aria-disabled="true"' in sidebar
+            and "protected" in sidebar,
+            "delete_takes_two_presses": "event.stopPropagation(); armHarnessDelete('${escapeHtml(s.id)}')" in sidebar
+            and "Confirm delete" in sidebar
+            and "harnessDeleteArmedId === s.id" in sidebar,
+            "the_armed_state_expires": "setTimeout(" in arm and "6000" in arm,
+            "the_confirmation_states_the_irreversible_scope": all(
+                needle in scope
+                for needle in (
+                    "Irreversible",
+                    "event log",
+                    "checkpoints",
+                    "worktree branch",
+                    "main workspace are never deleted",
+                    "no archive",
+                    "cannot be undone",
+                )
+            ),
+            "the_scope_note_renders_while_armed": 'id="harnessDeleteScopeNote"' in sidebar
+            and 'role="alert"' in sidebar
+            and "harnessDeleteScopeNote()" in sidebar,
+            "delete_still_goes_through_the_guarded_write": "guardedWrite({" in delete_fn
+            and 'method: "DELETE"' in delete_fn
+            and "retry: () => deleteHarnessSession(id)" in delete_fn,
+            "the_armed_state_is_cleared_on_delete": sidebar.count("disarmHarnessDelete") >= 1
+            and "disarmHarnessDelete();" in delete_fn,
+            "active_row_and_new_session_kept": "s.id === activeHarnessId ? 'active' : ''" in sidebar
+            and "+ New session" in html
+            and "startFreshHarnessDraft()" in html,
+        },
         "preserved": {
             element_id: needle in element(html, element_id)
             for element_id, needle in PRESERVED_CONTROLS.items()
@@ -369,6 +424,24 @@ def build_inventory() -> dict:
     html = FRONTEND.read_text(encoding="utf-8")
     server = APP.read_text(encoding="utf-8")
     frontend = read_frontend(html)
+    # UIV2-11: the server's side of the delete - a running session is refused with a 409
+    # that names its state and the way out, and only a non-running session is removed.
+    route_start = server.find('@app.delete("/api/harness/sessions/{session_id}")')
+    delete_route = server[route_start : route_start + 2600] if route_start >= 0 else ""
+    frontend["uiv2_11_sessions_server"] = {
+        "the_delete_route_still_exists": route_start >= 0,
+        "a_running_session_is_refused_with_409": 'sess.get("status") in {"running", "waiting_approval", "blocked"}' in delete_route
+        and "status_code=409" in delete_route,
+        "the_refusal_says_the_session_is_protected": "a running session is protected" in delete_route,
+        "the_refusal_names_the_way_out": "pause or cancel it before deleting" in delete_route,
+        "the_refusal_precedes_the_abort_and_fence": delete_route.find("status_code=409") < delete_route.find("_HARNESS_ABORT_FLAGS.add"),
+        "the_removal_still_cleans_worktree_log_and_grants": all(
+            needle in delete_route
+            for needle in ("_remove_harness_worktree", "DELETE FROM harness_sessions", ".jsonl", "purge_session")
+        ),
+        "only_the_worktree_is_removed_not_the_workspace": '_remove_harness_worktree(Path(sess["workspace_dir"]), Path(sess["worktree_dir"])' in delete_route
+        and "rmtree" not in delete_route,
+    }
     findings: list[dict[str, str]] = []
 
     def fail(check: str, detail: str) -> None:
@@ -482,6 +555,40 @@ def build_inventory() -> dict:
         if not frontend["uiv2_10_composer"].get(flag):
             fail("uiv2_10_composer", description)
 
+    uiv2_11_rules = (
+        ("filter_input_is_a_named_search_box", "the sessions list lost its named filter input"),
+        ("the_filter_re_renders_the_list", "typing in the filter no longer re-renders the sessions list"),
+        ("the_list_is_filtered_by_the_query", "the sessions list is not filtered by the query"),
+        ("the_match_reads_title_id_policy_status", "the filter match no longer reads title, id, policy and status"),
+        ("every_word_of_the_query_must_match", "the filter no longer requires every word of the query to match"),
+        ("the_count_says_shown_of_total", "the runs count no longer says shown-of-total while filtering"),
+        ("an_empty_filter_result_says_so", "an empty filter result no longer says that nothing matched"),
+        ("a_live_session_disables_its_delete", "a running/queued session's delete button is no longer disabled"),
+        ("delete_takes_two_presses", "deleting a session no longer takes a confirming second press"),
+        ("the_armed_state_expires", "the armed delete no longer expires on its own"),
+        ("the_confirmation_states_the_irreversible_scope", "the delete confirmation no longer states what is irreversibly removed and what is never touched"),
+        ("the_scope_note_renders_while_armed", "the irreversible-scope note is not shown while the delete is armed"),
+        ("delete_still_goes_through_the_guarded_write", "the DELETE no longer goes through the guarded write with its refusal and retry"),
+        ("the_armed_state_is_cleared_on_delete", "a completed delete no longer clears the armed state"),
+        ("active_row_and_new_session_kept", "the active-row highlight or the New session action is gone"),
+    )
+    for flag, description in uiv2_11_rules:
+        if not frontend["uiv2_11_sessions"].get(flag):
+            fail("uiv2_11_sessions", description)
+
+    uiv2_11_server_rules = (
+        ("the_delete_route_still_exists", "the DELETE /api/harness/sessions/{id} route is gone"),
+        ("a_running_session_is_refused_with_409", "the server no longer refuses to delete a running session with a 409"),
+        ("the_refusal_says_the_session_is_protected", "the 409 no longer says the running session is protected"),
+        ("the_refusal_names_the_way_out", "the 409 no longer names pause-or-cancel as the way out"),
+        ("the_refusal_precedes_the_abort_and_fence", "the refusal no longer comes before the abort flag and lease fence"),
+        ("the_removal_still_cleans_worktree_log_and_grants", "the delete no longer cleans the worktree, event log, DB row and grants"),
+        ("only_the_worktree_is_removed_not_the_workspace", "the delete now removes something other than the isolated worktree"),
+    )
+    for flag, description in uiv2_11_server_rules:
+        if not frontend["uiv2_11_sessions_server"].get(flag):
+            fail("uiv2_11_sessions", description)
+
     for flag, description in (
         ("arrives_hidden", "the brief banner is visible before a brief has arrived"),
         ("appears_only_with_a_brief", "the banner renders without a brief"),
@@ -589,6 +696,8 @@ def build_inventory() -> dict:
                     "brief",
                     "composer",
                     "uiv2_10_composer",
+                    "uiv2_11_sessions",
+                    "uiv2_11_sessions_server",
                     "preserved",
                     "labelling",
                     "styles",
