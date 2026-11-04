@@ -94,7 +94,7 @@ CURATED_PRODUCERS = {
 #: `--check` fails when a set on disk has no entry here.
 REVIEWS: dict[str, dict[str, object]] = {
     "screenshots": {
-        "story": "UIUX-P0-01 (published set, re-shot by UIUX-P6-03, re-shot again by UIV2-04)",
+        "story": "UIUX-P0-01 (published set, re-shot by UIUX-P6-03, re-shot again by UIV2-04, re-shot again by UIV2-05)",
         "note": (
             "Re-shot on this tree: the set the README shows was twenty-two stories old and showed a "
             "Compare pane without the P5-03 criteria table or the P5-04 readiness strip, plus a "
@@ -105,7 +105,13 @@ REVIEWS: dict[str, dict[str, object]] = {
             "palette in the m5-redesign-system token block): same six panes, same viewport and OS-default "
             "theme, only the colour tokens changed; opened again and the indigo accent, canvas, surface "
             "and border roles read as the approved north-star values in both themes (the light/dark "
-            "after-sets live under uiv2-v2/after-uiv2-04)."
+            "after-sets live under uiv2-v2/after-uiv2-04). Re-shot once more for UIV2-05 (responsive shared "
+            "shell: header pinned to one <=64px row at every width, tablist moved out of the header to a "
+            "200px rail at >=1280, a 64px icon rail at 800-1279 and a scrollable row under the header at "
+            "<800, inspector a 320px column at >=1440 and a drawer below, skills/MCP strip collapsed to one "
+            "row); same six panes, opened again - all six tabs reachable, no horizontal overflow, and the "
+            "before/after sets plus measured shell metrics live under uiv2-v2/before-uiv2-05 and "
+            "uiv2-v2/after-uiv2-05)."
         ),
         "eye": [
             "start.png",
@@ -354,7 +360,7 @@ REVIEWS: dict[str, dict[str, object]] = {
         "theme": "dark and light",
     },
     "uiv2-v2": {
-        "story": "UIV2-01 (baseline) and UIV2-03 (reference fixtures)",
+        "story": "UIV2-01 (baseline), UIV2-03 (reference fixtures), UIV2-04/UIV2-05 (after-sets)",
         "note": (
             "Two V2-program sets. `baseline/` is the running app at pinned HEAD 9a584a3, captured "
             "from a disposable git-archive copy via demo_tour.py --serve with scripts/capture_screenshots.mjs "
@@ -372,7 +378,12 @@ REVIEWS: dict[str, dict[str, object]] = {
             "the running app re-shot at the UIV2-04 commit after the approved palette landed: six panes "
             "at 1440x900 light, 1440x900 dark and 390x844 light plus the MCP overlay at 1440x900 light, "
             "opened and read against `baseline/` — the indigo accent (#4F5FE8 light / #93A0FF dark), "
-            "canvas, surface and border roles now match the approved tokens while layout is unchanged."
+            "canvas, surface and border roles now match the approved tokens while layout is unchanged. "
+            "`before-uiv2-05/` and `after-uiv2-05/` bracket the UIV2-05 shared-shell change: opened the "
+            "390x844-dark pair (header was 108px with the tabs wrapped inside it, now one 56px row with a "
+            "tab row under it) and the 1280x800-dark pair plus `after-uiv2-05/1280x800-dark/harness-drawer-open.png` "
+            "(inspector was a permanent 320px column, now a 320px drawer over a 1080px central pane); the "
+            "measured numbers are in `uiv2-05-shell-metrics-before.json` / `uiv2-05-shell-metrics-after.json`."
         ),
         "eye": [
             "baseline/1440x900-light/start.png",
@@ -383,6 +394,8 @@ REVIEWS: dict[str, dict[str, object]] = {
             "baseline/overlay/1440x900-light/mcp-hub.png",
             "reference/1440x900-light/harness.png",
             "reference/390x844-light/harness.png",
+            "after-uiv2-05/390x844-dark/harness.png",
+            "after-uiv2-05/1280x800-dark/harness-drawer-open.png",
         ],
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",

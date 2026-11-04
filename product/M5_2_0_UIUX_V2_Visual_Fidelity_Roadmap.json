@@ -617,20 +617,46 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-05: Build responsive shared shell and navigation. Required outcome: Desktop app shell with persistent slim nav, central flexible content, optional contextual inspector; minimize two-row skills/MCP chrome. Specific gate: At >=1440px nav 192-224px, inspector 272-320px when open, central min-width 640px; no horizontal overflow; compact header <=64px; collapses at narrower widths; all 6 tabs accessible. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-04T02:20:00+05:30",
+        "completed_at": "2026-11-04T03:10:00+05:30",
         "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
+        "changed_files": [
+          "static/index.html (tablist moved out of <header> to body level; topbar nowrap single row; breakpoints 1440/1280/800: 200px rail >=1280, 64px icon rail 800-1279, tab row <800; inspector 320px column >=1440, 320px drawer below; skills/MCP strip one nowrap row; JS matchMedia 1439 drawer / 799 orientation)",
+          "studio.py (build_studio.py, byte-synced)",
+          "docs/media/uiv2-v2/before-uiv2-05/ (20 PNGs + index.json per set)",
+          "docs/media/uiv2-v2/after-uiv2-05/ (22 PNGs incl. two drawer-open shots + index.json per set)",
+          "docs/media/uiv2-v2/uiv2-05-shell-metrics-before.json, uiv2-05-shell-metrics-after.json",
+          "docs/media/uiv2-v2/README.md",
+          "docs/media/screenshots/ (canonical 6-pane set recaptured)",
+          "scripts/uiux_screenshot_review.py (review notes for the UIV2-05 sets)",
+          "all regenerated product/M5_2_0_UIUX_*.json + docs/uiux-2-0-*.md artifacts"
+        ],
+        "tests_executed": [
+          "shell metrics measured in a headless browser against a disposable copy of the story commit served by demo_tour.py --serve (4 AC viewports + 1024x768/800x600 x light/dark): see uiv2-05-shell-metrics-after.json - header 56px at every width; nav 200px >=1280, 64px icon rail 800-1279, full-width tab row at 390; inspector 320px column >=1440, 320px drawer below; central 736-1120px (>=640 wherever the gate applies); scrollWidth == clientWidth at every viewport (no horizontal overflow); 6/6 tabs visible at every width",
+          "before/after capture sets: scripts/capture_screenshots.mjs (before at HEAD c56c65a on :8736, after at the story tree on :8737); validate_screenshots.py 6/6 on the recaptured canonical set",
+          "python -m pytest -q in a disposable full clone at the story commit (see commit message / PR)",
+          "browser legs with STUDIO_SCREENSHOT_CHROME/STUDIO_PUPPETEER_CORE set (see PR)"
+        ],
+        "visual_evidence": [
+          "docs/media/uiv2-v2/before-uiv2-05/{1640x900,1440x900,1280x800,390x844}-{light,dark}/ (1440 sets hold all six panes)",
+          "docs/media/uiv2-v2/after-uiv2-05/{1640x900,1440x900,1280x800,390x844}-{light,dark}/ + 1280x800-dark/harness-drawer-open.png + 390x844-light/harness-drawer-open.png",
+          "docs/media/uiv2-v2/uiv2-05-shell-metrics-before.json vs uiv2-05-shell-metrics-after.json",
+          "docs/media/screenshots/ recaptured at the story commit"
+        ],
+        "acceptance_evidence": [
+          ">=1440px: nav 200px (gate 192-224), inspector 320px when open (gate 272-320), central 920px at 1440 / 1120px at 1640 (gate >=640), header 56px (gate <=64), no horizontal overflow - measured",
+          "1280-1439: inspector is a drawer (320px when open), central 1080px at 1280, header 56px, no overflow - measured",
+          "800-1279: nav collapses to a 64px icon rail, central 736-960px, header 56px, no overflow - measured",
+          "<800 (390x844): single column, one scrollable tab row under a 56px header, all 6 tabs visible and clickable, no horizontal overflow - measured; skills/MCP strip one 42px row (was up to 227px)",
+          "all six tabs reachable and switch panes at every tested viewport (capture driver clicked each tab and asserted the active pane)"
+        ],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "Shared shell rebuilt to the approved responsive contract: one <=64px header row at every width with the tablist moved out of it (200px rail >=1280, 64px icon rail 800-1279, scrollable row <800), inspector 320px column >=1440 and 320px drawer below, skills/MCP strip collapsed to a single row, no horizontal overflow anywhere, 194 controls unchanged. Measured evidence in the metrics JSONs and the before/after sets.",
+        "exact_next_action": "UIV2-06: implement the context-aware inspector and telemetry drawer content (the shell drawer now exists at <1440 and toggles correctly)."
       },
       "status": "in_progress"
     },
@@ -2710,11 +2736,11 @@
       "id": "P1",
       "name": "Design system and application shell",
       "total": 4,
-      "done": 1,
-      "in_progress": 1,
+      "done": 2,
+      "in_progress": 0,
       "blocked": 0,
       "not_started": 2,
-      "percent_complete": 38
+      "percent_complete": 50
     },
     {
       "id": "P2",
@@ -2769,11 +2795,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 4,
-    "in_progress": 1,
+    "done": 5,
+    "in_progress": 0,
     "blocked": 0,
     "not_started": 25,
-    "percent_complete": 13
+    "percent_complete": 17
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",

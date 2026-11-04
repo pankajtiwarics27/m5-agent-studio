@@ -443,7 +443,7 @@ async function run(args) {
       railKeys.join(" "),
     );
 
-    // The inspector is a drawer below 1100px: it must take focus and give it back.
+    // The inspector is a drawer below 1440px (UIV2-05): it must take focus and give it back.
     await page.setViewport({ width: 420, height: 880, deviceScaleFactor: 1 });
     await sleep(args.settleMs * 2);
     await page.evaluate(() => {
