@@ -19,7 +19,7 @@ which meant a stacked dialog disappeared without returning focus to the one unde
 | Dialog | Label | Opens from | Controller | Line |
 |---|---|---|---|---|
 | `#cmdPaletteModal` | Command Palette | `, o, p, e, n, C, o, m, m, a, n, d, P, a, l, e, t, t, e, (, ), `,  , f, r, o, m,  , 2,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 1661 |
-| `#hallConclusionModal` | Pinned Council conclusion, expanded | `, o, p, e, n, H, a, l, l, C, o, n, c, l, u, s, i, o, n, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 1,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 1675 |
+| `#hallConclusionModal` | Pinned Council conclusion, expanded | `, o, p, e, n, H, a, l, l, C, o, n, c, l, u, s, i, o, n, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 2,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 1675 |
 | `#contextModal` | Knowledge and code tools | `, o, p, e, n, C, o, n, t, e, x, t, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 6,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 1686 |
 | `#mcpModal` | MCP tools | `, o, p, e, n, M, c, p, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 3,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 1790 |
 | `#externalHarnessModal` | Official DeepSeek Harness & OpenHarness Bridge | `, o, p, e, n, E, x, t, e, r, n, a, l, H, a, r, n, e, s, s, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 2,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 1904 |

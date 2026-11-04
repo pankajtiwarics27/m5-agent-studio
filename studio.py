@@ -6606,6 +6606,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     { label: "Compact active Harness session", hint: "KV Cache", run: () => compactActiveHarness() },
     { label: "Inspect Harness Git Status & Unified Diff", hint: "Worktree", run: () => openHarnessDiffModal() },
     { label: "Show what a completion claim rests on", hint: "Evidence", run: () => openHarnessEvidenceModal() },
+    // UIV2-12: the expanded pinned conclusion also has a palette path, so it opens from the
+    // keyboard with no session conclusion rendered (the Expand button lives in the banner).
+    { label: "Expand pinned Council conclusion", hint: "Council", run: () => openHallConclusionModal() },
     { label: "Unload local models", hint: "RAM", run: () => unloadAllModels() },
     { label: "Toggle telemetry", hint: "Monitor", run: () => toggleMonitorRail() },
     { label: "Toggle appearance", hint: "Theme", run: () => toggleTheme() },
@@ -9062,6 +9065,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       if (head) head.textContent = `Pinned Council Conclusion (${s.conclusion_author || ""})`;
       body.innerHTML = renderMarkdown(String(s.conclusion_text));
       body.scrollTop = 0;
+    } else if (body) {
+      if (head) head.textContent = "Pinned Council Conclusion";
+      body.innerHTML = '<p style="color:var(--text-dim); margin:0;">No conclusion is pinned for the active Council session yet. Close a session with a pinned summary and it appears here.</p>';
     }
     openOverlay("hallConclusionModal");
   }

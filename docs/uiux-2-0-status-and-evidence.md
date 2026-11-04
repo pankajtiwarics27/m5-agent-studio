@@ -55,18 +55,18 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 | `#harnessActiveStatusBadge` | `info` | yes | 2496 |
 | `#hallStatusBadge` | `info` | yes | 2582 |
 | `#councilReadinessCount` | `neutral` | no | 2595 |
-| (unnamed) | `warn` | no | 5288 |
-| (unnamed) | `warn` | no | 5386 |
-| (unnamed) | `neutral` | no | 8663 |
-| (unnamed) | `busy` | no | 8664 |
-| (unnamed) | `ok` | no | 8665 |
-| (unnamed) | `warn` | no | 8666 |
-| (unnamed) | `warn` | no | 8667 |
-| (unnamed) | `warn` | no | 8668 |
-| (unnamed) | `danger` | no | 8669 |
-| (unnamed) | `warn` | no | 8670 |
-| (unnamed) | `warn` | no | 8671 |
-| (unnamed) | `neutral` | no | 8672 |
+| (unnamed) | `warn` | no | 5291 |
+| (unnamed) | `warn` | no | 5389 |
+| (unnamed) | `neutral` | no | 8669 |
+| (unnamed) | `busy` | no | 8670 |
+| (unnamed) | `ok` | no | 8671 |
+| (unnamed) | `warn` | no | 8672 |
+| (unnamed) | `warn` | no | 8673 |
+| (unnamed) | `warn` | no | 8674 |
+| (unnamed) | `danger` | no | 8675 |
+| (unnamed) | `warn` | no | 8676 |
+| (unnamed) | `warn` | no | 8677 |
+| (unnamed) | `neutral` | no | 8678 |
 
 ## Writers
 
