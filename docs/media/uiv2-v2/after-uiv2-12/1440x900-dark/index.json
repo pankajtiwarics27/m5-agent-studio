@@ -1,0 +1,22 @@
+{
+ "schema": 1,
+ "captured_at": "2026-11-04T17:34:46.804Z",
+ "viewport": {
+  "width": 1440,
+  "height": 900,
+  "device_scale_factor": 2
+ },
+ "variant": {
+  "theme": "dark",
+  "density": null
+ },
+ "shots": [
+  {
+   "id": "hall",
+   "tab": "hall",
+   "file": "hall.png",
+   "bytes": 379212,
+   "sha256": "dac72e58596073345c517df5c99c7444b729c67bd204d158bd32d366f7f9523c"
+  }
+ ]
+}

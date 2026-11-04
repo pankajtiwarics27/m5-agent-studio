@@ -154,6 +154,46 @@
       "detail": ""
     },
     {
+      "check": "the conclusion renders as the first card of the transcript stream",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the banner sticks to the top of the stream while the transcript scrolls under it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the conclusion body scrolls independently of the transcript",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the panel is resizable by drag and by keyboard, clamped so the transcript keeps room",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the panel expands into a true modal through the shared overlay controller",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "pin/unpin only flips the sticky position and says so",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "no code locks the page scroll outside a true modal",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the transcript stream still scrolls on its own",
+      "ok": true,
+      "detail": ""
+    },
+    {
       "check": "every value the verdict draws is escaped",
       "ok": true,
       "detail": ""
@@ -184,7 +224,7 @@
       "detail": ""
     }
   ],
-  "check_count": 24,
+  "check_count": 32,
   "findings": [],
   "status": "clean"
 }

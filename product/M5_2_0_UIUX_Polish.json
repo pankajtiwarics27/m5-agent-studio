@@ -5,7 +5,7 @@
     "frontend": "static/index.html",
     "walk": "scripts/polish_walk.mjs",
     "style_blocks": 2,
-    "rules": 851
+    "rules": 859
   },
   "tokens": {
     "radius": [
@@ -68,6 +68,7 @@
       ".toast-dismiss:hover",
       ".cmd-item:hover, .cmd-item.selected",
       ".chronicle-item:hover",
+      ".conclusion-resize:hover",
       ".start-recent-row:hover",
       ".chip:hover, .chip.active",
       ".debate-tag button:hover",
@@ -91,6 +92,8 @@
     ],
     "ring_rules": [
       "button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible,\n  summary:focus-visible, [tabindex]:focus-visible",
+      ".conclusion-body:focus-visible",
+      ".conclusion-resize:focus-visible",
       ".start-recent-row:focus-visible",
       ".prompt-box:focus-within",
       ".harness-stream:focus-visible, .hall-stream:focus-visible",
@@ -125,10 +128,10 @@
     ]
   },
   "totals": {
-    "radius_rules": 99,
+    "radius_rules": 101,
     "motion_rules": 17,
     "press_rules": 2,
-    "hover_rules": 32,
+    "hover_rules": 33,
     "captures": 8,
     "findings": 0
   },
