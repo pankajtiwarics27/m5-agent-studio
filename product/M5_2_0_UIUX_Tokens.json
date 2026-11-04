@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "9fb6f11bdf0cbddbc258192936c12469cf59f860e86047b536c8b3fe87cd6990",
+    "style_block_sha256": "9b858c5f76f2c3bf737ec48332d653cd260fb5ce73d1c264775d562ed386160c",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -42,7 +42,7 @@
   "totals": {
     "tokens": 54,
     "groups": 8,
-    "references": 1228,
+    "references": 1242,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 28,
@@ -139,7 +139,7 @@
         "light": "#FFFFFF"
       },
       "density_override": null,
-      "references": 35
+      "references": 36
     },
     {
       "name": "--bg-card",
@@ -189,7 +189,7 @@
         "light": "#DDE2E8"
       },
       "density_override": null,
-      "references": 153
+      "references": 155
     },
     {
       "name": "--border-hi",
@@ -209,7 +209,7 @@
         "light": "#1B2430"
       },
       "density_override": null,
-      "references": 77
+      "references": 78
     },
     {
       "name": "--text-dim",
@@ -219,7 +219,7 @@
         "light": "#596579"
       },
       "density_override": null,
-      "references": 139
+      "references": 140
     },
     {
       "name": "--text-faint",
@@ -239,7 +239,7 @@
         "light": "#4F5FE8"
       },
       "density_override": null,
-      "references": 29
+      "references": 31
     },
     {
       "name": "--accent-hi",
@@ -279,7 +279,7 @@
         "light": "#286e50"
       },
       "density_override": null,
-      "references": 29
+      "references": 30
     },
     {
       "name": "--amber",
@@ -343,7 +343,7 @@
       "value": "13px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 5
+      "references": 6
     },
     {
       "name": "--text-base",
@@ -367,7 +367,7 @@
       "value": "500",
       "theme_overrides": {},
       "density_override": null,
-      "references": 7
+      "references": 8
     },
     {
       "name": "--weight-semibold",
@@ -415,7 +415,7 @@
       "value": "16px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 26
+      "references": 28
     },
     {
       "name": "--space-3",
@@ -423,7 +423,7 @@
       "value": "24px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 20
+      "references": 21
     },
     {
       "name": "--space-4",
@@ -463,7 +463,7 @@
       "value": "8px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 34
+      "references": 35
     },
     {
       "name": "--radius-lg",

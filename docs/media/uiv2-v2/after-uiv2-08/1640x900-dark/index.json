@@ -1,0 +1,22 @@
+{
+ "schema": 1,
+ "captured_at": "2026-11-04T09:27:41.027Z",
+ "viewport": {
+  "width": 1640,
+  "height": 900,
+  "device_scale_factor": 1
+ },
+ "variant": {
+  "theme": "dark",
+  "density": null
+ },
+ "shots": [
+  {
+   "id": "harness",
+   "tab": "harness",
+   "file": "harness.png",
+   "bytes": 171916,
+   "sha256": "5ba0faf046aafaaf9e10b11cfe2b2c846496a1a36e1f14c482d7bd95807250f1"
+  }
+ ]
+}

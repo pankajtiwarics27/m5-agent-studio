@@ -40,8 +40,8 @@ no scrollbar to reach it, and a row of controls sat under the floor a finger nee
 | Width | What changes |
 | :--- | :--- |
 | ≤ 1439px | UIV2-05: the contextual inspector becomes a 320px drawer; the central pane keeps its width |
-| ≤ 1279px | UIV2-05: the nav collapses to a 64px icon rail; labels hide, button titles keep the names |
-| ≤ 880px | the harness and hall sidebars fold away; the council seat grid goes to two columns |
+| ≤ 1279px | UIV2-05: the nav collapses to a 64px icon rail; labels hide, button titles keep the names. UIV2-08: the harness session/workspace list folds away here too, per the approved reference |
+| ≤ 880px | the hall sidebar folds to a horizontal strip and the council seat grid goes to two columns (the harness sidebar already folded at 1279) |
 | ≤ 860px | the hall shell goes to one column |
 | ≤ 820px | the role grid goes to two columns |
 | ≤ 799px | UIV2-05: single column with one scrollable tab row under the header; the header never wraps past 64px |
