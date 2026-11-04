@@ -1361,7 +1361,7 @@
         "attempt_count": 1,
         "started_at": "2026-11-04T23:05:00+05:30",
         "completed_at": "2026-11-05T01:15:00+05:30",
-        "commit_sha": "b68b4096 (PR #200 merge commit b68b4096ea82bad378c201b25e5e34660a8b9790)",
+        "commit_sha": "b68b4096ea82bad378c201b25e5e34660a8b9790",
         "changed_files": [
           "static/index.html (pinned conclusion banner now renders as the FIRST card inside #hallStream with position:sticky top:0 [data-pinned=false -> static], an independently scrollable .conclusion-body (max-height:24vh, overflow-y:auto, overscroll-behavior:contain, tabindex=0 role=region), a drag+delegated-keyboard resize separator (role=separator, clamped 120px..70vh), Pin/Unpin (aria-pressed), hide, and Expand opening the true modal #hallConclusionModal through the shared openOverlay/closeOverlay controller; no document.body/documentElement overflow lock anywhere - background inert only while the modal is open and always restored)",
           "studio.py (build_studio.py, byte-synced in the same commit)",
