@@ -1360,8 +1360,8 @@
         "progress_percent": 100,
         "attempt_count": 1,
         "started_at": "2026-11-04T23:05:00+05:30",
-        "completed_at": "2026-11-05T00:40:00+05:30",
-        "commit_sha": "PENDING-UIV2-12",
+        "completed_at": "2026-11-05T01:15:00+05:30",
+        "commit_sha": "b68b4096ea82bad378c201b25e5e34660a8b9790",
         "changed_files": [
           "static/index.html (pinned conclusion banner now renders as the FIRST card inside #hallStream with position:sticky top:0 [data-pinned=false -> static], an independently scrollable .conclusion-body (max-height:24vh, overflow-y:auto, overscroll-behavior:contain, tabindex=0 role=region), a drag+delegated-keyboard resize separator (role=separator, clamped 120px..70vh), Pin/Unpin (aria-pressed), hide, and Expand opening the true modal #hallConclusionModal through the shared openOverlay/closeOverlay controller; no document.body/documentElement overflow lock anywhere - background inert only while the modal is open and always restored)",
           "studio.py (build_studio.py, byte-synced in the same commit)",
@@ -1396,8 +1396,8 @@
         ],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "UIV2-12 done: the Council pinned conclusion is now the first card of the transcript stream, sticky at its top, with its own scrollable (24vh default, drag/keyboard resizable 120px..70vh, expandable into a true modal) body. A 17k-char conclusion no longer freezes the pane: before 3/17 walk checks, after 17/17; release gate 37/37 with 0 findings.",
-        "exact_next_action": "Merge the UIV2-12 PR when CI is green and the user says to merge; then start UIV2-13 per the ledger."
+        "handoff_summary": "UIV2-12 done: the Council pinned conclusion is now the first card of the transcript stream, sticky at its top, with its own scrollable (24vh default, drag/keyboard resizable 120px..70vh, expandable into a true modal) body. A 17k-char conclusion no longer freezes the pane: before 3/17 walk checks, after 17/17; release gate 37/37 with 0 findings. Merged via PR #200 (merge commit b68b4096) with green CI: test 3.11/3.12/3.13 + browser safety all success.",
+        "exact_next_action": "UIV2-12 closed. Start UIV2-13 per the ledger (next not_started story in phase order)."
       }
     },
     {
