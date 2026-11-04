@@ -5067,7 +5067,43 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   .hall-shell { grid-template-rows: minmax(118px, 20vh) minmax(0, 1fr); }
   .stepper { grid-template-columns: repeat(5, minmax(104px, 1fr)); }
 }
-@media (prefers-reduced-motion: reduce) {
+
+  /* UIV2-06: global telemetry lives in a header popover; the rail is a contextual
+     inspector whose views follow the active pane. */
+  .telemetry-popover {
+    position: fixed; top: calc(var(--header-height) + 6px); right: 12px; z-index: 40;
+    width: 340px; max-width: 94vw; max-height: calc(100dvh - var(--header-height) - 20px);
+    overflow-y: auto; padding: 10px; display: none;
+    background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    box-shadow: 0 14px 40px rgba(0,0,0,.28);
+  }
+  .telemetry-popover.open { display: block; }
+  .telemetry-popover-head {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim);
+  }
+  .inspector-head { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+  .inspector-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+  .inspector-tab {
+    border: 1px solid var(--border); background: var(--bg); color: var(--text-dim);
+    border-radius: var(--radius-pill); padding: 3px 9px; font-size: 11px; font-weight: 600;
+    cursor: pointer; min-height: 24px;
+  }
+  .inspector-tab:hover { color: var(--text); background: var(--bg-hover); }
+  .inspector-tab.active { background: var(--bg-hover); color: var(--text); border-color: var(--accent); }
+  .inspector-tab:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+  .inspector-panels { display: flex; flex-direction: column; gap: 10px; }
+  .inspector-panel { display: none; }
+  .inspector-panel.active { display: block; }
+  .insp-empty { color: var(--text-faint); font-size: 12px; padding: 6px 2px; line-height: 1.5; }
+  .insp-kv { display: flex; justify-content: space-between; gap: 8px; padding: 4px 2px; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .insp-kv .k { color: var(--text-dim); }
+  .insp-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .insp-item { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 7px 9px; margin-bottom: 7px; font-size: 12px; background: var(--bg-card); }
+  .insp-item .t { font-weight: 600; }
+  .insp-item .d { color: var(--text-dim); font-size: 11px; margin-top: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
 
@@ -5084,6 +5120,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   </div>
 
   <div class="top-actions">
+    <button class="btn" id="telemetryPopoverBtn" type="button" onclick="toggleTelemetryPopover()" aria-expanded="false" aria-controls="telemetryPopover" title="Global telemetry, memory and model residency (header popover)">
+      <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Telemetry</span>
+    </button>
     <button class="btn" data-shortcut-action="command-palette" onclick="openCommandPalette()" aria-label="Open Command Palette (Cmd+K)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <span>Search</span>
@@ -5096,6 +5136,70 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </button>
   </div>
 </header>
+
+<!-- UIV2-06: global telemetry is a header popover, not a permanent rail. The cards below
+     are the same nodes the rail used to hold (ids unchanged), so every telemetry reader,
+     the model load/unload actions and the 2s refresh keep working from here. -->
+<div id="telemetryPopover" class="telemetry-popover" role="dialog" aria-label="Global telemetry and model residency">
+  <div class="telemetry-popover-head"><span>Global telemetry</span><button class="btn btn-xs" type="button" onclick="toggleTelemetryPopover(false)">Close</button></div>
+  <div id="telemetryCards" style="display:flex; flex-direction:column; gap:10px;">
+    <div class="m-card">
+      <div class="m-head"><span>M5 Unified Memory (24 GB)</span><span class="status" data-tone="ok">ok</span></div>
+      <div style="display:flex; justify-content:space-between; font-size:11.6px; margin-bottom:2px;">
+        <span id="ramUsedSummary" class="mono">-- / 24.0 GB</span>
+        <span id="ramCeilingSummary" class="mono" style="color:var(--rose);">Cap: 20.8 GB</span>
+      </div>
+      <div class="ram-bar-wrap">
+        <div class="ram-bar">
+          <div id="segOmlx" class="seg-omlx" style="width:0%"></div>
+          <div id="segOrb" class="seg-orb" style="width:0%"></div>
+          <div id="segApps" class="seg-apps" style="width:0%"></div>
+          <div id="segFree" class="seg-free" style="width:100%"></div>
+        </div>
+        <div id="ceilingMarker" class="ceiling-marker" style="left:86.6%"></div>
+      </div>
+      <div class="ram-legend">
+        <div class="leg-item"><span class="leg-left"><span class="swatch" style="background:var(--accent)"></span>oMLX LLM</span><span id="legOmlx" class="mono">0.00 GB</span></div>
+        <div class="leg-item"><span class="leg-left"><span class="swatch" style="background:var(--cyan)"></span>OrbStack</span><span id="legOrb" class="mono">0.00 GB</span></div>
+        <div class="leg-item"><span class="leg-left"><span class="swatch" style="background:var(--amber)"></span>macOS/Apps</span><span id="legApps" class="mono">0.00 GB</span></div>
+        <div class="leg-item"><span class="leg-left"><span class="swatch" style="background:var(--emerald)"></span>Free/Reclaim</span><span id="legFree" class="mono">0.00 GB</span></div>
+      </div>
+    </div>
+
+    <div class="m-card">
+      <div class="m-head"><span>Local oMLX Residency</span><span id="omlxActiveReq" class="mono" style="font-size:11px;">0 active</span></div>
+      <div id="modelsMonitorList"></div>
+      <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:6px;">
+        <div style="display:flex; gap:5px; align-items:center;">
+          <select id="omlxLoadModelPicker" aria-label="Select local model to load" style="flex:1; font-size:11.2px; padding:4px 7px;" onchange="toggleCustomLoadInput(this.value)">
+            <option value="">+ Load model on demand…</option>
+          </select>
+          <button type="button" class="btn btn-xs btn-cyan" onclick="loadSelectedOmlxModel()">Load</button>
+        </div>
+        <input type="text" id="omlxCustomModelInput" placeholder="Enter local oMLX or HF model ID…" style="display:none; width:100%; font-family:var(--mono); font-size:11.2px; padding:4px 7px;" />
+      </div>
+    </div>
+
+    <div class="m-card">
+      <div class="m-head"><span>Throughput (tok/s)</span><span id="sessionTokCount" class="mono" style="font-size:11px;">0 tok</span></div>
+      <svg id="tpsChart" width="100%" height="58" viewBox="0 0 320 58" preserveAspectRatio="none" style="display:block; margin-bottom:7px;"></svg>
+      <div id="perfLeaderboard" style="font-size:11.2px; display:flex; flex-direction:column; gap:3px; margin-bottom:8px;"></div>
+      <div style="border-top:1px solid var(--border); padding-top:7px; display:flex; align-items:center; justify-content:space-between; font-size:11.4px;">
+        <div><span style="color:var(--text-dim);">Paged SSD KV:</span> <strong id="ssdCacheText" class="mono">0.0 / 30 GB</strong></div>
+        <button class="btn btn-xs" onclick="clearSsdCache()">Clear SSD</button>
+      </div>
+    </div>
+
+    <div class="m-card">
+      <div class="m-head"><span>OrbStack &amp; Containers</span><span id="dockerStateBadge" class="status" data-tone="neutral">checking</span></div>
+      <div style="display:flex; justify-content:space-between; font-size:11.4px; color:var(--text-dim); margin-bottom:4px;">
+        <span>RAM: <strong id="dockerRam" class="mono" style="color:var(--text)">0.00 GB</strong></span>
+        <span>CPU: <strong id="dockerCpu" class="mono" style="color:var(--text)">0.0%</strong></span>
+      </div>
+      <div id="dockerContainersBox"></div>
+    </div>
+  </div>
+</div>
 
   <!-- Six panes of one application: a tablist, not six pages. The tab ids and the
        data-tab values are the contract every handler and every screenshot uses, so
@@ -5722,8 +5826,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <option value="context">Knowledge &amp; CodeGraph</option>
           <option value="external">External Harness CLI Bridge</option>
         </select>
-        <button id="monitorToggleBtn" class="btn btn-xs" onclick="toggleMonitorRail()" aria-controls="monitorRail" aria-expanded="true" title="Hide telemetry and model monitor">
-          <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Telemetry</span>
+        <button id="monitorToggleBtn" class="btn btn-xs" onclick="toggleMonitorRail()" aria-controls="monitorRail" aria-expanded="true" title="Hide the contextual inspector">
+          <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Inspector</span>
         </button>
         <button class="btn btn-xs btn-danger" onclick="unloadAllModels()" title="Unload local models to free memory">
           <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg><span>Unload models</span>
@@ -5815,7 +5919,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div id="startHealthState"></div>
           <div id="startHealthActions" class="onboarding-actions">
             <button class="btn" type="button" onclick="refreshTelemetry()">Re-check health</button>
-            <button class="btn" type="button" onclick="toggleMonitorRail()" title="Open the monitor rail with the full telemetry">Monitor rail</button>
+            <button class="btn" type="button" onclick="toggleMonitorRail()" title="Open the contextual inspector">Inspector</button>
           </div>
         </div>
 
@@ -6302,63 +6406,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </section>
   </main>
 
-  <!-- ================= RIGHT MONITORING RAIL ================= -->
-  <aside id="monitorRail" class="monitor-rail" role="complementary" aria-label="Telemetry and model monitor">
-    <div class="m-card">
-      <div class="m-head"><span>M5 Unified Memory (24 GB)</span><span class="status" data-tone="ok">ok</span></div>
-      <div style="display:flex; justify-content:space-between; font-size:11.6px; margin-bottom:2px;">
-        <span id="ramUsedSummary" class="mono">-- / 24.0 GB</span>
-        <span id="ramCeilingSummary" class="mono" style="color:var(--rose);">Cap: 20.8 GB</span>
-      </div>
-      <div class="ram-bar-wrap">
-        <div class="ram-bar">
-          <div id="segOmlx" class="seg-omlx" style="width:0%"></div>
-          <div id="segOrb" class="seg-orb" style="width:0%"></div>
-          <div id="segApps" class="seg-apps" style="width:0%"></div>
-          <div id="segFree" class="seg-free" style="width:100%"></div>
-        </div>
-        <div id="ceilingMarker" class="ceiling-marker" style="left:86.6%"></div>
-      </div>
-      <div class="ram-legend">
-        <div class="leg-item"><span class="leg-left"><span class="swatch" style="background:var(--accent)"></span>oMLX LLM</span><span id="legOmlx" class="mono">0.00 GB</span></div>
-        <div class="leg-item"><span class="leg-left"><span class="swatch" style="background:var(--cyan)"></span>OrbStack</span><span id="legOrb" class="mono">0.00 GB</span></div>
-        <div class="leg-item"><span class="leg-left"><span class="swatch" style="background:var(--amber)"></span>macOS/Apps</span><span id="legApps" class="mono">0.00 GB</span></div>
-        <div class="leg-item"><span class="leg-left"><span class="swatch" style="background:var(--emerald)"></span>Free/Reclaim</span><span id="legFree" class="mono">0.00 GB</span></div>
-      </div>
+  <!-- ================= CONTEXTUAL INSPECTOR RAIL ================= -->
+  <aside id="monitorRail" class="monitor-rail" role="complementary" aria-label="Contextual inspector">
+    <div class="inspector-head">
+      <span class="field-lbl" style="margin:0;">Inspector</span>
+      <div id="inspectorTabs" class="inspector-tabs" role="tablist" aria-label="Inspector views"></div>
     </div>
-
-    <div class="m-card">
-      <div class="m-head"><span>Local oMLX Residency</span><span id="omlxActiveReq" class="mono" style="font-size:11px;">0 active</span></div>
-      <div id="modelsMonitorList"></div>
-      <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:6px;">
-        <div style="display:flex; gap:5px; align-items:center;">
-          <select id="omlxLoadModelPicker" aria-label="Select local model to load" style="flex:1; font-size:11.2px; padding:4px 7px;" onchange="toggleCustomLoadInput(this.value)">
-            <option value="">+ Load model on demand…</option>
-          </select>
-          <button type="button" class="btn btn-xs btn-cyan" onclick="loadSelectedOmlxModel()">Load</button>
-        </div>
-        <input type="text" id="omlxCustomModelInput" placeholder="Enter local oMLX or HF model ID…" style="display:none; width:100%; font-family:var(--mono); font-size:11.2px; padding:4px 7px;" />
-      </div>
-    </div>
-
-    <div class="m-card">
-      <div class="m-head"><span>Throughput (tok/s)</span><span id="sessionTokCount" class="mono" style="font-size:11px;">0 tok</span></div>
-      <svg id="tpsChart" width="100%" height="58" viewBox="0 0 320 58" preserveAspectRatio="none" style="display:block; margin-bottom:7px;"></svg>
-      <div id="perfLeaderboard" style="font-size:11.2px; display:flex; flex-direction:column; gap:3px; margin-bottom:8px;"></div>
-      <div style="border-top:1px solid var(--border); padding-top:7px; display:flex; align-items:center; justify-content:space-between; font-size:11.4px;">
-        <div><span style="color:var(--text-dim);">Paged SSD KV:</span> <strong id="ssdCacheText" class="mono">0.0 / 30 GB</strong></div>
-        <button class="btn btn-xs" onclick="clearSsdCache()">Clear SSD</button>
-      </div>
-    </div>
-
-    <div class="m-card">
-      <div class="m-head"><span>OrbStack &amp; Containers</span><span id="dockerStateBadge" class="status" data-tone="neutral">checking</span></div>
-      <div style="display:flex; justify-content:space-between; font-size:11.4px; color:var(--text-dim); margin-bottom:4px;">
-        <span>RAM: <strong id="dockerRam" class="mono" style="color:var(--text)">0.00 GB</strong></span>
-        <span>CPU: <strong id="dockerCpu" class="mono" style="color:var(--text)">0.0%</strong></span>
-      </div>
-      <div id="dockerContainersBox"></div>
-    </div>
+    <div id="inspectorPanels" class="inspector-panels"></div>
   </aside>
 </div>
 
@@ -6720,6 +6774,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     // the old handler stripped .open from all nine at once, which meant a stacked
     // dialog vanished without returning focus to the one underneath it.
     if (shortcutMatches(e, "dismiss-overlay")) {
+      const pop = document.getElementById("telemetryPopover");
+      if (pop && pop.classList.contains("open")) {
+        e.preventDefault();
+        toggleTelemetryPopover(false);
+        return;
+      }
       if (overlayStack.length) {
         e.preventDefault();
         closeTopOverlay();
@@ -7499,12 +7559,27 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       if (Date.now() - startRecentReadAt > 15000) loadStartRecent({ silent: true });
       updateStartTaskHint();
     }
+    // UIV2-06: the inspector follows the pane; Chat has no inspector, so it is
+    // hidden by default there (the user can still open it manually).
+    renderInspectorFor(tab);
+    if (tab === "chat") {
+      const layout = document.getElementById("mainLayout");
+      const btn = document.getElementById("monitorToggleBtn");
+      const rail = document.getElementById("monitorRail");
+      const narrow = window.matchMedia("(max-width: 1439px)").matches;
+      if (layout) {
+        if (narrow) layout.classList.remove("rail-mobile-open");
+        else layout.classList.add("rail-collapsed");
+      }
+      if (rail) rail.removeAttribute("aria-modal");
+      if (btn) { btn.setAttribute("aria-expanded", "false"); btn.title = "Show the contextual inspector"; }
+    }
   }
 
   // Arrow keys move between tabs, Home/End jump to the ends, and activation follows
   // focus (automatic activation): in a six-item rail, requiring Enter as well as an
   // arrow is a second keystroke for nothing. The axis follows the layout - the rail is
-  // vertical above 1100px and a horizontal strip below it - so both arrow pairs work
+  // vertical above 800px and a horizontal strip below it - so both arrow pairs work
   // and the reported orientation matches what the user sees.
   function currentTabIndex(tabs) {
     const index = tabs.findIndex(b => b.getAttribute("aria-selected") === "true");
@@ -7951,6 +8026,195 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     });
   }
 
+
+  /* ── UIV2-06: contextual inspector ───────────────────────────────────────────
+     The rail's views follow the active pane (Harness: Approvals/Changes/Verification/
+     Resources; Council: People/Evidence; Pipeline: Stage/Artifacts; Compare: Evaluation;
+     Chat: hidden by default). Global telemetry moved to the header popover. Every panel
+     is a read-only mirror of pane state plus buttons that call the existing handlers -
+     no new backend, no changed authorization. */
+  const INSPECTOR_VIEWS = {
+    start:   [["resources", "Resources"]],
+    harness: [["approvals", "Approvals"], ["changes", "Changes"], ["verification", "Verification"], ["resources", "Resources"]],
+    hall:    [["people", "People"], ["evidence", "Evidence"]],
+    council: [["stage", "Stage"], ["artifacts", "Artifacts"]],
+    debate:  [["evaluation", "Evaluation"]],
+    chat:    [],
+  };
+  let inspectorPane = "harness";
+  let inspectorView = "approvals";
+
+  function toggleTelemetryPopover(force) {
+    const pop = document.getElementById("telemetryPopover");
+    const btn = document.getElementById("telemetryPopoverBtn");
+    if (!pop || !btn) return;
+    const open = typeof force === "boolean" ? force : !pop.classList.contains("open");
+    pop.classList.toggle("open", open);
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  document.addEventListener("click", (event) => {
+    const pop = document.getElementById("telemetryPopover");
+    const btn = document.getElementById("telemetryPopoverBtn");
+    if (pop && pop.classList.contains("open") && !pop.contains(event.target) && !(btn && btn.contains(event.target))) {
+      toggleTelemetryPopover(false);
+    }
+  });
+
+  function inspKV(k, v) {
+    return `<div class="insp-kv"><span class="k">${escapeHtml(k)}</span><span>${escapeHtml(String(v))}</span></div>`;
+  }
+
+  function renderInspectorFor(tab) {
+    inspectorPane = tab;
+    const tabsEl = document.getElementById("inspectorTabs");
+    const panelsEl = document.getElementById("inspectorPanels");
+    if (!tabsEl || !panelsEl) return;
+    const views = INSPECTOR_VIEWS[tab] || [];
+    tabsEl.innerHTML = "";
+    panelsEl.innerHTML = "";
+    if (!views.length) {
+      panelsEl.innerHTML = `<div class="insp-empty">Chat has no inspector context, so the inspector is hidden by default here. Global telemetry lives in the header popover (Telemetry).</div>`;
+      return;
+    }
+    if (!views.some(([id]) => id === inspectorView)) inspectorView = views[0][0];
+    for (const [id, label] of views) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "inspector-tab" + (id === inspectorView ? " active" : "");
+      b.id = `insp-tab-${id}`;
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", id === inspectorView ? "true" : "false");
+      b.dataset.view = id;
+      b.textContent = label;
+      b.onclick = () => {
+        inspectorView = id;
+        tabsEl.querySelectorAll(".inspector-tab").forEach((t) => {
+          const on = t.dataset.view === id;
+          t.classList.toggle("active", on);
+          t.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        panelsEl.querySelectorAll(".inspector-panel").forEach((pn) => pn.classList.toggle("active", pn.id === `insp-panel-${id}`));
+        refreshInspectorPanel();
+      };
+      tabsEl.appendChild(b);
+      const pn = document.createElement("div");
+      pn.className = "inspector-panel" + (id === inspectorView ? " active" : "");
+      pn.id = `insp-panel-${id}`;
+      pn.setAttribute("role", "tabpanel");
+      pn.setAttribute("aria-labelledby", `insp-tab-${id}`);
+      panelsEl.appendChild(pn);
+    }
+    refreshInspectorPanel();
+  }
+
+  function refreshInspectorPanel() {
+    const panel = document.getElementById(`insp-panel-${inspectorView}`);
+    if (!panel) return;
+    const v = inspectorView;
+    const txt = (id, max = 140) => {
+      const el = document.getElementById(id);
+      return el ? String(el.textContent || "").replace(/\s+/g, " ").trim().slice(0, max) : "";
+    };
+    if (v === "approvals") {
+      const pending = [...harnessApprovalRequests.entries()].map(([id, a]) => ({ id, tool: a.tool || "tool", step: a.step || "" }));
+      if (!pending.length) {
+        panel.innerHTML = `<div class="insp-empty">No approval is pending right now. When a tool needs a decision, it appears here and in the Harness pane.</div>`;
+        return;
+      }
+      // Read-only mirror: the Harness pane keeps the single approval card and the only
+      // decision controls (uiux_harness_permissions_inventory enforces one of each).
+      panel.innerHTML = pending.map(({ id, tool, step }) => `
+        <div class="insp-item"><div class="t">Pending decision: <code>${escapeHtml(tool)}</code></div>
+        <div class="d">${escapeHtml(step || "waiting for a decision")}</div>
+        <div class="insp-actions">
+          <button class="btn btn-xs" onclick="document.getElementById('apr-card-${escapeHtml(id)}')?.scrollIntoView({block:'center'})">Review in Harness pane</button>
+        </div></div>`).join("") +
+        `<div class="insp-empty">The full card with arguments and the approve/reject controls stays in the Harness pane, which remains the only place a decision is made.</div>`;
+      return;
+    }
+    if (v === "changes") {
+      const dir = (document.getElementById("harnessWorkspaceInput")?.value || "").trim() || "not set";
+      const wtBtn = document.getElementById("applyWorktreeBtn");
+      const worktree = !!(wtBtn && wtBtn.style.display !== "none");
+      panel.innerHTML = inspKV("Workspace", dir) + inspKV("Worktree", worktree ? "active — isolated copy" : "off") +
+        `<div class="insp-actions">
+          <button class="btn btn-xs" onclick="openHarnessDiffModal()">Git status &amp; diff</button>
+          ${worktree ? `<button class="btn btn-emerald btn-xs" onclick="applyHarnessWorktree()">Apply worktree</button>` : ""}
+        </div>`;
+      return;
+    }
+    if (v === "verification") {
+      const stream = txt("harnessStreamState", 160) || "idle";
+      panel.innerHTML = inspKV("Stream", stream) +
+        `<div class="insp-actions"><button class="btn btn-xs" onclick="openHarnessEvidenceModal()">Show evidence</button></div>`;
+      return;
+    }
+    if (v === "resources") {
+      panel.innerHTML = inspKV("MCP tools", txt("mcpToolsCountBadge", 12) || "0") +
+        inspKV("Providers", txt("providersCountBadge", 12) || "0") +
+        inspKV("Skills", txt("skillsCountBadge", 12) || "0") +
+        inspKV("Docs", txt("ocDocsCountBadge", 12) || "0") +
+        `<div class="insp-actions">
+          <button class="btn btn-xs" onclick="openContextModal()">Knowledge &amp; CodeGraph</button>
+          <button class="btn btn-xs" onclick="openMcpModal()">MCP hub</button>
+          <button class="btn btn-xs" onclick="openSkillsModal()">Skills</button>
+          <button class="btn btn-xs" onclick="openProvidersModal()">Providers</button>
+        </div>`;
+      return;
+    }
+    if (v === "people") {
+      const seats = [["hallSeatArch", "1. Architect / Thesis"], ["hallSeatCoder", "2. Builder / Analyst"], ["hallSeatCritic", "3. Critic"], ["hallSeatJudge", "4. Judge"]];
+      const rows = seats.map(([id, label]) => {
+        const sel = document.getElementById(id);
+        const st = document.getElementById(id + "State");
+        const model = sel && sel.value ? sel.value : "no model selected";
+        const state = st ? (st.dataset.state || "unknown") : "unknown";
+        return `<div class="insp-item"><div class="t">${escapeHtml(label)}</div><div class="d">${escapeHtml(model)} — ${escapeHtml(state)}</div></div>`;
+      }).join("");
+      panel.innerHTML = rows || `<div class="insp-empty">No council seats configured yet.</div>`;
+      return;
+    }
+    if (v === "evidence") {
+      const ev = document.getElementById("deliberationEvidence");
+      const n = ev ? ev.querySelectorAll(":scope > *").length : 0;
+      const first = ev && ev.firstElementChild ? String(ev.firstElementChild.textContent || "").replace(/\s+/g, " ").trim().slice(0, 120) : "";
+      const verdict = document.getElementById("hallVerdict");
+      const vtxt = verdict && !verdict.hidden ? String(verdict.textContent || "").replace(/\s+/g, " ").trim().slice(0, 120) : "";
+      panel.innerHTML = inspKV("Evidence entries", n) + inspKV("Verdict", vtxt || "none yet") +
+        (first ? `<div class="insp-item"><div class="t">Latest evidence</div><div class="d">${escapeHtml(first)}</div></div>` : "") +
+        `<div class="insp-empty">The full evidence list scrolls with the Council transcript.</div>`;
+      return;
+    }
+    if (v === "stage") {
+      const stepper = document.querySelector("#pane-council .stepper");
+      const steps = stepper ? [...stepper.children] : [];
+      if (!steps.length) { panel.innerHTML = `<div class="insp-empty">No pipeline run yet.</div>`; return; }
+      panel.innerHTML = steps.map((s, i) => {
+        const label = String(s.textContent || "").replace(/\s+/g, " ").trim().slice(0, 40);
+        const cls = s.classList.contains("active") ? "active" : (s.classList.contains("done") ? "done" : "");
+        return `<div class="insp-item"><div class="t">${i + 1}. ${escapeHtml(label)}</div><div class="d">${cls || "pending"}</div></div>`;
+      }).join("");
+      return;
+    }
+    if (v === "artifacts") {
+      const art = document.getElementById("councilArtifacts");
+      const atxt = art && !art.hidden ? String(art.textContent || "").replace(/\s+/g, " ").trim().slice(0, 200) : "";
+      panel.innerHTML = atxt
+        ? `<div class="insp-item"><div class="t">Artifacts</div><div class="d">${escapeHtml(atxt)}</div></div>`
+        : `<div class="insp-empty">No artifacts produced yet — they appear here when a pipeline stage writes them.</div>`;
+      return;
+    }
+    if (v === "evaluation") {
+      const crit = document.getElementById("debateCriteria");
+      const n = crit ? crit.querySelectorAll(":scope > *").length : 0;
+      const grid = document.getElementById("debateGrid");
+      const cols = grid ? grid.children.length : 0;
+      panel.innerHTML = inspKV("Criteria", n) + inspKV("Result columns", cols) +
+        `<div class="insp-empty">Scores and the arbiter verdict render in the Compare pane; this view summarizes them.</div>`;
+      return;
+    }
+  }
+
   function toggleMonitorRail(returnFocus) {
     const layout = document.getElementById("mainLayout");
     const rail = document.getElementById("monitorRail");
@@ -7973,7 +8237,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     }
     if (btn) {
       btn.setAttribute("aria-expanded", expanded ? "true" : "false");
-      btn.title = expanded ? "Hide telemetry and model monitor" : "Show telemetry and model monitor";
+      btn.title = expanded ? "Hide the contextual inspector" : "Show the contextual inspector";
     }
     if (narrow && expanded && rail) {
       const target = rail.querySelector("button, [href], input, select, textarea") || rail;
@@ -16856,6 +17120,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   const tabRail = document.querySelector(".mode-tabs");
   if (tabRail) tabRail.addEventListener("keydown", tabRailKeydown);
   syncTabOrientation();
+  renderInspectorFor((document.querySelector(".mode-tab.active") || {}).dataset?.tab || "harness");
   try {
     window.matchMedia("(max-width: 799px)").addEventListener("change", syncTabOrientation);
   } catch (_) { /* older engines: the initial orientation still applies */ }
@@ -16895,7 +17160,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     layout.classList.remove("rail-collapsed");
     if (rail) rail.removeAttribute("aria-modal");
     monitorButton.setAttribute("aria-expanded", narrow ? "false" : "true");
-    monitorButton.title = narrow ? "Show telemetry and model monitor" : "Hide telemetry and model monitor";
+    monitorButton.title = narrow ? "Show the contextual inspector" : "Hide the contextual inspector";
   });
   try {
     const themePreference = window.matchMedia("(prefers-color-scheme: light)");
@@ -16925,6 +17190,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   refreshHallSessions();
   refreshTelemetry();
   setInterval(refreshTelemetry, 2000);
+  setInterval(() => { try { refreshInspectorPanel(); } catch (_) { /* a pane re-render wins the next tick */ } }, 2000);
 </script>
 </body>
 </html>

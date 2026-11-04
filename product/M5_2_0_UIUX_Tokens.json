@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "d3eb0449b488962b846c9defa7da1c007f4b4d9b6504ff5be85084375fe06e1b",
+    "style_block_sha256": "f7fb7f55c7a8a5bb3f8c0505434b597c2b9d7d3b0b3eac331032f584c5147511",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -42,7 +42,7 @@
   "totals": {
     "tokens": 53,
     "groups": 8,
-    "references": 1197,
+    "references": 1220,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 22,
@@ -128,7 +128,7 @@
         "light": "#F8F9FB"
       },
       "density_override": null,
-      "references": 12
+      "references": 13
     },
     {
       "name": "--bg-elev",
@@ -138,7 +138,7 @@
         "light": "#FFFFFF"
       },
       "density_override": null,
-      "references": 34
+      "references": 35
     },
     {
       "name": "--bg-card",
@@ -148,7 +148,7 @@
         "light": "#FFFFFF"
       },
       "density_override": null,
-      "references": 61
+      "references": 62
     },
     {
       "name": "--bg-hover",
@@ -158,7 +158,7 @@
         "light": "#F1F3F5"
       },
       "density_override": null,
-      "references": 20
+      "references": 22
     },
     {
       "name": "--bg-press",
@@ -188,7 +188,7 @@
         "light": "#DDE2E8"
       },
       "density_override": null,
-      "references": 149
+      "references": 153
     },
     {
       "name": "--border-hi",
@@ -208,7 +208,7 @@
         "light": "#1B2430"
       },
       "density_override": null,
-      "references": 74
+      "references": 76
     },
     {
       "name": "--text-dim",
@@ -218,7 +218,7 @@
         "light": "#596579"
       },
       "density_override": null,
-      "references": 135
+      "references": 139
     },
     {
       "name": "--text-faint",
@@ -228,7 +228,7 @@
         "light": "#67717F"
       },
       "density_override": null,
-      "references": 110
+      "references": 111
     },
     {
       "name": "--accent",
@@ -238,7 +238,7 @@
         "light": "#4F5FE8"
       },
       "density_override": null,
-      "references": 28
+      "references": 29
     },
     {
       "name": "--accent-hi",
@@ -318,7 +318,7 @@
         "light": "#4F5FE8"
       },
       "density_override": null,
-      "references": 5
+      "references": 6
     },
     {
       "name": "--text-2xs",
@@ -454,7 +454,7 @@
       "value": "8px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 33
+      "references": 34
     },
     {
       "name": "--radius-lg",
@@ -462,7 +462,7 @@
       "value": "10px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 27
+      "references": 28
     },
     {
       "name": "--radius-xl",
@@ -478,7 +478,7 @@
       "value": "999px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 9
+      "references": 10
     },
     {
       "name": "--control-min-h",
@@ -582,7 +582,7 @@
       "value": "56px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 7
+      "references": 9
     }
   ],
   "contrast": [

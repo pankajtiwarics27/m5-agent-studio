@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "57a770846866d7ffe51de10c761f1e87d89121450d47fa8e4280fa3d2b2b7f7b",
+  "frontend_sha256": "c59454fefdda4a29aef9eb2f19173046cf1abd2f7a7a0307d09db79563db79c3",
   "panes": [
     {
       "dom_id": "start",
@@ -80,9 +80,9 @@
           "tag": "button",
           "type": "button",
           "class": "btn",
-          "title": "Open the monitor rail with the full telemetry",
+          "title": "Open the contextual inspector",
           "onclick": "toggleMonitorRail()",
-          "text": "Monitor rail"
+          "text": "Inspector"
         },
         {
           "tag": "input",
@@ -700,15 +700,24 @@
     }
   ],
   "chrome": {
-    "control_count": 106,
+    "control_count": 108,
     "counts": {
-      "button": 59,
+      "button": 61,
       "input": 29,
       "select": 12,
       "summary": 1,
       "textarea": 5
     },
     "controls": [
+      {
+        "tag": "button",
+        "id": "telemetryPopoverBtn",
+        "type": "button",
+        "class": "btn",
+        "title": "Global telemetry, memory and model residency (header popover)",
+        "onclick": "toggleTelemetryPopover()",
+        "text": "Telemetry"
+      },
       {
         "tag": "button",
         "class": "btn",
@@ -737,6 +746,39 @@
         "title": "Switch to light theme",
         "onclick": "toggleTheme()",
         "text": "Light"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "toggleTelemetryPopover(false)",
+        "text": "Close"
+      },
+      {
+        "tag": "select",
+        "id": "omlxLoadModelPicker",
+        "aria-label": "Select local model to load",
+        "onchange": "toggleCustomLoadInput(this.value)",
+        "text": "+ Load model on demand…"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs btn-cyan",
+        "onclick": "loadSelectedOmlxModel()",
+        "text": "Load"
+      },
+      {
+        "tag": "input",
+        "id": "omlxCustomModelInput",
+        "type": "text",
+        "placeholder": "Enter local oMLX or HF model ID…"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs",
+        "onclick": "clearSsdCache()",
+        "text": "Clear SSD"
       },
       {
         "tag": "button",
@@ -1371,9 +1413,9 @@
         "tag": "button",
         "id": "monitorToggleBtn",
         "class": "btn btn-xs",
-        "title": "Hide telemetry and model monitor",
+        "title": "Hide the contextual inspector",
         "onclick": "toggleMonitorRail()",
-        "text": "Telemetry"
+        "text": "Inspector"
       },
       {
         "tag": "button",
@@ -1381,45 +1423,20 @@
         "title": "Unload local models to free memory",
         "onclick": "unloadAllModels()",
         "text": "Unload models"
-      },
-      {
-        "tag": "select",
-        "id": "omlxLoadModelPicker",
-        "aria-label": "Select local model to load",
-        "onchange": "toggleCustomLoadInput(this.value)",
-        "text": "+ Load model on demand…"
-      },
-      {
-        "tag": "button",
-        "type": "button",
-        "class": "btn btn-xs btn-cyan",
-        "onclick": "loadSelectedOmlxModel()",
-        "text": "Load"
-      },
-      {
-        "tag": "input",
-        "id": "omlxCustomModelInput",
-        "type": "text",
-        "placeholder": "Enter local oMLX or HF model ID…"
-      },
-      {
-        "tag": "button",
-        "class": "btn btn-xs",
-        "onclick": "clearSsdCache()",
-        "text": "Clear SSD"
       }
     ]
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 194,
+    "markup_controls": 196,
     "pane_controls": 88,
-    "chrome_controls": 106,
-    "script_rendered_controls": 42,
+    "chrome_controls": 108,
+    "script_rendered_controls": 50,
     "script_rendered_by_function": {
       "ensureStageCardMounted": 1,
       "harnessEvidenceChangeHtml": 1,
       "openSpawnModal": 1,
+      "refreshInspectorPanel": 8,
       "refreshOnboarding": 1,
       "renderCommandPaletteList": 1,
       "renderDebateCriteria": 3,

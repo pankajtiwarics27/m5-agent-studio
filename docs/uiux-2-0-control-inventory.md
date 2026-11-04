@@ -6,9 +6,9 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `57a770846866d7ffe51de10c761f1e87d89121450d47fa8e4280fa3d2b2b7f7b`.
+* Frontend digest: `c59454fefdda4a29aef9eb2f19173046cf1abd2f7a7a0307d09db79563db79c3`.
 * Panes: 6 · controls in panes: 88 · controls in the
-  shared chrome: 106 · script-rendered: 42.
+  shared chrome: 108 · script-rendered: 50.
 
 ## What this page is, and is not
 
@@ -27,13 +27,13 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
 | debate | `pane-debate` | 9 | 0 | 0 | button 5, input 1, select 2, textarea 1 |
 | chat | `pane-chat` | 11 | 0 | 0 | button 5, input 2, select 3, textarea 1 |
-| (chrome) | outside the panes | 106 | 42 | 0 | button 59, input 29, select 12, summary 1, textarea 5 |
+| (chrome) | outside the panes | 108 | 43 | 0 | button 61, input 29, select 12, summary 1, textarea 5 |
 
 ## What the numbers already say
 
-* 194 controls are in the markup and 42 more are built by script — a checklist written from the markup alone would miss 18% of the interactive surface.
-* The shared chrome carries 106 controls; all six panes together carry 88. Most of the clicking happens in the shell, not inside a tab.
-* 56 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
+* 196 controls are in the markup and 50 more are built by script — a checklist written from the markup alone would miss 20% of the interactive surface.
+* The shared chrome carries 108 controls; all six panes together carry 88. Most of the clicking happens in the shell, not inside a tab.
+* 57 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
 
@@ -48,7 +48,7 @@ Section `pane-start`, 11 interactive elements.
 | 5 | button | startTaskBtn | button | Open in Harness | launchTaskFromStart() |
 | 6 | button | — | button | Refresh | loadStartRecent({ force: true }) |
 | 7 | button | — | button | Re-check health | refreshTelemetry() |
-| 8 | button | — | button | Monitor rail | toggleMonitorRail() |
+| 8 | button | — | button | Inspector | toggleMonitorRail() |
 | 9 | input | startWorkspaceInput | text | ~/Projects/my-app | — |
 | 10 | select | startWorkspaceRecent | — | Recent project folders | if(this.value) pickStartWorkspace(this.value) |
 | 11 | button | startWorkspaceBtn | button | Set / Create | saveStartWorkspace() |
@@ -167,122 +167,124 @@ Section `pane-chat`, 11 interactive elements.
 
 ## Shared chrome
 
-106 interactive elements outside every pane (tab bar,
+108 interactive elements outside every pane (tab bar,
 top bar and monitor rail). These are reachable from all six tabs, which is why they are not
 attributed to one.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
-| 1 | button | — | — | Open Command Palette (Cmd+K) | openCommandPalette() |
-| 2 | button | densityToggleBtn | button | Density: comfortable | toggleDensity() |
-| 3 | button | themeToggleBtn | button | Switch to light theme | toggleTheme() |
-| 4 | button | tab-start | tab | Start | switchTab('start') |
-| 5 | button | tab-harness | tab | Harness | switchTab('harness') |
-| 6 | button | tab-hall | tab | Council | switchTab('hall') |
-| 7 | button | tab-council | tab | Pipeline | switchTab('council') |
-| 8 | button | tab-debate | tab | Compare | switchTab('debate') |
-| 9 | button | tab-chat | tab | Chat | switchTab('chat') |
-| 10 | input | cmdSearchInput | text | Search actions | renderCommandPaletteList(this.value) |
-| 11 | button | ctxTabBtn-oc | — | Knowledge | switchCtxTab('oc') |
-| 12 | button | ctxTabBtn-cg | — | Code graph | switchCtxTab('cg') |
-| 13 | button | ctxTabBtn-gsd | — | Planning | switchCtxTab('gsd') |
-| 14 | button | — | — | Close | closeContextModal() |
-| 15 | input | ocDocId | hidden | — | — |
-| 16 | input | ocTitle | text | e.g. Auth Service JWT Rotation & Edge Cases | — |
-| 17 | select | ocFolder | — | architecture decisions preferences postmortems | — |
-| 18 | input | ocPinned | checkbox | — | — |
-| 19 | textarea | ocContent | — | Markdown architectural rules, decisions, commands, or lessons learned... | — |
-| 20 | input | ocSearchInput | text | Search OpenContext documents | searchOpenContextUI(this.value) |
-| 21 | button | — | — | Wiki Lint | runOpenContextLintUI() |
-| 22 | button | — | — | Clear | resetOcForm() |
-| 23 | button | — | — | Save to OpenContext | saveOpenContextDoc() |
-| 24 | button | — | — | Scan Workspace Graph | refreshCodeGraphOverview() |
-| 25 | input | cgWorkspaceInput | text | — | — |
-| 26 | select | cgModeSelect | — | codegraph_architecture (Hubs & God Nodes) codegraph_path (Graphify Shortest Path A -> B) codegraph_impact (Caller Blast-Radius) codegraph_context (Symbol Search) codegraph_quality (Complexity Hotspots) ponytail-debt (Shortcut & Rationale Ledger) | — |
-| 27 | input | cgQueryInput | text | e.g. api_run_harness_turn -> stream_any_model | — |
-| 28 | button | — | — | Run Query | runCodeGraphPlayground() |
-| 29 | button | — | — | Refresh | loadMcpServers() |
-| 30 | button | — | — | Close | closeMcpModal() |
-| 31 | input | mcpAlias | text | context7 | — |
-| 32 | input | mcpName | text | Context7 Live Docs | — |
-| 33 | select | mcpTransport | — | Cloud / Custom HTTP (URL) Custom Stdio Command | toggleMcpTransportFields() |
-| 34 | select | mcpApprovalPolicy | — | Auto-Run (Trusted Read/Search) Inherit Harness Policy Always Ask Human Approval | — |
-| 35 | input | mcpUrl | text | https://mcp.context7.com/mcp | — |
-| 36 | select | mcpAuthHeader | — | Authorization: Bearer x-api-key None (Zero-Key) | — |
-| 37 | input | mcpToken | password | Optional for free servers | — |
-| 38 | input | mcpHeadersJson | text | {"X-Workspace": "prod"} | — |
-| 39 | input | mcpCommand | text | python3, uv, npx, uvx, docker | — |
-| 40 | input | mcpArgs | text | -y @playwright/mcp@latest --headless | — |
-| 41 | input | mcpEnvJson | text | {"API_KEY": "..."} | — |
-| 42 | button | mcpSaveBtn | — | Save & Sync Tools | saveMcpServer() |
-| 43 | summary | — | — | Paste mcpServers JSON Config (Claude Desktop / Cursor / Windsurf Format) | — |
-| 44 | textarea | mcpImportJsonInput | — | {"mcpServers": {"exa": {"url": "https://mcp.exa.ai/mcp"}, "my-script": {"command": "python3", "args": ["server.py"]}}} | — |
-| 45 | button | — | — | Import & Sync All | importMcpJson() |
-| 46 | select | mcpPlayServer | — | — | populateMcpPlayTools() |
-| 47 | select | mcpPlayTool | — | — | — |
-| 48 | input | mcpPlayArgs | text | — | — |
-| 49 | button | mcpPlayBtn | — | Test Call | runMcpPlayground() |
-| 50 | button | — | — | Close | closeExternalHarnessModal() |
-| 51 | button | — | — | Copy YAML | copyPreText('extDshYaml', this) |
-| 52 | button | — | — | Copy Python | copyPreText('extDshPy', this) |
-| 53 | button | — | — | Copy Commands | copyPreText('extOpenHarness', this) |
-| 54 | button | applyWorktreeBtn | — | Apply Worktree to Main Workspace | applyHarnessWorktree() |
-| 55 | button | — | — | Refresh | openHarnessDiffModal() |
-| 56 | button | — | — | Verification & artifacts | openHarnessEvidenceModal() |
-| 57 | button | — | — | Close | closeHarnessDiffModal() |
-| 58 | button | — | — | Refresh | refreshHarnessEvidence() |
-| 59 | button | — | — | Close | closeHarnessEvidenceModal() |
-| 60 | button | — | — | Refresh | refreshHarnessGrants() |
-| 61 | button | — | — | Close | closeHarnessGrants() |
-| 62 | button | — | — | Close | closeProvidersModal() |
-| 63 | input | provAlias | text | openrouter | — |
-| 64 | input | provName | text | OpenRouter | — |
-| 65 | select | provWire | — | OpenAI Compatible (/chat/completions) Anthropic Native (/v1/messages SSE) | — |
-| 66 | input | provUrl | text | https://openrouter.ai/api/v1 | — |
-| 67 | input | provKey | password | sk-... (optional for Pollinations / OmniRoute) | — |
-| 68 | button | fetchModelsBtn | — | Fetch Live Models from Endpoint | fetchRemoteModels() |
-| 69 | textarea | provModels | — | claude-sonnet-4-5, gemini-2.5-pro, qwen/qwen3-coder:free | — |
-| 70 | button | — | — | Save & Enable Provider | saveProvider() |
-| 71 | input | comboAlias | text | — | — |
-| 72 | input | comboName | text | — | — |
-| 73 | input | comboTargets | text | openrouter::qwen/qwen3-coder:free, Qwen3.8-27B-oQ4e-mtp | — |
-| 74 | button | — | — | Save Combo | saveCombo() |
-| 75 | button | — | — | Rescan | loadSkills() |
-| 76 | button | — | — | Close | closeSkillsModal() |
-| 77 | input | skillInstallInput | text | — | — |
-| 78 | button | skillInstallBtn | — | Install | installSkill() |
-| 79 | button | — | — | Refresh | refreshSdlcBoard() |
-| 80 | button | — | — | Close | closeSdlcModal() |
-| 81 | input | sdlcWorkspaceInput | text | ~/Projects/my-new-app | syncProjectDirInputs(this.value) |
-| 82 | button | — | button | Set Directory | saveWorkspaceDirectory(document.getElementById('sdlcWorkspaceInput').value) |
-| 83 | textarea | sdlcVisionInput | — | e.g. Build a modern full-stack E-Commerce storefront with live search, filterable catalog, slide-over cart drawer, promo codes, SQLite order persistence, and unit/E2E tests — OR an end-to-end HTML5 Canvas survival roguelike game with wave progression, upgrades, spatial audio, and 60fps loop. | — |
-| 84 | select | sdlcMaxStories | — | 3 stories 5 stories 8 stories | — |
-| 85 | select | sdlcRunModeSelect | — | SDLC execution mode | — |
-| 86 | button | — | — | Launch SDLC | startSdlcSelectedMode() |
-| 87 | button | — | — | Research | switchSdlcArtifact('RESEARCH.md') |
-| 88 | button | — | — | PRD | switchSdlcArtifact('PRD.md') |
-| 89 | button | — | — | Arch | switchSdlcArtifact('ARCHITECTURE.md') |
-| 90 | button | — | — | Feedback | switchSdlcArtifact('FEEDBACK_LOG.md') |
-| 91 | input | sdlcFeedbackAutoImpl | checkbox | — | — |
-| 92 | input | sdlcFeedbackInput | text | e.g. Checkout feels clunky — research 1-page Stripe/Shopify cart drawers & add instant validation | — |
-| 93 | input | sdlcInspirationQuery | text | e.g. modern ecommerce slide-over cart ux | — |
-| 94 | button | — | — | Research & Iterate | submitSdlcFeedback() |
-| 95 | button | — | — | Close | closeSpawnModal() |
-| 96 | textarea | spawnRequestInput | — | Design an event-sourced local-first task queue on macOS with crash-safe SQLite WAL persistence, zero-polling wakeups, and backpressure. | — |
-| 97 | button | — | — | Cancel | closeSpawnModal() |
-| 98 | button | — | — | Open Empty Room | confirmSpawnSession(false) |
-| 99 | button | spawnConveneBtn | — | Spawn & Convene 4-LLM Council | confirmSpawnSession(true) |
-| 100 | select | integrationsQuickMenu | — | Open studio tools and integrations | openIntegrationFromMenu(this) |
-| 101 | button | monitorToggleBtn | — | Telemetry | toggleMonitorRail() |
-| 102 | button | — | — | Unload models | unloadAllModels() |
-| 103 | select | omlxLoadModelPicker | — | Select local model to load | toggleCustomLoadInput(this.value) |
-| 104 | button | — | button | Load | loadSelectedOmlxModel() |
-| 105 | input | omlxCustomModelInput | text | Enter local oMLX or HF model ID… | — |
-| 106 | button | — | — | Clear SSD | clearSsdCache() |
+| 1 | button | telemetryPopoverBtn | button | Telemetry | toggleTelemetryPopover() |
+| 2 | button | — | — | Open Command Palette (Cmd+K) | openCommandPalette() |
+| 3 | button | densityToggleBtn | button | Density: comfortable | toggleDensity() |
+| 4 | button | themeToggleBtn | button | Switch to light theme | toggleTheme() |
+| 5 | button | — | button | Close | toggleTelemetryPopover(false) |
+| 6 | select | omlxLoadModelPicker | — | Select local model to load | toggleCustomLoadInput(this.value) |
+| 7 | button | — | button | Load | loadSelectedOmlxModel() |
+| 8 | input | omlxCustomModelInput | text | Enter local oMLX or HF model ID… | — |
+| 9 | button | — | — | Clear SSD | clearSsdCache() |
+| 10 | button | tab-start | tab | Start | switchTab('start') |
+| 11 | button | tab-harness | tab | Harness | switchTab('harness') |
+| 12 | button | tab-hall | tab | Council | switchTab('hall') |
+| 13 | button | tab-council | tab | Pipeline | switchTab('council') |
+| 14 | button | tab-debate | tab | Compare | switchTab('debate') |
+| 15 | button | tab-chat | tab | Chat | switchTab('chat') |
+| 16 | input | cmdSearchInput | text | Search actions | renderCommandPaletteList(this.value) |
+| 17 | button | ctxTabBtn-oc | — | Knowledge | switchCtxTab('oc') |
+| 18 | button | ctxTabBtn-cg | — | Code graph | switchCtxTab('cg') |
+| 19 | button | ctxTabBtn-gsd | — | Planning | switchCtxTab('gsd') |
+| 20 | button | — | — | Close | closeContextModal() |
+| 21 | input | ocDocId | hidden | — | — |
+| 22 | input | ocTitle | text | e.g. Auth Service JWT Rotation & Edge Cases | — |
+| 23 | select | ocFolder | — | architecture decisions preferences postmortems | — |
+| 24 | input | ocPinned | checkbox | — | — |
+| 25 | textarea | ocContent | — | Markdown architectural rules, decisions, commands, or lessons learned... | — |
+| 26 | input | ocSearchInput | text | Search OpenContext documents | searchOpenContextUI(this.value) |
+| 27 | button | — | — | Wiki Lint | runOpenContextLintUI() |
+| 28 | button | — | — | Clear | resetOcForm() |
+| 29 | button | — | — | Save to OpenContext | saveOpenContextDoc() |
+| 30 | button | — | — | Scan Workspace Graph | refreshCodeGraphOverview() |
+| 31 | input | cgWorkspaceInput | text | — | — |
+| 32 | select | cgModeSelect | — | codegraph_architecture (Hubs & God Nodes) codegraph_path (Graphify Shortest Path A -> B) codegraph_impact (Caller Blast-Radius) codegraph_context (Symbol Search) codegraph_quality (Complexity Hotspots) ponytail-debt (Shortcut & Rationale Ledger) | — |
+| 33 | input | cgQueryInput | text | e.g. api_run_harness_turn -> stream_any_model | — |
+| 34 | button | — | — | Run Query | runCodeGraphPlayground() |
+| 35 | button | — | — | Refresh | loadMcpServers() |
+| 36 | button | — | — | Close | closeMcpModal() |
+| 37 | input | mcpAlias | text | context7 | — |
+| 38 | input | mcpName | text | Context7 Live Docs | — |
+| 39 | select | mcpTransport | — | Cloud / Custom HTTP (URL) Custom Stdio Command | toggleMcpTransportFields() |
+| 40 | select | mcpApprovalPolicy | — | Auto-Run (Trusted Read/Search) Inherit Harness Policy Always Ask Human Approval | — |
+| 41 | input | mcpUrl | text | https://mcp.context7.com/mcp | — |
+| 42 | select | mcpAuthHeader | — | Authorization: Bearer x-api-key None (Zero-Key) | — |
+| 43 | input | mcpToken | password | Optional for free servers | — |
+| 44 | input | mcpHeadersJson | text | {"X-Workspace": "prod"} | — |
+| 45 | input | mcpCommand | text | python3, uv, npx, uvx, docker | — |
+| 46 | input | mcpArgs | text | -y @playwright/mcp@latest --headless | — |
+| 47 | input | mcpEnvJson | text | {"API_KEY": "..."} | — |
+| 48 | button | mcpSaveBtn | — | Save & Sync Tools | saveMcpServer() |
+| 49 | summary | — | — | Paste mcpServers JSON Config (Claude Desktop / Cursor / Windsurf Format) | — |
+| 50 | textarea | mcpImportJsonInput | — | {"mcpServers": {"exa": {"url": "https://mcp.exa.ai/mcp"}, "my-script": {"command": "python3", "args": ["server.py"]}}} | — |
+| 51 | button | — | — | Import & Sync All | importMcpJson() |
+| 52 | select | mcpPlayServer | — | — | populateMcpPlayTools() |
+| 53 | select | mcpPlayTool | — | — | — |
+| 54 | input | mcpPlayArgs | text | — | — |
+| 55 | button | mcpPlayBtn | — | Test Call | runMcpPlayground() |
+| 56 | button | — | — | Close | closeExternalHarnessModal() |
+| 57 | button | — | — | Copy YAML | copyPreText('extDshYaml', this) |
+| 58 | button | — | — | Copy Python | copyPreText('extDshPy', this) |
+| 59 | button | — | — | Copy Commands | copyPreText('extOpenHarness', this) |
+| 60 | button | applyWorktreeBtn | — | Apply Worktree to Main Workspace | applyHarnessWorktree() |
+| 61 | button | — | — | Refresh | openHarnessDiffModal() |
+| 62 | button | — | — | Verification & artifacts | openHarnessEvidenceModal() |
+| 63 | button | — | — | Close | closeHarnessDiffModal() |
+| 64 | button | — | — | Refresh | refreshHarnessEvidence() |
+| 65 | button | — | — | Close | closeHarnessEvidenceModal() |
+| 66 | button | — | — | Refresh | refreshHarnessGrants() |
+| 67 | button | — | — | Close | closeHarnessGrants() |
+| 68 | button | — | — | Close | closeProvidersModal() |
+| 69 | input | provAlias | text | openrouter | — |
+| 70 | input | provName | text | OpenRouter | — |
+| 71 | select | provWire | — | OpenAI Compatible (/chat/completions) Anthropic Native (/v1/messages SSE) | — |
+| 72 | input | provUrl | text | https://openrouter.ai/api/v1 | — |
+| 73 | input | provKey | password | sk-... (optional for Pollinations / OmniRoute) | — |
+| 74 | button | fetchModelsBtn | — | Fetch Live Models from Endpoint | fetchRemoteModels() |
+| 75 | textarea | provModels | — | claude-sonnet-4-5, gemini-2.5-pro, qwen/qwen3-coder:free | — |
+| 76 | button | — | — | Save & Enable Provider | saveProvider() |
+| 77 | input | comboAlias | text | — | — |
+| 78 | input | comboName | text | — | — |
+| 79 | input | comboTargets | text | openrouter::qwen/qwen3-coder:free, Qwen3.8-27B-oQ4e-mtp | — |
+| 80 | button | — | — | Save Combo | saveCombo() |
+| 81 | button | — | — | Rescan | loadSkills() |
+| 82 | button | — | — | Close | closeSkillsModal() |
+| 83 | input | skillInstallInput | text | — | — |
+| 84 | button | skillInstallBtn | — | Install | installSkill() |
+| 85 | button | — | — | Refresh | refreshSdlcBoard() |
+| 86 | button | — | — | Close | closeSdlcModal() |
+| 87 | input | sdlcWorkspaceInput | text | ~/Projects/my-new-app | syncProjectDirInputs(this.value) |
+| 88 | button | — | button | Set Directory | saveWorkspaceDirectory(document.getElementById('sdlcWorkspaceInput').value) |
+| 89 | textarea | sdlcVisionInput | — | e.g. Build a modern full-stack E-Commerce storefront with live search, filterable catalog, slide-over cart drawer, promo codes, SQLite order persistence, and unit/E2E tests — OR an end-to-end HTML5 Canvas survival roguelike game with wave progression, upgrades, spatial audio, and 60fps loop. | — |
+| 90 | select | sdlcMaxStories | — | 3 stories 5 stories 8 stories | — |
+| 91 | select | sdlcRunModeSelect | — | SDLC execution mode | — |
+| 92 | button | — | — | Launch SDLC | startSdlcSelectedMode() |
+| 93 | button | — | — | Research | switchSdlcArtifact('RESEARCH.md') |
+| 94 | button | — | — | PRD | switchSdlcArtifact('PRD.md') |
+| 95 | button | — | — | Arch | switchSdlcArtifact('ARCHITECTURE.md') |
+| 96 | button | — | — | Feedback | switchSdlcArtifact('FEEDBACK_LOG.md') |
+| 97 | input | sdlcFeedbackAutoImpl | checkbox | — | — |
+| 98 | input | sdlcFeedbackInput | text | e.g. Checkout feels clunky — research 1-page Stripe/Shopify cart drawers & add instant validation | — |
+| 99 | input | sdlcInspirationQuery | text | e.g. modern ecommerce slide-over cart ux | — |
+| 100 | button | — | — | Research & Iterate | submitSdlcFeedback() |
+| 101 | button | — | — | Close | closeSpawnModal() |
+| 102 | textarea | spawnRequestInput | — | Design an event-sourced local-first task queue on macOS with crash-safe SQLite WAL persistence, zero-polling wakeups, and backpressure. | — |
+| 103 | button | — | — | Cancel | closeSpawnModal() |
+| 104 | button | — | — | Open Empty Room | confirmSpawnSession(false) |
+| 105 | button | spawnConveneBtn | — | Spawn & Convene 4-LLM Council | confirmSpawnSession(true) |
+| 106 | select | integrationsQuickMenu | — | Open studio tools and integrations | openIntegrationFromMenu(this) |
+| 107 | button | monitorToggleBtn | — | Inspector | toggleMonitorRail() |
+| 108 | button | — | — | Unload models | unloadAllModels() |
 
 ## Controls built by script
 
-42 interactive tags appear as template strings inside the
+50 interactive tags appear as template strings inside the
 inline script rather than in the markup. They are attributed to the nearest preceding function
 and are **not** in the tables above:
 
@@ -291,6 +293,7 @@ and are **not** in the tables above:
 | `ensureStageCardMounted` | 1 |
 | `harnessEvidenceChangeHtml` | 1 |
 | `openSpawnModal` | 1 |
+| `refreshInspectorPanel` | 8 |
 | `refreshOnboarding` | 1 |
 | `renderCommandPaletteList` | 1 |
 | `renderDebateCriteria` | 3 |

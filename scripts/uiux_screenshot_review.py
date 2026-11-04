@@ -360,7 +360,7 @@ REVIEWS: dict[str, dict[str, object]] = {
         "theme": "dark and light",
     },
     "uiv2-v2": {
-        "story": "UIV2-01 (baseline), UIV2-03 (reference fixtures), UIV2-04/UIV2-05 (after-sets)",
+        "story": "UIV2-01 (baseline), UIV2-03 (reference fixtures), UIV2-04/UIV2-05/UIV2-06 (after-sets)",
         "note": (
             "Two V2-program sets. `baseline/` is the running app at pinned HEAD 9a584a3, captured "
             "from a disposable git-archive copy via demo_tour.py --serve with scripts/capture_screenshots.mjs "
@@ -383,7 +383,13 @@ REVIEWS: dict[str, dict[str, object]] = {
             "390x844-dark pair (header was 108px with the tabs wrapped inside it, now one 56px row with a "
             "tab row under it) and the 1280x800-dark pair plus `after-uiv2-05/1280x800-dark/harness-drawer-open.png` "
             "(inspector was a permanent 320px column, now a 320px drawer over a 1080px central pane); the "
-            "measured numbers are in `uiv2-05-shell-metrics-before.json` / `uiv2-05-shell-metrics-after.json`."
+            "measured numbers are in `uiv2-05-shell-metrics-before.json` / `uiv2-05-shell-metrics-after.json`. "
+            "`before-uiv2-06/` and `after-uiv2-06/` bracket the UIV2-06 inspector change: opened the "
+            "1440x900-dark harness pair (permanent telemetry rail -> contextual inspector with "
+            "Approvals/Changes/Verification/Resources tabs) and `after-uiv2-06/1440x900-light/harness-telemetry-popover.png` "
+            "(header Telemetry popover holding all four telemetry cards incl. the model load/unload "
+            "actions), plus the per-pane inspector tabs in the 1440x900-dark set (Council "
+            "People/Evidence, Pipeline Stage/Artifacts, Compare Evaluation, Chat hidden by default)."
         ),
         "eye": [
             "baseline/1440x900-light/start.png",
@@ -396,6 +402,8 @@ REVIEWS: dict[str, dict[str, object]] = {
             "reference/390x844-light/harness.png",
             "after-uiv2-05/390x844-dark/harness.png",
             "after-uiv2-05/1280x800-dark/harness-drawer-open.png",
+            "after-uiv2-06/1440x900-dark/harness.png",
+            "after-uiv2-06/1440x900-light/harness-telemetry-popover.png",
         ],
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",

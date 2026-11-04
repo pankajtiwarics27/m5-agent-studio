@@ -725,20 +725,41 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-06: Implement context-aware inspector and telemetry drawer. Required outcome: Replace permanently expanded global telemetry rail with tab-specific inspector and header resource popover/drawer. Specific gate: Harness inspector tabs Approvals/Changes/Verification/Resources; Council People/Evidence; Pipeline Stage/Artifacts; Compare Evaluation; Chat hidden by default; preserve full telemetry details and model load/unload actions. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-04T03:40:00+05:30",
+        "completed_at": "2026-11-04T04:30:00+05:30",
         "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
+        "changed_files": [
+          "static/index.html (telemetry cards moved into header #telemetryPopover with a Telemetry button in .top-actions; #monitorRail rebuilt as per-pane contextual inspector with INSPECTOR_VIEWS tabs; switchTab hook renders inspector + auto-hides on chat; Escape/outside-click close the popover; 2s inspector refresh; strip toggle relabelled Inspector)",
+          "studio.py (build_studio.py, byte-synced)",
+          "docs/media/uiv2-v2/before-uiv2-06/ (3 PNGs at dee72ff), after-uiv2-06/ (10 PNGs incl. popover-open)",
+          "docs/media/uiv2-v2/README.md, scripts/uiux_screenshot_review.py (review notes)",
+          "all regenerated product/M5_2_0_UIUX_*.json + docs/uiux-2-0-*.md artifacts"
+        ],
+        "tests_executed": [
+          "headless-browser functional probe against a disposable demo_tour.py --serve copy of the story tree: 16/16 assertions PASS - popover closed by default, opens from the header button with aria-expanded, holds all six telemetry controls (ramUsedSummary, omlxLoadModelPicker, tpsChart, dockerContainersBox, modelsMonitorList, omlxActiveReq), Escape closes it; inspector tabs per pane exactly Approvals/Changes/Verification/Resources (harness), Resources (start), People/Evidence (hall), Stage/Artifacts (council), Evaluation (debate); chat auto-collapses the rail and explains hidden-by-default, manual toggle still works; Approvals/Resources panels render; rail toggle opens/closes the 320px column at 1440; header stays 56px",
+          "before/after capture sets via scripts/capture_screenshots.mjs (before at dee72ff on :8736, after at the story tree on :8738) + popover-open driver",
+          "python -m pytest -q in a disposable full clone at the story commit (see PR)",
+          "browser legs with the repo-pinned chromium (tests/browser) at the story commit (see PR)"
+        ],
+        "visual_evidence": [
+          "docs/media/uiv2-v2/before-uiv2-06/{1440x900-light,1440x900-dark,390x844-dark}/harness.png",
+          "docs/media/uiv2-v2/after-uiv2-06/1440x900-dark/{start,harness,hall,pipeline,compare,chat}.png (per-pane inspector tabs)",
+          "docs/media/uiv2-v2/after-uiv2-06/1440x900-light/harness.png, after-uiv2-06/1440x900-{light,dark}/harness-telemetry-popover.png, after-uiv2-06/390x844-dark/harness.png"
+        ],
+        "acceptance_evidence": [
+          "Harness inspector tabs Approvals/Changes/Verification/Resources - probe PASS, screenshot after-uiv2-06/1440x900-dark/harness.png",
+          "Council People/Evidence, Pipeline Stage/Artifacts, Compare Evaluation - probe PASS, 1440x900-dark hall/pipeline/compare.png",
+          "Chat hidden by default (rail auto-collapses on entering chat, note shown, manual toggle still works) - probe PASS, 1440x900-dark/chat.png",
+          "Full telemetry details + model load/unload actions preserved: all four cards moved with their ids into the header popover, verified in-DOM by the probe and in after-uiv2-06/1440x900-light/harness-telemetry-popover.png; refreshTelemetry 2s loop unchanged",
+          "All six panes, 194 controls, routes and handlers unchanged; release gate + preservation matrix regenerated green"
+        ],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "Global telemetry now lives in a header popover (Telemetry button, Escape/outside-click close, all cards and load/unload actions intact); the right rail/drawer is a contextual inspector whose tabs follow the active pane (Harness Approvals/Changes/Verification/Resources, Council People/Evidence, Pipeline Stage/Artifacts, Compare Evaluation), hidden by default on Chat.",
+        "exact_next_action": "UIV2-07: shared controls, typography, empty states and dialog patterns."
       }
     },
     {
@@ -2736,11 +2757,11 @@
       "id": "P1",
       "name": "Design system and application shell",
       "total": 4,
-      "done": 2,
+      "done": 3,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 2,
-      "percent_complete": 50
+      "not_started": 1,
+      "percent_complete": 75
     },
     {
       "id": "P2",
@@ -2795,11 +2816,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 5,
+    "done": 6,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 25,
-    "percent_complete": 17
+    "not_started": 24,
+    "percent_complete": 20
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",

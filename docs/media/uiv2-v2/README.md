@@ -1,6 +1,6 @@
 # UIV2 (visual-fidelity V2) capture sets
 
-Five capture sets produced for the V2 visual-fidelity program
+Six capture sets produced for the V2 visual-fidelity program
 (`product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json`):
 
 - `baseline/` — 53 before-screenshots of the real app at pinned HEAD
@@ -31,6 +31,13 @@ Five capture sets produced for the V2 visual-fidelity program
   >=1280 and a 64px icon rail at 800-1279, inspector 320px column at >=1440 and a
   320px drawer below that, central pane >= 736px, no horizontal overflow at any
   viewport, all six tabs visible at every width, skills strip one 42-47px row).
+- `before-uiv2-06/` — 3 before-screenshots of the real app at `dee72ff` (UIV2-05
+  tree): harness at 1440x900 light/dark and 390x844 dark with the permanent
+  telemetry rail still expanded.
+- `after-uiv2-06/` — 10 after-screenshots of the real app at the UIV2-06 commit:
+  all six panes at 1440x900 dark (per-pane inspector tabs), harness at 1440x900
+  light and 390x844 dark, plus the header Telemetry popover open at 1440x900 in
+  light and dark (all four telemetry cards, model load/unload actions included).
 - `after-uiv2-04/` — 19 after-screenshots of the real app at the UIV2-04 commit
   (approved V2 palette applied): six tabs at 1440x900 light, 1440x900 dark and
   390x844 light, plus the MCP hub overlay at 1440x900 light, produced by
