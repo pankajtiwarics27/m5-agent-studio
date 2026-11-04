@@ -83,85 +83,85 @@
       "id": "hallStatusBadge",
       "tone": "info",
       "live": true,
-      "line": 2556
+      "line": 2557
     },
     {
       "id": "councilReadinessCount",
       "tone": "neutral",
       "live": false,
-      "line": 2569
+      "line": 2570
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 5259
+      "line": 5260
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 5341
+      "line": 5342
     },
     {
       "id": null,
       "tone": "neutral",
       "live": false,
-      "line": 8520
+      "line": 8544
     },
     {
       "id": null,
       "tone": "busy",
       "live": false,
-      "line": 8521
+      "line": 8545
     },
     {
       "id": null,
       "tone": "ok",
       "live": false,
-      "line": 8522
+      "line": 8546
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 8523
+      "line": 8547
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 8524
+      "line": 8548
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 8525
+      "line": 8549
     },
     {
       "id": null,
       "tone": "danger",
       "live": false,
-      "line": 8526
+      "line": 8550
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 8527
+      "line": 8551
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 8528
+      "line": 8552
     },
     {
       "id": null,
       "tone": "neutral",
       "live": false,
-      "line": 8529
+      "line": 8553
     }
   ],
   "state_matrix": [

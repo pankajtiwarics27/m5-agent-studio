@@ -1141,20 +1141,44 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-10: Harness task composer and Cowork-style project flow. Required outcome: Simple task brief, workspace, optional attachments/context, plan preview, permissions and start; advanced execution settings behind disclosure. Specific gate: Do not imply desktop automation exists; all actions use current admitted tools; user sees planned action, approval, progress, outcome; cannot silently escalate execution policy. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-04T18:40:00+05:30",
+        "completed_at": "2026-11-04T20:20:00+05:30",
+        "commit_sha": "9ab3034",
+        "changed_files": [
+          "static/index.html (composer row: secondary 'Attach context' button opening the shared knowledge/code modal next to the single primary Run; harnessRunPlan gains 'tools' (active skills by name / admitted-tools fallback) and 'context' (pinned docs) rows)",
+          "studio.py (build_studio.py, byte-synced in the same commit)",
+          "scripts/uiux_harness_settings_inventory.py (new uiv2_10_composer gate group, 90 checks; PLAN_ROWS extended with tools+context)",
+          "tests/test_harness_settings.py (4 new UIV2-10 mutation tests)",
+          "docs/media/uiv2-v2/before-uiv2-10/ and after-uiv2-10/ (20 shell shots each + composer states), README.md notes",
+          "all regenerated product/M5_2_0_UIUX_*.json + docs/uiux-2-0-*.md artifacts incl. release gate 37/37, 7/7 gates, 0 findings"
+        ],
+        "tests_executed": [
+          "headless-Chromium walk against disposable demo_tour.py --serve copies (before b8c44ea on :8761, after on :8762), driving the real page: after 10/10 checks - Attach context present and opens #contextModal (no new modal), exactly one btn-primary in the composer row, plan preview shows tools + context rows (skill name when one is active), intercepted POST /api/harness/run body carries policy 'plan' exactly as the picker shows plus the typed task and workspace, policy PATCH returns 200 and the picker is re-read from the server; before-walk 4/9 with the five new gaps failing",
+          "python -m pytest -q in a disposable clone at 9ab3034: 2630 passed, 29 skipped; the single failure was the shallow-clone baseline pin (verify_baseline green in the unshallowed repo; 14/14 in test_baseline + test_uiux_source_manifest once unshallowed)",
+          "verify_baseline, run_scoped_tests --check-map, mypy, ruff check, check_frontend_syntax, demo_tour --check, smoke_local x2, validate_screenshots/docs, byte-identical build_studio rebuild: all green; browser legs in CI"
+        ],
+        "visual_evidence": [
+          "docs/media/uiv2-v2/before-uiv2-10/1440x900-dark-composer/harness-composer.png (no attach action, plan without tools/context rows)",
+          "docs/media/uiv2-v2/after-uiv2-10/1440x900-dark-composer/harness-composer.png and 390x844-dark-composer/harness-composer-390.png (Run + Attach context, plan rows for tools/context)",
+          "docs/media/uiv2-v2/after-uiv2-10/{1640x900,1440x900,1280x800,390x844}-{dark,light}/harness.png and 1440x900-{dark,light}-all/*.png vs before-uiv2-10/",
+          "docs/media/uiv2-v2/reference/1440x900-dark/harness.png (approved reference: composer with one primary action + Attach context)"
+        ],
+        "acceptance_evidence": [
+          "No desktop automation implied: pane markup scanned for desktop/computer-use/screen-control/remote-desktop copy - none (mutation test fails if added); the only 'Desktop' string in the file is the MCP config format name 'Claude Desktop'; Attach context opens the shared knowledge/code modal whose pinned docs are the only context a harness run consumes",
+          "All actions use current admitted tools: the plan preview names them (active skills by name, else 'the run uses only the tools this workspace admits'); the run payload sends skills + the picker's policy - verified by intercepted request body",
+          "User sees planned action, approval, progress, outcome: 'Run will' plan (directory/mode, tools, context, policy, models, workflow + changed-advanced), approvals in the log + inspector Approvals tab with Approve/Reject, progress via the Plan/Execute/Verify strip + timeline (UIV2-08/09), outcome via turn/verified cards and the session badge",
+          "Cannot silently escalate execution policy: run payload posts document.getElementById('harnessPolicy').value (all 5 call sites), picker re-read from sess.policy on select/resync, changes go through guardedWrite PATCH which shows refusals and re-reads; mutation test fails on a hardcoded 'autonomous'",
+          "Target behavior: simple brief + workspace (visible directory row), optional context (Attach context -> pinned docs), plan preview, permissions (banner permission badge + Approvals), start (single Run); advanced execution settings remain behind the Run settings disclosure (UIV2-08)",
+          "Visual conformance: after composer matches the reference wireframe (one dominant action + Attach context); screenshot review 565 captures / 28 sets / 0 findings",
+          "Preservation: full suite 2630 passed (only shallow-clone pin failure, green when unshallowed); preservation matrix/e2e/signoff/gate all green; demo_tour --check + smoke_local pass; no backend route changed"
+        ],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "The harness composer now reads as the simple flow the reference asks for: brief, workspace, Attach context (shared knowledge/code modal), a plan preview that names the admitted tools and pinned docs, permissions, and one primary Run. Policy escalation is impossible to do silently - payload, picker re-read and guarded PATCH are all pinned by rules and mutation tests.",
+        "exact_next_action": "UIV2-11: Harness session navigation and safe lifecycle controls (P2, deps UIV2-08)."
       }
     },
     {
@@ -2835,11 +2859,11 @@
       "id": "P2",
       "name": "Harness and Cowork-style task UX",
       "total": 4,
-      "done": 2,
+      "done": 3,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 2,
-      "percent_complete": 50
+      "not_started": 1,
+      "percent_complete": 75
     },
     {
       "id": "P3",
@@ -2884,11 +2908,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 9,
+    "done": 10,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 21,
-    "percent_complete": 30
+    "not_started": 20,
+    "percent_complete": 33
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",

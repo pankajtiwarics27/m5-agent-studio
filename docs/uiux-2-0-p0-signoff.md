@@ -8,7 +8,7 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 201 markup controls (108 chrome, 93 panes) · 50 rendered by script.
+* 6 panes · 21 preserved capabilities · 202 markup controls (108 chrome, 94 panes) · 50 rendered by script.
 * 115 routes exist, 69 with a resolved or possible caller, 46 with none observed and 0 unknown due to unresolved edges; 46 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
@@ -28,7 +28,7 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 201 markup controls (108 chrome, 93 panes) plus 50 rendered by script |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 202 markup controls (108 chrome, 94 panes) plus 50 rendered by script |
 | 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 115 routes exist; 69 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 46 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
@@ -101,7 +101,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | compaction | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | GSD and SDLC | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 
-**Controls — 28 in the markup:**
+**Controls — 29 in the markup:**
 
 | Tag | Id | Label | Handler |
 |---|---|---|---|
@@ -133,8 +133,9 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | textarea | harnessPromptInput | — | — |
 | select | harnessWorkflowMode | Autonomous Turn (Step Loop) Plan, Build, Verify (GSD 3-Wave) Agile SDLC Factory (Full Build) Agile SDLC Board & Backlog… | — |
 | button | harnessRunBtn | Run | executeHarnessSelectedWorkflow() |
+| button | harnessAttachBtn | Attach context | openContextModal() |
 
-**Routes reached from this pane's controls — 14, walking at most 2 calls; 6 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
+**Routes reached from this pane's controls — 15, walking at most 2 calls; 6 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
 
 | Method | Route | Certainty | State-changing | Walk | Gates that can refuse it |
 |---|---|---|---|---|---|
@@ -147,6 +148,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | GET | `/api/harness/sessions/{session_id}/sdlc` | certain | no | `executeHarnessSelectedWorkflow` → `openSdlcModal` → `refreshSdlcBoard` | — |
 | GET | `/api/harness/sessions/{session_id}/state` | certain | no | `harnessResyncFromSnapshot` | — |
 | GET | `/api/harness/sessions/{session_id}/task` | certain | no | `abortHarnessRun` → `refreshHarnessRecovery` | — |
+| GET | `/api/opencontext/docs` | certain | no | `openContextModal` → `loadOpenContextDocs` | — |
 | POST | `/api/harness/abort/{session_id}` | certain | yes | `abortHarnessRun` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | POST | `/api/harness/approve` | certain | yes | `resolveHarnessApproval` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | POST | `/api/harness/gsd-wave` | certain | yes | `executeHarnessSelectedWorkflow` → `runGsdWaveTurn` → `consumeSSE` | `host_allowlist`, `origin_check`, `bearer_token`, `rate_limit`, `body_size_limit` |
@@ -369,11 +371,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b` | `not recorded` |
-| `source_manifest_sha256` | `955c1a5e60660d7dc6e1e3c217fc0d16c6e59c4e4939db2c3b862f02a9ce7bae` | `not recorded` |
-| `control_inventory_sha256` | `623494ad48388445c9d97ba69fb7b3ae290ea6a1b4645ecea37fc37d15ba8d98` | `not recorded` |
-| `route_map_sha256` | `757a7e5d204feab4e351a7eef8466f7aa16e21323f93386f1e2e4d206a8f4c81` | `not recorded` |
-| `authorization_trace_sha256` | `93a1d43905f0da6ed19e64fee6cad5ba6d490e6221bd998cadcd264eb2c7d5cd` | `not recorded` |
-| `frontend_sha256` | `b5ea1f6347b11defbdff953a47ca5e41bb585c7cddd2f7e0a644312c64edfacb` | `not recorded` |
+| `source_manifest_sha256` | `98251be02a9691a3f58b48ac7f638db8cfcc10c378b1a18d4ac1657a3012a240` | `not recorded` |
+| `control_inventory_sha256` | `c7e962178cc0343ebd33e5f74a639afc2ef8dc0b7ad8c8ef20182fe45aeae111` | `not recorded` |
+| `route_map_sha256` | `22c28c583e3e86e0086fa79f0ba1153bf13de9fc4f8cef90452d726738a85103` | `not recorded` |
+| `authorization_trace_sha256` | `723ec73d7a650d7047eb0432fda58cbf654818e191518c6f7073b5b0cb9e855a` | `not recorded` |
+| `frontend_sha256` | `a3c45e31ab6dfb1f4182d87836e876fa6aa4762ced40cbd53417ad8e8fef4830` | `not recorded` |
 | `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
 | `screenshot_index_sha256` | `16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

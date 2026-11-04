@@ -82,7 +82,7 @@ Every control in the bar, the sidebar and the composer keeps the handler it had 
 - the advanced settings are summarised in the workflow row rather than given a fifth row, because they shape the same decision and a longer plan is a plan a reader skips.
 - the brief banner is a carry, not a promise: it compares the model and the directory the reply was sent with against the plan as it stands now, and says 'changes' when they differ - it never claims the conversation will fit.
 
-`--check` re-derives 81 checks from the source and fails on any of them. `node scripts/harness_settings_walk.mjs` drives the same surface in a browser: it reads the plan, changes
+`--check` re-derives 90 checks from the source and fails on any of them. `node scripts/harness_settings_walk.mjs` drives the same surface in a browser: it reads the plan, changes
 each control and re-reads it, collapses and reopens the advanced group, presses Run with no task, hands a
 conversation over from Chat to reach the banner, and photographs the states in
 [`media/harness/`](media/harness/README.md).

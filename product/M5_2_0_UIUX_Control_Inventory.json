@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "b5ea1f6347b11defbdff953a47ca5e41bb585c7cddd2f7e0a644312c64edfacb",
+  "frontend_sha256": "a3c45e31ab6dfb1f4182d87836e876fa6aa4762ced40cbd53417ad8e8fef4830",
   "panes": [
     {
       "dom_id": "start",
@@ -112,9 +112,9 @@
     {
       "dom_id": "harness",
       "section_id": "pane-harness",
-      "control_count": 28,
+      "control_count": 29,
       "counts": {
-        "button": 15,
+        "button": 16,
         "input": 2,
         "select": 9,
         "summary": 1,
@@ -344,6 +344,15 @@
           "class": "btn btn-primary",
           "onclick": "executeHarnessSelectedWorkflow()",
           "text": "Run"
+        },
+        {
+          "tag": "button",
+          "id": "harnessAttachBtn",
+          "type": "button",
+          "class": "btn",
+          "title": "Pin knowledge documents or explore the code graph — pinned documents are included in this run's context",
+          "onclick": "openContextModal()",
+          "text": "Attach context"
         }
       ]
     },
@@ -1483,8 +1492,8 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 201,
-    "pane_controls": 93,
+    "markup_controls": 202,
+    "pane_controls": 94,
     "chrome_controls": 108,
     "script_rendered_controls": 50,
     "script_rendered_by_function": {

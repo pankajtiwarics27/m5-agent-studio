@@ -465,3 +465,48 @@ def test_a_new_settings_route_is_caught(sources):
         )
     )
     assert "new-route" in _checks(payload)
+
+
+# ── UIV2-10: composer gates — attach context, admitted tools, no silent policy ──
+
+
+def test_uiv2_10_composer_gates_hold(payload):
+    gates = payload["frontend"]["uiv2_10_composer"]
+    assert all(gates.values()), [name for name, ok in gates.items() if not ok]
+
+
+def test_a_composer_without_attach_context_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace('id="harnessAttachBtn"', 'id="harnessAttachBtnGone"', 1)
+    )
+    assert "uiv2_10_composer" in _checks(payload)
+
+
+def test_a_plan_that_hides_the_admitted_tools_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            "only the tools this workspace admits", "the tools", 1
+        )
+    )
+    assert "uiv2_10_composer" in _checks(payload)
+
+
+def test_a_run_that_hardcodes_a_policy_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            'policy: document.getElementById("harnessPolicy").value',
+            'policy: "autonomous"',
+        )
+    )
+    assert "uiv2_10_composer" in _checks(payload)
+
+
+def test_a_pane_that_claims_desktop_automation_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            '<textarea id="harnessPromptInput"',
+            '<p>remote desktop control of your machine</p><textarea id="harnessPromptInput"',
+            1,
+        )
+    )
+    assert "uiv2_10_composer" in _checks(payload)

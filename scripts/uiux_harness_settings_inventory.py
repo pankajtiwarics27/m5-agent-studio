@@ -44,7 +44,7 @@ JSON_PATH = PROJECT_ROOT / "product" / "M5_2_0_UIUX_Harness_Settings.json"
 DOC_PATH = PROJECT_ROOT / "docs" / "uiux-2-0-harness-settings.md"
 
 REASONS = ("running", "board", "no-task", "ready")
-PLAN_ROWS = ("directory", "policy", "models", "workflow")
+PLAN_ROWS = ("directory", "tools", "context", "policy", "models", "workflow")
 ADVANCED_IDS = ("harnessEfficiencyMode", "harnessReasoning", "harnessMaxSteps")
 NETWORK_CALLS = ("fetch(", "XMLHttpRequest", "EventSource", "navigator.sendBeacon")
 
@@ -201,6 +201,8 @@ def read_frontend(html: str) -> dict:
         selected_options[element_id] = chosen.group(1) if chosen else ""
 
     hint = element(html, "harnessRunHint")
+    patch = function_body(html, "patchActiveHarnessSettings")
+    pane = html.split('id="pane-harness"', 1)[-1].split('id="pane-hall"', 1)[0]
     return {
         "functions": {
             name: bool(function_body(html, name))
@@ -220,7 +222,7 @@ def read_frontend(html: str) -> dict:
             "covers_the_run_payload": posted <= plan_reads,
             "watches_the_same_controls": set(plan_input_ids) == posted,
             "one_row_per_decision": all(f'key: "{row}"' in plan for row in PLAN_ROWS),
-            "a_row_cannot_be_empty": plan.count("|| ") == 8,
+            "a_row_cannot_be_empty": plan.count("|| ") == 11,
             "directory_says_which_mode": "isolated git worktree" in plan and "· direct" in plan,
             "policy_is_the_option_label": 'harnessSelectedText("harnessPolicy")' in plan
             and "HARNESS_POLICY_EFFECT" not in html,
@@ -314,6 +316,27 @@ def read_frontend(html: str) -> dict:
             "rests_after_a_run": "fitHarnessComposer();" in turn,
             "manual_resize_is_off": "resize:none" in element(html, "harnessPromptInput"),
         },
+        "uiv2_10_composer": {
+            "attach_context_button_in_the_composer_row": 'id="harnessAttachBtn"' in html
+            and 'onclick="openContextModal()"' in element(html, "harnessAttachBtn"),
+            "attach_opens_the_shared_context_modal": 'id="harnessAttachModal"' not in html
+            and "openContextModal()" in element(html, "harnessAttachBtn"),
+            "one_dominant_action": "btn-primary" in element(html, "harnessRunBtn")
+            and "btn-primary" not in element(html, "harnessAttachBtn")
+            and 'class="btn"' in element(html, "harnessAttachBtn"),
+            "plan_names_the_admitted_tools": 'key: "tools"' in plan
+            and "only the tools this workspace admits" in plan,
+            "plan_names_the_pinned_context": 'key: "context"' in plan
+            and "included in Harness context" in plan,
+            "run_posts_the_pickers_policy": 'policy: document.getElementById("harnessPolicy").value' in html,
+            "policy_is_re_read_from_the_server": 'document.getElementById("harnessPolicy").value = sess.policy' in html,
+            "policy_change_goes_through_the_guarded_write": "guardedWrite({" in patch,
+            "no_desktop_automation_copy_in_the_pane": not re.search(
+                r"(?<!Claude )desktop|computer[- ]use|screen control|remote desktop|your (computer|machine|desktop)",
+                pane,
+                re.I,
+            ),
+        },
         "preserved": {
             element_id: needle in element(html, element_id)
             for element_id, needle in PRESERVED_CONTROLS.items()
@@ -364,7 +387,7 @@ def build_inventory() -> dict:
             "watches_the_same_controls",
             "the plan is not watching the same controls the payload reads, so a change can leave it stale",
         ),
-        ("one_row_per_decision", "the plan is missing one of its four decisions"),
+        ("one_row_per_decision", "the plan is missing one of its decision rows"),
         (
             "a_row_cannot_be_empty",
             "a plan row lost a fallback, so it can print nothing at all",
@@ -443,6 +466,21 @@ def build_inventory() -> dict:
     ):
         if not frontend["run_control"].get(flag):
             fail("run-control", description)
+
+    uiv2_10_rules = (
+        ("attach_context_button_in_the_composer_row", "the composer lost its Attach context action"),
+        ("attach_opens_the_shared_context_modal", "Attach context grew its own modal instead of the shared knowledge/code one"),
+        ("one_dominant_action", "the composer no longer has exactly one primary action"),
+        ("plan_names_the_admitted_tools", "the plan no longer names the admitted tools the run will use"),
+        ("plan_names_the_pinned_context", "the plan no longer names the pinned context docs"),
+        ("run_posts_the_pickers_policy", "the run payload no longer sends the policy the picker shows, so the policy could silently escalate"),
+        ("policy_is_re_read_from_the_server", "the policy picker is no longer re-read from the server's answer"),
+        ("policy_change_goes_through_the_guarded_write", "a policy change no longer goes through the guarded write that shows a refusal"),
+        ("no_desktop_automation_copy_in_the_pane", "the pane claims a desktop-automation capability that does not exist"),
+    )
+    for flag, description in uiv2_10_rules:
+        if not frontend["uiv2_10_composer"].get(flag):
+            fail("uiv2_10_composer", description)
 
     for flag, description in (
         ("arrives_hidden", "the brief banner is visible before a brief has arrived"),
@@ -550,6 +588,7 @@ def build_inventory() -> dict:
                     "run_control",
                     "brief",
                     "composer",
+                    "uiv2_10_composer",
                     "preserved",
                     "labelling",
                     "styles",

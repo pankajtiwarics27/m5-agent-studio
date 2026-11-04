@@ -6,8 +6,8 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `b5ea1f6347b11defbdff953a47ca5e41bb585c7cddd2f7e0a644312c64edfacb`.
-* Panes: 6 · controls in panes: 93 · controls in the
+* Frontend digest: `a3c45e31ab6dfb1f4182d87836e876fa6aa4762ced40cbd53417ad8e8fef4830`.
+* Panes: 6 · controls in panes: 94 · controls in the
   shared chrome: 108 · script-rendered: 50.
 
 ## What this page is, and is not
@@ -22,7 +22,7 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 | Pane | Section | Total | Without id | Without any label | Breakdown |
 |---|---|---|---|---|---|
 | start | `pane-start` | 11 | 5 | 0 | button 8, input 2, select 1 |
-| harness | `pane-harness` | 28 | 9 | 0 | button 15, input 2, select 9, summary 1, textarea 1 |
+| harness | `pane-harness` | 29 | 9 | 0 | button 16, input 2, select 9, summary 1, textarea 1 |
 | hall | `pane-hall` | 18 | 3 | 0 | button 7, select 8, summary 2, textarea 1 |
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
 | debate | `pane-debate` | 9 | 0 | 0 | button 5, input 1, select 2, textarea 1 |
@@ -31,8 +31,8 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 
 ## What the numbers already say
 
-* 201 controls are in the markup and 50 more are built by script — a checklist written from the markup alone would miss 20% of the interactive surface.
-* The shared chrome carries 108 controls; all six panes together carry 93. Most of the clicking happens in the shell, not inside a tab.
+* 202 controls are in the markup and 50 more are built by script — a checklist written from the markup alone would miss 20% of the interactive surface.
+* The shared chrome carries 108 controls; all six panes together carry 94. Most of the clicking happens in the shell, not inside a tab.
 * 62 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
@@ -55,7 +55,7 @@ Section `pane-start`, 11 interactive elements.
 
 ## Pane `harness`
 
-Section `pane-harness`, 28 interactive elements.
+Section `pane-harness`, 29 interactive elements.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
@@ -87,6 +87,7 @@ Section `pane-harness`, 28 interactive elements.
 | 26 | textarea | harnessPromptInput | — | Your task for the Harness | — |
 | 27 | select | harnessWorkflowMode | — | Harness workflow mode | syncHarnessWorkflowModeUI() |
 | 28 | button | harnessRunBtn | — | Run | executeHarnessSelectedWorkflow() |
+| 29 | button | harnessAttachBtn | button | Attach context | openContextModal() |
 
 ## Pane `hall`
 
