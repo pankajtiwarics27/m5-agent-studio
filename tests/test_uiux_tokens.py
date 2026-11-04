@@ -135,8 +135,8 @@ def test_a_token_with_no_reader_is_refused(tmp_path: Path, monkeypatch: pytest.M
     module = _patched(
         monkeypatch,
         tmp_path,
-        "  --space-2: 6px;",
-        "  --space-2: 6px;\n  --space-9: 32px;",
+        "  --space-2: 16px;",
+        "  --space-2: 16px;\n  --space-9: 32px;",
     )
     # --space-9 has no group either; the group check runs first, which is the
     # stronger message, so this proves the classification rule directly.
@@ -149,16 +149,16 @@ def test_a_token_whose_only_reader_is_removed_is_refused(
 ) -> None:
     """The orphan rule, proved on a real token rather than a synthetic one.
 
-    `--tracking-tight` has exactly one reader (`.brand`). Dropping that declaration
-    while keeping the token leaves a value nothing reads, which is the state the
-    check exists to refuse — and the state a token reaches by accident when the
-    rule that used it is refactored away.
+    `--text-page-title` has exactly one reader (the `.pane-title` rule added by
+    UIV2-07). Dropping that declaration while keeping the token leaves a value
+    nothing reads, which is the state the check exists to refuse — and the state
+    a token reaches by accident when the rule that used it is refactored away.
     """
     module = _patched(
         monkeypatch,
         tmp_path,
-        "letter-spacing: var(--tracking-tight);",
-        "",
+        "font-size: var(--text-page-title); font-weight: var(--weight-semibold);",
+        "font-weight: var(--weight-semibold);",
     )
     with pytest.raises(module.TokenError, match="wishes rather than tokens"):
         module.read_tokens()
@@ -208,6 +208,42 @@ def test_a_contrast_regression_is_refused(tmp_path: Path, monkeypatch: pytest.Mo
     # light theme after UIV2-04). Moving it to #70798a drops the pair to 4.16:1, past
     # the 4.5:1 floor, which proves the check measures rather than trusts.
     module = _patched(monkeypatch, tmp_path, "  --text-faint: #67717F;", "  --text-faint: #70798a;")
+    with pytest.raises(module.TokenError, match="contrast"):
+        module.read_tokens()
+
+
+def test_the_space_scale_is_the_8px_scale(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # UIV2-07: a space token that is not a multiple of 8px is refused, so the
+    # spacing scale cannot drift off the 8px grid one value at a time.
+    module = _patched(monkeypatch, tmp_path, "  --space-3: 24px;", "  --space-3: 20px;")
+    with pytest.raises(module.TokenError, match="8px scale"):
+        module.read_tokens()
+
+
+def test_a_short_comfortable_control_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # UIV2-07: --control-min-h below the 44px touch floor in :root is refused;
+    # compact may re-point it, which test_density_must_repoint_exactly_its_own_tokens covers.
+    module = _patched(monkeypatch, tmp_path, "  --control-min-h: 44px;", "  --control-min-h: 36px;")
+    with pytest.raises(module.TokenError, match="44px"):
+        module.read_tokens()
+
+
+def test_a_page_title_outside_20_24_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _patched(monkeypatch, tmp_path, "  --text-page-title: 22px;", "  --text-page-title: 18px;")
+    with pytest.raises(module.TokenError, match="20-24px"):
+        module.read_tokens()
+
+
+def test_a_pane_without_a_title_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _patched(monkeypatch, tmp_path, '<h2 class="pane-title">Chat</h2>', "")
+    with pytest.raises(module.TokenError, match="pane-title"):
+        module.read_tokens()
+
+
+def test_pale_accent_text_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # UIV2-07: the accent used as text clears 4.5:1 like secondary text. Moving the
+    # light accent to a pale value drops it to ~1.9:1 on the light canvas.
+    module = _patched(monkeypatch, tmp_path, "  --accent: #4F5FE8;", "  --accent: #AAB4F5;")
     with pytest.raises(module.TokenError, match="contrast"):
         module.read_tokens()
 

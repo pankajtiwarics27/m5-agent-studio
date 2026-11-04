@@ -26,7 +26,7 @@
   },
   "design_north_star": {
     "style": "Quiet, focused, minimal developer workspace with Claude Code/Cowork-like clarity, not a pixel clone or brand imitation",
-    "approved_harness_layout": "Desktop: slim global nav | session/workspace list | main active task Plan\u2192Execute\u2192Verify + timeline + composer | context inspector. Global telemetry is a header popover, not permanent right rail.",
+    "approved_harness_layout": "Desktop: slim global nav | session/workspace list | main active task Plan→Execute→Verify + timeline + composer | context inspector. Global telemetry is a header popover, not permanent right rail.",
     "layout_constraints": {
       "desktop_min_width_px": 1440,
       "nav_width_px": [
@@ -325,18 +325,18 @@
           "full suite at the same pin (UIV2-01 evidence): pytest -q 2612 passed/29 skipped + browser legs 32 passed in disposable clone"
         ],
         "visual_evidence": [
-          "docs/media/uiv2-v2/baseline/ (53 screenshots from the running app at the pin, captured under UIV2-01) \u2014 the visual side of this story changes no UI",
+          "docs/media/uiv2-v2/baseline/ (53 screenshots from the running app at the pin, captured under UIV2-01) — the visual side of this story changes no UI",
           "docs/uiv2-v2-preservation-matrix.md"
         ],
         "acceptance_evidence": [
-          "AC1 (machine-readable control->handler->API->test matrix; existing/partial/absent/unknown; no fabricated API): product/M5_2_0_UIUX_V2_Preservation_Matrix.json \u2014 194 controls with handler, resolved calls, api_status and covering test files; contracts: chat_persona_registry=absent_registry__existing_picker (3 hard-coded options, no registry), council_session_deletion=partial__lifecycle_without_delete (close exists, no DELETE under /api/hall), mcp_credential_handling=existing__masked (auth_token in SQLite/keyring, API returns only masked_token/has_token, UI field type=password). Every resolved call was matched against mounted @app routes; 0 absent-route, 0 unknown",
+          "AC1 (machine-readable control->handler->API->test matrix; existing/partial/absent/unknown; no fabricated API): product/M5_2_0_UIUX_V2_Preservation_Matrix.json — 194 controls with handler, resolved calls, api_status and covering test files; contracts: chat_persona_registry=absent_registry__existing_picker (3 hard-coded options, no registry), council_session_deletion=partial__lifecycle_without_delete (close exists, no DELETE under /api/hall), mcp_credential_handling=existing__masked (auth_token in SQLite/keyring, API returns only masked_token/has_token, UI field type=password). Every resolved call was matched against mounted @app routes; 0 absent-route, 0 unknown",
           "AC2 (visual conformance not checkbox-claimed): no UI changed in this story; conformance gate remains UIV2-03 with explicit user approval",
-          "AC3 (preservation): no product code edited \u2014 only a new generator script, its generated artifacts and this ledger; suite green at the pin"
+          "AC3 (preservation): no product code edited — only a new generator script, its generated artifacts and this ledger; suite green at the pin"
         ],
         "known_regressions": [],
         "blockers": [],
         "handoff_summary": "UIV2-02 complete. The V2 preservation matrix traces all 194 markup controls to handlers, API routes and test files; 33 controls reach mounted routes (all existing), 83 are client-side, 78 have no inline handler. Contracts: persona registry ABSENT (picker has 3 hard-coded options); Council session delete ABSENT (only /close exists); MCP credentials EXISTING and masked (keyring/SQLite storage, masked_token-only API, password field). No code edits; generator --check is a drift gate.",
-        "exact_next_action": "UIV2-03: encode the approved three-region Harness reference and per-tab layouts as annotated wireframes + screenshot fixtures, then STOP at the approval gate \u2014 structural implementation requires explicit user approval of the reference (no inferred approval).",
+        "exact_next_action": "UIV2-03: encode the approved three-region Harness reference and per-tab layouts as annotated wireframes + screenshot fixtures, then STOP at the approval gate — structural implementation requires explicit user approval of the reference (no inferred approval).",
         "updated_at": "2026-11-03T19:05:00+05:30"
       }
     },
@@ -426,12 +426,12 @@
           "python3 scripts/check_frontend_syntax.py : exit 0 (frontend untouched)"
         ],
         "visual_evidence": [
-          "docs/media/uiv2-v2/reference/<viewport>-<theme>/<pane>.png \u2014 36 rendered fixtures of docs/media/uiv2-v2/reference/wireframe.html (harness/start/hall/council/debate/chat at 1640x900, 1440x900 light+dark, 1280x800, 390x844) with per-set index.json sha256",
-          "docs/uiv2-v2-reference.md \u2014 annotated structure spec, tokens, per-tab intent, defect mapping, approval gate"
+          "docs/media/uiv2-v2/reference/<viewport>-<theme>/<pane>.png — 36 rendered fixtures of docs/media/uiv2-v2/reference/wireframe.html (harness/start/hall/council/debate/chat at 1640x900, 1440x900 light+dark, 1280x800, 390x844) with per-set index.json sha256",
+          "docs/uiv2-v2-reference.md — annotated structure spec, tokens, per-tab intent, defect mapping, approval gate"
         ],
         "acceptance_evidence": [
           "AC1 (reference shows persistent nav + central task + contextual inspector; reproducible annotated references and screenshot fixtures): encoded as wireframe.html + docs/uiv2-v2-reference.md + 36 fixtures; nav 192-224px / main >=640px / inspector 272-320px / header <=64px annotated; telemetry as header popover",
-          "AC2 (user review/explicit approval required before structural implementation; no inferred approval): NOT YET GIVEN \u2014 story stays blocked at the approval gate; the conceptual reference was approved by the user, this encoded artifact still needs explicit approval",
+          "AC2 (user review/explicit approval required before structural implementation; no inferred approval): NOT YET GIVEN — story stays blocked at the approval gate; the conceptual reference was approved by the user, this encoded artifact still needs explicit approval",
           "AC3 (preservation): no frontend or backend file edited; only docs/media/scripts/ledger added",
           "AC2 resolved: explicit user approval given in-session on 2026-11-04 (ask_user answer \"approve\" for the encoded reference docs/uiv2-v2-reference.md + docs/media/uiv2-v2/reference/ fixtures). Approval is recorded here, not inferred; PR #187 merged as c9a00c4."
         ],
@@ -541,14 +541,14 @@
           "product/M5_2_0_UIUX_Screenshot_Review.json + docs/uiux-2-0-screenshot-review.md : 348 captures, 28 sets, 28 reviewed, 0 findings"
         ],
         "acceptance_evidence": [
-          "AC1 (exact approved palettes, WCAG AA, semantic status colors only): light canvas #F8F9FB / surface #FFFFFF / secondary #F1F3F5 / text #1B2430 / muted #596579 / border #DDE2E8 / primary #4F5FE8; dark canvas #111318 / surface #1A1D24 / secondary #242832 / text #F3F5F7 / muted #AAB4C3 / border #343B48 / primary #93A0FF \u2014 all set in the m5-redesign-system block of static/index.html, parsed and verified by scripts/uiux_tokens.py --check (22 contrast pairs, lowest 4.7:1; text role floor 7:1, dim 4.5:1, primary-text on accent 4.5:1). Status hues untouched (color denotes meaning). After-screenshots in both themes confirm the rendered result.",
+          "AC1 (exact approved palettes, WCAG AA, semantic status colors only): light canvas #F8F9FB / surface #FFFFFF / secondary #F1F3F5 / text #1B2430 / muted #596579 / border #DDE2E8 / primary #4F5FE8; dark canvas #111318 / surface #1A1D24 / secondary #242832 / text #F3F5F7 / muted #AAB4C3 / border #343B48 / primary #93A0FF — all set in the m5-redesign-system block of static/index.html, parsed and verified by scripts/uiux_tokens.py --check (22 contrast pairs, lowest 4.7:1; text role floor 7:1, dim 4.5:1, primary-text on accent 4.5:1). Status hues untouched (color denotes meaning). After-screenshots in both themes confirm the rendered result.",
           "AC2 (visual conformance, no checkbox completion): canonical 6-pane set recaptured in the same commit (validate_screenshots 6/6) + 19 after-images under uiv2-v2/after-uiv2-04; screenshot review regenerated with 0 findings. Layout conformance to the three-region reference is the P1 shell story (UIV2-05), not claimed here.",
-          "AC3 (preservation): only colour tokens changed \u2014 control inventory 194 controls before and after, route map call sites unchanged, no handler/markup/route edits; studio.py regenerated byte-synced; full check suite green (see tests_executed)"
+          "AC3 (preservation): only colour tokens changed — control inventory 194 controls before and after, route map call sites unchanged, no handler/markup/route edits; studio.py regenerated byte-synced; full check suite green (see tests_executed)"
         ],
         "known_regressions": [],
         "blockers": [],
         "handoff_summary": "UIV2-04 done: the approved V2 palette (light + dark) is now the m5-redesign-system token block in static/index.html; every var() consumer (1192 references) works unchanged, semantic status colors untouched. WCAG verified by uiux_tokens.py (22 pairs, lowest 4.7:1). Canonical screenshots recaptured and 19 after-images committed; screenshot review 0 findings; release gate 37/37 checks, 7/7 gates. No controls/routes/handlers changed.",
-        "exact_next_action": "Start UIV2-05 (dependency UIV2-04 done): build the responsive shared shell and navigation \u2014 persistent slim nav 192-224px at >=1440, central min 640px, inspector 272-320px as a drawer, header <=64px, collapse at 1280/800/390, minimize the two-row skills/MCP chrome. Verify no horizontal overflow, all 6 tabs reachable, and recapture before/after screenshots.",
+        "exact_next_action": "Start UIV2-05 (dependency UIV2-04 done): build the responsive shared shell and navigation — persistent slim nav 192-224px at >=1440, central min 640px, inspector 272-320px as a drawer, header <=64px, collapse at 1280/800/390, minimize the two-row skills/MCP chrome. Verify no horizontal overflow, all 6 tabs reachable, and recapture before/after screenshots.",
         "updated_at": "2026-11-04T10:20:00+05:30"
       }
     },
@@ -828,20 +828,42 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-07: Shared controls, typography, empty states and dialog patterns. Required outcome: Consistent input sizing, buttons, headings, chips, cards, tables, focus states, confirmation dialogs, scroll areas and disclosure controls. Specific gate: Primary action clear on every page; 8px spacing scale; 14-16px body, 20-24px page titles; minimum 44px touch targets where feasible; never use pale low-contrast accent text. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-04T12:20:00+05:30",
+        "completed_at": "2026-11-04T13:00:00+05:30",
+        "commit_sha": "ca73320",
+        "changed_files": [
+          "static/index.html (space tokens re-pointed to the 8px scale 8/16/24/32/40px; --control-min-h and --control-min-h-sm 44px; text inputs/selects/textarea min-height var(--control-min-h); new --text-page-title: 22px with one <h2 class=\"pane-title\"> per pane; Start pane demoted to a single page-level primary - lead-card action, Open in Harness, Set / Create and Launch SDLC are secondary)",
+          "studio.py (build_studio.py, byte-synced in the same commit)",
+          "scripts/uiux_tokens.py (UIV2-07 rules: space tokens must be positive multiples of 8px, :root control heights >= 44px, --text-page-title in 20-24px with a .pane-title in every pane, accent-as-text 4.5:1 floor vs every surface in both themes)",
+          "tests/test_uiux_tokens.py (anchors moved to new values + 5 new refusal tests; 18/18 pass)",
+          "docs/media/uiv2-v2/before-uiv2-07/ (18 PNGs at 995606c), after-uiv2-07/ (18 PNGs at ca73320), README.md notes",
+          "all regenerated product/M5_2_0_UIUX_*.json + docs/uiux-2-0-*.md artifacts incl. release gate 37/37, 7/7 gates, 0 findings"
+        ],
+        "tests_executed": [
+          "bridge-driven headless-Chromium audit of the running demo (file:// bundle + fetch bridged to a disposable demo_tour.py --serve copy): before at 995606c (body 14px, no page title >18px, controls 13-38px, 5 visible primaries on Start, space 4/6/8/12/16) and after at ca73320 (22px title per pane, one 44px page-level primary per pane, space 8/16/24/32/40, control-min-h 44, only 24px chips/badges below 44, zero accent-coloured text nodes) in dark and light at 1440x900",
+          "before/after capture sets (6 panes x 1440x900 light/dark + 390x844 dark) from disposable copies served by demo_tour.py --serve",
+          "python -m pytest -q in a disposable full clone at ca73320: 2602 passed, 28 skipped, 12 failed before artifact regen; after regenerating the gate/signoff/review artifacts and fixing 2 token-test anchors, the 153 affected tests (tokens, signoff, release gate, screenshot review, control inventory, harness recovery, start health) all pass; token file 18/18",
+          "verify_baseline, run_scoped_tests --check-map, mypy, compileall, ruff check ., check_frontend_syntax, demo_tour --check, smoke_local (x2), validate_screenshots, validate_docs/governance/adrs/security_signoff/threat_model, build_studio reproducibility + generate_* --check + git diff: all green; browser legs run in CI (this sandbox's Chromium cannot open HTTP itself)"
+        ],
+        "visual_evidence": [
+          "docs/media/uiv2-v2/before-uiv2-07/{1440x900-light,1440x900-dark,390x844-dark}/*.png (6 panes each)",
+          "docs/media/uiv2-v2/after-uiv2-07/{1440x900-light,1440x900-dark,390x844-dark}/*.png (6 panes each; e.g. after-uiv2-07/1440x900-dark/start.png shows the 22px Start title, 44px controls and the single filled primary)"
+        ],
+        "acceptance_evidence": [
+          "One clear primary per page: exactly one page-level .btn-primary per pane measured in the running app at 44px (start 'Run the first task', harness 'Run', hall 'Send', council 'Run pipeline', debate 'Start Compare', chat 'Send'); the only other primaries are btn-xs card-local actions in empty/presentation states",
+          "8px spacing scale: --space-1..5 = 8/16/24/32/40px, enforced by uiux_tokens.py (off-grid space token refused)",
+          "Body 14px (14-16 band); page titles 22px (20-24 band) with one .pane-title per pane, enforced by uiux_tokens.py",
+          "44px touch targets where feasible: --control-min-h/-sm 44px and inputs/selects/composers on the same token, enforced; only chips/badges keep the 24px --target-min floor (WCAG 2.5.8 spacing exception, documented)",
+          "No pale low-contrast accent text: accent-as-text measured 7.0-7.7:1 dark and 4.8-5.1:1 light against bg/bg-elev/bg-card, now enforced at a 4.5:1 floor by uiux_tokens.py; zero accent-coloured text nodes found in any pane",
+          "Preservation: six tabs, all controls/handlers, auth/session behavior unchanged (affected test files + preservation matrix + signoff + release gate green; demo_tour --check and smoke_local pass)"
+        ],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "Shared controls and typography now sit on enforced tokens: an 8px space scale, 44px comfortable-density control heights (inputs/selects/composers included), a 22px page title on every pane, exactly one page-level primary action per pane, and accent text held to a 4.5:1 contrast floor in both themes. Empty states and dialog patterns were already shared (presentInto/modal) and are inventoried green by the overlay/presentation artifacts.",
+        "exact_next_action": "UIV2-08: next P1 story per the roadmap order."
       }
     },
     {
@@ -2757,11 +2779,11 @@
       "id": "P1",
       "name": "Design system and application shell",
       "total": 4,
-      "done": 3,
+      "done": 4,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 1,
-      "percent_complete": 75
+      "not_started": 0,
+      "percent_complete": 100
     },
     {
       "id": "P2",
@@ -2816,11 +2838,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 6,
+    "done": 7,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 24,
-    "percent_complete": 20
+    "not_started": 23,
+    "percent_complete": 23
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",

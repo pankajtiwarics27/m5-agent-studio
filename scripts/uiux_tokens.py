@@ -57,7 +57,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "cyan", "emerald", "amber", "rose", "purple", "ring",
     ),
     "typography": (
-        "text-2xs", "text-xs", "text-sm", "text-base",
+        "text-2xs", "text-xs", "text-sm", "text-base", "text-page-title",
         "weight-medium", "weight-semibold", "lh-tight", "lh-base", "tracking-tight",
     ),
     "space": ("space-1", "space-2", "space-3", "space-4", "space-5"),
@@ -76,6 +76,10 @@ GROUP_OF = {f"--{name}": group for group, names in GROUPS.items() for name in na
 #: A number with a reason: body text aims well past AA, secondary text is AA, and
 #: decorative text still has to be readable rather than "faint by design".
 TEXT_ROLES: dict[str, float] = {"text": 7.0, "text-dim": 4.5, "text-faint": 4.5}
+#: The accent colour is a fill first, but anywhere it is used as a *text* colour
+#: it must clear the same AA floor as secondary text (UIV2-07: never pale,
+#: low-contrast accent text).
+ACCENT_TEXT_FLOOR = 4.5
 SURFACES = ("bg", "bg-elev", "bg-card")
 #: Text drawn on the accent fill (primary buttons) — one pair, same AA floor.
 FILL_PAIRS: tuple[tuple[str, str, float], ...] = (
@@ -253,11 +257,46 @@ def read_tokens() -> dict[str, object]:
             + (f"; it does not re-point {', '.join(absent_density)}" if absent_density else "")
         )
 
+    # UIV2-07, the shared-control rules: the space scale is the 8px scale, a
+    # comfortable-density control is at least the 44px touch floor, and the page
+    # title token sits in the 20-24px band with a .pane-title in every pane.
+    for name in GROUPS["space"]:
+        value = _length_px(str(default[f"--{name}"]))
+        if value is None or value <= 0 or value % 8 != 0:
+            raise TokenError(
+                f"--{name} is {default[f'--{name}']!r}; the space scale is the 8px scale "
+                "(UIV2-07), so every space token must be a positive multiple of 8px"
+            )
+    for name in ("control-min-h", "control-min-h-sm"):
+        value = _length_px(str(default[f"--{name}"]))
+        if value is None or value < 44:
+            raise TokenError(
+                f"--{name} is {default[f'--{name}']!r} in :root; at comfortable density a "
+                "control must be at least the 44px touch floor (UIV2-07) — compact may "
+                "re-point it, --target-min may not"
+            )
+    title_px = _length_px(str(default["--text-page-title"]))
+    if title_px is None or not 20 <= title_px <= 24:
+        raise TokenError(
+            f"--text-page-title is {default['--text-page-title']!r}; page titles are 20-24px "
+            "(UIV2-07)"
+        )
+    for pane in ("start", "harness", "hall", "council", "debate", "chat"):
+        match = re.search(
+            r'<section id="pane-' + pane + r'"[^>]*>(.*?)</section>', html, re.DOTALL
+        )
+        if not match or 'class="pane-title"' not in match.group(1):
+            raise TokenError(
+                f'the pane #pane-{pane} has no <h2 class="pane-title">; every page opens with '
+                "one title in the 20-24px band (UIV2-07)"
+            )
+
     themes = {"dark": default, "light": {**default, **light}}
     measured: list[dict[str, object]] = []
     failures: list[str] = []
     for theme, values in themes.items():
-        for role, floor in TEXT_ROLES.items():
+        text_roles = {**TEXT_ROLES, "accent": ACCENT_TEXT_FLOOR}
+        for role, floor in text_roles.items():
             foreground = str(values[f"--{role}"])
             for surface in SURFACES:
                 background = str(values[f"--{surface}"])
@@ -361,6 +400,10 @@ def read_tokens() -> dict[str, object]:
             "the light theme defines exactly the colour tokens the default theme defines",
             "the density block re-points exactly the density tokens",
             "every text token clears its floor against every surface, in every theme",
+            "the accent colour used as text clears 4.5:1 against every surface, in every theme (UIV2-07)",
+            "every space token is a positive multiple of 8px — the 8px spacing scale (UIV2-07)",
+            "--control-min-h and --control-min-h-sm are at least 44px in :root (UIV2-07)",
+            "--text-page-title is 20-24px and every pane carries a .pane-title (UIV2-07)",
         ],
         "limits": [
             "A referenced token can still be referenced by a rule that never matches; this artifact "

@@ -4346,18 +4346,23 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   --text-xs: 12px;
   --text-sm: 13px;
   --text-base: 14px;
+  /* UIV2-07: every page carries one title in the 20-24px band; uiux_tokens.py
+     fails a page-title token outside that band or a pane without a .pane-title. */
+  --text-page-title: 22px;
   --weight-medium: 500;
   --weight-semibold: 600;
   --lh-tight: 1.3;
   --lh-base: 1.5;
   --tracking-tight: -0.01em;
 
-  /* Space — one scale, so density can move the whole app rather than one panel. */
-  --space-1: 4px;
-  --space-2: 6px;
-  --space-3: 8px;
-  --space-4: 12px;
-  --space-5: 16px;
+  /* Space — one 8px scale (UIV2-07): every step is a multiple of 8px, and
+     uiux_tokens.py fails a space token that is not, so density can move the
+     whole app rather than one panel. */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
 
   /* Radius — one scale for every corner in the app. A corner is a decision the token makes, not a
      number a rule picks: the pane had eleven of them before this list existed. */
@@ -4375,8 +4380,11 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
 
   /* Density — comfortable is the default. body[data-density="compact"] re-points
      these five values; rules read the token, never the density attribute. */
-  --control-min-h: 36px;
-  --control-min-h-sm: 32px;
+  /* UIV2-07: at comfortable density a control is at least the 44px touch floor
+     (uiux_tokens.py fails a shorter --control-min-h in :root); compact is the
+     deliberate exception a user opts into, and --target-min stays a floor. */
+  --control-min-h: 44px;
+  --control-min-h-sm: 44px;
   --strip-pad-y: 7px;
   --card-pad: 13px;
   --row-gap: 4px;
@@ -4504,6 +4512,20 @@ select { min-width: 0; max-width: 100%; }
 input, select, textarea {
   color: var(--text); background-color: var(--bg); border-color: var(--border); border-radius: var(--radius-sm);
   font-family: var(--sans); font-size: 13px;
+}
+/* UIV2-07: one input sizing — a text field, select or composer is a standard
+   control, so it stands at the same --control-min-h as a button (44px at
+   comfortable density). Checkboxes and radios are excluded on purpose: their
+   hit area is the label, which already carries --target-min. */
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+  min-height: var(--control-min-h);
+}
+/* UIV2-07: every page opens with one title in the 20-24px band, so the pane a
+   reader lands on is named at a readable size, not only in the tab rail. */
+.pane-title {
+  margin: 0; padding: var(--space-3) var(--space-3) 0;
+  font-size: var(--text-page-title); font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight); color: var(--text); line-height: var(--lh-tight);
 }
 input::placeholder, textarea::placeholder { color: var(--text-faint); opacity: 1; }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); }
@@ -5730,7 +5752,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
               <option value="plan_only">1. Research &amp; Plan Backlog Only (.sdlc/backlog.json)</option>
               <option value="run_sprints">Resume Pending Sprints (passes:false stories)</option>
             </select>
-            <button class="btn btn-primary btn-xs" onclick="startSdlcSelectedMode()">Launch SDLC</button>
+            <button class="btn btn-xs" onclick="startSdlcSelectedMode()">Launch SDLC</button>
           </div>
         </div>
       </div>
@@ -5837,6 +5859,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
     <!-- ================= TAB 0: AUTONOMOUS AGENTIC HARNESS (v5.0) ================= -->
     <section id="pane-start" role="tabpanel" aria-labelledby="tab-start" class="pane">
+      <h2 class="pane-title">Start</h2>
       <div class="onboarding-shell">
         <div class="m-card">
           <div class="m-head">
@@ -5897,7 +5920,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <input type="text" id="startTaskInput" autocomplete="off"
                    placeholder="Describe a task to open in the Harness…"
                    aria-describedby="startTaskHint" />
-            <button class="btn btn-primary" id="startTaskBtn" type="button" onclick="launchTaskFromStart()" aria-describedby="startTaskHint">Open in Harness</button>
+            <button class="btn" id="startTaskBtn" type="button" onclick="launchTaskFromStart()" aria-describedby="startTaskHint">Open in Harness</button>
             <button class="btn" type="button" onclick="loadStartRecent({ force: true })" title="Re-read the session list from the server">Refresh</button>
           </div>
           <div id="startTaskHint" class="onboarding-note"></div>
@@ -5942,7 +5965,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <select id="startWorkspaceRecent" aria-label="Recent project folders" onchange="if(this.value) pickStartWorkspace(this.value)">
               <option value="">Recent folders…</option>
             </select>
-            <button class="btn btn-primary" id="startWorkspaceBtn" type="button" onclick="saveStartWorkspace()" aria-describedby="startWorkspaceHint">Set / Create</button>
+            <button class="btn" id="startWorkspaceBtn" type="button" onclick="saveStartWorkspace()" aria-describedby="startWorkspaceHint">Set / Create</button>
           </div>
           <div id="startWorkspaceHint" class="onboarding-note"></div>
           <div id="startWorkspaceState"></div>
@@ -5951,6 +5974,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </section>
 
     <section id="pane-harness" role="tabpanel" aria-labelledby="tab-harness" class="pane active">
+      <h2 class="pane-title">Harness</h2>
       <!-- Inert inventory anchor: approval cards render from durable events, so this disabled template
            keeps the existing decision handler visible to the pane-to-route sign-off without rendering it. -->
       <template id="harnessApprovalRouteAttributionTemplate">
@@ -6111,6 +6135,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
     <!-- ================= TAB 1: COUNCIL HALL ================= -->
     <section id="pane-hall" role="tabpanel" aria-labelledby="tab-hall" class="pane">
+      <h2 class="pane-title">Council</h2>
       <div class="hall-shell">
         <aside class="hall-sidebar">
           <div class="hall-side-head">
@@ -6225,6 +6250,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
     <!-- ================= TAB 2: AUTO 4-STAGE ================= -->
     <section id="pane-council" role="tabpanel" aria-labelledby="tab-council" class="pane">
+      <h2 class="pane-title">Pipeline</h2>
       <div id="councilScroll" class="scroll-body">
         <div class="config-strip">
           <div class="role-grid">
@@ -6302,6 +6328,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
     <!-- ================= TAB 3: DEBATE ================= -->
     <section id="pane-debate" role="tabpanel" aria-labelledby="tab-debate" class="pane">
+      <h2 class="pane-title">Compare</h2>
       <div class="scroll-body">
         <div class="config-strip" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
           <div style="flex:1; min-width:260px;">
@@ -6356,6 +6383,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
     <!-- ================= TAB 4: DIRECT CHAT ================= -->
     <section id="pane-chat" role="tabpanel" aria-labelledby="tab-chat" class="pane">
+      <h2 class="pane-title">Chat</h2>
       <div class="chat-header-bar">
         <div><label class="field-lbl" for="chatModel">Active Model (Local / Cloud / Combo)</label><select id="chatModel"></select></div>
         <div>
@@ -7037,7 +7065,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (!report.ready && next && next.action && next.action_label) {
       const run = document.createElement("button");
       run.type = "button";
-      run.className = "btn btn-primary";
+      // UIV2-07: the lead card names the next step, but the pane has exactly one
+      // primary action ("Run the first task"), so this button is secondary.
+      run.className = "btn";
       run.id = "onboardingLeadAction";
       run.textContent = next.action_label;
       run.title = `Do the next step: ${next.title}`;

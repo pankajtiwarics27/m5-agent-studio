@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "f7fb7f55c7a8a5bb3f8c0505434b597c2b9d7d3b0b3eac331032f584c5147511",
+    "style_block_sha256": "9fb6f11bdf0cbddbc258192936c12469cf59f860e86047b536c8b3fe87cd6990",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -40,12 +40,12 @@
     ]
   },
   "totals": {
-    "tokens": 53,
+    "tokens": 54,
     "groups": 8,
-    "references": 1220,
+    "references": 1228,
     "theme_overrides": 20,
     "density_overrides": 5,
-    "contrast_pairs": 22,
+    "contrast_pairs": 28,
     "lowest_contrast_ratio": 4.7
   },
   "groups": {
@@ -76,6 +76,7 @@
       "text-xs",
       "text-sm",
       "text-base",
+      "text-page-title",
       "weight-medium",
       "weight-semibold",
       "lh-tight",
@@ -208,7 +209,7 @@
         "light": "#1B2430"
       },
       "density_override": null,
-      "references": 76
+      "references": 77
     },
     {
       "name": "--text-dim",
@@ -353,6 +354,14 @@
       "references": 2
     },
     {
+      "name": "--text-page-title",
+      "group": "typography",
+      "value": "22px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 1
+    },
+    {
       "name": "--weight-medium",
       "group": "typography",
       "value": "500",
@@ -366,7 +375,7 @@
       "value": "600",
       "theme_overrides": {},
       "density_override": null,
-      "references": 6
+      "references": 7
     },
     {
       "name": "--lh-tight",
@@ -374,7 +383,7 @@
       "value": "1.3",
       "theme_overrides": {},
       "density_override": null,
-      "references": 5
+      "references": 6
     },
     {
       "name": "--lh-base",
@@ -390,12 +399,12 @@
       "value": "-0.01em",
       "theme_overrides": {},
       "density_override": null,
-      "references": 1
+      "references": 2
     },
     {
       "name": "--space-1",
       "group": "space",
-      "value": "4px",
+      "value": "8px",
       "theme_overrides": {},
       "density_override": null,
       "references": 9
@@ -403,7 +412,7 @@
     {
       "name": "--space-2",
       "group": "space",
-      "value": "6px",
+      "value": "16px",
       "theme_overrides": {},
       "density_override": null,
       "references": 26
@@ -411,15 +420,15 @@
     {
       "name": "--space-3",
       "group": "space",
-      "value": "8px",
+      "value": "24px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 18
+      "references": 20
     },
     {
       "name": "--space-4",
       "group": "space",
-      "value": "12px",
+      "value": "32px",
       "theme_overrides": {},
       "density_override": null,
       "references": 4
@@ -427,7 +436,7 @@
     {
       "name": "--space-5",
       "group": "space",
-      "value": "16px",
+      "value": "40px",
       "theme_overrides": {},
       "density_override": null,
       "references": 1
@@ -483,15 +492,15 @@
     {
       "name": "--control-min-h",
       "group": "density",
-      "value": "36px",
+      "value": "44px",
       "theme_overrides": {},
       "density_override": "32px",
-      "references": 2
+      "references": 3
     },
     {
       "name": "--control-min-h-sm",
       "group": "density",
-      "value": "32px",
+      "value": "44px",
       "theme_overrides": {},
       "density_override": "28px",
       "references": 1
@@ -660,6 +669,30 @@
     },
     {
       "theme": "dark",
+      "foreground": "--accent",
+      "background": "--bg",
+      "ratio": 7.71,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "--accent",
+      "background": "--bg-elev",
+      "ratio": 7.0,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "--accent",
+      "background": "--bg-card",
+      "ratio": 7.0,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
       "foreground": "--primary-text",
       "background": "--accent",
       "ratio": 7.71,
@@ -748,6 +781,30 @@
     },
     {
       "theme": "light",
+      "foreground": "--accent",
+      "background": "--bg",
+      "ratio": 4.82,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "foreground": "--accent",
+      "background": "--bg-elev",
+      "ratio": 5.08,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "foreground": "--accent",
+      "background": "--bg-card",
+      "ratio": 5.08,
+      "floor": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
       "foreground": "--primary-text",
       "background": "--accent",
       "ratio": 5.08,
@@ -769,7 +826,11 @@
     "every token belongs to a declared group",
     "the light theme defines exactly the colour tokens the default theme defines",
     "the density block re-points exactly the density tokens",
-    "every text token clears its floor against every surface, in every theme"
+    "every text token clears its floor against every surface, in every theme",
+    "the accent colour used as text clears 4.5:1 against every surface, in every theme (UIV2-07)",
+    "every space token is a positive multiple of 8px — the 8px spacing scale (UIV2-07)",
+    "--control-min-h and --control-min-h-sm are at least 44px in :root (UIV2-07)",
+    "--text-page-title is 20-24px and every pane carries a .pane-title (UIV2-07)"
   ],
   "limits": [
     "A referenced token can still be referenced by a rule that never matches; this artifact does not render the page.",
