@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "c59454fefdda4a29aef9eb2f19173046cf1abd2f7a7a0307d09db79563db79c3",
+  "frontend_sha256": "67f337b72a09c3c871cd1558cae33287bff376abd938f4d809cae5107d1059ee",
   "panes": [
     {
       "dom_id": "start",
@@ -56,7 +56,7 @@
           "tag": "button",
           "id": "startTaskBtn",
           "type": "button",
-          "class": "btn btn-primary",
+          "class": "btn",
           "aria-describedby": "startTaskHint",
           "onclick": "launchTaskFromStart()",
           "text": "Open in Harness"
@@ -102,7 +102,7 @@
           "tag": "button",
           "id": "startWorkspaceBtn",
           "type": "button",
-          "class": "btn btn-primary",
+          "class": "btn",
           "aria-describedby": "startWorkspaceHint",
           "onclick": "saveStartWorkspace()",
           "text": "Set / Create"
@@ -1319,7 +1319,7 @@
       },
       {
         "tag": "button",
-        "class": "btn btn-primary btn-xs",
+        "class": "btn btn-xs",
         "onclick": "startSdlcSelectedMode()",
         "text": "Launch SDLC"
       },
