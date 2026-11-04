@@ -41,7 +41,7 @@ def _source() -> str:
 def test_every_modal_is_a_named_modal_dialog() -> None:
     parser = ModalParser()
     parser.feed(_source())
-    assert len(parser.dialogs) == 11
+    assert len(parser.dialogs) == 12  # +1: #hallConclusionModal (UIV2-12 expanded conclusion)
     assert all(dialog["aria-label"] or dialog["aria-labelledby"] for dialog in parser.dialogs)
     # The shared controller sets aria-modal only while a backdrop is open.
     source = _source()

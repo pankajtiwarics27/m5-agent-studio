@@ -57,6 +57,9 @@ const PALETTE_QUERIES = {
   harnessEvidenceModal: "what a completion claim rests on",
   providersModal: "Configure model providers",
   sdlcModal: "Plan and deliver a product",
+  // UIV2-12: the Expand button only exists once a conclusion is rendered, so the palette
+  // row is this dialog's always-available keyboard path.
+  hallConclusionModal: "Expand pinned Council conclusion",
 };
 
 function parseArgs(argv) {
@@ -240,7 +243,7 @@ async function run(args) {
     record("the controller is exported for the walk", initial.hook === true, "window.M5Overlays");
 
     const dialogs = inventory.dialogs || [];
-    record("the inventory lists every dialog", dialogs.length === 11, `${dialogs.length} dialogs`);
+    record("the inventory lists every dialog", dialogs.length === 12, `${dialogs.length} dialogs`);
 
     for (const dialog of dialogs) {
       const id = dialog.id;

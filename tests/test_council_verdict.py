@@ -359,3 +359,83 @@ def test_the_ledger_marks_the_story():
     assert tracking["evidence"] and tracking["test_results"]
     assert tracking["commit_sha"]
     assert ledger["session_state"]["next_recommended_story"] != "UIUX-P4-03"
+
+
+# ── UIV2-12: pinned conclusion panel — sticky, scrollable, resizable, never locking ──
+
+
+def test_uiv2_12_conclusion_panel_gates_hold(payload):
+    by_name = {c["check"]: c["ok"] for c in payload["checks"]}
+    for name in (
+        "the conclusion renders as the first card of the transcript stream",
+        "the banner sticks to the top of the stream while the transcript scrolls under it",
+        "the conclusion body scrolls independently of the transcript",
+        "the panel is resizable by drag and by keyboard, clamped so the transcript keeps room",
+        "the panel expands into a true modal through the shared overlay controller",
+        "pin/unpin only flips the sticky position and says so",
+        "no code locks the page scroll outside a true modal",
+        "the transcript stream still scrolls on its own",
+    ):
+        assert by_name.get(name), f"missing or failed gate: {name}"
+
+
+def test_a_conclusion_rendered_outside_the_stream_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            "stream.innerHTML = conclusionBannerHtml +", "stream.innerHTML = ", 1
+        )
+    )
+    assert "the conclusion renders as the first card of the transcript stream" in _checks(payload)
+
+
+def test_a_banner_without_its_own_scroll_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            ".conclusion-body { max-height: 24vh; overflow-y: auto;",
+            ".conclusion-body { ",
+            1,
+        )
+    )
+    assert "the conclusion body scrolls independently of the transcript" in _checks(payload)
+
+
+def test_a_non_sticky_banner_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            ".conclusion-banner { position: sticky; top: 0;",
+            ".conclusion-banner { position: static;",
+            1,
+        )
+    )
+    assert "the banner sticks to the top of the stream while the transcript scrolls under it" in _checks(payload)
+
+
+def test_an_expand_that_skips_the_overlay_controller_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            'openOverlay("hallConclusionModal");', "document.getElementById(\"hallConclusionModal\").classList.add(\"open\");", 1
+        )
+    )
+    assert "the panel expands into a true modal through the shared overlay controller" in _checks(payload)
+
+
+def test_a_page_scroll_lock_outside_modals_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            "function openOverlay(id, options = {}) {",
+            "function openOverlay(id, options = {}) {\n    document.body.style.overflow = \"hidden\";",
+            1,
+        )
+    )
+    assert "no code locks the page scroll outside a true modal" in _checks(payload)
+
+
+def test_an_unclamped_resize_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            "Math.min(Math.max(h, 120), Math.round(window.innerHeight * 0.7))",
+            "Math.max(h, 0)",
+            1,
+        )
+    )
+    assert "the panel is resizable by drag and by keyboard, clamped so the transcript keeps room" in _checks(payload)

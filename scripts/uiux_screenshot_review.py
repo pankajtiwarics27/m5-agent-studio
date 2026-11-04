@@ -360,7 +360,7 @@ REVIEWS: dict[str, dict[str, object]] = {
         "theme": "dark and light",
     },
     "uiv2-v2": {
-        "story": "UIV2-01 (baseline), UIV2-03 (reference fixtures), UIV2-04/UIV2-05/UIV2-06 (after-sets)",
+        "story": "UIV2-01 (baseline), UIV2-03 (reference fixtures), UIV2-04/UIV2-05/UIV2-06/UIV2-11/UIV2-12 (after-sets)",
         "note": (
             "Two V2-program sets. `baseline/` is the running app at pinned HEAD 9a584a3, captured "
             "from a disposable git-archive copy via demo_tour.py --serve with scripts/capture_screenshots.mjs "
@@ -396,7 +396,15 @@ REVIEWS: dict[str, dict[str, object]] = {
             "row's delete is an enabled one-click button, after has the named Filter sessions box, "
             "shown-of-total counts, the disabled (aria-disabled) delete on the running row, and the armed "
             "Confirm delete state with its irreversible-scope note - plus the walk state shots "
-            "(filter-active, running-protected, armed-delete-scope, sessions-mobile at 390x844)."
+            "(filter-active, running-protected, armed-delete-scope, sessions-mobile at 390x844). "
+            "`before-uiv2-12/` and `after-uiv2-12/` bracket the UIV2-12 pinned-conclusion scroll-lock fix "
+            "(served from a disposable git-archive copy at b01704f vs the branch, one seeded closed Council "
+            "session carrying a 17,430-char conclusion): opened the 1440x900-dark pair - before shows the "
+            "conclusion flooding the whole pane as one unscrollable block with the transcript and composer "
+            "pushed out of view, after shows it as a capped sticky card at the top of the transcript with "
+            "Expand/Unpin/close controls while the transcript and composer stay visible - plus the walk "
+            "state shots (pinned-long-conclusion, unpinned, resized, expanded-modal at 1440x900-dark; "
+            "mobile-long-conclusion at 390x844-dark)."
         ),
         "eye": [
             "baseline/1440x900-light/start.png",
@@ -417,6 +425,13 @@ REVIEWS: dict[str, dict[str, object]] = {
             "after-uiv2-11/1440x900-dark-states/running-protected.png",
             "after-uiv2-11/1440x900-dark-states/armed-delete-scope.png",
             "after-uiv2-11/390x844-dark-states/sessions-mobile.png",
+            "before-uiv2-12/1440x900-dark/hall.png",
+            "after-uiv2-12/1440x900-dark/hall.png",
+            "after-uiv2-12/1440x900-dark-states/pinned-long-conclusion.png",
+            "after-uiv2-12/1440x900-dark-states/unpinned.png",
+            "after-uiv2-12/1440x900-dark-states/resized.png",
+            "after-uiv2-12/1440x900-dark-states/expanded-modal.png",
+            "after-uiv2-12/390x844-dark-states/mobile-long-conclusion.png",
         ],
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",

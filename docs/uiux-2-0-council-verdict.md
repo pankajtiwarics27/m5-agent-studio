@@ -61,7 +61,7 @@ against `scripts/council_readiness_seed.py`.
 
 ## The checks
 
-24 checks, 0 findings — **clean**.
+32 checks, 0 findings — **clean**.
 
 * `pass` the session table records a conclusion with its author and the time it was pinned
 * `pass` a pinned verdict is the seat's own reply, closed by the call that saves it
@@ -81,6 +81,14 @@ against `scripts/council_readiness_seed.py`.
 * `pass` the block is not rewritten while nothing in it has moved
 * `pass` Copy verdict writes the same table as markdown
 * `pass` the pinned conclusion banner still draws the pinned text
+* `pass` the conclusion renders as the first card of the transcript stream
+* `pass` the banner sticks to the top of the stream while the transcript scrolls under it
+* `pass` the conclusion body scrolls independently of the transcript
+* `pass` the panel is resizable by drag and by keyboard, clamped so the transcript keeps room
+* `pass` the panel expands into a true modal through the shared overlay controller
+* `pass` pin/unpin only flips the sticky position and says so
+* `pass` no code locks the page scroll outside a true modal
+* `pass` the transcript stream still scrolls on its own
 * `pass` every value the verdict draws is escaped
 * `pass` the pane calls no route for the verdict, and invents none
 * `pass` the fixture answers each catalogue model with its own paragraph, and a stranger with a line

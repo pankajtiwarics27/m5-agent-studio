@@ -389,6 +389,63 @@ def build_inventory() -> dict:
         and "Pinned Council Conclusion" in render_hall,
         "the surface this story builds on may not be replaced by it",
     )
+
+    # ── UIV2-12: the pinned conclusion is a readable panel that never locks scrolling ──
+    check(
+        "the conclusion renders as the first card of the transcript stream",
+        "stream.innerHTML = conclusionBannerHtml +" in render_hall
+        and 'id="hallConclusionBanner"' in render_hall,
+        "a conclusion rendered outside the stream cannot scroll with it and freezes the pane",
+    )
+    check(
+        "the banner sticks to the top of the stream while the transcript scrolls under it",
+        ".conclusion-banner { position: sticky; top: 0;" in html
+        and '.conclusion-banner[data-pinned="false"] { position: static; }' in html,
+        "without sticky the long card either scrolls away or blocks the transcript",
+    )
+    check(
+        "the conclusion body scrolls independently of the transcript",
+        ".conclusion-body { max-height: 24vh; overflow-y: auto;" in html
+        and 'class="conclusion-body" tabindex="0" role="region"' in render_hall,
+        "a 10k+ character conclusion needs its own wheel/trackpad/touch/keyboard scroll",
+    )
+    check(
+        "the panel is resizable by drag and by keyboard, clamped so the transcript keeps room",
+        "hallConclusionResizeStart(event)" in render_hall
+        and "addEventListener(\"pointermove\", hallConclusionResizeMove)" in html
+        and "hallConclusionResizeKey" in html
+        and 'role="separator" aria-orientation="horizontal" tabindex="0"' in render_hall
+        and "Math.min(Math.max(h, 120), Math.round(window.innerHeight * 0.7))" in html,
+        "a resize that could eat the whole pane would trade one scroll lock for another",
+    )
+    check(
+        "the panel expands into a true modal through the shared overlay controller",
+        'openOverlay("hallConclusionModal")' in html
+        and 'id="hallConclusionModal" class="modal-backdrop"' in html
+        and bool(re.search(r'id="hallConclusionModal".*?role="dialog" aria-modal="true"', html, re.S)),
+        "expanding must open a real dialog, not a second scroll container",
+    )
+    check(
+        "pin/unpin only flips the sticky position and says so",
+        "banner.dataset.pinned = hallConclusionPinned ? \"true\" : \"false\"" in html
+        and 'aria-pressed' in html
+        and "toggleHallConclusionPin" in html,
+        "unpin must not hide the conclusion's text or lock anything",
+    )
+    check(
+        "no code locks the page scroll outside a true modal",
+        "document.body.style.overflow" not in html
+        and "documentElement.style.overflow" not in html
+        and "overlayInert(true)" in html
+        and "overlayInert(false)" in html
+        and "delete document.body.dataset.overlay" in html,
+        "background locking belongs to the overlay controller alone and must always be restored",
+    )
+    check(
+        "the transcript stream still scrolls on its own",
+        ".hall-stream { flex: 1; overflow-y: auto;" in html,
+        "the stream's own scroll is what the conclusion panel must never freeze",
+    )
     check(
         "every value the verdict draws is escaped",
         not unescaped_interpolations(verdict_functions),
