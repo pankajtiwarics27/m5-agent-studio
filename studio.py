@@ -4266,7 +4266,9 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   /* Agentic Harness (v5.0) */
   .btn-emerald { background: rgba(16, 185, 129, 0.18); border-color: rgba(16, 185, 129, 0.48); color: #a7f3d0; }
   .btn-emerald:hover:not(:disabled) { background: rgba(16, 185, 129, 0.28); }
-  .harness-shell { display: grid; grid-template-columns: 272px 1fr; flex: 1; overflow: hidden; }
+  /* UIV2-08: the approved three-region reference gives the session/workspace column
+     240px at >=1440 and the task area minmax(0,1fr) (680px at 1440, >= the 640px floor). */
+  .harness-shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); flex: 1; overflow: hidden; }
   @media (max-width: 880px) { .harness-shell { grid-template-columns: 1fr; } .harness-sidebar { display: none; } }
   .harness-sidebar { background: var(--bg-elev); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
   .harness-main { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
@@ -4522,6 +4524,14 @@ input:not([type="checkbox"]):not([type="radio"]), select, textarea {
 }
 /* UIV2-07: every page opens with one title in the 20-24px band, so the pane a
    reader lands on is named at a readable size, not only in the tab rail. */
+/* UIV2-08: the harness task area opens with the Plan -> Execute -> Verify stage strip
+   from the approved three-region reference; the state comes from the durable log. */
+.harness-stages { display: flex; gap: var(--space-2); padding: var(--space-2) var(--space-3) 0; flex: 0 0 auto; }
+.harness-stage { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-elev); font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--text-dim); }
+.harness-stage-dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+.harness-stage[data-state="active"] { color: var(--text); border-color: var(--accent); }
+.harness-stage[data-state="active"] .harness-stage-dot { background: var(--accent); }
+.harness-stage[data-state="done"] .harness-stage-dot { background: var(--emerald); }
 .pane-title {
   margin: 0; padding: var(--space-3) var(--space-3) 0;
   font-size: var(--text-page-title); font-weight: var(--weight-semibold);
@@ -4977,6 +4987,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   /* UIV2-05: 1280-1439 the contextual inspector is a drawer, never a permanent column,
      so the central pane keeps its width. The header stays one <=64px row at every size. */
   .layout { grid-template-columns: minmax(0, 1fr); }
+  /* UIV2-08: 1280-1439 the session/workspace column narrows to 220px, matching the
+     approved reference (nav 208px, sessions 220px, task area the rest). */
+  .harness-shell { grid-template-columns: 220px minmax(0, 1fr); }
   .monitor-rail {
     display: none; position: fixed; z-index: 35; top: var(--header-height); right: 0; bottom: 0;
     width: min(320px, 92vw); max-height: calc(100dvh - var(--header-height));
@@ -4992,6 +5005,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   .mode-tab { width: 100%; justify-content: center; padding: var(--space-2) 0; }
   .mode-tab span { display: none; }
   #mainLayout { padding-left: 64px; }
+  /* UIV2-08: at 800-1279 the session/workspace list folds away, as in the approved
+     reference; below 800 the later rule re-opens it as a horizontal strip. */
+  .harness-shell { grid-template-columns: minmax(0, 1fr); }
+  .harness-sidebar { display: none; }
 }
 @media (max-width: 799px) {
   /* UIV2-05: <800 is a single column with one scrollable tab row under the header.
@@ -6069,6 +6086,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           </div>
 
           <!-- Harness Active Worktree / Session Strip -->
+          <div class="harness-stages" id="harnessStages" role="group" aria-label="Task stages: plan, execute, verify">
+            <div class="harness-stage" data-stage="plan" data-state="pending"><span class="harness-stage-dot" aria-hidden="true"></span><span class="harness-stage-name">Plan</span></div>
+            <div class="harness-stage" data-stage="execute" data-state="pending"><span class="harness-stage-dot" aria-hidden="true"></span><span class="harness-stage-name">Execute</span></div>
+            <div class="harness-stage" data-stage="verify" data-state="pending"><span class="harness-stage-dot" aria-hidden="true"></span><span class="harness-stage-name">Verify</span></div>
+          </div>
           <div id="harnessInfoBanner" style="padding:6px 16px; background:var(--bg-elev); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:11.6px; color:var(--text-dim); flex-wrap:wrap;">
             <span id="harnessActiveLabel">New session — choose a project directory and model, then describe the task.</span>
             <div style="display:flex; gap:6px; align-items:center;">
@@ -13432,6 +13454,18 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     }
   }
 
+  // UIV2-08: the Plan/Execute/Verify strip is driven by the same durable events the
+  // timeline reads, so the strip and the log can never disagree.
+  const harnessStageState = { plan: "pending", execute: "pending", verify: "pending" };
+  function renderHarnessStages() {
+    const wrap = document.getElementById("harnessStages");
+    if (!wrap) return;
+    for (const stage of wrap.querySelectorAll(".harness-stage")) {
+      const key = stage.dataset.stage;
+      if (harnessStageState[key]) stage.dataset.state = harnessStageState[key];
+    }
+  }
+
   function updateHarnessHeaderBanner(sess) {
     activeHarnessSession = sess;
     if (!sess) return;
@@ -13447,6 +13481,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (sess.lead_model && unifiedCatalog.some(x => x.id === sess.lead_model)) document.getElementById("harnessLeadModel").value = sess.lead_model;
     if (sess.critic_model && unifiedCatalog.some(x => x.id === sess.critic_model)) document.getElementById("harnessCriticModel").value = sess.critic_model;
     updateHarnessRunControl();
+    const st = (sess.status || "").toLowerCase();
+    if (st === "done" || st === "completed" || st === "failed" || st === "error") {
+      harnessStageState.plan = harnessStageState.execute = harnessStageState.verify = "done";
+    } else if (st === "running" || st === "active" || st === "paused") {
+      harnessStageState.plan = "done"; harnessStageState.execute = "active";
+    }
+    renderHarnessStages();
   }
 
   async function selectHarnessSession(id) {
@@ -16275,6 +16316,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         stream.scrollTop = stream.scrollHeight;
       },
       turn_done(d) {
+        harnessStageState.plan = harnessStageState.execute = harnessStageState.verify = "done"; renderHarnessStages();
         updateHarnessHeaderBanner(d.session);
         const doneDiv = document.createElement("div");
         doneDiv.style.cssText = "font-family:var(--mono); font-size:11.3px; color:#6ee7b7; text-align:right; padding:3px 4px;";
@@ -16739,8 +16781,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       max_steps: parseInt(document.getElementById("harnessMaxSteps").value, 10) || 6,
       skills: [...selectedSkills],
     }, {
-      turn_start(d) { activeHarnessId = d.session.id; updateHarnessHeaderBanner(d.session); loadHarnessSessions(); },
+      turn_start(d) {
+        activeHarnessId = d.session.id; updateHarnessHeaderBanner(d.session); loadHarnessSessions();
+        const mode = (document.getElementById("harnessWorkflowMode") || {}).value;
+        if (mode !== "gsd") { harnessStageState.plan = "done"; harnessStageState.execute = "active"; renderHarnessStages(); }
+      },
       gsd_wave_start(d) {
+        if (d.wave === 1) { harnessStageState.plan = "active"; renderHarnessStages(); }
+        else if (d.wave === 2) { harnessStageState.plan = "done"; harnessStageState.execute = "active"; renderHarnessStages(); }
+        else if (d.wave === 3) { harnessStageState.plan = "done"; harnessStageState.execute = "done"; harnessStageState.verify = "active"; renderHarnessStages(); }
         const wb = document.createElement("div");
         wb.style.cssText = "font-family:var(--mono); font-size:11.4px; color:#fde68a; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.42); border-radius: var(--radius-md); padding:7px 12px;";
         wb.innerHTML = `${UI_ICONS.bolt} GSD Wave ${d.wave}/3: <strong>${escapeHtml(d.name)}</strong> (${escapeHtml(d.model)}) &rarr; <code>${escapeHtml(d.artifact)}</code>`;
@@ -16749,7 +16798,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         if (d.wave === 3) ensureWaveStep(99, `Wave 3/3 • Independent Verifier (${d.model})`);
         stream.scrollTop = stream.scrollHeight;
       },
-      step_start(d) { ensureWaveStep(d.step, `Wave 2/3 • Fresh-Context Step #${d.step - 1} (${d.model})`); },
+      step_start(d) {
+        if (d.wave === 2 && harnessStageState.execute !== "done") { harnessStageState.plan = "done"; harnessStageState.execute = "active"; renderHarnessStages(); }
+        ensureWaveStep(d.step, `Wave 2/3 • Fresh-Context Step #${d.step - 1} (${d.model})`);
+      },
       step_content(d) {
         const key = d.wave === 3 ? 99 : d.step;
         const st = ensureWaveStep(key, `Step #${key}`);
@@ -16783,6 +16835,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         stream.scrollTop = stream.scrollHeight;
       },
       turn_done(d) {
+        harnessStageState.plan = harnessStageState.execute = harnessStageState.verify = "done"; renderHarnessStages();
         updateHarnessHeaderBanner(d.session);
         const doneDiv = document.createElement("div");
         doneDiv.style.cssText = "font-family:var(--mono); font-size:11.3px; color:#6ee7b7; text-align:right; padding:3px 4px;";

@@ -58,5 +58,16 @@ Six capture sets produced for the V2 visual-fidelity program
   badges remain below 44px, the documented --target-min affordances), accent used
   as text measured 7.0-7.7:1 (dark) and 4.8-5.1:1 (light) against every surface.
 
+- `before-uiv2-08/` — 20 before-screenshots of the real app at `11aaf04`: harness at
+  1640x900/1440x900/1280x800/390x844 in light and dark, plus all six panes at 1440x900 in
+  light and dark. Region audit at that commit (harness pane, dark): header 56px, nav
+  200px, session sidebar 272px, task area 648px, inspector 320px at >=1440; at 1024px the
+  sidebar still showed (272px); no Plan/Execute/Verify stage strip.
+- `after-uiv2-08/` — 20 after-screenshots of the real app at the UIV2-08 commit (same
+  matrix). Region audit after: header 56px, nav 200px, session sidebar 240px (>=1440) /
+  220px (1280-1439) / folded at <=1279, task area 680px at 1440 (>= the 640px floor),
+  inspector 320px at >=1440 and a drawer below, telemetry popover closed by default, and
+  the Plan/Execute/Verify stage strip present; no horizontal overflow at any width.
+
 Each capture directory carries an `index.json` with sha256, byte size, viewport
 and theme per shot.

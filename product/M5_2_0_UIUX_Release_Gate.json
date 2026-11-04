@@ -242,7 +242,7 @@
           "totals": {
             "tokens": 54,
             "groups": 8,
-            "references": 1228,
+            "references": 1242,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -812,7 +812,7 @@
         {
           "artifact": "product/M5_2_0_UIUX_Polish.json",
           "totals": {
-            "radius_rules": 96,
+            "radius_rules": 98,
             "motion_rules": 17,
             "press_rules": 2,
             "hover_rules": 31,
@@ -892,7 +892,7 @@
           "artifact": "product/M5_2_0_UIUX_Screenshot_Review.json",
           "totals": {
             "sets": 28,
-            "files": 435,
+            "files": 475,
             "reviewed_sets": 28,
             "sets_eyed": 8,
             "files_eyed": 28,
@@ -1146,7 +1146,7 @@
     "e2e_findings": 0,
     "refusals": 12,
     "refusal_statuses": 9,
-    "captures": 435,
+    "captures": 475,
     "capture_sets": 28,
     "reviewed_sets": 28,
     "screenshot_findings": 0,
