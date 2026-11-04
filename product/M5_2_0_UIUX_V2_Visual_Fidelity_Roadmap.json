@@ -512,7 +512,7 @@
         "attempt_count": 1,
         "started_at": "2026-11-04T09:55:00+05:30",
         "completed_at": "2026-11-04T10:20:00+05:30",
-        "commit_sha": null,
+        "commit_sha": "9465741",
         "changed_files": [
           "static/index.html (m5-redesign-system token block only: approved V2 palette, both themes)",
           "studio.py (regenerated, byte-synced with static/index.html)",
@@ -530,8 +530,8 @@
           "python3 scripts/validate_screenshots.py : 6 of 6 recaptured and consistent with the manifest (exit 0)",
           "python3 scripts/validate_docs.py : passed, 197 files scanned; validate_governance.py : exit 0",
           "ruff check . : all checks passed; compileall on tracked .py : clean; check_frontend_syntax.py : 1 inline block OK; demo_tour.py --check : up to date",
-          "python -m pytest -q in a disposable full clone at the story commit : full suite result recorded in the PR body",
-          "browser legs (STUDIO_SCREENSHOT_CHROME/PUPPETEER_CORE set): recorded in the PR body"
+          "python -m pytest -q in a disposable full clone at 9465741 (unshallowed): 2614 passed, 28 skipped, 0 failed in 468s",
+          "browser legs with STUDIO_SCREENSHOT_CHROME/STUDIO_PUPPETEER_CORE set: 32 passed in 122s"
         ],
         "visual_evidence": [
           "docs/media/uiv2-v2/after-uiv2-04/1440x900-light, 1440x900-dark, 390x844-light/{start,harness,hall,pipeline,compare,chat}.png + index.json",
