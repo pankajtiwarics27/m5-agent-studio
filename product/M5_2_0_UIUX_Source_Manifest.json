@@ -327,9 +327,9 @@
     {
       "path": "tests/test_screenshot_capture_browser.py",
       "role": "runs browser-backed UI and screenshot safety regressions",
-      "sha256": "a30aeee29eff42f001b44534b1bc3f314e049cbce1f1c83e024d59e2d80ceb62",
-      "bytes": 26075,
-      "lines": 666
+      "sha256": "5ec6d3a92816b83f6ac3ba8b89acd57091e11d2150977c7eae1679b67ca75665",
+      "bytes": 26172,
+      "lines": 667
     },
     {
       "path": "tests/test_uiux_source_manifest.py",

@@ -5751,8 +5751,8 @@
         {
           "file": "uiv2-v2/after-uiv2-12/1440x900-dark-states/expanded-modal.png",
           "name": "expanded-modal.png",
-          "bytes": 281662,
-          "sha256": "03ce01dc4a06aac84a7b47f4b2ee00d373e6c3fd3292149c484b205d9d12933f",
+          "bytes": 281637,
+          "sha256": "a876cdc86f2d5d37de071de2981549fa287c484395c41956cd43e091a3a0cee2",
           "width": 1440,
           "height": 900,
           "css_width": 1440,
@@ -5775,8 +5775,8 @@
         {
           "file": "uiv2-v2/after-uiv2-12/1440x900-dark-states/resized.png",
           "name": "resized.png",
-          "bytes": 168425,
-          "sha256": "a02fb02870e929aaaf392935d99ef989b0eba606895f14dc635abd6518770ae0",
+          "bytes": 168424,
+          "sha256": "a2ea4100ea3f586dcf1565ea9192c1e96d9e6e7e94db2f8a68dc2515e254435b",
           "width": 1440,
           "height": 900,
           "css_width": 1440,
