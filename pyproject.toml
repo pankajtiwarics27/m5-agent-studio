@@ -18,7 +18,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest>=8,<10",
-  "ruff>=0.14,<0.15",
+  "ruff>=0.14,<0.18",
   "mypy>=1.19,<2",
 ]
 # Advisory-database tooling for `scripts/release_supply_chain.py`. Deliberately
