@@ -94,14 +94,18 @@ CURATED_PRODUCERS = {
 #: `--check` fails when a set on disk has no entry here.
 REVIEWS: dict[str, dict[str, object]] = {
     "screenshots": {
-        "story": "UIUX-P0-01 (published set, re-shot by UIUX-P6-03)",
+        "story": "UIUX-P0-01 (published set, re-shot by UIUX-P6-03, re-shot again by UIV2-04)",
         "note": (
             "Re-shot on this tree: the set the README shows was twenty-two stories old and showed a "
             "Compare pane without the P5-03 criteria table or the P5-04 readiness strip, plus a "
             "horizontal overflow the later stories fixed. Re-captured with "
             "`scripts/capture_screenshots.mjs`, `validate_screenshots.py` -> 6 of 6, and all six "
             "opened: every pane draws its own empty state with a cause and a next step, nothing is "
-            "clipped at 1440x900, and the inspector fits."
+            "clipped at 1440x900, and the inspector fits. Re-shot once more for UIV2-04 (approved V2 "
+            "palette in the m5-redesign-system token block): same six panes, same viewport and OS-default "
+            "theme, only the colour tokens changed; opened again and the indigo accent, canvas, surface "
+            "and border roles read as the approved north-star values in both themes (the light/dark "
+            "after-sets live under uiv2-v2/after-uiv2-04)."
         ),
         "eye": [
             "start.png",
@@ -364,7 +368,11 @@ REVIEWS: dict[str, dict[str, object]] = {
             "scripts/uiux_v2_reference_capture.mjs from wireframe.html; opened: harness at 1440x900-light "
             "(four regions with annotated widths, telemetry as header popover) and harness at 390x844-light "
             "(single column, annotations hidden). The baseline set is current-state evidence; the "
-            "reference set is the proposed target and is gated on explicit user approval in the V2 ledger."
+            "reference set is the target approved by the user at the UIV2-03 gate. `after-uiv2-04/` is "
+            "the running app re-shot at the UIV2-04 commit after the approved palette landed: six panes "
+            "at 1440x900 light, 1440x900 dark and 390x844 light plus the MCP overlay at 1440x900 light, "
+            "opened and read against `baseline/` — the indigo accent (#4F5FE8 light / #93A0FF dark), "
+            "canvas, surface and border roles now match the approved tokens while layout is unchanged."
         ),
         "eye": [
             "baseline/1440x900-light/start.png",

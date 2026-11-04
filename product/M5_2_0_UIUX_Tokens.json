@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "0a18c9efa5ae0fecd27988e39a349aa997c6c95eb185520d8dabfb755c903165",
+    "style_block_sha256": "899041968135403ef11f647d213f0b17b85e443f7c9ea9d19bdb210692625bf5",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -46,7 +46,7 @@
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 22,
-    "lowest_contrast_ratio": 4.69
+    "lowest_contrast_ratio": 4.7
   },
   "groups": {
     "colour": [
@@ -123,9 +123,9 @@
     {
       "name": "--bg",
       "group": "colour",
-      "value": "#151719",
+      "value": "#111318",
       "theme_overrides": {
-        "light": "#f7f7f5"
+        "light": "#F8F9FB"
       },
       "density_override": null,
       "references": 12
@@ -133,9 +133,9 @@
     {
       "name": "--bg-elev",
       "group": "colour",
-      "value": "#1b1e21",
+      "value": "#1A1D24",
       "theme_overrides": {
-        "light": "#ffffff"
+        "light": "#FFFFFF"
       },
       "density_override": null,
       "references": 33
@@ -143,9 +143,9 @@
     {
       "name": "--bg-card",
       "group": "colour",
-      "value": "#202428",
+      "value": "#1A1D24",
       "theme_overrides": {
-        "light": "#ffffff"
+        "light": "#FFFFFF"
       },
       "density_override": null,
       "references": 61
@@ -153,9 +153,9 @@
     {
       "name": "--bg-hover",
       "group": "colour",
-      "value": "#292e33",
+      "value": "#242832",
       "theme_overrides": {
-        "light": "#eff0ed"
+        "light": "#F1F3F5"
       },
       "density_override": null,
       "references": 20
@@ -163,9 +163,9 @@
     {
       "name": "--bg-press",
       "group": "colour",
-      "value": "#23272b",
+      "value": "#2D333F",
       "theme_overrides": {
-        "light": "#e4e6e0"
+        "light": "#E8EBF0"
       },
       "density_override": null,
       "references": 1
@@ -173,9 +173,9 @@
     {
       "name": "--bg-code",
       "group": "colour",
-      "value": "#111315",
+      "value": "#0E1116",
       "theme_overrides": {
-        "light": "#f1f2ef"
+        "light": "#F1F3F5"
       },
       "density_override": null,
       "references": 14
@@ -183,9 +183,9 @@
     {
       "name": "--border",
       "group": "colour",
-      "value": "#34393e",
+      "value": "#343B48",
       "theme_overrides": {
-        "light": "#d9dcd8"
+        "light": "#DDE2E8"
       },
       "density_override": null,
       "references": 148
@@ -193,9 +193,9 @@
     {
       "name": "--border-hi",
       "group": "colour",
-      "value": "#525a62",
+      "value": "#4A5468",
       "theme_overrides": {
-        "light": "#b7bcb7"
+        "light": "#C6CDD8"
       },
       "density_override": null,
       "references": 27
@@ -203,9 +203,9 @@
     {
       "name": "--text",
       "group": "colour",
-      "value": "#e9eaec",
+      "value": "#F3F5F7",
       "theme_overrides": {
-        "light": "#202326"
+        "light": "#1B2430"
       },
       "density_override": null,
       "references": 74
@@ -213,9 +213,9 @@
     {
       "name": "--text-dim",
       "group": "colour",
-      "value": "#b0b5ba",
+      "value": "#AAB4C3",
       "theme_overrides": {
-        "light": "#555c62"
+        "light": "#596579"
       },
       "density_override": null,
       "references": 135
@@ -223,9 +223,9 @@
     {
       "name": "--text-faint",
       "group": "colour",
-      "value": "#969da4",
+      "value": "#8B95A6",
       "theme_overrides": {
-        "light": "#687077"
+        "light": "#67717F"
       },
       "density_override": null,
       "references": 110
@@ -233,9 +233,9 @@
     {
       "name": "--accent",
       "group": "colour",
-      "value": "#5969d8",
+      "value": "#93A0FF",
       "theme_overrides": {
-        "light": "#5969d8"
+        "light": "#4F5FE8"
       },
       "density_override": null,
       "references": 28
@@ -243,9 +243,9 @@
     {
       "name": "--accent-hi",
       "group": "colour",
-      "value": "#4a55c8",
+      "value": "#7E8BFA",
       "theme_overrides": {
-        "light": "#4a55c8"
+        "light": "#3F4CD6"
       },
       "density_override": null,
       "references": 2
@@ -253,7 +253,7 @@
     {
       "name": "--primary-text",
       "group": "colour",
-      "value": "#ffffff",
+      "value": "#111318",
       "theme_overrides": {
         "light": "#ffffff"
       },
@@ -313,9 +313,9 @@
     {
       "name": "--ring",
       "group": "colour",
-      "value": "#a8b4ff",
+      "value": "#93A0FF",
       "theme_overrides": {
-        "light": "#4858c8"
+        "light": "#4F5FE8"
       },
       "density_override": null,
       "references": 5
@@ -590,7 +590,7 @@
       "theme": "dark",
       "foreground": "--text",
       "background": "--bg",
-      "ratio": 14.93,
+      "ratio": 17.0,
       "floor": 7.0,
       "passes": true
     },
@@ -598,7 +598,7 @@
       "theme": "dark",
       "foreground": "--text",
       "background": "--bg-elev",
-      "ratio": 13.91,
+      "ratio": 15.43,
       "floor": 7.0,
       "passes": true
     },
@@ -606,7 +606,7 @@
       "theme": "dark",
       "foreground": "--text",
       "background": "--bg-card",
-      "ratio": 12.98,
+      "ratio": 15.43,
       "floor": 7.0,
       "passes": true
     },
@@ -614,7 +614,7 @@
       "theme": "dark",
       "foreground": "--text-dim",
       "background": "--bg",
-      "ratio": 8.7,
+      "ratio": 8.87,
       "floor": 4.5,
       "passes": true
     },
@@ -622,7 +622,7 @@
       "theme": "dark",
       "foreground": "--text-dim",
       "background": "--bg-elev",
-      "ratio": 8.1,
+      "ratio": 8.05,
       "floor": 4.5,
       "passes": true
     },
@@ -630,7 +630,7 @@
       "theme": "dark",
       "foreground": "--text-dim",
       "background": "--bg-card",
-      "ratio": 7.56,
+      "ratio": 8.05,
       "floor": 4.5,
       "passes": true
     },
@@ -638,7 +638,7 @@
       "theme": "dark",
       "foreground": "--text-faint",
       "background": "--bg",
-      "ratio": 6.55,
+      "ratio": 6.15,
       "floor": 4.5,
       "passes": true
     },
@@ -646,7 +646,7 @@
       "theme": "dark",
       "foreground": "--text-faint",
       "background": "--bg-elev",
-      "ratio": 6.1,
+      "ratio": 5.58,
       "floor": 4.5,
       "passes": true
     },
@@ -654,7 +654,7 @@
       "theme": "dark",
       "foreground": "--text-faint",
       "background": "--bg-card",
-      "ratio": 5.69,
+      "ratio": 5.58,
       "floor": 4.5,
       "passes": true
     },
@@ -662,7 +662,7 @@
       "theme": "dark",
       "foreground": "--primary-text",
       "background": "--accent",
-      "ratio": 4.73,
+      "ratio": 7.71,
       "floor": 4.5,
       "passes": true
     },
@@ -670,7 +670,7 @@
       "theme": "dark",
       "foreground": "--primary-text",
       "background": "--accent-hi",
-      "ratio": 6.13,
+      "ratio": 6.16,
       "floor": 4.5,
       "passes": true
     },
@@ -678,7 +678,7 @@
       "theme": "light",
       "foreground": "--text",
       "background": "--bg",
-      "ratio": 14.72,
+      "ratio": 14.86,
       "floor": 7.0,
       "passes": true
     },
@@ -686,7 +686,7 @@
       "theme": "light",
       "foreground": "--text",
       "background": "--bg-elev",
-      "ratio": 15.79,
+      "ratio": 15.65,
       "floor": 7.0,
       "passes": true
     },
@@ -694,7 +694,7 @@
       "theme": "light",
       "foreground": "--text",
       "background": "--bg-card",
-      "ratio": 15.79,
+      "ratio": 15.65,
       "floor": 7.0,
       "passes": true
     },
@@ -702,7 +702,7 @@
       "theme": "light",
       "foreground": "--text-dim",
       "background": "--bg",
-      "ratio": 6.33,
+      "ratio": 5.6,
       "floor": 4.5,
       "passes": true
     },
@@ -710,7 +710,7 @@
       "theme": "light",
       "foreground": "--text-dim",
       "background": "--bg-elev",
-      "ratio": 6.79,
+      "ratio": 5.9,
       "floor": 4.5,
       "passes": true
     },
@@ -718,7 +718,7 @@
       "theme": "light",
       "foreground": "--text-dim",
       "background": "--bg-card",
-      "ratio": 6.79,
+      "ratio": 5.9,
       "floor": 4.5,
       "passes": true
     },
@@ -726,7 +726,7 @@
       "theme": "light",
       "foreground": "--text-faint",
       "background": "--bg",
-      "ratio": 4.69,
+      "ratio": 4.7,
       "floor": 4.5,
       "passes": true
     },
@@ -734,7 +734,7 @@
       "theme": "light",
       "foreground": "--text-faint",
       "background": "--bg-elev",
-      "ratio": 5.03,
+      "ratio": 4.95,
       "floor": 4.5,
       "passes": true
     },
@@ -742,7 +742,7 @@
       "theme": "light",
       "foreground": "--text-faint",
       "background": "--bg-card",
-      "ratio": 5.03,
+      "ratio": 4.95,
       "floor": 4.5,
       "passes": true
     },
@@ -750,7 +750,7 @@
       "theme": "light",
       "foreground": "--primary-text",
       "background": "--accent",
-      "ratio": 4.73,
+      "ratio": 5.08,
       "floor": 4.5,
       "passes": true
     },
@@ -758,7 +758,7 @@
       "theme": "light",
       "foreground": "--primary-text",
       "background": "--accent-hi",
-      "ratio": 6.13,
+      "ratio": 6.53,
       "floor": 4.5,
       "passes": true
     }

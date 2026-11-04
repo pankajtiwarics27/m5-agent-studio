@@ -671,30 +671,34 @@
 
   /* Colour — roles, not shades. Dark is the default theme; every name below must
      also exist in body[data-theme="light"]. */
-  --bg: #151719;
-  --bg-elev: #1b1e21;
-  --bg-card: #202428;
-  --bg-hover: #292e33;
+  /* UIV2-04: the approved V2 palette (design_north_star). Dark: canvas/surface/secondary/
+     text/muted/border/primary exactly as approved; press/code/border-hi/faint are one-step
+     derivatives of those roles. */
+  --bg: #111318;
+  --bg-elev: #1A1D24;
+  --bg-card: #1A1D24;
+  --bg-hover: #242832;
   /* A press is one step past a hover: a reader who has committed to the click gets an answer even
      where the platform draws no press of its own, and one that survives reduced motion. */
-  --bg-press: #23272b;
-  --bg-code: #111315;
-  --border: #34393e;
-  --border-hi: #525a62;
-  --text: #e9eaec;
-  --text-dim: #b0b5ba;
-  --text-faint: #969da4;
-  --accent: #5969d8;
-  /* The hover of a filled accent control. Darker in both themes, which is the direction that keeps
-     white text above AA: a lighter hover would be a prettier effect and a worse button. */
-  --accent-hi: #4a55c8;
-  --primary-text: #ffffff;
+  --bg-press: #2D333F;
+  --bg-code: #0E1116;
+  --border: #343B48;
+  --border-hi: #4A5468;
+  --text: #F3F5F7;
+  --text-dim: #AAB4C3;
+  --text-faint: #8B95A6;
+  --accent: #93A0FF;
+  /* The hover of a filled accent control. The dark accent is light, so the text on it is dark
+     canvas (--primary-text below) and the hover darkens the fill; the light accent keeps white
+     text above AA and also darkens on hover. Both directions verified by uiux_tokens.py. */
+  --accent-hi: #7E8BFA;
+  --primary-text: #111318;
   --cyan: #70b7c9;
   --emerald: #72b598;
   --amber: #d2aa66;
   --rose: #dc7d83;
   --purple: #a99acb;
-  --ring: #a8b4ff;
+  --ring: #93A0FF;
 
   /* Typography — the sizes, weights, line heights and tracking a rule may use.
      The scale holds only sizes something reads: uiux_tokens.py fails a token with
@@ -756,25 +760,27 @@ body[data-theme="light"] {
   /* Colours are re-pointed, never omitted: a token missing here would fall back to
      its dark value, which is how a theme breaks only for the people who use it. */
   --primary-text: #ffffff;
-  --bg: #f7f7f5;
-  --bg-elev: #ffffff;
-  --bg-card: #ffffff;
-  --bg-hover: #eff0ed;
-  --bg-press: #e4e6e0;
-  --bg-code: #f1f2ef;
-  --border: #d9dcd8;
-  --border-hi: #b7bcb7;
-  --text: #202326;
-  --text-dim: #555c62;
-  --text-faint: #687077;
-  --accent: #5969d8;
-  --accent-hi: #4a55c8;
+  /* UIV2-04: light palette re-pointed to the approved V2 tokens (canvas/surface/secondary/
+     text/muted/border/primary); press/code/border-hi/faint are one-step derivatives. */
+  --bg: #F8F9FB;
+  --bg-elev: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-hover: #F1F3F5;
+  --bg-press: #E8EBF0;
+  --bg-code: #F1F3F5;
+  --border: #DDE2E8;
+  --border-hi: #C6CDD8;
+  --text: #1B2430;
+  --text-dim: #596579;
+  --text-faint: #67717F;
+  --accent: #4F5FE8;
+  --accent-hi: #3F4CD6;
   --cyan: #276e82;
   --emerald: #286e50;
   --amber: #80580e;
   --rose: #a4313a;
   --purple: #68508c;
-  --ring: #4858c8;
+  --ring: #4F5FE8;
 }
 /* Density is a token re-point, not a second stylesheet: rules below read
    --control-min-h and friends, so compact spacing cannot drift away from the

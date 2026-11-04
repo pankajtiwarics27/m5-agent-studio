@@ -409,8 +409,10 @@ def render_doc(payload: dict[str, object]) -> str:
         "",
         "The dark `--accent` measures "
         f"{next(row['ratio'] for row in payload['contrast']['tone_graphics'] if row['tone'] == 'busy' and row['theme'] == 'dark')}:1"
-        " on `--bg-card`. It is used for the `busy` dot and hairline and nowhere as text, which is why the",
-        "label is not painted with the tone.",
+        " on `--bg-card`. Since UIV2-04 (approved V2 palette, `--accent` `#93A0FF` in dark) that ratio is"
+        " above the text floor, so the ratio alone no longer keeps tones out of labels: tones are used"
+        " for the `busy` dot and hairline, and labels are painted `var(--text)` by the shared surface"
+        " rule the test suite asserts in the markup.",
         "",
         "## Checks and limits",
         "",

@@ -7,7 +7,7 @@ quietly disappearing.
 * 53 tokens in 8 groups, 1192 `var()` references
 * Themes: dark (default) and `body[data-theme="light"]`, 20 colour overrides
 * Density: `body[data-density="compact"]` re-points 5 tokens
-* 22 contrast pairs measured; lowest is 4.69:1
+* 22 contrast pairs measured; lowest is 4.7:1
 
 ## What this page is, and is not
 
@@ -48,26 +48,26 @@ matrix cover what this cannot.
 
 | Token | Value | Light theme | Compact | Readers |
 |---|---|---|---|---|
-| `--bg` | `#151719` | `#f7f7f5` | `—` | 12 |
-| `--bg-elev` | `#1b1e21` | `#ffffff` | `—` | 33 |
-| `--bg-card` | `#202428` | `#ffffff` | `—` | 61 |
-| `--bg-hover` | `#292e33` | `#eff0ed` | `—` | 20 |
-| `--bg-press` | `#23272b` | `#e4e6e0` | `—` | 1 |
-| `--bg-code` | `#111315` | `#f1f2ef` | `—` | 14 |
-| `--border` | `#34393e` | `#d9dcd8` | `—` | 148 |
-| `--border-hi` | `#525a62` | `#b7bcb7` | `—` | 27 |
-| `--text` | `#e9eaec` | `#202326` | `—` | 74 |
-| `--text-dim` | `#b0b5ba` | `#555c62` | `—` | 135 |
-| `--text-faint` | `#969da4` | `#687077` | `—` | 110 |
-| `--accent` | `#5969d8` | `#5969d8` | `—` | 28 |
-| `--accent-hi` | `#4a55c8` | `#4a55c8` | `—` | 2 |
-| `--primary-text` | `#ffffff` | `#ffffff` | `—` | 1 |
+| `--bg` | `#111318` | `#F8F9FB` | `—` | 12 |
+| `--bg-elev` | `#1A1D24` | `#FFFFFF` | `—` | 33 |
+| `--bg-card` | `#1A1D24` | `#FFFFFF` | `—` | 61 |
+| `--bg-hover` | `#242832` | `#F1F3F5` | `—` | 20 |
+| `--bg-press` | `#2D333F` | `#E8EBF0` | `—` | 1 |
+| `--bg-code` | `#0E1116` | `#F1F3F5` | `—` | 14 |
+| `--border` | `#343B48` | `#DDE2E8` | `—` | 148 |
+| `--border-hi` | `#4A5468` | `#C6CDD8` | `—` | 27 |
+| `--text` | `#F3F5F7` | `#1B2430` | `—` | 74 |
+| `--text-dim` | `#AAB4C3` | `#596579` | `—` | 135 |
+| `--text-faint` | `#8B95A6` | `#67717F` | `—` | 110 |
+| `--accent` | `#93A0FF` | `#4F5FE8` | `—` | 28 |
+| `--accent-hi` | `#7E8BFA` | `#3F4CD6` | `—` | 2 |
+| `--primary-text` | `#111318` | `#ffffff` | `—` | 1 |
 | `--cyan` | `#70b7c9` | `#276e82` | `—` | 21 |
 | `--emerald` | `#72b598` | `#286e50` | `—` | 29 |
 | `--amber` | `#d2aa66` | `#80580e` | `—` | 46 |
 | `--rose` | `#dc7d83` | `#a4313a` | `—` | 30 |
 | `--purple` | `#a99acb` | `#68508c` | `—` | 1 |
-| `--ring` | `#a8b4ff` | `#4858c8` | `—` | 5 |
+| `--ring` | `#93A0FF` | `#4F5FE8` | `—` | 5 |
 
 ### Typography
 
@@ -143,28 +143,28 @@ Measured with the WCAG relative-luminance formula on the declared hex values. Fl
 
 | Theme | Foreground | Background | Ratio | Floor |
 |---|---|---|---|---|
-| dark | `--text` | `--bg` | 14.93:1 | 7.0:1 |
-| dark | `--text` | `--bg-elev` | 13.91:1 | 7.0:1 |
-| dark | `--text` | `--bg-card` | 12.98:1 | 7.0:1 |
-| dark | `--text-dim` | `--bg` | 8.7:1 | 4.5:1 |
-| dark | `--text-dim` | `--bg-elev` | 8.1:1 | 4.5:1 |
-| dark | `--text-dim` | `--bg-card` | 7.56:1 | 4.5:1 |
-| dark | `--text-faint` | `--bg` | 6.55:1 | 4.5:1 |
-| dark | `--text-faint` | `--bg-elev` | 6.1:1 | 4.5:1 |
-| dark | `--text-faint` | `--bg-card` | 5.69:1 | 4.5:1 |
-| dark | `--primary-text` | `--accent` | 4.73:1 | 4.5:1 |
-| dark | `--primary-text` | `--accent-hi` | 6.13:1 | 4.5:1 |
-| light | `--text` | `--bg` | 14.72:1 | 7.0:1 |
-| light | `--text` | `--bg-elev` | 15.79:1 | 7.0:1 |
-| light | `--text` | `--bg-card` | 15.79:1 | 7.0:1 |
-| light | `--text-dim` | `--bg` | 6.33:1 | 4.5:1 |
-| light | `--text-dim` | `--bg-elev` | 6.79:1 | 4.5:1 |
-| light | `--text-dim` | `--bg-card` | 6.79:1 | 4.5:1 |
-| light | `--text-faint` | `--bg` | 4.69:1 | 4.5:1 |
-| light | `--text-faint` | `--bg-elev` | 5.03:1 | 4.5:1 |
-| light | `--text-faint` | `--bg-card` | 5.03:1 | 4.5:1 |
-| light | `--primary-text` | `--accent` | 4.73:1 | 4.5:1 |
-| light | `--primary-text` | `--accent-hi` | 6.13:1 | 4.5:1 |
+| dark | `--text` | `--bg` | 17.0:1 | 7.0:1 |
+| dark | `--text` | `--bg-elev` | 15.43:1 | 7.0:1 |
+| dark | `--text` | `--bg-card` | 15.43:1 | 7.0:1 |
+| dark | `--text-dim` | `--bg` | 8.87:1 | 4.5:1 |
+| dark | `--text-dim` | `--bg-elev` | 8.05:1 | 4.5:1 |
+| dark | `--text-dim` | `--bg-card` | 8.05:1 | 4.5:1 |
+| dark | `--text-faint` | `--bg` | 6.15:1 | 4.5:1 |
+| dark | `--text-faint` | `--bg-elev` | 5.58:1 | 4.5:1 |
+| dark | `--text-faint` | `--bg-card` | 5.58:1 | 4.5:1 |
+| dark | `--primary-text` | `--accent` | 7.71:1 | 4.5:1 |
+| dark | `--primary-text` | `--accent-hi` | 6.16:1 | 4.5:1 |
+| light | `--text` | `--bg` | 14.86:1 | 7.0:1 |
+| light | `--text` | `--bg-elev` | 15.65:1 | 7.0:1 |
+| light | `--text` | `--bg-card` | 15.65:1 | 7.0:1 |
+| light | `--text-dim` | `--bg` | 5.6:1 | 4.5:1 |
+| light | `--text-dim` | `--bg-elev` | 5.9:1 | 4.5:1 |
+| light | `--text-dim` | `--bg-card` | 5.9:1 | 4.5:1 |
+| light | `--text-faint` | `--bg` | 4.7:1 | 4.5:1 |
+| light | `--text-faint` | `--bg-elev` | 4.95:1 | 4.5:1 |
+| light | `--text-faint` | `--bg-card` | 4.95:1 | 4.5:1 |
+| light | `--primary-text` | `--accent` | 5.08:1 | 4.5:1 |
+| light | `--primary-text` | `--accent-hi` | 6.53:1 | 4.5:1 |
 
 ## Adding a token
 

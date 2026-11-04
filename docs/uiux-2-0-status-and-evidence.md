@@ -7,7 +7,7 @@ One status component (tone, dot, hairline, label) written by one function, and o
 ## Vocabulary
 
 A status is a tone, a dot, a hairline and a label. The label carries the state; the tone
-repeats it. That order matters: the label is `--text`, which measures 12.98:1 on `--bg-card` in the dark theme and 15.79:1 in the light theme, while the tone paints the dot and the
+repeats it. That order matters: the label is `--text`, which measures 15.43:1 on `--bg-card` in the dark theme and 15.65:1 in the light theme, while the tone paints the dot and the
 hairline where a colour can be decorative.
 
 | Tone | Means |
@@ -45,28 +45,28 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| `#sdlcProgressBadge` | `neutral` | no | 1924 |
-| `#onboardingSummary` | `neutral` | yes | 2071 |
-| `#startRecentSummary` | `neutral` | yes | 2111 |
-| `#startHealthSummary` | `neutral` | yes | 2138 |
-| `#startWorkspaceSummary` | `neutral` | yes | 2156 |
-| `#harnessActiveStatusBadge` | `info` | yes | 2280 |
-| `#hallStatusBadge` | `info` | yes | 2357 |
-| `#councilReadinessCount` | `neutral` | no | 2370 |
-| (unnamed) | `ok` | no | 2639 |
-| `#dockerStateBadge` | `neutral` | no | 2686 |
-| (unnamed) | `warn` | no | 4895 |
-| (unnamed) | `warn` | no | 4977 |
-| (unnamed) | `neutral` | no | 8135 |
-| (unnamed) | `busy` | no | 8136 |
-| (unnamed) | `ok` | no | 8137 |
-| (unnamed) | `warn` | no | 8138 |
-| (unnamed) | `warn` | no | 8139 |
-| (unnamed) | `warn` | no | 8140 |
-| (unnamed) | `danger` | no | 8141 |
-| (unnamed) | `warn` | no | 8142 |
-| (unnamed) | `warn` | no | 8143 |
-| (unnamed) | `neutral` | no | 8144 |
+| `#sdlcProgressBadge` | `neutral` | no | 1930 |
+| `#onboardingSummary` | `neutral` | yes | 2077 |
+| `#startRecentSummary` | `neutral` | yes | 2117 |
+| `#startHealthSummary` | `neutral` | yes | 2144 |
+| `#startWorkspaceSummary` | `neutral` | yes | 2162 |
+| `#harnessActiveStatusBadge` | `info` | yes | 2286 |
+| `#hallStatusBadge` | `info` | yes | 2363 |
+| `#councilReadinessCount` | `neutral` | no | 2376 |
+| (unnamed) | `ok` | no | 2645 |
+| `#dockerStateBadge` | `neutral` | no | 2692 |
+| (unnamed) | `warn` | no | 4901 |
+| (unnamed) | `warn` | no | 4983 |
+| (unnamed) | `neutral` | no | 8141 |
+| (unnamed) | `busy` | no | 8142 |
+| (unnamed) | `ok` | no | 8143 |
+| (unnamed) | `warn` | no | 8144 |
+| (unnamed) | `warn` | no | 8145 |
+| (unnamed) | `warn` | no | 8146 |
+| (unnamed) | `danger` | no | 8147 |
+| (unnamed) | `warn` | no | 8148 |
+| (unnamed) | `warn` | no | 8149 |
+| (unnamed) | `neutral` | no | 8150 |
 
 ## Writers
 
@@ -87,23 +87,22 @@ Text floor 4.5:1, redundant-graphic floor 3.0:1. Ratios are computed from the to
 
 | Theme | Pair | Ratio |
 |---|---|---|
-| dark | `--text on --bg-card` | 12.98:1 |
-| light | `--text on --bg-card` | 15.79:1 |
-| dark | `busy` dot — `--accent` on `--bg-card` | 3.3:1 |
-| light | `busy` dot — `--accent` on `--bg-card` | 4.73:1 |
-| dark | `danger` dot — `--rose` on `--bg-card` | 5.43:1 |
+| dark | `--text on --bg-card` | 15.43:1 |
+| light | `--text on --bg-card` | 15.65:1 |
+| dark | `busy` dot — `--accent` on `--bg-card` | 7.0:1 |
+| light | `busy` dot — `--accent` on `--bg-card` | 5.08:1 |
+| dark | `danger` dot — `--rose` on `--bg-card` | 5.87:1 |
 | light | `danger` dot — `--rose` on `--bg-card` | 6.82:1 |
-| dark | `info` dot — `--cyan` on `--bg-card` | 6.92:1 |
+| dark | `info` dot — `--cyan` on `--bg-card` | 7.47:1 |
 | light | `info` dot — `--cyan` on `--bg-card` | 5.77:1 |
-| dark | `neutral` dot — `--text-dim` on `--bg-card` | 7.56:1 |
-| light | `neutral` dot — `--text-dim` on `--bg-card` | 6.79:1 |
-| dark | `ok` dot — `--emerald` on `--bg-card` | 6.53:1 |
+| dark | `neutral` dot — `--text-dim` on `--bg-card` | 8.05:1 |
+| light | `neutral` dot — `--text-dim` on `--bg-card` | 5.9:1 |
+| dark | `ok` dot — `--emerald` on `--bg-card` | 7.05:1 |
 | light | `ok` dot — `--emerald` on `--bg-card` | 6.11:1 |
-| dark | `warn` dot — `--amber` on `--bg-card` | 7.2:1 |
+| dark | `warn` dot — `--amber` on `--bg-card` | 7.78:1 |
 | light | `warn` dot — `--amber` on `--bg-card` | 6.33:1 |
 
-The dark `--accent` measures 3.3:1 on `--bg-card`. It is used for the `busy` dot and hairline and nowhere as text, which is why the
-label is not painted with the tone.
+The dark `--accent` measures 7.0:1 on `--bg-card`. Since UIV2-04 (approved V2 palette, `--accent` `#93A0FF` in dark) that ratio is above the text floor, so the ratio alone no longer keeps tones out of labels: tones are used for the `busy` dot and hairline, and labels are painted `var(--text)` by the shared surface rule the test suite asserts in the markup.
 
 ## Checks and limits
 
