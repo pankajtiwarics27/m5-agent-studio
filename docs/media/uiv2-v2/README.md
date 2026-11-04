@@ -46,5 +46,17 @@ Six capture sets produced for the V2 visual-fidelity program
   (same isolation as `baseline/`). Compare with `baseline/` for the
   before/after of the token change.
 
+- `before-uiv2-07/` — 18 before-screenshots of the real app at `995606c` (six panes
+  at 1440x900 light, 1440x900 dark and 390x844 dark), captured with the same recipe
+  as `baseline/` against a disposable `demo_tour.py --serve` copy. Audit at that
+  commit: body 14px, page titles <=18px (no page title element), standard controls
+  13-38px tall, five visible primaries on the Start pane, space scale 4/6/8/12/16px.
+- `after-uiv2-07/` — 18 after-screenshots of the real app at the UIV2-07 commit (same
+  matrix). Audit after: body 14px, one 22px page title per pane, space scale
+  8/16/24/32/40px, --control-min-h 44px with text inputs/selects/composers on the
+  same token, exactly one page-level primary per pane at 44px (only 24px chips and
+  badges remain below 44px, the documented --target-min affordances), accent used
+  as text measured 7.0-7.7:1 (dark) and 4.8-5.1:1 (light) against every surface.
+
 Each capture directory carries an `index.json` with sha256, byte size, viewport
 and theme per shot.

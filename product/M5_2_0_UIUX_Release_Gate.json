@@ -240,12 +240,12 @@
         {
           "artifact": "product/M5_2_0_UIUX_Tokens.json",
           "totals": {
-            "tokens": 53,
+            "tokens": 54,
             "groups": 8,
-            "references": 1220,
+            "references": 1228,
             "theme_overrides": 20,
             "density_overrides": 5,
-            "contrast_pairs": 22,
+            "contrast_pairs": 28,
             "lowest_contrast_ratio": 4.7
           }
         }
@@ -892,7 +892,7 @@
           "artifact": "product/M5_2_0_UIUX_Screenshot_Review.json",
           "totals": {
             "sets": 28,
-            "files": 399,
+            "files": 435,
             "reviewed_sets": 28,
             "sets_eyed": 8,
             "files_eyed": 28,
@@ -1146,7 +1146,7 @@
     "e2e_findings": 0,
     "refusals": 12,
     "refusal_statuses": 9,
-    "captures": 399,
+    "captures": 435,
     "capture_sets": 28,
     "reviewed_sets": 28,
     "screenshot_findings": 0,
