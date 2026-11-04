@@ -631,7 +631,8 @@
         "blockers": [],
         "handoff_summary": "",
         "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
-      }
+      },
+      "status": "in_progress"
     },
     {
       "id": "UIV2-06",
@@ -2710,10 +2711,10 @@
       "name": "Design system and application shell",
       "total": 4,
       "done": 1,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 3,
-      "percent_complete": 25
+      "not_started": 2,
+      "percent_complete": 38
     },
     {
       "id": "P2",
@@ -2769,9 +2770,9 @@
   "progress": {
     "total": 30,
     "done": 4,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 26,
+    "not_started": 25,
     "percent_complete": 13
   },
   "session_recovery_protocol": [
