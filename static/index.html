@@ -1106,6 +1106,17 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 /* `.btn` sets its own display, which wins over the UA rule for [hidden]: say it again
    here, so a control that is not offered is not drawn either. */
 .harness-timeline-actions .btn[hidden] { display: none; }
+/* UIV2-09: the log can be filtered by kind from the strip, and a waiting approval or a
+   blocked session is stated in words and colour, never folded into a neutral line. */
+.harness-timeline-filters { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.harness-timeline-filter { border: 1px solid var(--border); background: var(--bg-elev); color: var(--text-dim); border-radius: var(--radius-pill); padding: 2px 9px; font-size: 10.6px; font-weight: var(--weight-medium); cursor: pointer; min-height: var(--target-min); }
+.harness-timeline-filter:hover { background: var(--bg-hover); }
+.harness-timeline-filter[aria-pressed="true"] { color: var(--text); border-color: var(--accent); background: var(--bg-card); font-weight: var(--weight-semibold); }
+.harness-timeline-state[data-approvals] { color: var(--amber); font-weight: var(--weight-semibold); }
+.harness-run-hint[data-reason="blocked"] { color: var(--rose); font-weight: var(--weight-semibold); }
+.harness-run-hint[data-approvals] { color: var(--amber); }
+.harness-stage[data-state="blocked"] { color: var(--text); border-color: var(--rose); }
+.harness-stage[data-state="blocked"] .harness-stage-dot { background: var(--rose); }
 .harness-timeline-list { flex: 1 1 auto; min-height: 0; list-style: none; margin: 2px 0 6px; padding: 0; max-height: min(168px, 22vh); overflow-y: auto; border-top: 1px solid var(--border); }
 .harness-timeline-list[hidden] { display: none; }
 .harness-timeline-row { display: flex; gap: 8px; align-items: baseline; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid rgba(255,255,255,0.04); padding: 3px 4px; color: var(--text-dim); font: inherit; font-size: 11px; cursor: pointer; }
@@ -2475,6 +2486,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <div class="harness-timeline-bar">
               <button id="harnessTimelineToggle" class="harness-timeline-toggle" type="button" aria-expanded="false" aria-controls="harnessTimelineList" onclick="toggleHarnessTimeline()">Session log</button>
               <span id="harnessTimelineCount" class="harness-timeline-count mono">0 events</span>
+              <span class="harness-timeline-filters" id="harnessTimelineFilters" role="group" aria-label="Filter the event log by kind">
+                <button type="button" class="harness-timeline-filter" data-filter="all" aria-pressed="true" onclick="setHarnessEventFilter('all')" title="Show every retained event">All</button>
+                <button type="button" class="harness-timeline-filter" data-filter="tool" aria-pressed="false" onclick="setHarnessEventFilter('tool')" title="Tool calls, edits, workspace, delegation, handoff and MCP effects">Tools</button>
+                <button type="button" class="harness-timeline-filter" data-filter="approval" aria-pressed="false" onclick="setHarnessEventFilter('approval')" title="Approval requests and decisions">Approvals</button>
+                <button type="button" class="harness-timeline-filter" data-filter="error" aria-pressed="false" onclick="setHarnessEventFilter('error')" title="Security events, failed tools and rejected verdicts">Errors</button>
+                <button type="button" class="harness-timeline-filter" data-filter="system" aria-pressed="false" onclick="setHarnessEventFilter('system')" title="Turns, steps, sessions and the rest of the log">System</button>
+              </span>
               <span class="harness-timeline-actions">
                 <button id="harnessTimelineJump" class="btn btn-xs" type="button" hidden onclick="jumpToLatestHarnessEvent()" title="Scroll the trajectory to the newest event">Jump to latest &darr;</button>
                 <button id="harnessTimelineReplay" class="btn btn-xs" type="button" onclick="replayHarnessLog()" title="Re-read the durable log from its first retained event and rebuild the view">Replay log</button>
@@ -6242,18 +6260,36 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return plan;
   }
 
+  // UIV2-09: the waiting-approval sentence, named before anything else in every run state.
+  function harnessApprovalNote(n) {
+    return n > 0 ? `${n} approval${n === 1 ? "" : "s"} waiting — decide in the log above or the Approvals tab. ` : "";
+  }
+
   // One predicate for Run, like chatSendReason() for Send: the button's disabled state and
   // the sentence beside it are the same answer, and the sentence is a polite live region.
   function harnessRunState() {
     const plan = harnessRunPlan();
     const input = document.getElementById("harnessPromptInput");
     const task = input ? String(input.value || "").trim() : "";
+    const approvalNote = harnessApprovalNote(harnessPendingApprovalCount());
     if (harnessRunActive) {
       return {
         reason: "running",
         ready: false,
         plan,
-        hint: "Running. Abort stops it and keeps what has already streamed; this run keeps the settings it started with.",
+        hint: `${approvalNote}Running. Abort stops it and keeps what has already streamed; this run keeps the settings it started with.`,
+      };
+    }
+    // UIV2-09: a blocked session (sandbox containment, unresolved effects) is never
+    // presented as safe or ready - Run stays off and the hint says why, in words.
+    const blocked = String((activeHarnessSession && activeHarnessSession.status) || (harnessSnapshot && harnessSnapshot.status) || "").toLowerCase() === "blocked"
+      || String((harnessSnapshot && harnessSnapshot.task_status) || "").toLowerCase() === "blocked";
+    if (blocked) {
+      return {
+        reason: "blocked",
+        ready: false,
+        plan,
+        hint: `${approvalNote}This session is blocked — the sandbox stopped it or an effect is unresolved. Resolve it in the recovery panel above; it is not ready, so Run stays off.`,
       };
     }
     if (plan.mode === "sdlc_modal") {
@@ -6261,7 +6297,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         reason: "board",
         ready: true,
         plan,
-        hint: "Opens the Agile SDLC board. No task is needed here, and nothing runs until you start something in the board.",
+        hint: `${approvalNote}Opens the Agile SDLC board. No task is needed here, and nothing runs until you start something in the board.`,
       };
     }
     if (!task) {
@@ -6269,14 +6305,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         reason: "no-task",
         ready: false,
         plan,
-        hint: "Describe the task in the box above, then Run. Nothing runs until there is one.",
+        hint: `${approvalNote}Describe the task in the box above, then Run. Nothing runs until there is one.`,
       };
     }
     return {
       reason: "ready",
       ready: true,
       plan,
-      hint: "Run starts one task with the plan above and streams it into the trajectory.",
+      hint: `${approvalNote}Run starts one task with the plan above and streams it into the trajectory.`,
     };
   }
 
@@ -6289,6 +6325,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (hint) {
       hint.dataset.reason = state.reason;
       if (hint.textContent !== state.hint) hint.textContent = state.hint;
+      const waiting = harnessPendingApprovalCount();
+      if (waiting > 0) hint.dataset.approvals = String(waiting);
+      else delete hint.dataset.approvals;
     }
     renderHarnessIncomingBrief(plan);
     return state;
@@ -9617,6 +9656,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   let harnessRenderedSeqs = [];
   let harnessRenderedPending = 0;
   let harnessRenderedDecisions = 0;
+  let harnessRenderedFilter = "all";   // the kind filter the drawn window was rendered under
   let harnessStreamRenderQueued = false;
 
   let harnessSessions = [];
@@ -9694,6 +9734,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     harnessGrantSnapshot = null;
     harnessGrantConfirm = "";
     harnessApprovalRequests.clear();
+    harnessEventFilter = "all";
+    syncHarnessEventFilterButtons();
     updateHarnessPermissionBadge();
     clearHarnessIncomingBrief();
     harnessRecoveryPrepared = null;
@@ -9847,6 +9889,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       harnessStageState.plan = harnessStageState.execute = harnessStageState.verify = "done";
     } else if (st === "running" || st === "active" || st === "paused") {
       harnessStageState.plan = "done"; harnessStageState.execute = "active";
+    } else if (st === "blocked") {
+      harnessStageState.plan = "done"; harnessStageState.execute = "blocked";
     }
     renderHarnessStages();
   }
@@ -9861,6 +9905,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     harnessGrantSnapshot = null;
     harnessGrantConfirm = "";
     harnessApprovalRequests.clear();
+    harnessEventFilter = "all";
+    syncHarnessEventFilterButtons();
     updateHarnessPermissionBadge();
     await closeHarnessEventStream();
     try {
@@ -10238,7 +10284,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     // honest way to say "there is more" without claiming what the missing events are.
     if (latest && count < latest) text += ` · this view holds ${count} of the ${latest} events last reported`;
     if (tele.reloads) text += ` · replayed ${plural(tele.reloads, "time")}`;
+    // UIV2-09: a kind filter and a waiting approval are said in the same line as the
+    // counts, so the strip never presents a narrowed view or a gated run as plain.
+    if (harnessEventFilter !== "all") text += ` · showing ${HARNESS_EVENT_FILTERS[harnessEventFilter] || harnessEventFilter} only`;
+    const pendingApprovals = harnessPendingApprovalCount();
+    if (pendingApprovals) text += ` · ${plural(pendingApprovals, "approval")} waiting — decide in the log or the Approvals tab`;
     return {
+      pending: pendingApprovals,
       mode,
       text,
       count,
@@ -10268,20 +10320,30 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     host.hidden = false;
     host.dataset.mode = state.mode;
     const count = document.getElementById("harnessTimelineCount");
-    if (count) count.textContent = `${state.count} event${state.count === 1 ? "" : "s"}`;
+    if (count) {
+      if (harnessEventFilter === "all") {
+        count.textContent = `${state.count} event${state.count === 1 ? "" : "s"}`;
+      } else {
+        const filtered = harnessCachedEvents().filter((ev) => harnessEventMatchesFilter(ev, harnessEventFilter)).length;
+        count.textContent = `${filtered} of ${state.count} events · ${HARNESS_EVENT_FILTERS[harnessEventFilter] || harnessEventFilter}`;
+      }
+    }
     const line = document.getElementById("harnessTimelineState");
     if (line) {
       line.dataset.mode = state.mode;
       if (line.textContent !== state.text) line.textContent = state.text;
+      if (state.pending > 0) line.dataset.approvals = String(state.pending);
+      else delete line.dataset.approvals;
     }
     const toggle = document.getElementById("harnessTimelineToggle");
     const list = document.getElementById("harnessTimelineList");
     const expanded = Boolean(toggle) && toggle.getAttribute("aria-expanded") === "true";
     if (list && expanded) {
-      const signature = `${state.signature}|${harnessCachedEvents().length}`;
+      const signature = `${state.signature}|${harnessEventFilter}|${harnessCachedEvents().length}`;
       if (signature !== harnessTimelineSignature) {
         harnessTimelineSignature = signature;
-        list.innerHTML = harnessCachedEvents().slice(-HARNESS_RENDER_WINDOW).map((ev) => {
+        const rows = harnessEventFilter === "all" ? harnessCachedEvents() : harnessCachedEvents().filter((ev) => harnessEventMatchesFilter(ev, harnessEventFilter));
+        list.innerHTML = rows.slice(-HARNESS_RENDER_WINDOW).map((ev) => {
           const seq = Number(ev.seq) || 0;
           const type = String(ev.type || "event");
           const time = Number(ev.ts) ? new Date(Number(ev.ts) * 1000).toLocaleTimeString([], { hour12: false }) : "";
@@ -10378,6 +10440,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     harnessRenderedSeqs = [];
     harnessRenderedPending = 0;
     harnessRenderedDecisions = 0;
+    harnessRenderedFilter = "all";
   }
 
   // Keep `harnessEventOrder` ascending without sorting it: events almost always arrive in seq order,
@@ -11126,12 +11189,58 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     });
   }
 
+  // UIV2-09: the log can be filtered by kind from the strip, so a long run can be read
+  // for one thing at a time. The filter narrows only what is drawn - the cache, the cursor
+  // and the strip's count still describe the whole retained log.
+  const HARNESS_EVENT_FILTERS = { all: "All", tool: "Tools", approval: "Approvals", error: "Errors", system: "System" };
+  let harnessEventFilter = "all";
+  function harnessEventMatchesFilter(ev, filter) {
+    const type = String((ev && ev.type) || "");
+    if (!filter || filter === "all") return true;
+    if (filter === "approval") return type.startsWith("approval/");
+    if (filter === "tool") return /^(tool|edit|workspace|worktree|delegation|handoff|mcp)\//.test(type);
+    if (filter === "error") {
+      return type.startsWith("security/")
+        || /error|failed|rejected|cancelled|blocked|stagnation/.test(type)
+        || ev.ok === false
+        || harnessVerdictTone(ev) === "rejected";
+    }
+    if (filter === "system") {
+      return !harnessEventMatchesFilter(ev, "tool") && !harnessEventMatchesFilter(ev, "approval") && !harnessEventMatchesFilter(ev, "error");
+    }
+    return true;
+  }
+  function syncHarnessEventFilterButtons() {
+    for (const btn of document.querySelectorAll("#harnessTimelineFilters .harness-timeline-filter")) {
+      btn.setAttribute("aria-pressed", String(btn.dataset.filter === harnessEventFilter));
+    }
+  }
+  function setHarnessEventFilter(filter) {
+    if (!Object.prototype.hasOwnProperty.call(HARNESS_EVENT_FILTERS, filter)) return null;
+    harnessEventFilter = filter;
+    syncHarnessEventFilterButtons();
+    renderStoredHarnessEvents(harnessCachedEvents());
+    renderHarnessTimeline();
+    return filter;
+  }
+  // A pending approval is counted from both places it can be known: the authoritative
+  // snapshot and the live request cards, so a reconnect that re-read the snapshot cannot
+  // make a waiting approval stop being prominent.
+  function harnessPendingApprovalCount() {
+    const fromSnapshot = (((harnessSnapshot || {}).approvals || {}).pending || []).length;
+    return Math.max(fromSnapshot, harnessApprovalRequests.size);
+  }
+
   function renderStoredHarnessEvents(events) {
     const stream = document.getElementById("harnessStream");
     const ordered = harnessMergeEvents([], events || []);
+    // UIV2-09: a kind filter narrows what is drawn, never what is held, and a filtered
+    // view always redraws in full (the incremental append assumes the whole log is shown).
+    const visible = harnessEventFilter === "all" ? ordered : ordered.filter((ev) => harnessEventMatchesFilter(ev, harnessEventFilter));
     if (!ordered.length) {
       harnessRenderedSession = "";
       harnessRenderedSeqs = [];
+      harnessRenderedFilter = harnessEventFilter;
       renderHarnessStarter();
       renderHarnessTimeline();
       return;
@@ -11148,7 +11257,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const livePending = new Set((((harnessSnapshot || {}).approvals || {}).pending || []).map(a => a.approval_id));
     const streamState = (harnessSnapshot || {}).event_stream || {};
     // The newest window of the log, not all of it: the count in the timeline names the true total.
-    const shown = ordered.length > HARNESS_RENDER_WINDOW ? ordered.slice(ordered.length - HARNESS_RENDER_WINDOW) : ordered;
+    const shown = visible.length > HARNESS_RENDER_WINDOW ? visible.slice(visible.length - HARNESS_RENDER_WINDOW) : visible;
     const cardHtml = (ev) => {
       const seq = Number(ev.seq) || 0;
       const type = String(ev.type || "event");
@@ -11157,7 +11266,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     // A live event usually just adds a card to the end - and drops one off the top once the window
     // is full. That costs one node in and one node out; rebuilding the window costs every card on
     // screen, which is what a fast stream would otherwise pay per event.
-    const plan = harnessStreamAppendPlan(shown, livePending, decisions);
+    // The incremental append is only sound when the window on screen was drawn unfiltered:
+    // a filtered window is a subset in the middle of the log, not its tail, so extending it
+    // would leave a hole above the cards that stayed. A filter change always redraws in full.
+    const plan = harnessEventFilter === "all" && harnessRenderedFilter === "all" ? harnessStreamAppendPlan(shown, livePending, decisions) : null;
     if (plan) {
       // Collect the cards that leave the screen first, and measure them in one pass: taking a
       // card out between two height reads made the browser lay the pane out once per card, which
@@ -11177,7 +11289,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       harnessRenderedSeqs = shown.map((ev) => Number(ev.seq) || 0);
       harnessRenderedPending = livePending.size;
       harnessRenderedDecisions = Object.keys(decisions).length;
-      harnessUpdateWindowNote(shown.length, ordered.length);
+      harnessRenderedFilter = harnessEventFilter;
+      harnessUpdateWindowNote(shown.length, visible.length);
       if (pinned) {
         stream.scrollTop = stream.scrollHeight;
       } else {
@@ -11196,13 +11309,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (Number(streamState.retained_from_seq || 0) > 1) {
       htmlParts.push(`<div class="mono" style="font-size:11px; color:var(--text-faint);">Earlier events were pruned; showing the retained log from seq ${escapeHtml(String(streamState.retained_from_seq))}. Task status above is authoritative.</div>`);
     }
-    if (shown.length < ordered.length) htmlParts.push(harnessWindowNoteHtml(shown.length, ordered.length));
+    if (ordered.length && !shown.length) {
+      htmlParts.push(`<div class="mono" style="font-size:11px; color:var(--text-faint); padding:6px 2px;">No ${escapeHtml(HARNESS_EVENT_FILTERS[harnessEventFilter] || harnessEventFilter)} events among the ${ordered.length} retained.</div>`);
+    }
+    if (shown.length < visible.length) htmlParts.push(harnessWindowNoteHtml(shown.length, visible.length));
     for (const ev of shown) htmlParts.push(cardHtml(ev));
     stream.innerHTML = htmlParts.join("");
     harnessRenderedSession = activeHarnessId;
     harnessRenderedSeqs = shown.map((ev) => Number(ev.seq) || 0);
     harnessRenderedPending = livePending.size;
     harnessRenderedDecisions = Object.keys(decisions).length;
+    harnessRenderedFilter = harnessEventFilter;
     if (openDetails.length) {
       const details = stream.querySelectorAll("details");
       for (const index of openDetails) if (details[index]) details[index].open = true;
@@ -12626,6 +12743,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           activeHarnessId = d.session.id;
           harnessResetEventCache();
           harnessSnapshot = null;
+          harnessEventFilter = "all";
+          syncHarnessEventFilterButtons();
         }
         updateHarnessHeaderBanner(d.session);
         loadHarnessSessions();

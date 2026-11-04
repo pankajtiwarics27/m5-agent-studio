@@ -31,6 +31,12 @@ reader who is scrolled up, when the jump is offered with nothing to jump to, whe
 claims to have rebuilt a log it could not resume, when a pruned or incomplete log stops
 saying so, and when the cursor, dedupe or resync semantics this story had to preserve
 change.
+
+UIV2-09 adds the gates this file now also measures: the log can be filtered by kind from
+the strip (without the filter ever narrowing what the cache, the cursor or the count
+describe), a waiting approval is stated in the strip line, the state line's colour and
+the composer's run hint, a blocked session is never shown as ready, and a stream
+reconnect starts from the cursor so no event is missing or drawn twice.
 """
 
 from __future__ import annotations
@@ -98,6 +104,9 @@ FUNCTIONS = (
     "replayHarnessLog",
     "renderRecordedHarnessEventHtml",
     "harnessStreamNearBottom",
+    "harnessEventMatchesFilter",
+    "setHarnessEventFilter",
+    "harnessPendingApprovalCount",
 )
 
 
@@ -189,6 +198,10 @@ def read_frontend(html: str, server: str) -> dict:
     merge = function_body(html, "harnessMergeEvents")
     load = function_body(html, "loadHarnessEvents")
     resync = function_body(html, "harnessResyncFromSnapshot")
+    stream = function_body(html, "openHarnessEventStream")
+    run_state = function_body(html, "harnessRunState")
+    run_control = function_body(html, "updateHarnessRunControl")
+    banner = function_body(html, "updateHarnessHeaderBanner")
 
     types = emitted_types(server)
     cards = card_types(renderer)
@@ -311,6 +324,39 @@ def read_frontend(html: str, server: str) -> dict:
             "stream_frames_unchanged": "task_event" in html
             and "resync_required" in html
             and "stream_error" in html,
+        },
+        "filters": {
+            "chips_in_the_strip": 'id="harnessTimelineFilters"' in html
+            and html.count('class="harness-timeline-filter"') >= 5,
+            "every_chip_is_a_toggle_button": (lambda block: 'data-filter="all"' in block
+                and 'data-filter="system"' in block
+                and block.count("<button") >= 5
+                and "aria-pressed" in block
+                and 'onclick="setHarnessEventFilter(' in block)(html.split('id="harnessTimelineFilters"', 1)[-1][:1600]),
+            "matcher_exists": "function harnessEventMatchesFilter(ev, filter) {" in html,
+            "the_stream_is_filtered": "ordered.filter((ev) => harnessEventMatchesFilter(ev, harnessEventFilter))" in stored,
+            "the_record_is_filtered": "rows.slice(-HARNESS_RENDER_WINDOW)" in render
+            and "harnessEventMatchesFilter(ev, harnessEventFilter)" in render,
+            "a_filtered_view_redraws_in_full": 'harnessEventFilter === "all" && harnessRenderedFilter === "all" ? harnessStreamAppendPlan' in stored,
+            "the_filtered_count_is_stated": "of ${state.count} events" in render,
+            "the_filter_is_stated_in_the_line": "showing ${HARNESS_EVENT_FILTERS[harnessEventFilter] || harnessEventFilter} only" in log_state,
+            "an_empty_filter_says_so": "No ${escapeHtml(HARNESS_EVENT_FILTERS[harnessEventFilter]" in stored,
+            "the_filter_resets_with_the_session": 'harnessEventFilter = "all";' in html
+            and "syncHarnessEventFilterButtons();" in html,
+            "chips_have_a_rule": '.harness-timeline-filter[aria-pressed="true"]' in html,
+        },
+        "uiv2_09_gates": {
+            "reconnect_starts_from_the_cursor": "events/stream?cursor=${harnessCursor}" in stream,
+            "a_stream_gap_forces_a_resync": "harnessResyncFromSnapshot(verdict.reason" in stream,
+            "pending_approval_stated_in_the_strip_line": "waiting — decide in the log or the Approvals tab" in log_state,
+            "pending_approval_marks_the_state_line": "line.dataset.approvals = String(state.pending);" in render,
+            "pending_approval_stated_in_the_run_hint": "function harnessApprovalNote(" in html and "waiting — decide in the log above or the Approvals tab." in html,
+            "pending_approval_marks_the_run_hint": "hint.dataset.approvals = String(waiting);" in run_control,
+            "blocked_is_never_ready": bool(re.search(r'reason:\s*"blocked",\s*\n\s*ready:\s*false,', run_state)),
+            "blocked_is_said_in_the_run_hint": "it is not ready, so Run stays off" in run_state,
+            "blocked_marks_the_stage": 'harnessStageState.execute = "blocked";' in banner,
+            "blocked_has_a_hint_rule": '.harness-run-hint[data-reason="blocked"]' in html,
+            "approval_has_a_hint_rule": '.harness-run-hint[data-approvals]' in html,
         },
         "styles": {
             "strip": ".harness-timeline {" in html,
@@ -481,6 +527,40 @@ def build_inventory() -> dict:
         if not preserved.get(flag):
             fail("preserved", description)
 
+    filter_rules = (
+        ("chips_in_the_strip", "the log strip no longer offers the kind filters"),
+        ("every_chip_is_a_toggle_button", "a filter chip is not a toggle button, so it cannot be reached or announced"),
+        ("matcher_exists", "the filter matcher is gone"),
+        ("the_stream_is_filtered", "the trajectory is no longer filtered by kind"),
+        ("the_record_is_filtered", "the log record is no longer filtered by kind"),
+        ("a_filtered_view_redraws_in_full", "a filtered view still uses the incremental append, so it can draw stale cards"),
+        ("the_filtered_count_is_stated", "the strip does not say how many events the filter shows"),
+        ("the_filter_is_stated_in_the_line", "the strip line does not say the view is filtered"),
+        ("an_empty_filter_says_so", "a filter that matches nothing draws a blank pane"),
+        ("the_filter_resets_with_the_session", "one session's filter leaks into the next"),
+        ("chips_have_a_rule", "the filter chips have no style rule"),
+    )
+    for flag, description in filter_rules:
+        if not frontend["filters"].get(flag):
+            fail("filters", description)
+
+    gate_rules = (
+        ("reconnect_starts_from_the_cursor", "the event stream no longer reconnects from the cursor, so events go missing or duplicate"),
+        ("a_stream_gap_forces_a_resync", "a gap in the stream no longer forces a resync from the snapshot"),
+        ("pending_approval_stated_in_the_strip_line", "a waiting approval is no longer stated in the strip line"),
+        ("pending_approval_marks_the_state_line", "the state line no longer marks a waiting approval"),
+        ("pending_approval_stated_in_the_run_hint", "the composer's run hint no longer names a waiting approval"),
+        ("pending_approval_marks_the_run_hint", "the run hint no longer carries the waiting-approval mark"),
+        ("blocked_is_never_ready", "a blocked session can be shown as ready again"),
+        ("blocked_is_said_in_the_run_hint", "the run hint no longer says a blocked session is not ready"),
+        ("blocked_marks_the_stage", "the stage strip no longer marks a blocked run"),
+        ("blocked_has_a_hint_rule", "the blocked run hint has no rule"),
+        ("approval_has_a_hint_rule", "the waiting-approval run hint has no rule"),
+    )
+    for flag, description in gate_rules:
+        if not frontend["uiv2_09_gates"].get(flag):
+            fail("uiv2_09_gates", description)
+
     for flag, description in (
         ("strip", "the strip has no rule"),
         ("list", "the log list has no rule"),
@@ -550,6 +630,8 @@ def build_inventory() -> dict:
                     "honesty",
                     "telemetry",
                     "preserved",
+                    "filters",
+                    "uiv2_09_gates",
                     "styles",
                 )
             ),

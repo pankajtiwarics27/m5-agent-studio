@@ -53,7 +53,10 @@
       "updateHarnessTimelineJump": true,
       "replayHarnessLog": true,
       "renderRecordedHarnessEventHtml": true,
-      "harnessStreamNearBottom": true
+      "harnessStreamNearBottom": true,
+      "harnessEventMatchesFilter": true,
+      "setHarnessEventFilter": true,
+      "harnessPendingApprovalCount": true
     },
     "strip": {
       "arrives_hidden": true,
@@ -151,6 +154,32 @@
       "resync_reopens_the_stream": true,
       "pruned_notice_kept": true,
       "stream_frames_unchanged": true
+    },
+    "filters": {
+      "chips_in_the_strip": true,
+      "every_chip_is_a_toggle_button": true,
+      "matcher_exists": true,
+      "the_stream_is_filtered": true,
+      "the_record_is_filtered": true,
+      "a_filtered_view_redraws_in_full": true,
+      "the_filtered_count_is_stated": true,
+      "the_filter_is_stated_in_the_line": true,
+      "an_empty_filter_says_so": true,
+      "the_filter_resets_with_the_session": true,
+      "chips_have_a_rule": true
+    },
+    "uiv2_09_gates": {
+      "reconnect_starts_from_the_cursor": true,
+      "a_stream_gap_forces_a_resync": true,
+      "pending_approval_stated_in_the_strip_line": true,
+      "pending_approval_marks_the_state_line": true,
+      "pending_approval_stated_in_the_run_hint": true,
+      "pending_approval_marks_the_run_hint": true,
+      "blocked_is_never_ready": true,
+      "blocked_is_said_in_the_run_hint": true,
+      "blocked_marks_the_stage": true,
+      "blocked_has_a_hint_rule": true,
+      "approval_has_a_hint_rule": true
     },
     "styles": {
       "strip": true,
@@ -279,12 +308,12 @@
     "modes": 4,
     "gap_reasons": 6,
     "strip_controls": 8,
-    "functions": 10,
+    "functions": 13,
     "event_types_emitted": 43,
     "event_types_with_a_card": 16,
     "event_types_described_by_name": 23,
     "event_types_with_only_the_generic_preview": 20,
-    "checks": 81,
+    "checks": 103,
     "findings": 0
   },
   "findings": [],

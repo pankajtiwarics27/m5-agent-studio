@@ -8,13 +8,13 @@
   "check_with": "python3 scripts/uiux_v2_preservation_matrix.py --check",
   "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
   "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
-  "frontend_sha256": "fd4f396d03ef6f866a0561fa4864dcc2c4b2ea15ed32868a6c715cb6e618fc5c",
+  "frontend_sha256": "b5ea1f6347b11defbdff953a47ca5e41bb585c7cddd2f7e0a644312c64edfacb",
   "app_sha256": "0e6ecd89d84b7779f91513d8077934b08c8e90bccda919a6fac49ff6e44e2962",
   "totals": {
-    "controls": 196,
+    "controls": 201,
     "by_pane": {
       "start": 11,
-      "harness": 23,
+      "harness": 28,
       "hall": 18,
       "council": 16,
       "debate": 9,
@@ -23,7 +23,7 @@
     "chrome_controls": 108,
     "api_status_counts": {
       "existing": 33,
-      "no-api": 85,
+      "no-api": 90,
       "no-handler": 78
     },
     "mounted_routes": 115,
@@ -423,6 +423,56 @@
       "tag": "button",
       "text": "Session log",
       "handler": "toggleHarnessTimeline",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": null,
+      "tag": "button",
+      "text": "All",
+      "handler": "setHarnessEventFilter",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": null,
+      "tag": "button",
+      "text": "Tools",
+      "handler": "setHarnessEventFilter",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": null,
+      "tag": "button",
+      "text": "Approvals",
+      "handler": "setHarnessEventFilter",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": null,
+      "tag": "button",
+      "text": "Errors",
+      "handler": "setHarnessEventFilter",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": null,
+      "tag": "button",
+      "text": "System",
+      "handler": "setHarnessEventFilter",
       "calls": [],
       "api_status": "no-api",
       "tests": []
@@ -2446,7 +2496,7 @@
       "classification": "absent_registry__existing_picker",
       "picker": {
         "status": "existing",
-        "evidence": "select#chatPersona at static/index.html:2774 with 3 hard-coded <option> values",
+        "evidence": "select#chatPersona at static/index.html:2792 with 3 hard-coded <option> values",
         "options": [
           "Principal Engineer &amp; UI Architect",
           "Bug &amp; UX Auditor",
