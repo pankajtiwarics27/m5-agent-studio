@@ -806,3 +806,54 @@ def test_the_overhead_allowance_still_rejects_a_disproportionate_transform() -> 
     assert report["overhead_allowance_ms"] == pytest.approx(300.0)
     assert report["overhead_within_allowance"] is False
     assert report["benefit_justifies_cost"] is False
+
+
+def test_the_adversarial_scenario_does_not_gate_on_synthetic_baseline_overhead() -> None:
+    """The adversarial guard suite has no baseline transform; runner load must not fail its A/B gate.
+
+    Its baseline is a synthetic no-op, so the wall-clock overhead floor measures how loaded the
+    runner is rather than whether the guard suite is proportionate. On a busy CI machine the guard
+    suite's overhead crossed the 50 ms floor and flipped ``ab_gate_passed`` to false; the security
+    assertions (zero unauthorized relaxations) are the real gate for this scenario.
+    """
+    guard = [
+        _ab_run(
+            "b1",
+            "baseline_strict_taint",
+            verified=True,
+            latency_ms=0.05,
+            scenario_id="adversarial-bypass-and-model-self-cert-guard",
+        ),
+        _ab_run(
+            "b2",
+            "baseline_strict_taint",
+            verified=True,
+            latency_ms=0.05,
+            scenario_id="adversarial-bypass-and-model-self-cert-guard",
+        ),
+        _ab_run(
+            "q1",
+            "qualified_transform",
+            verified=True,
+            latency_ms=120.0,
+            overhead_ms=120.0,
+            scenario_id="adversarial-bypass-and-model-self-cert-guard",
+        ),
+        _ab_run(
+            "q2",
+            "qualified_transform",
+            verified=True,
+            latency_ms=120.0,
+            overhead_ms=120.0,
+            scenario_id="adversarial-bypass-and-model-self-cert-guard",
+        ),
+    ]
+    report = tt.compare_transformation_ab_runs(
+        "adversarial-bypass-and-model-self-cert-guard",
+        guard,
+        expect_blocking_lift=False,
+        enforce_overhead_gate=False,
+    )
+    assert report["overhead_gate_enforced"] is False
+    assert report["overhead_within_allowance"] is True
+    assert report["benefit_justifies_cost"] is True
