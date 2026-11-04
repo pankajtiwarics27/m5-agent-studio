@@ -39,10 +39,12 @@ no scrollbar to reach it, and a row of controls sat under the floor a finger nee
 
 | Width | What changes |
 | :--- | :--- |
-| ≤ 1100px | the monitor rail folds away and the two-column layout becomes one |
+| ≤ 1439px | UIV2-05: the contextual inspector becomes a 320px drawer; the central pane keeps its width |
+| ≤ 1279px | UIV2-05: the nav collapses to a 64px icon rail; labels hide, button titles keep the names |
 | ≤ 880px | the harness and hall sidebars fold away; the council seat grid goes to two columns |
 | ≤ 860px | the hall shell goes to one column |
 | ≤ 820px | the role grid goes to two columns |
+| ≤ 799px | UIV2-05: single column with one scrollable tab row under the header; the header never wraps past 64px |
 | ≤ 600px | phones: header, tabs, composers and the full-screen modals |
 | ≤ 390px | small phones: the tightest header and rail |
 

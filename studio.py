@@ -3810,7 +3810,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .cmd-item:hover, .cmd-item.selected { background: var(--bg-hover); border-color: var(--border-hi); }
   .layout.rail-collapsed { grid-template-columns: 1fr; }
   .layout.rail-collapsed .monitor-rail { display: none; }
-  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .monitor-rail { display: none; } }
+  @media (max-width: 1439px) { .layout { grid-template-columns: minmax(0, 1fr); } .monitor-rail { display: none; } }
 
   .workspace { display: flex; flex-direction: column; height: 100%; overflow: hidden; position: relative; }
   .pane { display: none; flex: 1; overflow: hidden; }
@@ -4436,6 +4436,9 @@ body { font-family: var(--sans); }
 .topbar {
   height: var(--header-height); min-height: var(--header-height); padding: 0 20px; gap: 18px;
   background: var(--bg-elev); border-bottom: 1px solid var(--border); backdrop-filter: none;
+  /* UIV2-05: the header is one row at every width, so it never grows past 64px; the
+     tablist lives beside/below it, not inside it. */
+  flex-wrap: nowrap;
 }
 .brand { gap: 10px; font-size: var(--text-base); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
 .brand-chip { width: 28px; height: 28px; border-radius: var(--radius-sm); background: var(--accent); box-shadow: none; font-weight: 650; }
@@ -4483,14 +4486,19 @@ select { min-width: 0; max-width: 100%; }
 .kbd { font-size: var(--text-2xs); border-color: var(--border); background: var(--bg-code); color: var(--text-dim); }
 .layout { height: calc(100dvh - var(--header-height)); grid-template-columns: minmax(0, 1fr) 320px; }
 .workspace { min-width: 0; }
-.skills-strip { background: var(--bg-elev); border-bottom: 1px solid var(--border); padding: var(--strip-pad-y) var(--space-5); gap: 7px; }
+.skills-strip { background: var(--bg-elev); border-bottom: 1px solid var(--border); padding: var(--strip-pad-y) var(--space-5); gap: 7px;
+  /* UIV2-05: the skills/MCP chrome is one row, not two - pill groups scroll inside their
+     own box and the strip itself never wraps onto a second line. */
+  flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; flex-shrink: 0; }
+#activeSkillsPills, #activeMcpPills { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; min-width: 0; flex: 0 1 auto; }
+.skills-strip > div:last-child { flex: 0 0 auto; flex-wrap: nowrap; }
 .skills-strip .field-lbl[hidden] { display: none; }
 .field-lbl { color: var(--text-dim) !important; font-size: 12px; }
   .skills-strip > span[aria-hidden="true"] { color: var(--border-hi) !important; }
   #contextModal .field-lbl, #mcpModal .field-lbl, #pane-hall .field-lbl { color: var(--text-dim) !important; }
   #contextModal strong[style*="color:"] { color: var(--text) !important; }
 .skills-strip > div:last-child { gap: 6px !important; }
-.skill-pill { background: var(--bg); border-color: var(--border); color: var(--text-dim); font-size: 12px; }
+.skill-pill { background: var(--bg); border-color: var(--border); color: var(--text-dim); font-size: 12px; white-space: nowrap; flex: 0 0 auto; }
 .skill-pill.active { background: var(--bg-hover); color: var(--text); border-color: var(--accent); }
 .field-lbl { color: var(--text-dim) !important; font-size: 12px !important; line-height: 1.35; font-weight: 600; letter-spacing: 0 !important; text-transform: none !important; }
 input, select, textarea {
@@ -4943,28 +4951,45 @@ details.think-box pre { border-color: var(--border); font-size: 12px; }
 :root:not([data-theme="light"]) .status-pill.demo { background: var(--bg-elev); color: var(--text); border-color: var(--border); }
 body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b; border-color: #e0c98c; }
 
-@media (max-width: 1100px) {
-  :root { --header-height: 96px; }
-  .topbar { height: var(--header-height); min-height: var(--header-height); padding: 7px 14px; gap: 4px 12px; flex-wrap: wrap; align-content: center; }
-  .brand { order: 1; }
-  .top-actions { order: 2; margin-left: auto; }
-  .mode-tabs {
-    position: static; order: 3; flex: 0 0 100%; width: 100%; height: auto; padding: 0;
-    flex-direction: row; align-items: center; overflow-x: auto; overflow-y: hidden;
-    background: transparent; border: 0;
-  }
-  .mode-tab { width: auto; }
-  .mode-tab.active { box-shadow: inset 0 -2px 0 var(--accent); }
-  #mainLayout { padding-left: 0; }
-  .mode-tab { flex: 0 0 auto; }
+@media (max-width: 1439px) {
+  /* UIV2-05: 1280-1439 the contextual inspector is a drawer, never a permanent column,
+     so the central pane keeps its width. The header stays one <=64px row at every size. */
   .layout { grid-template-columns: minmax(0, 1fr); }
   .monitor-rail {
     display: none; position: fixed; z-index: 35; top: var(--header-height); right: 0; bottom: 0;
-    width: min(360px, 92vw); max-height: calc(100dvh - var(--header-height));
+    width: min(320px, 92vw); max-height: calc(100dvh - var(--header-height));
     border-left: 1px solid var(--border); box-shadow: -14px 0 40px rgba(0,0,0,.22);
   }
   .layout.rail-mobile-open .monitor-rail { display: flex; }
   .layout.rail-collapsed .monitor-rail { display: none; }
+}
+@media (max-width: 1279px) {
+  /* UIV2-05: 800-1279 the nav collapses to a slim icon rail. The label hides but the
+     button title keeps the accessible name, and all six tabs stay reachable. */
+  .mode-tabs { width: 64px; padding: var(--space-3) var(--space-2); align-items: center; }
+  .mode-tab { width: 100%; justify-content: center; padding: var(--space-2) 0; }
+  .mode-tab span { display: none; }
+  #mainLayout { padding-left: 64px; }
+}
+@media (max-width: 799px) {
+  /* UIV2-05: <800 is a single column with one scrollable tab row under the header.
+     The header itself never wraps, so it stays <=64px even at 390px. */
+  .mode-tabs {
+    position: static; width: 100%; height: 44px; padding: 0 var(--space-3);
+    flex-direction: row; align-items: center; gap: 2px; overflow-x: auto; overflow-y: hidden;
+    background: var(--bg-elev); border-right: 0; border-bottom: 1px solid var(--border);
+  }
+  .mode-tab { width: auto; flex: 0 0 auto; min-height: 32px; padding: 4px 9px; }
+  .mode-tab span { display: inline; }
+  .mode-tab.active { box-shadow: inset 0 -2px 0 var(--accent); }
+  #mainLayout { padding-left: 0; }
+  .layout { height: calc(100dvh - var(--header-height) - 44px); grid-template-columns: minmax(0, 1fr); }
+  .topbar { padding: 0 10px; gap: 8px; }
+  .brand .brand-name { display: none; }
+  .top-actions { margin-left: auto; gap: 4px; }
+  .top-actions .btn span { display: none; }
+  .top-actions .btn { padding: 6px 8px; }
+  .top-actions #densityToggleBtn { display: none; }
 }
 @media (max-width: 880px) {
   .harness-shell { grid-template-columns: 1fr; grid-template-rows: minmax(132px, 22vh) minmax(0, 1fr); }
@@ -4987,7 +5012,6 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   .stepper { grid-template-columns: repeat(5, minmax(112px, 1fr)); overflow-x: auto; }
 }
 @media (max-width: 600px) {
-  :root { --header-height: 102px; }
   .topbar { padding: 6px 10px; gap: 2px 8px; }
   .brand { font-size: 13px; gap: 7px; }
   .brand-chip { width: 25px; height: 25px; font-size: 10px; }
@@ -4998,14 +5022,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   .mode-tabs { gap: 1px; }
   .mode-tab { min-height: 34px; padding: 5px 8px; font-size: 12px; gap: 4px; }
   .mode-tab .svg-ico { width: 14px; height: 14px; }
-  .skills-strip { padding: 6px 10px; max-height: 100px; overflow-y: auto; flex-shrink: 0; }
+  .skills-strip { padding: 4px 10px; }
   .harness-main, .hall-main { overflow-y: auto; }
   .harness-main > *, .hall-main > * { flex-shrink: 0; }
   .harness-stream, .hall-stream { flex: 0 0 auto; min-height: 160px; }
   .hall-composer { flex-wrap: wrap; }
   .hall-composer textarea { flex: 1 1 100% !important; min-width: 0; }
 
-  .skills-strip > div:last-child { flex: 1 1 100%; margin-left: 0 !important; }
+  .skills-strip > div:last-child { margin-left: auto; }
   .scroll-body, .hall-stream, .chat-messages { padding-left: 12px; padding-right: 12px; }
   .chat-header-bar { gap: 8px; padding: 10px 12px; }
   .chat-header-bar > div { flex: 1 1 100%; }
@@ -5035,7 +5059,6 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 }
 @media (max-width: 390px) {
-  :root { --header-height: 108px; }
   .topbar { padding: 5px 8px; }
   .brand { gap: 4px; }
   .mode-tab { padding: 5px 6px; }
@@ -5055,10 +5078,24 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 <header class="topbar">
   <div class="brand">
     <div class="brand-chip" aria-hidden="true">M5</div>
-    <span>Agent Studio</span>
+    <span class="brand-name">Agent Studio</span>
     <span class="ver-badge" aria-label="Version 9.0">v9.0</span>
     <span id="connPill" class="status-pill" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="connText">Connecting...</span></span>
   </div>
+
+  <div class="top-actions">
+    <button class="btn" data-shortcut-action="command-palette" onclick="openCommandPalette()" aria-label="Open Command Palette (Cmd+K)">
+      <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span>Search</span>
+      <span class="kbd">⌘K</span>
+    </button>
+    <button class="btn" id="densityToggleBtn" type="button" onclick="toggleDensity()" aria-pressed="false" title="Toggle workspace density">Density: comfortable</button>
+    <button class="btn" id="themeToggleBtn" type="button" onclick="toggleTheme()" aria-pressed="false" aria-label="Switch to light theme" title="Switch to light theme">
+      <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+      <span id="themeToggleLabel">Light</span>
+    </button>
+  </div>
+</header>
 
   <!-- Six panes of one application: a tablist, not six pages. The tab ids and the
        data-tab values are the contract every handler and every screenshot uses, so
@@ -5090,19 +5127,6 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     </button>
   </div>
 
-  <div class="top-actions">
-    <button class="btn" data-shortcut-action="command-palette" onclick="openCommandPalette()" aria-label="Open Command Palette (Cmd+K)">
-      <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <span>Search</span>
-      <span class="kbd">⌘K</span>
-    </button>
-    <button class="btn" id="densityToggleBtn" type="button" onclick="toggleDensity()" aria-pressed="false" title="Toggle workspace density">Density: comfortable</button>
-    <button class="btn" id="themeToggleBtn" type="button" onclick="toggleTheme()" aria-pressed="false" aria-label="Switch to light theme" title="Switch to light theme">
-      <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
-      <span id="themeToggleLabel">Light</span>
-    </button>
-  </div>
-</header>
 
 <!-- NON-BLOCKING ACCESSIBLE TOAST STACK (`ui-ux-pro-max` Priority 8) -->
 <div id="toastStack" class="toast-stack" role="region" aria-label="Notifications" aria-live="polite" aria-atomic="false"></div>
@@ -5682,11 +5706,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     <!-- UNIFIED INTEGRATIONS & TELEMETRY BAND ("Ponytail Band" Pattern) -->
     <div class="skills-strip" tabindex="0" aria-label="Integrations and telemetry controls">
       <span class="field-lbl" style="margin:0;">Skills:</span>
-      <div id="activeSkillsPills" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;"></div>
+      <div id="activeSkillsPills" style="display:flex; gap:6px; flex-wrap:nowrap; align-items:center; overflow-x:auto; min-width:0;"></div>
       <span style="color:var(--border-hi); margin:0 2px;" aria-hidden="true">|</span>
       <span class="field-lbl" style="margin:0;">MCP:</span>
-      <div id="activeMcpPills" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;"></div>
-      <div style="margin-left:auto; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+      <div id="activeMcpPills" style="display:flex; gap:6px; flex-wrap:nowrap; align-items:center; overflow-x:auto; min-width:0;"></div>
+      <div style="margin-left:auto; display:flex; gap:6px; align-items:center; flex-wrap:nowrap; flex:0 0 auto;">
         <span style="font-size:11px; color:var(--text-faint); font-family:var(--mono);" title="Configured integrations summary">
           MCP:<span id="mcpToolsCountBadge">0</span> · Prov:<span id="providersCountBadge">0</span> · Skills:<span id="skillsCountBadge">0</span> · Docs:<span id="ocDocsCountBadge">1</span>
         </span>
@@ -7509,7 +7533,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function syncTabOrientation() {
     const rail = document.querySelector(".mode-tabs");
     if (!rail) return;
-    const horizontal = window.matchMedia("(max-width: 1100px)").matches;
+    const horizontal = window.matchMedia("(max-width: 799px)").matches;
     rail.setAttribute("aria-orientation", horizontal ? "horizontal" : "vertical");
   }
   // Status and evidence have one vocabulary each, and these are the only things that
@@ -7931,7 +7955,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const layout = document.getElementById("mainLayout");
     const rail = document.getElementById("monitorRail");
     const btn = document.getElementById("monitorToggleBtn");
-    const narrow = window.matchMedia("(max-width: 1100px)").matches;
+    const narrow = window.matchMedia("(max-width: 1439px)").matches;
     let expanded;
     if (narrow) {
       layout.classList.remove("rail-collapsed");
@@ -8172,7 +8196,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     document.getElementById("skillsCountBadge").textContent = `${selectedSkills.size}/${installedSkills.length}`;
     const strip = document.getElementById("activeSkillsPills");
     strip.innerHTML = !installedSkills.length
-      ? `<span style="font-size:11.8px; color:var(--text-dim);">0 skills — click <strong>+ Skills</strong> to install <code>ui-ux-pro-max</code></span>`
+      ? `<span style="font-size:11.8px; color:var(--text-dim); white-space:nowrap;">0 skills — click <strong>+ Skills</strong> to install <code>ui-ux-pro-max</code></span>`
       : installedSkills.map(s => {
           const on = selectedSkills.has(s.id);
           return `<span class="skill-pill ${on ? 'active' : ''}" role="button" tabindex="0" data-key-activate onclick="toggleSkill('${escapeHtml(s.id)}')">${on ? UI_ICONS.check + ' ' : ''}${escapeHtml(s.name)}${s.has_design_engine ? ' • Design Engine' : ''}</span>`;
@@ -16089,7 +16113,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     // Top Strip Pills
     const strip = document.getElementById("activeMcpPills");
     if (!mcpServers.length) {
-      strip.innerHTML = `<span style="font-size:11.6px; color:var(--text-faint);">0 servers — click <strong>+ MCP</strong> for Context7 / Exa / GitHub / Custom</span>`;
+      strip.innerHTML = `<span style="font-size:11.6px; color:var(--text-faint); white-space:nowrap;">0 servers — click <strong>+ MCP</strong> for Context7 / Exa / GitHub / Custom</span>`;
     } else {
       strip.innerHTML = mcpServers.map(s => {
         const on = s.enabled;
@@ -16833,7 +16857,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   if (tabRail) tabRail.addEventListener("keydown", tabRailKeydown);
   syncTabOrientation();
   try {
-    window.matchMedia("(max-width: 1100px)").addEventListener("change", syncTabOrientation);
+    window.matchMedia("(max-width: 799px)").addEventListener("change", syncTabOrientation);
   } catch (_) { /* older engines: the initial orientation still applies */ }
   try { applyDensity(localStorage.getItem("m5_ui_density") === "compact"); } catch (_) { applyDensity(false); }
   const advanced = document.getElementById("harnessAdvanced");
@@ -16853,13 +16877,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     });
   }
 
-  const initialNarrow = window.matchMedia("(max-width: 1100px)").matches;
+  const initialNarrow = window.matchMedia("(max-width: 1439px)").matches;
   if (initialNarrow) {
     const monitorButton = document.getElementById("monitorToggleBtn");
     if (monitorButton) monitorButton.setAttribute("aria-expanded", "false");
   }
   window.addEventListener("resize", () => {
-    const narrow = window.matchMedia("(max-width: 1100px)").matches;
+    const narrow = window.matchMedia("(max-width: 1439px)").matches;
     const layout = document.getElementById("mainLayout");
     const monitorButton = document.getElementById("monitorToggleBtn");
     if (!layout || !monitorButton) return;

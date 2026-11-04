@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `6442f54749cf321ed53bd6818f549072ae37bf3da2a3fa952003794f9b600e77`.
+* Frontend digest: `57a770846866d7ffe51de10c761f1e87d89121450d47fa8e4280fa3d2b2b7f7b`.
 * Panes: 6 · controls in panes: 88 · controls in the
   shared chrome: 106 · script-rendered: 42.
 
@@ -173,15 +173,15 @@ attributed to one.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
-| 1 | button | tab-start | tab | Start | switchTab('start') |
-| 2 | button | tab-harness | tab | Harness | switchTab('harness') |
-| 3 | button | tab-hall | tab | Council | switchTab('hall') |
-| 4 | button | tab-council | tab | Pipeline | switchTab('council') |
-| 5 | button | tab-debate | tab | Compare | switchTab('debate') |
-| 6 | button | tab-chat | tab | Chat | switchTab('chat') |
-| 7 | button | — | — | Open Command Palette (Cmd+K) | openCommandPalette() |
-| 8 | button | densityToggleBtn | button | Density: comfortable | toggleDensity() |
-| 9 | button | themeToggleBtn | button | Switch to light theme | toggleTheme() |
+| 1 | button | — | — | Open Command Palette (Cmd+K) | openCommandPalette() |
+| 2 | button | densityToggleBtn | button | Density: comfortable | toggleDensity() |
+| 3 | button | themeToggleBtn | button | Switch to light theme | toggleTheme() |
+| 4 | button | tab-start | tab | Start | switchTab('start') |
+| 5 | button | tab-harness | tab | Harness | switchTab('harness') |
+| 6 | button | tab-hall | tab | Council | switchTab('hall') |
+| 7 | button | tab-council | tab | Pipeline | switchTab('council') |
+| 8 | button | tab-debate | tab | Compare | switchTab('debate') |
+| 9 | button | tab-chat | tab | Chat | switchTab('chat') |
 | 10 | input | cmdSearchInput | text | Search actions | renderCommandPaletteList(this.value) |
 | 11 | button | ctxTabBtn-oc | — | Knowledge | switchCtxTab('oc') |
 | 12 | button | ctxTabBtn-cg | — | Code graph | switchCtxTab('cg') |

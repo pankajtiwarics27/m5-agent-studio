@@ -1,0 +1,762 @@
+{
+ "1640x900-light-harness": {
+  "viewport": {
+   "w": 1640,
+   "h": 900
+  },
+  "headerHeight": 56,
+  "headerVar": "56px",
+  "nav": {
+   "x": 0,
+   "y": 56,
+   "width": 200,
+   "height": 844,
+   "top": 56,
+   "right": 200,
+   "bottom": 900,
+   "left": 0
+  },
+  "navPosition": "fixed",
+  "layout": {
+   "x": 0,
+   "y": 56,
+   "width": 1640,
+   "height": 844,
+   "top": 56,
+   "right": 1640,
+   "bottom": 900,
+   "left": 0
+  },
+  "workspace": {
+   "x": 200,
+   "y": 56,
+   "width": 1120,
+   "height": 844,
+   "top": 56,
+   "right": 1320,
+   "bottom": 900,
+   "left": 200
+  },
+  "rail": {
+   "x": 1320,
+   "y": 56,
+   "width": 320,
+   "height": 844,
+   "top": 56,
+   "right": 1640,
+   "bottom": 900,
+   "left": 1320
+  },
+  "railVisible": true,
+  "strip": {
+   "x": 200,
+   "y": 56,
+   "width": 1120,
+   "height": 75,
+   "top": 56,
+   "right": 1320,
+   "bottom": 131,
+   "left": 200
+  },
+  "stripRows": 75,
+  "scrollWidth": 1640,
+  "clientWidth": 1640,
+  "horizontalOverflow": false,
+  "bodyScrollWidth": 1640,
+  "tabs": [
+   {
+    "id": "start",
+    "visible": true
+   },
+   {
+    "id": "harness",
+    "visible": true
+   },
+   {
+    "id": "hall",
+    "visible": true
+   },
+   {
+    "id": "council",
+    "visible": true
+   },
+   {
+    "id": "debate",
+    "visible": true
+   },
+   {
+    "id": "chat",
+    "visible": true
+   }
+  ],
+  "railWhenOpen": {
+   "widthWhenForcedOpen": 320,
+   "position": "static"
+  }
+ },
+ "1640x900-dark-harness": {
+  "viewport": {
+   "w": 1640,
+   "h": 900
+  },
+  "headerHeight": 56,
+  "headerVar": "56px",
+  "nav": {
+   "x": 0,
+   "y": 56,
+   "width": 200,
+   "height": 844,
+   "top": 56,
+   "right": 200,
+   "bottom": 900,
+   "left": 0
+  },
+  "navPosition": "fixed",
+  "layout": {
+   "x": 0,
+   "y": 56,
+   "width": 1640,
+   "height": 844,
+   "top": 56,
+   "right": 1640,
+   "bottom": 900,
+   "left": 0
+  },
+  "workspace": {
+   "x": 200,
+   "y": 56,
+   "width": 1120,
+   "height": 844,
+   "top": 56,
+   "right": 1320,
+   "bottom": 900,
+   "left": 200
+  },
+  "rail": {
+   "x": 1320,
+   "y": 56,
+   "width": 320,
+   "height": 844,
+   "top": 56,
+   "right": 1640,
+   "bottom": 900,
+   "left": 1320
+  },
+  "railVisible": true,
+  "strip": {
+   "x": 200,
+   "y": 56,
+   "width": 1120,
+   "height": 75,
+   "top": 56,
+   "right": 1320,
+   "bottom": 131,
+   "left": 200
+  },
+  "stripRows": 75,
+  "scrollWidth": 1640,
+  "clientWidth": 1640,
+  "horizontalOverflow": false,
+  "bodyScrollWidth": 1640,
+  "tabs": [
+   {
+    "id": "start",
+    "visible": true
+   },
+   {
+    "id": "harness",
+    "visible": true
+   },
+   {
+    "id": "hall",
+    "visible": true
+   },
+   {
+    "id": "council",
+    "visible": true
+   },
+   {
+    "id": "debate",
+    "visible": true
+   },
+   {
+    "id": "chat",
+    "visible": true
+   }
+  ],
+  "railWhenOpen": {
+   "widthWhenForcedOpen": 320,
+   "position": "static"
+  }
+ },
+ "1440x900-light-harness": {
+  "viewport": {
+   "w": 1440,
+   "h": 900
+  },
+  "headerHeight": 56,
+  "headerVar": "56px",
+  "nav": {
+   "x": 0,
+   "y": 56,
+   "width": 200,
+   "height": 844,
+   "top": 56,
+   "right": 200,
+   "bottom": 900,
+   "left": 0
+  },
+  "navPosition": "fixed",
+  "layout": {
+   "x": 0,
+   "y": 56,
+   "width": 1440,
+   "height": 844,
+   "top": 56,
+   "right": 1440,
+   "bottom": 900,
+   "left": 0
+  },
+  "workspace": {
+   "x": 200,
+   "y": 56,
+   "width": 920,
+   "height": 844,
+   "top": 56,
+   "right": 1120,
+   "bottom": 900,
+   "left": 200
+  },
+  "rail": {
+   "x": 1120,
+   "y": 56,
+   "width": 320,
+   "height": 844,
+   "top": 56,
+   "right": 1440,
+   "bottom": 900,
+   "left": 1120
+  },
+  "railVisible": true,
+  "strip": {
+   "x": 200,
+   "y": 56,
+   "width": 920,
+   "height": 75,
+   "top": 56,
+   "right": 1120,
+   "bottom": 131,
+   "left": 200
+  },
+  "stripRows": 75,
+  "scrollWidth": 1440,
+  "clientWidth": 1440,
+  "horizontalOverflow": false,
+  "bodyScrollWidth": 1440,
+  "tabs": [
+   {
+    "id": "start",
+    "visible": true
+   },
+   {
+    "id": "harness",
+    "visible": true
+   },
+   {
+    "id": "hall",
+    "visible": true
+   },
+   {
+    "id": "council",
+    "visible": true
+   },
+   {
+    "id": "debate",
+    "visible": true
+   },
+   {
+    "id": "chat",
+    "visible": true
+   }
+  ],
+  "railWhenOpen": {
+   "widthWhenForcedOpen": 320,
+   "position": "static"
+  }
+ },
+ "1440x900-dark-harness": {
+  "viewport": {
+   "w": 1440,
+   "h": 900
+  },
+  "headerHeight": 56,
+  "headerVar": "56px",
+  "nav": {
+   "x": 0,
+   "y": 56,
+   "width": 200,
+   "height": 844,
+   "top": 56,
+   "right": 200,
+   "bottom": 900,
+   "left": 0
+  },
+  "navPosition": "fixed",
+  "layout": {
+   "x": 0,
+   "y": 56,
+   "width": 1440,
+   "height": 844,
+   "top": 56,
+   "right": 1440,
+   "bottom": 900,
+   "left": 0
+  },
+  "workspace": {
+   "x": 200,
+   "y": 56,
+   "width": 920,
+   "height": 844,
+   "top": 56,
+   "right": 1120,
+   "bottom": 900,
+   "left": 200
+  },
+  "rail": {
+   "x": 1120,
+   "y": 56,
+   "width": 320,
+   "height": 844,
+   "top": 56,
+   "right": 1440,
+   "bottom": 900,
+   "left": 1120
+  },
+  "railVisible": true,
+  "strip": {
+   "x": 200,
+   "y": 56,
+   "width": 920,
+   "height": 75,
+   "top": 56,
+   "right": 1120,
+   "bottom": 131,
+   "left": 200
+  },
+  "stripRows": 75,
+  "scrollWidth": 1440,
+  "clientWidth": 1440,
+  "horizontalOverflow": false,
+  "bodyScrollWidth": 1440,
+  "tabs": [
+   {
+    "id": "start",
+    "visible": true
+   },
+   {
+    "id": "harness",
+    "visible": true
+   },
+   {
+    "id": "hall",
+    "visible": true
+   },
+   {
+    "id": "council",
+    "visible": true
+   },
+   {
+    "id": "debate",
+    "visible": true
+   },
+   {
+    "id": "chat",
+    "visible": true
+   }
+  ],
+  "railWhenOpen": {
+   "widthWhenForcedOpen": 320,
+   "position": "static"
+  }
+ },
+ "1280x800-light-harness": {
+  "viewport": {
+   "w": 1280,
+   "h": 800
+  },
+  "headerHeight": 56,
+  "headerVar": "56px",
+  "nav": {
+   "x": 0,
+   "y": 56,
+   "width": 200,
+   "height": 744,
+   "top": 56,
+   "right": 200,
+   "bottom": 800,
+   "left": 0
+  },
+  "navPosition": "fixed",
+  "layout": {
+   "x": 0,
+   "y": 56,
+   "width": 1280,
+   "height": 744,
+   "top": 56,
+   "right": 1280,
+   "bottom": 800,
+   "left": 0
+  },
+  "workspace": {
+   "x": 200,
+   "y": 56,
+   "width": 760,
+   "height": 744,
+   "top": 56,
+   "right": 960,
+   "bottom": 800,
+   "left": 200
+  },
+  "rail": {
+   "x": 960,
+   "y": 56,
+   "width": 320,
+   "height": 744,
+   "top": 56,
+   "right": 1280,
+   "bottom": 800,
+   "left": 960
+  },
+  "railVisible": true,
+  "strip": {
+   "x": 200,
+   "y": 56,
+   "width": 760,
+   "height": 99.390625,
+   "top": 56,
+   "right": 960,
+   "bottom": 155.390625,
+   "left": 200
+  },
+  "stripRows": 99,
+  "scrollWidth": 1280,
+  "clientWidth": 1280,
+  "horizontalOverflow": false,
+  "bodyScrollWidth": 1280,
+  "tabs": [
+   {
+    "id": "start",
+    "visible": true
+   },
+   {
+    "id": "harness",
+    "visible": true
+   },
+   {
+    "id": "hall",
+    "visible": true
+   },
+   {
+    "id": "council",
+    "visible": true
+   },
+   {
+    "id": "debate",
+    "visible": true
+   },
+   {
+    "id": "chat",
+    "visible": true
+   }
+  ],
+  "railWhenOpen": {
+   "widthWhenForcedOpen": 320,
+   "position": "static"
+  }
+ },
+ "1280x800-dark-harness": {
+  "viewport": {
+   "w": 1280,
+   "h": 800
+  },
+  "headerHeight": 56,
+  "headerVar": "56px",
+  "nav": {
+   "x": 0,
+   "y": 56,
+   "width": 200,
+   "height": 744,
+   "top": 56,
+   "right": 200,
+   "bottom": 800,
+   "left": 0
+  },
+  "navPosition": "fixed",
+  "layout": {
+   "x": 0,
+   "y": 56,
+   "width": 1280,
+   "height": 744,
+   "top": 56,
+   "right": 1280,
+   "bottom": 800,
+   "left": 0
+  },
+  "workspace": {
+   "x": 200,
+   "y": 56,
+   "width": 760,
+   "height": 744,
+   "top": 56,
+   "right": 960,
+   "bottom": 800,
+   "left": 200
+  },
+  "rail": {
+   "x": 960,
+   "y": 56,
+   "width": 320,
+   "height": 744,
+   "top": 56,
+   "right": 1280,
+   "bottom": 800,
+   "left": 960
+  },
+  "railVisible": true,
+  "strip": {
+   "x": 200,
+   "y": 56,
+   "width": 760,
+   "height": 99.390625,
+   "top": 56,
+   "right": 960,
+   "bottom": 155.390625,
+   "left": 200
+  },
+  "stripRows": 99,
+  "scrollWidth": 1280,
+  "clientWidth": 1280,
+  "horizontalOverflow": false,
+  "bodyScrollWidth": 1280,
+  "tabs": [
+   {
+    "id": "start",
+    "visible": true
+   },
+   {
+    "id": "harness",
+    "visible": true
+   },
+   {
+    "id": "hall",
+    "visible": true
+   },
+   {
+    "id": "council",
+    "visible": true
+   },
+   {
+    "id": "debate",
+    "visible": true
+   },
+   {
+    "id": "chat",
+    "visible": true
+   }
+  ],
+  "railWhenOpen": {
+   "widthWhenForcedOpen": 320,
+   "position": "static"
+  }
+ },
+ "390x844-light-harness": {
+  "viewport": {
+   "w": 390,
+   "h": 844
+  },
+  "headerHeight": 108,
+  "headerVar": "108px",
+  "nav": {
+   "x": 8,
+   "y": 67,
+   "width": 374,
+   "height": 34,
+   "top": 67,
+   "right": 382,
+   "bottom": 101,
+   "left": 8
+  },
+  "navPosition": "static",
+  "layout": {
+   "x": 0,
+   "y": 108,
+   "width": 390,
+   "height": 736,
+   "top": 108,
+   "right": 390,
+   "bottom": 844,
+   "left": 0
+  },
+  "workspace": {
+   "x": 0,
+   "y": 108,
+   "width": 390,
+   "height": 736,
+   "top": 108,
+   "right": 390,
+   "bottom": 844,
+   "left": 0
+  },
+  "rail": {
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "top": 0,
+   "right": 0,
+   "bottom": 0,
+   "left": 0
+  },
+  "railVisible": false,
+  "strip": {
+   "x": 0,
+   "y": 108,
+   "width": 390,
+   "height": 100,
+   "top": 108,
+   "right": 390,
+   "bottom": 208,
+   "left": 0
+  },
+  "stripRows": 100,
+  "scrollWidth": 390,
+  "clientWidth": 390,
+  "horizontalOverflow": false,
+  "bodyScrollWidth": 390,
+  "tabs": [
+   {
+    "id": "start",
+    "visible": true
+   },
+   {
+    "id": "harness",
+    "visible": true
+   },
+   {
+    "id": "hall",
+    "visible": true
+   },
+   {
+    "id": "council",
+    "visible": true
+   },
+   {
+    "id": "debate",
+    "visible": true
+   },
+   {
+    "id": "chat",
+    "visible": true
+   }
+  ],
+  "railWhenOpen": {
+   "widthWhenForcedOpen": 358.796875,
+   "position": "fixed"
+  }
+ },
+ "390x844-dark-harness": {
+  "viewport": {
+   "w": 390,
+   "h": 844
+  },
+  "headerHeight": 108,
+  "headerVar": "108px",
+  "nav": {
+   "x": 8,
+   "y": 67,
+   "width": 374,
+   "height": 34,
+   "top": 67,
+   "right": 382,
+   "bottom": 101,
+   "left": 8
+  },
+  "navPosition": "static",
+  "layout": {
+   "x": 0,
+   "y": 108,
+   "width": 390,
+   "height": 736,
+   "top": 108,
+   "right": 390,
+   "bottom": 844,
+   "left": 0
+  },
+  "workspace": {
+   "x": 0,
+   "y": 108,
+   "width": 390,
+   "height": 736,
+   "top": 108,
+   "right": 390,
+   "bottom": 844,
+   "left": 0
+  },
+  "rail": {
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "top": 0,
+   "right": 0,
+   "bottom": 0,
+   "left": 0
+  },
+  "railVisible": false,
+  "strip": {
+   "x": 0,
+   "y": 108,
+   "width": 390,
+   "height": 100,
+   "top": 108,
+   "right": 390,
+   "bottom": 208,
+   "left": 0
+  },
+  "stripRows": 100,
+  "scrollWidth": 390,
+  "clientWidth": 390,
+  "horizontalOverflow": false,
+  "bodyScrollWidth": 390,
+  "tabs": [
+   {
+    "id": "start",
+    "visible": true
+   },
+   {
+    "id": "harness",
+    "visible": true
+   },
+   {
+    "id": "hall",
+    "visible": true
+   },
+   {
+    "id": "council",
+    "visible": true
+   },
+   {
+    "id": "debate",
+    "visible": true
+   },
+   {
+    "id": "chat",
+    "visible": true
+   }
+  ],
+  "railWhenOpen": {
+   "widthWhenForcedOpen": 358.796875,
+   "position": "fixed"
+  }
+ }
+}

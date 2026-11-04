@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "899041968135403ef11f647d213f0b17b85e443f7c9ea9d19bdb210692625bf5",
+    "style_block_sha256": "d3eb0449b488962b846c9defa7da1c007f4b4d9b6504ff5be85084375fe06e1b",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -42,7 +42,7 @@
   "totals": {
     "tokens": 53,
     "groups": 8,
-    "references": 1192,
+    "references": 1197,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 22,
@@ -138,7 +138,7 @@
         "light": "#FFFFFF"
       },
       "density_override": null,
-      "references": 33
+      "references": 34
     },
     {
       "name": "--bg-card",
@@ -188,7 +188,7 @@
         "light": "#DDE2E8"
       },
       "density_override": null,
-      "references": 148
+      "references": 149
     },
     {
       "name": "--border-hi",
@@ -406,7 +406,7 @@
       "value": "6px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 24
+      "references": 26
     },
     {
       "name": "--space-3",
@@ -414,7 +414,7 @@
       "value": "8px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 16
+      "references": 18
     },
     {
       "name": "--space-4",
@@ -582,7 +582,7 @@
       "value": "56px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 8
+      "references": 7
     }
   ],
   "contrast": [
