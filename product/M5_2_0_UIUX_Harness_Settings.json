@@ -131,6 +131,23 @@
       "policy_change_goes_through_the_guarded_write": true,
       "no_desktop_automation_copy_in_the_pane": true
     },
+    "uiv2_11_sessions": {
+      "filter_input_is_a_named_search_box": true,
+      "the_filter_re_renders_the_list": true,
+      "the_list_is_filtered_by_the_query": true,
+      "the_match_reads_title_id_policy_status": true,
+      "every_word_of_the_query_must_match": true,
+      "the_count_says_shown_of_total": true,
+      "an_empty_filter_result_says_so": true,
+      "a_live_session_disables_its_delete": true,
+      "delete_takes_two_presses": true,
+      "the_armed_state_expires": true,
+      "the_confirmation_states_the_irreversible_scope": true,
+      "the_scope_note_renders_while_armed": true,
+      "delete_still_goes_through_the_guarded_write": true,
+      "the_armed_state_is_cleared_on_delete": true,
+      "active_row_and_new_session_kept": true
+    },
     "preserved": {
       "harnessWorkspaceInput": true,
       "harnessRecentDirsSelect": true,
@@ -186,14 +203,23 @@
       "harnessUseWorktree",
       "harnessWorkflowMode",
       "harnessWorkspaceInput"
-    ]
+    ],
+    "uiv2_11_sessions_server": {
+      "the_delete_route_still_exists": true,
+      "a_running_session_is_refused_with_409": true,
+      "the_refusal_says_the_session_is_protected": true,
+      "the_refusal_names_the_way_out": true,
+      "the_refusal_precedes_the_abort_and_fence": true,
+      "the_removal_still_cleans_worktree_log_and_grants": true,
+      "only_the_worktree_is_removed_not_the_workspace": true
+    }
   },
   "totals": {
     "reasons": 4,
     "plan_rows": 6,
     "preserved_controls": 11,
     "named_controls": 10,
-    "checks": 90,
+    "checks": 112,
     "findings": 0
   },
   "findings": [],

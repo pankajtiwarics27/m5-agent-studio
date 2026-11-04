@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "a3c45e31ab6dfb1f4182d87836e876fa6aa4762ced40cbd53417ad8e8fef4830",
+  "frontend_sha256": "6328f8e813bf4f9831955968298f6c2da801a51a1d6f37fd0eea9a7c8219761f",
   "panes": [
     {
       "dom_id": "start",
@@ -112,10 +112,10 @@
     {
       "dom_id": "harness",
       "section_id": "pane-harness",
-      "control_count": 29,
+      "control_count": 30,
       "counts": {
         "button": 16,
-        "input": 2,
+        "input": 3,
         "select": 9,
         "summary": 1,
         "textarea": 1
@@ -135,6 +135,14 @@
           "class": "btn",
           "onclick": "startFreshHarnessDraft()",
           "text": "+ New session"
+        },
+        {
+          "tag": "input",
+          "id": "harnessSessionFilter",
+          "type": "search",
+          "aria-label": "Filter harness sessions by title, id, status or policy",
+          "placeholder": "Filter sessions…",
+          "oninput": "renderHarnessSidebar()"
         },
         {
           "tag": "button",
@@ -1492,10 +1500,10 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 202,
-    "pane_controls": 94,
+    "markup_controls": 203,
+    "pane_controls": 95,
     "chrome_controls": 108,
-    "script_rendered_controls": 50,
+    "script_rendered_controls": 53,
     "script_rendered_by_function": {
       "ensureStageCardMounted": 1,
       "harnessEvidenceChangeHtml": 1,
@@ -1510,7 +1518,7 @@
       "renderHarnessApprovalCardHtml": 3,
       "renderHarnessGrants": 4,
       "renderHarnessRecoveryEventHtml": 1,
-      "renderHarnessSidebar": 1,
+      "renderHarnessSidebar": 4,
       "renderHarnessTimeline": 1,
       "renderHarnessVerdictCardHtml": 2,
       "renderMarkdown": 1,

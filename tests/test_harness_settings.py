@@ -510,3 +510,70 @@ def test_a_pane_that_claims_desktop_automation_is_caught(sources):
         )
     )
     assert "uiv2_10_composer" in _checks(payload)
+
+
+# ── UIV2-11: session navigation gates — filter, armed delete, running-session protection ──
+
+
+def test_uiv2_11_session_gates_hold(payload):
+    for group in ("uiv2_11_sessions", "uiv2_11_sessions_server"):
+        gates = payload["frontend"][group]
+        assert all(gates.values()), [f"{group}:{name}" for name, ok in gates.items() if not ok]
+
+
+def test_a_sidebar_without_the_filter_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace('id="harnessSessionFilter"', 'id="harnessSessionFilterGone"', 1)
+    )
+    assert "uiv2_11_sessions" in _checks(payload)
+
+
+def test_a_delete_that_needs_no_confirmation_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            "armHarnessDelete('${escapeHtml(s.id)}')", "deleteHarnessSession('${escapeHtml(s.id)}')", 1
+        )
+    )
+    assert "uiv2_11_sessions" in _checks(payload)
+
+
+def test_a_confirmation_without_the_irreversible_scope_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            "there is no archive; delete cannot be undone.", "goodbye.", 1
+        )
+    )
+    assert "uiv2_11_sessions" in _checks(payload)
+
+
+def test_a_live_session_whose_delete_stays_enabled_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            'new Set(["pending", "running", "waiting_approval", "blocked"])',
+            'new Set([])',
+            1,
+        )
+    )
+    assert "uiv2_11_sessions" in _checks(payload)
+
+
+def test_a_server_that_deletes_running_sessions_is_caught(sources):
+    payload = sources(
+        app_transform=lambda text: text.replace(
+            'if sess.get("status") in {"running", "waiting_approval", "blocked"}:',
+            'if False:',
+            1,
+        )
+    )
+    assert "uiv2_11_sessions" in _checks(payload)
+
+
+def test_a_server_that_never_cleans_up_on_delete_is_caught(sources):
+    payload = sources(
+        app_transform=lambda text: text.replace(
+            "_remove_harness_worktree(Path(sess[\"workspace_dir\"]), Path(sess[\"worktree_dir\"]), sess.get(\"branch_name\") or \"\")",
+            "",
+            1,
+        )
+    )
+    assert "uiv2_11_sessions" in _checks(payload)

@@ -138,6 +138,39 @@ def test_a_write_to_a_session_the_server_no_longer_has_is_a_404(tmp_path: Path, 
     assert session["id"] in compact.json()["detail"]
 
 
+def test_a_delete_of_a_running_session_is_refused_and_keeps_the_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """UIV2-11: an active running session is protected - the DELETE is a 409 that names the
+    state and says what to do first, and the session, its record and its worktree survive."""
+    monkeypatch.setattr(studio, "STUDIO_AUTH_DISABLED", True)
+    session = studio.create_harness_session_db(
+        title="live-run",
+        workspace_dir=str(tmp_path / "ws"),
+        use_worktree=False,
+        policy="standard",
+        lead_model="local",
+        critic_model="critic",
+    )
+    sid = session["id"]
+    studio._update_harness_session_state(sid, status="running")
+    with TestClient(studio.app) as client:
+        refused = client.delete(f"/api/harness/sessions/{sid}")
+        assert refused.status_code == 409, refused.text
+        detail = refused.json()["detail"]
+        assert "running" in detail and "protected" in detail
+        assert "pause or cancel" in detail
+        # The refusal removed nothing: the session is still listed and still readable.
+        listed = client.get("/api/harness/sessions")
+        assert listed.status_code == 200
+        assert any(s["id"] == sid and s["status"] == "running" for s in listed.json()["sessions"])
+        detail_get = client.get(f"/api/harness/sessions/{sid}")
+        assert detail_get.status_code == 200
+    # Once the run is over the session can be deleted after all.
+    studio._update_harness_session_state(sid, status="completed")
+    with TestClient(studio.app) as client:
+        assert client.delete(f"/api/harness/sessions/{sid}").status_code == 200
+        assert all(s["id"] != sid for s in client.get("/api/harness/sessions").json()["sessions"])
+
+
 def test_an_unconfigured_token_refuses_every_protected_route_with_503(monkeypatch: pytest.MonkeyPatch) -> None:
     """With no token there is nothing to authenticate against, and the boundary says so."""
     monkeypatch.setattr(studio, "STUDIO_AUTH_DISABLED", False)

@@ -8,13 +8,13 @@
   "check_with": "python3 scripts/uiux_v2_preservation_matrix.py --check",
   "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
   "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
-  "frontend_sha256": "a3c45e31ab6dfb1f4182d87836e876fa6aa4762ced40cbd53417ad8e8fef4830",
-  "app_sha256": "0e6ecd89d84b7779f91513d8077934b08c8e90bccda919a6fac49ff6e44e2962",
+  "frontend_sha256": "6328f8e813bf4f9831955968298f6c2da801a51a1d6f37fd0eea9a7c8219761f",
+  "app_sha256": "81f500f4152992e498bfb48f3e6e224399a4f1a30bd75c10fd87ce0309035b9d",
   "totals": {
-    "controls": 202,
+    "controls": 203,
     "by_pane": {
       "start": 11,
-      "harness": 29,
+      "harness": 30,
       "hall": 18,
       "council": 16,
       "debate": 9,
@@ -23,7 +23,7 @@
     "chrome_controls": 108,
     "api_status_counts": {
       "existing": 33,
-      "no-api": 91,
+      "no-api": 92,
       "no-handler": 78
     },
     "mounted_routes": 115,
@@ -224,6 +224,16 @@
       "tag": "button",
       "text": "+ New session",
       "handler": "startFreshHarnessDraft",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessSessionFilter",
+      "tag": "input",
+      "text": null,
+      "handler": "renderHarnessSidebar",
       "calls": [],
       "api_status": "no-api",
       "tests": []
@@ -2506,7 +2516,7 @@
       "classification": "absent_registry__existing_picker",
       "picker": {
         "status": "existing",
-        "evidence": "select#chatPersona at static/index.html:2793 with 3 hard-coded <option> values",
+        "evidence": "select#chatPersona at static/index.html:2794 with 3 hard-coded <option> values",
         "options": [
           "Principal Engineer &amp; UI Architect",
           "Bug &amp; UX Auditor",
