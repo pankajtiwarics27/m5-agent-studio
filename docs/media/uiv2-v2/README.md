@@ -88,5 +88,21 @@ Six capture sets produced for the V2 visual-fidelity program
   pinned docs; after, the composer row has one primary Run plus Attach context
   (shared knowledge/code modal), and the "Run will" plan lists tools and context.
 
+- `before-uiv2-11/` / `after-uiv2-11/` — 20 shell shots each (harness at
+  1640x900/1440x900/1280x800/390x844 in light and dark, plus all six panes at 1440x900
+  in light and dark), seeded with four sessions (one flipped to `running`) so the
+  sessions region is populated, plus behavior-walk states in the after set
+  (`1440x900-dark-states/`: `filter-active`, `running-protected`, `armed-delete-scope`;
+  `390x844-dark-states/sessions-mobile`): before (a723078) the sidebar has no filter
+  input, the running session's delete button is enabled with the old title "Delete
+  session & cleanup worktree", and one click deletes; after (a6b578a) the sidebar has
+  the named `Filter sessions…` search box with shown-of-total counts, the running row's
+  delete button is disabled (`aria-disabled`, protection title), and delete takes a
+  confirming second press that shows the irreversible-scope note (record, event log,
+  checkpoints, grants, worktree branch; main workspace never deleted; no archive). The
+  walk also proved the wire contract live: DELETE on the running session is a 409
+  ("a running session is protected - pause or cancel it before deleting") after, 200
+  before; AFTER walk 15/15, BEFORE 8/15.
+
 Each capture directory carries an `index.json` with sha256, byte size, viewport
 and theme per shot.
