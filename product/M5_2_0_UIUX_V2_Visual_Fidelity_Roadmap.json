@@ -1037,20 +1037,43 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-09: Harness activity timeline, durable recovery and approvals. Required outcome: Human-readable event stream with filters, tool detail, approvals, checkpoint and verification evidence; maintain durable event semantics. Specific gate: Stream reconnect preserves cursor and scroll; no missing/duplicated event display; pending approval stays prominent; blocked sandbox cannot be represented as safe/ready. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-04T16:05:00+05:30",
+        "completed_at": "2026-11-04T18:10:00+05:30",
+        "commit_sha": "14f3a71",
+        "changed_files": [
+          "static/index.html (log-strip kind filters All/Tools/Approvals/Errors/System with true counts and full-redraw-on-filter; harnessApprovalNote + data-approvals marks for waiting approvals in the strip line, state line and every run-hint state; harnessRunState blocked branch reason 'blocked' ready:false; stage strip data-state=blocked; harnessRenderedFilter gating the incremental append; filter reset per session)",
+          "studio.py (build_studio.py, byte-synced in the same commit)",
+          "scripts/uiux_harness_timeline_inventory.py (new filters + uiv2_09_gates rule groups, 103 checks), scripts/uiux_stream_perf_inventory.py (filter-aware windowing needles)",
+          "tests/test_harness_timeline.py (8 new UIV2-09 mutation tests), tests/test_stream_perf.py (mutation targets updated)",
+          "docs/media/uiv2-v2/before-uiv2-09/ and after-uiv2-09/ (20 shell shots each + populated walk states), README.md notes",
+          "all regenerated product/M5_2_0_UIUX_*.json + docs/uiux-2-0-*.md artifacts incl. release gate 37/37, 7/7 gates, 0 findings"
+        ],
+        "tests_executed": [
+          "headless-Chromium behavior walk against disposable demo_tour.py --serve copies (before 27d1e32 on :8751, after on :8752), driving the real page's own functions: after 23/23 checks - filters narrow stream+record with true counts and restore on All; reconnect re-opens with ?cursor=<harnessCursor> (intercepted fetch), seq-dedupe renders no duplicated card, sequence hole => gap/resync, scrolled-up reader unmoved, pinned reader follows; waiting approval named in strip line + state-line mark + run hint + badge; blocked session disables Run with 'blocked' hint/badge/stage. Before-walk: 10/16, the six new gates fail there; plus a direct probe showing a blocked session with a task typed at baseline showed data-reason='ready' with Run enabled (after: 'blocked', disabled)",
+          "python -m pytest -q in a disposable full clone at 14f3a71: 2624 passed, 29 skipped, only 2 failures that were the shallow-clone baseline pin and one stale mutation target, both fixed and re-run green (180/180 in the affected files incl. baseline, timeline, stream_perf, source manifest, approval UI, recovery, gate, signoff, screenshot review)",
+          "verify_baseline, run_scoped_tests --check-map, mypy, ruff check, check_frontend_syntax, demo_tour --check, smoke_local x2, validate_screenshots/docs, byte-identical build_studio rebuild: all green; browser legs in CI"
+        ],
+        "visual_evidence": [
+          "docs/media/uiv2-v2/before-uiv2-09/1440x900-dark-populated/harness-populated.png (no filters, waiting approval named only by the badge)",
+          "docs/media/uiv2-v2/after-uiv2-09/1440x900-dark-populated/harness-populated.png and harness-filter-approvals.png (filter chips, '2 of 12 events · Approvals', approval events only)",
+          "docs/media/uiv2-v2/after-uiv2-09/{1640x900,1440x900,1280x800,390x844}-{dark,light}/harness.png and 1440x900-{dark,light}-all/*.png vs the same sets in before-uiv2-09/",
+          "docs/media/uiv2-v2/reference/1440x900-dark/harness.png (approved structural reference: timeline in the task area, approvals in the inspector)"
+        ],
+        "acceptance_evidence": [
+          "Stream reconnect preserves cursor and scroll; no missing/duplicated event display: live-walk proof - follow stream re-opens with ?cursor=harnessCursor, duplicated delivery renders 13 unique seqs / 0 dupes, sequence hole -> {gap:true, sequence_gap} -> snapshot resync, reader scrolled up keeps scrollTop 0, pinned reader follows to bottom; mutation tests pin the cursor, dedupe and gap reasons",
+          "Pending approval stays prominent: strip line '1 approval waiting — decide in the log or the Approvals tab', state line data-approvals=1 (amber), composer run hint names it first in every run state with data-approvals mark, session badge 'waiting approval', approval cards in the log and the inspector Approvals tab",
+          "Blocked sandbox cannot be represented as safe/ready: before probe on 27d1e32 showed blocked session + typed task => run hint 'ready', Run enabled; after 14f3a71 => 'blocked', Run disabled, badge 'blocked', stage strip execute=blocked; mutation test fails if ready:true returns for blocked",
+          "Target behavior: human-readable event stream with kind filters, tool detail (details cards preserved across frames), approvals, checkpoint (recovery panel) and verification evidence (turn/verified cards + Verification tab); durable event semantics maintained (cursor/dedupe/gap/resync preserved rules all green)",
+          "Visual conformance: after screenshots match the approved reference structure (timeline + stages in the >=640px task area, approvals contextual in the 320px inspector); screenshot review 521 captures / 28 sets / 0 findings",
+          "Preservation: full suite 2624 passed; preservation matrix 201 controls, e2e 21/21, signoff, release gate 37/37 + 7/7 + 0 findings; demo_tour --check and smoke_local pass; no backend route changed (routes list unchanged)"
+        ],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "The harness log is now filterable by kind without ever narrowing what the record claims, a waiting approval is prominent in the strip, the state line and the composer hint, and a blocked session is never presented as ready. Reconnect/resume/dedupe/scroll semantics verified live and pinned by mutation tests.",
+        "exact_next_action": "UIV2-10: Harness task composer and Cowork-style project flow (P2, deps UIV2-08)."
       }
     },
     {
@@ -2812,11 +2835,11 @@
       "id": "P2",
       "name": "Harness and Cowork-style task UX",
       "total": 4,
-      "done": 1,
+      "done": 2,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 3,
-      "percent_complete": 25
+      "not_started": 2,
+      "percent_complete": 50
     },
     {
       "id": "P3",
@@ -2861,11 +2884,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 8,
+    "done": 9,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 22,
-    "percent_complete": 27
+    "not_started": 21,
+    "percent_complete": 30
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",

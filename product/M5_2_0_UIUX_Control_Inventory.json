@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "fd4f396d03ef6f866a0561fa4864dcc2c4b2ea15ed32868a6c715cb6e618fc5c",
+  "frontend_sha256": "b5ea1f6347b11defbdff953a47ca5e41bb585c7cddd2f7e0a644312c64edfacb",
   "panes": [
     {
       "dom_id": "start",
@@ -112,15 +112,15 @@
     {
       "dom_id": "harness",
       "section_id": "pane-harness",
-      "control_count": 23,
+      "control_count": 28,
       "counts": {
-        "button": 10,
+        "button": 15,
         "input": 2,
         "select": 9,
         "summary": 1,
         "textarea": 1
       },
-      "controls_without_id": 4,
+      "controls_without_id": 9,
       "controls_without_label": 0,
       "controls": [
         {
@@ -240,6 +240,61 @@
           "class": "harness-timeline-toggle",
           "onclick": "toggleHarnessTimeline()",
           "text": "Session log"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "harness-timeline-filter",
+          "title": "Show every retained event",
+          "onclick": "setHarnessEventFilter('all')",
+          "data": {
+            "data-filter": "all"
+          },
+          "text": "All"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "harness-timeline-filter",
+          "title": "Tool calls, edits, workspace, delegation, handoff and MCP effects",
+          "onclick": "setHarnessEventFilter('tool')",
+          "data": {
+            "data-filter": "tool"
+          },
+          "text": "Tools"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "harness-timeline-filter",
+          "title": "Approval requests and decisions",
+          "onclick": "setHarnessEventFilter('approval')",
+          "data": {
+            "data-filter": "approval"
+          },
+          "text": "Approvals"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "harness-timeline-filter",
+          "title": "Security events, failed tools and rejected verdicts",
+          "onclick": "setHarnessEventFilter('error')",
+          "data": {
+            "data-filter": "error"
+          },
+          "text": "Errors"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "harness-timeline-filter",
+          "title": "Turns, steps, sessions and the rest of the log",
+          "onclick": "setHarnessEventFilter('system')",
+          "data": {
+            "data-filter": "system"
+          },
+          "text": "System"
         },
         {
           "tag": "button",
@@ -1428,8 +1483,8 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 196,
-    "pane_controls": 88,
+    "markup_controls": 201,
+    "pane_controls": 93,
     "chrome_controls": 108,
     "script_rendered_controls": 50,
     "script_rendered_by_function": {

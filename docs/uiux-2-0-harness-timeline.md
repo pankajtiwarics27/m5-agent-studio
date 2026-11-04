@@ -122,7 +122,7 @@ strip reads through already existed; this story added no endpoint.
 - pressing Jump to latest focuses the newest card, so a keyboard reader arrives where a mouse reader does; it does not mark that card, because nothing was pointed at.
 - the pruned and failed-resume states are exercised from the log state the pane derives, because the demo instance's log is never pruned: the walk builds those states from the events the server really returned and says so in its step names.
 
-`--check` re-derives 81 checks from the source and fails on any of them. `node scripts/harness_timeline_walk.mjs` drives the same surface in a real browser against a seeded demo instance: it creates a session through the API (which is what writes `session/init`), changes the policy
+`--check` re-derives 103 checks from the source and fails on any of them. `node scripts/harness_timeline_walk.mjs` drives the same surface in a real browser against a seeded demo instance: it creates a session through the API (which is what writes `session/init`), changes the policy
 twelve times (which is what writes `security/policy_revision`), and watches the strip, the rows and the
 cards agree about all thirteen — then replays the log twice, scrolls up, resizes the window, and
 photographs the states in [`media/harness-timeline/`](media/harness-timeline/README.md).

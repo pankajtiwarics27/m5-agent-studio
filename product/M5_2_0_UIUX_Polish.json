@@ -5,7 +5,7 @@
     "frontend": "static/index.html",
     "walk": "scripts/polish_walk.mjs",
     "style_blocks": 2,
-    "rules": 842
+    "rules": 851
   },
   "tokens": {
     "radius": [
@@ -82,6 +82,7 @@
       ":is(button, select, summary):hover:not(:disabled):not([aria-disabled=\"true\"])",
       ":is(input, textarea):hover:not(:disabled)",
       ":is(label):has(> input):hover",
+      ".harness-timeline-filter:hover",
       ".harness-timeline-row:hover",
       ".evidence-copy:hover",
       ".cmd-item:hover, .cmd-item.selected",
@@ -124,10 +125,10 @@
     ]
   },
   "totals": {
-    "radius_rules": 98,
+    "radius_rules": 99,
     "motion_rules": 17,
     "press_rules": 2,
-    "hover_rules": 31,
+    "hover_rules": 32,
     "captures": 8,
     "findings": 0
   },

@@ -274,8 +274,10 @@ def build_inventory() -> dict:
     )
     check(
         "the stream draws the newest window of the log",
-        "ordered.length > HARNESS_RENDER_WINDOW" in render_stream
-        and "ordered.slice(ordered.length - HARNESS_RENDER_WINDOW)" in render_stream,
+        ("ordered.length > HARNESS_RENDER_WINDOW" in render_stream
+            or "visible.length > HARNESS_RENDER_WINDOW" in render_stream)
+        and ("ordered.slice(ordered.length - HARNESS_RENDER_WINDOW)" in render_stream
+            or "visible.slice(visible.length - HARNESS_RENDER_WINDOW)" in render_stream),
         "the render is not windowed",
     )
     check(
@@ -288,14 +290,16 @@ def build_inventory() -> dict:
     note_updater = function_body(html, "harnessUpdateWindowNote")
     check(
         "the note is updated as the window slides, so it never counts cards it is not showing",
-        "harnessUpdateWindowNote(shown.length, ordered.length);" in render_stream
+        ("harnessUpdateWindowNote(shown.length, ordered.length);" in render_stream
+            or "harnessUpdateWindowNote(shown.length, visible.length);" in render_stream)
         and "note.textContent = harnessWindowNoteText(showing, total);" in note_updater
         and 'insertAdjacentHTML("afterbegin"' in note_updater,
         "the note is written once and left to drift",
     )
     check(
         "the timeline's own list is windowed by the same number",
-        "harnessCachedEvents().slice(-HARNESS_RENDER_WINDOW)" in html,
+        ("harnessCachedEvents().slice(-HARNESS_RENDER_WINDOW)" in html
+            or "rows.slice(-HARNESS_RENDER_WINDOW)" in html),
         "the timeline list still draws every cached event",
     )
 

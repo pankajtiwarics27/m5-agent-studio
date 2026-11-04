@@ -51,8 +51,8 @@
           "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
           "totals": {
             "panes": 6,
-            "markup_controls": 196,
-            "pane_controls": 88,
+            "markup_controls": 201,
+            "pane_controls": 93,
             "chrome_controls": 108,
             "script_rendered_controls": 50,
             "script_rendered_by_function": {
@@ -205,9 +205,9 @@
           "totals": {
             "panes": 6,
             "preserved_capabilities": 21,
-            "markup_controls": 196,
+            "markup_controls": 201,
             "chrome_controls": 108,
-            "pane_controls": 88,
+            "pane_controls": 93,
             "script_rendered_controls": 50,
             "routes": 115,
             "routes_with_resolved_or_possible_caller": 69,
@@ -242,7 +242,7 @@
           "totals": {
             "tokens": 54,
             "groups": 8,
-            "references": 1242,
+            "references": 1262,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -507,12 +507,12 @@
             "modes": 4,
             "gap_reasons": 6,
             "strip_controls": 8,
-            "functions": 10,
+            "functions": 13,
             "event_types_emitted": 43,
             "event_types_with_a_card": 16,
             "event_types_described_by_name": 23,
             "event_types_with_only_the_generic_preview": 20,
-            "checks": 81,
+            "checks": 103,
             "findings": 0
           }
         }
@@ -812,10 +812,10 @@
         {
           "artifact": "product/M5_2_0_UIUX_Polish.json",
           "totals": {
-            "radius_rules": 98,
+            "radius_rules": 99,
             "motion_rules": 17,
             "press_rules": 2,
-            "hover_rules": 31,
+            "hover_rules": 32,
             "captures": 8,
             "findings": 0
           }
@@ -892,7 +892,7 @@
           "artifact": "product/M5_2_0_UIUX_Screenshot_Review.json",
           "totals": {
             "sets": 28,
-            "files": 475,
+            "files": 521,
             "reviewed_sets": 28,
             "sets_eyed": 8,
             "files_eyed": 28,
@@ -1138,7 +1138,7 @@
   "inventory": {
     "tabs": 6,
     "routes": 115,
-    "markup_controls": 196,
+    "markup_controls": 201,
     "chrome_controls": 108,
     "script_rendered_controls": 50,
     "capabilities": 21,
@@ -1146,7 +1146,7 @@
     "e2e_findings": 0,
     "refusals": 12,
     "refusal_statuses": 9,
-    "captures": 475,
+    "captures": 521,
     "capture_sets": 28,
     "reviewed_sets": 28,
     "screenshot_findings": 0,

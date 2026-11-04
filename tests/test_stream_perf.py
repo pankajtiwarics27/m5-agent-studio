@@ -235,8 +235,8 @@ def test_a_render_that_draws_the_whole_log_is_a_finding(sources):
     def unwindow(html: str) -> str:
         return swap(
             html,
-            "const shown = ordered.length > HARNESS_RENDER_WINDOW ? ordered.slice(ordered.length - HARNESS_RENDER_WINDOW) : ordered;",
-            "const shown = ordered;",
+            "const shown = visible.length > HARNESS_RENDER_WINDOW ? visible.slice(visible.length - HARNESS_RENDER_WINDOW) : visible;",
+            "const shown = visible;",
         )
 
     report = sources(html_transform=unwindow)
@@ -253,7 +253,7 @@ def test_a_note_that_does_not_say_where_the_rest_is_is_a_finding(sources):
 
 def test_a_note_that_is_never_updated_is_a_finding(sources):
     def stale(html: str) -> str:
-        return swap(html, "      harnessUpdateWindowNote(shown.length, ordered.length);\n", "")
+        return swap(html, "      harnessUpdateWindowNote(shown.length, visible.length);\n", "")
 
     report = sources(html_transform=stale)
     assert "the note is updated as the window slides, so it never counts cards it is not showing" in failing(report)
@@ -261,7 +261,7 @@ def test_a_note_that_is_never_updated_is_a_finding(sources):
 
 def test_a_timeline_that_draws_every_cached_event_is_a_finding(sources):
     def unwindow(html: str) -> str:
-        return swap(html, "harnessCachedEvents().slice(-HARNESS_RENDER_WINDOW)", "harnessCachedEvents()")
+        return swap(html, "rows.slice(-HARNESS_RENDER_WINDOW)", "rows")
 
     report = sources(html_transform=unwindow)
     assert "the timeline's own list is windowed by the same number" in failing(report)

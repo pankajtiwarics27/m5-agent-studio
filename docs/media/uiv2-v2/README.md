@@ -69,5 +69,16 @@ Six capture sets produced for the V2 visual-fidelity program
   inspector 320px at >=1440 and a drawer below, telemetry popover closed by default, and
   the Plan/Execute/Verify stage strip present; no horizontal overflow at any width.
 
+- `before-uiv2-09/` / `after-uiv2-09/` — 20 shell shots each (harness at
+  1640x900/1440x900/1280x800/390x844 in light and dark, plus all six panes at 1440x900
+  in light and dark) plus populated walk states (`1440x900-dark-populated`,
+  `390x844-dark-populated`) from the UIV2-09 behavior walk: before (27d1e32) the log
+  strip has no kind filters, a waiting approval is named nowhere but the badge, and a
+  blocked session with a task typed still shows `ready` with Run enabled; after, the
+  strip offers All/Tools/Approvals/Errors/System with true counts, the strip line, state
+  mark and composer run hint all name the waiting approval, and a blocked session shows
+  `blocked`, disables Run and marks the stage. Reconnect (cursor resume, seq dedupe,
+  scroll preservation, gap->resync) verified in both.
+
 Each capture directory carries an `index.json` with sha256, byte size, viewport
 and theme per shot.

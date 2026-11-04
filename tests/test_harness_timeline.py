@@ -398,3 +398,82 @@ def test_an_unmounted_log_route_is_caught(sources):
 
     payload = sources(app_transform=unmount)
     assert "route-missing" in _checks(payload)
+
+
+# ── UIV2-09: filters, waiting approvals, blocked sessions, reconnect ────────
+
+
+def test_uiv2_09_the_log_can_be_filtered_without_narrowing_the_record(payload):
+    filters = payload["frontend"]["filters"]
+    assert all(filters.values()), [name for name, ok in filters.items() if not ok]
+
+
+def test_uiv2_09_the_gates_hold(payload):
+    gates = payload["frontend"]["uiv2_09_gates"]
+    assert all(gates.values()), [name for name, ok in gates.items() if not ok]
+
+
+def test_a_stream_that_is_not_filtered_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            "ordered.filter((ev) => harnessEventMatchesFilter(ev, harnessEventFilter))",
+            "ordered",
+            1,
+        )
+    )
+    assert "filters" in _checks(payload)
+
+
+def test_a_filtered_view_that_still_appends_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            'const plan = harnessEventFilter === "all" && harnessRenderedFilter === "all" ? harnessStreamAppendPlan(shown, livePending, decisions) : null;',
+            "const plan = harnessStreamAppendPlan(shown, livePending, decisions);",
+            1,
+        )
+    )
+    assert "filters" in _checks(payload)
+
+
+def test_a_reconnect_that_ignores_the_cursor_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            "events/stream?cursor=${harnessCursor}",
+            "events/stream",
+            1,
+        )
+    )
+    assert "uiv2_09_gates" in _checks(payload)
+
+
+def test_a_blocked_session_shown_as_ready_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            '        reason: "blocked",\n        ready: false,',
+            '        reason: "blocked",\n        ready: true,',
+            1,
+        )
+    )
+    assert "uiv2_09_gates" in _checks(payload)
+
+
+def test_a_waiting_approval_removed_from_the_run_hint_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            'return n > 0 ? `${n} approval${n === 1 ? "" : "s"} waiting — decide in the log above or the Approvals tab. ` : "";',
+            'return "";',
+            1,
+        )
+    )
+    assert "uiv2_09_gates" in _checks(payload)
+
+
+def test_a_waiting_approval_removed_from_the_strip_line_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            'if (pendingApprovals) text += ` · ${plural(pendingApprovals, "approval")} waiting — decide in the log or the Approvals tab`;',
+            "",
+            1,
+        )
+    )
+    assert "uiv2_09_gates" in _checks(payload)

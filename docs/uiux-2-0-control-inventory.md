@@ -6,8 +6,8 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `fd4f396d03ef6f866a0561fa4864dcc2c4b2ea15ed32868a6c715cb6e618fc5c`.
-* Panes: 6 · controls in panes: 88 · controls in the
+* Frontend digest: `b5ea1f6347b11defbdff953a47ca5e41bb585c7cddd2f7e0a644312c64edfacb`.
+* Panes: 6 · controls in panes: 93 · controls in the
   shared chrome: 108 · script-rendered: 50.
 
 ## What this page is, and is not
@@ -22,7 +22,7 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 | Pane | Section | Total | Without id | Without any label | Breakdown |
 |---|---|---|---|---|---|
 | start | `pane-start` | 11 | 5 | 0 | button 8, input 2, select 1 |
-| harness | `pane-harness` | 23 | 4 | 0 | button 10, input 2, select 9, summary 1, textarea 1 |
+| harness | `pane-harness` | 28 | 9 | 0 | button 15, input 2, select 9, summary 1, textarea 1 |
 | hall | `pane-hall` | 18 | 3 | 0 | button 7, select 8, summary 2, textarea 1 |
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
 | debate | `pane-debate` | 9 | 0 | 0 | button 5, input 1, select 2, textarea 1 |
@@ -31,9 +31,9 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 
 ## What the numbers already say
 
-* 196 controls are in the markup and 50 more are built by script — a checklist written from the markup alone would miss 20% of the interactive surface.
-* The shared chrome carries 108 controls; all six panes together carry 88. Most of the clicking happens in the shell, not inside a tab.
-* 57 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
+* 201 controls are in the markup and 50 more are built by script — a checklist written from the markup alone would miss 20% of the interactive surface.
+* The shared chrome carries 108 controls; all six panes together carry 93. Most of the clicking happens in the shell, not inside a tab.
+* 62 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
 
@@ -55,7 +55,7 @@ Section `pane-start`, 11 interactive elements.
 
 ## Pane `harness`
 
-Section `pane-harness`, 23 interactive elements.
+Section `pane-harness`, 28 interactive elements.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
@@ -76,12 +76,17 @@ Section `pane-harness`, 23 interactive elements.
 | 15 | button | harnessAbortBtn | — | Abort | abortHarnessRun() |
 | 16 | button | harnessPermissionBadge | button | No permissions | openHarnessGrants() |
 | 17 | button | harnessTimelineToggle | button | Session log | toggleHarnessTimeline() |
-| 18 | button | harnessTimelineJump | button | Jump to latest ↓ | jumpToLatestHarnessEvent() |
-| 19 | button | harnessTimelineReplay | button | Replay log | replayHarnessLog() |
-| 20 | button | harnessTimelineResync | button | Resync | harnessResyncFromSnapshot('operator') |
-| 21 | textarea | harnessPromptInput | — | Your task for the Harness | — |
-| 22 | select | harnessWorkflowMode | — | Harness workflow mode | syncHarnessWorkflowModeUI() |
-| 23 | button | harnessRunBtn | — | Run | executeHarnessSelectedWorkflow() |
+| 18 | button | — | button | All | setHarnessEventFilter('all') |
+| 19 | button | — | button | Tools | setHarnessEventFilter('tool') |
+| 20 | button | — | button | Approvals | setHarnessEventFilter('approval') |
+| 21 | button | — | button | Errors | setHarnessEventFilter('error') |
+| 22 | button | — | button | System | setHarnessEventFilter('system') |
+| 23 | button | harnessTimelineJump | button | Jump to latest ↓ | jumpToLatestHarnessEvent() |
+| 24 | button | harnessTimelineReplay | button | Replay log | replayHarnessLog() |
+| 25 | button | harnessTimelineResync | button | Resync | harnessResyncFromSnapshot('operator') |
+| 26 | textarea | harnessPromptInput | — | Your task for the Harness | — |
+| 27 | select | harnessWorkflowMode | — | Harness workflow mode | syncHarnessWorkflowModeUI() |
+| 28 | button | harnessRunBtn | — | Run | executeHarnessSelectedWorkflow() |
 
 ## Pane `hall`
 

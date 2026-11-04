@@ -1,0 +1,23 @@
+{
+ "schema": 1,
+ "captured_at": "2026-11-04T11:02:45.596919+00:00",
+ "viewport": {
+  "width": 390,
+  "height": 844,
+  "device_scale_factor": 1
+ },
+ "variant": {
+  "theme": "dark",
+  "density": null,
+  "note": "populated harness states captured by the UIV2-09 behavior walk (log seeded through the pane's own cache path; approvals filter applied where named)"
+ },
+ "shots": [
+  {
+   "id": "harness-populated-390",
+   "tab": "harness",
+   "file": "harness-populated-390.png",
+   "bytes": 57989,
+   "sha256": "71dfb301c157cc2d2b798c252f6cf4ac9d47fea0e7a7a1bdf2758eb3945b5be1"
+  }
+ ]
+}
