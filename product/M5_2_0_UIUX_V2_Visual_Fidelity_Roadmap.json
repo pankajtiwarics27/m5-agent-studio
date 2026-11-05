@@ -1922,20 +1922,62 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-17: Compare results and evidence inspector. Required outcome: Consistent side-by-side response typography, verdict provenance, latency and model metrics with explicit missing data. Specific gate: Never fabricate pricing, correctness or quality scores; one-model comparison not falsely called multi-model; long outputs scroll/read; responsive stack without truncation. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
-        "known_regressions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-06T09:05:00+05:30",
+        "completed_at": "2026-11-06T13:10:00+05:30",
+        "commit_sha": "5684f2045d0223918a8f62e601066db73968f070",
+        "changed_files": [
+          "static/index.html (Compare: a reply with no text has no size, so the results table draws a dash instead of `0 ch`; the arbiter's answer is a `data-role=\"verdict\"` card with a provenance line naming the model, its catalogue row, the question it judged and the replies as its evidence, and refusing figures for a demo verdict; the inspector's Evaluation view now carries the evidence - one line per reply read from the same `debateProvenanceOf()` the pane's table reads, with the reason and the panel's own error where a reply reported nothing, the basis of the figures, the cost that is not known, the arbiter or `not requested`, and a button that puts the reader on the rows; the rail redraws with the run, not only on a tab switch; both tables stack below 560px with each cell carrying its column label and the `thead` clipped rather than deleted)",
+          "scripts/compare_evidence_walk.mjs (new: 25-check authenticated browser walk over the empty, populated, verdict, error, loading, stopped, long-content and 390x844 states; starts its own `council_readiness_seed.py` fixtures - default, `--slow-model`, `--long-model` - and uses the catalogue's keyless provider row for the failure, so no state needs a network; `--states` and `--capture-only` for a subset and for the before set)",
+          "scripts/council_readiness_seed.py (new `--long-model`: a standalone reply long enough that a card body has to scroll, so the long-content state is a state and not a claim)",
+          "scripts/uiux_compare_evidence_inventory.py (new: 31 checks over the dash, the labelled cells and the stacked layout, the verdict card and its provenance, the rail's evidence rows, the no-run state, the cost that is not invented, and the preserved tables and call site; generates product/M5_2_0_UIUX_Compare_Evidence.json + docs/uiux-2-0-compare-evidence.md)",
+          "tests/test_compare_evidence.py (new: 43 tests - inventory sync, the doc, the ledger, 16 mutation tests that break one rule each, and the captures at every required viewport/theme)",
+          "scripts/uiux_preservation_e2e.py (compare_evidence_walk.mjs listed as a support walk) and scripts/uiux_screenshot_review.py (a review entry for the new set, naming the captures opened)",
+          "docs/media/compare-evidence (66 after captures across 8 viewport/theme runs (9 shots per run; the 390x844 narrow shot is the same file each run) + 40 before captures from origin/main faff1e9 + README)",
+          "studio.py (build_studio.py, byte-synced)",
+          "product/* + docs/uiux-2-0-* (every gate generator regenerated; release gate 37/37 checks, 7/7 gates, 0 findings)"
+        ],
+        "tests_executed": [
+          "node scripts/compare_evidence_walk.mjs --viewport <vp> --theme <theme> --screenshots docs/media/compare-evidence -> 25/25 checks, 9 screenshots, on all eight viewport/theme runs (1640x900, 1440x900, 1280x800, 390x844 x light, dark)",
+          "node scripts/compare_evidence_walk.mjs --states populated,error --capture-only (in a detached worktree of origin/main faff1e9) -> 11/18 checks on the unmodified pane, which is the defect pinned at every viewport and theme",
+          "python3 -m pytest tests/test_compare_evidence.py -q -> 35 passed",
+          "python3 scripts/uiux_compare_evidence_inventory.py -> 31 checks, 0 findings",
+          "node scripts/compare_balanced_walk.mjs -> 21/21 (UIV2-16's composition walk still passes on the pane this story changed)",
+          "node scripts/compare_criteria_walk.mjs -> 15/15; node scripts/compare_provenance_walk.mjs -> 12/12",
+          "python3 scripts/uiux_preservation_e2e.py -> 21/21 rows, 0 findings",
+          "python3 scripts/uiux_release_gate.py -> 37/37 checks, 7/7 gates, 0 findings",
+          "ruff check . -> clean; mypy -> no issues in the typed contract modules; full pytest -> green"
+        ],
+        "visual_evidence": [
+          "docs/media/compare-evidence/ - 66 captured files: 9 shots on each of 8 viewport/theme runs, the 390x844 narrow shot being one file per theme, written by `node scripts/compare_evidence_walk.mjs` (25/25 checks on each of the eight runs)",
+          "empty - both tables hidden and the rail saying there is no comparison yet, never a row of zeroes: docs/media/compare-evidence/evidence-empty-{1640x900,1440x900,1280x800,390x844}-{light,dark}.png",
+          "populated - two replies, one row each in both tables, at one type scale: docs/media/compare-evidence/evidence-populated-<viewport>-<theme>.png",
+          "verdict - the arbiter card with its provenance line and its own figures: docs/media/compare-evidence/evidence-verdict-<viewport>-<theme>.png",
+          "error - one answered reply beside a failed provider, with a dash where the size would be and the reason where a figure would be: docs/media/compare-evidence/evidence-error-<viewport>-<theme>.png",
+          "loading - a panel still streaming, its figures described as arriving with the reply: docs/media/compare-evidence/evidence-loading-<viewport>-<theme>.png",
+          "stopped - a run the reader stopped, attributed in the pane and explained in the rail, Start ready again: docs/media/compare-evidence/evidence-stopped-<viewport>-<theme>.png",
+          "long-content - a reply that scrolls inside its card and a size the table reports in full: docs/media/compare-evidence/evidence-long-content-<viewport>-<theme>.png",
+          "narrow - the tables stacked at 390x844, every cell labelled, nothing clipping: docs/media/compare-evidence/evidence-narrow-390x844-{light,dark}.png",
+          "the rail framed on its own: docs/media/compare-evidence/evidence-inspector-<viewport>-<theme>.png",
+          "before-uiv2-17/ - the same two states served from origin/main at faff1e9, where the pane draws `0 ch` for a reply that does not exist, a verdict with no provenance, a rail that points at the pane, and a provenance table that overflows by 65px at 390x844"
+        ],
+        "acceptance_evidence": [
+          "never fabricates pricing, correctness or quality scores: cost is a dash in every row with the reason on the cell, the rail repeats `Cost: not known - no price is configured for any model`, no score or price constant exists in the pane, and a demo verdict is given no model figures (31 inventory checks, 3 of them about invented numbers).",
+          "a one-model comparison is not called multi-model: the composer's `1 model selected` line and the single-answer note above the grid are unchanged from UIV2-16 and still asserted by its 21-check walk, which passes on this branch.",
+          "long outputs scroll and read: the long-content state is produced by the fixture's new `--long-model` (a real 4,891-character reply), the card body caps at 46vh and scrolls inside it, and the results table reports the whole size in its own column.",
+          "responsive stack without truncation: below 560px both tables stack, every cell carries the label of the column it belongs to, the `thead` is clipped rather than removed so the column names stay for a screen reader, and the walk measures 0px of overflow at 390x844 in both tables.",
+          "result conforms to the approved target (`Results side by side - equal columns, evidence in the inspector`): the columns are the run's (UIV2-16), and the inspector now carries the evidence - one line per reply read from the same function the pane's table reads, so the two cannot disagree - with the verdict's provenance above it.",
+          "verdict provenance is visible: the card names the model that judged, its catalogue row (or says it is not in the catalogue), the question it judged, the replies as its evidence, its own figures or why it has none.",
+          "all impacted existing features work: both preserved tables keep their columns and their hidden-until-a-run state, both regions keep their labels, the debate stream is still the only call site, and the P4-04 criteria walk (15/15), the P4-05 provenance walk (12/12) and UIV2-16's composition walk (21/21) all pass."
+        ],
+        "known_regressions": [
+          "Carried from UIV2-16, still open: `node scripts/compare_continuity_walk.mjs` fails 7/15 on origin/main and here, because restoring a saved comparison at load throws `ReferenceError: Cannot access 'UI_STATUS' before initialization` - the Council transcript renderer runs before `const UI_STATUS` (static/index.html, ~line 10960) is initialized. Follow-up: hoist that table above its first use; out of both stories' scope."
+        ],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "UIV2-17 is done: Compare draws a dash where a reply has no size, the arbiter's answer is a verdict card that names the model, the catalogue row, the question and the evidence, and the inspector's Evaluation view now carries the evidence the target asked for - one line per reply read from the same function the table reads, with the reason where a reply reported nothing. 31 inventory checks, 43 tests, a 25-check walk at 25/25 on eight viewport/theme runs, 66 captures beside a 40-file before set from main. Next story: UIV2-18 'Chat focused balanced conversation layout' (P4, deps UIV2-05/06/07).",
+        "exact_next_action": "Start UIV2-18 'Chat focused balanced conversation layout': read the Chat pane's column, composer and persona controls on this branch, pin the dead-whitespace and sticky-composer defects with a before capture, then implement on the same story branch and record the sha in a follow-up commit."
       }
     },
     {
@@ -3093,11 +3135,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 16,
+    "done": 17,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 14,
-    "percent_complete": 53
+    "not_started": 13,
+    "percent_complete": 57
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",

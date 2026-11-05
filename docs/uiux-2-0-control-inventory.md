@@ -6,9 +6,9 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `c8ad2a2f896f0629c9726cee0bc84bc763a5de5ea5f80333f10c9d5feb79f671`.
+* Frontend digest: `d884cf321e60263c43f5c27f15b36642d9febb3db48d8c82063664b434f62652`.
 * Panes: 6 · controls in panes: 98 · controls in the
-  shared chrome: 109 · script-rendered: 61.
+  shared chrome: 109 · script-rendered: 62.
 
 ## What this page is, and is not
 
@@ -31,7 +31,7 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 
 ## What the numbers already say
 
-* 207 controls are in the markup and 61 more are built by script — a checklist written from the markup alone would miss 23% of the interactive surface.
+* 207 controls are in the markup and 62 more are built by script — a checklist written from the markup alone would miss 23% of the interactive surface.
 * The shared chrome carries 109 controls; all six panes together carry 98. Most of the clicking happens in the shell, not inside a tab.
 * 64 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
@@ -295,7 +295,7 @@ attributed to one.
 
 ## Controls built by script
 
-61 interactive tags appear as template strings inside the
+62 interactive tags appear as template strings inside the
 inline script rather than in the markup. They are attributed to the nearest preceding function
 and are **not** in the tables above:
 
@@ -306,7 +306,7 @@ and are **not** in the tables above:
 | `harnessEvidenceChangeHtml` | 1 |
 | `openSpawnModal` | 1 |
 | `refreshHallSessions` | 3 |
-| `refreshInspectorPanel` | 8 |
+| `refreshInspectorPanel` | 9 |
 | `refreshOnboarding` | 1 |
 | `renderActiveHall` | 3 |
 | `renderCommandPaletteList` | 1 |

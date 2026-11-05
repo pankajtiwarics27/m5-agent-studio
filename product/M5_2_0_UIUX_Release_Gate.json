@@ -54,14 +54,14 @@
             "markup_controls": 207,
             "pane_controls": 98,
             "chrome_controls": 109,
-            "script_rendered_controls": 61,
+            "script_rendered_controls": 62,
             "script_rendered_by_function": {
               "ensureStageCardMounted": 1,
               "hallClearScopeNoteHtml": 2,
               "harnessEvidenceChangeHtml": 1,
               "openSpawnModal": 1,
               "refreshHallSessions": 3,
-              "refreshInspectorPanel": 8,
+              "refreshInspectorPanel": 9,
               "refreshOnboarding": 1,
               "renderActiveHall": 3,
               "renderCommandPaletteList": 1,
@@ -211,7 +211,7 @@
             "markup_controls": 207,
             "chrome_controls": 109,
             "pane_controls": 98,
-            "script_rendered_controls": 61,
+            "script_rendered_controls": 62,
             "routes": 117,
             "routes_with_resolved_or_possible_caller": 71,
             "routes_no_caller_observed": 46,
@@ -245,7 +245,7 @@
           "totals": {
             "tokens": 55,
             "groups": 8,
-            "references": 1304,
+            "references": 1313,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -815,7 +815,7 @@
         {
           "artifact": "product/M5_2_0_UIUX_Polish.json",
           "totals": {
-            "radius_rules": 104,
+            "radius_rules": 105,
             "motion_rules": 17,
             "press_rules": 2,
             "hover_rules": 33,
@@ -847,7 +847,7 @@
             "route_provers": 9,
             "control_provers": 2,
             "walks": 17,
-            "support_walks": 17,
+            "support_walks": 18,
             "findings": 0
           }
         }
@@ -894,15 +894,15 @@
         {
           "artifact": "product/M5_2_0_UIUX_Screenshot_Review.json",
           "totals": {
-            "sets": 30,
-            "files": 811,
-            "reviewed_sets": 30,
-            "sets_eyed": 10,
-            "files_eyed": 61,
-            "re_taken_sets": 6,
+            "sets": 31,
+            "files": 917,
+            "reviewed_sets": 31,
+            "sets_eyed": 11,
+            "files_eyed": 66,
+            "re_taken_sets": 7,
             "published_sets": 1,
             "findings": 0,
-            "observations": 24
+            "observations": 25
           }
         }
       ]
@@ -1143,15 +1143,15 @@
     "routes": 117,
     "markup_controls": 207,
     "chrome_controls": 109,
-    "script_rendered_controls": 61,
+    "script_rendered_controls": 62,
     "capabilities": 21,
     "e2e_rows": 21,
     "e2e_findings": 0,
     "refusals": 12,
     "refusal_statuses": 9,
-    "captures": 811,
-    "capture_sets": 30,
-    "reviewed_sets": 30,
+    "captures": 917,
+    "capture_sets": 31,
+    "reviewed_sets": 31,
     "screenshot_findings": 0,
     "doc_pages": 5,
     "doc_commands": 40,

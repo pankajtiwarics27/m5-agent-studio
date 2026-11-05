@@ -518,6 +518,35 @@ REVIEWS: dict[str, dict[str, object]] = {
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",
     },
+    "compare-evidence": {
+        "story": "UIV2-17",
+        "note": (
+            "The Compare pane's results, verdict and evidence rail: nine shots on each of four "
+            "viewports x light/dark - seven states, the 390x844 narrow shot and the rail on its "
+            "own - written by `scripts/compare_evidence_walk.mjs` against fixtures it starts "
+            "itself (default, `--slow-model`, `--long-model`, and the catalogue's keyless provider "
+            "row for the failure), after 25/25 checks on each of the eight runs, beside "
+            "`before-uiv2-17/`, the same two states served from origin/main at faff1e9 captured by "
+            "an earlier copy of the walk in `--capture-only`. Opened and read: the 1440x900-dark "
+            "populated capture (two 434px answers, one row each in both tables, the rail reading "
+            "`Panels 2 of 2 answered` and one evidence line per reply), the 1440x900-dark verdict "
+            "capture (arbiter named with its catalogue row, `The replies above are its evidence`, "
+            "and its own 41.2 tok/s badge), the 1440x900-dark error capture (a dash where the size "
+            "would be and `the provider failed before it reported any figure` where a figure would "
+            "be), the 390x844-light narrow capture (both tables stacked with their labels and no "
+            "sideways scroll), and the before-uiv2-17 1440x900-light populated capture (`0 ch` for "
+            "the failed row, a verdict with no provenance, and a rail that points at the pane)."
+        ),
+        "eye": [
+            "evidence-populated-1440x900-dark.png",
+            "evidence-verdict-1440x900-dark.png",
+            "evidence-error-1440x900-dark.png",
+            "evidence-narrow-390x844-light.png",
+            "before-uiv2-17/1440x900-light/evidence-populated-1440x900-light.png",
+        ],
+        "re_taken": True,
+        "theme": "light and dark, desktop 1280-1640 and narrow 390",
+    },
 }
 
 

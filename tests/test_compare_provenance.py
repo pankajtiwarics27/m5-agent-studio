@@ -207,8 +207,8 @@ def test_a_run_total_from_the_client_clock_is_a_finding(sources):
 def test_the_old_unqualified_badge_coming_back_is_a_finding(sources):
     broken = sources(
         html_transform=lambda html: html.replace(
-            "${debateArbiterBadge(debateSynth.u)}",
-            '<span class="badge">${debateSynth.u?debateSynth.u.decode_tps+\' tok/s\':\'Synthesizing...\'}</span>',
+            "+ debateArbiterBadge(debateSynth.u) +",
+            "+ '<span class=\"badge\">' + (debateSynth.u ? debateSynth.u.decode_tps + ' tok/s' : 'Synthesizing...') + '</span> +",
             1,
         )
     )
@@ -218,8 +218,8 @@ def test_the_old_unqualified_badge_coming_back_is_a_finding(sources):
 def test_a_price_in_the_cost_column_is_a_finding(sources):
     broken = sources(
         html_transform=lambda html: html.replace(
-            "'<td class=\"mono\" title=\"No price is configured for any model\">—</td></tr>'",
-            "'<td class=\"mono\">$0.14</td></tr>'",
+            "'<td class=\"mono\" data-label=\"Cost\" title=\"No price is configured for any model\">—</td></tr>'",
+            "'<td class=\"mono\" data-label=\"Cost\">$0.14</td></tr>'",
             1,
         )
     )

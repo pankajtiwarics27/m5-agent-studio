@@ -1,0 +1,224 @@
+{
+  "story": "UIV2-17",
+  "title": "Compare results and evidence inspector",
+  "status": "clean",
+  "check_count": 31,
+  "checks": [
+    {
+      "check": "a reply with no text has no size: the results table draws a dash, never 0 ch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the results table still reports the size of a reply that does exist",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every cell of the results table carries the label its column head gives it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every cell of the provenance table carries the label its column head gives it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "below a phone width both tables stack instead of scrolling sideways",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the stacked table keeps its headings for a screen reader",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the arbiter's answer is drawn as a verdict, and the card says so in its markup",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the verdict names the model that judged it, and the catalogue row it came from",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the verdict says the replies are its evidence",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a demo verdict says the server wrote it, rather than carrying figures it never had",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the verdict's own figures are drawn by the same badge the table reads",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the provenance line is escaped value by value",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the rail's Evaluation view reads the same usage the pane's table reads",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the rail draws one evidence line per reply, naming the model and its status",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a reply with no figures is given the reason in the rail, including the panel's own error",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the rail says where the figures came from, and that cost is not known",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the rail states the arbiter, or says none was requested",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the rail can reach the rows it summarises",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "with no run the rail says so instead of counting nothing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the rail redraws with the run, not only when the tab changes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "no price, score or quality figure is invented anywhere in the pane",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the measured criteria are the only ones a reply can meet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a cost cell is a dash with its own explanation, in every row",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the provenance table still has its six columns",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the results table still has its four columns",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "both tables are still hidden until there is a run",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the two regions are still labelled for a screen reader",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "one summon call site: the pane still posts only the debate stream",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the fixture can answer at length, so the long-content state is real",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk asserts every state the captures show",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk needs no environment of its own",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "findings": [],
+  "states": [
+    {
+      "state": "empty",
+      "what": "the pane before a comparison: both tables gone, and a rail that says there is no run"
+    },
+    {
+      "state": "populated",
+      "what": "two replies answered, one row each in both tables, at one type scale"
+    },
+    {
+      "state": "verdict",
+      "what": "the arbiter's verdict, with the model that judged it and the replies as its evidence"
+    },
+    {
+      "state": "error",
+      "what": "one reply beside a provider that failed: a dash where a size would be, and the reason"
+    },
+    {
+      "state": "loading",
+      "what": "a panel still streaming: its figures described as arriving with the reply"
+    },
+    {
+      "state": "stopped",
+      "what": "a run the reader stopped: attributed in the pane and in the rail, Start ready again"
+    },
+    {
+      "state": "long-content",
+      "what": "a reply long enough that its card scrolls, and a size the table reports in full"
+    }
+  ],
+  "columns": {
+    "results": [
+      "Model",
+      "Status",
+      "Size",
+      "Criteria it met"
+    ],
+    "provenance": [
+      "Model",
+      "Elapsed",
+      "First token",
+      "Reply tokens",
+      "Decode",
+      "Cost"
+    ]
+  },
+  "evidence": {
+    "walk": "scripts/compare_evidence_walk.mjs",
+    "media": "docs/media/compare-evidence",
+    "viewports": [
+      "1640x900",
+      "1440x900",
+      "1280x800",
+      "390x844"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ]
+  }
+}
