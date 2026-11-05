@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "903e7721d05a0934e5dd0b3cc372da7b98e51e9c8c1bac60c236af0baeb10214",
+  "frontend_sha256": "c8ad2a2f896f0629c9726cee0bc84bc763a5de5ea5f80333f10c9d5feb79f671",
   "panes": [
     {
       "dom_id": "start",
@@ -627,30 +627,22 @@
     {
       "dom_id": "debate",
       "section_id": "pane-debate",
-      "control_count": 9,
+      "control_count": 10,
       "counts": {
         "button": 5,
         "input": 1,
         "select": 2,
+        "summary": 1,
         "textarea": 1
       },
-      "controls_without_id": 0,
+      "controls_without_id": 1,
       "controls_without_label": 0,
       "controls": [
-        {
-          "tag": "input",
-          "id": "d-synth",
-          "type": "checkbox",
-          "onchange": "syncDebateArbiter()"
-        },
-        {
-          "tag": "select",
-          "id": "d-judge"
-        },
         {
           "tag": "textarea",
           "id": "debatePrompt",
           "aria-label": "What to compare",
+          "aria-describedby": "debateModelsChosen debateRunHint",
           "text": "Compare SQLite WAL vs DuckDB vs embedded Postgres for a local macOS telemetry & vector hybrid store handling 500 writes/sec."
         },
         {
@@ -667,6 +659,21 @@
           "aria-describedby": "debateRunHint",
           "onclick": "runDebate()",
           "text": "Start Compare"
+        },
+        {
+          "tag": "input",
+          "id": "d-synth",
+          "type": "checkbox",
+          "onchange": "syncDebateArbiter()"
+        },
+        {
+          "tag": "select",
+          "id": "d-judge"
+        },
+        {
+          "tag": "summary",
+          "class": "debate-criteria-summary",
+          "text": "What this comparison is judged on Open to add or remove one"
         },
         {
           "tag": "button",
@@ -1527,8 +1534,8 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 206,
-    "pane_controls": 97,
+    "markup_controls": 207,
+    "pane_controls": 98,
     "chrome_controls": 109,
     "script_rendered_controls": 61,
     "script_rendered_by_function": {

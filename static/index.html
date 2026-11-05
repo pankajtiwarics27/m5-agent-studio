@@ -418,7 +418,10 @@
   .config-strip { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; margin-bottom: 12px; }
   .role-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
   @media (max-width: 820px) { .role-grid { grid-template-columns: 1fr 1fr; } }
+  /* A label carries its own display, which beat the `hidden` attribute: a hint the pane had
+     hidden still drew, saying "Enable Arbiter Verdict" under a ticked box (UIV2-16). */
   .field-lbl { display: block; font-size: 10.6px; font-weight: 700; color: var(--text-dim); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .field-lbl[hidden] { display: none; }
   .role-grid select { width: 100%; font-size: 11.8px; padding: 6px 8px; }
 
   .prompt-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 12px 14px; margin-bottom: 13px; }
@@ -504,14 +507,66 @@
   .council-artifacts[data-state="recovered"] { border-left-color: var(--cyan); }
   .council-artifacts strong { color: var(--text); }
   .council-artifacts .council-artifacts-note { display: block; margin-top: 3px; font-size: 11.2px; color: var(--text-faint); }
-  .debate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  /* ── UIV2-16: one question first, equal columns under it ────────────────────
+     The pane stacked a four-row criteria table above the question, so at 1440x900 the fold
+     held a table and the thing being compared was below it; the answers landed in whatever
+     columns `auto-fit` happened to make, so two replies could be different widths, and one
+     model looked exactly like two that had failed to fill the row. The composer now carries
+     the question and the picks, the criteria fold away under it, and the grid takes its
+     column count from the run instead of from the window. */
+  .compare-composer { margin: 0 20px 12px; }
+  .compare-question-label { display: block; margin-bottom: 6px; }
+  .compare-prompt { margin-bottom: 0; }
+  .compare-prompt textarea { min-height: 84px; }
+  .compare-models { display: flex; gap: 12px 18px; align-items: flex-end; flex-wrap: wrap; margin-top: 11px; }
+  .compare-model-picks { flex: 1 1 320px; min-width: 0; }
+  .compare-model-checks { display: flex; gap: 8px 14px; flex-wrap: wrap; align-items: flex-start; margin-top: 4px; }
+  .compare-model-checks .chk-lbl { align-items: flex-start; }
+  .compare-models-chosen { font-size: 12px; color: var(--text-dim); }
+  .compare-run-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .compare-arbiter { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .compare-arbiter select { min-width: 0; max-width: 300px; }
+  .debate-criteria-details { margin: 0 20px 12px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--bg-card); }
+  .debate-criteria-details > summary { cursor: pointer; }
+  .debate-criteria-summary { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; padding: 10px 15px; list-style: none; }
+  .debate-criteria-summary::-webkit-details-marker { display: none; }
+  .debate-criteria-summary::marker { content: ""; }
+  .debate-criteria-summary strong { color: var(--text); font-size: 12.5px; }
+  .debate-criteria-summary strong::before { content: "▸ "; color: var(--text-faint); }
+  .debate-criteria-details[open] .debate-criteria-summary strong::before { content: "▾ "; }
+  .debate-criteria-summary:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; border-radius: var(--radius-xl); }
+  .debate-criteria-counts { color: var(--text-faint); font-size: 11.4px; }
+  .debate-criteria-open-hint { color: var(--text-faint); font-size: 11.2px; margin-left: auto; }
+  .debate-criteria-details[open] .debate-criteria-open-hint { display: none; }
+  .debate-grid { display: grid; grid-template-columns: repeat(var(--debate-cols, 1), minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; align-items: stretch; }
+  .debate-grid[data-count="1"] { grid-template-columns: minmax(0, 1fr); }
+  /* Matching heights: every card in the row is as tall as the tallest, and a long reply
+     scrolls inside its own body rather than stretching the row and the pane with it. */
+  .debate-grid > .stage-output-card { display: flex; flex-direction: column; min-width: 0; margin-bottom: 0; }
+  .debate-grid > .stage-output-card > .stage-output-body { flex: 1 1 auto; min-height: 96px; max-height: 46vh; overflow-y: auto; }
+  .debate-columns-note { margin: 0 20px 10px; padding: 8px 12px; border: 1px dashed var(--border); border-radius: var(--radius-md); background: var(--bg-card); color: var(--text-dim); font-size: 11.8px; line-height: 1.5; }
+  .debate-columns-note[hidden] { display: none; }
   /* ── UIUX-P4-04: a comparison states its criteria and each model's fate ──
      The pane offered checkboxes, a question and a wall of cards. Nothing said what the
      comparison was being judged on, a panel that failed looked like a panel that was slow, a
      stopped run left every card saying "Streaming", and no row said which panels answered. The
      strip below names the criteria and, for each, what could settle it; the table under the grid
      reads the run against those criteria and refuses the two it cannot decide. */
-  .debate-criteria { margin: 0 20px 12px; padding: 12px 15px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--bg-card); }
+  .debate-criteria { margin: 0; padding: 0 15px 12px; border: 0; border-top: 1px solid var(--border); border-radius: 0; background: transparent; }
+  .debate-criteria-group { margin-top: 10px; padding-left: 10px; border-left: 3px solid var(--border); }
+  .debate-criteria-group[data-kind="measured"] { border-left-color: var(--emerald); }
+  .debate-criteria-group[data-kind="not-stated"] { border-left-color: var(--amber); }
+  .debate-criteria-group[data-kind="judged"] { border-left-color: var(--cyan); }
+  .debate-criteria-group-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; margin: 2px 0 2px; font-size: 10.6px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .debate-criteria-group[data-kind="measured"] .debate-criteria-group-head { color: var(--emerald); }
+  .debate-criteria-group[data-kind="not-stated"] .debate-criteria-group-head { color: var(--amber); }
+  .debate-criteria-group[data-kind="judged"] .debate-criteria-group-head { color: var(--cyan); }
+  .debate-criteria-group-head .debate-criteria-group-note { font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 11px; color: var(--text-faint); }
+  .debate-criteria-group th { padding-top: 2px; }
+  /* The column headers are stated once, above the first group: repeating them over three short
+     tables is three lines of the same words. They stay in the tree for a screen reader. */
+  .debate-criteria-group:not(:first-of-type) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .debate-criteria-group:not(:first-of-type) table { margin-top: -2px; }
   .debate-criteria-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
   .debate-criteria-head strong { color: var(--text); font-size: 12.5px; }
   .debate-criteria-basis { color: var(--text-faint); font-size: 11.4px; line-height: 1.5; margin-bottom: 9px; }
@@ -782,6 +837,8 @@
   /* Shell metrics and families */
   --sans: Inter, "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  /* UIV2-16: how many answer columns the Compare grid draws, set from the run. */
+  --debate-cols: 1;
   --header-height: 56px;
 }
 body[data-theme="light"] {
@@ -2772,33 +2829,52 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     <section id="pane-debate" role="tabpanel" aria-labelledby="tab-debate" class="pane">
       <h2 class="pane-title">Compare</h2>
       <div class="scroll-body">
-        <div class="config-strip" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-          <div style="flex:1; min-width:260px;">
-            <span class="field-lbl">Compare model responses</span>
-            <div id="debateModelChecks" style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;"></div>
+        <!-- UIV2-16: the question and the picks are what a comparison is, so they are asked for
+             first, in the composer the reference draws. Everything that explains or scores the
+             answers sits under it. -->
+        <div class="compare-composer" id="compareComposer" role="group" aria-label="The comparison to run">
+          <label class="field-lbl compare-question-label" for="debatePrompt">The question to compare on</label>
+          <div class="prompt-box compare-prompt">
+            <textarea id="debatePrompt" aria-label="What to compare" aria-describedby="debateModelsChosen debateRunHint">Compare SQLite WAL vs DuckDB vs embedded Postgres for a local macOS telemetry &amp; vector hybrid store handling 500 writes/sec.</textarea>
+            <div class="prompt-footer">
+              <span id="debateModelsChosen" class="compare-models-chosen" role="status" aria-live="polite"></span>
+              <div class="compare-run-controls">
+                <span id="debateRunHint" class="debate-run-hint" role="status" aria-live="polite"></span>
+                <button id="debateStopBtn" class="btn btn-danger" style="display:none;" onclick="stopActiveStream()">Stop</button>
+                <button id="debateRunBtn" class="btn btn-primary" onclick="runDebate()" aria-describedby="debateRunHint">Start Compare</button>
+              </div>
+            </div>
           </div>
-          <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-            <label class="chk-lbl"><input type="checkbox" id="d-synth" checked onchange="syncDebateArbiter()" /> Arbiter Verdict</label>
-            <div id="debateArbiterModel" style="min-width:0;"><label class="field-lbl" for="d-judge">Arbiter Model</label><select id="d-judge"></select></div>
-            <span id="debateArbiterHint" class="field-lbl" hidden>Enable Arbiter Verdict to choose an arbiter model.</span>
-          </div>
-        </div>
-        <!-- UIUX-P4-04: what the comparison is judged on, before it runs. -->
-        <div id="debateCriteria" class="debate-criteria" role="region" aria-label="Comparison criteria"></div>
-        <div class="prompt-box">
-          <textarea id="debatePrompt" aria-label="What to compare">Compare SQLite WAL vs DuckDB vs embedded Postgres for a local macOS telemetry &amp; vector hybrid store handling 500 writes/sec.</textarea>
-          <div class="prompt-footer">
-            <span style="font-size:12px; color:var(--text-faint);">Select the models to compare; responses appear side by side.</span>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <span id="debateRunHint" class="debate-run-hint" role="status" aria-live="polite"></span>
-              <button id="debateStopBtn" class="btn btn-danger" style="display:none;" onclick="stopActiveStream()">Stop</button>
-              <button id="debateRunBtn" class="btn btn-primary" onclick="runDebate()" aria-describedby="debateRunHint">Start Compare</button>
+          <div class="compare-models">
+            <div class="compare-model-picks">
+              <span class="field-lbl" id="debateModelPicksLabel">Compare model responses</span>
+              <div id="debateModelChecks" class="compare-model-checks" role="group" aria-labelledby="debateModelPicksLabel"></div>
+            </div>
+            <div class="compare-arbiter">
+              <label class="chk-lbl"><input type="checkbox" id="d-synth" checked onchange="syncDebateArbiter()" /> Arbiter Verdict</label>
+              <div id="debateArbiterModel" style="min-width:0;"><label class="field-lbl" for="d-judge">Arbiter Model</label><select id="d-judge"></select></div>
+              <span id="debateArbiterHint" class="field-lbl" hidden>Enable Arbiter Verdict to choose an arbiter model.</span>
             </div>
           </div>
         </div>
+        <!-- UIUX-P4-04: what the comparison is judged on, stated before it runs.
+             UIV2-16: folded away by default - the question is what the pane is for, and a
+             six-row table above the fold pushed it off the screen. The summary says how many
+             criteria each group holds, so nothing is hidden that a reader needs to judge. -->
+        <details id="debateCriteriaDetails" class="debate-criteria-details">
+          <summary class="debate-criteria-summary">
+            <strong>What this comparison is judged on</strong>
+            <span id="debateCriteriaCounts" class="debate-criteria-counts"></span>
+            <span class="debate-criteria-open-hint">Open to add or remove one</span>
+          </summary>
+          <div id="debateCriteria" class="debate-criteria" role="region" aria-label="Comparison criteria"></div>
+        </details>
         <div id="debateSynthesisArea"></div>
         <div id="debateSummary" class="debate-summary" role="status" aria-live="polite"></div>
-        <div id="debateGrid" class="debate-grid"></div>
+        <!-- UIV2-16: one model is a single answer, and the pane says so instead of leaving a lone
+             card where a reader expected the second column. -->
+        <div id="debateColumnsNote" class="debate-columns-note" role="status" aria-live="polite" hidden></div>
+        <div id="debateGrid" class="debate-grid" data-count="0"></div>
         <!-- What the run left, read against the criteria above. -->
         <div id="debateResults" class="debate-results" role="region" aria-label="Comparison results" hidden></div>
         <!-- UIUX-P4-05: what the response said about each reply, and this page times nothing. -->
@@ -4694,12 +4770,22 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       return;
     }
     if (v === "evaluation") {
+      // UIV2-16: what the criteria panel holds, told apart. Counting the panel's own children
+      // said "4" for a table of six criteria and told a reader nothing about who settles them.
       const crit = document.getElementById("debateCriteria");
-      const n = crit ? crit.querySelectorAll(":scope > *").length : 0;
+      const groupCount = (kind) => {
+        const group = crit ? crit.querySelector(`.debate-criteria-group[data-kind="${kind}"]`) : null;
+        return group ? group.querySelectorAll("tbody tr").length : 0;
+      };
+      const rows = crit ? crit.querySelectorAll("tbody tr").length : 0;
       const grid = document.getElementById("debateGrid");
       const cols = grid ? grid.children.length : 0;
-      panel.innerHTML = inspKV("Criteria", n) + inspKV("Result columns", cols) +
-        `<div class="insp-empty">Scores and the arbiter verdict render in the Compare pane; this view summarizes them.</div>`;
+      panel.innerHTML = inspKV("Criteria", rows)
+        + inspKV("Settled by the run", groupCount("measured"))
+        + inspKV("Not settled here", groupCount("not-stated"))
+        + inspKV("Yours to judge", groupCount("judged"))
+        + inspKV("Result columns", cols)
+        + `<div class="insp-empty">Scores and the arbiter verdict render in the Compare pane; this view summarizes them.</div>`;
       return;
     }
   }
@@ -9202,32 +9288,82 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function renderDebateCriteria(focusAdd = false) {
     const host = document.getElementById("debateCriteria");
     if (!host) return;
-    const measured = DEBATE_CRITERIA.map(criterion => {
-      const answer = criterion.kind === "measured"
-        ? '<span class="criterion-yes">yes — after each panel reports</span>'
-        : '<span class="criterion-no">no — ' + escapeHtml(criterion.why || "") + "</span>";
-      return "<tr><td>" + escapeHtml(criterion.label) + '</td><td class="mono">'
-        + escapeHtml(criterion.settles) + "</td><td>" + answer + "</td></tr>";
-    }).join("");
-    const judged = debateJudged.map((label, index) =>
-      "<tr><td>" + escapeHtml(label) + '</td><td class="mono">you</td><td>'
-      + '<span class="criterion-no">no — yours to judge</span> '
-      + '<button class="btn btn-xs" type="button" onclick="removeDebateCriterion(' + index
-      + ')" title="Remove this criterion from the stated list">Remove</button></td></tr>'
-    ).join("");
-    host.innerHTML = '<div class="debate-criteria-head"><strong>What this comparison is judged on</strong></div>'
-      + '<div class="debate-criteria-basis">Named before the run, so a reader can hold the result to it. '
-      + "Three of these are settled by what the replies and the runtime report. The rest are yours: "
-      + "nothing in a reply decides them, and this pane does not pretend otherwise.</div>"
-      + '<table><thead><tr><th scope="col">Criterion</th><th scope="col">Settled by</th>'
-      + '<th scope="col">Can this pane say it?</th></tr></thead><tbody>' + measured + judged + "</tbody></table>"
+    // UIV2-16: three groups, drawn apart rather than interleaved in one table. What the run can
+    // settle, what nothing here can settle, and what is the reader's to judge are three
+    // different claims; a reader who cannot tell them apart is reading a scoreboard, not evidence.
+    const groups = [
+      {
+        kind: "measured",
+        label: "Settled by the run",
+        note: "read from the replies and the runtime's own usage",
+        rows: DEBATE_CRITERIA.filter(criterion => criterion.kind === "measured").map(criterion =>
+          "<tr><td>" + escapeHtml(criterion.label) + '</td><td class="mono">'
+          + escapeHtml(criterion.settles) + '</td><td>'
+          + '<span class="criterion-yes">yes — after each panel reports</span></td></tr>'
+        ),
+      },
+      {
+        kind: "not-stated",
+        label: "Not settled here",
+        note: "named, and refused rather than guessed",
+        rows: DEBATE_CRITERIA.filter(criterion => criterion.kind !== "measured").map(criterion =>
+          "<tr><td>" + escapeHtml(criterion.label) + '</td><td class="mono">'
+          + escapeHtml(criterion.settles) + '</td><td>'
+          + '<span class="criterion-no">no — ' + escapeHtml(criterion.why || "") + "</span></td></tr>"
+        ),
+      },
+      {
+        kind: "judged",
+        label: "Yours to judge",
+        note: "nothing in a reply decides these",
+        rows: debateJudged.map((label, index) =>
+          "<tr><td>" + escapeHtml(label) + '</td><td class="mono">you</td><td>'
+          + '<span class="criterion-no">no — yours to judge</span> '
+          + '<button class="btn btn-xs" type="button" onclick="removeDebateCriterion(' + index
+          + ')" title="Remove this criterion from the stated list">Remove</button></td></tr>'
+        ),
+      },
+    ];
+    const counted = groups.map(group => String(group.rows.length) + " " + group.label.toLowerCase());
+    host.innerHTML = '<div class="debate-criteria-basis">Named before the run, so a reader can hold the result to it. '
+      + "What the replies and the runtime report settles itself. What nothing in a reply decides is "
+      + "yours, and this pane does not pretend otherwise.</div>"
+      + groups.map(group =>
+        '<div class="debate-criteria-group" data-kind="' + group.kind + '">'
+        + '<div class="debate-criteria-group-head"><span>' + escapeHtml(group.label) + "</span>"
+        + '<span class="debate-criteria-group-note">' + escapeHtml(group.note) + "</span></div>"
+        + '<table><thead><tr><th scope="col">Criterion</th><th scope="col">Settled by</th>'
+        + '<th scope="col">Can this pane say it?</th></tr></thead><tbody>' + group.rows.join("")
+        + "</tbody></table></div>"
+      ).join("")
       + '<div class="debate-criteria-add"><input id="debateCriterionInput" type="text" '
       + 'aria-label="A criterion you will judge yourself" '
       + 'placeholder="A criterion you will judge yourself (for example: runs on my machine)" />'
       + '<button class="btn btn-xs" type="button" onclick="addDebateCriterion()">Add criterion</button></div>';
+    const counts = document.getElementById("debateCriteriaCounts");
+    if (counts) counts.textContent = counted.join(" · ");
+    // The inspector reads these same rows. A criterion added or removed has to show there too,
+    // or the two places disagree about what the run is judged on. The refresh waits a turn: boot
+    // draws this pane before the inspector's own state exists, and reading it mid-boot threw.
+    if (typeof renderInspectorFor === "function") {
+      const active = document.querySelector(".mode-tab.active");
+      if (!active || active.dataset.tab === "debate") {
+        setTimeout(() => {
+          try {
+            renderInspectorFor("debate");
+          } catch (error) {
+            // The rail is not up yet; the next draw of the pane refreshes it.
+          }
+        }, 0);
+      }
+    }
     // The strip is rewritten when a criterion is added or removed, which would drop the focus of
     // whoever was typing into it: adding a criterion is a thing you do several times in a row.
+    // UIV2-16: the strip is folded by default, so editing opens it - a focused input behind a
+    // closed <details> takes the keystrokes and shows nobody anything.
     if (focusAdd) {
+      const details = document.getElementById("debateCriteriaDetails");
+      if (details) details.open = true;
       const input = document.getElementById("debateCriterionInput");
       if (input) input.focus();
     }
@@ -9447,11 +9583,46 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       : '<span class="badge amber" title="' + title + '">figures not reported</span>';
   }
 
+  /** One model is a single answer, many are a comparison; the pane has to say which it holds.
+   *  UIV2-16: the column count comes from the run, not from `auto-fit` and the window width, so
+   *  two replies are always the same width and a lone reply is not a column that failed to fill. */
+  function renderDebateColumns() {
+    const grid = document.getElementById("debateGrid");
+    const note = document.getElementById("debateColumnsNote");
+    const chosen = debateSelectedModels();
+    const panels = debatePanels();
+    const count = Math.max(panels.length, chosen.length);
+    if (grid) {
+      const columns = Math.max(1, Math.min(count, 4));
+      grid.style.setProperty("--debate-cols", String(columns));
+      grid.dataset.count = String(count);
+    }
+    if (note) {
+      if (count === 1) {
+        note.hidden = false;
+        note.textContent = panels.length
+          ? "One model: this is a single answer, not a comparison. Tick a second model to run two and read them side by side."
+          : "One model selected: this run gives a single answer, not a comparison. Tick a second model to put two answers side by side.";
+      } else {
+        note.hidden = true;
+        note.textContent = "";
+      }
+    }
+    return count;
+  }
+
   function updateDebateRunControl() {
     const prompt = (document.getElementById("debatePrompt") || {}).value || "";
     const models = debateSelectedModels();
     const hint = document.getElementById("debateRunHint");
     const button = document.getElementById("debateRunBtn");
+    const chosenLabel = document.getElementById("debateModelsChosen");
+    if (chosenLabel) {
+      chosenLabel.textContent = models.length
+        ? String(models.length) + " " + (models.length === 1 ? "model" : "models") + " selected"
+        : "No model selected";
+    }
+    renderDebateColumns();
     if (!hint || !button) return false;
     const ready = Boolean(models.length) && Boolean(String(prompt).trim());
     if (debateBusy) {
@@ -9468,6 +9639,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function renderDebate() {
     const grid = document.getElementById("debateGrid");
+    renderDebateColumns();
     if (grid) {
       grid.innerHTML = Object.keys(debateSlots).map(key => {
         const slot = debateSlots[key];

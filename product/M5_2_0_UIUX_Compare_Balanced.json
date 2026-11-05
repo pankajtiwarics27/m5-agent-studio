@@ -1,0 +1,230 @@
+{
+  "story": "UIV2-16",
+  "title": "Compare balanced question-first layout",
+  "generated_by": "scripts/uiux_compare_balanced_inventory.py",
+  "order": [
+    {
+      "id": "debatePrompt",
+      "what": "the question"
+    },
+    {
+      "id": "debateModelChecks",
+      "what": "the models to compare"
+    },
+    {
+      "id": "debateCriteriaDetails",
+      "what": "the criteria, folded"
+    },
+    {
+      "id": "debateSummary",
+      "what": "what the run left"
+    },
+    {
+      "id": "debateGrid",
+      "what": "the answers"
+    }
+  ],
+  "groups": [
+    {
+      "kind": "measured",
+      "label": "Settled by the run",
+      "note": "read from the replies and the runtime's own usage"
+    },
+    {
+      "kind": "not-stated",
+      "label": "Not settled here",
+      "note": "named, and refused rather than guessed"
+    },
+    {
+      "kind": "judged",
+      "label": "Yours to judge",
+      "note": "nothing in a reply decides these"
+    }
+  ],
+  "browser_walk": {
+    "script": "scripts/compare_balanced_walk.mjs",
+    "media": "docs/media/compare-balanced",
+    "states": [
+      {
+        "state": "order",
+        "asserted": "the question and the picks are the composer, and the composer comes first"
+      },
+      {
+        "state": "fold",
+        "asserted": "the question is fully above the fold"
+      },
+      {
+        "state": "folded",
+        "asserted": "the criteria panel is folded, so it cannot push the question down"
+      },
+      {
+        "state": "counts",
+        "asserted": "the folded summary counts what each group holds"
+      },
+      {
+        "state": "groups",
+        "asserted": "the criteria open into three named groups, in the order the run reads them"
+      },
+      {
+        "state": "rails",
+        "asserted": "what the run settles and what the reader judges are drawn apart"
+      },
+      {
+        "state": "add",
+        "asserted": "a criterion the reader adds opens the panel, stays focused, and is counted"
+      },
+      {
+        "state": "inspector",
+        "asserted": "the inspector's criteria counts follow the panel that changed"
+      },
+      {
+        "state": "inspector-back",
+        "asserted": "and the inspector is back to six criteria, two of them the reader's"
+      },
+      {
+        "state": "single",
+        "asserted": "one model is stated as a single answer, not as a comparison"
+      },
+      {
+        "state": "fixture",
+        "asserted": "the fixture serves two local models, so a comparison is two real answers"
+      },
+      {
+        "state": "pair",
+        "asserted": "two answers land in two columns of the same width, top and height"
+      },
+      {
+        "state": "answered",
+        "asserted": "both panels answered, so the capture is a comparison and not a failure"
+      },
+      {
+        "state": "scroll",
+        "asserted": "a long reply scrolls inside its own card instead of stretching the row"
+      },
+      {
+        "state": "narrow",
+        "asserted": "at 390x844 the answers stack in one column and nothing overflows sideways"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "the pane reads question, models, criteria, results, answers - in that order",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the question and the picks are one composer, and it is the pane's first region",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the model picks are labelled as a group, not as loose checkboxes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the criteria are folded in a details element that starts closed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the folded summary states how many criteria each group holds",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the criteria are drawn as three groups, in the order they are read",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "each group carries its own rail, so the three are told apart before they are read",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a measured criterion says what settles it, and a judged one says it is the reader's",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "adding a criterion opens the panel and keeps the input focused",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the criteria region is labelled, drawn at load, and drawn by its own renderer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the grid takes its column count from the run",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the columns are capped at four, and a single answer takes the row",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "one model is named as a single answer rather than a comparison",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the run control states the picks it will run",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "cards in a row are the same height, and their bodies scroll rather than stretch the row",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the narrow layout stacks the answers instead of squeezing them",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the Evaluation inspector counts the criteria by group, not the panel's children",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a criterion added or removed re-reads the inspector that counts it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "one summon call site: the pane still posts only the debate stream",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Start is still disabled with the reason it is disabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a hidden label stays hidden",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a browser walk asserts what this inventory describes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk needs no environment of its own",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "check_count": 23,
+  "findings": [],
+  "status": "clean"
+}

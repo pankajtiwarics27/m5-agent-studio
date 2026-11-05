@@ -51,8 +51,8 @@
           "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
           "totals": {
             "panes": 6,
-            "markup_controls": 206,
-            "pane_controls": 97,
+            "markup_controls": 207,
+            "pane_controls": 98,
             "chrome_controls": 109,
             "script_rendered_controls": 61,
             "script_rendered_by_function": {
@@ -208,9 +208,9 @@
           "totals": {
             "panes": 6,
             "preserved_capabilities": 21,
-            "markup_controls": 206,
+            "markup_controls": 207,
             "chrome_controls": 109,
-            "pane_controls": 97,
+            "pane_controls": 98,
             "script_rendered_controls": 61,
             "routes": 117,
             "routes_with_resolved_or_possible_caller": 71,
@@ -243,9 +243,9 @@
         {
           "artifact": "product/M5_2_0_UIUX_Tokens.json",
           "totals": {
-            "tokens": 54,
+            "tokens": 55,
             "groups": 8,
-            "references": 1284,
+            "references": 1304,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -815,7 +815,7 @@
         {
           "artifact": "product/M5_2_0_UIUX_Polish.json",
           "totals": {
-            "radius_rules": 101,
+            "radius_rules": 104,
             "motion_rules": 17,
             "press_rules": 2,
             "hover_rules": 33,
@@ -847,7 +847,7 @@
             "route_provers": 9,
             "control_provers": 2,
             "walks": 17,
-            "support_walks": 16,
+            "support_walks": 17,
             "findings": 0
           }
         }
@@ -894,15 +894,15 @@
         {
           "artifact": "product/M5_2_0_UIUX_Screenshot_Review.json",
           "totals": {
-            "sets": 29,
-            "files": 769,
-            "reviewed_sets": 29,
-            "sets_eyed": 9,
-            "files_eyed": 56,
-            "re_taken_sets": 5,
+            "sets": 30,
+            "files": 811,
+            "reviewed_sets": 30,
+            "sets_eyed": 10,
+            "files_eyed": 61,
+            "re_taken_sets": 6,
             "published_sets": 1,
             "findings": 0,
-            "observations": 23
+            "observations": 24
           }
         }
       ]
@@ -1141,7 +1141,7 @@
   "inventory": {
     "tabs": 6,
     "routes": 117,
-    "markup_controls": 206,
+    "markup_controls": 207,
     "chrome_controls": 109,
     "script_rendered_controls": 61,
     "capabilities": 21,
@@ -1149,9 +1149,9 @@
     "e2e_findings": 0,
     "refusals": 12,
     "refusal_statuses": 9,
-    "captures": 769,
-    "capture_sets": 29,
-    "reviewed_sets": 29,
+    "captures": 811,
+    "capture_sets": 30,
+    "reviewed_sets": 30,
     "screenshot_findings": 0,
     "doc_pages": 5,
     "doc_commands": 40,

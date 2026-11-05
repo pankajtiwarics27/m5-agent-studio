@@ -1805,20 +1805,55 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-16: Compare balanced question-first layout. Required outcome: Comparison prompt and model selection are primary; evaluation criteria collapsible; response cards aligned side-by-side when multiple models. Specific gate: At 1440px no oversized criteria panel above fold; matching response card widths/heights where appropriate; clear one-model state; measured and user-judged criteria visually distinguished. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-05T20:10:00+05:30",
+        "completed_at": "2026-11-05T22:05:00+05:30",
         "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
-        "known_regressions": [],
+        "changed_files": [
+          "static/index.html (Compare pane: the question and the model picks are one composer and the pane's first region; the criteria are a closed <details> whose summary counts its three groups; the criteria render as measured / not-stated / judged groups on their own rails; renderDebateColumns() sets --debate-cols and data-count from the run, caps the row at four columns, and states the one-model case; the grid stretches its cards and caps each body at 46vh with its own scroll; the Evaluation inspector counts criteria by group; .field-lbl[hidden] now actually hides)",
+          "scripts/compare_balanced_walk.mjs (new: 21-check authenticated browser walk over the composition, the fold, the three groups, the inspector that counts them, the one-model state, the two-column run with equal widths/heights and two real answers, the scrolling body and the 390x844 stack; starts council_readiness_seed.py --resident-model itself so every run has two loaded local models, and refuses to pass on a failed transport)",
+          "scripts/uiux_compare_balanced_inventory.py (new: 23 checks over the order, the fold and its counts, the three groups and their rails, the column rule, the card heights, the one-model note, the inspector and its refresh, the preserved rules; generates product/M5_2_0_UIUX_Compare_Balanced.json + docs/uiux-2-0-compare-balanced.md)",
+          "tests/test_compare_balanced_layout.py (new: 31 tests — inventory sync, the doc, the ledger, 14 mutation tests that break one rule each, and the captures at every required viewport/theme)",
+          "scripts/uiux_compare_criteria_inventory.py (the P4-04 rule that the criteria precede the prompt in the document now reads: they are stated before the run, drawn at load, folded with their counts, and the question comes first — 27 checks, regenerated)",
+          "scripts/uiux_preservation_e2e.py (compare_balanced_walk.mjs listed as a support walk) and scripts/uiux_screenshot_review.py (a review entry for the new set, naming the five captures opened)",
+          "docs/media/compare-balanced (34 after captures + 8 before captures + README)",
+          "studio.py (build_studio.py, byte-synced)",
+          "product/* + docs/uiux-2-0-* (every gate generator regenerated; release gate 37/37 checks, 7/7 gates, 0 findings)"
+        ],
+        "tests_executed": [
+          "node scripts/compare_balanced_walk.mjs --viewport <vp> --theme <theme> --screenshots docs/media/compare-balanced -> 21/21 checks, 5 screenshots, on all eight viewport/theme runs (1640x900, 1440x900, 1280x800, 390x844 x light, dark), each run starting its own council_readiness_seed.py --resident-model Qwen3.6-35B-REAP-19B with two loaded local models",
+          "python3 -m pytest tests/test_compare_balanced_layout.py -q -> 31 passed",
+          "python3 scripts/uiux_compare_balanced_inventory.py -> 23 checks, 0 findings",
+          "python3 scripts/uiux_compare_criteria_inventory.py -> 27 checks, 0 findings (P4-04 rule updated for the question-first order)",
+          "python3 scripts/uiux_preservation_e2e.py -> 21/21 rows, 55 provers, 0 findings",
+          "python3 scripts/uiux_release_gate.py -> 37/37 checks, 7/7 gates, 0 findings",
+          "node scripts/compare_criteria_walk.mjs -> 15/15; node scripts/compare_provenance_walk.mjs -> 12/12 (the P4-04 and P4-05 walks still pass on the reordered pane)",
+          "ruff check . -> clean; mypy -> no issues in 58 source files"
+        ],
+        "visual_evidence": [
+          "docs/media/compare-balanced/ — 34 captured files: 4 states x 4 viewports x light/dark plus the 390x844 stack, written by `node scripts/compare_balanced_walk.mjs` (21/21 checks on each of the eight runs, two loaded local models answering in every one)",
+          "the pane as it opens: the question and the model picks are the composer, the criteria are one folded line that counts what it holds: docs/media/compare-balanced/compare-collapsed-1640x900-light.png, docs/media/compare-balanced/compare-collapsed-1640x900-dark.png, docs/media/compare-balanced/compare-collapsed-1440x900-light.png, docs/media/compare-balanced/compare-collapsed-1440x900-dark.png, docs/media/compare-balanced/compare-collapsed-1280x800-light.png, docs/media/compare-balanced/compare-collapsed-1280x800-dark.png, docs/media/compare-balanced/compare-collapsed-390x844-light.png, docs/media/compare-balanced/compare-collapsed-390x844-dark.png",
+          "the criteria opened: Settled by the run (emerald), Not settled here (amber) and Yours to judge (cyan) on their own rails: docs/media/compare-balanced/compare-criteria-open-1640x900-light.png, docs/media/compare-balanced/compare-criteria-open-1640x900-dark.png, docs/media/compare-balanced/compare-criteria-open-1440x900-light.png, docs/media/compare-balanced/compare-criteria-open-1440x900-dark.png, docs/media/compare-balanced/compare-criteria-open-1280x800-light.png, docs/media/compare-balanced/compare-criteria-open-1280x800-dark.png, docs/media/compare-balanced/compare-criteria-open-390x844-light.png, docs/media/compare-balanced/compare-criteria-open-390x844-dark.png",
+          "one model ticked: '1 model selected' and the note that this is a single answer, not a comparison: docs/media/compare-balanced/compare-one-model-1640x900-light.png, docs/media/compare-balanced/compare-one-model-1640x900-dark.png, docs/media/compare-balanced/compare-one-model-1440x900-light.png, docs/media/compare-balanced/compare-one-model-1440x900-dark.png, docs/media/compare-balanced/compare-one-model-1280x800-light.png, docs/media/compare-balanced/compare-one-model-1280x800-dark.png, docs/media/compare-balanced/compare-one-model-390x844-light.png, docs/media/compare-balanced/compare-one-model-390x844-dark.png",
+          "two local models run on the same question: two 434x229 answers at the same width and height, the results table under them, Result columns 2 in the inspector: docs/media/compare-balanced/compare-two-models-1640x900-light.png, docs/media/compare-balanced/compare-two-models-1640x900-dark.png, docs/media/compare-balanced/compare-two-models-1440x900-light.png, docs/media/compare-balanced/compare-two-models-1440x900-dark.png, docs/media/compare-balanced/compare-two-models-1280x800-light.png, docs/media/compare-balanced/compare-two-models-1280x800-dark.png, docs/media/compare-balanced/compare-two-models-390x844-light.png, docs/media/compare-balanced/compare-two-models-390x844-dark.png",
+          "docs/media/compare-balanced/compare-narrow-390x844-{light,dark}.png (the answers stacked in one column at a phone width, nothing overflowing sideways)",
+          "docs/media/compare-balanced/before-uiv2-16/ (8 captures of the same pane served from origin/main at 5c9a6e3: at 1440x900 the fold holds the four-row criteria table and the question is below it — the defect)"
+        ],
+        "acceptance_evidence": [
+          "no oversized criteria panel above the fold at 1440px: the criteria are a closed <details> whose body has zero height; the question is fully above the fold at 1640x900 (bottom 219 of 900), 1440x900 (303 of 900), 1280x800 and 390x844, asserted by the walk on every run and visible in the compare-collapsed captures.",
+          "matching response card widths/heights: two answers measured 434x229 at 1440x900 — equal width, equal height, same top, different left, both statuses `answered` and the summary reading '2 panels · 2 answered' — with each body capped at 46vh and scrolling inside its card; at 390x844 the same two answers stack at one width (366px) and nothing overflows sideways.",
+          "clear one-model state: one model is stated twice — '1 model selected' in the composer and, above the answers, 'this run gives a single answer, not a comparison. Tick a second model to put two answers side by side'; the grid collapses to one full-width column and the note goes when a second model is picked.",
+          "measured and user-judged criteria visually distinguished: three groups, each on its own rail (emerald for Settled by the run, amber for Not settled here, cyan for Yours to judge), each with its own heading and note; the walk asserts the three computed rail colours differ, that the folded summary counts all three groups, and that the Evaluation inspector's counts move with the panel when a criterion is added and removed.",
+          "all impacted existing features preserved: the P4-04 criteria list still adds/removes and keeps focus (and now opens the fold it lives in), Start is still disabled with its reason, the P4-05 provenance table and the P4-06 record bar are untouched, one debate-stream call site, and both earlier walks (compare_criteria 15/15, compare_provenance 12/12) still pass."
+        ],
+        "known_regressions": [
+          "Found, not caused: `node scripts/compare_continuity_walk.mjs` fails 7/15 on origin/main 5c9a6e3 exactly as it does on this branch (reproduced with the frontend reverted), because the page throws `ReferenceError: Cannot access 'UI_STATUS' before initialization` when a stored comparison is restored at load — the Council pane's transcript renderer is called before `const UI_STATUS` (static/index.html line ~10893) is initialized. Follow-up: hoist that table above its first use; out of this story's scope."
+        ],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "UIV2-16 is done: Compare is now a question-first composer with the picks beside it and the criteria folded underneath, the answers in equal columns whose count comes from the run, a stated one-model case, and the criteria drawn as three groups on their own rails. 22 inventory checks, 30 tests and a 17-check browser walk (17/17 on eight viewport/theme runs, 34 captures in docs/media/compare-balanced beside an 8-file before set). Next story: UIV2-17 'Compare results and evidence inspector' (P4, deps UIV2-16/07).",
+        "exact_next_action": "Start UIV2-17 'Compare results and evidence inspector': read the results/provenance tables and the Evaluation inspector on this branch, pin the defect with a before capture, then implement on the same story branch and record the sha in a follow-up commit."
       }
     },
     {
@@ -3058,11 +3093,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 15,
+    "done": 16,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 15,
-    "percent_complete": 50
+    "not_started": 14,
+    "percent_complete": 53
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",

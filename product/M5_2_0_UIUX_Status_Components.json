@@ -35,133 +35,133 @@
       "id": null,
       "tone": "ok",
       "live": false,
-      "line": 1577
+      "line": 1634
     },
     {
       "id": "dockerStateBadge",
       "tone": "neutral",
       "live": false,
-      "line": 1624
+      "line": 1681
     },
     {
       "id": "sdlcProgressBadge",
       "tone": "neutral",
       "live": false,
-      "line": 2140
+      "line": 2197
     },
     {
       "id": "onboardingSummary",
       "tone": "neutral",
       "live": true,
-      "line": 2288
+      "line": 2345
     },
     {
       "id": "startRecentSummary",
       "tone": "neutral",
       "live": true,
-      "line": 2328
+      "line": 2385
     },
     {
       "id": "startHealthSummary",
       "tone": "neutral",
       "live": true,
-      "line": 2355
+      "line": 2412
     },
     {
       "id": "startWorkspaceSummary",
       "tone": "neutral",
       "live": true,
-      "line": 2373
+      "line": 2430
     },
     {
       "id": "harnessActiveStatusBadge",
       "tone": "info",
       "live": true,
-      "line": 2504
+      "line": 2561
     },
     {
       "id": "hallStatusBadge",
       "tone": "info",
       "live": true,
-      "line": 2594
+      "line": 2651
     },
     {
       "id": "councilReadinessCount",
       "tone": "neutral",
       "live": false,
-      "line": 2608
+      "line": 2665
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 5688
+      "line": 5774
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 5786
+      "line": 5872
     },
     {
       "id": null,
       "tone": "neutral",
       "live": false,
-      "line": 9163
+      "line": 9249
     },
     {
       "id": null,
       "tone": "busy",
       "live": false,
-      "line": 9164
+      "line": 9250
     },
     {
       "id": null,
       "tone": "ok",
       "live": false,
-      "line": 9165
+      "line": 9251
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 9166
+      "line": 9252
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 9167
+      "line": 9253
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 9168
+      "line": 9254
     },
     {
       "id": null,
       "tone": "danger",
       "live": false,
-      "line": 9169
+      "line": 9255
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 9170
+      "line": 9256
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 9171
+      "line": 9257
     },
     {
       "id": null,
       "tone": "neutral",
       "live": false,
-      "line": 9172
+      "line": 9258
     }
   ],
   "state_matrix": [
