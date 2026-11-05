@@ -1470,8 +1470,8 @@
         "progress_percent": 100,
         "attempt_count": 1,
         "started_at": "2026-11-05T01:20:00+05:30",
-        "completed_at": "2026-11-05T02:30:00+05:30",
-        "commit_sha": "PENDING-UIV2-13",
+        "completed_at": "2026-11-05T07:40:00+05:30",
+        "commit_sha": "89548db705b41694dbfe91fcdeb627c523f82784",
         "changed_files": [
           "app.py (DELETE /api/hall/sessions/{id} and DELETE /api/hall/sessions: true delete archived:false, 404 unknown, 409 while a summon runs via _HALL_RUNNING_SUMMONS, clear-all skips+reports running, hall tables only, durable DB write; summon marks/releases running; +117th/118th routes in the route matrix)",
           "static/index.html (armed two-press per-row delete with role=alert scope note, sidebar Clear all with armed confirm, composer Clear session button per wireframe, running row disabled, guardedWrite refusal host hallRefusalState, Enter/Space no longer hijacked on real buttons inside data-key-activate rows)",
@@ -1507,8 +1507,8 @@
         ],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "UIV2-13 done: Council sessions can now be cleared safely - armed per-session delete, composer Clear session, and sidebar Clear all, backed by authorized DELETE routes with a running-summon guard (409/skip), true-delete semantics (no archive), workspace untouched, and restart-durable persistence. Walk 14/14 after vs 2/5 before; release gate 37/37, 0 findings.",
-        "exact_next_action": "Push, open the PR, wait for green CI, merge when the user says so; then start UIV2-14 per the ledger."
+        "handoff_summary": "UIV2-13 done: Council sessions can now be cleared safely - armed per-session delete, composer Clear session, and sidebar Clear all, backed by authorized DELETE routes with a running-summon guard (409/skip), true-delete semantics (no archive), workspace untouched, and restart-durable persistence. Walk 14/14 after vs 2/5 before; release gate 37/37, 0 findings. Merged via PR #203 (merge commit 89548db) with green CI on the first run: test 3.11/3.12/3.13 + browser safety all success.",
+        "exact_next_action": "UIV2-13 closed. Start UIV2-14 per the ledger (next not_started story)."
       }
     },
     {
