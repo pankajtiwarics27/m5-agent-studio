@@ -250,259 +250,259 @@
   "writes": [
     {
       "function": "fetchRemoteModels",
-      "line": 4826,
+      "line": 4834,
       "call": "fetch(\"/api/providers/fetch-models\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ alias: docume",
       "kind": "reports",
       "note": "toasts the server's detail and keeps the typed endpoint"
     },
     {
       "function": "saveProvider",
-      "line": 4850,
+      "line": 4858,
       "call": "fetch(\"/api/providers\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ alias: document.getElement",
       "kind": "reports",
       "note": "toasts the server's detail and leaves the form filled"
     },
     {
       "function": "removeProvider",
-      "line": 4875,
+      "line": 4883,
       "call": "fetch(`/api/providers/${encodeURIComponent(alias)}`, { method: \"DELETE\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "saveCombo",
-      "line": 4885,
+      "line": 4893,
       "call": "fetch(\"/api/combos\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ alias: document.getElementByI",
       "kind": "reports",
       "note": "toasts the server's detail and leaves the form filled"
     },
     {
       "function": "removeCombo",
-      "line": 4902,
+      "line": 4910,
       "call": "fetch(`/api/combos/${encodeURIComponent(alias)}`, { method: \"DELETE\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "installSkill",
-      "line": 4970,
+      "line": 4978,
       "call": "fetch(\"/api/skills/install\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ command: cmd }) })",
       "kind": "reports",
       "note": "throws the server's detail into the skill panel's error line"
     },
     {
       "function": "confirmSpawnSession",
-      "line": 5014,
+      "line": 5022,
       "call": "fetch(\"/api/hall/sessions\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ request: req, context_",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "deleteHallSession",
-      "line": 5194,
+      "line": 5203,
       "call": "fetch(`/api/hall/sessions/${encodeURIComponent(id)}`, { method: \"DELETE\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "clearAllHallSessions",
-      "line": 5211,
+      "line": 5220,
       "call": "fetch(\"/api/hall/sessions\", { method: \"DELETE\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "postHumanHallMessage",
-      "line": 5690,
+      "line": 5699,
       "call": "fetch(\"/api/hall/sessions\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ request: txt, context_",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "postHumanHallMessage",
-      "line": 5704,
+      "line": 5713,
       "call": "fetch(`/api/hall/sessions/${encodeURIComponent(activeHallId)}/message`, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, b",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "councilSeatAction",
-      "line": 6111,
+      "line": 6120,
       "call": "fetch(`/api/models/${encodeURIComponent(model)}/load`, { method: \"POST\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "modelAction",
-      "line": 6974,
+      "line": 6983,
       "call": "fetch(`/api/models/${encodeURIComponent(id)}/${act}`, { method: \"POST\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "unloadAllModels",
-      "line": 6982,
+      "line": 6991,
       "call": "fetch(\"/api/models/unload-all\", { method: \"POST\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "clearSsdCache",
-      "line": 6990,
+      "line": 6999,
       "call": "fetch(\"/api/cache/clear-ssd\", { method: \"POST\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "consumeSSE",
-      "line": 7002,
+      "line": 7011,
       "call": "fetch(url, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify(payload), signal: controller.signal })",
       "kind": "reports",
       "note": "reads the refusal's own detail and Retry-After before it opens the stream, so the pane shows the server's reason and the wait instead of `HTTP <status>`"
     },
     {
       "function": "saveWorkspaceDirectory",
-      "line": 10135,
+      "line": 10144,
       "call": "fetch(\"/api/workspace/directory\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ workspace_dir: t",
       "kind": "reports",
       "note": "returns {ok, message} so Start can present a failure with a cause"
     },
     {
       "function": "patchActiveHarnessSettings",
-      "line": 10345,
+      "line": 10354,
       "call": "fetch(`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}`, { method: \"PATCH\", headers: { \"Content-Type\": \"application/json\" }, bo",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "deleteHarnessSession",
-      "line": 10369,
+      "line": 10378,
       "call": "fetch(`/api/harness/sessions/${encodeURIComponent(id)}`, { method: \"DELETE\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "revokeHarnessGrant",
-      "line": 11427,
+      "line": 11436,
       "call": "fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/grants/revoke`, { method: \"POST\", headers: { \"Content-Type\": \"application/json",
       "kind": "reports",
       "note": "renders the refusal in the grants panel and keeps the grant listed"
     },
     {
       "function": "resolveHarnessApproval",
-      "line": 11850,
+      "line": 11859,
       "call": "fetch(\"/api/harness/approve\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body, })",
       "kind": "reports",
       "note": "re-checks the live slot, then resyncs the session on a refusal and prints the server's detail"
     },
     {
       "function": "abortHarnessRun",
-      "line": 11886,
+      "line": 11895,
       "call": "fetch(`/api/harness/abort/${encodeURIComponent(sessionId)}`, { method: \"POST\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "applyHarnessWorktree",
-      "line": 11938,
+      "line": 11947,
       "call": "fetch(`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/apply`, { method: \"POST\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "harnessRecoveryPost",
-      "line": 12938,
+      "line": 12947,
       "call": "fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/${path}`, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, b",
       "kind": "reports",
       "note": "returns {ok, status, data} to its caller and never claims a resume it did not get"
     },
     {
       "function": "saveMcpServer",
-      "line": 13480,
+      "line": 13489,
       "call": "fetch(\"/api/mcp/servers\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify(payload), })",
       "kind": "reports",
       "note": "toasts the server's detail and keeps the form"
     },
     {
       "function": "importMcpJson",
-      "line": 13504,
+      "line": 13513,
       "call": "fetch(\"/api/mcp/import-json\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ json_text: raw, auto",
       "kind": "reports",
       "note": "toasts the server's detail and keeps the pasted JSON"
     },
     {
       "function": "syncMcpServer",
-      "line": 13518,
+      "line": 13527,
       "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}/sync`, { method: \"POST\" })",
       "kind": "reports",
       "note": "toasts the server's detail and re-reads the server list"
     },
     {
       "function": "toggleMcpServerEnabled",
-      "line": 13534,
+      "line": 13543,
       "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, { method: \"PATCH\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.string",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "changeMcpApprovalPolicy",
-      "line": 13549,
+      "line": 13558,
       "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, { method: \"PATCH\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.string",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "toggleMcpSingleTool",
-      "line": 13567,
+      "line": 13576,
       "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, { method: \"PATCH\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.string",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "deleteMcpServer",
-      "line": 13582,
+      "line": 13591,
       "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, { method: \"DELETE\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "runMcpPlayground",
-      "line": 13598,
+      "line": 13607,
       "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}/call`, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.st",
       "kind": "reports",
       "note": "prints the server's detail in the output box"
     },
     {
       "function": "compactActiveHarness",
-      "line": 13617,
+      "line": 13626,
       "call": "fetch(`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/compact`, { method: \"POST\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "saveOpenContextDoc",
-      "line": 13843,
+      "line": 13852,
       "call": "fetch(\"/api/opencontext/docs\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify(payload), })",
       "kind": "reports",
       "note": "toasts the server's detail and keeps the editor contents"
     },
     {
       "function": "togglePinOpenContextDoc",
-      "line": 13857,
+      "line": 13866,
       "call": "fetch(`/api/opencontext/docs/${encodeURIComponent(id)}`, { method: \"PATCH\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stri",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "deleteOpenContextDoc",
-      "line": 13870,
+      "line": 13879,
       "call": "fetch(`/api/opencontext/docs/${encodeURIComponent(id)}`, { method: \"DELETE\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "runCodeGraphPlayground",
-      "line": 13921,
+      "line": 13930,
       "call": "fetch(\"/api/codegraph/query\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ workspace_dir: ws, m",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"

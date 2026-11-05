@@ -249,6 +249,36 @@
       "detail": ""
     },
     {
+      "check": "the session list carries participant roles from the server",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "each session row renders its participant role chips",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "role chips wrap instead of overflowing the row",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pinned conclusion shows a compact summary by default, full text one Expand away",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the verdict block is height-capped and scrolls as a sibling of the transcript, not nested in it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the transcript keeps at least 640px at desktop widths",
+      "ok": true,
+      "detail": ""
+    },
+    {
       "check": "every value the verdict draws is escaped",
       "ok": true,
       "detail": ""
@@ -279,7 +309,7 @@
       "detail": ""
     }
   ],
-  "check_count": 43,
+  "check_count": 49,
   "findings": [],
   "status": "clean"
 }

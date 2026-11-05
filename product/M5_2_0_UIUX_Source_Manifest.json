@@ -12,23 +12,23 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "978c88ceb32023fef6948453cc32d32d0a06e7fba78a0c58ebb99cd411c643eb",
-      "bytes": 817217,
-      "lines": 14174
+      "sha256": "82f2bddd0a41018e4fc607770fc28639808f851c563d173792eccb02edc803d7",
+      "bytes": 818321,
+      "lines": 14183
     },
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "b35e004105d3951ba584e9e33cd3d94aa53ed5db573f804fe5fc3ec7e12f7751",
-      "bytes": 1010887,
-      "lines": 21814
+      "sha256": "4f7355b7ea6bbf068e6c3cd239c4d29ee993332ab764e60b5402e2f6fefcac7c",
+      "bytes": 1011242,
+      "lines": 21818
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "19e45f4053ca8bf11fc2c32345e5d23d81bba0ec06f5b5d8b1fdcb0a71c247b1",
-      "bytes": 3563237,
-      "lines": 77365
+      "sha256": "d5c8bf3f5000baac9d8dc0b7b601f1b1a72e4b3f0c57c2b3921407ecfba5a8d4",
+      "bytes": 3564696,
+      "lines": 77378
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -418,9 +418,9 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "b95b9d22ce97117471ff85c05b256383750a2b648ec5308e74b71ffe318d9801",
-      "bytes": 53608,
-      "lines": 1105
+      "sha256": "936e180dae3c32f9297b6205d44ee821a4ce3fd9068187d11770664be1dad35e",
+      "bytes": 54839,
+      "lines": 1119
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "978c88ceb32023fef6948453cc32d32d0a06e7fba78a0c58ebb99cd411c643eb",
-    "lines": 14174,
+    "sha256": "82f2bddd0a41018e4fc607770fc28639808f851c563d173792eccb02edc803d7",
+    "lines": 14183,
     "tab_count": 6,
     "tabs": [
       {
@@ -568,7 +568,7 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "b35e004105d3951ba584e9e33cd3d94aa53ed5db573f804fe5fc3ec7e12f7751",
+    "sha256": "4f7355b7ea6bbf068e6c3cd239c4d29ee993332ab764e60b5402e2f6fefcac7c",
     "route_count": 117,
     "by_method": {
       "DELETE": 7,
