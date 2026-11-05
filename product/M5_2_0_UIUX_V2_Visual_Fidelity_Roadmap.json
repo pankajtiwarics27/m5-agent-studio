@@ -1927,7 +1927,7 @@
         "attempt_count": 1,
         "started_at": "2026-11-06T09:05:00+05:30",
         "completed_at": "2026-11-06T13:10:00+05:30",
-        "commit_sha": null,
+        "commit_sha": "5684f2045d0223918a8f62e601066db73968f070",
         "changed_files": [
           "static/index.html (Compare: a reply with no text has no size, so the results table draws a dash instead of `0 ch`; the arbiter's answer is a `data-role=\"verdict\"` card with a provenance line naming the model, its catalogue row, the question it judged and the replies as its evidence, and refusing figures for a demo verdict; the inspector's Evaluation view now carries the evidence - one line per reply read from the same `debateProvenanceOf()` the pane's table reads, with the reason and the panel's own error where a reply reported nothing, the basis of the figures, the cost that is not known, the arbiter or `not requested`, and a button that puts the reader on the rows; the rail redraws with the run, not only on a tab switch; both tables stack below 560px with each cell carrying its column label and the `thead` clipped rather than deleted)",
           "scripts/compare_evidence_walk.mjs (new: 25-check authenticated browser walk over the empty, populated, verdict, error, loading, stopped, long-content and 390x844 states; starts its own `council_readiness_seed.py` fixtures - default, `--slow-model`, `--long-model` - and uses the catalogue's keyless provider row for the failure, so no state needs a network; `--states` and `--capture-only` for a subset and for the before set)",
