@@ -2829,6 +2829,43 @@ def close_hall_session_db(session_id: str, author: str, conclusion: str) -> dict
     return get_hall_session(session_id)
 
 
+# UIV2-13: session ids with a summon stream in flight. A running session is guarded
+# from deletion (409 on the single delete, skipped by clear-all) so a stray click cannot
+# remove a session whose reply is still being written.
+_HALL_RUNNING_SUMMONS: set[str] = set()
+
+
+def delete_hall_session_db(session_id: str) -> None:
+    """True delete of one Council session and its transcript - not an archive.
+
+    Hall sessions own no workspace files, so nothing outside the two hall tables is
+    touched; the delete is durable in the same DB write path every other write uses.
+    """
+
+    def _delete_tx(conn: sqlite3.Connection) -> None:
+        conn.execute("DELETE FROM hall_messages WHERE session_id = ?", (session_id,))
+        conn.execute("DELETE FROM hall_sessions WHERE id = ?", (session_id,))
+
+    runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _delete_tx)
+
+
+def clear_hall_sessions_db(exclude: set[str]) -> int:
+    """Delete every hall session except `exclude` (running summons); returns the count."""
+
+    def _clear_tx(conn: sqlite3.Connection) -> int:
+        ids = [row[0] for row in conn.execute("SELECT id FROM hall_sessions").fetchall()]
+        deleted = 0
+        for sid in ids:
+            if sid in exclude:
+                continue
+            conn.execute("DELETE FROM hall_messages WHERE session_id = ?", (sid,))
+            cur = conn.execute("DELETE FROM hall_sessions WHERE id = ?", (sid,))
+            deleted += int(cur.rowcount or 0)
+        return deleted
+
+    return int(runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _clear_tx) or 0)
+
+
 def list_hall_sessions(status: str = "all") -> list[dict[str, Any]]:
     def _read_hall_list(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
@@ -4906,6 +4943,9 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
         sess = get_hall_session(session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    # UIV2-13: while this stream is in flight the session is "running" - the delete
+    # routes refuse it (409) and clear-all skips it.
+    _HALL_RUNNING_SUMMONS.add(session_id)
 
     role_meta = AGENT_ROLES.get(role_key, AGENT_ROLES["architect"])
     author_label = f"{role_meta['label']} ({model})"
@@ -4960,8 +5000,57 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
             yield _sse("summon_done", {"message": saved_msg, "pinned_conclusion": pin_as_conclusion})
         except Exception as exc:
             yield _sse("error", {"message": str(exc)})
+        finally:
+            _HALL_RUNNING_SUMMONS.discard(session_id)
 
     return StreamingResponse(event_gen(), media_type="text/event-stream")
+
+
+@app.delete("/api/hall/sessions")
+async def api_clear_hall_sessions() -> JSONResponse:
+    """UIV2-13: clear every Council session at once, except any running a summon.
+
+    This is a true delete, not an archive: sessions and their transcripts are removed
+    durably (the delete survives a restart). Hall sessions own no workspace files, so
+    nothing in the user workspace is touched.
+    """
+    running = set(_HALL_RUNNING_SUMMONS)
+    deleted = clear_hall_sessions_db(exclude=running)
+    return JSONResponse(
+        {
+            "status": "cleared",
+            "deleted": deleted,
+            "skipped_running": sorted(running),
+            "archived": False,
+            "sessions": list_hall_sessions(),
+        }
+    )
+
+
+@app.delete("/api/hall/sessions/{session_id}")
+async def api_delete_hall_session(session_id: str) -> JSONResponse:
+    """UIV2-13: delete one Council session and its transcript.
+
+    True delete, not an archive (`archived: false` says so); deleting one session never
+    deletes others. A session with a summon in flight is protected: 409 until it ends.
+    Workspace files are never touched - hall sessions own none.
+    """
+    try:
+        get_hall_session(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if session_id in _HALL_RUNNING_SUMMONS:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"session {session_id} is running a summon; "
+                "wait for the reply to finish before deleting it"
+            ),
+        )
+    delete_hall_session_db(session_id)
+    return JSONResponse(
+        {"status": "deleted", "id": session_id, "archived": False, "sessions": list_hall_sessions()}
+    )
 
 
 # --- Telemetry & Model Controls ---

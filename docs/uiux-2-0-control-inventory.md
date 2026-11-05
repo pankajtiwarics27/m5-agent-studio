@@ -6,9 +6,9 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `f0d531f0bc73782f54b08202b1301c6c94ff951c0455bc99a888f0c6b6ecdd21`.
-* Panes: 6 · controls in panes: 95 · controls in the
-  shared chrome: 109 · script-rendered: 56.
+* Frontend digest: `978c88ceb32023fef6948453cc32d32d0a06e7fba78a0c58ebb99cd411c643eb`.
+* Panes: 6 · controls in panes: 97 · controls in the
+  shared chrome: 109 · script-rendered: 61.
 
 ## What this page is, and is not
 
@@ -23,7 +23,7 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 |---|---|---|---|---|---|
 | start | `pane-start` | 11 | 5 | 0 | button 8, input 2, select 1 |
 | harness | `pane-harness` | 30 | 9 | 0 | button 16, input 3, select 9, summary 1, textarea 1 |
-| hall | `pane-hall` | 18 | 3 | 0 | button 7, select 8, summary 2, textarea 1 |
+| hall | `pane-hall` | 20 | 3 | 0 | button 9, select 8, summary 2, textarea 1 |
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
 | debate | `pane-debate` | 9 | 0 | 0 | button 5, input 1, select 2, textarea 1 |
 | chat | `pane-chat` | 11 | 0 | 0 | button 5, input 2, select 3, textarea 1 |
@@ -31,8 +31,8 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 
 ## What the numbers already say
 
-* 204 controls are in the markup and 56 more are built by script — a checklist written from the markup alone would miss 22% of the interactive surface.
-* The shared chrome carries 109 controls; all six panes together carry 95. Most of the clicking happens in the shell, not inside a tab.
+* 206 controls are in the markup and 61 more are built by script — a checklist written from the markup alone would miss 23% of the interactive surface.
+* The shared chrome carries 109 controls; all six panes together carry 97. Most of the clicking happens in the shell, not inside a tab.
 * 63 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
@@ -92,28 +92,30 @@ Section `pane-harness`, 30 interactive elements.
 
 ## Pane `hall`
 
-Section `pane-hall`, 18 interactive elements.
+Section `pane-hall`, 20 interactive elements.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
 | 1 | button | — | — | + Spawn Council Session | openSpawnModal() |
-| 2 | button | hallFullRoundBtn | — | Run full round | runHallFullRound() |
-| 3 | button | hallConcludeBtn | — | Finish and pin summary | summonConclusion() |
-| 4 | summary | — | — | Council role models | — |
-| 5 | button | councilReadinessRefresh | button | Check again | refreshCouncilReadiness() |
-| 6 | select | hallSeatArch | — | — | — |
-| 7 | select | hallSeatCoder | — | — | — |
-| 8 | select | hallSeatCritic | — | — | — |
-| 9 | select | hallSeatJudge | — | — | — |
-| 10 | select | hallReasoningSelect | — | Reasoning: Off Reasoning: Low Reasoning: Medium | — |
-| 11 | button | hallStopBtn | — | Stop | stopActiveStream() |
-| 12 | summary | — | — | Ask one model | — |
-| 13 | select | hallRoleSelect | — | 1. Architect / Strategist 2. Builder / Deep Analyst 3. Adversarial Critic 4. Lead Arbiter | — |
-| 14 | select | hallModelSelect | — | — | — |
-| 15 | button | hallSummonBtn | — | Ask one model | summonSingleAgent() |
-| 16 | textarea | hallHumanInput | — | Ask a question or steer the Council as Human Operative (Enter = Send)... | — |
-| 17 | select | hallSendModeSelect | — | Council message action | — |
-| 18 | button | hallSendBtn | — | Send | submitHallComposer() |
+| 2 | button | hallClearAllBtn | button | Clear all Council sessions | armHallClearAll() |
+| 3 | button | hallFullRoundBtn | — | Run full round | runHallFullRound() |
+| 4 | button | hallConcludeBtn | — | Finish and pin summary | summonConclusion() |
+| 5 | button | hallClearSessionBtn | — | Clear the active Council session | armHallClearSession() |
+| 6 | summary | — | — | Council role models | — |
+| 7 | button | councilReadinessRefresh | button | Check again | refreshCouncilReadiness() |
+| 8 | select | hallSeatArch | — | — | — |
+| 9 | select | hallSeatCoder | — | — | — |
+| 10 | select | hallSeatCritic | — | — | — |
+| 11 | select | hallSeatJudge | — | — | — |
+| 12 | select | hallReasoningSelect | — | Reasoning: Off Reasoning: Low Reasoning: Medium | — |
+| 13 | button | hallStopBtn | — | Stop | stopActiveStream() |
+| 14 | summary | — | — | Ask one model | — |
+| 15 | select | hallRoleSelect | — | 1. Architect / Strategist 2. Builder / Deep Analyst 3. Adversarial Critic 4. Lead Arbiter | — |
+| 16 | select | hallModelSelect | — | — | — |
+| 17 | button | hallSummonBtn | — | Ask one model | summonSingleAgent() |
+| 18 | textarea | hallHumanInput | — | Ask a question or steer the Council as Human Operative (Enter = Send)... | — |
+| 19 | select | hallSendModeSelect | — | Council message action | — |
+| 20 | button | hallSendBtn | — | Send | submitHallComposer() |
 
 ## Pane `council`
 
@@ -292,15 +294,17 @@ attributed to one.
 
 ## Controls built by script
 
-56 interactive tags appear as template strings inside the
+61 interactive tags appear as template strings inside the
 inline script rather than in the markup. They are attributed to the nearest preceding function
 and are **not** in the tables above:
 
 | Function | Controls rendered |
 |---|---|
 | `ensureStageCardMounted` | 1 |
+| `hallClearScopeNoteHtml` | 2 |
 | `harnessEvidenceChangeHtml` | 1 |
 | `openSpawnModal` | 1 |
+| `refreshHallSessions` | 3 |
 | `refreshInspectorPanel` | 8 |
 | `refreshOnboarding` | 1 |
 | `renderActiveHall` | 3 |

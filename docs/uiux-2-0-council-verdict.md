@@ -61,7 +61,7 @@ against `scripts/council_readiness_seed.py`.
 
 ## The checks
 
-32 checks, 0 findings — **clean**.
+43 checks, 0 findings — **clean**.
 
 * `pass` the session table records a conclusion with its author and the time it was pinned
 * `pass` a pinned verdict is the seat's own reply, closed by the call that saves it
@@ -89,6 +89,17 @@ against `scripts/council_readiness_seed.py`.
 * `pass` pin/unpin only flips the sticky position and says so
 * `pass` no code locks the page scroll outside a true modal
 * `pass` the transcript stream still scrolls on its own
+* `pass` the server mounts an authorized delete for one hall session
+* `pass` delete says it is a true delete, not an archive
+* `pass` a running summon guards the session from deletion
+* `pass` clear-all deletes every session except running ones and never touches workspace files
+* `pass` deleting one session cannot delete others
+* `pass` the sidebar arms a per-session delete before it fires
+* `pass` the armed confirm states the scope: irreversible, no archive, workspace never touched
+* `pass` a running session's row is protected in the UI too
+* `pass` clear-all exists in the sidebar and is armed before it fires
+* `pass` the composer carries a Clear session control for the active session
+* `pass` a refused delete is stated where it happened and keeps the row
 * `pass` every value the verdict draws is escaped
 * `pass` the pane calls no route for the verdict, and invents none
 * `pass` the fixture answers each catalogue model with its own paragraph, and a stranger with a line

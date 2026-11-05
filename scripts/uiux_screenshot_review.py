@@ -360,7 +360,7 @@ REVIEWS: dict[str, dict[str, object]] = {
         "theme": "dark and light",
     },
     "uiv2-v2": {
-        "story": "UIV2-01 (baseline), UIV2-03 (reference fixtures), UIV2-04/UIV2-05/UIV2-06/UIV2-11/UIV2-12 (after-sets)",
+        "story": "UIV2-01 (baseline), UIV2-03 (reference fixtures), UIV2-04/UIV2-05/UIV2-06/UIV2-11/UIV2-12/UIV2-13 (after-sets)",
         "note": (
             "Two V2-program sets. `baseline/` is the running app at pinned HEAD 9a584a3, captured "
             "from a disposable git-archive copy via demo_tour.py --serve with scripts/capture_screenshots.mjs "
@@ -404,7 +404,15 @@ REVIEWS: dict[str, dict[str, object]] = {
             "pushed out of view, after shows it as a capped sticky card at the top of the transcript with "
             "Expand/Unpin/close controls while the transcript and composer stay visible - plus the walk "
             "state shots (pinned-long-conclusion, unpinned, resized, expanded-modal at 1440x900-dark; "
-            "mobile-long-conclusion at 390x844-dark)."
+            "mobile-long-conclusion at 390x844-dark). "
+            "`before-uiv2-13/` and `after-uiv2-13/` bracket the UIV2-13 clear-session change "
+            "(served from a disposable git-archive copy at 65f6e94 vs the branch, seeded Council "
+            "sessions): opened the 1440x900-dark pair - before has no clear control anywhere (sidebar "
+            "rows carry no delete button, the composer row has only Run full round / Finish and pin "
+            "summary, and DELETE /api/hall/sessions answers 405), after adds the armed per-row delete, "
+            "the sidebar Clear all, and the composer Clear session button matching the wireframe's "
+            "hall composer row - plus the walk state shots (armed-delete with its role=alert scope "
+            "note, armed-clear-all, cleared-empty, populated-with-clear-controls at 1440x900-dark)."
         ),
         "eye": [
             "baseline/1440x900-light/start.png",
@@ -432,6 +440,12 @@ REVIEWS: dict[str, dict[str, object]] = {
             "after-uiv2-12/1440x900-dark-states/resized.png",
             "after-uiv2-12/1440x900-dark-states/expanded-modal.png",
             "after-uiv2-12/390x844-dark-states/mobile-long-conclusion.png",
+            "before-uiv2-13/1440x900-dark/hall.png",
+            "after-uiv2-13/1440x900-dark/hall.png",
+            "after-uiv2-13/1440x900-dark-states/armed-delete.png",
+            "after-uiv2-13/1440x900-dark-states/armed-clear-all.png",
+            "after-uiv2-13/1440x900-dark-states/cleared-empty.png",
+            "after-uiv2-13/1440x900-dark-states/populated-with-clear-controls.png",
         ],
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",

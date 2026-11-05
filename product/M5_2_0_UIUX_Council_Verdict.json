@@ -194,6 +194,61 @@
       "detail": ""
     },
     {
+      "check": "the server mounts an authorized delete for one hall session",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "delete says it is a true delete, not an archive",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a running summon guards the session from deletion",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "clear-all deletes every session except running ones and never touches workspace files",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "deleting one session cannot delete others",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the sidebar arms a per-session delete before it fires",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the armed confirm states the scope: irreversible, no archive, workspace never touched",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a running session's row is protected in the UI too",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "clear-all exists in the sidebar and is armed before it fires",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the composer carries a Clear session control for the active session",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a refused delete is stated where it happened and keeps the row",
+      "ok": true,
+      "detail": ""
+    },
+    {
       "check": "every value the verdict draws is escaped",
       "ok": true,
       "detail": ""
@@ -224,7 +279,7 @@
       "detail": ""
     }
   ],
-  "check_count": 32,
+  "check_count": 43,
   "findings": [],
   "status": "clean"
 }

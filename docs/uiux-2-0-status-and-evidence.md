@@ -53,20 +53,20 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 | `#startHealthSummary` | `neutral` | yes | 2347 |
 | `#startWorkspaceSummary` | `neutral` | yes | 2365 |
 | `#harnessActiveStatusBadge` | `info` | yes | 2496 |
-| `#hallStatusBadge` | `info` | yes | 2582 |
-| `#councilReadinessCount` | `neutral` | no | 2595 |
-| (unnamed) | `warn` | no | 5291 |
-| (unnamed) | `warn` | no | 5389 |
-| (unnamed) | `neutral` | no | 8669 |
-| (unnamed) | `busy` | no | 8670 |
-| (unnamed) | `ok` | no | 8671 |
-| (unnamed) | `warn` | no | 8672 |
-| (unnamed) | `warn` | no | 8673 |
-| (unnamed) | `warn` | no | 8674 |
-| (unnamed) | `danger` | no | 8675 |
-| (unnamed) | `warn` | no | 8676 |
-| (unnamed) | `warn` | no | 8677 |
-| (unnamed) | `neutral` | no | 8678 |
+| `#hallStatusBadge` | `info` | yes | 2586 |
+| `#councilReadinessCount` | `neutral` | no | 2600 |
+| (unnamed) | `warn` | no | 5483 |
+| (unnamed) | `warn` | no | 5581 |
+| (unnamed) | `neutral` | no | 8865 |
+| (unnamed) | `busy` | no | 8866 |
+| (unnamed) | `ok` | no | 8867 |
+| (unnamed) | `warn` | no | 8868 |
+| (unnamed) | `warn` | no | 8869 |
+| (unnamed) | `warn` | no | 8870 |
+| (unnamed) | `danger` | no | 8871 |
+| (unnamed) | `warn` | no | 8872 |
+| (unnamed) | `warn` | no | 8873 |
+| (unnamed) | `neutral` | no | 8874 |
 
 ## Writers
 

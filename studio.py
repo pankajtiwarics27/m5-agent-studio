@@ -2797,6 +2797,43 @@ def close_hall_session_db(session_id: str, author: str, conclusion: str) -> dict
     return get_hall_session(session_id)
 
 
+# UIV2-13: session ids with a summon stream in flight. A running session is guarded
+# from deletion (409 on the single delete, skipped by clear-all) so a stray click cannot
+# remove a session whose reply is still being written.
+_HALL_RUNNING_SUMMONS: set[str] = set()
+
+
+def delete_hall_session_db(session_id: str) -> None:
+    """True delete of one Council session and its transcript - not an archive.
+
+    Hall sessions own no workspace files, so nothing outside the two hall tables is
+    touched; the delete is durable in the same DB write path every other write uses.
+    """
+
+    def _delete_tx(conn: sqlite3.Connection) -> None:
+        conn.execute("DELETE FROM hall_messages WHERE session_id = ?", (session_id,))
+        conn.execute("DELETE FROM hall_sessions WHERE id = ?", (session_id,))
+
+    runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _delete_tx)
+
+
+def clear_hall_sessions_db(exclude: set[str]) -> int:
+    """Delete every hall session except `exclude` (running summons); returns the count."""
+
+    def _clear_tx(conn: sqlite3.Connection) -> int:
+        ids = [row[0] for row in conn.execute("SELECT id FROM hall_sessions").fetchall()]
+        deleted = 0
+        for sid in ids:
+            if sid in exclude:
+                continue
+            conn.execute("DELETE FROM hall_messages WHERE session_id = ?", (sid,))
+            cur = conn.execute("DELETE FROM hall_sessions WHERE id = ?", (sid,))
+            deleted += int(cur.rowcount or 0)
+        return deleted
+
+    return int(runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _clear_tx) or 0)
+
+
 def list_hall_sessions(status: str = "all") -> list[dict[str, Any]]:
     def _read_hall_list(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
@@ -6206,8 +6243,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <aside class="hall-sidebar">
           <div class="hall-side-head">
             <button class="btn" style="width:100%; justify-content:center;" onclick="openSpawnModal()">+ Spawn Council Session</button>
-            <div style="display:flex; justify-content:space-between; font-size:10.8px; color:var(--text-faint); text-transform:uppercase; font-weight:700;">
-              <span>Session Chronicles</span><span id="chronicleCount">0</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.8px; color:var(--text-faint); text-transform:uppercase; font-weight:700;">
+              <span>Session Chronicles</span>
+              <span style="display:flex; gap:6px; align-items:center;">
+                <button id="hallClearAllBtn" type="button" class="btn btn-xs" onclick="armHallClearAll()" disabled title="Delete every Council session and its transcript (asks for confirmation; irreversible - not an archive; workspace files are never touched)" aria-label="Clear all Council sessions">Clear all</button>
+                <span id="chronicleCount">0</span>
+              </span>
             </div>
           </div>
           <div id="hallChroniclesList" class="hall-chronicles"></div>
@@ -6225,6 +6266,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <div style="display:flex; gap:7px; align-items:center;">
               <button id="hallFullRoundBtn" class="btn btn-amber" disabled aria-describedby="councilReadinessSummary" onclick="runHallFullRound()" title="Sequentially summon all four configured Council seats">Run full round</button>
               <button id="hallConcludeBtn" class="btn" onclick="summonConclusion()" title="Convene remaining voices if needed, then pin Lead Arbiter Final Verdict">Finish and pin summary</button>
+              <button id="hallClearSessionBtn" class="btn" onclick="armHallClearSession()" disabled title="Delete the active Council session and its transcript (asks for confirmation; irreversible - not an archive; workspace files are never touched)" aria-label="Clear the active Council session">Clear session</button>
             </div>
           </div>
 
@@ -6292,6 +6334,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           </details>
 
           <div id="hallSummonState"></div>
+          <div id="hallRefusalState"></div>
 
           <div id="hallStream" class="hall-stream"></div>
 
@@ -6670,6 +6713,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // have made - no inline `onkeydown`, so nothing runs from markup.
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== " " && event.key !== "Spacebar") return;
+    // UIV2-13: a real button inside a data-key-activate row (e.g. a row's armed delete) must
+    // get Enter/Space natively; the row shortcut only claims keys pressed on the row itself.
+    if (event.target && (event.target.tagName === "BUTTON" || event.target.tagName === "A" || event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA" || event.target.tagName === "SELECT")) return;
     const target = event.target && event.target.closest ? event.target.closest("[data-key-activate]") : null;
     if (!target || target.tagName === "BUTTON" || target.tagName === "A") return;
     event.preventDefault();
@@ -6947,6 +6993,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   let activeHallData = null;
   // UIV2-12: the pinned conclusion card sticks to the top of the transcript until unpinned.
   let hallConclusionPinned = true;
+  // UIV2-13: clearing a session is irreversible, so every clear path takes two presses - the
+  // first arms the control and shows the scope (what is gone for good, what is never touched),
+  // the second performs the delete. A session with a summon in flight is protected.
+  let hallDeleteArmedId = null;
+  let hallDeleteArmedTimer = 0;
+  let hallClearAllArmed = false;
+  let hallClearAllTimer = 0;
+  let hallClearSessionArmed = false;
+  let hallClearSessionTimer = 0;
 
   let stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 2:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 3:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 4:{c:"",r:"",rCount:0,m:"",u:null,k:null} };
   let rafPending = false;
@@ -8653,17 +8708,191 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       hallSessions = d.sessions || [];
       document.getElementById("chronicleCount").textContent = hallSessions.length;
       const list = document.getElementById("hallChroniclesList");
+      const clearBtn = document.getElementById("hallClearAllBtn");
+      if (clearBtn) {
+        clearBtn.disabled = hallSessions.length === 0;
+        clearBtn.textContent = hallClearAllArmed ? "Confirm clear all" : "Clear all";
+        clearBtn.classList.toggle("btn-danger", hallClearAllArmed);
+        clearBtn.onclick = hallClearAllArmed ? () => clearAllHallSessions() : () => armHallClearAll();
+        clearBtn.setAttribute("aria-label", hallClearAllArmed ? "Confirm irreversible delete of all Council sessions" : "Clear all Council sessions");
+      }
+      updateHallClearSessionBtn();
       if (!hallSessions.length) {
         list.innerHTML = `<div style="padding:12px; font-size:12px; color:var(--text-faint);">No sessions yet.</div>`;
         return;
       }
       if (!activeHallId) { await selectHallSession(hallSessions[0].id); return; }
-      list.innerHTML = hallSessions.map(s => `
+      list.innerHTML = hallSessions.map(s => {
+        const running = councilSummonInProgress && s.id === activeHallId;
+        const armed = hallDeleteArmedId === s.id;
+        let delBtn;
+        if (running) {
+          delBtn = `<button class="btn btn-xs btn-danger" disabled style="padding:1px 5px; min-height:var(--target-min); font-size:10px; opacity:0.45; cursor:not-allowed;" title="A summon is running on this session - it is protected until the reply finishes" aria-label="Delete Council session (protected while a summon runs)" aria-disabled="true">${UI_ICONS.close}</button>`;
+        } else if (armed) {
+          delBtn = `<button class="btn btn-xs btn-danger" style="padding:1px 5px; min-height:var(--target-min); font-size:10px; font-weight:700;" onclick="event.stopPropagation(); deleteHallSession('${escapeHtml(s.id)}')" title="${escapeHtml(hallDeleteScopeNote())}" aria-label="Confirm irreversible delete of this Council session">Confirm delete</button>`;
+        } else {
+          delBtn = `<button class="btn btn-xs btn-danger" style="padding:1px 5px; min-height:var(--target-min); font-size:10px;" onclick="event.stopPropagation(); armHallDelete('${escapeHtml(s.id)}')" title="Delete session… (asks for confirmation; irreversible - session and transcript only, never workspace files)" aria-label="Delete Council session">${UI_ICONS.close}</button>`;
+        }
+        return `
         <div class="chronicle-item ${s.id === activeHallId ? 'active' : ''}" role="button" tabindex="0" data-key-activate onclick="selectHallSession('${escapeHtml(s.id)}')">
-          <div class="chronicle-title">${escapeHtml(s.title)}</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:5px;">
+            <div class="chronicle-title">${escapeHtml(s.title)}</div>
+            ${delBtn}
+          </div>
           <div class="chronicle-meta"><span>${s.status === 'closed' ? 'Closed' : 'Active'}</span><span>${s.participant_count} voices • ${s.message_count} msgs</span></div>
-        </div>`).join("");
+        </div>`;
+      }).join("") + hallClearScopeNoteHtml();
     } catch (e) {}
+  }
+
+  // UIV2-13: the armed confirmation's scope note, so "delete" cannot be mistaken for an
+  // archive and the reader sees exactly what is gone for good and what is never touched.
+  function hallDeleteScopeNote() {
+    const s = hallSessions.find((x) => x.id === hallDeleteArmedId);
+    const title = s ? s.title : "this session";
+    return `Irreversible: deletes "${title}" and its whole transcript from the server - there is no archive and it cannot be undone. Files in your workspace are never touched.`;
+  }
+
+  function hallClearAllScopeNote() {
+    const running = councilSummonInProgress && activeHallId ? 1 : 0;
+    return `Irreversible: deletes all ${hallSessions.length} Council session(s) and their transcripts${running ? " except the one running a summon (it is skipped)" : ""}. There is no archive. Files in your workspace are never touched.`;
+  }
+
+  function hallClearScopeNoteHtml() {
+    if (hallDeleteArmedId) {
+      return `<div id="hallClearScopeNote" role="alert" style="padding:8px 11px; border-top:1px solid var(--border); font-size:10.8px; color:var(--text-faint); display:flex; gap:8px; align-items:flex-start; justify-content:space-between;">${escapeHtml(hallDeleteScopeNote())}<button type="button" class="btn btn-xs" style="flex:none;" onclick="disarmHallDelete(); refreshHallSessions();" aria-label="Cancel the armed delete">Cancel</button></div>`;
+    }
+    if (hallClearAllArmed) {
+      return `<div id="hallClearScopeNote" role="alert" style="padding:8px 11px; border-top:1px solid var(--border); font-size:10.8px; color:var(--text-faint); display:flex; gap:8px; align-items:flex-start; justify-content:space-between;">${escapeHtml(hallClearAllScopeNote())}<button type="button" class="btn btn-xs" style="flex:none;" onclick="disarmHallClearAll(); refreshHallSessions();" aria-label="Cancel the armed clear-all">Cancel</button></div>`;
+    }
+    return "";
+  }
+
+  function disarmHallDelete() {
+    clearTimeout(hallDeleteArmedTimer);
+    hallDeleteArmedId = null;
+  }
+
+  function armHallDelete(id) {
+    if (hallDeleteArmedId === id) {
+      disarmHallDelete();
+      refreshHallSessions();
+      return;
+    }
+    hallDeleteArmedId = id;
+    refreshHallSessions();
+    clearTimeout(hallDeleteArmedTimer);
+    hallDeleteArmedTimer = setTimeout(() => {
+      hallDeleteArmedId = null;
+      refreshHallSessions();
+    }, 6000);
+  }
+
+  function disarmHallClearAll() {
+    clearTimeout(hallClearAllTimer);
+    hallClearAllArmed = false;
+  }
+
+  function armHallClearAll() {
+    if (!hallSessions.length) return;
+    if (hallClearAllArmed) {
+      disarmHallClearAll();
+      refreshHallSessions();
+      return;
+    }
+    hallClearAllArmed = true;
+    refreshHallSessions();
+    clearTimeout(hallClearAllTimer);
+    hallClearAllTimer = setTimeout(() => {
+      hallClearAllArmed = false;
+      refreshHallSessions();
+    }, 6000);
+  }
+
+  function disarmHallClearSession() {
+    clearTimeout(hallClearSessionTimer);
+    hallClearSessionArmed = false;
+  }
+
+  function armHallClearSession() {
+    if (!activeHallId) return;
+    if (hallClearSessionArmed) {
+      disarmHallClearSession();
+      updateHallClearSessionBtn();
+      return;
+    }
+    hallClearSessionArmed = true;
+    updateHallClearSessionBtn();
+    clearTimeout(hallClearSessionTimer);
+    hallClearSessionTimer = setTimeout(() => {
+      hallClearSessionArmed = false;
+      updateHallClearSessionBtn();
+    }, 6000);
+  }
+
+  function updateHallClearSessionBtn() {
+    const btn = document.getElementById("hallClearSessionBtn");
+    if (!btn) return;
+    const running = councilSummonInProgress && !!activeHallId;
+    btn.disabled = !activeHallId || running;
+    if (hallClearSessionArmed && activeHallId && !running) {
+      btn.textContent = "Confirm clear";
+      btn.classList.add("btn-danger");
+      btn.onclick = () => deleteHallSession(activeHallId);
+      btn.setAttribute("aria-label", "Confirm irreversible delete of the active Council session");
+      btn.title = hallDeleteScopeNoteFor(activeHallId);
+    } else {
+      btn.textContent = "Clear session";
+      btn.classList.remove("btn-danger");
+      btn.onclick = () => armHallClearSession();
+      btn.setAttribute("aria-label", "Clear the active Council session (asks for confirmation; irreversible)");
+      btn.title = "Delete the active Council session and its transcript (asks for confirmation; irreversible - not an archive; workspace files are never touched)";
+    }
+  }
+
+  function hallDeleteScopeNoteFor(id) {
+    const keep = hallDeleteArmedId;
+    hallDeleteArmedId = id;
+    const note = hallDeleteScopeNote();
+    hallDeleteArmedId = keep;
+    return note;
+  }
+
+  async function deleteHallSession(id) {
+    // A refused delete must not clear the pane and re-read a list that still holds the
+    // session: the refusal is stated where it happened, and the row stays.
+    disarmHallDelete();
+    disarmHallClearSession();
+    disarmHallClearAll();
+    const write = await guardedWrite({
+      host: "hallRefusalState",
+      kept: "the session and its transcript are still on the server, and its row is still in the list",
+      request: () => fetch(`/api/hall/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
+      retry: () => deleteHallSession(id),
+      reload: () => { clearPresentation("hallRefusalState"); refreshHallSessions(); },
+    });
+    if (activeHallId === id) { activeHallId = null; activeHallData = null; }
+    await refreshHallSessions();
+    renderActiveHall();
+    if (!write) return;
+  }
+
+  async function clearAllHallSessions() {
+    disarmHallDelete();
+    disarmHallClearAll();
+    disarmHallClearSession();
+    const write = await guardedWrite({
+      host: "hallRefusalState",
+      kept: "every session is still on the server and still listed",
+      request: () => fetch("/api/hall/sessions", { method: "DELETE" }),
+      retry: () => clearAllHallSessions(),
+      reload: () => { clearPresentation("hallRefusalState"); refreshHallSessions(); },
+    });
+    activeHallId = null;
+    activeHallData = null;
+    await refreshHallSessions();
+    renderActiveHall();
+    if (!write) return;
   }
 
   async function selectHallSession(id) {
@@ -9182,6 +9411,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       return Promise.resolve(false);
     }
     councilSummonInProgress = true;
+    refreshHallSessions();
+    updateHallClearSessionBtn();
     return new Promise((resolve, reject) => {
       let liveC = "", liveR = "", liveAuthor = `${roleKey.toUpperCase()} (${modelId})`;
       let summonCompleted = false;
@@ -9214,6 +9445,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         councilSummonInProgress = false;
         document.getElementById("hallStopBtn").style.display = "none";
         renderCouncilReadiness();
+        refreshHallSessions();
+        updateHallClearSessionBtn();
         if (summonFailure) reject(summonFailure);
         else resolve(summonCompleted);
       });
@@ -18855,6 +19088,9 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
         sess = get_hall_session(session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    # UIV2-13: while this stream is in flight the session is "running" - the delete
+    # routes refuse it (409) and clear-all skips it.
+    _HALL_RUNNING_SUMMONS.add(session_id)
 
     role_meta = AGENT_ROLES.get(role_key, AGENT_ROLES["architect"])
     author_label = f"{role_meta['label']} ({model})"
@@ -18909,8 +19145,57 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
             yield _sse("summon_done", {"message": saved_msg, "pinned_conclusion": pin_as_conclusion})
         except Exception as exc:
             yield _sse("error", {"message": str(exc)})
+        finally:
+            _HALL_RUNNING_SUMMONS.discard(session_id)
 
     return StreamingResponse(event_gen(), media_type="text/event-stream")
+
+
+@app.delete("/api/hall/sessions")
+async def api_clear_hall_sessions() -> JSONResponse:
+    """UIV2-13: clear every Council session at once, except any running a summon.
+
+    This is a true delete, not an archive: sessions and their transcripts are removed
+    durably (the delete survives a restart). Hall sessions own no workspace files, so
+    nothing in the user workspace is touched.
+    """
+    running = set(_HALL_RUNNING_SUMMONS)
+    deleted = clear_hall_sessions_db(exclude=running)
+    return JSONResponse(
+        {
+            "status": "cleared",
+            "deleted": deleted,
+            "skipped_running": sorted(running),
+            "archived": False,
+            "sessions": list_hall_sessions(),
+        }
+    )
+
+
+@app.delete("/api/hall/sessions/{session_id}")
+async def api_delete_hall_session(session_id: str) -> JSONResponse:
+    """UIV2-13: delete one Council session and its transcript.
+
+    True delete, not an archive (`archived: false` says so); deleting one session never
+    deletes others. A session with a summon in flight is protected: 409 until it ends.
+    Workspace files are never touched - hall sessions own none.
+    """
+    try:
+        get_hall_session(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if session_id in _HALL_RUNNING_SUMMONS:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"session {session_id} is running a summon; "
+                "wait for the reply to finish before deleting it"
+            ),
+        )
+    delete_hall_session_db(session_id)
+    return JSONResponse(
+        {"status": "deleted", "id": session_id, "archived": False, "sessions": list_hall_sessions()}
+    )
 
 
 # --- Telemetry & Model Controls ---

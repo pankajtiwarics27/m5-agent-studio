@@ -446,6 +446,83 @@ def build_inventory() -> dict:
         ".hall-stream { flex: 1; overflow-y: auto;" in html,
         "the stream's own scroll is what the conclusion panel must never freeze",
     )
+
+    # ── UIV2-13: clear session / clear-all with safety ───────────────────────
+    delete_route = python_function(server, "api_delete_hall_session")
+    clear_route = python_function(server, "api_clear_hall_sessions")
+    check(
+        "the server mounts an authorized delete for one hall session",
+        '@app.delete("/api/hall/sessions/{session_id}")' in server
+        and "async def api_delete_hall_session" in server
+        and 'DELETE FROM hall_messages WHERE session_id = ?' in server
+        and 'DELETE FROM hall_sessions WHERE id = ?' in server,
+        "the UI cannot clear a session without a mounted, authorized delete route",
+    )
+    check(
+        "delete says it is a true delete, not an archive",
+        '"archived": False' in delete_route and '"archived": False' in clear_route,
+        "delete and archive must be distinguishable; the response has to say which happened",
+    )
+    check(
+        "a running summon guards the session from deletion",
+        "_HALL_RUNNING_SUMMONS" in server
+        and "_HALL_RUNNING_SUMMONS.add(session_id)" in summon
+        and "_HALL_RUNNING_SUMMONS.discard(session_id)" in summon
+        and "status_code=409" in delete_route
+        and "in _HALL_RUNNING_SUMMONS" in delete_route,
+        "a stray click must not delete a session whose reply is still streaming",
+    )
+    check(
+        "clear-all deletes every session except running ones and never touches workspace files",
+        '@app.delete("/api/hall/sessions")' in server
+        and "async def api_clear_hall_sessions" in server
+        and "clear_hall_sessions_db(exclude=running)" in clear_route
+        and '"skipped_running"' in clear_route
+        and "workspace" not in delete_route.lower().replace("workspace files are never touched", ""),
+        "clear-all must skip in-flight sessions, report them, and delete only hall tables",
+    )
+    delete_helper = python_function(server, "delete_hall_session_db")
+    check(
+        "deleting one session cannot delete others",
+        'DELETE FROM hall_sessions WHERE id = ?' in delete_helper
+        and "delete_hall_session_db(session_id)" in delete_route,
+        "the delete must be keyed on the one id, not the table",
+    )
+    check(
+        "the sidebar arms a per-session delete before it fires",
+        "armHallDelete('${escapeHtml(s.id)}')" in html and "Confirm delete" in html and "hallDeleteArmedId" in html,
+        "an irreversible delete needs a two-press confirm on the row itself",
+    )
+    check(
+        "the armed confirm states the scope: irreversible, no archive, workspace never touched",
+        "hallDeleteScopeNote" in html
+        and "no archive" in html
+        and "workspace are never touched" in html
+        and 'role="alert"' in html,
+        "the confirmation has to say what is gone for good and what is never touched",
+    )
+    check(
+        "a running session's row is protected in the UI too",
+        "protected while a summon runs" in html and "aria-disabled" in html,
+        "the UI must show the guard, not only the server",
+    )
+    check(
+        "clear-all exists in the sidebar and is armed before it fires",
+        'id="hallClearAllBtn"' in html and "armHallClearAll(" in html and "Confirm clear all" in html,
+        "clear-all needs the same two-press safety as a single delete",
+    )
+    check(
+        "the composer carries a Clear session control for the active session",
+        'id="hallClearSessionBtn"' in html and "armHallClearSession(" in html and "Clear session" in html,
+        "the approved wireframe's hall composer row has Run full round + Clear session",
+    )
+    check(
+        "a refused delete is stated where it happened and keeps the row",
+        'host: "hallRefusalState"' in html
+        and 'id="hallRefusalState"' in html
+        and "still on the server" in html,
+        "a 409 must be shown, not swallowed into a pane that looks cleared",
+    )
     check(
         "every value the verdict draws is escaped",
         not unescaped_interpolations(verdict_functions),
