@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "131e16fef2a0703cca5e441c7b7799d7dd186585ff2add7ae79d16a9bb928654",
+    "style_block_sha256": "99c619bf3116431e5f32bd5d2c9ec7f670a43f52ecc3ba973be1bea9f793be76",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -40,9 +40,9 @@
     ]
   },
   "totals": {
-    "tokens": 54,
+    "tokens": 55,
     "groups": 8,
-    "references": 1284,
+    "references": 1304,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 28,
@@ -117,7 +117,8 @@
     "shell": [
       "sans",
       "mono",
-      "header-height"
+      "header-height",
+      "debate-cols"
     ]
   },
   "tokens": [
@@ -149,7 +150,7 @@
         "light": "#FFFFFF"
       },
       "density_override": null,
-      "references": 63
+      "references": 64
     },
     {
       "name": "--bg-hover",
@@ -189,7 +190,7 @@
         "light": "#DDE2E8"
       },
       "density_override": null,
-      "references": 160
+      "references": 163
     },
     {
       "name": "--border-hi",
@@ -209,7 +210,7 @@
         "light": "#1B2430"
       },
       "density_override": null,
-      "references": 80
+      "references": 81
     },
     {
       "name": "--text-dim",
@@ -219,7 +220,7 @@
         "light": "#596579"
       },
       "density_override": null,
-      "references": 142
+      "references": 144
     },
     {
       "name": "--text-faint",
@@ -229,7 +230,7 @@
         "light": "#67717F"
       },
       "density_override": null,
-      "references": 117
+      "references": 120
     },
     {
       "name": "--accent",
@@ -269,7 +270,7 @@
         "light": "#276e82"
       },
       "density_override": null,
-      "references": 21
+      "references": 23
     },
     {
       "name": "--emerald",
@@ -279,7 +280,7 @@
         "light": "#286e50"
       },
       "density_override": null,
-      "references": 30
+      "references": 32
     },
     {
       "name": "--amber",
@@ -289,7 +290,7 @@
         "light": "#80580e"
       },
       "density_override": null,
-      "references": 48
+      "references": 50
     },
     {
       "name": "--rose",
@@ -319,7 +320,7 @@
         "light": "#4F5FE8"
       },
       "density_override": null,
-      "references": 8
+      "references": 9
     },
     {
       "name": "--text-2xs",
@@ -463,7 +464,7 @@
       "value": "8px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 35
+      "references": 36
     },
     {
       "name": "--radius-lg",
@@ -479,7 +480,7 @@
       "value": "12px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 10
+      "references": 11
     },
     {
       "name": "--radius-pill",
@@ -592,6 +593,14 @@
       "theme_overrides": {},
       "density_override": null,
       "references": 9
+    },
+    {
+      "name": "--debate-cols",
+      "group": "shell",
+      "value": "1",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 1
     }
   ],
   "contrast": [

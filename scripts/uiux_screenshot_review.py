@@ -491,6 +491,33 @@ REVIEWS: dict[str, dict[str, object]] = {
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",
     },
+    "compare-balanced": {
+        "story": "UIV2-16",
+        "note": (
+            "The Compare pane's question-first composition: 4 states x 4 viewports x light/dark "
+            "plus the 390x844 stack, written by `scripts/compare_balanced_walk.mjs` against "
+            "`council_readiness_seed.py` with two local models that answer, after 17/17 checks on "
+            "each of the eight runs, and beside it `before-uiv2-16/`, the same pane from "
+            "origin/main at 5c9a6e3 captured with `capture_screenshots.mjs --panes debate`. Opened "
+            "and read: the 1440x900-light pair (before: the fold holds the four-row criteria table "
+            "and the question is under it; after: the question and the two picks fill the fold and "
+            "the criteria are one folded line reading '3 settled by the run · 1 not settled here · "
+            "2 yours to judge'), the 1440x900-dark two-model capture (two 434x229 answers at the "
+            "same width and height, the results table under them, Result columns 2 in the "
+            "inspector), the 1440x900-dark criteria-open capture (three groups on their own "
+            "emerald/amber/cyan rails), and the 390x844-light one-model capture (the single-answer "
+            "note above one full-width card, nothing overflowing)."
+        ),
+        "eye": [
+            "before-uiv2-16/compare-1440x900-light.png",
+            "compare-collapsed-1440x900-light.png",
+            "compare-two-models-1440x900-dark.png",
+            "compare-criteria-open-1440x900-dark.png",
+            "compare-one-model-390x844-light.png",
+        ],
+        "re_taken": True,
+        "theme": "light and dark, desktop 1280-1640 and narrow 390",
+    },
 }
 
 

@@ -68,7 +68,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     # different questions (UIUX-P5-03, WCAG 2.5.8).
     "touch": ("target-min",),
     "motion": ("ease-out", "dur-fast", "dur-slow", "dur-meter"),
-    "shell": ("sans", "mono", "header-height"),
+    "shell": ("sans", "mono", "header-height", "debate-cols"),
 }
 GROUP_OF = {f"--{name}": group for group, names in GROUPS.items() for name in names}
 

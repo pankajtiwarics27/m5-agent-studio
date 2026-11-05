@@ -302,8 +302,13 @@ def build_inventory() -> dict:
         'id="debateCriteria"' in html
         and 'role="region"' in element(html, "debateCriteria")
         and 'aria-label="Comparison criteria"' in element(html, "debateCriteria")
-        and html.index('id="debateCriteria"') < html.index('id="debatePrompt"')
-        and "renderDebateCriteria();" in init,
+        and "renderDebateCriteria();" in init
+        # UIV2-16 put the question first and folded the criteria under it: stating a criterion
+        # before the run is about the run, not about the top of the page. The panel is a
+        # <details> whose summary counts what it holds, so nothing is hidden that judges a reply.
+        and 'id="debateCriteriaDetails"' in html
+        and 'id="debateCriteriaCounts"' in html
+        and html.index('id="debatePrompt"') < html.index('id="debateCriteria"'),
         "a criterion named after the results exist is a rationalization, not a criterion",
     )
     check(
