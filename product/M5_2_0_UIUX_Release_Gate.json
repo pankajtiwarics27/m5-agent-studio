@@ -847,7 +847,7 @@
             "route_provers": 9,
             "control_provers": 2,
             "walks": 17,
-            "support_walks": 15,
+            "support_walks": 16,
             "findings": 0
           }
         }
@@ -894,15 +894,15 @@
         {
           "artifact": "product/M5_2_0_UIUX_Screenshot_Review.json",
           "totals": {
-            "sets": 28,
-            "files": 729,
-            "reviewed_sets": 28,
-            "sets_eyed": 8,
-            "files_eyed": 52,
-            "re_taken_sets": 4,
+            "sets": 29,
+            "files": 769,
+            "reviewed_sets": 29,
+            "sets_eyed": 9,
+            "files_eyed": 56,
+            "re_taken_sets": 5,
             "published_sets": 1,
             "findings": 0,
-            "observations": 22
+            "observations": 23
           }
         }
       ]
@@ -1149,9 +1149,9 @@
     "e2e_findings": 0,
     "refusals": 12,
     "refusal_statuses": 9,
-    "captures": 729,
-    "capture_sets": 28,
-    "reviewed_sets": 28,
+    "captures": 769,
+    "capture_sets": 29,
+    "reviewed_sets": 29,
     "screenshot_findings": 0,
     "doc_pages": 5,
     "doc_commands": 40,

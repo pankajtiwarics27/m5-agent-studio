@@ -376,9 +376,9 @@
     {
       "path": "scripts/uiux_preservation_e2e.py",
       "role": "maps each preservation-matrix row to the walk, test, route and control that proves it",
-      "sha256": "43cf73e806015be03a0a6b0258e50c6a445964f0b5891cdef4c154cf95098e03",
-      "bytes": 38719,
-      "lines": 824
+      "sha256": "2022c2ca74e99a7308c5b8ae877b3729ab9ebdc5f7683a60fc40d7de22a4e82c",
+      "bytes": 39006,
+      "lines": 826
     },
     {
       "path": "tests/test_uiux_preservation_e2e.py",
@@ -418,9 +418,9 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "936e180dae3c32f9297b6205d44ee821a4ce3fd9068187d11770664be1dad35e",
-      "bytes": 54839,
-      "lines": 1119
+      "sha256": "5e88b37980f19ec3eb521a289005ca909d729801ae8fdba7e70caa048659e003",
+      "bytes": 56624,
+      "lines": 1146
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",

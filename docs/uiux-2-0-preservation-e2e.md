@@ -6,7 +6,7 @@ executed by [`scripts/preservation_suite.py`](../scripts/preservation_suite.py).
 
 * 21 of 21 matrix rows mapped, 55 provers, 0 findings
 * 40 walk checks, 4 pytest nodes, 9 route probes, 2 wired controls
-* 17 walks prove a row; 15 more are listed with the reason they do not
+* 17 walks prove a row; 16 more are listed with the reason they do not
 
 ## What this page is, and is not
 
@@ -81,6 +81,7 @@ than succeed. That is what "existing endpoint and permission semantics" means in
 | `adversarial_walk.mjs` | the adversarial walk (P6-02) proves how a refusal is drawn, which is a contract about failures rather than a capability the matrix enumerates |
 | `chat_handoff_walk.mjs` | the Chat-to-Harness handoff (P2-05) is a new journey, not a preserved capability |
 | `compare_continuity_walk.mjs` | Compare continuity (P4-06) keeps a comparison; the capability it belongs to is the comparison itself |
+| `council_state_walk.mjs` | the Council state walk (UIV2-15) proves how a refused, reopened, dropped or deleted turn is drawn; the capability it belongs to is the Council session itself, which the matrix already enumerates from the pane's own controls |
 | `harness_recovery_walk.mjs` | Harness pause/resume/abort recovery (P3-05) extends the abort surface rather than preserving it |
 | `keyboard_walk.mjs` | the rail's tab semantics (P1-02) are shell behaviour |
 | `overlay_walk.mjs` | the overlay controller (P1-04) is shared machinery the matrix does not enumerate |

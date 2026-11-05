@@ -64,6 +64,35 @@ A rebuild also keeps the keyboard focus it found, because the poll is not the re
 * a closed session cannot be dispatched into from the pane or the route, and the control's
   reason says why — while the composer, whose message reopens it, stays available.
 
+## The browser walk
+
+The behaviours above are also driven against a real app, because an inventory reads source
+and a browser is what the reader uses:
+
+```
+node scripts/council_state_walk.mjs --base-url http://127.0.0.1:8000 --token <token> \
+     --viewport 1440x900 --theme dark --screenshots docs/media/uiv2-v15-states
+```
+
+It seeds the API token into `sessionStorage` before the first document (the pane's own
+gate), then asserts:
+
+* **drift** — a seat id survives a catalogue read that no longer carries it
+* **role** — choosing a role keeps the model that was picked
+* **closed** — a closed session cannot be dispatched into, and the control says why
+* **409** — pressing a seat on a closed session explains the 409 instead of sending it
+* **reopen** — a Human message reopens the session and keeps the pinned conclusion
+* **lost** — the server records the dropped turn instead of losing it silently
+* **unsaved** — the text that arrived is drawn as unsaved rather than as a reply
+* **gone** — a deleted session is named as gone, with the id
+* **running** — a seat the server says is answering is stated as running, not as a failure
+* **quiet** — no uncaught error is raised by any of it
+
+The screenshots land in `docs/media/uiv2-v15-states`, named
+`<state>-<viewport>-<theme>.png`, for all four viewports in both themes. The walk drops a
+stream under the pane's own `consumeSSE()` — a proxy reaping an idle socket, not a mocked
+response — so the "not saved" card and the notice come from the code the reader runs.
+
 ## What this story does not do
 
 * it does not resume a stream mid-token: the reply that was lost is retried as a turn, not
@@ -76,7 +105,7 @@ A rebuild also keeps the keyboard focus it found, because the poll is not the re
 
 ## Checks
 
-35 checks, 0 findings — **clean**.
+38 checks, 0 findings — **clean**.
 
 * `pass` the Council pickers a dispatch reads are named once, in one list
 * `pass` a catalogue poll does not rebuild the Council pickers while a dispatch holds them
@@ -113,3 +142,6 @@ A rebuild also keeps the keyboard focus it found, because the poll is not the re
 * `pass` the pinned conclusion and the verdict block are untouched by this story
 * `pass` one summon call site, one stream reader
 * `pass` the seat order and the reasoning modes the round posts are unchanged
+* `pass` a browser walk asserts what this inventory describes
+* `pass` the walk needs no environment of its own
+* `pass` the walk reads the turn the way the pane does, not the way a test would
