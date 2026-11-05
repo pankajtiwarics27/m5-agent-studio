@@ -1810,7 +1810,7 @@
         "attempt_count": 1,
         "started_at": "2026-11-05T20:10:00+05:30",
         "completed_at": "2026-11-05T22:05:00+05:30",
-        "commit_sha": null,
+        "commit_sha": "82f3b19aac80efd939538e345744801d6c78b37d",
         "changed_files": [
           "static/index.html (Compare pane: the question and the model picks are one composer and the pane's first region; the criteria are a closed <details> whose summary counts its three groups; the criteria render as measured / not-stated / judged groups on their own rails; renderDebateColumns() sets --debate-cols and data-count from the run, caps the row at four columns, and states the one-model case; the grid stretches its cards and caps each body at 46vh with its own scroll; the Evaluation inspector counts criteria by group; .field-lbl[hidden] now actually hides)",
           "scripts/compare_balanced_walk.mjs (new: 21-check authenticated browser walk over the composition, the fold, the three groups, the inspector that counts them, the one-model state, the two-column run with equal widths/heights and two real answers, the scrolling body and the 390x844 stack; starts council_readiness_seed.py --resident-model itself so every run has two loaded local models, and refuses to pass on a failed transport)",
