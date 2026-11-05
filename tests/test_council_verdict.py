@@ -391,7 +391,7 @@ def test_a_conclusion_rendered_outside_the_stream_is_caught(sources):
 def test_a_banner_without_its_own_scroll_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            ".conclusion-body { max-height: 24vh; overflow-y: auto;",
+            ".conclusion-body { max-height: 96px; overflow-y: auto;",
             ".conclusion-body { ",
             1,
         )
@@ -433,7 +433,7 @@ def test_a_page_scroll_lock_outside_modals_is_caught(sources):
 def test_an_unclamped_resize_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            "Math.min(Math.max(h, 120), Math.round(window.innerHeight * 0.7))",
+            "Math.min(Math.max(h, 72), Math.round(window.innerHeight * 0.7))",
             "Math.max(h, 0)",
             1,
         )

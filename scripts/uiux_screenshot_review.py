@@ -360,7 +360,7 @@ REVIEWS: dict[str, dict[str, object]] = {
         "theme": "dark and light",
     },
     "uiv2-v2": {
-        "story": "UIV2-01 (baseline), UIV2-03 (reference fixtures), UIV2-04/UIV2-05/UIV2-06/UIV2-11/UIV2-12/UIV2-13 (after-sets)",
+        "story": "UIV2-01 (baseline), UIV2-03 (reference fixtures), UIV2-04/UIV2-05/UIV2-06/UIV2-11/UIV2-12/UIV2-13/UIV2-14 (after-sets)",
         "note": (
             "Two V2-program sets. `baseline/` is the running app at pinned HEAD 9a584a3, captured "
             "from a disposable git-archive copy via demo_tour.py --serve with scripts/capture_screenshots.mjs "
@@ -412,7 +412,16 @@ REVIEWS: dict[str, dict[str, object]] = {
             "summary, and DELETE /api/hall/sessions answers 405), after adds the armed per-row delete, "
             "the sidebar Clear all, and the composer Clear session button matching the wireframe's "
             "hall composer row - plus the walk state shots (armed-delete with its role=alert scope "
-            "note, armed-clear-all, cleared-empty, populated-with-clear-controls at 1440x900-dark)."
+            "note, armed-clear-all, cleared-empty, populated-with-clear-controls at 1440x900-dark). "
+            "`before-uiv2-14/` and `after-uiv2-14/` bracket the UIV2-14 session-list/roles/compact-conclusion "
+            "change (served from a disposable git-archive copy of origin/main vs the branch, one seeded closed "
+            "Council session with architect + critic replies and a 9k-char conclusion): opened the "
+            "1440x900-dark pair - before shows rows with only '3 voices • 3 msgs' (no participant roles) and a "
+            "24vh conclusion body flooding the pane, after shows wrapped role chips on each row "
+            "(Human / Staff Architect / Adversarial Critic), a compact 96px pinned summary, the height-capped "
+            "verdict block, and the composer visible again - plus the walk state shots "
+            "(compact-conclusion-with-roles and full-conclusion-modal at 1440x900-dark; mobile-roles-compact "
+            "at 390x844-dark)."
         ),
         "eye": [
             "baseline/1440x900-light/start.png",
@@ -446,6 +455,11 @@ REVIEWS: dict[str, dict[str, object]] = {
             "after-uiv2-13/1440x900-dark-states/armed-clear-all.png",
             "after-uiv2-13/1440x900-dark-states/cleared-empty.png",
             "after-uiv2-13/1440x900-dark-states/populated-with-clear-controls.png",
+            "before-uiv2-14/1440x900-dark/hall.png",
+            "after-uiv2-14/1440x900-dark/hall.png",
+            "after-uiv2-14/1440x900-dark-states/compact-conclusion-with-roles.png",
+            "after-uiv2-14/1440x900-dark-states/full-conclusion-modal.png",
+            "after-uiv2-14/390x844-dark-states/mobile-roles-compact.png",
         ],
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",

@@ -2840,7 +2840,8 @@ def list_hall_sessions(status: str = "all") -> list[dict[str, Any]]:
         q = """
             SELECT s.*,
                    (SELECT COUNT(*) FROM hall_messages m WHERE m.session_id = s.id) AS message_count,
-                   (SELECT COUNT(DISTINCT author) FROM hall_messages m WHERE m.session_id = s.id) AS participant_count
+                   (SELECT COUNT(DISTINCT author) FROM hall_messages m WHERE m.session_id = s.id) AS participant_count,
+                   (SELECT GROUP_CONCAT(DISTINCT m.role_key) FROM hall_messages m WHERE m.session_id = s.id) AS role_keys
             FROM hall_sessions s
         """
         params: tuple[Any, ...] = ()
@@ -2855,6 +2856,9 @@ def list_hall_sessions(status: str = "all") -> list[dict[str, Any]]:
     for r in rows:
         d = dict(r)
         d["context_files"] = json.loads(d.pop("context_files_json", "[]"))
+        # UIV2-14: the list carries each session's participant roles, so a row can show
+        # who sat in the round without opening the session.
+        d["roles"] = [rk for rk in (d.pop("role_keys", "") or "").split(",") if rk]
         out.append(d)
     return out
 
@@ -3875,6 +3879,9 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .chronicle-item { padding: 8px 10px; border-radius: var(--radius-md); border: 1px solid transparent; cursor: pointer; }
   .chronicle-item:hover { background: var(--bg-card); border-color: var(--border); }
   .chronicle-item.active { background: var(--bg-card); border-color: var(--amber); box-shadow: inset -3px 0 0 var(--amber); }
+  /* UIV2-14: participant role chips on each session row wrap instead of overflowing. */
+  .chronicle-roles { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .chronicle-roles .agent-chip { font-size: 9.8px; padding: 1px 6px; }
   .chronicle-title { font-size: 12.6px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .chronicle-meta { font-family: var(--mono); font-size: 10.6px; color: var(--text-faint); margin-top: 3px; display: flex; justify-content: space-between; }
 
@@ -3905,7 +3912,10 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
      things or the same thing four times, and a session with nothing pinned looked the same as
      one that had settled something. The block below states the decision, measures how much of
      each reply it carries, and leaves every reply where it was: dissent is named, never merged. */
-  .hall-verdict { margin: 0 18px 9px; padding: 11px 15px; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-sm); background: var(--bg-card); font-size: 12px; line-height: 1.55; color: var(--text-dim); }
+  /* UIV2-14: the verdict (disagreements + evidence table) is capped and scrolls on its own, as a
+     sibling of the transcript - never inside it - so a long verdict cannot push the composer
+     out of the pane and there is no nested-scroll trap. */
+  .hall-verdict { margin: 0 18px 9px; padding: 11px 15px; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-sm); background: var(--bg-card); font-size: 12px; line-height: 1.55; color: var(--text-dim); max-height: 24vh; overflow-y: auto; overscroll-behavior: contain; }
   .hall-verdict[hidden] { display: none; }
   .hall-verdict[data-state="open"] { border-left-color: var(--amber); }
   .hall-verdict[data-state="single"] { border-left-color: var(--rose); }
@@ -3929,7 +3939,9 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .conclusion-banner[data-pinned="false"] { position: static; }
   .conclusion-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 5px; }
   .conclusion-actions { display: flex; gap: 6px; }
-  .conclusion-body { max-height: 24vh; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding-right: 6px; border-radius: var(--radius-sm); }
+  /* UIV2-14: the pinned conclusion shows a compact summary by default; the full text is one
+     Expand away (true modal) and the body stays independently scrollable + resizable. */
+  .conclusion-body { max-height: 96px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding-right: 6px; border-radius: var(--radius-sm); }
   .conclusion-body:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
   .conclusion-resize { height: 9px; margin: 4px -15px -4px; cursor: ns-resize; border-top: 1px solid transparent; border-radius: 0 0 var(--radius-lg) var(--radius-lg); touch-action: none; }
   .conclusion-resize:hover { border-top-color: var(--border-hi); }
@@ -8740,6 +8752,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             ${delBtn}
           </div>
           <div class="chronicle-meta"><span>${s.status === 'closed' ? 'Closed' : 'Active'}</span><span>${s.participant_count} voices • ${s.message_count} msgs</span></div>
+          ${s.roles && s.roles.length ? `<div class="chronicle-roles">${s.roles.map((rk) => `<span class="agent-chip ${escapeHtml(rk)}" title="${escapeHtml(rk === "human" ? "Human" : (COUNCIL_ROLES[rk] ? COUNCIL_ROLES[rk].label : rk))}">${escapeHtml(rk === "human" ? "Human" : (COUNCIL_ROLES[rk] ? COUNCIL_ROLES[rk].label : rk))}</span>`).join("")}</div>` : ""}
         </div>`;
       }).join("") + hallClearScopeNoteHtml();
     } catch (e) {}
@@ -9306,7 +9319,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   let hallConclusionResizeDrag = null;
 
   function hallConclusionClampHeight(h) {
-    return Math.min(Math.max(h, 120), Math.round(window.innerHeight * 0.7));
+    return Math.min(Math.max(h, 72), Math.round(window.innerHeight * 0.7));
   }
 
   // Keyboard resize is delegated (no inline onkeydown runs from markup).

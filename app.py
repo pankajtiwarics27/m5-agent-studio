@@ -2872,7 +2872,8 @@ def list_hall_sessions(status: str = "all") -> list[dict[str, Any]]:
         q = """
             SELECT s.*,
                    (SELECT COUNT(*) FROM hall_messages m WHERE m.session_id = s.id) AS message_count,
-                   (SELECT COUNT(DISTINCT author) FROM hall_messages m WHERE m.session_id = s.id) AS participant_count
+                   (SELECT COUNT(DISTINCT author) FROM hall_messages m WHERE m.session_id = s.id) AS participant_count,
+                   (SELECT GROUP_CONCAT(DISTINCT m.role_key) FROM hall_messages m WHERE m.session_id = s.id) AS role_keys
             FROM hall_sessions s
         """
         params: tuple[Any, ...] = ()
@@ -2887,6 +2888,9 @@ def list_hall_sessions(status: str = "all") -> list[dict[str, Any]]:
     for r in rows:
         d = dict(r)
         d["context_files"] = json.loads(d.pop("context_files_json", "[]"))
+        # UIV2-14: the list carries each session's participant roles, so a row can show
+        # who sat in the round without opening the session.
+        d["roles"] = [rk for rk in (d.pop("role_keys", "") or "").split(",") if rk]
         out.append(d)
     return out
 

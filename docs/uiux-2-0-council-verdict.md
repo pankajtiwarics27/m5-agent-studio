@@ -61,7 +61,7 @@ against `scripts/council_readiness_seed.py`.
 
 ## The checks
 
-43 checks, 0 findings — **clean**.
+49 checks, 0 findings — **clean**.
 
 * `pass` the session table records a conclusion with its author and the time it was pinned
 * `pass` a pinned verdict is the seat's own reply, closed by the call that saves it
@@ -100,6 +100,12 @@ against `scripts/council_readiness_seed.py`.
 * `pass` clear-all exists in the sidebar and is armed before it fires
 * `pass` the composer carries a Clear session control for the active session
 * `pass` a refused delete is stated where it happened and keeps the row
+* `pass` the session list carries participant roles from the server
+* `pass` each session row renders its participant role chips
+* `pass` role chips wrap instead of overflowing the row
+* `pass` the pinned conclusion shows a compact summary by default, full text one Expand away
+* `pass` the verdict block is height-capped and scrolls as a sibling of the transcript, not nested in it
+* `pass` the transcript keeps at least 640px at desktop widths
 * `pass` every value the verdict draws is escaped
 * `pass` the pane calls no route for the verdict, and invents none
 * `pass` the fixture answers each catalogue model with its own paragraph, and a stranger with a line

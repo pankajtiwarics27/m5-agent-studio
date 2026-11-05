@@ -35,133 +35,133 @@
       "id": null,
       "tone": "ok",
       "live": false,
-      "line": 1569
+      "line": 1577
     },
     {
       "id": "dockerStateBadge",
       "tone": "neutral",
       "live": false,
-      "line": 1616
+      "line": 1624
     },
     {
       "id": "sdlcProgressBadge",
       "tone": "neutral",
       "live": false,
-      "line": 2132
+      "line": 2140
     },
     {
       "id": "onboardingSummary",
       "tone": "neutral",
       "live": true,
-      "line": 2280
+      "line": 2288
     },
     {
       "id": "startRecentSummary",
       "tone": "neutral",
       "live": true,
-      "line": 2320
+      "line": 2328
     },
     {
       "id": "startHealthSummary",
       "tone": "neutral",
       "live": true,
-      "line": 2347
+      "line": 2355
     },
     {
       "id": "startWorkspaceSummary",
       "tone": "neutral",
       "live": true,
-      "line": 2365
+      "line": 2373
     },
     {
       "id": "harnessActiveStatusBadge",
       "tone": "info",
       "live": true,
-      "line": 2496
+      "line": 2504
     },
     {
       "id": "hallStatusBadge",
       "tone": "info",
       "live": true,
-      "line": 2586
+      "line": 2594
     },
     {
       "id": "councilReadinessCount",
       "tone": "neutral",
       "live": false,
-      "line": 2600
+      "line": 2608
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 5483
+      "line": 5492
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 5581
-    },
-    {
-      "id": null,
-      "tone": "neutral",
-      "live": false,
-      "line": 8865
-    },
-    {
-      "id": null,
-      "tone": "busy",
-      "live": false,
-      "line": 8866
-    },
-    {
-      "id": null,
-      "tone": "ok",
-      "live": false,
-      "line": 8867
-    },
-    {
-      "id": null,
-      "tone": "warn",
-      "live": false,
-      "line": 8868
-    },
-    {
-      "id": null,
-      "tone": "warn",
-      "live": false,
-      "line": 8869
-    },
-    {
-      "id": null,
-      "tone": "warn",
-      "live": false,
-      "line": 8870
-    },
-    {
-      "id": null,
-      "tone": "danger",
-      "live": false,
-      "line": 8871
-    },
-    {
-      "id": null,
-      "tone": "warn",
-      "live": false,
-      "line": 8872
-    },
-    {
-      "id": null,
-      "tone": "warn",
-      "live": false,
-      "line": 8873
+      "line": 5590
     },
     {
       "id": null,
       "tone": "neutral",
       "live": false,
       "line": 8874
+    },
+    {
+      "id": null,
+      "tone": "busy",
+      "live": false,
+      "line": 8875
+    },
+    {
+      "id": null,
+      "tone": "ok",
+      "live": false,
+      "line": 8876
+    },
+    {
+      "id": null,
+      "tone": "warn",
+      "live": false,
+      "line": 8877
+    },
+    {
+      "id": null,
+      "tone": "warn",
+      "live": false,
+      "line": 8878
+    },
+    {
+      "id": null,
+      "tone": "warn",
+      "live": false,
+      "line": 8879
+    },
+    {
+      "id": null,
+      "tone": "danger",
+      "live": false,
+      "line": 8880
+    },
+    {
+      "id": null,
+      "tone": "warn",
+      "live": false,
+      "line": 8881
+    },
+    {
+      "id": null,
+      "tone": "warn",
+      "live": false,
+      "line": 8882
+    },
+    {
+      "id": null,
+      "tone": "neutral",
+      "live": false,
+      "line": 8883
     }
   ],
   "state_matrix": [

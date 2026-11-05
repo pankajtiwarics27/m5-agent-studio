@@ -60,43 +60,43 @@ run a server that has no token configured.
 
 | Handler | Line | How its refusal is handled |
 |---|---|---|
-| `fetchRemoteModels` | 4826 | reports — toasts the server's detail and keeps the typed endpoint |
-| `saveProvider` | 4850 | reports — toasts the server's detail and leaves the form filled |
-| `removeProvider` | 4875 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `saveCombo` | 4885 | reports — toasts the server's detail and leaves the form filled |
-| `removeCombo` | 4902 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `installSkill` | 4970 | reports — throws the server's detail into the skill panel's error line |
-| `confirmSpawnSession` | 5014 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `deleteHallSession` | 5194 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `clearAllHallSessions` | 5211 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `postHumanHallMessage` | 5690 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `postHumanHallMessage` | 5704 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `councilSeatAction` | 6111 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `modelAction` | 6974 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `unloadAllModels` | 6982 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `clearSsdCache` | 6990 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `consumeSSE` | 7002 | reports — reads the refusal's own detail and Retry-After before it opens the stream, so the pane shows the server's reason and the wait instead of `HTTP <status>` |
-| `saveWorkspaceDirectory` | 10135 | reports — returns {ok, message} so Start can present a failure with a cause |
-| `patchActiveHarnessSettings` | 10345 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `deleteHarnessSession` | 10369 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `revokeHarnessGrant` | 11427 | reports — renders the refusal in the grants panel and keeps the grant listed |
-| `resolveHarnessApproval` | 11850 | reports — re-checks the live slot, then resyncs the session on a refusal and prints the server's detail |
-| `abortHarnessRun` | 11886 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `applyHarnessWorktree` | 11938 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `harnessRecoveryPost` | 12938 | reports — returns {ok, status, data} to its caller and never claims a resume it did not get |
-| `saveMcpServer` | 13480 | reports — toasts the server's detail and keeps the form |
-| `importMcpJson` | 13504 | reports — toasts the server's detail and keeps the pasted JSON |
-| `syncMcpServer` | 13518 | reports — toasts the server's detail and re-reads the server list |
-| `toggleMcpServerEnabled` | 13534 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `changeMcpApprovalPolicy` | 13549 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `toggleMcpSingleTool` | 13567 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `deleteMcpServer` | 13582 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `runMcpPlayground` | 13598 | reports — prints the server's detail in the output box |
-| `compactActiveHarness` | 13617 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `saveOpenContextDoc` | 13843 | reports — toasts the server's detail and keeps the editor contents |
-| `togglePinOpenContextDoc` | 13857 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `deleteOpenContextDoc` | 13870 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `runCodeGraphPlayground` | 13921 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `fetchRemoteModels` | 4834 | reports — toasts the server's detail and keeps the typed endpoint |
+| `saveProvider` | 4858 | reports — toasts the server's detail and leaves the form filled |
+| `removeProvider` | 4883 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `saveCombo` | 4893 | reports — toasts the server's detail and leaves the form filled |
+| `removeCombo` | 4910 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `installSkill` | 4978 | reports — throws the server's detail into the skill panel's error line |
+| `confirmSpawnSession` | 5022 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `deleteHallSession` | 5203 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `clearAllHallSessions` | 5220 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `postHumanHallMessage` | 5699 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `postHumanHallMessage` | 5713 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `councilSeatAction` | 6120 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `modelAction` | 6983 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `unloadAllModels` | 6991 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `clearSsdCache` | 6999 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `consumeSSE` | 7011 | reports — reads the refusal's own detail and Retry-After before it opens the stream, so the pane shows the server's reason and the wait instead of `HTTP <status>` |
+| `saveWorkspaceDirectory` | 10144 | reports — returns {ok, message} so Start can present a failure with a cause |
+| `patchActiveHarnessSettings` | 10354 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `deleteHarnessSession` | 10378 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `revokeHarnessGrant` | 11436 | reports — renders the refusal in the grants panel and keeps the grant listed |
+| `resolveHarnessApproval` | 11859 | reports — re-checks the live slot, then resyncs the session on a refusal and prints the server's detail |
+| `abortHarnessRun` | 11895 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `applyHarnessWorktree` | 11947 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `harnessRecoveryPost` | 12947 | reports — returns {ok, status, data} to its caller and never claims a resume it did not get |
+| `saveMcpServer` | 13489 | reports — toasts the server's detail and keeps the form |
+| `importMcpJson` | 13513 | reports — toasts the server's detail and keeps the pasted JSON |
+| `syncMcpServer` | 13527 | reports — toasts the server's detail and re-reads the server list |
+| `toggleMcpServerEnabled` | 13543 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `changeMcpApprovalPolicy` | 13558 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `toggleMcpSingleTool` | 13576 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `deleteMcpServer` | 13591 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `runMcpPlayground` | 13607 | reports — prints the server's detail in the output box |
+| `compactActiveHarness` | 13626 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `saveOpenContextDoc` | 13852 | reports — toasts the server's detail and keeps the editor contents |
+| `togglePinOpenContextDoc` | 13866 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `deleteOpenContextDoc` | 13879 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `runCodeGraphPlayground` | 13930 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
 
 `guarded` writes call `guardedWrite()`; `reports` writes read the status and carry the server's own
 reason in a toast or a returned value, and the inventory names each one's line; anything else is a

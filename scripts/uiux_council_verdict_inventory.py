@@ -405,7 +405,7 @@ def build_inventory() -> dict:
     )
     check(
         "the conclusion body scrolls independently of the transcript",
-        ".conclusion-body { max-height: 24vh; overflow-y: auto;" in html
+        ".conclusion-body { max-height: 96px; overflow-y: auto;" in html
         and 'class="conclusion-body" tabindex="0" role="region"' in render_hall,
         "a 10k+ character conclusion needs its own wheel/trackpad/touch/keyboard scroll",
     )
@@ -415,7 +415,7 @@ def build_inventory() -> dict:
         and "addEventListener(\"pointermove\", hallConclusionResizeMove)" in html
         and "hallConclusionResizeKey" in html
         and 'role="separator" aria-orientation="horizontal" tabindex="0"' in render_hall
-        and "Math.min(Math.max(h, 120), Math.round(window.innerHeight * 0.7))" in html,
+        and "Math.min(Math.max(h, 72), Math.round(window.innerHeight * 0.7))" in html,
         "a resize that could eat the whole pane would trade one scroll lock for another",
     )
     check(
@@ -523,6 +523,42 @@ def build_inventory() -> dict:
         and "still on the server" in html,
         "a 409 must be shown, not swallowed into a pane that looks cleared",
     )
+    # ── UIV2-14: readable session list, participant roles, compact pinned summary ──
+    check(
+        "the session list carries participant roles from the server",
+        "GROUP_CONCAT(DISTINCT m.role_key)" in server
+        and 'd["roles"] = [rk for rk in (d.pop("role_keys", "") or "").split(",") if rk]' in server,
+        "a readable list says who sat in the round, not only how many voices",
+    )
+    check(
+        "each session row renders its participant role chips",
+        'class="chronicle-roles"' in html and "s.roles.map((rk)" in html and "agent-chip ${escapeHtml(rk)}" in html,
+        "roles belong on the row, labeled and escaped",
+    )
+    check(
+        "role chips wrap instead of overflowing the row",
+        ".chronicle-roles { display: flex; flex-wrap: wrap;" in html,
+        "chips must wrap gracefully at narrow widths, not scroll sideways",
+    )
+    check(
+        "the pinned conclusion shows a compact summary by default, full text one Expand away",
+        ".conclusion-body { max-height: 96px;" in html
+        and 'openOverlay("hallConclusionModal")' in html
+        and "max-height:70vh" in html,
+        "a long conclusion must not obscure the controls; the full text stays in the true modal",
+    )
+    check(
+        "the verdict block is height-capped and scrolls as a sibling of the transcript, not nested in it",
+        ".hall-verdict {" in html and "max-height: 24vh; overflow-y: auto; overscroll-behavior: contain; }" in html
+        and "hallVerdict" in html,
+        "a long disagreements table must not push the composer out of the pane",
+    )
+    check(
+        "the transcript keeps at least 640px at desktop widths",
+        ".hall-shell" in html and "grid-template-columns" in html,
+        "checked live by the walk at 1640/1440/1280 (stream width measured, not assumed)",
+    )
+
     check(
         "every value the verdict draws is escaped",
         not unescaped_interpolations(verdict_functions),
