@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "f0d531f0bc73782f54b08202b1301c6c94ff951c0455bc99a888f0c6b6ecdd21",
+  "frontend_sha256": "978c88ceb32023fef6948453cc32d32d0a06e7fba78a0c58ebb99cd411c643eb",
   "panes": [
     {
       "dom_id": "start",
@@ -367,9 +367,9 @@
     {
       "dom_id": "hall",
       "section_id": "pane-hall",
-      "control_count": 18,
+      "control_count": 20,
       "counts": {
-        "button": 7,
+        "button": 9,
         "select": 8,
         "summary": 2,
         "textarea": 1
@@ -382,6 +382,16 @@
           "class": "btn",
           "onclick": "openSpawnModal()",
           "text": "+ Spawn Council Session"
+        },
+        {
+          "tag": "button",
+          "id": "hallClearAllBtn",
+          "type": "button",
+          "class": "btn btn-xs",
+          "aria-label": "Clear all Council sessions",
+          "title": "Delete every Council session and its transcript (asks for confirmation; irreversible - not an archive; workspace files are never touched)",
+          "onclick": "armHallClearAll()",
+          "text": "Clear all"
         },
         {
           "tag": "button",
@@ -399,6 +409,15 @@
           "title": "Convene remaining voices if needed, then pin Lead Arbiter Final Verdict",
           "onclick": "summonConclusion()",
           "text": "Finish and pin summary"
+        },
+        {
+          "tag": "button",
+          "id": "hallClearSessionBtn",
+          "class": "btn",
+          "aria-label": "Clear the active Council session",
+          "title": "Delete the active Council session and its transcript (asks for confirmation; irreversible - not an archive; workspace files are never touched)",
+          "onclick": "armHallClearSession()",
+          "text": "Clear session"
         },
         {
           "tag": "summary",
@@ -1508,14 +1527,16 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 204,
-    "pane_controls": 95,
+    "markup_controls": 206,
+    "pane_controls": 97,
     "chrome_controls": 109,
-    "script_rendered_controls": 56,
+    "script_rendered_controls": 61,
     "script_rendered_by_function": {
       "ensureStageCardMounted": 1,
+      "hallClearScopeNoteHtml": 2,
       "harnessEvidenceChangeHtml": 1,
       "openSpawnModal": 1,
+      "refreshHallSessions": 3,
       "refreshInspectorPanel": 8,
       "refreshOnboarding": 1,
       "renderActiveHall": 3,

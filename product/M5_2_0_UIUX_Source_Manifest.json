@@ -12,23 +12,23 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "f0d531f0bc73782f54b08202b1301c6c94ff951c0455bc99a888f0c6b6ecdd21",
-      "bytes": 807174,
-      "lines": 13978
+      "sha256": "978c88ceb32023fef6948453cc32d32d0a06e7fba78a0c58ebb99cd411c643eb",
+      "bytes": 817217,
+      "lines": 14174
     },
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "81f500f4152992e498bfb48f3e6e224399a4f1a30bd75c10fd87ce0309035b9d",
-      "bytes": 1007289,
-      "lines": 21725
+      "sha256": "b35e004105d3951ba584e9e33cd3d94aa53ed5db573f804fe5fc3ec7e12f7751",
+      "bytes": 1010887,
+      "lines": 21814
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "943654bb9f8df6d904b04dbea600c1dc33aec142d5796ad1a62d42cafd69d835",
-      "bytes": 3549596,
-      "lines": 77080
+      "sha256": "19e45f4053ca8bf11fc2c32345e5d23d81bba0ec06f5b5d8b1fdcb0a71c247b1",
+      "bytes": 3563237,
+      "lines": 77365
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -418,9 +418,9 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "96951c178404f804dc3b7f4a90155511f5cac5f33c38ed63bc6caa6aab81a480",
-      "bytes": 52397,
-      "lines": 1091
+      "sha256": "b95b9d22ce97117471ff85c05b256383750a2b648ec5308e74b71ffe318d9801",
+      "bytes": 53608,
+      "lines": 1105
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "f0d531f0bc73782f54b08202b1301c6c94ff951c0455bc99a888f0c6b6ecdd21",
-    "lines": 13978,
+    "sha256": "978c88ceb32023fef6948453cc32d32d0a06e7fba78a0c58ebb99cd411c643eb",
+    "lines": 14174,
     "tab_count": 6,
     "tabs": [
       {
@@ -507,7 +507,7 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 66,
+    "fetch_call_count": 68,
     "api_literal_count": 54,
     "api_literals": [
       "/api/cache/clear-ssd",
@@ -568,10 +568,10 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "81f500f4152992e498bfb48f3e6e224399a4f1a30bd75c10fd87ce0309035b9d",
-    "route_count": 115,
+    "sha256": "b35e004105d3951ba584e9e33cd3d94aa53ed5db573f804fe5fc3ec7e12f7751",
+    "route_count": 117,
     "by_method": {
-      "DELETE": 5,
+      "DELETE": 7,
       "GET": 38,
       "PATCH": 3,
       "POST": 69
@@ -664,6 +664,14 @@
       {
         "method": "POST",
         "path": "/api/hall/sessions/{session_id}/summon"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/hall/sessions"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/hall/sessions/{session_id}"
       },
       {
         "method": "GET",

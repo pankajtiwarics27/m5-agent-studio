@@ -8,8 +8,8 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 204 markup controls (109 chrome, 95 panes) · 56 rendered by script.
-* 115 routes exist, 69 with a resolved or possible caller, 46 with none observed and 0 unknown due to unresolved edges; 46 state-changing candidates traced.
+* 6 panes · 21 preserved capabilities · 206 markup controls (109 chrome, 97 panes) · 61 rendered by script.
+* 117 routes exist, 71 with a resolved or possible caller, 46 with none observed and 0 unknown due to unresolved edges; 48 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
 
@@ -28,8 +28,8 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 204 markup controls (109 chrome, 95 panes) plus 56 rendered by script |
-| 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 115 routes exist; 69 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 46 state-changing candidates; the lexical scan is not exhaustive |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 206 markup controls (109 chrome, 97 panes) plus 61 rendered by script |
+| 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 117 routes exist; 71 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 48 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
 
@@ -166,13 +166,15 @@ A council session: who was asked, what each participant said, in order.
 |---|---|---|
 | Council Hall session spawning and chronicle browsing | Council primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 
-**Controls — 18 in the markup:**
+**Controls — 20 in the markup:**
 
 | Tag | Id | Label | Handler |
 |---|---|---|---|
 | button | — | + Spawn Council Session | openSpawnModal() |
+| button | hallClearAllBtn | Clear all | armHallClearAll() |
 | button | hallFullRoundBtn | Run full round | runHallFullRound() |
 | button | hallConcludeBtn | Finish and pin summary | summonConclusion() |
+| button | hallClearSessionBtn | Clear session | armHallClearSession() |
 | summary | — | Council role models | — |
 | button | councilReadinessRefresh | Check again | refreshCouncilReadiness() |
 | select | hallSeatArch | — | — |
@@ -189,12 +191,14 @@ A council session: who was asked, what each participant said, in order.
 | select | hallSendModeSelect | Send & run 4-LLM round Post note only | — |
 | button | hallSendBtn | Send | submitHallComposer() |
 
-**Routes reached from this pane's controls — 8, walking at most 2 calls; 7 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
+**Routes reached from this pane's controls — 10, walking at most 2 calls; 7 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
 
 | Method | Route | Certainty | State-changing | Walk | Gates that can refuse it |
 |---|---|---|---|---|---|
-| GET | `/api/hall/sessions` | certain | no | `submitHallComposer` → `postHumanHallMessage` → `refreshHallSessions` | — |
-| GET | `/api/hall/sessions/{session_id}` | certain | no | `runHallFullRound` → `summonAgentPromise` → `selectHallSession` | — |
+| DELETE | `/api/hall/sessions` | certain | yes | `armHallClearAll` → `refreshHallSessions` → `clearAllHallSessions` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
+| DELETE | `/api/hall/sessions/{session_id}` | certain | yes | `armHallClearAll` → `refreshHallSessions` → `deleteHallSession` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
+| GET | `/api/hall/sessions` | certain | no | `armHallClearAll` → `refreshHallSessions` | — |
+| GET | `/api/hall/sessions/{session_id}` | certain | no | `armHallClearAll` → `refreshHallSessions` → `selectHallSession` | — |
 | GET | `/api/providers` | certain | no | `refreshCouncilReadiness` → `loadProviders` | — |
 | GET | `/api/telemetry` | certain | no | `refreshCouncilReadiness` → `refreshTelemetry` | — |
 | GET | `/api/workspace/files` | certain | no | `openSpawnModal` | — |
@@ -372,11 +376,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b` | `not recorded` |
-| `source_manifest_sha256` | `b3348a43cb0585e4a55f83a0723c1bec766ccdaa9b43dec9b1a5e283308429e8` | `not recorded` |
-| `control_inventory_sha256` | `2e164e281b51ccd0aad47ba4f7a2f90a3623e7eac391dab0985eaaa588f26575` | `not recorded` |
-| `route_map_sha256` | `7a63e28daf00505ac92a22bd37ba246f752b615ba4d7d547241f0e2af1df907b` | `not recorded` |
-| `authorization_trace_sha256` | `6143ba354837f292e02a03392d89c7743afd6541844c0b9950bbb17525a69945` | `not recorded` |
-| `frontend_sha256` | `f0d531f0bc73782f54b08202b1301c6c94ff951c0455bc99a888f0c6b6ecdd21` | `not recorded` |
+| `source_manifest_sha256` | `bce9f14b94a9ad1e34e94229fbc9bfe1a9008ff54e32bc35aed2e54298ab47d4` | `not recorded` |
+| `control_inventory_sha256` | `c117d8104f174a619b07fc51228d458d7d9f2dea9d0a8325a75345e8cb7e8606` | `not recorded` |
+| `route_map_sha256` | `3436b3f3f8b4a3008a1cec14b6b8940164278e463c48c3825898e29d01582e30` | `not recorded` |
+| `authorization_trace_sha256` | `b3a7828f94b311e0b5580045b5d28aabadbcd3af23c285cbce5f9726e698e8ac` | `not recorded` |
+| `frontend_sha256` | `978c88ceb32023fef6948453cc32d32d0a06e7fba78a0c58ebb99cd411c643eb` | `not recorded` |
 | `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
 | `screenshot_index_sha256` | `16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |
