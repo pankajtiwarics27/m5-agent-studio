@@ -236,7 +236,7 @@
       "detail": ""
     },
     {
-      "check": "the summon route keeps its defaults, so a seat-less caller behaves as before",
+      "check": "the summon route still states the author, role and model on summon_start and saves one reply",
       "ok": true,
       "detail": ""
     },

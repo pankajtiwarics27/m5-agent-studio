@@ -198,7 +198,7 @@ A council session: who was asked, what each participant said, in order.
 | DELETE | `/api/hall/sessions` | certain | yes | `armHallClearAll` → `refreshHallSessions` → `clearAllHallSessions` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | DELETE | `/api/hall/sessions/{session_id}` | certain | yes | `armHallClearAll` → `refreshHallSessions` → `deleteHallSession` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | GET | `/api/hall/sessions` | certain | no | `armHallClearAll` → `refreshHallSessions` | — |
-| GET | `/api/hall/sessions/{session_id}` | certain | no | `armHallClearAll` → `refreshHallSessions` → `selectHallSession` | — |
+| GET | `/api/hall/sessions/{session_id}` | certain | no | `runHallFullRound` → `hallReconcileTurn` → `readHallSession` | — |
 | GET | `/api/providers` | certain | no | `refreshCouncilReadiness` → `loadProviders` | — |
 | GET | `/api/telemetry` | certain | no | `refreshCouncilReadiness` → `refreshTelemetry` | — |
 | GET | `/api/workspace/files` | certain | no | `openSpawnModal` | — |
@@ -376,11 +376,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b` | `not recorded` |
-| `source_manifest_sha256` | `ee808e54521f17be98c3fb8c73b9f7994fe554419693c868f36ccebdd668fa56` | `not recorded` |
-| `control_inventory_sha256` | `a37f34bb326660339815d7cadbdd203d988ed79d6bd9dd651206c81c371247e5` | `not recorded` |
-| `route_map_sha256` | `fc485a6bf8ca23818b0b86ffe0ebdb1a2c28115832bd5294d85a2a3edbc3dc2c` | `not recorded` |
-| `authorization_trace_sha256` | `0d0e426761647436baf2b179fde6f0cb6ccdaf15be922a585c2892cb917199ee` | `not recorded` |
-| `frontend_sha256` | `82f2bddd0a41018e4fc607770fc28639808f851c563d173792eccb02edc803d7` | `not recorded` |
+| `source_manifest_sha256` | `32ef72bbc9e9d36d272b7479a3bc7a779c9e578a72a819bae12f1e6839cd2101` | `not recorded` |
+| `control_inventory_sha256` | `932572a3d7b98fcf9c4748cfdfe35bf6daeb4205ab2cd60eb5f610fa507cabf9` | `not recorded` |
+| `route_map_sha256` | `99098afd49a34154ca88ca23dfed40013bd6100cc3d8123dc980e95f3a37a309` | `not recorded` |
+| `authorization_trace_sha256` | `a170c6b4fccb69cbf37dbe982525a65cca4f74b59b99cb2b58c633cf9b64185a` | `not recorded` |
+| `frontend_sha256` | `903e7721d05a0934e5dd0b3cc372da7b98e51e9c8c1bac60c236af0baeb10214` | `not recorded` |
 | `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
 | `screenshot_index_sha256` | `16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

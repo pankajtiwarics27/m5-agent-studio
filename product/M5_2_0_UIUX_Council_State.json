@@ -1,0 +1,300 @@
+{
+  "story": "UIV2-15",
+  "title": "Council state consistency and streaming recovery",
+  "generated_by": "scripts/uiux_council_state_inventory.py",
+  "pickers": [
+    {
+      "id": "harnessLeadModel",
+      "council": false
+    },
+    {
+      "id": "harnessCriticModel",
+      "council": false
+    },
+    {
+      "id": "hallModelSelect",
+      "council": true
+    },
+    {
+      "id": "hallSeatArch",
+      "council": true
+    },
+    {
+      "id": "hallSeatCoder",
+      "council": true
+    },
+    {
+      "id": "hallSeatCritic",
+      "council": true
+    },
+    {
+      "id": "hallSeatJudge",
+      "council": true
+    },
+    {
+      "id": "c-arch",
+      "council": false
+    },
+    {
+      "id": "c-coder",
+      "council": false
+    },
+    {
+      "id": "c-critic",
+      "council": false
+    },
+    {
+      "id": "c-judge",
+      "council": false
+    },
+    {
+      "id": "d-judge",
+      "council": false
+    },
+    {
+      "id": "chatModel",
+      "council": false
+    }
+  ],
+  "turn_facts": [
+    {
+      "fact": "active_turn",
+      "meaning": "a seat is answering on the server right now"
+    },
+    {
+      "fact": "abandoned_turn",
+      "meaning": "a stream ended and its reply never reached the transcript"
+    }
+  ],
+  "refusals": [
+    {
+      "status": "400",
+      "refused": "a summon that names no model",
+      "replaces": "the route defaulted to Qwen3.8-27B-oQ4e-mtp"
+    },
+    {
+      "status": "400",
+      "refused": "a summon that names no known role",
+      "replaces": "AGENT_ROLES.get(role_key, architect) made it Seat 1"
+    },
+    {
+      "status": "409",
+      "refused": "a summon into a closed session",
+      "replaces": "the answer was written over the pinned conclusion"
+    }
+  ],
+  "hall_routes": [
+    {
+      "method": "GET",
+      "path": "/api/hall/sessions"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hall/sessions"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/hall/sessions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hall/sessions/{session_id}"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/hall/sessions/{session_id}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hall/sessions/{session_id}/message"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hall/sessions/{session_id}/close"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hall/sessions/{session_id}/summon"
+    }
+  ],
+  "checks": [
+    {
+      "check": "the Council pickers a dispatch reads are named once, in one list",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a catalogue poll does not rebuild the Council pickers while a dispatch holds them",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "every picker keeps the id it holds, not only the four Council seats",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "an id the current read does not carry is kept once, under Unavailable",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a rebuild keeps the keyboard focus it found",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "choosing a role does not silently replace the picked model",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a custom-id marker survives a catalogue refresh",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the server keeps a registry for the running turn and the last lost one",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "both facts travel with the session read the pane already makes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the summon records the turn before it streams and clears it in its own finally",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a stream that ends without saving is recorded as abandoned, not left silent",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a saved turn clears the lost record it answers",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "deleting or clearing a session drops its turn records",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a summon that names no model is refused instead of defaulted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a summon that names no known seat is refused instead of becoming Seat 1",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a summon into a closed session is refused, with the way back named",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a Human message reopens a closed session and keeps the pinned conclusion",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the story adds no route: the Council surface is the eight routes it already had",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a failed session read is stated instead of skipped",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a session that no longer exists is named as gone, with the id",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "an unreadable session keeps what is on screen and says it is not known to be current",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the dropped-stream handler reconciles against the server",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the text that arrived before the drop is kept, drawn as not saved",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the reconcile polls while the server says a seat is answering, and stops",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a running turn is stated as running, not as a failed one",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a lost turn names the seat, the model and the discarded characters",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a closed or vanished session cannot be dispatched into, and the reason is on the control",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the closed guard runs before readiness, at both dispatch entry points",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the closed presentation offers the write that reopens the session",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "a reopen by message is reported, with the pinned verdict kept",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the round reconciles after it ends, so a lost seat is not hidden",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the composer's note-only path stays available in every one of these states",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the pinned conclusion and the verdict block are untouched by this story",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "one summon call site, one stream reader",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the seat order and the reasoning modes the round posts are unchanged",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "check_count": 35,
+  "findings": [],
+  "status": "clean"
+}

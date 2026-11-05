@@ -93,5 +93,5 @@ regenerate it, and the check behind it stays true.
 * `pass` the failed seat redraws the server's transcript, so no card keeps saying Connecting
 * `pass` the story adds no endpoint: every route it calls was already mounted
 * `pass` the summon route still speaks its four events and saves through append_hall_message
-* `pass` the summon route keeps its defaults, so a seat-less caller behaves as before
+* `pass` the summon route still states the author, role and model on summon_start and saves one reply
 * `pass` the pane still posts only a summon, and the same one

@@ -158,11 +158,11 @@
             "routes_that_can_leave_the_machine": 23,
             "distinct_handler_refusals": 9,
             "refusals_by_status": {
-              "400": 86,
+              "400": 88,
               "401": 48,
               "403": 54,
               "404": 20,
-              "409": 18,
+              "409": 19,
               "413": 48,
               "429": 6,
               "500": 1,
@@ -178,10 +178,10 @@
               "429": 6
             },
             "handler_refusals_by_status": {
-              "400": 38,
+              "400": 40,
               "403": 6,
               "404": 20,
-              "409": 18,
+              "409": 19,
               "500": 1,
               "502": 1,
               "503": 9,
@@ -245,7 +245,7 @@
           "totals": {
             "tokens": 54,
             "groups": 8,
-            "references": 1283,
+            "references": 1284,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -318,13 +318,13 @@
           "artifact": "product/M5_2_0_UIUX_Presentations.json",
           "totals": {
             "kinds": 3,
-            "surfaces": 13,
+            "surfaces": 19,
             "containers": 9,
             "wired_containers": 9,
             "by_kind": {
               "empty": 3,
-              "error": 7,
-              "recovery": 3
+              "error": 9,
+              "recovery": 7
             },
             "remaining_raw_writers": 3,
             "findings": 0

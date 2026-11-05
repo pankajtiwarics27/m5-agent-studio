@@ -2803,6 +2803,16 @@ def append_hall_message(
             (session_id, author, role_key, model, content, reasoning, usage_payload, now),
         )
         conn.execute("UPDATE hall_sessions SET updated_at = ? WHERE id = ?", (now, session_id))
+        # UIV2-15: a session that takes a Human message is open again. Leaving the status at
+        # `closed` while a transcript keeps growing is the state a reader cannot act on: the
+        # badge said concluded, the pinned conclusion stayed, and the next voice answered over
+        # it. The conclusion itself is kept - it was pinned at a time and says so - and it is
+        # only replaced when a seat pins a new one.
+        if role_key == "human":
+            conn.execute(
+                "UPDATE hall_sessions SET status = 'active' WHERE id = ? AND status = 'closed'",
+                (session_id,),
+            )
         return int(cur.lastrowid or 0)
 
     msg_id = runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _append_msg_tx)
@@ -2834,6 +2844,25 @@ def close_hall_session_db(session_id: str, author: str, conclusion: str) -> dict
 # remove a session whose reply is still being written.
 _HALL_RUNNING_SUMMONS: set[str] = set()
 
+# UIV2-15: which seat a session is running right now, and the last seat whose stream ended
+# before its reply reached the transcript. Both are read-only and travel with
+# `GET /api/hall/sessions/{id}`, so a client that lost its stream (a sleeping laptop, a proxy
+# that drops an idle connection, a reload) can say which of the two happened - "Seat 3 is still
+# answering" versus "that reply was never written" - instead of leaving a card on
+# "Connecting..." or guessing that a round it did not see finish wrote nothing.
+_HALL_ACTIVE_TURNS: dict[str, dict[str, Any]] = {}
+_HALL_ABANDONED_TURNS: dict[str, dict[str, Any]] = {}
+
+
+def hall_turn_state(session_id: str) -> dict[str, Any]:
+    """The two turn facts a reader needs to reconcile: running now, or lost unsaved."""
+    active = _HALL_ACTIVE_TURNS.get(session_id)
+    abandoned = _HALL_ABANDONED_TURNS.get(session_id)
+    return {
+        "active_turn": dict(active) if active else None,
+        "abandoned_turn": dict(abandoned) if abandoned else None,
+    }
+
 
 def delete_hall_session_db(session_id: str) -> None:
     """True delete of one Council session and its transcript - not an archive.
@@ -2847,6 +2876,10 @@ def delete_hall_session_db(session_id: str) -> None:
         conn.execute("DELETE FROM hall_sessions WHERE id = ?", (session_id,))
 
     runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _delete_tx)
+    # A deleted session owns no turn state: a re-created id would otherwise inherit the
+    # last session's "abandoned" or "running" label.
+    _HALL_ACTIVE_TURNS.pop(session_id, None)
+    _HALL_ABANDONED_TURNS.pop(session_id, None)
 
 
 def clear_hall_sessions_db(exclude: set[str]) -> int:
@@ -2863,7 +2896,11 @@ def clear_hall_sessions_db(exclude: set[str]) -> int:
             deleted += int(cur.rowcount or 0)
         return deleted
 
-    return int(runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _clear_tx) or 0)
+    deleted = int(runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _clear_tx) or 0)
+    for sid in list(_HALL_ABANDONED_TURNS):
+        if sid not in exclude:
+            _HALL_ABANDONED_TURNS.pop(sid, None)
+    return deleted
 
 
 def list_hall_sessions(status: str = "all") -> list[dict[str, Any]]:
@@ -2923,6 +2960,9 @@ def get_hall_session(session_id: str, after_id: int = 0) -> dict[str, Any]:
     sess["messages"] = msgs
     sess["participants"] = participants
     sess["next_cursor"] = str(msgs[-1]["id"]) if msgs else str(after_id)
+    # UIV2-15: a reconnect reads the same route it read before, and it has to be able to tell
+    # a seat that is still answering from a reply that was never written.
+    sess.update(hall_turn_state(session_id))
     return sess
 
 
@@ -4936,8 +4976,32 @@ async def api_hall_close(session_id: str, request: Request) -> JSONResponse:
 @app.post("/api/hall/sessions/{session_id}/summon")
 async def api_hall_summon(session_id: str, request: Request) -> StreamingResponse:
     body = await request.json()
-    model = body.get("model") or "Qwen3.8-27B-oQ4e-mtp"
-    role_key = body.get("role_key") or "architect"
+    # UIV2-15: a seat is a named model in a named role, and the server substitutes neither.
+    # `body.get("model") or "Qwen3.8-27B-oQ4e-mtp"` answered for a model nobody picked, and
+    # `AGENT_ROLES.get(role_key, AGENT_ROLES["architect"])` made an unknown role into Seat 1,
+    # so a client bug - or a dispatch built from a stale catalogue - spent a real inference on
+    # a seat the reader never chose and labelled the answer with it.
+    model = body.get("model")
+    model = model.strip() if isinstance(model, str) else ""
+    if not model:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "A Council summon must name the model for its seat; the server will not pick one. "
+                "Re-open the picker (or re-read the catalogue) and dispatch the seat again."
+            ),
+        )
+    role_key = body.get("role_key")
+    role_key = role_key.strip() if isinstance(role_key, str) else ""
+    if role_key not in AGENT_ROLES:
+        known = ", ".join(sorted(AGENT_ROLES))
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"{role_key or 'no role'} is not a Council seat ({known}); the server will not "
+                "substitute one. Dispatch the seat from the pane's own role picker."
+            ),
+        )
     reasoning_mode = body.get("reasoning_mode") or "off"
     auto_unload = bool(body.get("auto_unload", True))
     pin_as_conclusion = bool(body.get("pin_as_conclusion", False))
@@ -4947,15 +5011,56 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
         sess = get_hall_session(session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    # UIV2-15: a closed session has a pinned conclusion. A summon into it would answer over
+    # that verdict and, with `pin_as_conclusion`, replace it without the reader choosing to.
+    # The refusal names the way back: a Human message reopens the session (append_hall_message).
+    if sess.get("status") == "closed":
+        who = sess.get("conclusion_author") or "a seat"
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Session {session_id} is closed: {who} pinned its conclusion and a new answer "
+                "would be written over that verdict. Send a Human message to reopen the session, "
+                "or start a new one."
+            ),
+        )
     # UIV2-13: while this stream is in flight the session is "running" - the delete
     # routes refuse it (409) and clear-all skips it.
     _HALL_RUNNING_SUMMONS.add(session_id)
 
-    role_meta = AGENT_ROLES.get(role_key, AGENT_ROLES["architect"])
+    role_meta = AGENT_ROLES[role_key]
     author_label = f"{role_meta['label']} ({model})"
     client: httpx.AsyncClient = request.app.state.http
+    turn_started_at = time.time()
+    # UIV2-15: what this route is doing, readable by a client that is not watching the stream.
+    _HALL_ACTIVE_TURNS[session_id] = {
+        "author": author_label,
+        "role_key": role_key,
+        "model": model,
+        "pin_as_conclusion": pin_as_conclusion,
+        "started_at": turn_started_at,
+    }
+    # A new turn is the answer to the last lost one: the old label would otherwise outlive it.
+    _HALL_ABANDONED_TURNS.pop(session_id, None)
 
     async def event_gen() -> AsyncIterator[str]:
+        buf, rbuf, usage_info = [], [], {}
+        saved = False
+        terminal_sent = False
+
+        def abandoned(reason: str) -> dict[str, Any]:
+            record = {
+                "author": author_label,
+                "role_key": role_key,
+                "model": model,
+                "started_at": turn_started_at,
+                "streamed_chars": len("".join(buf)) + len("".join(rbuf)),
+                "reason": reason,
+                "at": time.time(),
+            }
+            _HALL_ABANDONED_TURNS[session_id] = record
+            return record
+
         try:
             skill_block, skill_summaries = await build_skills_context(skill_ids, sess["request_text"])
             if skill_summaries:
@@ -4971,10 +5076,13 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
             messages = [{"role": "system", "content": role_meta["system"] + skill_block}, {"role": "user", "content": user_prompt}]
 
             yield _sse("summon_start", {"author": author_label, "role_key": role_key, "model": model})
-            buf, rbuf, usage_info = [], [], {}
 
             async for item in stream_any_model(client, model, messages, temperature=0.0, max_tokens=4600, reasoning_mode=reasoning_mode):
                 if await request.is_disconnected():
+                    # The reader stopped this stream (Stop) or the connection died. Nothing of
+                    # this turn reaches the transcript, and the dropped turn is recorded so the
+                    # next read can say that rather than showing a card that never resolves.
+                    abandoned("the reader's connection closed before the reply was saved")
                     return
                 if item["type"] == "content":
                     buf.append(item["text"])
@@ -4988,6 +5096,9 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
 
             if not "".join(buf).strip() and rbuf and is_local_omlx_model(model):
                 async for item in stream_any_model(client, model, messages, temperature=0.0, max_tokens=4096, reasoning_mode="off"):
+                    if await request.is_disconnected():
+                        abandoned("the reader's connection closed before the reply was saved")
+                        return
                     if item["type"] == "content":
                         buf.append(item["text"])
                         yield _sse("token", {"kind": "content", "text": item["text"]})
@@ -4996,16 +5107,27 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
 
             final_text = "".join(buf).strip() or "".join(rbuf).strip()
             saved_msg = append_hall_message(session_id, author_label, role_key, final_text, model=model, reasoning="".join(rbuf), usage=usage_info)
+            saved = True
             if pin_as_conclusion:
                 close_hall_session_db(session_id, author_label, final_text)
             if auto_unload and is_local_omlx_model(model):
                 await _unload_omlx_model(client, parse_model_route(model)[2])
 
+            _HALL_ABANDONED_TURNS.pop(session_id, None)
             yield _sse("summon_done", {"message": saved_msg, "pinned_conclusion": pin_as_conclusion})
+            terminal_sent = True
         except Exception as exc:
             yield _sse("error", {"message": str(exc)})
+            terminal_sent = True
         finally:
             _HALL_RUNNING_SUMMONS.discard(session_id)
+            _HALL_ACTIVE_TURNS.pop(session_id, None)
+            # A turn that neither reached the transcript nor told the reader why is a lost
+            # turn: the connection died, or this generator was cancelled with the client gone.
+            # Recording it is what lets the next read say "that reply was never saved" instead
+            # of a pane that waits forever on a card that will never finish.
+            if not saved and not terminal_sent and session_id not in _HALL_ABANDONED_TURNS:
+                abandoned("the stream ended before the reply was saved")
 
     return StreamingResponse(event_gen(), media_type="text/event-stream")
 

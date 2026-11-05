@@ -501,10 +501,16 @@ def build_inventory() -> dict:
         ", ".join(event for event in SUMMON_EVENTS if f'_sse("{event}"' not in server_route),
     )
     check(
-        "the summon route keeps its defaults, so a seat-less caller behaves as before",
-        'body.get("model") or "Qwen3.8-27B-oQ4e-mtp"' in server_route
-        and 'body.get("role_key") or "architect"' in server_route
-        and 'AGENT_ROLES.get(role_key, AGENT_ROLES["architect"])' in server_route,
+        # UIV2-15 replaced the route's defaults with refusals: a body that names no model or no
+        # known seat is answered 400 rather than dispatched as Qwen3.8-27B-oQ4e-mtp / Seat 1.
+        # The contract this story documented is that the route still states its author, role and
+        # model on `summon_start` and saves one message on `summon_done`.
+        "the summon route still states the author, role and model on summon_start and saves one reply",
+        '"summon_start"' in server_route
+        and '"author": author_label' in server_route
+        and "append_hall_message(session_id, author_label, role_key, final_text" in server_route
+        and "if not model:" in server_route
+        and "if role_key not in AGENT_ROLES:" in server_route,
         server_route[:200],
     )
     check(
