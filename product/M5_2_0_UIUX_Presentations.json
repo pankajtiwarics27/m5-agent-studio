@@ -162,6 +162,86 @@
       "container": "hallSummonState",
       "pane": "Council",
       "kind": "error",
+      "title": "This Council session no longer exists (404)",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Start a new session",
+        "Reload the session list"
+      ],
+      "line": 5278
+    },
+    {
+      "container": "hallSummonState",
+      "pane": "Council",
+      "kind": "recovery",
+      "title": "The session could not be read",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Read it again",
+        "Reload the session list"
+      ],
+      "line": 5291
+    },
+    {
+      "container": "hallSummonState",
+      "pane": "Council",
+      "kind": "recovery",
+      "title": "`This session is closed: ${s.conclusion_author || \"a seat\"} pinned the conclusion`",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Write a note to reopen",
+        "Read the conclusion",
+        "Start a new session"
+      ],
+      "line": 5305
+    },
+    {
+      "container": "hallSummonState",
+      "pane": "Council",
+      "kind": "recovery",
+      "title": "`${seat ? `Seat ${seat.seat} · ${seat.label}` : (turn.author || \"A seat\")} is still answering`",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Read it now",
+        "Stop watching"
+      ],
+      "line": 5321
+    },
+    {
+      "container": "hallSummonState",
+      "pane": "Council",
+      "kind": "error",
+      "title": "`${seat ? `Seat ${seat.seat} · ${seat.label}` : (lost.author || \"That seat\")}'s reply was not saved`",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Ask this seat again",
+        "Read the session",
+        "Check readiness"
+      ],
+      "line": 5337
+    },
+    {
+      "container": "hallSummonState",
+      "pane": "Council",
+      "kind": "recovery",
+      "title": "This session is open again",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Read the old conclusion",
+        "Convene the round"
+      ],
+      "line": 5931
+    },
+    {
+      "container": "hallSummonState",
+      "pane": "Council",
+      "kind": "error",
       "title": "`Seat ${failure.seat} (${failure.role}) did not answer`",
       "has_cause": true,
       "has_context": true,
@@ -170,7 +250,7 @@
         "Check readiness",
         "Ask one model"
       ],
-      "line": 6310
+      "line": 6577
     },
     {
       "container": "chatState",
@@ -183,7 +263,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 9681
+      "line": 9970
     },
     {
       "container": "chatState",
@@ -196,7 +276,7 @@
         "Back to Chat",
         "Open Harness"
       ],
-      "line": 9707
+      "line": 9996
     },
     {
       "container": "chatState",
@@ -209,7 +289,7 @@
         "Undo",
         "Dismiss"
       ],
-      "line": 9879
+      "line": 10168
     }
   ],
   "containers": [
@@ -274,23 +354,23 @@
       "handler": "installSkill"
     },
     {
-      "line": 11932,
+      "line": 12221,
       "handler": "openHarnessDiffModal"
     },
     {
-      "line": 13615,
+      "line": 13904,
       "handler": "runMcpPlayground"
     }
   ],
   "totals": {
     "kinds": 3,
-    "surfaces": 13,
+    "surfaces": 19,
     "containers": 9,
     "wired_containers": 9,
     "by_kind": {
       "empty": 3,
-      "error": 7,
-      "recovery": 3
+      "error": 9,
+      "recovery": 7
     },
     "remaining_raw_writers": 3,
     "findings": 0

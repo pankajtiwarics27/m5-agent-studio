@@ -33,12 +33,18 @@ is a bug in the caller, and the `error` kind is already how bugs are shown.
 | `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 4464 |
 | `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 4483 |
 | `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 4506 |
-| `#hallSummonState` | Council | `error` | `Retry the round`, `Check readiness`, `Ask one model` | 6310 |
-| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 9681 |
-| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 9707 |
-| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 9879 |
+| `#hallSummonState` | Council | `error` | `Start a new session`, `Reload the session list` | 5278 |
+| `#hallSummonState` | Council | `recovery` | `Read it again`, `Reload the session list` | 5291 |
+| `#hallSummonState` | Council | `recovery` | `Write a note to reopen`, `Read the conclusion`, `Start a new session` | 5305 |
+| `#hallSummonState` | Council | `recovery` | `Read it now`, `Stop watching` | 5321 |
+| `#hallSummonState` | Council | `error` | `Ask this seat again`, `Read the session`, `Check readiness` | 5337 |
+| `#hallSummonState` | Council | `recovery` | `Read the old conclusion`, `Convene the round` | 5931 |
+| `#hallSummonState` | Council | `error` | `Retry the round`, `Check readiness`, `Ask one model` | 6577 |
+| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 9970 |
+| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 9996 |
+| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 10168 |
 
-13 call sites across 9 of 9 containers: 3 empty, 7 error, 3 recovery.
+19 call sites across 9 of 9 containers: 3 empty, 9 error, 7 recovery.
 
 ## The paths that were broken before
 
@@ -63,8 +69,8 @@ should not quietly become a pane rewrite:
 | Handler | Line |
 |---|---|
 | `installSkill()` | 4986 |
-| `openHarnessDiffModal()` | 11932 |
-| `runMcpPlayground()` | 13615 |
+| `openHarnessDiffModal()` | 12221 |
+| `runMcpPlayground()` | 13904 |
 
 ## Checks and limits
 

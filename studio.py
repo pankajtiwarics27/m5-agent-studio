@@ -2771,6 +2771,16 @@ def append_hall_message(
             (session_id, author, role_key, model, content, reasoning, usage_payload, now),
         )
         conn.execute("UPDATE hall_sessions SET updated_at = ? WHERE id = ?", (now, session_id))
+        # UIV2-15: a session that takes a Human message is open again. Leaving the status at
+        # `closed` while a transcript keeps growing is the state a reader cannot act on: the
+        # badge said concluded, the pinned conclusion stayed, and the next voice answered over
+        # it. The conclusion itself is kept - it was pinned at a time and says so - and it is
+        # only replaced when a seat pins a new one.
+        if role_key == "human":
+            conn.execute(
+                "UPDATE hall_sessions SET status = 'active' WHERE id = ? AND status = 'closed'",
+                (session_id,),
+            )
         return int(cur.lastrowid or 0)
 
     msg_id = runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _append_msg_tx)
@@ -2802,6 +2812,25 @@ def close_hall_session_db(session_id: str, author: str, conclusion: str) -> dict
 # remove a session whose reply is still being written.
 _HALL_RUNNING_SUMMONS: set[str] = set()
 
+# UIV2-15: which seat a session is running right now, and the last seat whose stream ended
+# before its reply reached the transcript. Both are read-only and travel with
+# `GET /api/hall/sessions/{id}`, so a client that lost its stream (a sleeping laptop, a proxy
+# that drops an idle connection, a reload) can say which of the two happened - "Seat 3 is still
+# answering" versus "that reply was never written" - instead of leaving a card on
+# "Connecting..." or guessing that a round it did not see finish wrote nothing.
+_HALL_ACTIVE_TURNS: dict[str, dict[str, Any]] = {}
+_HALL_ABANDONED_TURNS: dict[str, dict[str, Any]] = {}
+
+
+def hall_turn_state(session_id: str) -> dict[str, Any]:
+    """The two turn facts a reader needs to reconcile: running now, or lost unsaved."""
+    active = _HALL_ACTIVE_TURNS.get(session_id)
+    abandoned = _HALL_ABANDONED_TURNS.get(session_id)
+    return {
+        "active_turn": dict(active) if active else None,
+        "abandoned_turn": dict(abandoned) if abandoned else None,
+    }
+
 
 def delete_hall_session_db(session_id: str) -> None:
     """True delete of one Council session and its transcript - not an archive.
@@ -2815,6 +2844,10 @@ def delete_hall_session_db(session_id: str) -> None:
         conn.execute("DELETE FROM hall_sessions WHERE id = ?", (session_id,))
 
     runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _delete_tx)
+    # A deleted session owns no turn state: a re-created id would otherwise inherit the
+    # last session's "abandoned" or "running" label.
+    _HALL_ACTIVE_TURNS.pop(session_id, None)
+    _HALL_ABANDONED_TURNS.pop(session_id, None)
 
 
 def clear_hall_sessions_db(exclude: set[str]) -> int:
@@ -2831,7 +2864,11 @@ def clear_hall_sessions_db(exclude: set[str]) -> int:
             deleted += int(cur.rowcount or 0)
         return deleted
 
-    return int(runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _clear_tx) or 0)
+    deleted = int(runtime_persistence.run_write_transaction(STORAGE, DB_PATH, _clear_tx) or 0)
+    for sid in list(_HALL_ABANDONED_TURNS):
+        if sid not in exclude:
+            _HALL_ABANDONED_TURNS.pop(sid, None)
+    return deleted
 
 
 def list_hall_sessions(status: str = "all") -> list[dict[str, Any]]:
@@ -2891,6 +2928,9 @@ def get_hall_session(session_id: str, after_id: int = 0) -> dict[str, Any]:
     sess["messages"] = msgs
     sess["participants"] = participants
     sess["next_cursor"] = str(msgs[-1]["id"]) if msgs else str(after_id)
+    # UIV2-15: a reconnect reads the same route it read before, and it has to be able to tell
+    # a seat that is still answering from a reply that was never written.
+    sess.update(hall_turn_state(session_id))
     return sess
 
 
@@ -8908,12 +8948,208 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (!write) return;
   }
 
-  async function selectHallSession(id) {
+  /* ── UIV2-15: state consistency and stream recovery ─────────────────────────
+     Three things drifted while a reader was not looking. A catalogue poll rebuilt a picker
+     over the id it held (see `syncUnifiedSelectors`). A stream could end without
+     `summon_done` - a sleeping laptop, a proxy that drops an idle connection, a reload -
+     and the pane kept the "Connecting..." card it drew before the first token, forever,
+     because nothing in it said the stream was gone. And a session that had been closed,
+     deleted in another tab, or cleared was re-read as the transcript that was already on
+     screen: `selectHallSession()` returned on `!r.ok` without a word, so the next dispatch
+     went to a session that no longer existed.
+
+     The server records two turn facts on every session read - `active_turn` (a seat is
+     answering now) and `abandoned_turn` (a stream ended and its reply never reached the
+     transcript) - so the pane can state which is true and offer the action that fits. It
+     never invents a reply, and it never blanks the transcript to look tidy.
+  */
+  let hallTurnWatch = 0;          // the poll taken while a seat is still answering on the server
+  let hallTurnNoticed = "";       // one notice per lost turn, not one per poll
+  let hallSessionVanished = false;
+
+  function hallSessionClosed() {
+    return Boolean(activeHallData && activeHallData.status === "closed");
+  }
+
+  function hallCanDispatch() {
+    return Boolean(activeHallId) && !hallSessionVanished && !hallSessionClosed() && !councilSummonInProgress && !councilRoundInProgress;
+  }
+
+  function stopHallTurnWatch() {
+    if (hallTurnWatch) { clearTimeout(hallTurnWatch); hallTurnWatch = 0; }
+  }
+
+  // One read with no side effects: the caller decides what a failure means, because a failed
+  // re-read of a live session (showing the transcript already on screen) and a failed read of a
+  // deleted one are two different statements.
+  async function readHallSession(id) {
+    try {
+      const response = await fetch(`/api/hall/sessions/${encodeURIComponent(id)}`);
+      if (!response.ok) {
+        return { ok: false, status: response.status, detail: (await refusalReader(response)).detail };
+      }
+      return { ok: true, session: await response.json() };
+    } catch (error) {
+      return { ok: false, status: 0, detail: (error && error.message) || "the request never reached the server" };
+    }
+  }
+
+  function presentHallSessionGone(id) {
+    return presentInto("hallSummonState", {
+      kind: "error",
+      title: "This Council session no longer exists (404)",
+      cause: `the server has no session ${id}; it was deleted or cleared outside this pane`,
+      context: "the transcript below is the copy this browser read last and is no longer authoritative; the composer will start a new session rather than writing into this one",
+      actions: [
+        { label: "Start a new session", run: () => { activeHallId = null; activeHallData = null; hallSessionVanished = false; clearPresentation("hallStream"); openSpawnModal(); }, title: "Create a session; the lost one cannot be written to" },
+        { label: "Reload the session list", run: () => refreshHallSessions(), title: "Re-read the Council sidebar" },
+      ],
+    });
+  }
+
+  function presentHallSessionUnreadable(id, detail) {
+    return presentInto("hallSummonState", {
+      kind: "recovery",
+      title: "The session could not be read",
+      cause: detail || "the read did not answer",
+      context: `what is on screen is the last read of ${id}; it is kept, and it is not known to be current`,
+      actions: [
+        { label: "Read it again", run: () => selectHallSession(id), title: "Send the same read again" },
+        { label: "Reload the session list", run: () => refreshHallSessions(), title: "Re-read the Council sidebar" },
+      ],
+    });
+  }
+
+  function presentHallClosedSession(action) {
+    const s = activeHallData || {};
+    return presentInto("hallSummonState", {
+      kind: "recovery",
+      title: `This session is closed: ${s.conclusion_author || "a seat"} pinned the conclusion`,
+      cause: `${action} is refused (409) while the session is closed, because a new voice would be written over the verdict that was pinned`,
+      context: "the pinned conclusion and every voice behind it are kept; a Human message reopens the session and keeps them, and only a later verdict replaces the pin",
+      actions: [
+        { label: "Write a note to reopen", run: () => { const input = document.getElementById("hallHumanInput"); if (input) { input.focus(); input.setAttribute("aria-describedby", "hallSummonState"); } }, title: "Post a Human message; the server reopens the session" },
+        { label: "Read the conclusion", run: () => openHallConclusionModal(), title: "Open the pinned conclusion in a dialog" },
+        { label: "Start a new session", run: () => openSpawnModal(), title: "Leave this verdict where it is and open a new round" },
+      ],
+    });
+  }
+
+  function presentHallTurnRunning(session) {
+    const turn = session.active_turn || {};
+    const seat = COUNCIL_ROLES[turn.role_key];
+    return presentInto("hallSummonState", {
+      kind: "recovery",
+      title: `${seat ? `Seat ${seat.seat} · ${seat.label}` : (turn.author || "A seat")} is still answering`,
+      cause: `the server is running ${turn.model || "this seat"} for this session; this browser is not holding the stream`,
+      context: "the transcript below is the last read and is re-read every second until the turn ends, so the reply appears here when it lands",
+      actions: [
+        { label: "Read it now", run: () => selectHallSession(activeHallId), title: "Read the session again immediately" },
+        { label: "Stop watching", run: () => { stopHallTurnWatch(); clearPresentation("hallSummonState"); }, title: "Stop polling; the turn keeps running on the server" },
+      ],
+    });
+  }
+
+  function presentHallTurnLost(session, partial) {
+    const lost = session.abandoned_turn || {};
+    const seat = COUNCIL_ROLES[lost.role_key];
+    const chars = Number(lost.streamed_chars || 0);
+    return presentInto("hallSummonState", {
+      kind: "error",
+      title: `${seat ? `Seat ${seat.seat} · ${seat.label}` : (lost.author || "That seat")}'s reply was not saved`,
+      cause: chars
+        ? `${chars.toLocaleString()} characters of ${lost.model || "that seat"} arrived before the stream ended, and none of them reached the transcript`
+        : `the stream ended before ${lost.model || "that seat"} produced a reply`,
+      context: "every voice before this seat is in the transcript and this one is not; the partial text below is what this browser streamed, marked as unsaved, so it is not mistaken for a reply",
+      actions: [
+        {
+          label: "Ask this seat again",
+          run: () => summonAgentPromise(lost.role_key, lost.model, (document.getElementById("hallReasoningSelect") || {}).value || "off", false),
+          title: "Send the same seat and model again",
+        },
+        { label: "Read the session", run: () => selectHallSession(activeHallId), title: "Read the transcript from the server" },
+        { label: "Check readiness", run: () => refreshCouncilReadiness(), title: "Read /api/telemetry and /api/providers again" },
+      ],
+    });
+  }
+
+  /* Reconcile the pane with the server after a stream it could not finish. `partial` carries the
+     HTML of what this browser had streamed so the reader keeps the text that arrived, drawn as
+     unsaved. While `active_turn` is set the pane polls; when it clears, the reply it produced is
+     in the transcript of this same read. */
+  async function hallReconcileTurn(partial = null) {
+    if (!activeHallId) return null;
+    const id = activeHallId;
+    const read = await readHallSession(id);
+    if (!read.ok) return null;
+    if (id !== activeHallId) return null;
+    activeHallData = read.session;
+    renderActiveHall(partial && partial.html ? partial.html : "");
+    const turn = read.session.active_turn;
+    if (turn) {
+      presentHallTurnRunning(read.session);
+      stopHallTurnWatch();
+      hallTurnWatch = setTimeout(() => { hallTurnWatch = 0; if (activeHallId === id) hallReconcileTurn(partial); }, 1000);
+      return read.session;
+    }
+    stopHallTurnWatch();
+    const lost = read.session.abandoned_turn;
+    if (lost) {
+      const stamp = `${lost.role_key}\u0000${lost.at}`;
+      if (hallTurnNoticed !== stamp) {
+        hallTurnNoticed = stamp;
+        presentHallTurnLost(read.session, partial);
+      }
+    }
+    return read.session;
+  }
+
+  // Exported so a walk can exercise these without a mouse: the pane's own answer to a stream it
+  // could not finish is the thing this story is about, and it is not reachable from markup alone.
+  window.M5CouncilState = {
+    sessionClosed: hallSessionClosed,
+    canDispatch: hallCanDispatch,
+    read: readHallSession,
+    select: selectHallSession,
+    reconcile: hallReconcileTurn,
+    stopWatch: stopHallTurnWatch,
+    vanished: () => hallSessionVanished,
+    notice: () => {
+      const host = document.getElementById("hallSummonState");
+      const box = host && host.querySelector(".presentation");
+      return box
+        ? {
+            kind: box.dataset.kind,
+            title: (box.querySelector(".presentation-title") || {}).textContent || "",
+            cause: (box.querySelector(".presentation-cause") || {}).textContent || "",
+            context: (box.querySelector(".presentation-context") || {}).textContent || "",
+            actions: [...box.querySelectorAll(".presentation-actions button")].map(button => button.textContent),
+          }
+        : null;
+    },
+  };
+
+  async function selectHallSession(id, options = {}) {
     activeHallId = id;
-    const r = await fetch(`/api/hall/sessions/${encodeURIComponent(id)}`);
-    if (!r.ok) return;
-    activeHallData = await r.json();
-    renderActiveHall(); refreshHallSessions();
+    const read = await readHallSession(id);
+    if (!read.ok) {
+      // Silence here used to leave the previous transcript and pinned conclusion on screen
+      // under the new title, and the next dispatch went to a session that was not there.
+      hallSessionVanished = read.status === 404;
+      if (hallSessionVanished) presentHallSessionGone(id);
+      else presentHallSessionUnreadable(id, read.detail);
+      renderCouncilReadiness();
+      return false;
+    }
+    hallSessionVanished = false;
+    activeHallData = read.session;
+    renderActiveHall();
+    refreshHallSessions();
+    renderCouncilReadiness();
+    // A stream is not active when this is a re-read (a dispatch calls it while it still holds
+    // the pickers, and reconciling then would draw the live card away from the seat writing it).
+    if (options.reconcile !== false && !councilSummonInProgress && !councilRoundInProgress) await hallReconcileTurn();
+    return true;
   }
 
   /* ── UIUX-P4-03: the verdict - agreement, dissent and the decision ─────────
@@ -9369,6 +9605,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   async function postHumanHallMessage(autoConvene = true) {
     const inp = document.getElementById("hallHumanInput"), txt = inp.value.trim();
     if (!txt) return;
+    // UIV2-15: a message into a closed session reopens it on the server. That is a state
+    // change the reader did not ask for by name, so it is reported after the dispatch instead
+    // of passing as an ordinary note.
+    const wasClosed = hallSessionClosed();
+    let reopenedNow = false;
     // The message is cleared only once the server has taken it: a refused write
     // must not eat what the reader typed, and a session created from an error body
     // used to become `activeHallId = undefined` with the text already gone.
@@ -9398,14 +9639,39 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       if (!write) { inp.value = txt; return; }
       inp.value = "";
       await selectHallSession(activeHallId);
+      reopenedNow = wasClosed && Boolean(activeHallData) && activeHallData.status === "active";
     }
     if (autoConvene) {
       await runHallFullRound(false);
     }
+    if (reopenedNow) {
+      // UIV2-15: the state changed without the reader asking for it by name. Saying so - and
+      // saying that the pinned verdict survived the reopen - is the difference between a
+      // reopen and a silent one.
+      presentInto("hallSummonState", {
+        kind: "recovery",
+        title: "This session is open again",
+        cause: "your Human message reopened it; a closed session does not accept a summon",
+        context: `the conclusion pinned by ${(activeHallData && activeHallData.conclusion_author) || "a seat"} is kept, and only a new verdict replaces it`,
+        actions: [
+          { label: "Read the old conclusion", run: () => openHallConclusionModal(), title: "Open the pinned conclusion in a dialog" },
+          { label: "Convene the round", run: () => runHallFullRound(false), title: "Send the four seats now that the session is open" },
+        ],
+      });
+    }
   }
 
   document.getElementById("hallRoleSelect").addEventListener("change", e => {
+    // UIV2-15: choosing a role is not choosing a model. This handler used to overwrite the
+    // model picker with the catalogue's preferred id for the new role, so asking "what would
+    // the Critic say?" quietly swapped the model that was picked for one the substring search
+    // liked - and the next "Ask one model" spent an inference on a model the reader had not
+    // chosen. It now fills only a picker that holds nothing the catalogue can run; a real
+    // selection is the reader's and stays.
     const role = e.target.value, sel = document.getElementById("hallModelSelect");
+    if (!sel) return;
+    const current = sel.value;
+    if (current && current !== "__custom__" && unifiedCatalog.some(item => item.id === current)) return;
     if (!knownModels.length) return;
     if (role === "architect" || role === "judge") sel.value = pickPreferred(knownModels, "27b", 0);
     else if (role === "coder") sel.value = pickPreferred(knownModels, "35b", 1);
@@ -9413,6 +9679,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   });
 
   function summonAgentPromise(roleKey, modelId, reasoningMode, pinConclusion = false, preflightedRound = false) {
+    // UIV2-15: a closed session has a pinned conclusion, and the server refuses a summon into
+    // it (409) rather than answering over that verdict. Saying so here, with the way back,
+    // beats a round that stops at its first seat with a toast nobody can act on.
+    if (hallSessionClosed()) {
+      presentHallClosedSession(preflightedRound ? "A full Council round" : "This seat");
+      return Promise.resolve(false);
+    }
     const verdict = councilSeatReadiness(modelId);
     if (councilSummonInProgress) return Promise.resolve(false);
     // A full round already verified every planned seat from one fresh read before its first
@@ -9447,6 +9720,22 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           renderActiveHall(`<div class="voice-card ${escapeHtml(roleKey)}"><div class="voice-head"><strong>${escapeHtml(liveAuthor)}</strong><span class="badge cyan">Streaming...</span></div>${thinkBlock}${renderMarkdown(liveC)}</div>`);
         },
         async summon_done() { await selectHallSession(activeHallId); summonCompleted = true; },
+        async closed() {
+          // UIV2-15: the stream ended with no `summon_done` and no `error` - a dropped
+          // connection, a sleeping laptop, a proxy that reaped an idle socket. The card that
+          // said "Streaming..." was this pane's own drawing; the reply it described is not in
+          // the transcript. Reconcile against the server rather than leaving that card up for
+          // ever: it says whether the seat is still answering, or that the reply was never saved.
+          const think = liveR
+            ? `<details class="think-box"><summary>Reasoning trace · not saved</summary><pre>${escapeHtml(liveR)}</pre></details>`
+            : "";
+          const body = liveC
+            ? renderMarkdown(liveC)
+            : '<div style="color:var(--text-faint);">No text arrived before the stream ended.</div>';
+          const html = `<div class="voice-card ${escapeHtml(roleKey)}"><div class="voice-head"><strong>${escapeHtml(liveAuthor)}</strong><span class="badge warn" title="This browser received these characters, but they are not in the transcript.">Stream ended · not saved</span></div>${think}${body}</div>`;
+          await hallReconcileTurn({ html, role_key: roleKey, model: modelId });
+          summonFailure = new Error("the stream ended before the reply was saved");
+        },
         error(d) {
           showToast("Summon error: " + d.message, "err");
           const seat = COUNCIL_ROLES[roleKey] || { seat: 0, label: roleKey };
@@ -9512,6 +9801,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     { key: "critic", select: "hallSeatCritic", stateId: "hallSeatCriticState" },
     { key: "judge", select: "hallSeatJudge", stateId: "hallSeatJudgeState" },
   ];
+  // UIV2-15: the pickers a dispatch reads. `syncUnifiedSelectors()` leaves them untouched
+  // while a round or a single seat owns them, because the plan was snapshotted before the
+  // first seat was sent and a rebuild mid-round can only cost the reader the pick it shows.
+  const COUNCIL_PICKER_IDS = ["hallModelSelect", "hallSeatArch", "hallSeatCoder", "hallSeatCritic", "hallSeatJudge"];
   // The seat's own picker, then the Pipeline's picker for the same seat, then the
   // catalogue default - the same chain `runHallFullRound` posts, in one place, because a
   // row that resolved the model differently from the round would describe another seat.
@@ -9892,18 +10185,31 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const allSeatsCanInvoke = verdicts.every(seat => councilCanInvoke(seat.verdict));
     const singleCanInvoke = councilCanInvoke(singleVerdict);
     const invocationBusy = councilSummonInProgress || councilRoundInProgress;
+    // UIV2-15: readiness reads the machine, not the session. A closed session's seats are all
+    // "ready" and the server still refuses them (409), and a session deleted in another tab is
+    // not there to write to. Send stays enabled on purpose: a Human message is the write that
+    // reopens a closed session, and a note-only post needs no seat at all.
+    const dispatchBlocked = hallSessionClosed() || hallSessionVanished;
+    const dispatchReason = hallSessionVanished
+      ? "This session no longer exists on the server; start a new one instead"
+      : "This session is closed and its conclusion is pinned; a Human message reopens it";
     const round = document.getElementById("hallFullRoundBtn");
     const spawnConvene = document.getElementById("spawnConveneBtn");
     const singleButton = document.getElementById("hallSummonBtn");
     const sendButton = document.getElementById("hallSendBtn");
     if (round) {
-      round.disabled = invocationBusy || !allSeatsCanInvoke;
-      round.title = allSeatsCanInvoke
-        ? "Sequentially summon all four configured Council seats"
-        : "Blocked until all four Council assignments are ready or configured";
+      round.disabled = invocationBusy || dispatchBlocked || !allSeatsCanInvoke;
+      round.title = dispatchBlocked
+        ? dispatchReason
+        : allSeatsCanInvoke
+          ? "Sequentially summon all four configured Council seats"
+          : "Blocked until all four Council assignments are ready or configured";
     }
     if (spawnConvene) spawnConvene.disabled = invocationBusy || !allSeatsCanInvoke;
-    if (singleButton) singleButton.disabled = invocationBusy || !singleCanInvoke;
+    if (singleButton) {
+      singleButton.disabled = invocationBusy || dispatchBlocked || !singleCanInvoke;
+      singleButton.title = dispatchBlocked ? dispatchReason : "Summon only this single selected voice";
+    }
     const sendMode = document.getElementById("hallSendModeSelect");
     const noteOnly = Boolean(sendMode && sendMode.value === "post_only");
     if (sendButton) sendButton.disabled = !noteOnly && (invocationBusy || !allSeatsCanInvoke);
@@ -9912,7 +10218,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const aiMessages = ((activeHallData && activeHallData.messages) || []).filter(message => message.role_key && message.role_key !== "human");
       const judgeModel = councilValue("hallSeatJudge") || singleModel;
       const judgeCanInvoke = councilCanInvoke(councilSeatReadiness(judgeModel));
-      conclusion.disabled = invocationBusy || (aiMessages.length < 2 ? !allSeatsCanInvoke : !judgeCanInvoke);
+      conclusion.disabled = invocationBusy || dispatchBlocked || (aiMessages.length < 2 ? !allSeatsCanInvoke : !judgeCanInvoke);
+      conclusion.title = dispatchBlocked ? dispatchReason : "Convene remaining voices if needed, then pin Lead Arbiter Final Verdict";
     }
 
     const total = plan.length;
@@ -10002,6 +10309,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   async function runHallFullRound(pinFinal = false) {
     if (!activeHallId) { openSpawnModal(); return; }
+    // Checked before the readiness read, because readiness cannot see the session's own state:
+    // a closed session's seats are "ready" and the server still refuses the summon (409).
+    if (hallSessionClosed()) { presentHallClosedSession("A full Council round"); return false; }
+    if (hallSessionVanished) { presentHallSessionGone(activeHallId); return false; }
     await refreshCouncilReadiness();
     const seatPlan = councilSeatPlan();
     const issues = councilInvocationIssues(seatPlan);
@@ -10029,6 +10340,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     } finally {
       councilRoundInProgress = false;
       renderCouncilReadiness();
+      // A seat whose stream died mid-round is not the round's failure to hide: the reconcile
+      // states which seat was lost and what the transcript does and does not contain.
+      await hallReconcileTurn();
     }
     return true;
   }
@@ -10527,20 +10841,35 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     ]) {
       const sel = document.getElementById(elId);
       if (!sel) continue;
+      // A dispatch owns the Council pickers until it returns: `runHallFullRound()` read the
+      // plan before its first seat, so rebuilding here cannot change what the round sends -
+      // it can only take the pick away from the reader watching it.
+      if (COUNCIL_PICKER_IDS.includes(elId) && (councilRoundInProgress || councilSummonInProgress)) continue;
       if (!sel.dataset.customHooked && elId !== "harnessLeadModel" && elId !== "harnessCriticModel") {
         sel.dataset.customHooked = "1";
         sel.addEventListener("change", () => handleModelSelectChange(sel));
       }
       const prevVal = sel.value;
-      const councilPicker = ["hallModelSelect", "hallSeatArch", "hallSeatCoder", "hallSeatCritic", "hallSeatJudge"].includes(elId);
-      const unavailable = councilPicker && prevVal && prevVal !== "__custom__" && !unifiedCatalog.some(item => item.id === prevVal);
+      // UIV2-15: a pick is the reader's, not the catalogue's. Every picker keeps the id it
+      // holds - not only the four Council seats - because a catalogue read that loses an id
+      // (a model mid-load, a provider row being edited, a runtime that restarted, a read that
+      // raced a write) used to fall through to `defVal`: the pane then showed a different model
+      // than the one picked, and the next dispatch spent a real inference on it and labelled the
+      // answer with that model's name. An absent id is kept once, under "Unavailable", so the
+      // picker says which id it holds and the seat row says what that id can do.
+      const held = !firstInit && prevVal && prevVal !== "__custom__";
+      const unavailable = Boolean(held) && !unifiedCatalog.some(item => item.id === prevVal);
+      const hadFocus = sel === document.activeElement;
       const unavailableOption = unavailable
         ? `<optgroup label="Unavailable"><option value="${escapeHtml(prevVal)}">[Unavailable] ${escapeHtml(prevVal)}</option></optgroup>`
         : "";
       sel.innerHTML = unavailableOption + optionsHtml;
-      if (unavailable) sel.value = prevVal;
-      else if (!firstInit && prevVal && prevVal !== "__custom__" && unifiedCatalog.some(x => x.id === prevVal)) sel.value = prevVal;
+      if (held) sel.value = prevVal;
+      else if (prevVal === "__custom__") sel.value = "__custom__";
       else if (defVal) sel.value = defVal;
+      // A rebuild that drops focus moves a keyboard reader out of the control they were
+      // using, on a poll they did not ask for.
+      if (hadFocus) sel.focus();
     }
     // The set of models is part of the composer's answer: a pane that had "no model
     // selected" one poll ago may have one now, and vice versa.
@@ -19090,8 +19419,32 @@ async def api_hall_close(session_id: str, request: Request) -> JSONResponse:
 @app.post("/api/hall/sessions/{session_id}/summon")
 async def api_hall_summon(session_id: str, request: Request) -> StreamingResponse:
     body = await request.json()
-    model = body.get("model") or "Qwen3.8-27B-oQ4e-mtp"
-    role_key = body.get("role_key") or "architect"
+    # UIV2-15: a seat is a named model in a named role, and the server substitutes neither.
+    # `body.get("model") or "Qwen3.8-27B-oQ4e-mtp"` answered for a model nobody picked, and
+    # `AGENT_ROLES.get(role_key, AGENT_ROLES["architect"])` made an unknown role into Seat 1,
+    # so a client bug - or a dispatch built from a stale catalogue - spent a real inference on
+    # a seat the reader never chose and labelled the answer with it.
+    model = body.get("model")
+    model = model.strip() if isinstance(model, str) else ""
+    if not model:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "A Council summon must name the model for its seat; the server will not pick one. "
+                "Re-open the picker (or re-read the catalogue) and dispatch the seat again."
+            ),
+        )
+    role_key = body.get("role_key")
+    role_key = role_key.strip() if isinstance(role_key, str) else ""
+    if role_key not in AGENT_ROLES:
+        known = ", ".join(sorted(AGENT_ROLES))
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"{role_key or 'no role'} is not a Council seat ({known}); the server will not "
+                "substitute one. Dispatch the seat from the pane's own role picker."
+            ),
+        )
     reasoning_mode = body.get("reasoning_mode") or "off"
     auto_unload = bool(body.get("auto_unload", True))
     pin_as_conclusion = bool(body.get("pin_as_conclusion", False))
@@ -19101,15 +19454,56 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
         sess = get_hall_session(session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    # UIV2-15: a closed session has a pinned conclusion. A summon into it would answer over
+    # that verdict and, with `pin_as_conclusion`, replace it without the reader choosing to.
+    # The refusal names the way back: a Human message reopens the session (append_hall_message).
+    if sess.get("status") == "closed":
+        who = sess.get("conclusion_author") or "a seat"
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Session {session_id} is closed: {who} pinned its conclusion and a new answer "
+                "would be written over that verdict. Send a Human message to reopen the session, "
+                "or start a new one."
+            ),
+        )
     # UIV2-13: while this stream is in flight the session is "running" - the delete
     # routes refuse it (409) and clear-all skips it.
     _HALL_RUNNING_SUMMONS.add(session_id)
 
-    role_meta = AGENT_ROLES.get(role_key, AGENT_ROLES["architect"])
+    role_meta = AGENT_ROLES[role_key]
     author_label = f"{role_meta['label']} ({model})"
     client: httpx.AsyncClient = request.app.state.http
+    turn_started_at = time.time()
+    # UIV2-15: what this route is doing, readable by a client that is not watching the stream.
+    _HALL_ACTIVE_TURNS[session_id] = {
+        "author": author_label,
+        "role_key": role_key,
+        "model": model,
+        "pin_as_conclusion": pin_as_conclusion,
+        "started_at": turn_started_at,
+    }
+    # A new turn is the answer to the last lost one: the old label would otherwise outlive it.
+    _HALL_ABANDONED_TURNS.pop(session_id, None)
 
     async def event_gen() -> AsyncIterator[str]:
+        buf, rbuf, usage_info = [], [], {}
+        saved = False
+        terminal_sent = False
+
+        def abandoned(reason: str) -> dict[str, Any]:
+            record = {
+                "author": author_label,
+                "role_key": role_key,
+                "model": model,
+                "started_at": turn_started_at,
+                "streamed_chars": len("".join(buf)) + len("".join(rbuf)),
+                "reason": reason,
+                "at": time.time(),
+            }
+            _HALL_ABANDONED_TURNS[session_id] = record
+            return record
+
         try:
             skill_block, skill_summaries = await build_skills_context(skill_ids, sess["request_text"])
             if skill_summaries:
@@ -19125,10 +19519,13 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
             messages = [{"role": "system", "content": role_meta["system"] + skill_block}, {"role": "user", "content": user_prompt}]
 
             yield _sse("summon_start", {"author": author_label, "role_key": role_key, "model": model})
-            buf, rbuf, usage_info = [], [], {}
 
             async for item in stream_any_model(client, model, messages, temperature=0.0, max_tokens=4600, reasoning_mode=reasoning_mode):
                 if await request.is_disconnected():
+                    # The reader stopped this stream (Stop) or the connection died. Nothing of
+                    # this turn reaches the transcript, and the dropped turn is recorded so the
+                    # next read can say that rather than showing a card that never resolves.
+                    abandoned("the reader's connection closed before the reply was saved")
                     return
                 if item["type"] == "content":
                     buf.append(item["text"])
@@ -19142,6 +19539,9 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
 
             if not "".join(buf).strip() and rbuf and is_local_omlx_model(model):
                 async for item in stream_any_model(client, model, messages, temperature=0.0, max_tokens=4096, reasoning_mode="off"):
+                    if await request.is_disconnected():
+                        abandoned("the reader's connection closed before the reply was saved")
+                        return
                     if item["type"] == "content":
                         buf.append(item["text"])
                         yield _sse("token", {"kind": "content", "text": item["text"]})
@@ -19150,16 +19550,27 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
 
             final_text = "".join(buf).strip() or "".join(rbuf).strip()
             saved_msg = append_hall_message(session_id, author_label, role_key, final_text, model=model, reasoning="".join(rbuf), usage=usage_info)
+            saved = True
             if pin_as_conclusion:
                 close_hall_session_db(session_id, author_label, final_text)
             if auto_unload and is_local_omlx_model(model):
                 await _unload_omlx_model(client, parse_model_route(model)[2])
 
+            _HALL_ABANDONED_TURNS.pop(session_id, None)
             yield _sse("summon_done", {"message": saved_msg, "pinned_conclusion": pin_as_conclusion})
+            terminal_sent = True
         except Exception as exc:
             yield _sse("error", {"message": str(exc)})
+            terminal_sent = True
         finally:
             _HALL_RUNNING_SUMMONS.discard(session_id)
+            _HALL_ACTIVE_TURNS.pop(session_id, None)
+            # A turn that neither reached the transcript nor told the reader why is a lost
+            # turn: the connection died, or this generator was cancelled with the client gone.
+            # Recording it is what lets the next read say "that reply was never saved" instead
+            # of a pane that waits forever on a card that will never finish.
+            if not saved and not terminal_sent and session_id not in _HALL_ABANDONED_TURNS:
+                abandoned("the stream ended before the reply was saved")
 
     return StreamingResponse(event_gen(), media_type="text/event-stream")
 
