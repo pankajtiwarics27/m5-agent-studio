@@ -4315,6 +4315,41 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .debate-provenance tr:last-child td { border-bottom: none; }
   .debate-provenance-note { color: var(--text-faint); font-size: 11.2px; line-height: 1.45; padding-top: 2px; }
   .debate-results-basis { margin-top: 9px; color: var(--text-faint); font-size: 11.4px; line-height: 1.5; }
+  /* UIV2-17: the verdict, and where it came from. */
+  .debate-verdict .stage-output-head { gap: 8px; }
+  .debate-verdict-model { color: var(--text-dim); font-size: 11.6px; }
+  .debate-verdict-provenance {
+    color: var(--text-dim); font-size: 11.6px; line-height: 1.5; padding: 7px 9px; margin-bottom: 10px;
+    border-left: 2px solid var(--accent); border-radius: var(--radius-sm); background: var(--bg-elev);
+  }
+  .insp-section {
+    margin: 12px 0 7px; color: var(--text-faint); font-size: 10.4px; font-weight: 700;
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .debate-evidence-state { color: var(--text-faint); font-weight: 500; font-size: 10.6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  /* Six columns cannot fit a phone. Below 600px both tables stack: each row becomes a block and
+     each cell carries its own header, so nothing is clipped and nothing scrolls sideways. */
+  @media (max-width: 600px) {
+    .debate-results table, .debate-provenance table { display: block; }
+    .debate-results thead, .debate-provenance thead {
+      position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+    }
+    .debate-results tbody, .debate-provenance tbody { display: block; }
+    .debate-results tbody tr, .debate-provenance tbody tr {
+      display: block; padding: 7px 0; border-bottom: 1px solid var(--border);
+    }
+    .debate-results tbody tr:last-child, .debate-provenance tbody tr:last-child { border-bottom: none; }
+    .debate-results tbody td, .debate-provenance tbody td {
+      display: flex; justify-content: space-between; gap: 12px; border: 0; padding: 2px 0;
+      white-space: normal; overflow-wrap: anywhere;
+    }
+    .debate-results tbody td::before, .debate-provenance tbody td::before {
+      content: attr(data-label); color: var(--text-faint); font-size: 10.4px; font-weight: 700;
+      letter-spacing: 0.05em; text-transform: uppercase; flex: 0 0 auto;
+    }
+    .debate-provenance td.debate-provenance-note { display: block; color: var(--text-faint); }
+    .debate-provenance td.debate-provenance-note::before { content: ""; }
+  }
   .debate-panel-note { font-size: 11.6px; color: var(--amber); margin-bottom: 8px; }
   .debate-record { margin: 0 20px 12px; padding: 12px 15px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--bg-card); }
   .debate-record[data-source="browser"] { border-color: var(--amber); }
@@ -8500,12 +8535,46 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const rows = crit ? crit.querySelectorAll("tbody tr").length : 0;
       const grid = document.getElementById("debateGrid");
       const cols = grid ? grid.children.length : 0;
-      panel.innerHTML = inspKV("Criteria", rows)
+      const counts = debateCounts();
+      const panels = debatePanels();
+      const criteria = inspKV("Criteria", rows)
         + inspKV("Settled by the run", groupCount("measured"))
         + inspKV("Not settled here", groupCount("not-stated"))
-        + inspKV("Yours to judge", groupCount("judged"))
+        + inspKV("Yours to judge", groupCount("judged"));
+      if (!panels.length) {
+        // UIV2-17: the rail used to count criteria against a run that had not happened, and then
+        // point at the pane for the evidence. Nothing measured is a state, not a row of zeroes.
+        panel.innerHTML = criteria
+          + inspKV("Panels", 0)
+          + `<div class="insp-empty">No comparison yet. Run two models on one question and this view carries what each reply reported - elapsed, first token, reply tokens, decode - and what it did not.</div>`;
+        return;
+      }
+      const settled = counts.answered + counts.cut + counts.demo + counts.empty;
+      const arbiter = debateSynth.m
+        ? [{ model: debateSynth.m, status: debateIsDemo(debateSynth.u) ? "demo" : "answered", u: debateSynth.u, error: "", arbiter: true }]
+        : [];
+      const evidence = panels.concat(arbiter).map(slot => {
+        const reading = debateProvenanceOf(slot);
+        const figures = [reading.elapsed, reading.ttft, reading.tokens, reading.decode].filter(Boolean);
+        const why = reading.note
+          ? reading.note + (slot.error ? " — " + slot.error : "")
+          : "";
+        const name = slot.model + (slot.arbiter ? " · arbiter" : "");
+        const state = debateMeta(slot.status).label;
+        return `<div class="insp-item debate-evidence" data-evidence-model="${escapeHtml(slot.model)}" data-evidence-status="${escapeHtml(slot.status)}">`
+          + `<div class="t">${escapeHtml(name)} <span class="debate-evidence-state">${escapeHtml(state)}</span></div>`
+          + `<div class="d">${escapeHtml(figures.length ? figures.join(" · ") : why || debateNoFigures(slot.status))}</div>`
+          + (figures.length && why ? `<div class="d">${escapeHtml(why)}</div>` : "")
+          + "</div>";
+      }).join("");
+      panel.innerHTML = criteria
+        + inspKV("Panels", settled + " of " + counts.total + " answered")
         + inspKV("Result columns", cols)
-        + `<div class="insp-empty">Scores and the arbiter verdict render in the Compare pane; this view summarizes them.</div>`;
+        + inspKV("Verdict", debateSynth.m || "not requested")
+        + `<div class="insp-section">Evidence, per reply</div>`
+        + evidence
+        + `<div class="insp-empty">Read from the usage the server sent with each reply; this page times nothing. Cost: not known — no price is configured for any model.</div>`
+        + `<div class="insp-actions"><button class="btn btn-xs" type="button" onclick="focusDebateProvenance(this)">Show the rows in the pane</button></div>`;
       return;
     }
   }
@@ -12979,6 +13048,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   };
   let debateJudged = DEBATE_JUDGED_DEFAULTS.slice();
   let debateSlots = {}, debateSynth = { m: "", c: "", u: null }, debateBusy = false;
+  // UIV2-17: what the catalogue said about each model when the run started. The catalogue loses a
+  // row the moment a run ends (auto-unload), so reading it later to name the arbiter's source read
+  // "not in the current catalogue" about a model the reader had just picked.
+  let debateRunLabels = new Map();
 
   function debatePanels() {
     return Object.keys(debateSlots).map(key => debateSlots[key]);
@@ -13175,9 +13248,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const meta = debateMeta(slot.status);
       const met = debateCriteriaMet(slot);
       const metText = met.length ? met.join(", ") : "—";
-      return "<tr><td>" + escapeHtml(slot.model) + '</td><td class="mono">' + escapeHtml(meta.label)
-        + '</td><td class="mono">' + String(String(slot.c || "").length) + " ch</td><td>"
-        + escapeHtml(metText) + "</td></tr>";
+      const text = String(slot.c || "");
+      // UIV2-17: a panel that wrote nothing has no size. `0 ch` was a zero standing in for a
+      // silence, in the same pane whose provenance table refuses exactly that.
+      const size = text.length ? String(text.length) + " ch" : "—";
+      return '<tr><td data-label="Model">' + escapeHtml(slot.model)
+        + '</td><td class="mono" data-label="Status">' + escapeHtml(meta.label)
+        + '</td><td class="mono" data-label="Size">' + escapeHtml(size)
+        + '</td><td data-label="Criteria it met">' + escapeHtml(metText) + "</td></tr>";
     }).join("");
     const judged = debateJudged.length ? debateJudged.map(label => escapeHtml(label)).join(", ") : "your own";
     host.innerHTML = '<div class="debate-criteria-head"><strong>What this run left, read against the criteria</strong></div>'
@@ -13264,11 +13342,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     host.hidden = false;
     const rows = panels.concat(arbiter).map(panel => {
       const reading = debateProvenanceOf(panel);
-      const cell = value => '<td class="mono">' + (value ? escapeHtml(value) : "—") + "</td>";
+      // Each cell names its own column, so a phone can stack the table instead of clipping it.
+      const cell = (label, value) => '<td class="mono" data-label="' + escapeHtml(label) + '">'
+        + (value ? escapeHtml(value) : "—") + "</td>";
       const name = escapeHtml(panel.model) + (panel.arbiter ? " · arbiter" : "");
-      const row = "<tr><td>" + name + "</td>" + cell(reading.elapsed) + cell(reading.ttft)
-        + cell(reading.tokens) + cell(reading.decode)
-        + '<td class="mono" title="No price is configured for any model">—</td></tr>';
+      const row = '<tr><td data-label="Model">' + name + "</td>" + cell("Elapsed", reading.elapsed)
+        + cell("First token", reading.ttft) + cell("Reply tokens", reading.tokens)
+        + cell("Decode", reading.decode)
+        + '<td class="mono" data-label="Cost" title="No price is configured for any model">—</td></tr>';
       return reading.note
         ? row + '<tr><td colspan="6" class="debate-provenance-note">' + escapeHtml(reading.note) + "</td></tr>"
         : row;
@@ -13290,6 +13371,62 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       + "</div>";
   }
 
+  /** The verdict, and the provenance of the verdict (UIV2-17).
+   *
+   *  The card used to name a model and say nothing else: not what it judged, not that the replies
+   *  above were its evidence, and not where its own figures came from. A verdict a reader cannot
+   *  trace is an opinion with a badge on it, so the card states all three - and says which of them
+   *  it does not have, rather than leaving the gap to the imagination.
+   */
+  /** A catalogue label reads "[M5 Local • Loaded] Qwen3.6-35B-REAP-19B (12.05 GB)". The sentence
+   *  already names the model, so the provenance should only add where it came from: repeating the
+   *  name reads like a paste bug, and a "[Unavailable]" prefix reads like a fault the reader can fix. */
+  function debateArbiterSource(label, model) {
+    const raw = String(label || "").trim();
+    if (!raw) return "";
+    const bracketed = raw.match(/^\[([^\]]+)\]\s*(.*)$/);
+    if (!bracketed) return raw;
+    const from = bracketed[1].trim();
+    const rest = bracketed[2].trim();
+    const ownName = rest.split(" (")[0].trim();
+    if (!rest || rest.indexOf(model) === 0 || (ownName && model.indexOf(ownName) === 0)) return from;
+    return from + " · " + rest;
+  }
+
+  function debateVerdictProvenance() {
+    const model = debateSynth.m;
+    const usage = debateSynth.u;
+    // The catalogue can lose a row (auto-unload takes a model out of it the moment a run ends), so
+    // the picker the arbiter was chosen from is the second read: its label is still the pane's own.
+    const picker = document.getElementById("d-judge");
+    const picked = picker && picker.value === model && picker.selectedOptions && picker.selectedOptions[0]
+      ? String(picker.selectedOptions[0].textContent || "").trim()
+      : "";
+    const known = debateRunLabels.get(model)
+      || (unifiedCatalog.find(item => item.id === model) || {}).label
+      || picked;
+    const source = debateArbiterSource(known, model);
+    const where = source ? " (" + source + ")" : " (not in the current catalogue)";
+    const lines = [
+      "Judged this question as " + model + where + ".",
+      "The replies above are its evidence.",
+    ];
+    if (debateIsDemo(usage)) lines.push("The server wrote this verdict, so it carries no model figures.");
+    else if (!usage) lines.push("Its own figures have not arrived yet.");
+    return lines;
+  }
+
+  function debateVerdictCard() {
+    return '<div class="stage-output-card debate-verdict" data-role="verdict">'
+      + '<div class="stage-output-head"><strong>Arbiter verdict</strong>'
+      + '<span class="mono debate-verdict-model">' + escapeHtml(debateSynth.m) + "</span>"
+      + debateArbiterBadge(debateSynth.u) + "</div>"
+      + '<div class="stage-output-body">'
+      + '<div class="debate-verdict-provenance" data-verdict-provenance>'
+      + debateVerdictProvenance().map(line => escapeHtml(line)).join(" ") + "</div>"
+      + renderMarkdown(debateSynth.c) + "</div></div>";
+  }
+
   /** The arbiter's badge: the same figure the table reads, or a refusal. */
   function debateArbiterBadge(usage) {
     if (debateIsDemo(usage)) {
@@ -13306,6 +13443,20 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   /** One model is a single answer, many are a comparison; the pane has to say which it holds.
    *  UIV2-16: the column count comes from the run, not from `auto-fit` and the window width, so
    *  two replies are always the same width and a lone reply is not a column that failed to fill. */
+  /** Put the reader on the provenance rows the rail just summarised (UIV2-17).
+   *  The rail is a summary of that table; a summary you cannot reach is a dead end. */
+  function focusDebateProvenance(button) {
+    const host = document.getElementById("debateProvenance");
+    if (!host || host.hidden) {
+      showToast("No figures to show yet: the table appears when a reply reports one.", "info");
+      return;
+    }
+    host.setAttribute("tabindex", "-1");
+    host.scrollIntoView({ block: "center" });
+    host.focus({ preventScroll: true });
+    if (button) button.blur();
+  }
+
   function renderDebateColumns() {
     const grid = document.getElementById("debateGrid");
     const note = document.getElementById("debateColumnsNote");
@@ -13387,12 +13538,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       }).join("");
     }
     const synthesis = document.getElementById("debateSynthesisArea");
-    if (synthesis) {
-      synthesis.innerHTML = !debateSynth.m ? "" : `<div class="stage-output-card" style="border-color:var(--accent);"><div class="stage-output-head"><strong>Arbiter Verdict (${escapeHtml(debateSynth.m)})</strong>${debateArbiterBadge(debateSynth.u)}</div><div class="stage-output-body">${renderMarkdown(debateSynth.c)}</div></div>`;
-    }
+    if (synthesis) synthesis.innerHTML = debateSynth.m ? debateVerdictCard() : "";
     renderDebateSummary();
     renderDebateResults();
     renderDebateProvenance();
+    // UIV2-17: the rail carries the evidence now, so it has to move with the run. The guard is a
+    // boot-order guard: this pane draws before the rail's own state exists, and reading it threw.
+    try {
+      if (inspectorView === "evaluation") refreshInspectorPanel();
+    } catch (error) {
+      // The rail is not up yet; the next draw of the pane refreshes it.
+    }
     renderDebateRecord();
   }
 
@@ -13407,6 +13563,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     debateBusy = true;
     debateSlots = {};
     models.forEach((model, index) => (debateSlots[index] = { model, c: "", u: null, status: "queued", error: "" }));
+    debateRunLabels = new Map(models.map(model => [model, (unifiedCatalog.find(item => item.id === model) || {}).label || ""]));
     debateSynth = { m: "", c: "", u: null };
     debateRunElapsed = null;
     debateRunId = 0;

@@ -171,8 +171,30 @@ REPLY_TEXTS = {
 }
 
 
+# UIV2-17: one reply long enough that the answer body has to scroll and the results table has to
+# report a size a reader can compare. It is the paragraph below, repeated with its own numbering,
+# so nothing here is a real quotation from a real model.
+LONG_REPLY = " ".join(
+    f"Point {index}: the queue keeps its ordering only while one writer holds the lease, and the "
+    f"consumer records the offset it has durably applied so a restart resumes there rather than "
+    f"replaying the tail."
+    for index in range(1, 26)
+)
+
+
+# Set once by `start_runtime(--long-model)`: the one catalogue entry whose reply is the long
+# paragraph. It lives here so `_reply_words(model)` keeps a single, model-only signature.
+LONG_MODEL = ""
+
+
 def _reply_words(model: str) -> str:
-    """What the stand-in runtime says for ``model``; a distinct paragraph per catalogue entry."""
+    """What the stand-in runtime says for ``model``; a distinct paragraph per catalogue entry.
+
+    UIV2-17's long reply is chosen by the caller, so this stays the one function the verdict and
+    compare-criteria inventories read: one model, one paragraph, whoever asks.
+    """
+    if LONG_MODEL and model == LONG_MODEL:
+        return LONG_REPLY
     text = REPLY_TEXTS.get(model)
     if text:
         return text
@@ -194,6 +216,10 @@ class _RuntimeHandler(BaseHTTPRequestHandler):
     # fixture that answers in 200 ms cannot produce it.
     slow_model: str = ""
     slow_word_seconds: float = 0.35
+    # UIV2-17: a model whose reply is long enough to need scrolling. Every other reply here is a
+    # paragraph, so a card body that silently grew to fit five pages - or a table that clipped a
+    # long reply - could not be seen on a screen.
+    long_model: str = ""
 
     def log_message(self, *_args) -> None:  # noqa: D401 - silence the access log
         return
@@ -293,6 +319,7 @@ def start_runtime(
     reasoning_model: str = "",
     slow_model: str = "",
     resident_model: str = "",
+    long_model: str = "",
 ) -> tuple[ThreadingHTTPServer, RuntimeState, str]:
     """Serve the stand-in admin API on loopback and return its base URL."""
     state = RuntimeState()
@@ -301,6 +328,8 @@ def start_runtime(
     # keyless alias, which fails — and a comparison that fails has no arbiter verdict to measure.
     if resident_model and resident_model in state.models:
         state.load(resident_model)
+    global LONG_MODEL
+    LONG_MODEL = long_model
     handler = type(
         "RuntimeHandler",
         (_RuntimeHandler,),
@@ -309,6 +338,7 @@ def start_runtime(
             "cap_model": cap_model,
             "reasoning_model": reasoning_model,
             "slow_model": slow_model,
+            "long_model": long_model,
         },
     )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -377,6 +407,11 @@ def main(argv: list[str] | None = None) -> int:
         help="a model the stand-in runtime answers slowly, so a comparison can be stopped mid-panel",
     )
     parser.add_argument(
+        "--long-model",
+        default="",
+        help="a model the stand-in runtime answers at length, so a card body or a table has to scroll",
+    )
+    parser.add_argument(
         "--resident-model",
         default="",
         help="a second catalogue model the stand-in runtime reports as loaded, so two panels can answer",
@@ -394,6 +429,7 @@ def main(argv: list[str] | None = None) -> int:
             reasoning_model=args.reasoning_model,
             slow_model=args.slow_model,
             resident_model=args.resident_model,
+            long_model=args.long_model,
         )
 
     try:
@@ -423,6 +459,7 @@ def main(argv: list[str] | None = None) -> int:
         "capped_model": args.cap_model,
         "reasoning_model": args.reasoning_model,
         "slow_model": args.slow_model,
+        "long_model": args.long_model,
         "resident_model": args.resident_model,
         "seeded_at": round(time.time(), 3),
         "root": str(environment.root),
