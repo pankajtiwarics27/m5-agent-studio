@@ -333,6 +333,7 @@ NEEDS_SERVER = {
     "chat_handoff_walk.mjs",
     "chat_walk.mjs",
     "compare_history_walk.mjs",
+    "council_state_walk.mjs",
     "harness_settings_walk.mjs",
     "harness_timeline_walk.mjs",
     "keyboard_walk.mjs",
@@ -364,6 +365,7 @@ SUPPORT_WALKS = {
     "compare_continuity_walk.mjs": "Compare continuity (P4-06) keeps a comparison; the capability it belongs to is the comparison itself",
     "uiux_interaction_polish_walk.mjs": "the supplemental P5-05 evidence walk measures hover/focus parity and captures 72 screenshots; it proves presentation, not a capability the matrix enumerates",
     "adversarial_walk.mjs": "the adversarial walk (P6-02) proves how a refusal is drawn, which is a contract about failures rather than a capability the matrix enumerates",
+    "council_state_walk.mjs": "the Council state walk (UIV2-15) proves how a refused, reopened, dropped or deleted turn is drawn; the capability it belongs to is the Council session itself, which the matrix already enumerates from the pane's own controls",
 }
 
 

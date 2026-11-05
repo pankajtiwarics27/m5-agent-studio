@@ -117,6 +117,52 @@
       "path": "/api/hall/sessions/{session_id}/summon"
     }
   ],
+  "browser_walk": {
+    "script": "scripts/council_state_walk.mjs",
+    "media": "docs/media/uiv2-v15-states",
+    "states": [
+      {
+        "state": "drift",
+        "asserted": "a seat id survives a catalogue read that no longer carries it"
+      },
+      {
+        "state": "role",
+        "asserted": "choosing a role keeps the model that was picked"
+      },
+      {
+        "state": "closed",
+        "asserted": "a closed session cannot be dispatched into, and the control says why"
+      },
+      {
+        "state": "409",
+        "asserted": "pressing a seat on a closed session explains the 409 instead of sending it"
+      },
+      {
+        "state": "reopen",
+        "asserted": "a Human message reopens the session and keeps the pinned conclusion"
+      },
+      {
+        "state": "lost",
+        "asserted": "the server records the dropped turn instead of losing it silently"
+      },
+      {
+        "state": "unsaved",
+        "asserted": "the text that arrived is drawn as unsaved rather than as a reply"
+      },
+      {
+        "state": "gone",
+        "asserted": "a deleted session is named as gone, with the id"
+      },
+      {
+        "state": "running",
+        "asserted": "a seat the server says is answering is stated as running, not as a failure"
+      },
+      {
+        "state": "quiet",
+        "asserted": "no uncaught error is raised by any of it"
+      }
+    ]
+  },
   "checks": [
     {
       "check": "the Council pickers a dispatch reads are named once, in one list",
@@ -292,9 +338,24 @@
       "check": "the seat order and the reasoning modes the round posts are unchanged",
       "ok": true,
       "detail": ""
+    },
+    {
+      "check": "a browser walk asserts what this inventory describes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk needs no environment of its own",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk reads the turn the way the pane does, not the way a test would",
+      "ok": true,
+      "detail": ""
     }
   ],
-  "check_count": 35,
+  "check_count": 38,
   "findings": [],
   "status": "clean"
 }

@@ -48,6 +48,8 @@ FRONTEND = PROJECT_ROOT / "static" / "index.html"
 APP = PROJECT_ROOT / "app.py"
 JSON_PATH = PROJECT_ROOT / "product" / "M5_2_0_UIUX_Council_State.json"
 DOC_PATH = PROJECT_ROOT / "docs" / "uiux-2-0-council-state.md"
+WALK_PATH = PROJECT_ROOT / "scripts" / "council_state_walk.mjs"
+MEDIA_DIR = PROJECT_ROOT / "docs" / "media" / "uiv2-v15-states"
 
 STORY = "UIV2-15"
 TITLE = "Council state consistency and streaming recovery"
@@ -71,6 +73,21 @@ REFUSALS = (
     ("400", "a summon that names no model", "the route defaulted to Qwen3.8-27B-oQ4e-mtp"),
     ("400", "a summon that names no known role", "AGENT_ROLES.get(role_key, architect) made it Seat 1"),
     ("409", "a summon into a closed session", "the answer was written over the pinned conclusion"),
+)
+
+# What the browser walk asserts, and the state each assertion puts on screen. A check here is a
+# claim about a browser; the walk is where the claim is made against a real one.
+WALK_STATES = (
+    ("drift", "a seat id survives a catalogue read that no longer carries it"),
+    ("role", "choosing a role keeps the model that was picked"),
+    ("closed", "a closed session cannot be dispatched into, and the control says why"),
+    ("409", "pressing a seat on a closed session explains the 409 instead of sending it"),
+    ("reopen", "a Human message reopens the session and keeps the pinned conclusion"),
+    ("lost", "the server records the dropped turn instead of losing it silently"),
+    ("unsaved", "the text that arrived is drawn as unsaved rather than as a reply"),
+    ("gone", "a deleted session is named as gone, with the id"),
+    ("running", "a seat the server says is answering is stated as running, not as a failure"),
+    ("quiet", "no uncaught error is raised by any of it"),
 )
 
 HALL_ROUTES = (
@@ -429,6 +446,35 @@ def build_inventory() -> dict[str, object]:
         "this story changes what a dispatch may do, not who sits in it",
     )
 
+    # 6. The browser walk: the same behaviours, driven against a running app.
+    walk = WALK_PATH.read_text(encoding="utf-8") if WALK_PATH.exists() else ""
+    check(
+        "a browser walk asserts what this inventory describes",
+        bool(walk) and all(needle in walk for _, needle in WALK_STATES),
+        "the states below are captured by `scripts/council_state_walk.mjs`; a walk that does not "
+        "assert them makes the screenshots decoration",
+    )
+    check(
+        "the walk needs no environment of its own",
+        all(
+            token in walk
+            for token in (
+                "STUDIO_SCREENSHOT_CHROME",
+                "STUDIO_PUPPETEER_CORE",
+                "--base-url",
+                "--screenshots",
+                "window.sessionStorage.setItem(key, token)",
+                'tokenKey: "m5_api_token"',
+            )
+        ),
+        "a walk that only runs on its author's machine is not evidence anyone else can re-make",
+    )
+    check(
+        "the walk reads the turn the way the pane does, not the way a test would",
+        "window.M5CouncilState.read(" in walk and "summonAgentPromise(" in walk,
+        "a walk that writes state through a private helper proves the helper, not the pane",
+    )
+
     return {
         "story": STORY,
         "title": TITLE,
@@ -440,6 +486,11 @@ def build_inventory() -> dict[str, object]:
             for status, refused, replaced in REFUSALS
         ],
         "hall_routes": [{"method": method, "path": path} for method, path in HALL_ROUTES],
+        "browser_walk": {
+            "script": "scripts/council_state_walk.mjs",
+            "media": "docs/media/uiv2-v15-states",
+            "states": [{"state": state, "asserted": needle} for state, needle in WALK_STATES],
+        },
         "checks": checks,
         "check_count": len(checks),
         "findings": findings,
@@ -524,6 +575,29 @@ def render_doc(payload: dict) -> str:
         "* a session that no longer exists is named as gone, with the id and the way forward;",
         "* a closed session cannot be dispatched into from the pane or the route, and the control's",
         "  reason says why — while the composer, whose message reopens it, stays available.",
+        "",
+        "## The browser walk",
+        "",
+        "The behaviours above are also driven against a real app, because an inventory reads source",
+        "and a browser is what the reader uses:",
+        "",
+        "```",
+        "node scripts/council_state_walk.mjs --base-url http://127.0.0.1:8000 --token <token> \\",
+        "     --viewport 1440x900 --theme dark --screenshots docs/media/uiv2-v15-states",
+        "```",
+        "",
+        "It seeds the API token into `sessionStorage` before the first document (the pane's own",
+        "gate), then asserts:",
+        "",
+    ]
+    for state, needle in WALK_STATES:
+        lines.append(f"* **{state}** — {needle}")
+    lines += [
+        "",
+        "The screenshots land in `docs/media/uiv2-v15-states`, named",
+        "`<state>-<viewport>-<theme>.png`, for all four viewports in both themes. The walk drops a",
+        "stream under the pane's own `consumeSSE()` — a proxy reaping an idle socket, not a mocked",
+        "response — so the \"not saved\" card and the notice come from the code the reader runs.",
         "",
         "## What this story does not do",
         "",

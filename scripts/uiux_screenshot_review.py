@@ -464,6 +464,33 @@ REVIEWS: dict[str, dict[str, object]] = {
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",
     },
+    "uiv2-v15-states": {
+        "story": "UIV2-15",
+        "note": (
+            "The five Council states this story makes say something, 5 states x 4 viewports x "
+            "light/dark, shot by `scripts/council_state_walk.mjs` against an authenticated demo app "
+            "after it passed 19/19 on each of the eight runs; each shot scrolls to the element that "
+            "reports the state rather than to whatever the pane happened to show. Opened and read: "
+            "the 1440x900-dark lost-turn capture (notice naming Seat 1 · Staff Architect, the model "
+            "and '4 characters ... none of them reached the transcript', with Ask this seat again / "
+            "Read the session / Check readiness, and the partial voice card under a 'Stream ended · "
+            "not saved' badge rather than a Streaming badge), the 1440x900-dark still-answering "
+            "capture ('still answering', not a failure, with Read it now / Stop watching, on a live "
+            "session row), the 1440x900-light reopened-session capture ('This session is open "
+            "again', the pinned conclusion kept, in the light palette), and the 390x844-light "
+            "closed-session capture (the 409 notice stacked in the single mobile column with Write "
+            "a note to reopen / Read the conclusion / Start a new session). Every one names a state "
+            "and a next action; none leaves a permanent 'Streaming...' card."
+        ),
+        "eye": [
+            "lost-turn-1440x900-dark.png",
+            "still-answering-1440x900-dark.png",
+            "reopened-session-1440x900-light.png",
+            "closed-session-390x844-light.png",
+        ],
+        "re_taken": True,
+        "theme": "light and dark, desktop 1280-1640 and narrow 390",
+    },
 }
 
 
