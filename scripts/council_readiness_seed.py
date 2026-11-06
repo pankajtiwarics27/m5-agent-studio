@@ -281,6 +281,65 @@ class _RuntimeHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-cache")
         self.end_headers()
+        # UIV2-20: a reply that has to make a tool call. The stub answers prose otherwise, so the
+        # tool disclosure, the argument/output disclosure and the "ask again after a tool ran" path
+        # had no way to be exercised end to end. The marker is in the *user's* message and survives
+        # into the follow-up request, so the second turn is recognised by the tool response app.py
+        # appends (`<tool_response ...>`), not by the marker.
+        messages = body.get("messages") or []
+        texts = [str(m.get("content") or "") for m in messages if isinstance(m, dict)]
+        joined = "\n".join(texts)
+        wants_tool = "[[use-tool]]" in joined or "[[use-tool-then-fail]]" in joined
+        # app.py wraps tool output in `<tool_response ...>` with `<` escaped to `\u003c` before it
+        # is put in the message, so the wrapper's delimiter survives only as UNTRUSTED_DATA_JSON.
+        after_tool = "UNTRUSTED_DATA_JSON" in joined
+        if wants_tool and not after_tool:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            call = '<tool_call>{"name": "read_file", "arguments": {"path": "README.md"}}</tool_call>'
+            packet = {"choices": [{"index": 0, "delta": {"content": call}, "finish_reason": None}]}
+            self.wfile.write(b"data: " + json.dumps(packet).encode("utf-8") + b"\n\n")
+            self.wfile.write(b"data: [DONE]\n\n")
+            self.wfile.flush()
+            return
+        if "[[use-tool-then-fail]]" in joined and after_tool:
+            # A provider that dies *after* the tool already ran. The stream opens and then stops
+            # before a single token, which is how a real one fails when the upstream drops: the turn
+            # ends up holding a tool call and no reply, which is exactly the case a retry may not
+            # silently repeat.
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            self.wfile.flush()
+            self.close_connection = True
+            return
+
+        if "[[code]]" in joined and not after_tool:
+            # UIV2-20: a fenced code block, so the copy control has something real to copy.
+            body_text = "Here is the shape of it:\n\n```python\ndef lease_holder(queue):\n    return queue.lease.owner\n```\n\nThat is the whole contract."
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            for word in body_text.split(" "):
+                packet = {"choices": [{"index": 0, "delta": {"content": word + " "}, "finish_reason": None}]}
+                self.wfile.write(b"data: " + json.dumps(packet).encode("utf-8") + b"\n\n")
+                self.wfile.flush()
+                time.sleep(0.004)
+            usage = {
+                "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+                "usage": {"completion_tokens": len(body_text.split(" ")), "prompt_tokens": 128,
+                          "time_to_first_token": 0.04, "generation_tokens_per_second": 41.2,
+                          "prompt_tokens_per_second": 180.0},
+            }
+            self.wfile.write(b"data: " + json.dumps(usage).encode("utf-8") + b"\n\n")
+            self.wfile.write(b"data: [DONE]\n\n")
+            self.wfile.flush()
+            return
+
         capped = bool(self.cap_model) and model == self.cap_model
         reasoning_only = bool(self.reasoning_model) and model == self.reasoning_model
         pace = self.slow_word_seconds if (self.slow_model and model == self.slow_model) else 0.004

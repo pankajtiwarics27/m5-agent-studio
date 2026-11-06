@@ -281,7 +281,15 @@ def test_a_raw_writer_in_a_converted_handler_is_caught(markup_copy):
         # the bare call, which `str.replace` matched as a substring of a deeper-indented
         # call in a different handler - so the injected writer landed somewhere the rule
         # was never meant to look and the test passed while the hole was open.
-        marker = "        presentChatError(pendingChatFailure.message, () => retryChatRequest(text, asstMsg), pendingChatFailure.refusal);"
+        # UIV2-20: the card now carries the retry plan too, so the marker is the whole call.
+        marker = (
+            "        presentChatError(\n"
+            "          pendingChatFailure.message,\n"
+            "          () => retryChatRequest(text, asstMsg),\n"
+            "          pendingChatFailure.refusal,\n"
+            "          chatRetryPlan(asstMsg),\n"
+            "        );"
+        )
         assert text.count(marker) == 1, (
             "the marker must appear exactly once, or the injection lands in another handler"
         )

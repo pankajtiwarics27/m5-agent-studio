@@ -277,8 +277,8 @@ def test_a_role_without_a_tone_is_caught(sources):
 def test_a_role_outside_the_table_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            'return `<div class="msg user" data-role="user" data-state="sent">${head}${renderMarkdown(m.content)}</div>`;',
-            'return `<div class="msg user" data-role="operator" data-state="sent">${head}${renderMarkdown(m.content)}</div>`;',
+            'return `<div class="msg user" data-role="user" data-state="sent">${head}${retried}${renderMarkdown(m.content)}</div>`;',
+            'return `<div class="msg user" data-role="operator" data-state="sent">${head}${retried}${renderMarkdown(m.content)}</div>`;',
             1,
         )
     )

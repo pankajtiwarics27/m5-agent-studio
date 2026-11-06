@@ -107,11 +107,15 @@ def test_chat_request_payload_contract_and_authorized_route_are_unchanged() -> N
 def test_retry_reuses_the_existing_user_turn_after_the_busy_lock_is_released() -> None:
     handler = _chat_handler()
     assert "function retryChatRequest(text, assistantMessage)" in handler
-    assert "sendChatRequest(text, { appendUser: false })" in handler
-    assert "if (options.appendUser !== false) chatHistory.push" in handler
+    # UIV2-20: whether the failed turn survives depends on the retry plan, so the call carries it.
+    assert "sendChatRequest(text, { appendUser: false, retry: plan })" in handler
+    # UIV2-20: the question is built first so a retried one can carry its own note.
+    assert "if (options.appendUser !== false) {" in handler
+    assert "chatHistory.push(asked)" in handler
     assert "lastIndexOf(assistantMessage)" in handler
+    # UIV2-20: the card is now a multi-line call, so the anchor is the call, not its first argument.
     assert handler.index("chatBusy = false;", handler.index("function sendChatRequest")) < handler.index(
-        "presentChatError(pendingChatFailure", handler.index("function sendChatRequest")
+        "presentChatError(", handler.index("function sendChatRequest")
     )
 
 

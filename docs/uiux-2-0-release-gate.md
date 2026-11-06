@@ -81,7 +81,7 @@ Each story in the program carries the same five criteria. The gate does not deci
 | preserved capabilities | 21 |
 | preservation e2e rows | 21 (0 findings) |
 | refusal states | 12 across 9 statuses |
-| committed captures | 1045 in 33 sets, 33 reviewed |
+| committed captures | 1109 in 34 sets, 34 reviewed |
 | reader pages verified | 5 (40 commands, 7 claims) |
 | files this program changed | 406 |
 

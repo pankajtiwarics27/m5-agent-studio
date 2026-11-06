@@ -4509,6 +4509,21 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .chat-persona-description[data-state="empty"] { color: var(--amber); }
+
+  /* ── UIV2-20: what a copied block, a retried question and a stopped turn say ───────────
+     One line each, all the same weight as the context line they sit beside, so a new sentence
+     does not cost the transcript its rhythm. */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  .code-bar button[data-state="copied"] { color: var(--emerald); border-color: var(--emerald); }
+  .code-bar button[data-state="failed"] { color: var(--amber); border-color: var(--amber); }
+  .chat-retry-note {
+    display: inline-block; margin: 0 0 5px; padding: 2px 8px; border-radius: var(--radius-pill);
+    border: 1px solid var(--border); background: var(--bg-elev);
+    font-size: 11.2px; color: var(--text-dim);
+  }
   /* What the reply was given: one line, from the same values that built the request. */
   .chat-context { font-size: 11.2px; color: var(--text-faint); margin: 0 0 8px; line-height: 1.5; }
   .chat-context code { font-family: var(--mono); font-size: 10.8px; color: var(--text-dim); }
@@ -7290,7 +7305,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const blocks = [];
     let text = md.replace(/```([a-zA-Z0-9_+-]*)\n([\s\S]*?)```/g, (_, lang, code) => {
       const idx = blocks.length;
-      blocks.push(`<div class="code-wrap"><div class="code-bar"><span>${escapeHtml(lang || "code")}</span><button class="btn btn-xs" onclick="copyCodeBlock(this)">Copy</button></div><pre><code>${escapeHtml(code.replace(/\n$/, ""))}</code></pre></div>`);
+      // UIV2-20: the copy control says which block it copies - a reply can hold four code blocks and
+      // "Copy" four times names none of them to a screen reader or to a reader on a phone.
+      const label = (lang || "code").trim() || "code";
+      const chars = code.replace(/\n$/, "").length;
+      blocks.push(`<div class="code-wrap" data-lang="${escapeHtml(label)}"><div class="code-bar"><span>${escapeHtml(label)}</span><button class="btn btn-xs" type="button" aria-label="Copy the ${escapeHtml(label)} block (${chars} characters)" title="Copy these ${chars} characters" onclick="copyCodeBlock(this)">Copy</button></div><pre><code>${escapeHtml(code.replace(/\n$/, ""))}</code></pre></div>`);
       return `\n\n@@CODEBLOCK_${idx}@@\n\n`;
     });
     const openFence = text.indexOf("```");
@@ -7371,7 +7390,68 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     try { localStorage.setItem("m5_theme", next); } catch (_) {}
   }
 
-  function copyCodeBlock(btn) { navigator.clipboard.writeText(btn.closest(".code-wrap").querySelector("code").innerText); const p = btn.textContent; btn.textContent = "Copied!"; setTimeout(() => (btn.textContent = p), 1200); }
+  /** Announce a copy to a screen reader, in one shared live region created on first use. */
+  function copyAnnounce(message) {
+    let host = document.getElementById("copyAnnounce");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "copyAnnounce";
+      host.className = "sr-only";
+      host.setAttribute("role", "status");
+      host.setAttribute("aria-live", "polite");
+      document.body.append(host);
+    }
+    host.textContent = message;
+  }
+
+  /** Put `text` on the clipboard. A clipboard that refuses is not a copy that failed.
+   *
+   *  The async Clipboard API needs a secure context and a permission a reader may have denied; the
+   *  old path was a bare `navigator.clipboard.writeText(...)` whose rejection went nowhere, so the
+   *  button said nothing and nothing was copied. The selection-based fallback still copies in those
+   *  browsers, and both paths report what happened. */
+  async function writeClipboard(text) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (_) { /* fall through to the legacy path below */ }
+    try {
+      const helper = document.createElement("textarea");
+      helper.value = text;
+      helper.setAttribute("readonly", "");
+      helper.style.position = "fixed";
+      helper.style.top = "0";
+      helper.style.opacity = "0";
+      document.body.append(helper);
+      helper.select();
+      const copied = document.execCommand("copy");
+      helper.remove();
+      return Boolean(copied);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function copyCodeBlock(btn) {
+    const wrap = btn.closest(".code-wrap");
+    const code = wrap && wrap.querySelector("code");
+    const text = code ? code.innerText : "";
+    const label = btn.dataset.label || btn.textContent || "Copy";
+    btn.dataset.label = label;
+    const copied = await writeClipboard(text);
+    btn.textContent = copied ? "Copied" : "Copy unavailable";
+    btn.dataset.state = copied ? "copied" : "failed";
+    copyAnnounce(copied
+      ? `Copied ${text.length} characters of ${(wrap && wrap.dataset.lang) || "code"}.`
+      : "Copy unavailable: this browser refused the clipboard.");
+    window.setTimeout(() => {
+      btn.textContent = label;
+      delete btn.dataset.state;
+    }, 1600);
+    return copied;
+  }
   function copyStageMarkdown(s, btn) { navigator.clipboard.writeText(stageBuffers[s].c || stageBuffers[s].r || ""); const p = btn.textContent; btn.textContent = "Copied!"; setTimeout(() => (btn.textContent = p), 1200); }
   let onboardingReport = null;
   // The last session list Start read. Kept so the launcher's hint can say whether
@@ -8405,7 +8485,33 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     });
   }
 
-  function presentChatError(message, onRetry, refusal) {
+  /** What asking again means for this turn.
+   *
+   *  A turn that failed before any tool ran is a message the server never acted on: sending the
+   *  same text again repeats nothing. A turn that failed *after* tool calls already ran is a
+   *  different question - those calls did whatever they did, and quietly repeating them is the
+   *  duplicate effect this pane may not cause. So the label says so, and the retry opens a new
+   *  message that records the failed attempt instead of replacing it. */
+  function chatRetryPlan(message) {
+    const ran = message && Array.isArray(message.tools) ? message.tools.length : 0;
+    if (!ran) {
+      return {
+        ran: 0,
+        replace: true,
+        label: "Retry",
+        title: "Send the same message again; nothing ran the first time",
+      };
+    }
+    const calls = `${ran} tool call${ran === 1 ? "" : "s"}`;
+    return {
+      ran,
+      replace: false,
+      label: `Ask again (${calls} already ran)`,
+      title: `Asks the same question as a new message: the ${calls} the failed attempt made are recorded and are not repeated silently`,
+    };
+  }
+
+  function presentChatError(message, onRetry, refusal, retryPlan) {
     // A stream that never opened is a refusal, and a refusal has a status and, for a 429,
     // a wait. Offering a Retry the server will refuse again is the same lie as printing
     // the error in the ok tone, so the control states the wait it is under.
@@ -8415,11 +8521,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       : status === 403 ? "The server refused the reply (403)"
         : status === 429 ? "The rate window is full (429)"
           : "The reply stopped";
+    const plan = retryPlan || chatRetryPlan(null);
+    const keptContext = plan.ran
+      ? `your message and the conversation so far are kept. The failed attempt made ${plan.ran} tool call${plan.ran === 1 ? "" : "s"}; asking again adds a new message and does not repeat them.`
+      : "your message and the conversation so far are kept; nothing ran, so sending it again repeats nothing";
     const written = presentInto("chatState", {
       kind: "error",
       title,
       cause: message || "the stream closed before the model answered",
-      context: "your message and the conversation so far are kept; the partial reply is still in the transcript",
+      context: keptContext,
       actions: [
         wait > 0
           ? {
@@ -8428,7 +8538,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             reason: `the server's Retry-After asks for ${wait}s before this route will answer again`,
             run: onRetry,
           }
-          : { label: "Retry", run: onRetry, title: "Send the same message again" },
+          : { label: plan.label, run: onRetry, title: plan.title },
         { label: "Dismiss", run: () => clearPresentation("chatState", { focus: "chatInput" }), title: "Hide this and keep the transcript, with the cursor back in the composer" },
       ],
     });
@@ -14382,7 +14492,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         + `</div>`;
       const streaming = state === "streaming" ? ' data-streaming="true"' : "";
       if (m.role === "user") {
-        return `<div class="msg user" data-role="user" data-state="sent">${head}${renderMarkdown(m.content)}</div>`;
+        const retried = m.retryOf
+          ? `<div class="chat-retry-note" data-retry="tool-calls">Asked again after an attempt that made ${chatCount(Number(m.retryOf.tool_calls) || 0, "tool call")}; those calls are not repeated.</div>`
+          : "";
+        return `<div class="msg user" data-role="user" data-state="sent">${head}${retried}${renderMarkdown(m.content)}</div>`;
       }
       const contextLine = m.context ? chatContextLine(m.context) : "";
       const context = contextLine
@@ -14403,15 +14516,22 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         : (state === "stopped" || state === "failed")
           ? `<div class="md"><p class="chat-pending">${escapeHtml(pending)}</p></div>`
           : renderMarkdown((m.reasoning || (m.tools && m.tools.length)) ? "" : "...");
+      // One expression for "how long this took": a finished turn and a stopped one must not each
+      // carry their own copy of it, or a change to one leaves the other measuring differently.
+      const elapsed = m.timing && m.timing.startedAt
+        ? `${(((m.timing.endedAt || performance.now()) - m.timing.startedAt) / 1000).toFixed(1)}s`
+        : "";
       const meta = m.usage
         ? `<div class="msg-meta">`
           + `<span>${escapeHtml(m.model)}</span><span>•</span>`
-          + (m.timing && m.timing.startedAt ? `<span>${(((m.timing.endedAt || performance.now()) - m.timing.startedAt) / 1000).toFixed(1)}s</span><span>•</span>` : "")
+          + (elapsed ? `<span>${elapsed}</span><span>•</span>` : "")
           + (m.timing && m.timing.firstTokenAt ? `<span>first token ${((m.timing.firstTokenAt - m.timing.startedAt) / 1000).toFixed(2)}s</span><span>•</span>` : "")
           + `<span>${m.usage.decode_tps} tok/s</span><span>•</span><span>${m.usage.completion_tokens} tok</span></div>`
         : state === "streaming"
           ? `<div class="msg-meta"><span>${escapeHtml(m.model)}</span><span>•</span><span>${chatStreamingMeta(m)}</span></div>`
-          : `<div class="msg-meta"><span>${chatStateLabel(state)}</span></div>`;
+          : state === "stopped"
+            ? `<div class="msg-meta"><span>Stopped by you</span><span>•</span><span>${chatCount(Number(m.stoppedChars) || 0, "character")} kept in this pane</span>${elapsed ? `<span>•</span><span>${elapsed}</span>` : ""}</div>`
+            : `<div class="msg-meta"><span>${chatStateLabel(state)}</span></div>`;
       return `<div class="msg assistant" data-role="assistant" data-state="${escapeHtml(state)}"${streaming}>${head}${context}${think}${toolsHtml}${content}${meta}</div>`;
     });
     if (onlyTheLastChanged) {
@@ -14467,10 +14587,18 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   function retryChatRequest(text, assistantMessage) {
-    if (chatBusy) return;
+    if (chatBusy) return null;
+    const plan = chatRetryPlan(assistantMessage);
     const index = chatHistory.lastIndexOf(assistantMessage);
-    if (index >= 0) chatHistory.splice(index, 1);
-    sendChatRequest(text, { appendUser: false });
+    if (plan.replace) {
+      // Nothing ran: the failed turn is a placeholder, so replacing it keeps one question and one
+      // answer in the transcript rather than two of each.
+      if (index >= 0) chatHistory.splice(index, 1);
+      return sendChatRequest(text, { appendUser: false, retry: plan });
+    }
+    // Something ran: the failed turn *is* the record of it, so it stays, and the new question says
+    // what the earlier attempt did.
+    return sendChatRequest(text, { appendUser: true, retry: plan });
   }
 
   function sendChatRequest(text, options = {}) {
@@ -14482,7 +14610,16 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const toolsEnabled = document.getElementById("chatToolsEnabled").checked;
     const wsInput = document.getElementById("harnessWorkspaceInput");
     const workspaceDir = wsInput ? wsInput.value.trim() : "";
-    if (options.appendUser !== false) chatHistory.push({ role: "user", content: text, createdAt: Date.now() });
+    if (options.appendUser !== false) {
+      const asked = { role: "user", content: text, createdAt: Date.now() };
+      if (options.retry && options.retry.ran) {
+        // UIV2-20: the question is being asked a second time on purpose. The earlier attempt - and
+        // the tool calls it made - stay in the transcript, and this note says so on the question
+        // itself rather than in a toast that has already gone.
+        asked.retryOf = { tool_calls: options.retry.ran };
+      }
+      chatHistory.push(asked);
+    }
     // UIV2-19: the picker's value is a persona id; the request carries the prompt that id names.
     const apiMessages = [{ role: "system", content: (chatPersonaSelected() || {}).prompt || "" }, ...chatHistory.map(m => ({ role: m.role, content: m.content }))];
     // What this reply is being given, captured from the same values that build the
@@ -14533,6 +14670,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       stopped() {
         asstMsg.status = "stopped";
         asstMsg.stoppedAt = Date.now();
+        asstMsg.stoppedChars = (asstMsg.content || "").length;
         asstMsg.timing.endedAt = performance.now();
         flushChatRender();
         if (chatStopRequested) document.getElementById("chatInput").focus({ preventScroll: true });
@@ -14553,7 +14691,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     }, () => { chatBusy = false; renderChatMessages();
       chatStopRequested = false;
       if (pendingChatFailure !== null && requestGeneration === chatRequestGeneration) {
-        presentChatError(pendingChatFailure.message, () => retryChatRequest(text, asstMsg), pendingChatFailure.refusal);
+        presentChatError(
+          pendingChatFailure.message,
+          () => retryChatRequest(text, asstMsg),
+          pendingChatFailure.refusal,
+          chatRetryPlan(asstMsg),
+        );
       }
     });
   }
