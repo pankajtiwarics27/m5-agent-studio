@@ -1,0 +1,182 @@
+{
+  "story": "UIV2-18",
+  "title": "Chat focused balanced conversation layout",
+  "source": "static/index.html",
+  "walk": "scripts/chat_layout_walk.mjs",
+  "column": {
+    "token": "--chat-column",
+    "px": 820,
+    "band": [
+      720,
+      900
+    ],
+    "rows": [
+      ".chat-transcript-bar",
+      ".chat-messages",
+      ".chat-composer"
+    ]
+  },
+  "states": [
+    "empty",
+    "populated",
+    "long-content",
+    "loading",
+    "error",
+    "recovery"
+  ],
+  "viewports": [
+    "1640x900",
+    "1440x900",
+    "1280x800",
+    "390x844"
+  ],
+  "themes": [
+    "light",
+    "dark"
+  ],
+  "checks": [
+    {
+      "check": "the conversation width is one token, inside the 720-900px readable band",
+      "ok": true,
+      "detail": "--chat-column 820px (band 720-900)"
+    },
+    {
+      "check": "there is exactly one place the column width is written",
+      "ok": true,
+      "detail": "1 declaration(s)"
+    },
+    {
+      "check": "the transcript, its bar and the composer all take that column",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the column is centred symmetrically, not nudged from one side",
+      "ok": true,
+      "detail": "padding-inline: max(20px, calc((100% - var(--chat-column)) / 2));\n  \n\n    position: sticky; bottom: 0; z-index: 2;\n    p"
+    },
+    {
+      "check": "the controls keep the pane's width instead of squeezing into the column",
+      "ok": true,
+      "detail": "padding-inline: 16px; \n flex-wrap: nowrap; gap: 10px; padding-block: 8px; \n gap: 8px; padding-block: 10px; \n background:"
+    },
+    {
+      "check": "above 1200px the pickers are one row",
+      "ok": true,
+      "detail": "@media (min-width: 1200px) {"
+    },
+    {
+      "check": "and their labels cannot wrap the bar onto a second row",
+      "ok": true,
+      "detail": "the model label is longer than its picker"
+    },
+    {
+      "check": "the pickers keep the design system's control height rather than a private one",
+      "ok": true,
+      "detail": "UIV2-07 sets --control-min-h for every field"
+    },
+    {
+      "check": "on a phone the controls are three rows, not five",
+      "ok": true,
+      "detail": "14 line phone block"
+    },
+    {
+      "check": "the composer is pinned to the bottom of the pane",
+      "ok": true,
+      "detail": "padding-inline: max(20px, calc((100% - var(--chat-column)) / 2));\n  \n\n    position: sticky; bottom: 0; z-index: 2;\n    padding-bottom: max(11px, env(safe-area-i"
+    },
+    {
+      "check": "and keeps clear of a phone's home indicator",
+      "ok": true,
+      "detail": "padding-bottom is a max() with the inset"
+    },
+    {
+      "check": "the field can scroll itself above an on-screen keyboard",
+      "ok": true,
+      "detail": "a keyboard that covers the field is a composer that left the screen"
+    },
+    {
+      "check": "the shell is measured in dvh, so the keyboard shrinks the pane",
+      "ok": true,
+      "detail": "vh would keep the pane taller than the visible screen"
+    },
+    {
+      "check": "a bubble may not grow wider than its column",
+      "ok": true,
+      "detail": "min-width: 0; overflow-wrap: anywhere; \n\n  background-color: var(--bg-card); border-color: var(--border); box-shadow: no"
+    },
+    {
+      "check": "a code block scrolls inside its bubble, never off the pane",
+      "ok": true,
+      "detail": "a wide line is a scrollbar, not a cut"
+    },
+    {
+      "check": "images, video and tables are clamped to the bubble",
+      "ok": true,
+      "detail": "a table that overflows a phone is unreadable, not just wide"
+    },
+    {
+      "check": "the empty state is one sentence, short enough to read at a glance",
+      "ok": true,
+      "detail": "90 chars: 'Nothing has been said yetPick a model, then type below; replies and reasoning ap'"
+    },
+    {
+      "check": "the markup and the renderer say it in the same words",
+      "ok": true,
+      "detail": "markup 'Nothing has been said yetPick a model, then type below; repl' vs renderer 'Nothing has been said yetPick a model, then type below; repl'"
+    },
+    {
+      "check": "every control the pane had is still there and still wired",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Enter sends, Shift+Enter adds a line - the contract the hint promises",
+      "ok": true,
+      "detail": "one keydown handler, and it is the only thing that sends"
+    },
+    {
+      "check": "Clear is still undoable",
+      "ok": true,
+      "detail": "a cleared transcript is one stray click from a long conversation"
+    },
+    {
+      "check": "the pane still posts one chat stream and invents no second route",
+      "ok": true,
+      "detail": "1 call site(s), 1 mention(s)"
+    },
+    {
+      "check": "Chat still opens without a telemetry rail",
+      "ok": true,
+      "detail": "the rail follows the pane; Chat has no inspector context"
+    },
+    {
+      "check": "the transcript is still a log that does not read itself aloud",
+      "ok": true,
+      "detail": "one live region per token is an accessibility defect, not a feature"
+    },
+    {
+      "check": "the walk asserts every state the captures show",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the walk needs no environment of its own",
+      "ok": true,
+      "detail": "a walk that hard-codes a path is not reproducible"
+    },
+    {
+      "check": "the walk measures the column it promised, not a screenshot's pixels",
+      "ok": true,
+      "detail": "the browser is the only thing that knows the width the reader got"
+    },
+    {
+      "check": "the walk knows the phone layout it photographs",
+      "ok": true,
+      "detail": "a phone capture that was never resized is a desktop capture with a small window"
+    }
+  ],
+  "check_count": 28,
+  "findings": [],
+  "status": "clean"
+}

@@ -547,6 +547,34 @@ REVIEWS: dict[str, dict[str, object]] = {
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",
     },
+    "chat-layout": {
+        "story": "UIV2-18",
+        "note": (
+            "Chat's conversation column: six shots on each of four viewports x light/dark - empty, "
+            "populated, long-content, loading, error and recovery - written by "
+            "`scripts/chat_layout_walk.mjs` against fixtures it starts itself (default, "
+            "`--slow-model` for the reply in progress, `--long-model` for the reply long enough to "
+            "scroll, and the catalogue's keyless provider row for the failure), after 26/26 checks "
+            "on each of the eight runs, beside `before-uiv2-18/`, the empty and populated states "
+            "served from origin/main at 21c1eef captured by this walk in `--capture-only`. Opened "
+            "and read: the 1440x900-dark populated capture (an 820px column centred in the 1,240px "
+            "pane, the answer at the column's width, the question aligned to its right edge, the "
+            "composer under both), the 1440x900-dark long-content capture (a code block with its own "
+            "scrollbar inside its bubble and an unbroken token that wraps instead of widening the "
+            "pane), the 390x844-light populated capture (a three-row control bar and the same column "
+            "at phone width), and the before-uiv2-18 1640x900-light populated capture (an 870px "
+            "answer in a 1,300px row, a full-width composer, and the second control row)."
+        ),
+        "eye": [
+            "chat-populated-1440x900-dark.png",
+            "chat-long-content-1440x900-dark.png",
+            "chat-empty-390x844-light.png",
+            "chat-loading-1440x900-light.png",
+            "before-uiv2-18/1640x900-light/chat-populated-1640x900-light.png",
+        ],
+        "re_taken": True,
+        "theme": "light and dark, desktop 1280-1640 and narrow 390",
+    },
 }
 
 

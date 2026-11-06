@@ -449,7 +449,7 @@ def test_a_payload_that_drops_a_field_is_caught(sources):
 def test_a_transcript_that_never_says_what_appears_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            "Choose a model above and type below; replies and reasoning appear here.",
+            "Pick a model, then type below; replies and reasoning appear here.",
             "Session cleared.",
         )
     )
