@@ -2170,7 +2170,7 @@
         "attempt_count": 1,
         "started_at": "2026-11-06T21:05:00+05:30",
         "completed_at": "2026-11-07T00:40:00+05:30",
-        "commit_sha": null,
+        "commit_sha": "946b62396a93f4b9549f9a3a457f46abee00a98a",
         "changed_files": [
           "static/index.html (Chat: `CHAT_PERSONAS` - the registry of id, label, description and prompt that is now the authority; `CHAT_PERSONA_DEFAULT` / `CHAT_PERSONA_KEY`; `chatPersonaById`, `chatPersonaSelected`, `chatPersonaMatches`, `renderChatPersonaPicker`, `updateChatPersonaDescription`, `selectChatPersona`; `select#chatPersona` ships no `<option>` and is filled by the renderer; `input#chatPersonaSearch` with `aria-controls`, `Escape` to clear and `Enter` to take the first match; `<p id=\"chatPersonaDescription\">` is one clamped line carrying the whole sentence as its title and `aria-live=\"polite\"`; the request sends `chatPersonaSelected().prompt`; `.chat-persona-*` styles, with the filter as the one documented 32px exception to `--control-min-h` and the two-column grid that keeps the picker on one row)",
           "studio.py (built from the above by scripts/build_studio.py)",
