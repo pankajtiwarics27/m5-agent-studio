@@ -1,6 +1,6 @@
 # MoneyPrinterTurbo integration
 
-Two integration surfaces, one external system: [MoneyPrinterTurbo](https://github.com/harry0703/MoneyPrinterTurbo),
+Three integration surfaces, one external system: [MoneyPrinterTurbo](https://github.com/harry0703/MoneyPrinterTurbo),
 an all-in-one AI short-video generator. Facts below were verified against the
 `main` branch source (2026-11-06); line references are to that revision.
 
@@ -184,6 +184,89 @@ gateway-capability merging in `discover_models`, negotiation feasibility for
 `script-generation`, the tool-unit/time budget behavior, and cancellation
 propagation.
 
+## Part 3 — `moneyprinter_mcp.py` (cross-harness MCP stdio server)
+
+`moneyprinter_mcp.py` exposes the **same Part 1 contract** to any MCP client
+that can launch a stdio server — including DeepSeek Harness and M5 Agent
+Studio's own MCP client. It exists so the MoneyPrinterTurbo tool is reachable
+from harnesses that speak MCP natively, without replicating or widening any
+authorization boundary inside the harness.
+
+### Transport and trust boundaries
+
+| Property | Value |
+|---|---|
+| Transport | stdio, newline-delimited JSON-RPC 2.0 (no sockets, no HTTP) |
+| Protocol revision | `2025-06-18` (`initialize`, `ping`, `tools/list`, `tools/call`; `notifications/*` accepted and dropped) |
+| Tools exposed | exactly one: `moneyprinter_video_generate` (same schema/validation as Part 1) |
+| Concurrency | one generation at a time; a second call fails fast with an `isError` `busy` result |
+| Frame cap | 4 MiB per input line; oversized frames are rejected and the loop continues |
+| Failure model | tool-level failures (missing config, invalid params, ffmpeg preflight, CLI failure, busy) are `isError` results; JSON-RPC errors are reserved for protocol faults |
+| Diagnostics | stderr only; stdout carries JSON-RPC frames exclusively |
+| Notifications | a `tools/call` without an `id` is dropped **without executing** |
+| Cancellation | not implemented; the client's own `tools/call` timeout governs |
+| Output caps / timeout | identical to Part 1 (capped stdout/stderr capture, 1800 s default, 3600 s hard cap) |
+
+Environment (all optional except `MONEYPRINTER_TURBO_DIR`):
+
+| Variable | Meaning |
+|---|---|
+| `MONEYPRINTER_TURBO_DIR` | Absolute MoneyPrinterTurbo checkout the CLI runs in. Required — tool calls fail closed (`not_configured`) without it |
+| `MONEYPRINTER_FFMPEG` | Optional ffmpeg path for the preflight probe |
+| `MONEYPRINTER_TIMEOUT_SECONDS` | Optional wall-clock budget in seconds (default 1800, hard cap 3600; malformed values fall back to the default) |
+| `MONEYPRINTER_LINEAGE_ROOT` | Optional artifact-lineage store directory (defaults to the Studio's standard location) |
+
+### DeepSeek Harness registration
+
+DeepSeek Harness's `@deepseek-ai/dsh-mcp-client` launches stdio servers; the
+tool then appears as `mcp__<serverName>__moneyprinter_video_generate`. Notes:
+
+- The default `toolCallTimeoutMs` is **60 seconds**, far below a video render —
+  set it explicitly or the harness will abort healthy renders.
+- `dsh-mcp-client` passes a scrubbed environment plus the configured `env` block;
+  `MONEYPRINTER_TURBO_DIR` must travel in that block (or via `cwd`).
+- The CLI's own stdout log line (`uv run ...`) happens inside MoneyPrinterTurbo,
+  not in this server, so stdio framing is unaffected.
+
+```yaml
+# deepseek-harness config (e.g. apps/cli/config/examples or a user profile)
+- id: moneyprinter
+  name: '@deepseek-ai/dsh-mcp-client'
+  config:
+    serverName: moneyprinter
+    transport: stdio
+    command: /abs/path/to/m5-agent-studio/.venv/bin/python
+    args: ['/abs/path/to/m5-agent-studio/moneyprinter_mcp.py']
+    env:
+      MONEYPRINTER_TURBO_DIR: /abs/path/to/MoneyPrinterTurbo
+    toolCallTimeoutMs: 3600000
+```
+
+The official SDK negotiates protocol revisions (modern or supported legacy);
+this server answers `2025-06-18`, a supported legacy revision. Against a stock
+MoneyPrinterTurbo, calls succeed through this path with **no OpenAI-compatible
+shim** — the shim requirement in Part 2 applies only to Council chat/routing traffic.
+
+### M5 Agent Studio registration
+
+Launch the same script as a stdio MCP server from the Studio's MCP settings
+(same shape: command `python`, args `["moneyprinter_mcp.py"]`, env
+`MONEYPRINTER_TURBO_DIR=…`). The Studio launches MCP servers only after you
+configure them, and its own MCP client policy (tool approval, timeouts) applies
+unchanged; this module does not bypass or widen the admission boundary.
+
+### Tests
+
+`tests/test_moneyprinter_mcp.py` covers the handshake shape, `tools/list`
+schema equality, ping, unknown method/tool and non-object arguments, fail-closed
+behavior without `MONEYPRINTER_TURBO_DIR`, input validation without spawning,
+success/failure/preflight/unexpected-exception result mapping, the
+single-concurrency guard, timeout parsing and clamping, frame caps and EOF, the
+full stdio exchange over in-memory pipes, parse-error recovery, broken-pipe
+exit, and an end-to-end stdio handshake via a real subprocess. The runner seam
+is monkeypatched throughout; no test contacts the network or a real MPT
+installation.
+
 ## Limitations and follow-ups
 
 - Registering `moneyprinter_video_generate` as an admission-boundary built-in
@@ -194,7 +277,10 @@ propagation.
 - `provider_switching.py` and `model_registry.py` are unchanged by design;
   MoneyPrinterAPI is streaming-only, without tools/structured output/reasoning.
 - Non-goals: no new persistence schema, no new runtime dependency, no change to
-  the standalone `studio.py` module wiring (the tool module is entered by the
-  orchestration loop, not imported by `studio.py`).
+  the standalone `studio.py` module wiring (`moneyprinter_tool.py` is entered by
+  the orchestration loop and `moneyprinter_mcp.py` is launched as a separate
+  stdio server; neither is imported by `studio.py`), and no cancellation or
+  progress notifications in the MCP server.
 
-Decision record: [ADR-0025](adr/0025-moneyprinter-turbo-local-tool-integration.md).
+Decision records: [ADR-0025](adr/0025-moneyprinter-turbo-local-tool-integration.md),
+[ADR-0026](adr/0026-moneyprinter-turbo-mcp-stdio-server.md).

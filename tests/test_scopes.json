@@ -301,6 +301,9 @@
     ],
     "model_discovery.py": [
       "models.providers"
+    ],
+    "moneyprinter_mcp.py": [
+      "models.providers"
     ]
   }
 }
