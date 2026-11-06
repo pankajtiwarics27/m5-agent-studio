@@ -13,7 +13,7 @@ thing on screen was configuration; the tools you had connected were below the fo
 chip told you neither whether it was local or remote, nor whether it needed a key, nor which
 approval policy it would run under.
 
-What this inventory checks: that the dialog is a hub with a three-tab tablist and exactly one
+What this inventory checks: that the dialog is a hub with a four-tab tablist and exactly one
 section on screen; that a preset card states its transport, its trust level, its key requirement,
 its approval policy and the endpoint or command it would connect to, and that the trust level is
 derived from the stored record rather than invented; that search narrows the cards, the filter chips
@@ -161,16 +161,16 @@ def build_inventory() -> dict[str, Any]:
     tab_ids = re.findall(r'id="mcpTab(\w+)" role="tab"', modal)
     panel_ids = re.findall(r'id="mcpPanel(\w+)"', modal)
     check(
-        "the dialog is a hub: one tablist with three tabs",
+        "the dialog is a hub: one tablist with four tabs, the Tools tab included",
         'role="tablist"' in modal
-        and tab_ids == ["Catalog", "Connected", "Activity"]
-        and modal.count('role="tab"') == 3,
+        and tab_ids == ["Catalog", "Connected", "Tools", "Activity"]
+        and modal.count('role="tab"') == 4,
         f"tabs: {', '.join(tab_ids) or 'none'}",
     )
     check(
         "each tab controls its own panel, and the panels are tabpanels",
-        panel_ids == ["Catalog", "Connected", "Activity"]
-        and modal.count('role="tabpanel"') == 3
+        panel_ids == ["Catalog", "Connected", "Tools", "Activity"]
+        and modal.count('role="tabpanel"') == 4
         and all(f'aria-controls="mcpPanel{name}"' in modal for name in tab_ids)
         and all(f'aria-labelledby="mcpTab{name}"' in modal for name in panel_ids),
         f"panels: {', '.join(panel_ids) or 'none'} · aria-controls and aria-labelledby wired both ways",

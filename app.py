@@ -6035,6 +6035,37 @@ def _normalize_mcp_tool_entry(raw_tool: Mapping[str, Any]) -> dict[str, Any]:
     return entry
 
 
+#: What each risk level is called on screen, and what it means for the next call (UIV2-23).
+MCP_RISK_LABELS: dict[str, str] = {
+    "read": "read-only tool",
+    "write": "write",
+    "write_idempotent": "repeatable write",
+    "destructive": "destructive write",
+}
+MCP_RISK_CONSEQUENCES: dict[str, str] = {
+    "read": "It only reads. Running it changes nothing on the server.",
+    "write": "It writes and cannot be repeated safely — a second call may do the work twice.",
+    "write_idempotent": "It writes, but it carries an idempotency key, so a repeat with the same key is safe.",
+    "destructive": "It is destructive: the server says this call can remove or overwrite data.",
+}
+
+
+def mcp_tool_risk_level(semantics: "mcp_client.McpToolSemantics") -> str:
+    """What a call to this tool can do to the world (UIV2-23).
+
+    Four words, in the order that matters: a read changes nothing, a destructive call is the one
+    nobody can undo, an idempotent write can be replayed with the same key, and every other tool
+    is a write that neither repeats safely nor can be reverted.
+    """
+    if semantics.read_only:
+        return "read"
+    if semantics.destructive:
+        return "destructive"
+    if semantics.idempotency_supported:
+        return "write_idempotent"
+    return "write"
+
+
 def list_mcp_servers(include_secret: bool = False) -> list[dict[str, Any]]:
     def _read_mcp(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
@@ -6088,6 +6119,12 @@ def list_mcp_servers(include_secret: bool = False) -> list[dict[str, Any]]:
             t_copy["idempotency_mechanism"] = sem.idempotency_mechanism
             t_copy["replay_policy"] = sem.replay_policy
             t_copy["reconciliation_supported"] = sem.reconciliation_supported
+            # UIV2-23: the tool browser has to be able to say what a call to this tool costs
+            # without re-deriving it, so the classification travels with the tool.
+            t_copy["read_only"] = sem.read_only
+            t_copy["destructive"] = sem.destructive
+            t_copy["requires_approval_override"] = sem.requires_approval_override
+            t_copy["risk"] = mcp_tool_risk_level(sem)
             if sem.idempotency_status == "unsupported":
                 unsupported_tools.append(sem.tool_name)
             enriched_tools.append(t_copy)
@@ -6095,6 +6132,10 @@ def list_mcp_servers(include_secret: bool = False) -> list[dict[str, Any]]:
         d["unsupported_idempotency_tools"] = unsupported_tools
         en_set = set(d["enabled_tools"]) if d["enabled_tools"] else {t.get("name") for t in enriched_tools}
         d["active_tool_count"] = sum(1 for t in enriched_tools if t.get("name") in en_set)
+        for t_copy in enriched_tools:
+            # `denied` is the server's own allowlist, not the Harness policy: a tool that is off
+            # here is refused before any policy is consulted.
+            t_copy["denied"] = bool(t_copy.get("name")) and t_copy["name"] not in en_set
         if include_secret:
             d["effective_token"] = effective_tok
             d["raw_token"] = raw_tok
@@ -6970,6 +7011,49 @@ async def api_sync_mcp_server(alias: str, request: Request) -> JSONResponse:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+#: The four ways a test call can be refused before the server is even reached, keyed by the
+#: sentence `_execute_mcp_tool_call_inner` refuses with. The message stays the one the executor
+#: raises — this only names it, so the UI can say *why* instead of matching words itself (UIV2-23).
+MCP_DENIAL_KINDS: tuple[tuple[str, str], ...] = (
+    ("is not in the server's enabled-tool allowlist", "tool_denied"),
+    ("MCP server `", "server_denied"),
+    ("MCP stdio process launch is disabled by default", "stdio_gate"),
+    ("requires explicit approval", "approval_required"),
+    ("Paused non-idempotent MCP write", "paused_idempotency"),
+)
+
+
+def mcp_denial_kind(message: str) -> str:
+    """Which refusal a test call met: the allowlist, the server, the stdio gate, or policy."""
+    text = str(message or "")
+    for needle, kind in MCP_DENIAL_KINDS:
+        if needle in text:
+            return kind
+    return "denied"
+
+
+def mcp_call_block_reason(srv: Mapping[str, Any], remote_tool: str) -> tuple[str, str] | None:
+    """Why a test call cannot run at all, before its risk or policy is considered.
+
+    The executor re-checks all three (defence in depth); this answers them first so a refused
+    call is not also asked to confirm that it is a write.
+    """
+    if not srv.get("enabled"):
+        return "server_denied", f"MCP server `{srv.get('alias')}` is disabled. Turn it on in Connected."
+    known_tools = {str(t.get("name")) for t in (srv.get("tools") or []) if isinstance(t, Mapping) and t.get("name")}
+    if remote_tool not in known_tools:
+        return "unknown_tool", f"`{remote_tool}` is not a tool this server discovered. Sync the server, then pick one of its tools."
+    enabled_tools = set(srv.get("enabled_tools") or known_tools)
+    if remote_tool not in enabled_tools:
+        return "tool_denied", f"`{remote_tool}` is turned off for this server. Allow it in Tools, then call it again."
+    if str(srv.get("transport") or "http").strip().lower() != "http" and not STUDIO_ALLOW_MCP_STDIO:
+        return (
+            "stdio_gate",
+            "MCP stdio process launch is disabled by default. Set STUDIO_ALLOW_MCP_STDIO=1 on the server, then call again.",
+        )
+    return None
+
+
 @app.post("/api/mcp/servers/{alias}/call")
 async def api_call_mcp_server_tool(alias: str, request: Request) -> JSONResponse:
     """Interactive MCP Tool Playground endpoint — test-fire any Cloud or Custom MCP tool live."""
@@ -6986,6 +7070,33 @@ async def api_call_mcp_server_tool(alias: str, request: Request) -> JSONResponse
     if not isinstance(args, dict):
         raise HTTPException(status_code=400, detail="`arguments` must be a JSON object.")
     raw_action_id = (request.headers.get("Idempotency-Key") or str(body.get("action_id") or "")).strip()
+    # UIV2-23: a test call is a human action, and the risk of the tool is stated before it runs.
+    try:
+        srv = get_mcp_server(alias, include_secret=False)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    blocked = mcp_call_block_reason(srv, tool_name)
+    if blocked is not None:
+        kind, message = blocked
+        return JSONResponse(status_code=403, content={"detail": message, "denial": {"kind": kind, "alias": alias, "tool": tool_name}})
+    semantics = _resolve_mcp_tool_semantics(srv, tool_name)
+    risk = mcp_tool_risk_level(semantics)
+    if risk != "read" and not bool(body.get("confirm_write")):
+        # Nothing runs an unclassified write from this page on one click: the operator is shown
+        # what the tool can do and has to say so for this call, every call.
+        return JSONResponse(
+            status_code=428,
+            content={
+                "detail": f"`{tool_name}` is a {MCP_RISK_LABELS[risk]}. A test call to a tool that is not read-only has to be confirmed first.",
+                "confirmation_required": {
+                    "alias": alias,
+                    "tool": tool_name,
+                    "risk": risk,
+                    "risk_label": MCP_RISK_LABELS[risk],
+                    "message": MCP_RISK_CONSEQUENCES[risk],
+                },
+            },
+        )
     try:
         res = await execute_mcp_tool_call(
             request.app.state.http,
@@ -6998,9 +7109,29 @@ async def api_call_mcp_server_tool(alias: str, request: Request) -> JSONResponse
             grant_source="operator_one_call",
             action_id=(raw_action_id or None),
         )
+        # What authorized this call, so the result inspector can say it instead of implying it.
+        res["authorization"] = {
+            "surface": "test call",
+            "policy": "standard",
+            "grant_source": "operator_one_call",
+            "approved": True,
+            "confirmed_write": risk != "read",
+            "risk": risk,
+            "risk_label": MCP_RISK_LABELS[risk],
+            "read_only": semantics.read_only,
+            "harness_would_ask": mcp_tool_needs_approval(alias, "standard", tool_name),
+        }
         return JSONResponse(res)
     except side_effect_ledger.DuplicateSideEffect as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except PermissionError as exc:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "detail": str(exc),
+                "denial": {"kind": mcp_denial_kind(str(exc)), "alias": alias, "tool": tool_name, "risk": risk},
+            },
+        )
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

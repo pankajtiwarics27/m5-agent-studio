@@ -24,25 +24,25 @@ is a bug in the caller, and the `error` kind is already how bugs are shown.
 
 | Container | Pane | Kind | Actions | Line |
 |---|---|---|---|---|
-| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 4114 |
-| `#startRecentState` | Start | `empty` | `Start a session`, `Open Harness` | 4173 |
-| `#startRecentState` | Start | `error` | `Retry`, `Open Harness` | 4248 |
-| `#startHealthState` | Start | `error` | `Re-check`, `Monitor rail` | 4346 |
-| `#startWorkspaceState` | Start | `error` | `Retry`, `Open Harness` | 4430 |
-| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 4923 |
-| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 4937 |
-| `#chatState` | Chat | `error` | `Dismiss` | 4986 |
-| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 5009 |
-| `#hallSummonState` | Council | `error` | `Start a new session`, `Reload the session list` | 5825 |
-| `#hallSummonState` | Council | `recovery` | `Read it again`, `Reload the session list` | 5838 |
-| `#hallSummonState` | Council | `recovery` | `Write a note to reopen`, `Read the conclusion`, `Start a new session` | 5852 |
-| `#hallSummonState` | Council | `recovery` | `Read it now`, `Stop watching` | 5868 |
-| `#hallSummonState` | Council | `error` | `Ask this seat again`, `Read the session`, `Check readiness` | 5884 |
-| `#hallSummonState` | Council | `recovery` | `Read the old conclusion`, `Convene the round` | 6478 |
-| `#hallSummonState` | Council | `error` | `Retry the round`, `Check readiness`, `Ask one model` | 7124 |
-| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 10811 |
-| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 10837 |
-| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 11021 |
+| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 4192 |
+| `#startRecentState` | Start | `empty` | `Start a session`, `Open Harness` | 4251 |
+| `#startRecentState` | Start | `error` | `Retry`, `Open Harness` | 4326 |
+| `#startHealthState` | Start | `error` | `Re-check`, `Monitor rail` | 4424 |
+| `#startWorkspaceState` | Start | `error` | `Retry`, `Open Harness` | 4508 |
+| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 5001 |
+| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 5015 |
+| `#chatState` | Chat | `error` | `Dismiss` | 5064 |
+| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 5087 |
+| `#hallSummonState` | Council | `error` | `Start a new session`, `Reload the session list` | 5903 |
+| `#hallSummonState` | Council | `recovery` | `Read it again`, `Reload the session list` | 5916 |
+| `#hallSummonState` | Council | `recovery` | `Write a note to reopen`, `Read the conclusion`, `Start a new session` | 5930 |
+| `#hallSummonState` | Council | `recovery` | `Read it now`, `Stop watching` | 5946 |
+| `#hallSummonState` | Council | `error` | `Ask this seat again`, `Read the session`, `Check readiness` | 5962 |
+| `#hallSummonState` | Council | `recovery` | `Read the old conclusion`, `Convene the round` | 6556 |
+| `#hallSummonState` | Council | `error` | `Retry the round`, `Check readiness`, `Ask one model` | 7202 |
+| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 10889 |
+| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 10915 |
+| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 11099 |
 
 19 call sites across 9 of 9 containers: 3 empty, 9 error, 7 recovery.
 
@@ -62,15 +62,14 @@ is a bug in the caller, and the `error` kind is already how bugs are shown.
 
 ## What is still raw
 
-3 `"Error: " + message` writers remain outside the wired handlers. They are listed
+2 `"Error: " + message` writers remain outside the wired handlers. They are listed
 here rather than converted, because they belong to panes P2 to P4 rebuild, and a story about the component
 should not quietly become a pane rewrite:
 
 | Handler | Line |
 |---|---|
-| `installSkill()` | 5533 |
-| `openHarnessDiffModal()` | 13098 |
-| `runMcpPlayground()` | 15346 |
+| `installSkill()` | 5611 |
+| `openHarnessDiffModal()` | 13176 |
 
 ## Checks and limits
 

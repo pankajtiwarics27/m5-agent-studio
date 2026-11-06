@@ -859,10 +859,12 @@ def test_mcp_playground_http_route_returns_409_when_uncertain_action_replayed(
             "Idempotency-Key": "idem-merge-42",
         }
         # First call fails ambiguously (HTTP 400 with uncertain ledger state recorded).
+        # UIV2-23: the test-call surface asks the operator to confirm a write before it runs, so
+        # the request carries confirm_write - the ledger behaviour under test is unchanged.
         r1 = client.post(
             "/api/mcp/servers/gh-mcp/call",
             headers=auth_headers,
-            json={"tool": "merge_pr", "arguments": {"pr": 42}},
+            json={"tool": "merge_pr", "arguments": {"pr": 42}, "confirm_write": True},
         )
         assert r1.status_code == 400
         assert calls["count"] == 1
@@ -874,7 +876,7 @@ def test_mcp_playground_http_route_returns_409_when_uncertain_action_replayed(
         r2 = client.post(
             "/api/mcp/servers/gh-mcp/call",
             headers=auth_headers,
-            json={"tool": "merge_pr", "arguments": {"pr": 42}},
+            json={"tool": "merge_pr", "arguments": {"pr": 42}, "confirm_write": True},
         )
         assert r2.status_code == 409
         assert "cannot be retried blindly" in r2.json()["detail"]

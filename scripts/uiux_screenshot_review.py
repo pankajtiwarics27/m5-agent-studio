@@ -619,6 +619,45 @@ REVIEWS: dict[str, dict[str, object]] = {
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",
     },
+    "mcp-tools-uiv2-23": {
+        "story": "UIV2-23",
+        "note": (
+            "The MCP tool browser and its test call: fifteen shots on each of four viewports x "
+            "light/dark (an empty Tools tab that names the next action, four rows each carrying a "
+            "risk pill, its allowlist state, what a call does, what happens when a model asks and "
+            "the arguments it takes, the filter chips with their counts, search narrowed to one "
+            "tool, a search with no hit offering to clear itself, a write selected with its consent "
+            "row and a disabled Test Call, arguments that are not JSON with the alert naming them, a "
+            "call held in flight reading 'Calling...', the result inspector with its authorization "
+            "line and a shut Raw response, a 3625-character output truncated with 'Show all', a "
+            "Denied row with no test call, a switched-off server refused with the switch to move, "
+            "the same call recovered, a tool that reports failure, and the keyboard path), written "
+            "by `scripts/mcp_tools_walk.mjs` against a fixture it starts itself and the real stdio "
+            "MCP server it syncs through the guide, after 56/56 checks on the six desktop runs and "
+            "55/55 on the two phone runs, beside `before-uiv2-23/`, the same states served from "
+            "57ef410 and captured by this same walk in `--capture-only`. Opened and read: the "
+            "1640x900-dark list capture (four rows, the risk words Read-only / Destructive / Write, "
+            "the three labelled statements each, and the counters reading 1 configured - 4 "
+            "discovered - 4 available - 0 denied), the 390x844-light consent capture (one column, "
+            "the consent naming slow_echo and the write it is, Test Call greyed until it is ticked), "
+            "the 1440x900-dark result capture (the Write pill, 1660 ms, 59 characters, 'Authorized as "
+            "operator_one_call under standard - you confirmed this write', and the Raw response "
+            "disclosure shut), the 1440x900-dark long capture (the truncation line with its hidden "
+            "count and 'Show all 3631 characters'), and the before-uiv2-23 1640x900-dark list "
+            "capture (three tabs, the tool list still a collapsed drawer on the Connected row, and "
+            "a one-line output box with no risk and no consent)."
+        ),
+        "eye": [
+            "mcp-tools-list-1640x900-dark.png",
+            "mcp-tools-consent-390x844-light.png",
+            "mcp-tools-result-1440x900-dark.png",
+            "mcp-tools-long-1440x900-dark.png",
+            "mcp-tools-denied-1440x900-light.png",
+            "before-uiv2-23/mcp-tools-list-1640x900-dark.png",
+        ],
+        "re_taken": True,
+        "theme": "light and dark, desktop 1280-1640 and narrow 390",
+    },
     "chat-recovery": {
         "story": "UIV2-20",
         "note": (

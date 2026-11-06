@@ -335,8 +335,9 @@ def build_inventory() -> dict:
         len(panels) == 6 and [(pane, tab) for pane, tab in panels] == pairs,
         f"{len(panels)} panels: {panels}",
     )
-    # UIV2-21 added a second tablist (the MCP hub's Catalog / Connected / Activity). The rule is
-    # one tab stop per tablist, so each section is one Tab away: the rail is 1 of 6, the hub 1 of 3.
+    # UIV2-21 added a second tablist (the MCP hub's Catalog / Connected / Activity) and UIV2-23 a
+    # fourth section in it (Tools). The rule is one tab stop per tablist, so each section is one Tab
+    # away: the rail is 1 of 6, the hub 1 of 4.
     tab_tags = re.findall(r"<button[^>]*role=\"tab\"[^>]*>", html)
     rail_tabs = [tag for tag in tab_tags if "data-mcp-tab" not in tag]
     hub_tabs = [tag for tag in tab_tags if "data-mcp-tab" in tag]
@@ -345,7 +346,7 @@ def build_inventory() -> dict:
     check(
         "exactly one tab is in the tab order, so a pane is one Tab away and not six",
         len(rail_tabs) == 6
-        and len(hub_tabs) == 3
+        and len(hub_tabs) == 4
         and len(zero_rail) == 1
         and len(zero_hub) == 1,
         f"rail {len(zero_rail)}/{len(rail_tabs)} tabbable · hub {len(zero_hub)}/{len(hub_tabs)} tabbable",

@@ -2635,20 +2635,60 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-23: MCP tool discovery, approval and test-call experience. Required outcome: Tool browser, read/write risk badges, approval policy explanation, test call with JSON validation and result inspector. Specific gate: User can distinguish configured vs discovered vs available vs denied; test calls go through same authorization; no auto-run of untrusted write tools; helpful failure messages. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-06T19:05:00+05:30",
+        "completed_at": "2026-11-06T21:10:00+05:30",
+        "commit_sha": "648af14",
+        "changed_files": [
+          "app.py (MCP tool risk: `MCP_RISK_LABELS`/`MCP_RISK_CONSEQUENCES` and `mcp_tool_risk_level()` — read only on `readOnlyHint`, destructive before any write kind, `write` as the fail-closed default; every tool the API returns now carries `read_only`, `destructive`, `requires_approval_override`, `risk` and `denied`; `MCP_DENIAL_KINDS`/`mcp_denial_kind()`/`mcp_call_block_reason()` name a refusal instead of raising; `POST /api/mcp/servers/{alias}/call` answers 404 unknown server, 403 with a structured `denial.kind` for a disabled server, an unknown tool, an allowlisted-out tool or the closed stdio gate, 428 `confirmation_required` for any non-read tool that was not confirmed, 200 with an `authorization` echo and 409 for a duplicate side effect)",
+          "studio.py (built from the above by scripts/build_studio.py)",
+          "static/index.html (MCP: a fourth hub tab `#mcpPanelTools` with `#mcpToolsSummary` four counters, `#mcpToolFilters` chips that count what they would show, `#mcpToolList` rows carrying risk, state, 'What a call does', 'When a model asks' and 'Arguments' plus Allow/Deny and Raw schema, search through `mcpHubTerm()`, and an empty state that clears it; the playground rebuilt as a two-row argument box validated against the tool's `inputSchema` (`#mcpPlayArgsError` role=alert), `#mcpPlayRisk` in the Tools tab's words, `#mcpPlayConsent` naming the tool and the risk for anything that is not a read, `confirm_write` sent only when it is ticked, 403 and 428 bodies drawn as refusals with the next step, and `#mcpPlayResult`/`#mcpPlayMeta`/`#mcpPlayAuth`/`#mcpPlayOutput`/`#mcpPlayMore`/`#mcpPlayRaw` as the inspector with the raw response behind a shut disclosure)",
+          "scripts/mcp_hub_fixture_server.py (its read tools declare `annotations.readOnlyHint`, its failing tool declares `destructiveHint`, so the walk has one tool of each risk)",
+          "scripts/mcp_hub_walk.mjs (four tabs now, and its write calls tick the consent the new playground asks for)",
+          "scripts/mcp_tools_walk.mjs (new: 56 checks — four tabs and one panel, four honest zeroes in an empty state, four rows with a risk each, the filter chips and their counts, search and its empty state, the schema disclosure, a write that cannot be posted while the consent is unticked, the same tool refused 428 without `confirm_write`, invalid JSON / a non-object / a missing required argument, a real loading state, the inspector and its authorization line, a Deny that the server honours with 403 `tool_denied`, recovery after Allow, long output with a real Show all, a failing tool, and the keyboard path; `--capture-only` photographs the dialog this story replaced)",
+          "scripts/uiux_mcp_tools_inventory.py (new: 47 checks over the tab, the four counters, the four risks, the refusal kinds, the test call, the inspector, the routes and policies it may not touch, the walk and the captures)",
+          "scripts/uiux_mcp_hub_inventory.py (the hub now has four tabs; its tablist check follows the source)",
+          "tests/test_mcp_tools.py (new: 38 tests over risk classification, every refusal kind, the route's 404/403/428/200/409 answers, the authorization echo, the page's consent gate and the walk's states)",
+          "tests/test_durable_intent_ledger.py (its two direct `/call` posts send `confirm_write`, which the surface now requires)",
+          "product/M5_2_0_UIUX_MCP_Tools.json, docs/uiux-2-3-mcp-tools.md (generated)",
+          "docs/media/mcp-tools-uiv2-23 (120 after and 112 before captures at four viewports x light/dark)"
+        ],
+        "tests_executed": [
+          "node scripts/mcp_tools_walk.mjs — 56/56 at 1640x900, 1440x900 and 1280x800 (light and dark), 55/55 at 390x844 (light and dark); the 390x844 runs skip the desktop-only first-screen check",
+          "node scripts/mcp_hub_walk.mjs — 40/40 at 1440x900 dark",
+          "python -m pytest tests/test_mcp_tools.py — 38 passed",
+          "python -m pytest tests/test_mcp_hub.py tests/test_mcp_wizard.py tests/test_mcp_client.py — 76 passed",
+          "python -m pytest tests/test_mcp_idempotency_reconciliation.py — 37 passed",
+          "python -m pytest tests/test_durable_intent_ledger.py — 10 passed",
+          "python -m pytest tests/test_action_admission_gate.py — 10 passed",
+          "python -m pytest tests/test_scoped_grants.py — 57 passed",
+          "python3 scripts/uiux_mcp_tools_inventory.py — 47 checks, 0 findings",
+          "python3 scripts/uiux_mcp_hub_inventory.py — 41 checks, 0 findings",
+          "python3 scripts/uiux_mcp_wizard_inventory.py — 34 checks, 0 findings",
+          "ruff check app.py tests/ scripts/ — clean"
+        ],
+        "visual_evidence": [
+          "docs/media/mcp-tools-uiv2-23/mcp-tools-list-1640x900-dark.png — four rows, each with its risk pill, its state, what a call does, what happens when a model asks, its arguments and Test call / Deny / Raw schema",
+          "docs/media/mcp-tools-uiv2-23/mcp-tools-consent-390x844-light.png — one column at phone width, the consent naming `slow_echo` and the write it is, Test Call disabled until it is ticked",
+          "docs/media/mcp-tools-uiv2-23/mcp-tools-denied-1440x900-dark.png — a dashed Denied row, its Test call disabled, the counters at 1/4/3/1",
+          "docs/media/mcp-tools-uiv2-23/mcp-tools-result-1440x900-dark.png — the inspector: Write pill, latency, character count, 'Authorized as operator_one_call under standard — you confirmed this write', the output and the Raw response disclosure shut",
+          "docs/media/mcp-tools-uiv2-23/mcp-tools-long-1440x900-dark.png — a truncated result with 'Show all 3631 characters' and the output scrolling inside its own box",
+          "docs/media/mcp-tools-uiv2-23/before-uiv2-23/mcp-tools-list-1640x900-dark.png — the same entry point before this story: the tool list is a collapsed drawer on the Connected row and the playground is a one-line output box with no risk and no consent"
+        ],
+        "acceptance_evidence": [
+          "configured vs discovered vs available vs denied: the Tools summary prints all four numbers from the same state the rows are rendered from, and the walk asserts 1/4/4/0 and 1/4/3/1 after a Deny (scripts/mcp_tools_walk.mjs, checks 2 and 10)",
+          "test calls go through the same authorization: the route calls the same `execute_mcp_tool_call` with `grant_source=\"operator_one_call\"`, the harness policy (`standard`) and admission, and returns the same 409 for a duplicate side effect; tests/test_mcp_tools.py asserts the call reaches the executor with `approved=True` under the standard policy",
+          "no auto-run of untrusted write tools: anything that is not a read needs the consent box, the button is disabled until it is ticked, `confirm_write` is added to the body only then, and the server refuses the same call without it with 428 `confirmation_required` — both the page and the server are asserted (walk checks 8-9, tests/test_mcp_tools.py)",
+          "helpful failure messages: invalid JSON, a non-object and a missing required argument each get a sentence in an alert; 403 denials are named per kind with the switch to move; 428 says nothing ran; a switched-off server is named before the call as well as after it (walk checks 6-8 and 11)",
+          "visual conformance at 1640x900 / 1440x900 / 1280x800 / 390x844 in light and dark across empty, populated, long-content, error, loading and recovery, with a before set captured from the same walk",
+          "authorization, sandbox boundaries, action ledger and the `auto` approval policy are unchanged; the inventory asserts the six routes, the stdio gate, `mcp_tool_needs_approval`'s auto branch, the admission import and all six panes"
+        ],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "The MCP hub's fourth tab is the tool browser: four counters that stay apart, one row per discovered tool with its risk, its allowlist state, what a call does, what happens when a model asks and the arguments it takes, live filters and search, and Allow/Deny that is the allowlist itself. Test call validates the arguments against the tool's schema, states the risk, and requires a per-call consent for anything that is not a read before `confirm_write` is sent; the server refuses the same call with 428 without it and 403 with a named denial when the allowlist, the server or the stdio gate says no. The inspector reports the authorization, the latency, the cost and the output, with the raw response shut.",
+        "exact_next_action": "Start UIV2-24 from the roadmap: pin HEAD, read its acceptance criteria, and capture the baseline before changing anything"
       }
     },
     {
@@ -3313,11 +3353,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 21,
+    "done": 22,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 9,
-    "percent_complete": 70
+    "not_started": 8,
+    "percent_complete": 73
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",

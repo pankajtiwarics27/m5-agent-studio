@@ -51,15 +51,16 @@
           "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
           "totals": {
             "panes": 6,
-            "markup_controls": 221,
+            "markup_controls": 225,
             "pane_controls": 99,
-            "chrome_controls": 122,
-            "script_rendered_controls": 66,
+            "chrome_controls": 126,
+            "script_rendered_controls": 71,
             "script_rendered_by_function": {
               "ensureStageCardMounted": 1,
               "hallClearScopeNoteHtml": 2,
               "harnessEvidenceChangeHtml": 1,
               "mcpCatalogCardHtml": 1,
+              "mcpToolRowHtml": 3,
               "openSpawnModal": 1,
               "refreshHallSessions": 3,
               "refreshInspectorPanel": 9,
@@ -78,6 +79,7 @@
               "renderHarnessVerdictCardHtml": 2,
               "renderMarkdown": 1,
               "renderMcpHub": 2,
+              "renderMcpTools": 2,
               "renderMcpUI": 7,
               "renderOpenContextDocs": 3,
               "renderProvidersModal": 3,
@@ -164,7 +166,7 @@
               "400": 88,
               "401": 48,
               "403": 54,
-              "404": 20,
+              "404": 21,
               "409": 19,
               "413": 48,
               "429": 6,
@@ -183,7 +185,7 @@
             "handler_refusals_by_status": {
               "400": 40,
               "403": 6,
-              "404": 20,
+              "404": 21,
               "409": 19,
               "500": 1,
               "502": 1,
@@ -211,10 +213,10 @@
           "totals": {
             "panes": 6,
             "preserved_capabilities": 21,
-            "markup_controls": 221,
-            "chrome_controls": 122,
+            "markup_controls": 225,
+            "chrome_controls": 126,
             "pane_controls": 99,
-            "script_rendered_controls": 66,
+            "script_rendered_controls": 71,
             "routes": 117,
             "routes_with_resolved_or_possible_caller": 71,
             "routes_no_caller_observed": 46,
@@ -248,7 +250,7 @@
           "totals": {
             "tokens": 56,
             "groups": 8,
-            "references": 1406,
+            "references": 1463,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -329,7 +331,7 @@
               "error": 9,
               "recovery": 7
             },
-            "remaining_raw_writers": 3,
+            "remaining_raw_writers": 2,
             "findings": 0
           }
         }
@@ -818,7 +820,7 @@
         {
           "artifact": "product/M5_2_0_UIUX_Polish.json",
           "totals": {
-            "radius_rules": 119,
+            "radius_rules": 124,
             "motion_rules": 17,
             "press_rules": 2,
             "hover_rules": 34,
@@ -850,7 +852,7 @@
             "route_provers": 9,
             "control_provers": 2,
             "walks": 17,
-            "support_walks": 23,
+            "support_walks": 24,
             "findings": 0
           }
         }
@@ -897,15 +899,15 @@
         {
           "artifact": "product/M5_2_0_UIUX_Screenshot_Review.json",
           "totals": {
-            "sets": 36,
-            "files": 1493,
-            "reviewed_sets": 36,
-            "sets_eyed": 16,
-            "files_eyed": 93,
-            "re_taken_sets": 12,
+            "sets": 37,
+            "files": 1725,
+            "reviewed_sets": 37,
+            "sets_eyed": 17,
+            "files_eyed": 99,
+            "re_taken_sets": 13,
             "published_sets": 1,
             "findings": 0,
-            "observations": 30
+            "observations": 31
           }
         }
       ]
@@ -1144,17 +1146,17 @@
   "inventory": {
     "tabs": 6,
     "routes": 117,
-    "markup_controls": 221,
-    "chrome_controls": 122,
-    "script_rendered_controls": 66,
+    "markup_controls": 225,
+    "chrome_controls": 126,
+    "script_rendered_controls": 71,
     "capabilities": 21,
     "e2e_rows": 21,
     "e2e_findings": 0,
     "refusals": 12,
     "refusal_statuses": 9,
-    "captures": 1493,
-    "capture_sets": 36,
-    "reviewed_sets": 36,
+    "captures": 1725,
+    "capture_sets": 37,
+    "reviewed_sets": 37,
     "screenshot_findings": 0,
     "doc_pages": 5,
     "doc_commands": 40,
