@@ -1577,6 +1577,68 @@ details.think-box pre { border-color: var(--border); font-size: 12px; }
 #providersModal .modal > div:first-child, #skillsModal .modal > div:first-child,
 #sdlcModal .modal > div:first-child, #externalHarnessModal .modal > div:first-child { flex-shrink: 0; }
 
+/* UIV2-21: the MCP surface is a hub with Catalog / Connected / Activity tabs, so the
+   dialog never asks anyone to scroll through presets, the whole config form, the
+   importer, the server list and the playground in one column. */
+#mcpModal .modal.mcp-hub { padding: 0; overflow: hidden; }
+.mcp-hub-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 18px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap; }
+.mcp-hub-headtext { min-width: 0; }
+.mcp-hub-title { font-size: 15px; }
+.mcp-hub-sub { font-size: 11.8px; color: var(--text-dim); margin-top: 2px; }
+.mcp-hub-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.mcp-hub-search { width: 232px; max-width: 46vw; font-size: 12px; padding: 4px 8px; }
+.mcp-hub-tabbar { display: flex; gap: 4px; padding: 0 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; }
+.mcp-hub-tab { background: transparent; border: 0; border-bottom: 2px solid transparent; color: var(--text-dim); font-family: var(--sans); font-size: 12.6px; font-weight: 600; padding: 9px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.mcp-hub-tab:hover { color: var(--text); }
+.mcp-hub-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+.mcp-hub-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius-sm); }
+.mcp-hub-count { font-size: 10.6px; color: var(--text-faint); background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 0 6px; min-width: 18px; text-align: center; }
+.mcp-hub-tab.active .mcp-hub-count { color: var(--text); border-color: var(--border-hi); }
+.mcp-hub-body { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 12px; }
+.mcp-hub-panel { display: flex; flex-direction: column; gap: 12px; }
+.mcp-hub-panel[hidden] { display: none; }
+.mcp-hub-filterrow { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mcp-hub-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.mcp-hub-hint { font-size: 11.3px; color: var(--text-faint); }
+.mcp-catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 10px; }
+.mcp-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 11px 12px; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.mcp-card.configured { border-color: var(--border-hi); }
+.mcp-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.mcp-card-name { font-size: 12.8px; line-height: 1.3; color: var(--text); }
+.mcp-pill { font-size: 10.4px; border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 1px 7px; color: var(--text-dim); background: var(--bg); white-space: nowrap; }
+.mcp-pill.remote { color: var(--cyan); border-color: rgba(103, 232, 249, .35); }
+.mcp-pill.local { color: var(--amber); border-color: rgba(245, 158, 11, .35); }
+.mcp-pill.trusted { color: var(--emerald); border-color: rgba(16, 185, 129, .35); }
+.mcp-pill.gated { color: var(--amber); border-color: rgba(245, 158, 11, .35); }
+.mcp-pill.keyed { color: var(--rose); border-color: rgba(244, 63, 94, .35); }
+.mcp-card-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+.mcp-card-notes { font-size: 11.4px; color: var(--text-dim); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.mcp-card-target { font-family: var(--mono); font-size: 10.8px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mcp-card-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: auto; padding-top: 2px; }
+.mcp-card-state { font-size: 11px; color: var(--text-faint); }
+.mcp-hub-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 10px 12px; }
+.mcp-hub-cardhead { cursor: pointer; font-size: 12.4px; font-weight: 650; color: var(--text); display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.mcp-hub-cardsub { font-size: 11.2px; font-weight: 450; color: var(--text-faint); }
+.mcp-editor-body { margin-top: 10px; }
+.mcp-editor-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mcp-hub-sectionhead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 12px; font-weight: 650; color: var(--text-dim); margin-top: 2px; flex-wrap: wrap; }
+.mcp-connected-list { display: flex; flex-direction: column; gap: 8px; }
+.mcp-play-output { margin-top: 8px; padding: 9px; background: var(--bg-code); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 11.3px; max-height: 170px; overflow: auto; white-space: pre-wrap; color: var(--text); }
+.mcp-activity-list { display: flex; flex-direction: column; gap: 7px; }
+.mcp-activity-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; flex-wrap: wrap; }
+.mcp-activity-main { min-width: 0; flex: 1 1 320px; display: flex; flex-direction: column; gap: 3px; }
+.mcp-activity-row > div:last-child { flex: 0 0 auto; }
+.mcp-activity-detail { font-size: 11.2px; color: var(--text-faint); }
+.mcp-activity-title { font-size: 12.2px; color: var(--text); }
+.mcp-activity-meta { font-size: 11.2px; color: var(--text-dim); }
+.mcp-activity-err { font-size: 11.2px; color: var(--rose); }
+.mcp-hub-empty { font-size: 12px; color: var(--text-faint); border: 1px dashed var(--border); border-radius: var(--radius-sm); padding: 14px; text-align: center; }
+@media (max-width: 880px) {
+  .mcp-catalog-grid { grid-template-columns: minmax(0, 1fr); }
+  .mcp-hub-search { width: 100%; max-width: none; }
+  .mcp-hub-actions { width: 100%; }
+}
+
 #harnessInfoBanner { background: var(--bg-elev) !important; }
 #pane-council h3, #pane-debate h3 { color: var(--text) !important; }
 
@@ -2005,114 +2067,137 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
 <!-- ================= CLOUD + CUSTOM MCP TOOLS HUB MODAL (v6.0) ================= -->
 <div id="mcpModal" class="modal-backdrop" onclick="if(event.target===this)closeMcpModal()">
-  <div class="modal" style="max-width:860px;" role="dialog" aria-label="MCP tools">
-    <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-      <div>
-        <strong style="font-size:15px;">MCP tools</strong>
-        <div style="font-size:11.8px; color:var(--text-dim);">Connect remote or local tools, review approval policy, and test calls.</div>
+  <div class="modal mcp-hub" role="dialog" aria-modal="true" aria-labelledby="mcpHubTitle">
+    <div class="mcp-hub-head">
+      <div class="mcp-hub-headtext">
+        <strong id="mcpHubTitle" class="mcp-hub-title">MCP hub</strong>
+        <div class="mcp-hub-sub" id="mcpHubSummary">Loading catalog…</div>
       </div>
-      <div style="display:flex; gap:6px;">
+      <div class="mcp-hub-actions">
+        <input type="search" id="mcpHubSearch" class="mcp-hub-search" placeholder="Search presets, servers, tools" aria-label="Search MCP presets, connected servers and tools" oninput="renderMcpHub()" />
         <button class="btn btn-xs" onclick="loadMcpServers()">Refresh</button>
         <button class="btn btn-xs" onclick="closeMcpModal()">Close</button>
       </div>
     </div>
 
-    <div style="padding:15px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:14px;">
-      <!-- 1. Presets & Add/Edit Form -->
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:12px;">
-        <label class="field-lbl" style="color:#67e8f9;">Remote server presets</label>
-        <div id="mcpCloudPresetChips" style="display:flex; gap:6px; flex-wrap:wrap; margin:5px 0 10px;"></div>
+    <div class="mcp-hub-tabbar" role="tablist" aria-label="MCP hub sections">
+      <button class="mcp-hub-tab active" id="mcpTabCatalog" role="tab" aria-selected="true" aria-controls="mcpPanelCatalog" tabindex="0" data-mcp-tab="catalog" onclick="switchMcpTab('catalog')">Catalog <span class="mcp-hub-count" id="mcpTabCatalogCount">0</span></button>
+      <button class="mcp-hub-tab" id="mcpTabConnected" role="tab" aria-selected="false" aria-controls="mcpPanelConnected" tabindex="-1" data-mcp-tab="connected" onclick="switchMcpTab('connected')">Connected <span class="mcp-hub-count" id="mcpTabConnectedCount">0</span></button>
+      <button class="mcp-hub-tab" id="mcpTabActivity" role="tab" aria-selected="false" aria-controls="mcpPanelActivity" tabindex="-1" data-mcp-tab="activity" onclick="switchMcpTab('activity')">Activity <span class="mcp-hub-count" id="mcpTabActivityCount">0</span></button>
+    </div>
 
-        <label class="field-lbl" style="color:#fde68a;">Local and custom server templates</label>
-        <div id="mcpCustomPresetChips" style="display:flex; gap:6px; flex-wrap:wrap; margin:5px 0 12px;"></div>
-
-        <div style="display:grid; grid-template-columns:1fr 1.4fr 1fr 1.2fr; gap:8px; margin-bottom:8px;">
-          <div><label class="field-lbl">Server Alias</label><input type="text" id="mcpAlias" style="width:100%; font-family:var(--mono);" placeholder="context7" /></div>
-          <div><label class="field-lbl">Display Name</label><input type="text" id="mcpName" style="width:100%;" placeholder="Context7 Live Docs" /></div>
-          <div>
-            <label class="field-lbl" for="mcpTransport">Transport</label>
-            <select id="mcpTransport" style="width:100%;" onchange="toggleMcpTransportFields()">
-              <option value="http">Cloud / Custom HTTP (URL)</option>
-              <option value="stdio">Custom Stdio Command</option>
-            </select>
-          </div>
-          <div>
-            <label class="field-lbl" for="mcpApprovalPolicy">Approval Policy</label>
-            <select id="mcpApprovalPolicy" style="width:100%;">
-              <option value="auto">Auto-Run (Trusted Read/Search)</option>
-              <option value="inherit">Inherit Harness Policy</option>
-              <option value="always_ask">Always Ask Human Approval</option>
-            </select>
-          </div>
+    <div class="mcp-hub-body">
+      <!-- ============ TAB 1: CATALOG ============ -->
+      <section id="mcpPanelCatalog" class="mcp-hub-panel" role="tabpanel" aria-labelledby="mcpTabCatalog" tabindex="0">
+        <div class="mcp-hub-filterrow">
+          <div class="mcp-hub-filters" id="mcpCatalogFilters" role="group" aria-label="Filter MCP catalog"></div>
+          <div class="mcp-hub-hint" id="mcpCatalogHint">Every card states its transport, trust level, key requirement and approval policy before you connect it.</div>
         </div>
+        <div class="mcp-catalog-grid" id="mcpCatalogGrid"></div>
+        <div class="mcp-hub-empty" id="mcpCatalogEmpty" hidden></div>
+      </section>
 
-        <!-- HTTP Transport Fields -->
-        <div id="mcpHttpFields">
-          <div style="display:grid; grid-template-columns:1.8fr 0.9fr 1.2fr; gap:8px; margin-bottom:8px;">
-            <div><label class="field-lbl">Remote / Custom MCP URL</label><input type="text" id="mcpUrl" style="width:100%; font-family:var(--mono);" placeholder="https://mcp.context7.com/mcp" /></div>
-            <div>
-              <label class="field-lbl" for="mcpAuthHeader">Auth Header</label>
-              <select id="mcpAuthHeader" style="width:100%;">
-                <option value="Authorization">Authorization: Bearer</option>
-                <option value="x-api-key">x-api-key</option>
-                <option value="none">None (Zero-Key)</option>
-              </select>
+      <!-- ============ TAB 2: CONNECTED ============ -->
+      <section id="mcpPanelConnected" class="mcp-hub-panel" role="tabpanel" aria-labelledby="mcpTabConnected" tabindex="0" hidden>
+        <details class="mcp-hub-card mcp-editor" id="mcpEditor">
+          <summary class="mcp-hub-cardhead">Add or edit a server<span class="mcp-hub-cardsub" id="mcpEditorState">Pick a catalog card to prefill, or enter your own.</span></summary>
+          <div class="mcp-editor-body">
+            <div style="display:grid; grid-template-columns:1fr 1.4fr 1fr 1.2fr; gap:8px; margin-bottom:8px;">
+              <div><label class="field-lbl" for="mcpAlias">Server Alias</label><input type="text" id="mcpAlias" style="width:100%; font-family:var(--mono);" placeholder="context7" oninput="syncMcpEditorState()" /></div>
+              <div><label class="field-lbl" for="mcpName">Display Name</label><input type="text" id="mcpName" style="width:100%;" placeholder="Context7 Live Docs" /></div>
+              <div>
+                <label class="field-lbl" for="mcpTransport">Transport</label>
+                <select id="mcpTransport" style="width:100%;" onchange="toggleMcpTransportFields()">
+                  <option value="http">Cloud / Custom HTTP (URL)</option>
+                  <option value="stdio">Custom Stdio Command</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-lbl" for="mcpApprovalPolicy">Approval Policy</label>
+                <select id="mcpApprovalPolicy" style="width:100%;">
+                  <option value="auto">Auto-Run (Trusted Read/Search)</option>
+                  <option value="inherit">Inherit Harness Policy</option>
+                  <option value="always_ask">Always Ask Human Approval</option>
+                </select>
+              </div>
             </div>
-            <div><label class="field-lbl">API Token (Masked; blank keeps existing)</label><input type="password" id="mcpToken" style="width:100%; font-family:var(--mono);" placeholder="Optional for free servers" /></div>
-          </div>
-          <div style="margin-bottom:8px;">
-            <label class="field-lbl" for="mcpHeadersJson">Extra HTTP Headers JSON (Optional)</label>
-            <input type="text" id="mcpHeadersJson" style="width:100%; font-family:var(--mono); font-size:11.6px;" placeholder='{"X-Workspace": "prod"}' />
-          </div>
-        </div>
 
-        <!-- Stdio Transport Fields -->
-        <div id="mcpStdioFields" style="display:none;">
-          <div style="display:grid; grid-template-columns:1fr 2.2fr; gap:8px; margin-bottom:8px;">
-            <div><label class="field-lbl">Executable Command</label><input type="text" id="mcpCommand" style="width:100%; font-family:var(--mono);" placeholder="python3, uv, npx, uvx, docker" /></div>
-            <div><label class="field-lbl">Arguments (Shell-quoted or space-separated)</label><input type="text" id="mcpArgs" style="width:100%; font-family:var(--mono);" placeholder="-y @playwright/mcp@latest --headless" /></div>
+            <!-- HTTP Transport Fields -->
+            <div id="mcpHttpFields">
+              <div style="display:grid; grid-template-columns:1.8fr 0.9fr 1.2fr; gap:8px; margin-bottom:8px;">
+                <div><label class="field-lbl" for="mcpUrl">Remote / Custom MCP URL</label><input type="text" id="mcpUrl" style="width:100%; font-family:var(--mono);" placeholder="https://mcp.context7.com/mcp" /></div>
+                <div>
+                  <label class="field-lbl" for="mcpAuthHeader">Auth Header</label>
+                  <select id="mcpAuthHeader" style="width:100%;">
+                    <option value="Authorization">Authorization: Bearer</option>
+                    <option value="x-api-key">x-api-key</option>
+                    <option value="none">None (Zero-Key)</option>
+                  </select>
+                </div>
+                <div><label class="field-lbl" for="mcpToken">API Token (Masked; blank keeps existing)</label><input type="password" id="mcpToken" style="width:100%; font-family:var(--mono);" placeholder="Optional for free servers" /></div>
+              </div>
+              <div style="margin-bottom:8px;">
+                <label class="field-lbl" for="mcpHeadersJson">Extra HTTP Headers JSON (Optional)</label>
+                <input type="text" id="mcpHeadersJson" style="width:100%; font-family:var(--mono); font-size:11.6px;" placeholder='{"X-Workspace": "prod"}' />
+              </div>
+            </div>
+
+            <!-- Stdio Transport Fields -->
+            <div id="mcpStdioFields" style="display:none;">
+              <div style="display:grid; grid-template-columns:1fr 2.2fr; gap:8px; margin-bottom:8px;">
+                <div><label class="field-lbl" for="mcpCommand">Executable Command</label><input type="text" id="mcpCommand" style="width:100%; font-family:var(--mono);" placeholder="python3, uv, npx, uvx, docker" /></div>
+                <div><label class="field-lbl" for="mcpArgs">Arguments (Shell-quoted or space-separated)</label><input type="text" id="mcpArgs" style="width:100%; font-family:var(--mono);" placeholder="-y @playwright/mcp@latest --headless" /></div>
+              </div>
+              <div style="margin-bottom:8px;">
+                <label class="field-lbl" for="mcpEnvJson">Environment Variables JSON (Secrets auto-masked)</label>
+                <input type="text" id="mcpEnvJson" style="width:100%; font-family:var(--mono); font-size:11.6px;" placeholder='{"API_KEY": "..."}' />
+              </div>
+            </div>
+
+            <div class="mcp-editor-foot">
+              <div id="mcpPresetNote" class="mcp-hub-hint"></div>
+              <button id="mcpSaveBtn" class="btn btn-primary" onclick="saveMcpServer()">Save &amp; Sync Tools</button>
+            </div>
           </div>
-          <div style="margin-bottom:8px;">
-            <label class="field-lbl" for="mcpEnvJson">Environment Variables JSON (Secrets auto-masked)</label>
-            <input type="text" id="mcpEnvJson" style="width:100%; font-family:var(--mono); font-size:11.6px;" placeholder='{"API_KEY": "..."}' />
+        </details>
+
+        <details class="mcp-hub-card mcp-import">
+          <summary class="mcp-hub-cardhead">Paste <code>mcpServers</code> JSON<span class="mcp-hub-cardsub">Claude Desktop / Cursor / Windsurf format</span></summary>
+          <div style="margin-top:8px;">
+            <label class="field-lbl" for="mcpImportJsonInput" style="display:block; margin-bottom:4px;">Imported servers JSON</label>
+            <textarea id="mcpImportJsonInput" rows="4" style="width:100%; font-family:var(--mono); font-size:11.4px;" placeholder='{"mcpServers": {"exa": {"url": "https://mcp.exa.ai/mcp"}, "my-script": {"command": "python3", "args": ["server.py"]}}}'></textarea>
+            <div style="display:flex; justify-content:flex-end; margin-top:6px;">
+              <button class="btn btn-purple btn-xs" onclick="importMcpJson()">Import &amp; Sync All</button>
+            </div>
           </div>
-        </div>
+        </details>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-          <div id="mcpPresetNote" style="font-size:11.3px; color:var(--text-faint);"></div>
-          <button id="mcpSaveBtn" class="btn btn-primary" onclick="saveMcpServer()">Save &amp; Sync Tools</button>
+        <div class="mcp-hub-sectionhead">
+          Configured servers &amp; discovered tools
+          <span class="mcp-hub-cardsub" id="mcpConnectedCount">0 servers</span>
         </div>
-      </div>
+        <div id="configuredMcpServersList" class="mcp-connected-list"></div>
 
-      <!-- 2. 1-Click Paste `mcpServers` JSON Import -->
-      <details style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:9px 12px;">
-        <summary style="cursor:pointer; font-size:12.3px; font-weight:650; color:#e9d5ff;">Paste <code>mcpServers</code> JSON Config (Claude Desktop / Cursor / Windsurf Format)</summary>
-        <div style="margin-top:8px;">
-          <label class="field-lbl" for="mcpImportJsonInput" style="display:block; margin-bottom:4px;">Imported servers JSON</label>
-          <textarea id="mcpImportJsonInput" rows="4" style="width:100%; font-family:var(--mono); font-size:11.4px;" placeholder='{"mcpServers": {"exa": {"url": "https://mcp.exa.ai/mcp"}, "my-script": {"command": "python3", "args": ["server.py"]}}}'></textarea>
-          <div style="display:flex; justify-content:flex-end; margin-top:6px;">
-            <button class="btn btn-purple btn-xs" onclick="importMcpJson()">Import &amp; Sync All</button>
+        <div class="mcp-hub-card mcp-playground">
+          <div class="mcp-hub-cardhead">Test an MCP tool call<span class="mcp-hub-cardsub">Runs one live call; results also appear in Activity.</span></div>
+          <div style="display:grid; grid-template-columns:1fr 1.2fr 1.8fr auto; gap:7px; align-items:end; margin-top:6px;">
+            <div><label class="field-lbl" for="mcpPlayServer">Server</label><select id="mcpPlayServer" style="width:100%;" onchange="populateMcpPlayTools()"></select></div>
+            <div><label class="field-lbl" for="mcpPlayTool">Tool Name</label><select id="mcpPlayTool" style="width:100%;"></select></div>
+            <div><label class="field-lbl" for="mcpPlayArgs">JSON Arguments</label><input type="text" id="mcpPlayArgs" style="width:100%; font-family:var(--mono); font-size:11.6px;" value="{}" /></div>
+            <button id="mcpPlayBtn" class="btn btn-emerald" onclick="runMcpPlayground()">Test Call</button>
           </div>
+          <pre id="mcpPlayOutput" class="mcp-play-output" style="display:none;"></pre>
         </div>
-      </details>
+      </section>
 
-      <!-- 3. Configured MCP Servers & Per-Tool Toggles -->
-      <div>
-        <div class="field-lbl" style="margin-bottom:6px;">Configured MCP Servers &amp; Discovered Tools</div>
-        <div id="configuredMcpServersList" style="display:flex; flex-direction:column; gap:8px;"></div>
-      </div>
-
-      <!-- 4. Live MCP Tool Playground -->
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius: var(--radius-lg); padding:12px;">
-        <label class="field-lbl" style="color:var(--emerald);">Test an MCP tool call</label>
-        <div style="display:grid; grid-template-columns:1fr 1.2fr 1.8fr auto; gap:7px; align-items:end; margin-top:6px;">
-          <div><label class="field-lbl" for="mcpPlayServer">Server</label><select id="mcpPlayServer" style="width:100%;" onchange="populateMcpPlayTools()"></select></div>
-          <div><label class="field-lbl" for="mcpPlayTool">Tool Name</label><select id="mcpPlayTool" style="width:100%;"></select></div>
-          <div><label class="field-lbl" for="mcpPlayArgs">JSON Arguments</label><input type="text" id="mcpPlayArgs" style="width:100%; font-family:var(--mono); font-size:11.6px;" value="{}" /></div>
-          <button id="mcpPlayBtn" class="btn btn-emerald" onclick="runMcpPlayground()">Test Call</button>
-        </div>
-        <pre id="mcpPlayOutput" style="display:none; margin-top:8px; padding:9px; background:var(--bg-code); border-radius: var(--radius-sm); font-family:var(--mono); font-size:11.3px; max-height:170px; overflow:auto; white-space:pre-wrap; color:#e2e8f0;"></pre>
-      </div>
+      <!-- ============ TAB 3: ACTIVITY ============ -->
+      <section id="mcpPanelActivity" class="mcp-hub-panel" role="tabpanel" aria-labelledby="mcpTabActivity" tabindex="0" hidden>
+        <div class="mcp-hub-sectionhead">Connection health<span class="mcp-hub-cardsub" id="mcpActivityHealthCount">0 servers</span></div>
+        <div class="mcp-activity-list" id="mcpActivityList"></div>
+        <div class="mcp-hub-sectionhead">Test calls in this session<span class="mcp-hub-cardsub" id="mcpActivityCallCount">0 calls</span></div>
+        <div class="mcp-activity-list" id="mcpActivityCalls"></div>
+        <div class="mcp-hub-empty" id="mcpActivityEmpty" hidden></div>
+      </section>
     </div>
   </div>
 </div>
@@ -14304,15 +14389,328 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   let editingMcpCategory = "cloud";
 
   function openMcpModal() {
-    loadMcpServers();
     openOverlay("mcpModal");
+    bindMcpTabs();
+    switchMcpTab("catalog");
+    loadMcpServers();
   }
   function closeMcpModal() { closeOverlay("mcpModal"); }
+
+  // ---- UIV2-21 hub state: three tabs, a catalog filter and an in-session call log ----
+  let mcpHubTab = "catalog";
+  let mcpCatalogFilter = "all";
+  let mcpActivity = [];
+  const MCP_ACTIVITY_CAP = 12;
+  const MCP_CATALOG_FILTERS = [
+    { id: "all", label: "All" },
+    { id: "remote", label: "Remote" },
+    { id: "local", label: "Local" },
+    { id: "keyed", label: "Needs a key" },
+    { id: "connected", label: "Connected" },
+  ];
+
+  function mcpServerByAlias(alias) {
+    return mcpServers.find(s => s.alias === alias) || null;
+  }
+
+  function mcpPolicyLabel(value) {
+    if (value === "auto") return "Auto-run";
+    if (value === "always_ask") return "Always ask";
+    return "Inherit harness policy";
+  }
+
+  // Trust is derived from data the server already sends (requires_token + approval_policy);
+  // the hub never invents a trust rating it cannot back with the stored record.
+  function mcpPresetTrust(preset) {
+    if (preset.requires_token) return { cls: "keyed", label: "Needs a key" };
+    if ((preset.approval_policy || "inherit") === "always_ask") return { cls: "gated", label: "Gated — asks first" };
+    if ((preset.approval_policy || "inherit") === "auto") return { cls: "trusted", label: "Trusted — auto-run" };
+    return { cls: "gated", label: "Inherits harness policy" };
+  }
+
+  function mcpHubTerm() {
+    const box = document.getElementById("mcpHubSearch");
+    return (box && box.value ? box.value : "").trim().toLowerCase();
+  }
+
+  function mcpPresetMatches(alias, preset, filter, term) {
+    const remote = (preset.transport || "http") === "http";
+    const configured = !!mcpServerByAlias(alias);
+    if (filter === "remote" && !remote) return false;
+    if (filter === "local" && remote) return false;
+    if (filter === "keyed" && !preset.requires_token) return false;
+    if (filter === "connected" && !configured) return false;
+    if (!term) return true;
+    const haystack = [
+      alias, preset.name, preset.category, preset.transport, preset.url, preset.command,
+      preset.env_key, preset.notes, configured ? "connected" : "not connected",
+    ].join(" ").toLowerCase();
+    return haystack.includes(term);
+  }
+
+  function setMcpCatalogFilter(filter) {
+    mcpCatalogFilter = MCP_CATALOG_FILTERS.some(f => f.id === filter) ? filter : "all";
+    renderMcpHub();
+  }
+
+  function resetMcpHubSearch() {
+    const box = document.getElementById("mcpHubSearch");
+    if (box) box.value = "";
+    mcpCatalogFilter = "all";
+    renderMcpHub();
+  }
+
+  function mcpCatalogCardHtml(alias, preset) {
+    const remote = (preset.transport || "http") === "http";
+    const trust = mcpPresetTrust(preset);
+    const configured = !!mcpServerByAlias(alias);
+    const target = remote
+      ? (preset.url || "")
+      : `${preset.command || ""} ${(preset.args || []).join(" ")}`.trim();
+    const auth = preset.requires_token ? `Key: ${preset.env_key || "API token"}` : "No key needed";
+    const haystack = [alias, preset.name, preset.notes, target, auth, trust.label, mcpPolicyLabel(preset.approval_policy)]
+      .join(" ").toLowerCase();
+    return `
+      <article class="mcp-card ${configured ? "configured" : ""}" data-mcp-preset="${escapeHtml(alias)}" data-mcp-search="${escapeHtml(haystack)}">
+        <div class="mcp-card-top">
+          <strong class="mcp-card-name">${escapeHtml(preset.name)}</strong>
+          <span class="mcp-pill ${remote ? "remote" : "local"}">${remote ? "Remote · HTTP" : "Local · stdio"}</span>
+        </div>
+        <div class="mcp-card-badges">
+          <span class="mcp-pill ${trust.cls}">${escapeHtml(trust.label)}</span>
+          <span class="mcp-pill">${escapeHtml(auth)}</span>
+          <span class="mcp-pill">Policy · ${escapeHtml(mcpPolicyLabel(preset.approval_policy))}</span>
+        </div>
+        <div class="mcp-card-notes">${escapeHtml(preset.notes || "No notes for this preset.")}</div>
+        <div class="mcp-card-target" title="${escapeHtml(target)}">${escapeHtml(target)}</div>
+        <div class="mcp-card-foot">
+          <span class="mcp-card-state">${configured ? "Connected" : "Not connected"}</span>
+          <button class="btn btn-xs ${configured ? "" : "btn-primary"}" onclick="selectMcpPreset('${escapeHtml(alias)}')">${configured ? "Review" : "Use preset"}</button>
+        </div>
+      </article>`;
+  }
+
+  function mcpActivityRowHtml(title, meta, note, right, searchKey, noteClass) {
+    const tone = noteClass === "detail" ? "mcp-activity-detail" : "mcp-activity-err";
+    return `
+      <div class="mcp-activity-row" data-mcp-search="${escapeHtml((searchKey || "").toLowerCase())}">
+        <div class="mcp-activity-main">
+          <div class="mcp-activity-title">${title}</div>
+          <div class="mcp-activity-meta">${meta}</div>
+          ${note ? `<div class="${tone}">${note}</div>` : ""}
+        </div>
+        <div>${right || ""}</div>
+      </div>`;
+  }
+
+  function renderMcpActivity() {
+    const healthBox = document.getElementById("mcpActivityList");
+    const callBox = document.getElementById("mcpActivityCalls");
+    if (!healthBox || !callBox) return;
+
+    healthBox.innerHTML = mcpServers.map(s => {
+      const tools = s.tools || [];
+      const on = new Set((s.enabled_tools && s.enabled_tools.length) ? s.enabled_tools : tools.map(t => t.name));
+      const target = s.transport === "http" ? (s.url || "") : `${s.command || ""} ${(s.args || []).join(" ")}`.trim();
+      const meta = [
+        s.transport === "http" ? "Remote · HTTP" : "Local · stdio",
+        `Policy · ${mcpPolicyLabel(s.approval_policy)}`,
+        `${s.active_tool_count || 0} of ${tools.length} tools on`,
+        s.masked_token ? `Token ${s.masked_token}` : "No token stored",
+      ].join(" · ");
+      const state = s.last_error
+        ? `<span class="mcp-pill keyed">Sync note</span>`
+        : s.enabled
+          ? `<span class="mcp-pill trusted">On</span>`
+          : `<span class="mcp-pill gated">Off</span>`;
+      return mcpActivityRowHtml(
+        `<strong>${escapeHtml(s.name)}</strong> <span class="mono" style="color:var(--text-faint);">${escapeHtml(s.alias)}</span>`,
+        `${escapeHtml(meta)}<div class="mcp-card-target" title="${escapeHtml(target)}">${escapeHtml(target)}</div>`,
+        s.last_error ? `Sync note: ${escapeHtml(s.last_error)}` : "",
+        state,
+        `${s.alias} ${s.name} ${target} ${s.last_error || ""}`,
+        "error"
+      );
+    }).join("");
+
+    callBox.innerHTML = mcpActivity.map(entry => {
+      const stamp = new Date(entry.at).toLocaleTimeString();
+      const status = entry.ok
+        ? `<span class="mcp-pill trusted">ok</span>`
+        : `<span class="mcp-pill keyed">failed</span>`;
+      const meta = `${escapeHtml(stamp)} · ${entry.ms ? `${entry.ms} ms · ` : ""}${entry.ok ? "completed" : "error returned"}`;
+      return mcpActivityRowHtml(
+        `<span class="mono">${escapeHtml(entry.alias)}</span> → <span class="mono">${escapeHtml(entry.tool)}</span>`,
+        meta,
+        entry.detail ? escapeHtml(entry.detail) : "",
+        status,
+        `${entry.alias} ${entry.tool} ${entry.detail || ""}`,
+        entry.ok ? "detail" : "error"
+      );
+    }).join("");
+
+    const healthCount = document.getElementById("mcpActivityHealthCount");
+    const callCount = document.getElementById("mcpActivityCallCount");
+    if (healthCount) healthCount.textContent = `${mcpServers.length} server${mcpServers.length === 1 ? "" : "s"}`;
+    if (callCount) callCount.textContent = `${mcpActivity.length} call${mcpActivity.length === 1 ? "" : "s"}`;
+
+    const empty = document.getElementById("mcpActivityEmpty");
+    if (empty) {
+      const nothing = !mcpServers.length && !mcpActivity.length;
+      empty.hidden = !nothing;
+      if (nothing) empty.textContent = "No MCP activity yet — connect a server from the Catalog tab, then run a test call on the Connected tab.";
+    }
+  }
+
+  function applyMcpHubSearch() {
+    const term = mcpHubTerm();
+    const rows = Array.from(document.querySelectorAll("#mcpModal .mcp-hub-panel [data-mcp-search]"));
+    let connectedVisible = 0;
+    rows.forEach(row => {
+      const haystack = row.getAttribute("data-mcp-search") || "";
+      const hit = !term || haystack.includes(term);
+      row.hidden = !hit;
+      if (hit && row.closest("#mcpPanelConnected")) connectedVisible += 1;
+    });
+    const connectedCount = document.getElementById("mcpConnectedCount");
+    if (connectedCount) {
+      connectedCount.textContent = term && !connectedVisible
+        ? `no match for “${term}”`
+        : `${mcpServers.length} server${mcpServers.length === 1 ? "" : "s"}`;
+    }
+  }
+
+  function renderMcpHub() {
+    const summary = document.getElementById("mcpHubSummary");
+    if (!summary) return;
+    const entries = Object.entries(mcpPresets || {});
+    const enabled = mcpServers.filter(s => s.enabled).length;
+    const errored = mcpServers.filter(s => s.last_error).length;
+    const term = mcpHubTerm();
+    summary.textContent = `${entries.length} preset${entries.length === 1 ? "" : "s"} · ${mcpServers.length} connected`
+      + (mcpServers.length !== enabled ? ` (${enabled} on)` : "")
+      + (errored ? ` · ${errored} with sync notes` : "");
+
+    const filters = document.getElementById("mcpCatalogFilters");
+    if (filters) {
+      filters.innerHTML = MCP_CATALOG_FILTERS.map(f => {
+        const count = f.id === "all" ? entries.length : entries.filter(([k, p]) => mcpPresetMatches(k, p, f.id, "")).length;
+        const on = mcpCatalogFilter === f.id;
+        return `<button class="chip ${on ? "active" : ""}" aria-pressed="${on}" onclick="setMcpCatalogFilter('${f.id}')">${f.label} <span class="mcp-hub-count">${count}</span></button>`;
+      }).join("");
+    }
+
+    const shown = entries.filter(([k, p]) => mcpPresetMatches(k, p, mcpCatalogFilter, term));
+    const grid = document.getElementById("mcpCatalogGrid");
+    if (grid) grid.innerHTML = shown.map(([k, p]) => mcpCatalogCardHtml(k, p)).join("");
+    const empty = document.getElementById("mcpCatalogEmpty");
+    if (empty) {
+      empty.hidden = shown.length > 0;
+      if (!shown.length) {
+        empty.innerHTML = entries.length
+          ? `No preset matches <strong>${escapeHtml(term || mcpCatalogFilter)}</strong>. <button class="btn btn-xs" onclick="resetMcpHubSearch()">Clear search</button>`
+          : "The server returned no presets. Use the Connected tab to add one by URL or command.";
+      }
+    }
+
+    const catalogCount = document.getElementById("mcpTabCatalogCount");
+    const connectedCount = document.getElementById("mcpTabConnectedCount");
+    const activityCount = document.getElementById("mcpTabActivityCount");
+    if (catalogCount) catalogCount.textContent = entries.length;
+    if (connectedCount) connectedCount.textContent = mcpServers.length;
+    if (activityCount) activityCount.textContent = mcpServers.length + mcpActivity.length;
+
+    renderMcpActivity();
+    applyMcpHubSearch();
+  }
+
+  function switchMcpTab(tab) {
+    mcpHubTab = ["catalog", "connected", "activity"].includes(tab) ? tab : "catalog";
+    document.querySelectorAll("#mcpModal [data-mcp-tab]").forEach(btn => {
+      const on = btn.dataset.mcpTab === mcpHubTab;
+      btn.classList.toggle("active", on);
+      btn.setAttribute("aria-selected", on ? "true" : "false");
+      btn.tabIndex = on ? 0 : -1;
+    });
+    document.querySelectorAll("#mcpModal .mcp-hub-panel").forEach(panel => {
+      panel.hidden = panel.id !== `mcpPanel${mcpHubTab.charAt(0).toUpperCase()}${mcpHubTab.slice(1)}`;
+    });
+    const body = document.querySelector("#mcpModal .mcp-hub-body");
+    if (body) body.scrollTop = 0;
+    renderMcpHub();
+  }
+
+  let mcpTabsBound = false;
+
+  // UIV2-21: the tab strip's keys are handled here, once, not in the markup - the same rule the
+  // Chat composer's one keyboard handler already follows.
+  function bindMcpTabs() {
+    if (mcpTabsBound) return;
+    const bar = document.querySelector("#mcpModal .mcp-hub-tabbar");
+    if (!bar) return;
+    bar.addEventListener("keydown", (event) => {
+      if (event.target && event.target.closest && event.target.closest("[data-mcp-tab]")) mcpTabKeydown(event);
+    });
+    mcpTabsBound = true;
+  }
+
+  function mcpTabKeydown(event) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const tabs = Array.from(document.querySelectorAll("#mcpModal [data-mcp-tab]"));
+    const current = tabs.findIndex(t => t.dataset.mcpTab === mcpHubTab);
+    let next = current;
+    if (event.key === "ArrowLeft") next = (current - 1 + tabs.length) % tabs.length;
+    if (event.key === "ArrowRight") next = (current + 1) % tabs.length;
+    if (event.key === "Home") next = 0;
+    if (event.key === "End") next = tabs.length - 1;
+    const target = tabs[next];
+    if (!target) return;
+    switchMcpTab(target.dataset.mcpTab);
+    target.focus();
+  }
+
+  // UIV2-21: the editor says what is actually in it. A subtitle left over from the card that
+  // prefilled it would claim the form holds a preset while it holds a hand-typed server.
+  function syncMcpEditorState() {
+    const host = document.getElementById("mcpEditorState");
+    if (!host) return;
+    const alias = document.getElementById("mcpAlias").value.trim();
+    if (!alias) {
+      host.textContent = "New server — nothing is saved until you press Save & Sync Tools.";
+      return;
+    }
+    if (mcpServerByAlias(alias)) {
+      host.textContent = `Editing ${alias} — the stored secret stays unless you type a new one.`;
+      return;
+    }
+    const preset = mcpPresets[alias];
+    host.textContent = preset
+      ? `Prefilled from the ${preset.name} card — add a key only if the card asks for one, then save.`
+      : `New server “${alias}” — nothing is saved until you press Save & Sync Tools.`;
+  }
+
+  function openMcpEditor() {
+    const editor = document.getElementById("mcpEditor");
+    if (editor) editor.open = true;
+    switchMcpTab("connected");
+  }
+
+  function recordMcpActivity(entry) {
+    mcpActivity.unshift({ at: Date.now(), ...entry });
+    if (mcpActivity.length > MCP_ACTIVITY_CAP) mcpActivity.length = MCP_ACTIVITY_CAP;
+    renderMcpHub();
+  }
 
   function toggleMcpTransportFields() {
     const tr = document.getElementById("mcpTransport").value;
     document.getElementById("mcpHttpFields").style.display = tr === "http" ? "block" : "none";
     document.getElementById("mcpStdioFields").style.display = tr === "stdio" ? "block" : "none";
+    // UIV2-21: a brand-new server takes its category from its transport, so a stdio server is
+    // never labelled CLOUD because a remote preset was looked at first. Editing keeps its category.
+    if (!document.getElementById("mcpAlias").value.trim()) {
+      editingMcpCategory = tr === "http" ? "cloud" : "custom";
+    }
   }
 
   async function loadMcpServers() {
@@ -14344,6 +14742,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       document.getElementById("mcpEnvJson").value = Object.keys(p.env || {}).length ? JSON.stringify(p.env) : "";
     }
     document.getElementById("mcpPresetNote").textContent = p.notes || "";
+    openMcpEditor();
+    syncMcpEditorState();
   }
 
   function editMcpServer(alias) {
@@ -14366,6 +14766,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       document.getElementById("mcpEnvJson").value = Object.keys(s.env || {}).length ? JSON.stringify(s.env) : "";
     }
     document.getElementById("mcpPresetNote").textContent = `Editing '${s.alias}' (${s.masked_token || 'no token'}). Leave token blank to preserve existing secret.`;
+    openMcpEditor();
+    syncMcpEditorState();
   }
 
   function renderMcpUI() {
@@ -14384,20 +14786,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       }).join("");
     }
 
-    // Preset Chips (Cloud vs Custom)
-    const cloudChips = [], customChips = [];
-    for (const [k, p] of Object.entries(mcpPresets)) {
-      const chipHtml = `<span class="chip" role="button" tabindex="0" data-key-activate onclick="selectMcpPreset('${escapeHtml(k)}')">${escapeHtml(p.name)}</span>`;
-      if (p.category === "cloud") cloudChips.push(chipHtml);
-      else customChips.push(chipHtml);
-    }
-    document.getElementById("mcpCloudPresetChips").innerHTML = cloudChips.join("");
-    document.getElementById("mcpCustomPresetChips").innerHTML = customChips.join("");
+    // UIV2-21: presets are rendered as catalog cards by renderMcpHub(), not as chip rows.
 
     // Configured Server Cards
     const listBox = document.getElementById("configuredMcpServersList");
     if (!mcpServers.length) {
-      listBox.innerHTML = `<div style="font-size:12px; color:var(--text-faint); padding:6px 0;">No MCP servers configured yet. Click a Cloud preset (e.g. <strong>Context7</strong>, <strong>Exa</strong>, <strong>GitHub</strong>) or Custom preset above, then click <strong>Save &amp; Sync Tools</strong>!</div>`;
+      listBox.innerHTML = `<div class="mcp-hub-empty" style="text-align:left;">No MCP servers connected yet. Open the <strong>Catalog</strong> tab, pick a card (Context7, Exa, DeepWiki, GitHub or a local template), then <strong>Save &amp; Sync Tools</strong>.</div>`;
     } else {
       listBox.innerHTML = mcpServers.map(s => {
         const tools = s.tools || [];
@@ -14421,8 +14815,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             </div>
           </details>` : `<div style="font-size:11.2px; color:var(--text-faint); margin-top:4px;">0 tools synced yet — click <strong>Sync Tools</strong> to discover tools live.</div>`;
 
+        const searchKey = [s.alias, s.name, s.category, s.transport, s.last_error || "", (s.tools || []).map(t => t.name).join(" ")].join(" ").toLowerCase();
         return `
-          <div class="model-row ${s.enabled ? 'loaded' : ''}">
+          <div class="model-row ${s.enabled ? 'loaded' : ''}" data-mcp-server="${escapeHtml(s.alias)}" data-mcp-search="${escapeHtml(searchKey)}">
             <div class="model-top" style="flex-wrap:wrap; gap:6px;">
               <div>
                 <strong>${escapeHtml(s.name)}</strong>
@@ -14454,6 +14849,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     playSrv.innerHTML = mcpServers.map(s => `<option value="${escapeHtml(s.alias)}">${escapeHtml(s.name)} (${s.alias})</option>`).join("");
     if (prevSrv && mcpServers.some(s => s.alias === prevSrv)) playSrv.value = prevSrv;
     populateMcpPlayTools();
+
+    // UIV2-21: catalog cards, tab counts and the activity pane all read the same state.
+    renderMcpHub();
   }
 
   function populateMcpPlayTools() {
@@ -14633,8 +15031,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail || "Call failed");
       out.textContent = `(${d.elapsed_ms}ms • ${d.ok ? uiStatus("ok").label : uiStatus("failed").label})\n${d.output || ""}`;
+      recordMcpActivity({ alias, tool, ok: !!d.ok, ms: d.elapsed_ms, detail: String(d.output || "").replace(/\s+/g, " ").slice(0, 160) });
     } catch (e) {
       out.textContent = "Error: " + e.message;
+      recordMcpActivity({ alias, tool, ok: false, ms: 0, detail: e.message });
     } finally {
       btn.disabled = false; btn.textContent = "Test Call";
     }

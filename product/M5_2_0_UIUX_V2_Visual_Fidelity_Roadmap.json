@@ -2398,20 +2398,55 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-21: MCP hub searchable catalog and connected-server dashboard. Required outcome: Replace giant modal with dedicated responsive hub with Catalog, Connected, Activity tabs and search/filter. Specific gate: Presets presented as scan-friendly cards with trust, local/remote, auth requirement, policy; connected list shows status/errors; no exposed secrets; dialog no longer requires scrolling through all configuration at once. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
-        "known_regressions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-06T21:10:00+05:30",
+        "completed_at": "2026-11-06T23:20:00+05:30",
+        "commit_sha": "739e0926b7fd5d3792f6ee73262917ba0a45ee0e",
+        "changed_files": [
+          "static/index.html (MCP: `#mcpModal` is now a hub — a `role=tablist` of Catalog / Connected / Activity with one panel shown at a time and a roving tab stop; `#mcpHubSearch` plus five filter chips and `applyMcpHubSearch()`; `mcpCatalogCardHtml()` renders one card per preset stating Remote·HTTP / Local·stdio, its trust level, its key requirement and its approval policy plus the endpoint or command; `mcpPresetTrust()` derives trust from `requires_token` and `approval_policy` only; the add/edit form is a closed `<details id=\"mcpEditor\">` that `openMcpEditor()` opens and `syncMcpEditorState()` describes from the alias; `renderMcpActivity()` and `recordMcpActivity()` give the Activity tab per-server health with its stored sync note and every test call with its outcome and latency; `bindMcpTabs()` is one delegated keydown listener, not an inline handler; the MCP CSS block and the 880px collapse)",
+          "studio.py (built from the above by scripts/build_studio.py)",
+          "scripts/mcp_hub_walk.mjs (new: 40 checks — tabs and one visible panel, card contents, search and filter counts, Use-preset prefill, a real sync error kept in both tabs, a real stdio server with 4 synced tools, the mask instead of the secret, a completed / failed / slow / long test call, tab counts, arrow keys, the tab strip at the viewport, no console error, MCP routes only; `--capture-only` runs the same walk against the pre-hub dialog)",
+          "scripts/mcp_hub_fixture_server.py (new: a stdio MCP server the walk connects to — initialize, tools/list, tools/call for echo_note, fail_always, slow_echo and big_output)",
+          "scripts/uiux_mcp_hub_inventory.py (new: 41 checks over the hub sections, the card, the editor, activity, secrets and the routes/controls the story may not touch)",
+          "tests/test_mcp_hub.py (new: 26 tests, 10 of them mutations)",
+          "scripts/uiux_screenshot_review.py, scripts/uiux_preservation_e2e.py (register the walk and the `mcp-hub` capture set)",
+          "scripts/uiux_keyboard_a11y_inventory.py, tests/test_keyboard_a11y.py (the tab-order rule is now one tab stop per tablist; the mouse-only count follows the preset chips becoming native buttons)",
+          "scripts/uiux_overlay_inventory.py (a dialog may carry modifier classes, and `aria-labelledby` counts as a label when the heading exists)",
+          "product/M5_2_0_UIUX_MCP_Hub.json, docs/uiux-2-1-mcp-hub.md (generated)",
+          "docs/media/mcp-hub/ (88 after PNGs + before-uiv2-21/ 88 PNGs + README)"
+        ],
+        "tests_executed": [
+          "node scripts/mcp_hub_walk.mjs (8 viewport x theme runs: 40/40 on all six desktop runs, 39/39 on 390x844)",
+          "node scripts/mcp_hub_walk.mjs --capture-only against origin/main 16320ab (8 runs, 8/39 each — the before set)",
+          "pytest tests/test_mcp_hub.py tests/test_keyboard_a11y.py tests/test_uiux_overlay_inventory.py -q",
+          "python3 scripts/uiux_mcp_hub_inventory.py --check",
+          "python3 scripts/uiux_release_gate.py",
+          "ruff check ."
+        ],
+        "visual_evidence": [
+          "docs/media/mcp-hub/*.png (88: eleven states x four viewports x two themes)",
+          "docs/media/mcp-hub/before-uiv2-21/*.png (88: the same states on origin/main 16320ab, where the walk scores 8/39)",
+          "docs/media/mcp-hub/README.md (what each state is evidence for)"
+        ],
+        "acceptance_evidence": [
+          "AC1 presets as scan-friendly cards with trust, local/remote, auth requirement and policy: `mcpCatalogCardHtml()` puts Remote·HTTP or Local·stdio, `Trusted — auto-run` / `Gated — asks first` / `Needs a key`, `No key needed` or `Key: <ENV_VAR>`, and `Policy · <label>` on every card; the walk fails if any of the 18 cards loses one (mcp-hub-catalog-*.png).",
+          "AC1 connected list shows status/errors: `renderMcpUI()` renders `Sync note: <last_error>` on the row and `renderMcpActivity()` repeats it with a state pill in Activity; the walk adds a server that cannot be reached, reloads, and still finds the note (mcp-hub-connected-error-*.png, mcp-hub-activity-health-*.png).",
+          "AC1 no exposed secrets: the only credential rendered is `masked_token` (`Token sk-u••••9f3c`); the walk types a real secret into the form, saves it, and asserts the string appears nowhere in the document, in Activity, or after the field is emptied (mcp-hub-secrets-*.png).",
+          "AC1 no scrolling through all configuration at once: the dialog is three tabs with one panel shown, the editor is a closed `<details>`, and the walk asserts the form is not on screen on the Catalog tab and that Connected lands on the server list with the editor shut — 31 of 39 checks fail on the old dialog for exactly this reason.",
+          "AC2 visual conformance: eleven states captured at 1640x900, 1440x900, 1280x800 and 390x844 in light and dark, reviewed by `scripts/uiux_screenshot_review.py` (1285 captures in 35 sets, 0 findings) against the before set.",
+          "AC3 existing features and authorization preserved: all 20 controls of the old dialog and all six `/api/mcp/*` routes are still there (inventory), the `STUDIO_ALLOW_MCP_STDIO` launch gate is untouched, the workspace's six panes and the MCP tool strip are unchanged, and `tests/test_mcp_hub.py` fails if any of them moves."
+        ],
+        "known_regressions": [
+          "The MCP toolbar pill still shows only the enabled tool count: a server with a stored sync note is marked inside the hub and in Activity, not in the strip.",
+          "The Activity tab's test-call log is in-memory for the session (`MCP_ACTIVITY_CAP = 12`); it does not survive a reload, because the app records no per-call audit endpoint for MCP calls.",
+          "`app.py` still refuses plain `http://` to a non-loopback host without `STUDIO_PRIVATE_URL_HOSTS` / `STUDIO_ALLOW_PRIVATE_URLS`; the walk's unreachable server therefore uses `https://127.0.0.1:9`, which is refused for a real and visible reason.",
+          "A headless container has no OS keyring, so the walk runs its fixture app with the same memory keyring stand-in the tests use; the app still refuses to persist a secret in SQLite, unchanged."
+        ],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "UIV2-21 done. The MCP surface is a hub: Catalog (18 preset cards stating transport, trust, key requirement and policy, with search and five counting filters), Connected (a shut editor, the importer, the server list with its stored sync notes and the playground) and Activity (per-server health plus every test call with its outcome and latency). 88 after captures at four viewports x two themes, 88 before captures at 16320ab where the walk scores 8/39, gate 37/37 checks and 7/7 phase gates with 0 findings.",
+        "exact_next_action": "Start UIV2-22 from origin/main at the merge commit of this PR: pin HEAD, read the ledger entry, then capture the before state of its surface with a new walk before changing anything."
       }
     },
     {
@@ -3200,31 +3235,31 @@
       "id": "P3",
       "name": "Council correctness and usability",
       "total": 4,
-      "done": 0,
+      "done": 4,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 4,
-      "percent_complete": 0
+      "not_started": 0,
+      "percent_complete": 100
     },
     {
       "id": "P4",
       "name": "Compare and Chat layout and personas",
       "total": 5,
-      "done": 0,
+      "done": 5,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 5,
-      "percent_complete": 0
+      "not_started": 0,
+      "percent_complete": 100
     },
     {
       "id": "P5",
       "name": "MCP hub and Start/Pipeline refinement",
       "total": 5,
-      "done": 0,
+      "done": 1,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 5,
-      "percent_complete": 0
+      "not_started": 4,
+      "percent_complete": 20
     },
     {
       "id": "P6",
@@ -3239,11 +3274,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 20,
+    "done": 21,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 10,
-    "percent_complete": 67
+    "not_started": 9,
+    "percent_complete": 70
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",

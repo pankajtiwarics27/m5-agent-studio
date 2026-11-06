@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "82a1b9a3520ad8e5358885c5a8ab246764f52d8d9b8d3aa83774c1abacdf4a19",
+    "style_block_sha256": "d699de5d0cebefe20a690dad8d2806dee2f49d7dc485700483aaf741737a5a0b",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -42,7 +42,7 @@
   "totals": {
     "tokens": 56,
     "groups": 8,
-    "references": 1326,
+    "references": 1365,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 28,
@@ -131,7 +131,7 @@
         "light": "#F8F9FB"
       },
       "density_override": null,
-      "references": 13
+      "references": 14
     },
     {
       "name": "--bg-elev",
@@ -141,7 +141,7 @@
         "light": "#FFFFFF"
       },
       "density_override": null,
-      "references": 39
+      "references": 40
     },
     {
       "name": "--bg-card",
@@ -191,7 +191,7 @@
         "light": "#DDE2E8"
       },
       "density_override": null,
-      "references": 165
+      "references": 169
     },
     {
       "name": "--border-hi",
@@ -201,7 +201,7 @@
         "light": "#C6CDD8"
       },
       "density_override": null,
-      "references": 29
+      "references": 31
     },
     {
       "name": "--text",
@@ -211,7 +211,7 @@
         "light": "#1B2430"
       },
       "density_override": null,
-      "references": 81
+      "references": 88
     },
     {
       "name": "--text-dim",
@@ -221,7 +221,7 @@
         "light": "#596579"
       },
       "density_override": null,
-      "references": 147
+      "references": 152
     },
     {
       "name": "--text-faint",
@@ -231,7 +231,7 @@
         "light": "#67717F"
       },
       "density_override": null,
-      "references": 126
+      "references": 132
     },
     {
       "name": "--accent",
@@ -241,7 +241,7 @@
         "light": "#4F5FE8"
       },
       "density_override": null,
-      "references": 32
+      "references": 34
     },
     {
       "name": "--accent-hi",
@@ -271,7 +271,7 @@
         "light": "#276e82"
       },
       "density_override": null,
-      "references": 23
+      "references": 24
     },
     {
       "name": "--emerald",
@@ -291,7 +291,7 @@
         "light": "#80580e"
       },
       "density_override": null,
-      "references": 53
+      "references": 55
     },
     {
       "name": "--rose",
@@ -301,7 +301,7 @@
         "light": "#a4313a"
       },
       "density_override": null,
-      "references": 33
+      "references": 35
     },
     {
       "name": "--purple",
@@ -457,7 +457,7 @@
       "value": "6px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 37
+      "references": 40
     },
     {
       "name": "--radius-md",
@@ -465,7 +465,7 @@
       "value": "8px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 36
+      "references": 38
     },
     {
       "name": "--radius-lg",
@@ -473,7 +473,7 @@
       "value": "10px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 30
+      "references": 27
     },
     {
       "name": "--radius-xl",
@@ -489,7 +489,7 @@
       "value": "999px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 12
+      "references": 14
     },
     {
       "name": "--control-min-h",
@@ -577,7 +577,7 @@
       "value": "Inter, \"IBM Plex Sans\", \"Segoe UI\", system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       "theme_overrides": {},
       "density_override": null,
-      "references": 7
+      "references": 8
     },
     {
       "name": "--mono",
@@ -585,7 +585,7 @@
       "value": "\"JetBrains Mono\", \"SFMono-Regular\", Consolas, \"Liberation Mono\", monospace",
       "theme_overrides": {},
       "density_override": null,
-      "references": 90
+      "references": 91
     },
     {
       "name": "--header-height",

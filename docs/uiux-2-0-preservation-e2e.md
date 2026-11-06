@@ -6,7 +6,7 @@ executed by [`scripts/preservation_suite.py`](../scripts/preservation_suite.py).
 
 * 21 of 21 matrix rows mapped, 55 provers, 0 findings
 * 40 walk checks, 4 pytest nodes, 9 route probes, 2 wired controls
-* 17 walks prove a row; 21 more are listed with the reason they do not
+* 17 walks prove a row; 22 more are listed with the reason they do not
 
 ## What this page is, and is not
 
@@ -89,6 +89,7 @@ than succeed. That is what "existing endpoint and permission semantics" means in
 | `council_state_walk.mjs` | the Council state walk (UIV2-15) proves how a refused, reopened, dropped or deleted turn is drawn; the capability it belongs to is the Council session itself, which the matrix already enumerates from the pane's own controls |
 | `harness_recovery_walk.mjs` | Harness pause/resume/abort recovery (P3-05) extends the abort surface rather than preserving it |
 | `keyboard_walk.mjs` | the rail's tab semantics (P1-02) are shell behaviour |
+| `mcp_hub_walk.mjs` | the MCP hub walk (UIV2-21) proves that the dialog is three tabs rather than one configuration scroll, that every preset card states its transport, trust, key requirement and approval policy before anything is connected, that search and the filter chips narrow the catalog, that a server which cannot be reached keeps the sync note it really got in both the Connected list and Activity, that a live stdio server syncs its real tools and a test call is recorded with its outcome and latency, and that a stored token never reaches the document; the capability it belongs to is the MCP surface, which the matrix already enumerates from the tool strip and the dialog's own controls |
 | `overlay_walk.mjs` | the overlay controller (P1-04) is shared machinery the matrix does not enumerate |
 | `pipeline_recovery_walk.mjs` | Pipeline failure recovery (P3-07) extends a capability rather than preserving it |
 | `polish_walk.mjs` | the polish layer (P5-05) proves affordances across all six panes |

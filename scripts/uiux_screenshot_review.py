@@ -547,6 +547,37 @@ REVIEWS: dict[str, dict[str, object]] = {
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",
     },
+    "mcp-hub": {
+        "story": "UIV2-21",
+        "note": (
+            "The MCP hub: its catalog, its connected-server dashboard and its activity log - "
+            "eleven shots on each of four viewports x light/dark (catalog, search, connected, a "
+            "server that could not be reached, a stored token, activity, a slow call's loading "
+            "state, a long output, a failed call, the health list and the keyboard state), written "
+            "by `scripts/mcp_hub_walk.mjs` against a fixture it starts itself and a real stdio MCP "
+            "server it connects through `scripts/mcp_hub_fixture_server.py`, after 40/40 checks on "
+            "each desktop run and 39/39 at 390x844, beside `before-uiv2-21/`, the same eleven "
+            "states served from origin/main at 16320ab and captured by this same walk in "
+            "`--capture-only` (8/39 there: the tabs, the cards, the search and the counts do not "
+            "exist yet, which is what the before set is). Opened and read: the 1440x900-dark "
+            "catalog capture (three columns of named cards, each with Remote-HTTP, its trust word, "
+            "its key requirement and its policy, and the tab strip above them), the 1440x900-dark "
+            "activity capture (two servers carrying their stored sync note in rose, one local "
+            "server reading `4 of 4 tools on`, and four test calls with their latency and outcome), "
+            "the 390x844-light connected capture (full-bleed, one field per row, the tab strip still "
+            "one line), and the before-uiv2-21 1440x900-dark catalog capture (chips that name no "
+            "transport, the whole form open, and the playground clipped below the fold)."
+        ),
+        "eye": [
+            "mcp-hub-catalog-1440x900-dark.png",
+            "mcp-hub-activity-health-1440x900-dark.png",
+            "mcp-hub-connected-error-1440x900-light.png",
+            "mcp-hub-catalog-390x844-light.png",
+            "before-uiv2-21/mcp-hub-catalog-1440x900-dark.png",
+        ],
+        "re_taken": True,
+        "theme": "light and dark, desktop 1280-1640 and narrow 390",
+    },
     "chat-recovery": {
         "story": "UIV2-20",
         "note": (

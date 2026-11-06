@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "77e8a67248be9932a33bcea6e06e11f3fe2e0f19a30577de931da3ebbcf90df8",
+  "frontend_sha256": "e552b8fa4b2529e3b763ba787d3c562db39a492bc705d6d06cdbb2f824172b18",
   "panes": [
     {
       "dom_id": "start",
@@ -807,12 +807,12 @@
     }
   ],
   "chrome": {
-    "control_count": 109,
+    "control_count": 114,
     "counts": {
-      "button": 62,
-      "input": 29,
+      "button": 65,
+      "input": 30,
       "select": 12,
-      "summary": 1,
+      "summary": 2,
       "textarea": 5
     },
     "controls": [
@@ -1092,6 +1092,15 @@
         "text": "Run Query"
       },
       {
+        "tag": "input",
+        "id": "mcpHubSearch",
+        "type": "search",
+        "class": "mcp-hub-search",
+        "aria-label": "Search MCP presets, connected servers and tools",
+        "placeholder": "Search presets, servers, tools",
+        "oninput": "renderMcpHub()"
+      },
+      {
         "tag": "button",
         "class": "btn btn-xs",
         "onclick": "loadMcpServers()",
@@ -1104,10 +1113,49 @@
         "text": "Close"
       },
       {
+        "tag": "button",
+        "id": "mcpTabCatalog",
+        "role": "tab",
+        "class": "mcp-hub-tab active",
+        "onclick": "switchMcpTab('catalog')",
+        "data": {
+          "data-mcp-tab": "catalog"
+        },
+        "text": "Catalog 0"
+      },
+      {
+        "tag": "button",
+        "id": "mcpTabConnected",
+        "role": "tab",
+        "class": "mcp-hub-tab",
+        "onclick": "switchMcpTab('connected')",
+        "data": {
+          "data-mcp-tab": "connected"
+        },
+        "text": "Connected 0"
+      },
+      {
+        "tag": "button",
+        "id": "mcpTabActivity",
+        "role": "tab",
+        "class": "mcp-hub-tab",
+        "onclick": "switchMcpTab('activity')",
+        "data": {
+          "data-mcp-tab": "activity"
+        },
+        "text": "Activity 0"
+      },
+      {
+        "tag": "summary",
+        "class": "mcp-hub-cardhead",
+        "text": "Add or edit a serverPick a catalog card to prefill, or enter your own."
+      },
+      {
         "tag": "input",
         "id": "mcpAlias",
         "type": "text",
-        "placeholder": "context7"
+        "placeholder": "context7",
+        "oninput": "syncMcpEditorState()"
       },
       {
         "tag": "input",
@@ -1176,7 +1224,8 @@
       },
       {
         "tag": "summary",
-        "text": "Paste mcpServers JSON Config (Claude Desktop / Cursor / Windsurf Format)"
+        "class": "mcp-hub-cardhead",
+        "text": "Paste mcpServers JSONClaude Desktop / Cursor / Windsurf format"
       },
       {
         "tag": "textarea",
@@ -1543,14 +1592,15 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 208,
+    "markup_controls": 213,
     "pane_controls": 99,
-    "chrome_controls": 109,
-    "script_rendered_controls": 62,
+    "chrome_controls": 114,
+    "script_rendered_controls": 65,
     "script_rendered_by_function": {
       "ensureStageCardMounted": 1,
       "hallClearScopeNoteHtml": 2,
       "harnessEvidenceChangeHtml": 1,
+      "mcpCatalogCardHtml": 1,
       "openSpawnModal": 1,
       "refreshHallSessions": 3,
       "refreshInspectorPanel": 9,
@@ -1568,6 +1618,7 @@
       "renderHarnessTimeline": 1,
       "renderHarnessVerdictCardHtml": 2,
       "renderMarkdown": 1,
+      "renderMcpHub": 2,
       "renderMcpUI": 7,
       "renderOpenContextDocs": 3,
       "renderProvidersModal": 3,

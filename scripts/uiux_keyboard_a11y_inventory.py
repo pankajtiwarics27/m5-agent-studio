@@ -241,8 +241,8 @@ def build_inventory() -> dict:
     )
     activatable = [entry for entry in targets if "data-key-activate" in entry["attrs"]]
     check(
-        "the non-native controls are the ten that were mouse-only: starter cards, preset chips, skill pills and session rows",
-        len(activatable) == 10,
+        "the non-native controls are the nine that are still mouse-only: starter cards, provider chips, skill pills and session rows",
+        len(activatable) == 9,
         f"{len(activatable)} activatable click targets: "
         + "; ".join(f"{entry['tag']}.{entry['class']}" for entry in activatable),
     )
@@ -335,11 +335,20 @@ def build_inventory() -> dict:
         len(panels) == 6 and [(pane, tab) for pane, tab in panels] == pairs,
         f"{len(panels)} panels: {panels}",
     )
-    zero_tabs = len(re.findall(r'role="tab"[^>]*tabindex="0"', html))
+    # UIV2-21 added a second tablist (the MCP hub's Catalog / Connected / Activity). The rule is
+    # one tab stop per tablist, so each section is one Tab away: the rail is 1 of 6, the hub 1 of 3.
+    tab_tags = re.findall(r"<button[^>]*role=\"tab\"[^>]*>", html)
+    rail_tabs = [tag for tag in tab_tags if "data-mcp-tab" not in tag]
+    hub_tabs = [tag for tag in tab_tags if "data-mcp-tab" in tag]
+    zero_rail = [tag for tag in rail_tabs if 'tabindex="0"' in tag]
+    zero_hub = [tag for tag in hub_tabs if 'tabindex="0"' in tag]
     check(
         "exactly one tab is in the tab order, so a pane is one Tab away and not six",
-        zero_tabs == 1,
-        f"{zero_tabs} tabbable tabs",
+        len(rail_tabs) == 6
+        and len(hub_tabs) == 3
+        and len(zero_rail) == 1
+        and len(zero_hub) == 1,
+        f"rail {len(zero_rail)}/{len(rail_tabs)} tabbable · hub {len(zero_hub)}/{len(hub_tabs)} tabbable",
     )
 
     # ── 5. focus order is the reading order ─────────────────────────────────
@@ -488,7 +497,13 @@ def build_inventory() -> dict:
             "stream_px": outline_px(stream_ring),
             "minimum_px": RING_MIN_PX,
         },
-        "tab_order": {"tabs": len(tabs), "tabbable_tabs": zero_tabs, "positive_tabindex": len(positive)},
+        "tab_order": {
+            "tabs": len(tabs),
+            "tabbable_tabs": len(zero_rail),
+            "hub_tabs": len(hub_tabs),
+            "hub_tabbable_tabs": len(zero_hub),
+            "positive_tabindex": len(positive),
+        },
         "names": {"controls": len(fields), "unnamed": len(unnamed), "live_regions": len(live)},
         "walk": {"script": "scripts/a11y_walk.mjs", "checks": walk_names, "check_count": len(walk_names)},
         "captures": list(CAPTURES),
