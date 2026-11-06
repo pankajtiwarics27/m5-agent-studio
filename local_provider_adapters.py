@@ -1,4 +1,4 @@
-"""Capability-aware adapters for local Ollama and llama.cpp runtimes."""
+"""Capability-aware adapters for local Ollama, llama.cpp, and MoneyPrinterTurbo runtimes."""
 
 from __future__ import annotations
 
@@ -12,8 +12,22 @@ from capability_negotiation import (
     NegotiationDecision,
     TaskRequirements,
 )
+from execution_budget import BudgetExceeded, ExecutionBudget
 from hardware_capabilities import HardwareProfile
 from model_registry import ModelDescriptor, ModelLimits, ModelProvenance
+
+# Capability surface a MoneyPrinterTurbo deployment acts as a gateway for:
+# LLM script/term generation routed through the backend configured in MPT's
+# config.toml (commonly an OpenAI-compatible endpoint serving Qwen/DeepSeek-class
+# models), TTS/speech synthesis routing, material search, subtitle generation, and
+# the final render itself. These are capability tags, not model identifiers.
+MONEYPRINTER_GATEWAY_CAPABILITIES: tuple[str, ...] = (
+    "material-search",
+    "script-generation",
+    "speech-synthesis",
+    "subtitle-generation",
+    "video-generation",
+)
 
 
 class LocalTransport(Protocol):
@@ -58,18 +72,42 @@ def _digest(value: object, model_id: str) -> str:
 
 
 class LocalModelAdapter:
-    """Common discovery and negotiation behavior for local runtimes."""
+    """Common discovery and negotiation behavior for local runtimes.
+
+    ``budget`` optionally binds discovery to the Studio's execution budget
+    (:class:`execution_budget.ExecutionBudget`). Each remote discovery request
+    consumes one tool unit and is refused when the budget is exhausted, so a
+    budget-starved runtime fails closed instead of adding concurrent load to the
+    host's unified memory. Cancellation propagates to the caller; the adapter
+    starts no background work and adds no concurrency of its own.
+    """
 
     runtime_name: str
     models_path: str
 
-    def __init__(self, transport: LocalTransport, *, request_timeout: float = 5.0) -> None:
+    def __init__(
+        self,
+        transport: LocalTransport,
+        *,
+        request_timeout: float = 5.0,
+        budget: ExecutionBudget | None = None,
+    ) -> None:
         if request_timeout <= 0:
             raise ValueError("request_timeout must be positive.")
+        if budget is not None and not isinstance(budget, ExecutionBudget):
+            raise TypeError("budget must be an ExecutionBudget value.")
         self._transport = transport
         self._request_timeout = request_timeout
+        self._budget = budget
 
     async def _fetch(self) -> Mapping[str, Any]:
+        if self._budget is not None:
+            try:
+                # Each remote call consumes one tool unit up front and re-checks
+                # elapsed time/tokens/cost/retries. ExecutionCancelled propagates.
+                self._budget.consume(tools=1)
+            except BudgetExceeded as exc:
+                raise LocalAdapterError("execution budget exceeded") from exc
         try:
             status, payload = await self._transport("GET", self.models_path, self._request_timeout)
         except asyncio.CancelledError:
@@ -149,28 +187,31 @@ class OllamaAdapter(LocalModelAdapter):
         return descriptors
 
 
-class LlamaCppAdapter(LocalModelAdapter):
-    runtime_name = "llama.cpp"
-    models_path = "/v1/models"
+class _OpenAIModelsAdapter(LocalModelAdapter):
+    """Shared parser for OpenAI-compatible ``/v1/models`` (``data: [...]``) payloads."""
+
+    source_label: str = ""
+    error_subject: str = ""
+    default_capabilities: tuple[str, ...] = ("chat", "streaming")
 
     def _parse_models(self, payload: Mapping[str, Any]) -> Sequence[ModelDescriptor]:
         raw_models = payload.get("data", ())
         if isinstance(raw_models, (str, bytes)) or not isinstance(raw_models, Sequence):
-            raise LocalAdapterError("llama.cpp returned invalid model data")
+            raise LocalAdapterError(f"{self.error_subject} returned invalid model data")
         descriptors: list[ModelDescriptor] = []
         for raw in raw_models:
             if not isinstance(raw, Mapping):
-                raise LocalAdapterError("llama.cpp returned an invalid model record")
+                raise LocalAdapterError(f"{self.error_subject} returned an invalid model record")
             model_id = _text(raw.get("id"))
             if not model_id:
-                raise LocalAdapterError("llama.cpp returned a model without an id")
-            capabilities = _capabilities(raw.get("capabilities"), ("chat", "streaming"))
+                raise LocalAdapterError(f"{self.error_subject} returned a model without an id")
+            capabilities = _capabilities(raw.get("capabilities"), self.default_capabilities)
             digest = _digest(raw.get("digest"), model_id)
             descriptors.append(
                 ModelDescriptor(
                     model_id=model_id,
                     digest=digest,
-                    source="llama.cpp",
+                    source=self.source_label,
                     revision=_text(raw.get("created"), default=digest),
                     quantization=_text(raw.get("quantization"), default="") or None,
                     runtime=self.runtime_name,
@@ -182,7 +223,32 @@ class LlamaCppAdapter(LocalModelAdapter):
                     supports_tools="tools" in capabilities,
                     supports_schema="json" in capabilities,
                     supports_streaming="streaming" in capabilities,
-                    provenance=ModelProvenance("llama.cpp", model_id, "unverified"),
+                    provenance=ModelProvenance(self.source_label, model_id, "unverified"),
                 )
             )
         return descriptors
+
+
+class LlamaCppAdapter(_OpenAIModelsAdapter):
+    runtime_name = "llama.cpp"
+    models_path = "/v1/models"
+    source_label = "llama.cpp"
+    error_subject = "llama.cpp"
+
+
+class MoneyPrinterAPIAdapter(_OpenAIModelsAdapter):
+    """Discovery for a MoneyPrinterTurbo gateway's OpenAI-compatible API surface.
+
+    The Studio's ``MoneyPrinterAPI`` provider profile targets the gateway at
+    ``http://localhost:8080/v1`` (MoneyPrinterTurbo's default ``listen_port`` is
+    8080). Stock MoneyPrinterTurbo serves its native REST API under ``/api/v1``;
+    this adapter expects an OpenAI-compatible front (a shim or gateway) on the
+    configured base URL and reports itself unavailable — never fabricated models —
+    when that surface is absent or misbehaves.
+    """
+
+    runtime_name = "moneyprinter"
+    models_path = "/v1/models"
+    source_label = "moneyprinter"
+    error_subject = "moneyprinter"
+    default_capabilities = MONEYPRINTER_GATEWAY_CAPABILITIES

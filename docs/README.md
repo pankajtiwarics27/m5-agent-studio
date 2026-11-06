@@ -86,7 +86,8 @@ Model and provider: [`provider-adapters.md`](provider-adapters.md),
 [`macos-hardware-profiler.md`](macos-hardware-profiler.md),
 [`performance-profiles.md`](performance-profiles.md),
 [`local-provider-adapters.md`](local-provider-adapters.md),
-[`local-runtime-lifecycle.md`](local-runtime-lifecycle.md).
+[`local-runtime-lifecycle.md`](local-runtime-lifecycle.md),
+[`moneyprinter-turbo-integration.md`](moneyprinter-turbo-integration.md).
 
 Execution and policy: [`routing-consent-policy.md`](routing-consent-policy.md),
 [`capability-negotiation.md`](capability-negotiation.md),

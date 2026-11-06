@@ -81,7 +81,8 @@
       "test_pinned_transport.py",
       "test_portable_handoff_and_switching.py",
       "test_provider_*.py",
-      "test_routing_*.py"
+      "test_routing_*.py",
+      "test_moneyprinter_*.py"
     ],
     "storage.history": [
       "test_audit_log.py",
@@ -294,6 +295,12 @@
       "ui.compare",
       "ui.chat",
       "ui.shared"
+    ],
+    "moneyprinter_tool.py": [
+      "models.providers"
+    ],
+    "model_discovery.py": [
+      "models.providers"
     ]
   }
 }

@@ -17,7 +17,7 @@
   ],
   "totals": {
     "pages": 5,
-    "links": 21,
+    "links": 22,
     "commands": 47,
     "claims": 7,
     "claims_verified": 7,
@@ -70,6 +70,12 @@
       "page": "README.md",
       "target": "docs/configuration-contracts.md",
       "resolved": "docs/configuration-contracts.md",
+      "resolves": true
+    },
+    {
+      "page": "README.md",
+      "target": "docs/moneyprinter-turbo-integration.md",
+      "resolved": "docs/moneyprinter-turbo-integration.md",
       "resolves": true
     },
     {
