@@ -155,7 +155,7 @@ def test_the_count_of_non_native_controls_is_pinned(sources):
         ) + '<span class="chip" role="button" tabindex="0" data-key-activate onclick="noop()">x</span>'
 
     report = sources(html_transform=add_one)
-    assert "the non-native controls are the ten that were mouse-only: starter cards, preset chips, skill pills and session rows" in failing(report)
+    assert "the non-native controls are the nine that are still mouse-only: starter cards, provider chips, skill pills and session rows" in failing(report)
 
 
 # ── 2. one delegated handler ───────────────────────────────────────────────

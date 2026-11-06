@@ -6,9 +6,9 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `77e8a67248be9932a33bcea6e06e11f3fe2e0f19a30577de931da3ebbcf90df8`.
+* Frontend digest: `e552b8fa4b2529e3b763ba787d3c562db39a492bc705d6d06cdbb2f824172b18`.
 * Panes: 6 · controls in panes: 99 · controls in the
-  shared chrome: 109 · script-rendered: 62.
+  shared chrome: 114 · script-rendered: 65.
 
 ## What this page is, and is not
 
@@ -27,13 +27,13 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
 | debate | `pane-debate` | 10 | 1 | 0 | button 5, input 1, select 2, summary 1, textarea 1 |
 | chat | `pane-chat` | 12 | 0 | 0 | button 5, input 3, select 3, textarea 1 |
-| (chrome) | outside the panes | 109 | 44 | 0 | button 62, input 29, select 12, summary 1, textarea 5 |
+| (chrome) | outside the panes | 114 | 45 | 0 | button 65, input 30, select 12, summary 2, textarea 5 |
 
 ## What the numbers already say
 
-* 208 controls are in the markup and 62 more are built by script — a checklist written from the markup alone would miss 23% of the interactive surface.
-* The shared chrome carries 109 controls; all six panes together carry 99. Most of the clicking happens in the shell, not inside a tab.
-* 64 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
+* 213 controls are in the markup and 65 more are built by script — a checklist written from the markup alone would miss 23% of the interactive surface.
+* The shared chrome carries 114 controls; all six panes together carry 99. Most of the clicking happens in the shell, not inside a tab.
+* 65 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
 
@@ -178,7 +178,7 @@ Section `pane-chat`, 12 interactive elements.
 
 ## Shared chrome
 
-109 interactive elements outside every pane (tab bar,
+114 interactive elements outside every pane (tab bar,
 top bar and monitor rail). These are reachable from all six tabs, which is why they are not
 attributed to one.
 
@@ -219,84 +219,89 @@ attributed to one.
 | 33 | select | cgModeSelect | — | codegraph_architecture (Hubs & God Nodes) codegraph_path (Graphify Shortest Path A -> B) codegraph_impact (Caller Blast-Radius) codegraph_context (Symbol Search) codegraph_quality (Complexity Hotspots) ponytail-debt (Shortcut & Rationale Ledger) | — |
 | 34 | input | cgQueryInput | text | e.g. api_run_harness_turn -> stream_any_model | — |
 | 35 | button | — | — | Run Query | runCodeGraphPlayground() |
-| 36 | button | — | — | Refresh | loadMcpServers() |
-| 37 | button | — | — | Close | closeMcpModal() |
-| 38 | input | mcpAlias | text | context7 | — |
-| 39 | input | mcpName | text | Context7 Live Docs | — |
-| 40 | select | mcpTransport | — | Cloud / Custom HTTP (URL) Custom Stdio Command | toggleMcpTransportFields() |
-| 41 | select | mcpApprovalPolicy | — | Auto-Run (Trusted Read/Search) Inherit Harness Policy Always Ask Human Approval | — |
-| 42 | input | mcpUrl | text | https://mcp.context7.com/mcp | — |
-| 43 | select | mcpAuthHeader | — | Authorization: Bearer x-api-key None (Zero-Key) | — |
-| 44 | input | mcpToken | password | Optional for free servers | — |
-| 45 | input | mcpHeadersJson | text | {"X-Workspace": "prod"} | — |
-| 46 | input | mcpCommand | text | python3, uv, npx, uvx, docker | — |
-| 47 | input | mcpArgs | text | -y @playwright/mcp@latest --headless | — |
-| 48 | input | mcpEnvJson | text | {"API_KEY": "..."} | — |
-| 49 | button | mcpSaveBtn | — | Save & Sync Tools | saveMcpServer() |
-| 50 | summary | — | — | Paste mcpServers JSON Config (Claude Desktop / Cursor / Windsurf Format) | — |
-| 51 | textarea | mcpImportJsonInput | — | {"mcpServers": {"exa": {"url": "https://mcp.exa.ai/mcp"}, "my-script": {"command": "python3", "args": ["server.py"]}}} | — |
-| 52 | button | — | — | Import & Sync All | importMcpJson() |
-| 53 | select | mcpPlayServer | — | — | populateMcpPlayTools() |
-| 54 | select | mcpPlayTool | — | — | — |
-| 55 | input | mcpPlayArgs | text | — | — |
-| 56 | button | mcpPlayBtn | — | Test Call | runMcpPlayground() |
-| 57 | button | — | — | Close | closeExternalHarnessModal() |
-| 58 | button | — | — | Copy YAML | copyPreText('extDshYaml', this) |
-| 59 | button | — | — | Copy Python | copyPreText('extDshPy', this) |
-| 60 | button | — | — | Copy Commands | copyPreText('extOpenHarness', this) |
-| 61 | button | applyWorktreeBtn | — | Apply Worktree to Main Workspace | applyHarnessWorktree() |
-| 62 | button | — | — | Refresh | openHarnessDiffModal() |
-| 63 | button | — | — | Verification & artifacts | openHarnessEvidenceModal() |
-| 64 | button | — | — | Close | closeHarnessDiffModal() |
-| 65 | button | — | — | Refresh | refreshHarnessEvidence() |
-| 66 | button | — | — | Close | closeHarnessEvidenceModal() |
-| 67 | button | — | — | Refresh | refreshHarnessGrants() |
-| 68 | button | — | — | Close | closeHarnessGrants() |
-| 69 | button | — | — | Close | closeProvidersModal() |
-| 70 | input | provAlias | text | openrouter | — |
-| 71 | input | provName | text | OpenRouter | — |
-| 72 | select | provWire | — | OpenAI Compatible (/chat/completions) Anthropic Native (/v1/messages SSE) | — |
-| 73 | input | provUrl | text | https://openrouter.ai/api/v1 | — |
-| 74 | input | provKey | password | sk-... (optional for Pollinations / OmniRoute) | — |
-| 75 | button | fetchModelsBtn | — | Fetch Live Models from Endpoint | fetchRemoteModels() |
-| 76 | textarea | provModels | — | claude-sonnet-4-5, gemini-2.5-pro, qwen/qwen3-coder:free | — |
-| 77 | button | — | — | Save & Enable Provider | saveProvider() |
-| 78 | input | comboAlias | text | — | — |
-| 79 | input | comboName | text | — | — |
-| 80 | input | comboTargets | text | openrouter::qwen/qwen3-coder:free, Qwen3.8-27B-oQ4e-mtp | — |
-| 81 | button | — | — | Save Combo | saveCombo() |
-| 82 | button | — | — | Rescan | loadSkills() |
-| 83 | button | — | — | Close | closeSkillsModal() |
-| 84 | input | skillInstallInput | text | — | — |
-| 85 | button | skillInstallBtn | — | Install | installSkill() |
-| 86 | button | — | — | Refresh | refreshSdlcBoard() |
-| 87 | button | — | — | Close | closeSdlcModal() |
-| 88 | input | sdlcWorkspaceInput | text | ~/Projects/my-new-app | syncProjectDirInputs(this.value) |
-| 89 | button | — | button | Set Directory | saveWorkspaceDirectory(document.getElementById('sdlcWorkspaceInput').value) |
-| 90 | textarea | sdlcVisionInput | — | e.g. Build a modern full-stack E-Commerce storefront with live search, filterable catalog, slide-over cart drawer, promo codes, SQLite order persistence, and unit/E2E tests — OR an end-to-end HTML5 Canvas survival roguelike game with wave progression, upgrades, spatial audio, and 60fps loop. | — |
-| 91 | select | sdlcMaxStories | — | 3 stories 5 stories 8 stories | — |
-| 92 | select | sdlcRunModeSelect | — | SDLC execution mode | — |
-| 93 | button | — | — | Launch SDLC | startSdlcSelectedMode() |
-| 94 | button | — | — | Research | switchSdlcArtifact('RESEARCH.md') |
-| 95 | button | — | — | PRD | switchSdlcArtifact('PRD.md') |
-| 96 | button | — | — | Arch | switchSdlcArtifact('ARCHITECTURE.md') |
-| 97 | button | — | — | Feedback | switchSdlcArtifact('FEEDBACK_LOG.md') |
-| 98 | input | sdlcFeedbackAutoImpl | checkbox | — | — |
-| 99 | input | sdlcFeedbackInput | text | e.g. Checkout feels clunky — research 1-page Stripe/Shopify cart drawers & add instant validation | — |
-| 100 | input | sdlcInspirationQuery | text | e.g. modern ecommerce slide-over cart ux | — |
-| 101 | button | — | — | Research & Iterate | submitSdlcFeedback() |
-| 102 | button | — | — | Close | closeSpawnModal() |
-| 103 | textarea | spawnRequestInput | — | Design an event-sourced local-first task queue on macOS with crash-safe SQLite WAL persistence, zero-polling wakeups, and backpressure. | — |
-| 104 | button | — | — | Cancel | closeSpawnModal() |
-| 105 | button | — | — | Open Empty Room | confirmSpawnSession(false) |
-| 106 | button | spawnConveneBtn | — | Spawn & Convene 4-LLM Council | confirmSpawnSession(true) |
-| 107 | select | integrationsQuickMenu | — | Open studio tools and integrations | openIntegrationFromMenu(this) |
-| 108 | button | monitorToggleBtn | — | Inspector | toggleMonitorRail() |
-| 109 | button | — | — | Unload models | unloadAllModels() |
+| 36 | input | mcpHubSearch | search | Search MCP presets, connected servers and tools | renderMcpHub() |
+| 37 | button | — | — | Refresh | loadMcpServers() |
+| 38 | button | — | — | Close | closeMcpModal() |
+| 39 | button | mcpTabCatalog | tab | Catalog 0 | switchMcpTab('catalog') |
+| 40 | button | mcpTabConnected | tab | Connected 0 | switchMcpTab('connected') |
+| 41 | button | mcpTabActivity | tab | Activity 0 | switchMcpTab('activity') |
+| 42 | summary | — | — | Add or edit a serverPick a catalog card to prefill, or enter your own. | — |
+| 43 | input | mcpAlias | text | context7 | syncMcpEditorState() |
+| 44 | input | mcpName | text | Context7 Live Docs | — |
+| 45 | select | mcpTransport | — | Cloud / Custom HTTP (URL) Custom Stdio Command | toggleMcpTransportFields() |
+| 46 | select | mcpApprovalPolicy | — | Auto-Run (Trusted Read/Search) Inherit Harness Policy Always Ask Human Approval | — |
+| 47 | input | mcpUrl | text | https://mcp.context7.com/mcp | — |
+| 48 | select | mcpAuthHeader | — | Authorization: Bearer x-api-key None (Zero-Key) | — |
+| 49 | input | mcpToken | password | Optional for free servers | — |
+| 50 | input | mcpHeadersJson | text | {"X-Workspace": "prod"} | — |
+| 51 | input | mcpCommand | text | python3, uv, npx, uvx, docker | — |
+| 52 | input | mcpArgs | text | -y @playwright/mcp@latest --headless | — |
+| 53 | input | mcpEnvJson | text | {"API_KEY": "..."} | — |
+| 54 | button | mcpSaveBtn | — | Save & Sync Tools | saveMcpServer() |
+| 55 | summary | — | — | Paste mcpServers JSONClaude Desktop / Cursor / Windsurf format | — |
+| 56 | textarea | mcpImportJsonInput | — | {"mcpServers": {"exa": {"url": "https://mcp.exa.ai/mcp"}, "my-script": {"command": "python3", "args": ["server.py"]}}} | — |
+| 57 | button | — | — | Import & Sync All | importMcpJson() |
+| 58 | select | mcpPlayServer | — | — | populateMcpPlayTools() |
+| 59 | select | mcpPlayTool | — | — | — |
+| 60 | input | mcpPlayArgs | text | — | — |
+| 61 | button | mcpPlayBtn | — | Test Call | runMcpPlayground() |
+| 62 | button | — | — | Close | closeExternalHarnessModal() |
+| 63 | button | — | — | Copy YAML | copyPreText('extDshYaml', this) |
+| 64 | button | — | — | Copy Python | copyPreText('extDshPy', this) |
+| 65 | button | — | — | Copy Commands | copyPreText('extOpenHarness', this) |
+| 66 | button | applyWorktreeBtn | — | Apply Worktree to Main Workspace | applyHarnessWorktree() |
+| 67 | button | — | — | Refresh | openHarnessDiffModal() |
+| 68 | button | — | — | Verification & artifacts | openHarnessEvidenceModal() |
+| 69 | button | — | — | Close | closeHarnessDiffModal() |
+| 70 | button | — | — | Refresh | refreshHarnessEvidence() |
+| 71 | button | — | — | Close | closeHarnessEvidenceModal() |
+| 72 | button | — | — | Refresh | refreshHarnessGrants() |
+| 73 | button | — | — | Close | closeHarnessGrants() |
+| 74 | button | — | — | Close | closeProvidersModal() |
+| 75 | input | provAlias | text | openrouter | — |
+| 76 | input | provName | text | OpenRouter | — |
+| 77 | select | provWire | — | OpenAI Compatible (/chat/completions) Anthropic Native (/v1/messages SSE) | — |
+| 78 | input | provUrl | text | https://openrouter.ai/api/v1 | — |
+| 79 | input | provKey | password | sk-... (optional for Pollinations / OmniRoute) | — |
+| 80 | button | fetchModelsBtn | — | Fetch Live Models from Endpoint | fetchRemoteModels() |
+| 81 | textarea | provModels | — | claude-sonnet-4-5, gemini-2.5-pro, qwen/qwen3-coder:free | — |
+| 82 | button | — | — | Save & Enable Provider | saveProvider() |
+| 83 | input | comboAlias | text | — | — |
+| 84 | input | comboName | text | — | — |
+| 85 | input | comboTargets | text | openrouter::qwen/qwen3-coder:free, Qwen3.8-27B-oQ4e-mtp | — |
+| 86 | button | — | — | Save Combo | saveCombo() |
+| 87 | button | — | — | Rescan | loadSkills() |
+| 88 | button | — | — | Close | closeSkillsModal() |
+| 89 | input | skillInstallInput | text | — | — |
+| 90 | button | skillInstallBtn | — | Install | installSkill() |
+| 91 | button | — | — | Refresh | refreshSdlcBoard() |
+| 92 | button | — | — | Close | closeSdlcModal() |
+| 93 | input | sdlcWorkspaceInput | text | ~/Projects/my-new-app | syncProjectDirInputs(this.value) |
+| 94 | button | — | button | Set Directory | saveWorkspaceDirectory(document.getElementById('sdlcWorkspaceInput').value) |
+| 95 | textarea | sdlcVisionInput | — | e.g. Build a modern full-stack E-Commerce storefront with live search, filterable catalog, slide-over cart drawer, promo codes, SQLite order persistence, and unit/E2E tests — OR an end-to-end HTML5 Canvas survival roguelike game with wave progression, upgrades, spatial audio, and 60fps loop. | — |
+| 96 | select | sdlcMaxStories | — | 3 stories 5 stories 8 stories | — |
+| 97 | select | sdlcRunModeSelect | — | SDLC execution mode | — |
+| 98 | button | — | — | Launch SDLC | startSdlcSelectedMode() |
+| 99 | button | — | — | Research | switchSdlcArtifact('RESEARCH.md') |
+| 100 | button | — | — | PRD | switchSdlcArtifact('PRD.md') |
+| 101 | button | — | — | Arch | switchSdlcArtifact('ARCHITECTURE.md') |
+| 102 | button | — | — | Feedback | switchSdlcArtifact('FEEDBACK_LOG.md') |
+| 103 | input | sdlcFeedbackAutoImpl | checkbox | — | — |
+| 104 | input | sdlcFeedbackInput | text | e.g. Checkout feels clunky — research 1-page Stripe/Shopify cart drawers & add instant validation | — |
+| 105 | input | sdlcInspirationQuery | text | e.g. modern ecommerce slide-over cart ux | — |
+| 106 | button | — | — | Research & Iterate | submitSdlcFeedback() |
+| 107 | button | — | — | Close | closeSpawnModal() |
+| 108 | textarea | spawnRequestInput | — | Design an event-sourced local-first task queue on macOS with crash-safe SQLite WAL persistence, zero-polling wakeups, and backpressure. | — |
+| 109 | button | — | — | Cancel | closeSpawnModal() |
+| 110 | button | — | — | Open Empty Room | confirmSpawnSession(false) |
+| 111 | button | spawnConveneBtn | — | Spawn & Convene 4-LLM Council | confirmSpawnSession(true) |
+| 112 | select | integrationsQuickMenu | — | Open studio tools and integrations | openIntegrationFromMenu(this) |
+| 113 | button | monitorToggleBtn | — | Inspector | toggleMonitorRail() |
+| 114 | button | — | — | Unload models | unloadAllModels() |
 
 ## Controls built by script
 
-62 interactive tags appear as template strings inside the
+65 interactive tags appear as template strings inside the
 inline script rather than in the markup. They are attributed to the nearest preceding function
 and are **not** in the tables above:
 
@@ -305,6 +310,7 @@ and are **not** in the tables above:
 | `ensureStageCardMounted` | 1 |
 | `hallClearScopeNoteHtml` | 2 |
 | `harnessEvidenceChangeHtml` | 1 |
+| `mcpCatalogCardHtml` | 1 |
 | `openSpawnModal` | 1 |
 | `refreshHallSessions` | 3 |
 | `refreshInspectorPanel` | 9 |
@@ -322,6 +328,7 @@ and are **not** in the tables above:
 | `renderHarnessTimeline` | 1 |
 | `renderHarnessVerdictCardHtml` | 2 |
 | `renderMarkdown` | 1 |
+| `renderMcpHub` | 2 |
 | `renderMcpUI` | 7 |
 | `renderOpenContextDocs` | 3 |
 | `renderProvidersModal` | 3 |

@@ -57,10 +57,6 @@
       {
         "tag": "span",
         "class": "skill-pill"
-      },
-      {
-        "tag": "span",
-        "class": "chip"
       }
     ]
   },
@@ -76,10 +72,12 @@
   "tab_order": {
     "tabs": 6,
     "tabbable_tabs": 1,
+    "hub_tabs": 3,
+    "hub_tabbable_tabs": 1,
     "positive_tabindex": 0
   },
   "names": {
-    "controls": 94,
+    "controls": 95,
     "unnamed": 0,
     "live_regions": 19
   },
@@ -128,7 +126,7 @@
       "detail": ""
     },
     {
-      "check": "the non-native controls are the ten that were mouse-only: starter cards, preset chips, skill pills and session rows",
+      "check": "the non-native controls are the nine that are still mouse-only: starter cards, provider chips, skill pills and session rows",
       "ok": true,
       "detail": ""
     },

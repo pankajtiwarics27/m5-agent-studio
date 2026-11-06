@@ -1,0 +1,279 @@
+{
+  "story": "UIV2-21",
+  "title": "MCP hub: searchable catalog and connected-server dashboard",
+  "schema_version": 1,
+  "source": "static/index.html",
+  "states": [
+    "catalog",
+    "search",
+    "connected",
+    "secrets",
+    "activity",
+    "loading",
+    "long",
+    "error"
+  ],
+  "sections": {
+    "catalog": {
+      "search": "mcpHubSearch",
+      "filters": [
+        "All",
+        "Remote",
+        "Local",
+        "Needs a key",
+        "Connected"
+      ],
+      "card": "mcpCatalogCardHtml",
+      "trust": "mcpPresetTrust"
+    },
+    "connected": {
+      "editor": "mcpEditor",
+      "list": "configuredMcpServersList",
+      "playground": "mcpPlayBtn"
+    },
+    "activity": {
+      "health": "mcpActivityList",
+      "calls": "mcpActivityCalls",
+      "recorder": "recordMcpActivity"
+    }
+  },
+  "controls": [
+    "mcpAlias",
+    "mcpName",
+    "mcpTransport",
+    "mcpApprovalPolicy",
+    "mcpAuthHeader",
+    "mcpUrl",
+    "mcpToken",
+    "mcpHeadersJson",
+    "mcpCommand",
+    "mcpArgs",
+    "mcpEnvJson",
+    "mcpPresetNote",
+    "mcpSaveBtn",
+    "mcpImportJsonInput",
+    "configuredMcpServersList",
+    "mcpPlayServer",
+    "mcpPlayTool",
+    "mcpPlayArgs",
+    "mcpPlayBtn",
+    "mcpPlayOutput"
+  ],
+  "routes": [
+    "@app.get(\"/api/mcp/servers\")",
+    "@app.post(\"/api/mcp/servers\")",
+    "@app.post(\"/api/mcp/import-json\")",
+    "@app.delete(\"/api/mcp/servers/{alias}\")",
+    "@app.post(\"/api/mcp/servers/{alias}/sync\")",
+    "@app.post(\"/api/mcp/servers/{alias}/call\")"
+  ],
+  "checks": [
+    {
+      "check": "the dialog is a hub: one tablist with three tabs",
+      "passed": true,
+      "detail": "tabs: Catalog, Connected, Activity"
+    },
+    {
+      "check": "each tab controls its own panel, and the panels are tabpanels",
+      "passed": true,
+      "detail": "panels: Catalog, Connected, Activity · aria-controls and aria-labelledby wired both ways"
+    },
+    {
+      "check": "the landing tab is the catalog, not the configuration form",
+      "passed": true,
+      "detail": "Catalog is selected and Connected starts hidden"
+    },
+    {
+      "check": "switching a tab shows exactly one panel and moves the roving tabindex",
+      "passed": true,
+      "detail": "switchMcpTab() hides every other panel, sets aria-selected and a single tab stop"
+    },
+    {
+      "check": "the tab strip answers the arrow keys, Home and End",
+      "passed": true,
+      "detail": "one delegated listener bound when the hub opens; no inline key handler in the markup"
+    },
+    {
+      "check": "the dialog is a labelled modal",
+      "passed": true,
+      "detail": "role=dialog, aria-modal, labelled by the hub title"
+    },
+    {
+      "check": "the hub has one search box that names what it searches",
+      "passed": true,
+      "detail": "type=search, labelled, re-renders the hub on input"
+    },
+    {
+      "check": "the catalog filters count what they would show",
+      "passed": true,
+      "detail": "each chip is a toggle with a count and aria-pressed"
+    },
+    {
+      "check": "search narrows the cards and hides the rows that do not match",
+      "passed": true,
+      "detail": "applyMcpHubSearch() hides every row whose haystack misses the term"
+    },
+    {
+      "check": "a search with no hit says so and offers to clear itself",
+      "passed": true,
+      "detail": "the empty state names the term and offers a Clear search action"
+    },
+    {
+      "check": "a preset is a card, not a chip with a name",
+      "passed": true,
+      "detail": "mcpCatalogCardHtml() renders a named card with its target"
+    },
+    {
+      "check": "every card states its transport, trust, key requirement and policy",
+      "passed": true,
+      "detail": "remote/local · trust · key requirement · approval policy on every card"
+    },
+    {
+      "check": "the transport says remote HTTP or local stdio in words",
+      "passed": true,
+      "detail": "a pill, not a colour or an icon alone"
+    },
+    {
+      "check": "the key requirement names the variable or says no key is needed",
+      "passed": true,
+      "detail": "either `No key needed` or the exact environment variable"
+    },
+    {
+      "check": "trust is derived from the stored preset, never invented",
+      "passed": true,
+      "detail": "mcpPresetTrust() reads requires_token and approval_policy only"
+    },
+    {
+      "check": "the card says whether it is connected and what its button will do",
+      "passed": true,
+      "detail": "state line plus a Use preset / Review action"
+    },
+    {
+      "check": "cards show the endpoint or the command they would run",
+      "passed": true,
+      "detail": "remote cards print the URL, stdio cards print command and arguments"
+    },
+    {
+      "check": "the configuration form is a shut disclosure, not the first thing shown",
+      "passed": true,
+      "detail": "the editor is a closed <details> with a summary that says what it is"
+    },
+    {
+      "check": "a card opens the editor for you and lands on the Connected tab",
+      "passed": true,
+      "detail": "selectMcpPreset() and editMcpServer() both open the editor on Connected"
+    },
+    {
+      "check": "the editor describes what is actually in it, not the card that filled it",
+      "passed": true,
+      "detail": "syncMcpEditorState() reads the alias and picks preset / editing / new"
+    },
+    {
+      "check": "connected rows state transport, policy and their sync note",
+      "passed": true,
+      "detail": "each row carries its search key, its tools and the error it really got"
+    },
+    {
+      "check": "the connected list explains itself when nothing is connected",
+      "passed": true,
+      "detail": "the empty state points at the Catalog tab"
+    },
+    {
+      "check": "every control the old dialog had is still on the hub",
+      "passed": true,
+      "detail": "20 controls: "
+    },
+    {
+      "check": "all three approval policies survive, on the form and on the rows",
+      "passed": true,
+      "detail": "auto / inherit / always_ask kept in the select and in the per-server row"
+    },
+    {
+      "check": "Activity reports every server's health, not just the happy ones",
+      "passed": true,
+      "detail": "state pill, policy, tool counts, token mask and the stored sync note per server"
+    },
+    {
+      "check": "a test call is recorded with its outcome, its latency and a capped detail",
+      "passed": true,
+      "detail": "both the success and the failure path record, and the detail is capped at 160 characters"
+    },
+    {
+      "check": "the activity log is bounded and newest first",
+      "passed": true,
+      "detail": "unshift with a 12-entry cap"
+    },
+    {
+      "check": "the tab counts are computed from the state, not typed in",
+      "passed": true,
+      "detail": "catalog / connected / activity counts read the live arrays"
+    },
+    {
+      "check": "no renderer interpolates a secret into the page",
+      "passed": true,
+      "detail": "renderers: only masked values"
+    },
+    {
+      "check": "the only credential the hub renders is the server's mask",
+      "passed": true,
+      "detail": "masked_token in the connected row and in Activity"
+    },
+    {
+      "check": "saving empties the token field",
+      "passed": true,
+      "detail": "the typed secret does not stay in the DOM after a save"
+    },
+    {
+      "check": "the served payload is what masks the secret, not the page",
+      "passed": true,
+      "detail": "app.py sends masked_token; the hub never sees the raw value"
+    },
+    {
+      "check": "the six MCP routes are unchanged and none were added",
+      "passed": true,
+      "detail": "6 routes, no additions"
+    },
+    {
+      "check": "spawning a stdio command is still gated on the operator's opt-in",
+      "passed": true,
+      "detail": "STUDIO_ALLOW_MCP_STDIO is still required before a command is launched"
+    },
+    {
+      "check": "the workspace still has all six tabs",
+      "passed": true,
+      "detail": "start, harness, hall, council, debate, chat"
+    },
+    {
+      "check": "the top strip still shows the MCP pill row and its tool count",
+      "passed": true,
+      "detail": "the strip is outside the dialog and untouched"
+    },
+    {
+      "check": "a browser walk asserts the hub on a screen",
+      "passed": true,
+      "detail": "mcp_hub_walk.mjs: 40 recorded checks"
+    },
+    {
+      "check": "the walk covers every state the ledger asks for",
+      "passed": true,
+      "detail": "STATES = catalog, search, connected, secrets, activity, loading, long, error"
+    },
+    {
+      "check": "the walk connects a real stdio server rather than inventing one",
+      "passed": true,
+      "detail": "the fixture speaks the protocol; the fixture app opts into stdio launch explicitly"
+    },
+    {
+      "check": "the walk refuses to photograph the hub with a fake secret",
+      "passed": true,
+      "detail": "the secret is typed into the form and then searched for in the document"
+    },
+    {
+      "check": "captures exist for every viewport and theme, with a before set",
+      "passed": true,
+      "detail": "88 after PNG, 88 before PNG"
+    }
+  ],
+  "check_count": 41,
+  "findings": []
+}

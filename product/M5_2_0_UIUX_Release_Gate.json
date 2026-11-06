@@ -51,14 +51,15 @@
           "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
           "totals": {
             "panes": 6,
-            "markup_controls": 208,
+            "markup_controls": 213,
             "pane_controls": 99,
-            "chrome_controls": 109,
-            "script_rendered_controls": 62,
+            "chrome_controls": 114,
+            "script_rendered_controls": 65,
             "script_rendered_by_function": {
               "ensureStageCardMounted": 1,
               "hallClearScopeNoteHtml": 2,
               "harnessEvidenceChangeHtml": 1,
+              "mcpCatalogCardHtml": 1,
               "openSpawnModal": 1,
               "refreshHallSessions": 3,
               "refreshInspectorPanel": 9,
@@ -76,6 +77,7 @@
               "renderHarnessTimeline": 1,
               "renderHarnessVerdictCardHtml": 2,
               "renderMarkdown": 1,
+              "renderMcpHub": 2,
               "renderMcpUI": 7,
               "renderOpenContextDocs": 3,
               "renderProvidersModal": 3,
@@ -208,10 +210,10 @@
           "totals": {
             "panes": 6,
             "preserved_capabilities": 21,
-            "markup_controls": 208,
-            "chrome_controls": 109,
+            "markup_controls": 213,
+            "chrome_controls": 114,
             "pane_controls": 99,
-            "script_rendered_controls": 62,
+            "script_rendered_controls": 65,
             "routes": 117,
             "routes_with_resolved_or_possible_caller": 71,
             "routes_no_caller_observed": 46,
@@ -245,7 +247,7 @@
           "totals": {
             "tokens": 56,
             "groups": 8,
-            "references": 1326,
+            "references": 1365,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -815,10 +817,10 @@
         {
           "artifact": "product/M5_2_0_UIUX_Polish.json",
           "totals": {
-            "radius_rules": 106,
+            "radius_rules": 114,
             "motion_rules": 17,
             "press_rules": 2,
-            "hover_rules": 33,
+            "hover_rules": 34,
             "captures": 8,
             "findings": 0
           }
@@ -847,7 +849,7 @@
             "route_provers": 9,
             "control_provers": 2,
             "walks": 17,
-            "support_walks": 21,
+            "support_walks": 22,
             "findings": 0
           }
         }
@@ -894,15 +896,15 @@
         {
           "artifact": "product/M5_2_0_UIUX_Screenshot_Review.json",
           "totals": {
-            "sets": 34,
-            "files": 1109,
-            "reviewed_sets": 34,
-            "sets_eyed": 14,
-            "files_eyed": 81,
-            "re_taken_sets": 10,
+            "sets": 35,
+            "files": 1285,
+            "reviewed_sets": 35,
+            "sets_eyed": 15,
+            "files_eyed": 86,
+            "re_taken_sets": 11,
             "published_sets": 1,
             "findings": 0,
-            "observations": 28
+            "observations": 29
           }
         }
       ]
@@ -1141,17 +1143,17 @@
   "inventory": {
     "tabs": 6,
     "routes": 117,
-    "markup_controls": 208,
-    "chrome_controls": 109,
-    "script_rendered_controls": 62,
+    "markup_controls": 213,
+    "chrome_controls": 114,
+    "script_rendered_controls": 65,
     "capabilities": 21,
     "e2e_rows": 21,
     "e2e_findings": 0,
     "refusals": 12,
     "refusal_statuses": 9,
-    "captures": 1109,
-    "capture_sets": 34,
-    "reviewed_sets": 34,
+    "captures": 1285,
+    "capture_sets": 35,
+    "reviewed_sets": 35,
     "screenshot_findings": 0,
     "doc_pages": 5,
     "doc_commands": 40,

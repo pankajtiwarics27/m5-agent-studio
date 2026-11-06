@@ -93,9 +93,17 @@ def read_dialogs(html: str) -> list[dict[str, object]]:
         tail = html[match.end():]
         end = tail.find('class="modal-backdrop"')
         block = tail if end < 0 else tail[:end]
-        inner = re.search(r'<div class="modal"([^>]*)>', block)
+        # A dialog may carry modifier classes (`class="modal mcp-hub"`); the attributes that name
+        # it still live on the same element.
+        inner = re.search(r'<div class="modal(?:\s[^"]*)?"([^>]*)>', block)
         attrs = inner.group(1) if inner else ""
         label = re.search(r'aria-label="([^"]+)"', attrs)
+        if not label:
+            # aria-labelledby is the better label when the heading is on the page: accept it, but
+            # only when it points at an element that actually exists.
+            by_id = re.search(r'aria-labelledby="([^"]+)"', attrs)
+            if by_id and f'id="{by_id.group(1)}"' in html:
+                label = by_id
         role = re.search(r'role="([^"]+)"', attrs)
         onclose = re.search(r'onclick="if\(event\.target===this\)(\w+)\(\)"', rest)
         open_fn = _enclosing_function(html, f'openOverlay("{ident}"')
@@ -164,7 +172,7 @@ def build_inventory() -> dict[str, object]:
         if dialog["role"] != "dialog":
             fail("dialog-unlabelled-role", f"#{ident} has no role=\"dialog\" inside its backdrop")
         if not dialog["label"]:
-            fail("dialog-unlabelled", f"#{ident} has no aria-label, so a screen reader announces 'dialog'")
+            fail("dialog-unlabelled", f"#{ident} has no aria-label or aria-labelledby, so a screen reader announces 'dialog'")
 
     # 2. Open and close go through the controller.
     for dialog in dialogs:
