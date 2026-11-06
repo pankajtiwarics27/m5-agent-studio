@@ -2514,20 +2514,56 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-22: MCP guided connect wizard and advanced configuration. Required outcome: Stepwise preset selection, credentials/transport, policy review, connection test and confirmation; advanced JSON isolated. Specific gate: No credential logging, masking on read, unchanged-token semantics, test result visible, explicit consent for risky local commands, keyboard complete, no bypass of admission or sandbox. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
-        "known_regressions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-06T23:30:00+05:30",
+        "completed_at": "2026-11-07T00:35:00+05:30",
+        "commit_sha": "PENDING_STORY_COMMIT",
+        "changed_files": [
+          "static/index.html (MCP: the editor's body is now a four-step guide — `#mcpWizardSteps` rail with `aria-current` and `#mcpWizardProgress` in a live region, four `role=group` panels labelled by their headings, `mcpWizardValidate/Problem/Next/Back/Go`, `mcpWizardRefresh()` for the transport effect, the policy effect, the consent row and the `#mcpReviewList`; the token stays a password field with autocomplete off; `#mcpAdvancedJson` holds the raw headers and environment JSON behind one closed disclosure; `saveMcpServer()` re-checks steps 1-3, shows `Saving and testing…`, and renders `#mcpWizardResult` ok / failed / testing plus a confirmation that names the tool namespace; `mcpReviewRows()` reads only the presence of a typed token, never its characters)",
+          "studio.py (built from the above by scripts/build_studio.py)",
+          "scripts/mcp_wizard_walk.mjs (new: 38 checks — four steps and one panel, aria-current and the live progress line, refusals that name the field and clear, transport-conditional fields, the password field, the closed advanced disclosure, three policy consequences, consent gating and its STUDIO_ALLOW_MCP_STDIO note, the seven review rows, a typed secret that never reaches the DOM or the console or another request body, a save held in flight to photograph the testing state, `Connected — 4 tools discovered.`, a failed test that keeps the server's note, a recovery that updates rather than duplicates, unchanged-token semantics, the whole path from the keyboard, a 315-character target at phone width, and the old form in `--capture-only`)",
+          "scripts/uiux_mcp_wizard_inventory.py (new: 34 checks over the guide, its refusals, its review, its consent, its save, the routes and controls it may not touch, the walk and the captures)",
+          "tests/test_mcp_wizard.py (new: 30 tests, 14 of them mutations)",
+          "product/M5_2_0_UIUX_MCP_Wizard.json, docs/uiux-2-2-mcp-wizard.md (generated)",
+          "docs/media/mcp-wizard-uiv2-22/ (104 after PNGs + before-uiv2-22/ 104 PNGs + README)",
+          "scripts/mcp_hub_walk.mjs (the hub walk walks the guide to its last step and ticks the consent a local command now needs, instead of waiting for the old button label; still 40/40), docs/media/mcp-hub/README.md (the hub captures are pinned at the UIV2-21 merge commit)",
+          "product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json (this entry), scripts/uiux_source_manifest.py, scripts/uiux_control_inventory.py, scripts/uiux_overlay_inventory.py, scripts/uiux_tokens.py, scripts/uiux_polish_inventory.py, scripts/uiux_keyboard_a11y_inventory.py, scripts/uiux_screenshot_review.py, scripts/uiux_preservation_e2e.py + their generated artifacts (regenerated for the new markup)"
+        ],
+        "tests_executed": [
+          "node scripts/mcp_wizard_walk.mjs (8 viewport x theme runs: 38/38 on all eight)",
+          "node scripts/mcp_wizard_walk.mjs --capture-only against b06ab96 in a worktree (8 runs, 12/38 each — the before set)",
+          "pytest tests/test_mcp_wizard.py tests/test_mcp_hub.py tests/test_keyboard_a11y.py -q",
+          "python3 scripts/uiux_mcp_wizard_inventory.py --check",
+          "python3 scripts/uiux_mcp_hub_inventory.py --check",
+          "python3 scripts/uiux_release_gate.py",
+          "ruff check ."
+        ],
+        "visual_evidence": [
+          "docs/media/mcp-wizard-uiv2-22/*.png (104: thirteen states x four viewports x two themes)",
+          "docs/media/mcp-wizard-uiv2-22/before-uiv2-22/*.png (104: the same states on b06ab96, where the walk scores 12/38)",
+          "docs/media/mcp-wizard-uiv2-22/README.md (what each state is evidence for)"
+        ],
+        "acceptance_evidence": [
+          "AC1 no credential logging: the guide never writes the token anywhere but the save request's body — the walk asserts no console line carries the secret (`secretConsole`), and `mcpReviewRows()` decides `A new token will be stored` from a boolean, never from the value.",
+          "AC1 masking on read: the only credential rendered anywhere is the mask the server sends (`Token sk-u••••4b71`, unchanged `_mask_secret` / `masked_token` in app.py); the walk types a real secret, saves it, and asserts the string appears nowhere in the document (mcp-wizard-review-*.png, mcp-wizard-keyed-*.png).",
+          "AC1 unchanged-token semantics: editing a stored server opens the guide with an empty token field, the review says `The stored token is kept (sk-u••••4b71)`, and saving with the field blank keeps the mask — the walk checks all three (mcp-wizard-keyed-*.png).",
+          "AC1 test result visible: `Save & test connection` sets `Saving and testing…` on a disabled button and a `testing` result line, then replaces it with `Connected — N tools discovered.` and a confirmation naming `mcp__alias__<tool>`, or `Saved, but the connection test failed — <the server's own note>`; the walk holds the request in flight to photograph the middle state and asserts each outcome (mcp-wizard-loading-*, -success-*, -error-*.png).",
+          "AC1 explicit consent for risky local commands: step 3 shows a consent row only for a local command, naming the exact command and arguments, and neither Continue nor Save will proceed until it is ticked; the note states the screen records consent and cannot grant `STUDIO_ALLOW_MCP_STDIO=1` (mcp-wizard-consent-*.png).",
+          "AC1 keyboard complete: the rail, Back, Continue, every field, the consent box and the save button are native controls; advancing moves focus to the step heading, a refusal moves it to the field that needs it, and the walk drives the path with Tab/Enter/Shift+Tab alone (mcp-wizard-keyboard-*.png).",
+          "AC1 no bypass of admission or sandbox: no new route, no change to `app.py`; the six `/api/mcp/*` routes and the `STUDIO_ALLOW_MCP_STDIO` gate are asserted unchanged, and the consent box is additional to that gate rather than a substitute for it.",
+          "AC2 visual conformance: thirteen states captured at 1640x900, 1440x900, 1280x800 and 390x844 in light and dark, reviewed by `scripts/uiux_screenshot_review.py`, against a before set of the same states on the form this story replaced.",
+          "AC3 existing features and authorization preserved: all 20 controls of the old form are still in the guide (inventory check), the six tabs, the hub's tabs and search, the importer, the server list and the playground are untouched, and the secrets still reach the page only as the server's mask."
+        ],
+        "known_regressions": [
+          "A successful connection test is recorded in Activity, but a failed one is not: the server row keeps the sync note and the guide shows the failure, and the Activity tab only gains an entry for a test that discovered tools.",
+          "The guide's `Advanced` disclosure still offers free-text headers and environment JSON; a value with a sensitive name is masked on read as before, but a mistyped header key is not validated until the connection test runs.",
+          "A headless container has no OS keyring, so the walk runs its fixture app with the same memory keyring stand-in the tests use; the app still refuses to persist a secret in SQLite, unchanged."
+        ],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "UIV2-22 done. Opening the MCP editor now starts a four-step guide instead of a single form: name the server, say how it is reached (HTTP with a password-field token, or a local command), choose what a call costs (with a consent that names the exact command and cannot grant the operator's stdio opt-in), then review the seven things that will be saved and press `Save & test connection`, which saves and tests in one request and reports `Connected — N tools discovered.` or the server's own refusal where the button was. 104 after captures at four viewports x two themes, 104 before captures on b06ab96 where the walk scores 12/38, gate 37/37 checks and 7/7 phase gates with 0 findings.",
+        "exact_next_action": "Start UIV2-23 from origin/main at the merge commit of this PR: pin HEAD, read the ledger entry, capture the before state of its surface with a new walk before changing anything."
       }
     },
     {

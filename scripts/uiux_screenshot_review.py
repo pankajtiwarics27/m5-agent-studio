@@ -578,6 +578,47 @@ REVIEWS: dict[str, dict[str, object]] = {
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",
     },
+    "mcp-wizard-uiv2-22": {
+        "story": "UIV2-22",
+        "note": (
+            "The MCP guided connect wizard: thirteen shots on each of four viewports x light/dark "
+            "(an empty step 1, the credentials step with a password-field token, the policy step "
+            "with its consequence in words, the review of the seven things that will be saved, the "
+            "consent row naming a local command, a save held in flight reading 'Saving and "
+            "testing...', the green 'Connected - 4 tools discovered.' confirmation, the server list "
+            "after it, a failed connection test that keeps the server's own note, the same server "
+            "recovered in place, a stored token kept through a blank field, the keyboard path and a "
+            "315-character target at phone width), written by `scripts/mcp_wizard_walk.mjs` against "
+            "a fixture it starts itself and the real stdio MCP server it connects to through step 4, "
+            "after 38/38 checks on all eight runs, beside `before-uiv2-22/`, the same thirteen states "
+            "served from b06ab96 and captured by this same walk in `--capture-only` (12/38 there: "
+            "there are no steps, no consent and no result where the button is, which is what the "
+            "before set is). Opened and read: the 1440x900-dark step-1 capture (four rail items with "
+            "the first marked, 'Step 1 of 4 - Server' announced, Back disabled, Continue the only way "
+            "on), the 1440x900-dark review capture (seven labelled rows including 'Credential: A new "
+            "token will be stored, and only its mask shown', the advanced disclosure shut and out of "
+            "the way), the 1440x900-dark consent capture (the exact command inside the consent "
+            "sentence, the note that the screen cannot grant STUDIO_ALLOW_MCP_STDIO, and Continue "
+            "refusing in amber), the 1440x900-dark success capture (the green result line, the "
+            "namespace the tools arrive under, and the server row masked as Token sk-u...4b71), the "
+            "390x844-dark review capture (values wrapping in place, no sideways scroll), the "
+            "1440x900-light review capture (the same rows in the light theme, the focus ring on the "
+            "step heading reading as a ring and not as a field), and the before-uiv2-22 1440x900-dark "
+            "credentials capture (one form with alias, name, transport, policy, URL, auth header, "
+            "token and raw headers JSON on screen at once above a 'Save & Sync Tools' button)."
+        ),
+        "eye": [
+            "mcp-wizard-empty-1440x900-dark.png",
+            "mcp-wizard-review-1440x900-dark.png",
+            "mcp-wizard-consent-1440x900-dark.png",
+            "mcp-wizard-success-1440x900-dark.png",
+            "mcp-wizard-review-1440x900-light.png",
+            "mcp-wizard-review-390x844-dark.png",
+            "before-uiv2-22/mcp-wizard-credentials-1440x900-dark.png",
+        ],
+        "re_taken": True,
+        "theme": "light and dark, desktop 1280-1640 and narrow 390",
+    },
     "chat-recovery": {
         "story": "UIV2-20",
         "note": (

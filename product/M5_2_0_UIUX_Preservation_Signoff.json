@@ -26,11 +26,11 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b",
-      "source_manifest_sha256": "43156595b2668a75270bf0b2afc7115e63c66a927a00deb7310361d636e2400a",
-      "control_inventory_sha256": "9f963c50b8cacaa45803b600d1f99f7a2a8f66367e81a0b58e774ab232c0abca",
-      "route_map_sha256": "96ffe13a2496156f7c19758939095387ab9a63e914cc2af9b676dbb342e06b71",
-      "authorization_trace_sha256": "e87ea46b2046a8fd74108bf06bf45a600db7758cbf32753661a810cb4fe73b97",
-      "frontend_sha256": "e552b8fa4b2529e3b763ba787d3c562db39a492bc705d6d06cdbb2f824172b18",
+      "source_manifest_sha256": "79e270da043f026599daba629abbc7c5db002383f7d204cf25d8b326a18d324c",
+      "control_inventory_sha256": "5634d600174266a3a4feced747245f899a1dbe249a5d6f81d492d5753b3e20a8",
+      "route_map_sha256": "ce3de07d3e25fe216612ee736afd04838b174daafde8dfcd2af8e710f3c866ab",
+      "authorization_trace_sha256": "84cb141cc21b7676611469a510665cb1cb8c9e60c964e142ec04682c2aee17b9",
+      "frontend_sha256": "ef75ce6bb371344dbe9286327334a5737e227c8dc972c2ed89bcd531454cf382",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
       "screenshot_index_sha256": "16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -40,11 +40,11 @@
   },
   "inputs": {
     "ledger_sha256": "1adcb5f5fe82d14855291246cfe4ed08aafb57ab7143703a1ce5e3c5fc0ea43c",
-    "source_manifest_sha256": "43156595b2668a75270bf0b2afc7115e63c66a927a00deb7310361d636e2400a",
-    "control_inventory_sha256": "9f963c50b8cacaa45803b600d1f99f7a2a8f66367e81a0b58e774ab232c0abca",
-    "route_map_sha256": "96ffe13a2496156f7c19758939095387ab9a63e914cc2af9b676dbb342e06b71",
-    "authorization_trace_sha256": "e87ea46b2046a8fd74108bf06bf45a600db7758cbf32753661a810cb4fe73b97",
-    "frontend_sha256": "e552b8fa4b2529e3b763ba787d3c562db39a492bc705d6d06cdbb2f824172b18"
+    "source_manifest_sha256": "79e270da043f026599daba629abbc7c5db002383f7d204cf25d8b326a18d324c",
+    "control_inventory_sha256": "5634d600174266a3a4feced747245f899a1dbe249a5d6f81d492d5753b3e20a8",
+    "route_map_sha256": "ce3de07d3e25fe216612ee736afd04838b174daafde8dfcd2af8e710f3c866ab",
+    "authorization_trace_sha256": "84cb141cc21b7676611469a510665cb1cb8c9e60c964e142ec04682c2aee17b9",
+    "frontend_sha256": "ef75ce6bb371344dbe9286327334a5737e227c8dc972c2ed89bcd531454cf382"
   },
   "approval_request": [
     {
@@ -55,7 +55,7 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "213 markup controls (114 chrome, 99 panes) plus 65 rendered by script"
+      "evidence": "221 markup controls (122 chrome, 99 panes) plus 66 rendered by script"
     },
     {
       "id": 3,
@@ -76,10 +76,10 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 213,
-    "chrome_controls": 114,
+    "markup_controls": 221,
+    "chrome_controls": 122,
     "pane_controls": 99,
-    "script_rendered_controls": 65,
+    "script_rendered_controls": 66,
     "routes": 117,
     "routes_with_resolved_or_possible_caller": 71,
     "routes_no_caller_observed": 46,
@@ -1670,12 +1670,12 @@
     }
   ],
   "chrome": {
-    "control_count": 114,
+    "control_count": 122,
     "counts": {
-      "button": 65,
-      "input": 30,
+      "button": 71,
+      "input": 31,
       "select": 12,
-      "summary": 2,
+      "summary": 3,
       "textarea": 5
     },
     "note": "Tabs, command palette, modals and the shared toolbar. A pane story may restyle chrome, but every control here stays reachable: the inventory test fails if one disappears."

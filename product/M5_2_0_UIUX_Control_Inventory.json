@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "e552b8fa4b2529e3b763ba787d3c562db39a492bc705d6d06cdbb2f824172b18",
+  "frontend_sha256": "ef75ce6bb371344dbe9286327334a5737e227c8dc972c2ed89bcd531454cf382",
   "panes": [
     {
       "dom_id": "start",
@@ -807,12 +807,12 @@
     }
   ],
   "chrome": {
-    "control_count": 114,
+    "control_count": 122,
     "counts": {
-      "button": 65,
-      "input": 30,
+      "button": 71,
+      "input": 31,
       "select": 12,
-      "summary": 2,
+      "summary": 3,
       "textarea": 5
     },
     "controls": [
@@ -1151,6 +1151,38 @@
         "text": "Add or edit a serverPick a catalog card to prefill, or enter your own."
       },
       {
+        "tag": "button",
+        "id": "mcpWizardTab1",
+        "type": "button",
+        "class": "mcp-wizard-stepbtn",
+        "onclick": "mcpWizardGo(1)",
+        "text": "1Server"
+      },
+      {
+        "tag": "button",
+        "id": "mcpWizardTab2",
+        "type": "button",
+        "class": "mcp-wizard-stepbtn",
+        "onclick": "mcpWizardGo(2)",
+        "text": "2Transport & credentials"
+      },
+      {
+        "tag": "button",
+        "id": "mcpWizardTab3",
+        "type": "button",
+        "class": "mcp-wizard-stepbtn",
+        "onclick": "mcpWizardGo(3)",
+        "text": "3Policy & consent"
+      },
+      {
+        "tag": "button",
+        "id": "mcpWizardTab4",
+        "type": "button",
+        "class": "mcp-wizard-stepbtn",
+        "onclick": "mcpWizardGo(4)",
+        "text": "4Review & connect"
+      },
+      {
         "tag": "input",
         "id": "mcpAlias",
         "type": "text",
@@ -1167,29 +1199,45 @@
         "tag": "select",
         "id": "mcpTransport",
         "onchange": "toggleMcpTransportFields()",
-        "text": "Cloud / Custom HTTP (URL) Custom Stdio Command"
-      },
-      {
-        "tag": "select",
-        "id": "mcpApprovalPolicy",
-        "text": "Auto-Run (Trusted Read/Search) Inherit Harness Policy Always Ask Human Approval"
+        "text": "Remote server over HTTP (URL) Local command over stdio"
       },
       {
         "tag": "input",
         "id": "mcpUrl",
         "type": "text",
-        "placeholder": "https://mcp.context7.com/mcp"
+        "placeholder": "https://mcp.context7.com/mcp",
+        "oninput": "mcpWizardRefresh()"
       },
       {
         "tag": "select",
         "id": "mcpAuthHeader",
+        "onchange": "mcpWizardRefresh()",
         "text": "Authorization: Bearer x-api-key None (Zero-Key)"
       },
       {
         "tag": "input",
         "id": "mcpToken",
         "type": "password",
-        "placeholder": "Optional for free servers"
+        "placeholder": "Optional for free servers",
+        "oninput": "mcpWizardRefresh()"
+      },
+      {
+        "tag": "input",
+        "id": "mcpCommand",
+        "type": "text",
+        "placeholder": "python3, uv, npx, uvx, docker",
+        "oninput": "mcpWizardRefresh()"
+      },
+      {
+        "tag": "input",
+        "id": "mcpArgs",
+        "type": "text",
+        "placeholder": "-y @playwright/mcp@latest --headless",
+        "oninput": "mcpWizardRefresh()"
+      },
+      {
+        "tag": "summary",
+        "text": "Advanced: raw headers and environment JSON"
       },
       {
         "tag": "input",
@@ -1199,28 +1247,44 @@
       },
       {
         "tag": "input",
-        "id": "mcpCommand",
-        "type": "text",
-        "placeholder": "python3, uv, npx, uvx, docker"
-      },
-      {
-        "tag": "input",
-        "id": "mcpArgs",
-        "type": "text",
-        "placeholder": "-y @playwright/mcp@latest --headless"
-      },
-      {
-        "tag": "input",
         "id": "mcpEnvJson",
         "type": "text",
         "placeholder": "{\"API_KEY\": \"...\"}"
+      },
+      {
+        "tag": "select",
+        "id": "mcpApprovalPolicy",
+        "onchange": "mcpWizardRefresh()",
+        "text": "Auto-Run (Trusted Read/Search) Inherit Harness Policy Always Ask Human Approval"
+      },
+      {
+        "tag": "input",
+        "id": "mcpStdioConsent",
+        "type": "checkbox",
+        "onchange": "mcpWizardRefresh()"
       },
       {
         "tag": "button",
         "id": "mcpSaveBtn",
         "class": "btn btn-primary",
         "onclick": "saveMcpServer()",
-        "text": "Save & Sync Tools"
+        "text": "Save & test connection"
+      },
+      {
+        "tag": "button",
+        "id": "mcpWizardBack",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "mcpWizardBack()",
+        "text": "Back"
+      },
+      {
+        "tag": "button",
+        "id": "mcpWizardNext",
+        "type": "button",
+        "class": "btn btn-xs btn-primary",
+        "onclick": "mcpWizardNext()",
+        "text": "Continue"
       },
       {
         "tag": "summary",
@@ -1592,10 +1656,10 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 213,
+    "markup_controls": 221,
     "pane_controls": 99,
-    "chrome_controls": 114,
-    "script_rendered_controls": 65,
+    "chrome_controls": 122,
+    "script_rendered_controls": 66,
     "script_rendered_by_function": {
       "ensureStageCardMounted": 1,
       "hallClearScopeNoteHtml": 2,
@@ -1623,6 +1687,7 @@
       "renderOpenContextDocs": 3,
       "renderProvidersModal": 3,
       "renderTelemetry": 1,
+      "saveMcpServer": 1,
       "syncUnifiedSelectors": 1
     }
   },

@@ -3,6 +3,14 @@
 UIV2-21 turned one long configuration dialog into a hub you can look things up in: a searchable
 catalog of presets, a connected-server dashboard and an activity log.
 
+## Pinned at the UIV2-21 merge commit
+
+These captures are the hub as UIV2-21 shipped it (`b06ab96`). UIV2-22 then replaced the editor that
+sits inside the Connected tab with a four-step guide, so re-running this walk today produces a
+different Connected panel; the current surface is captured in
+[`../mcp-wizard-uiv2-22/`](../mcp-wizard-uiv2-22/README.md). The walk itself still passes against
+the current tree (40/40), because it walks whatever editor is there.
+
 ## After (`*.png`, 88 files)
 
 Eleven states × four viewports × two themes, written by `scripts/mcp_hub_walk.mjs` against a fixture

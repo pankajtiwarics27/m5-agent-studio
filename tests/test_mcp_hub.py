@@ -116,8 +116,13 @@ def test_the_walk_opts_into_stdio_and_a_memory_keyring_only_for_its_own_fixture(
     assert 'STUDIO_ALLOW_MCP_STDIO: "1"' in walk
     assert "sitecustomize.py" in walk
     assert "keyring.set_password = _set" in walk
-    # The opt-in belongs to the fixture process the walk spawns, never to the app's own code.
-    assert "STUDIO_ALLOW_MCP_STDIO" not in FRONTEND.read_text(encoding="utf-8")
+    # The opt-in belongs to the fixture process the walk spawns, never to the app's own code. UIV2-22
+    # lets the page name the variable in the sentence that says it cannot grant it, and nothing more.
+    html = FRONTEND.read_text(encoding="utf-8")
+    assert html.count("STUDIO_ALLOW_MCP_STDIO") <= 1
+    assert '"STUDIO_ALLOW_MCP_STDIO"' not in html
+    assert "env.STUDIO_ALLOW_MCP_STDIO" not in html
+    assert "it cannot grant that permission" in html
 
 
 def test_the_fixture_speaks_the_protocol_the_app_calls():

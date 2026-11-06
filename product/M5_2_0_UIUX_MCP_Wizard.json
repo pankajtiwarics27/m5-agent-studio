@@ -1,0 +1,267 @@
+{
+  "story": "UIV2-22",
+  "title": "MCP guided connect wizard and advanced configuration",
+  "schema_version": 1,
+  "source": "static/index.html",
+  "states": [
+    "empty",
+    "populated",
+    "long-content",
+    "error",
+    "loading",
+    "recovery"
+  ],
+  "steps": [
+    {
+      "id": 1,
+      "label": "Server",
+      "heading": "mcpWizardHeading",
+      "question": "what is it called?"
+    },
+    {
+      "id": 2,
+      "label": "Transport and credentials",
+      "heading": "mcpWizardHeading2",
+      "question": "how is it reached?"
+    },
+    {
+      "id": 3,
+      "label": "Policy and consent",
+      "heading": "mcpWizardHeading3",
+      "question": "what does a call cost?"
+    },
+    {
+      "id": 4,
+      "label": "Review and connect",
+      "heading": "mcpWizardHeading4",
+      "question": "is this what I want, and does it answer?"
+    }
+  ],
+  "controls": {
+    "preserved": [
+      "mcpAlias",
+      "mcpName",
+      "mcpTransport",
+      "mcpApprovalPolicy",
+      "mcpAuthHeader",
+      "mcpUrl",
+      "mcpToken",
+      "mcpHeadersJson",
+      "mcpCommand",
+      "mcpArgs",
+      "mcpEnvJson",
+      "mcpPresetNote",
+      "mcpSaveBtn",
+      "mcpImportJsonInput",
+      "configuredMcpServersList",
+      "mcpPlayServer",
+      "mcpPlayTool",
+      "mcpPlayArgs",
+      "mcpPlayBtn",
+      "mcpPlayOutput"
+    ],
+    "wizard": [
+      "mcpWizardSteps",
+      "mcpWizardTab1",
+      "mcpWizardTab2",
+      "mcpWizardTab3",
+      "mcpWizardTab4",
+      "mcpWizardProgress",
+      "mcpWizardBack",
+      "mcpWizardNext",
+      "mcpWizardHint",
+      "mcpTransportEffect",
+      "mcpPolicyEffect",
+      "mcpConsentRow",
+      "mcpStdioConsent",
+      "mcpConsentCommand",
+      "mcpConsentNote",
+      "mcpReviewList",
+      "mcpWizardResult",
+      "mcpWizardConfirm",
+      "mcpAdvancedJson"
+    ]
+  },
+  "routes": [
+    "@app.get(\"/api/mcp/servers\")",
+    "@app.post(\"/api/mcp/servers\")",
+    "@app.post(\"/api/mcp/import-json\")",
+    "@app.delete(\"/api/mcp/servers/{alias}\")",
+    "@app.post(\"/api/mcp/servers/{alias}/sync\")",
+    "@app.post(\"/api/mcp/servers/{alias}/call\")"
+  ],
+  "checks": [
+    {
+      "check": "connecting a server is four named steps, not one form",
+      "passed": true,
+      "detail": "rail: 1 · 2 · 3 · 4 · panels: 1, 2, 3, 4"
+    },
+    {
+      "check": "the guide asks four questions in order: what, how, what it costs, and is it right",
+      "passed": true,
+      "detail": "1 Server · 2 Transport and credentials · 3 Policy and consent · 4 Review and connect"
+    },
+    {
+      "check": "one step is on screen at a time, and starting over goes back to the first",
+      "passed": true,
+      "detail": "mcpWizardGo() hides every other panel; opening the editor resets to step 1"
+    },
+    {
+      "check": "the rail says where you are, in a live region, and marks the step it is on",
+      "passed": true,
+      "detail": "aria-current=step on the current item, done on the ones behind, `Step N of 4 · label` in role=status"
+    },
+    {
+      "check": "each step is a labelled group whose heading names the question",
+      "passed": true,
+      "detail": "role=group, aria-labelledby the step heading, heading focusable for the keyboard"
+    },
+    {
+      "check": "no step can advance until it is satisfied, and the refusal is words, not a shake",
+      "passed": true,
+      "detail": "mcpWizardValidate() returns the sentence, mcpWizardNext() refuses to move while it does"
+    },
+    {
+      "check": "a refusal puts the cursor in the field that needs it, and clears when satisfied",
+      "passed": true,
+      "detail": "mcpWizardProblem() names the reason, focuses the field, and mcpWizardRefresh() clears it"
+    },
+    {
+      "check": "Back and Continue are real buttons, and Continue leaves the last step",
+      "passed": true,
+      "detail": "Back is disabled on step 1; Continue disappears on step 4, where Save & test connection is"
+    },
+    {
+      "check": "step 2 shows only the fields the chosen transport needs",
+      "passed": true,
+      "detail": "toggleMcpTransportFields() shows one block and hides the other"
+    },
+    {
+      "check": "the transport says what will happen, in words",
+      "passed": true,
+      "detail": "a sentence per transport, not a badge or a colour"
+    },
+    {
+      "check": "the token is a password field that is never pre-filled or auto-completed",
+      "passed": true,
+      "detail": "type=password, autocomplete=off, and the editor never writes a stored secret into it"
+    },
+    {
+      "check": "raw headers and environment JSON are one closed disclosure, off the guided path",
+      "passed": true,
+      "detail": "`Advanced: raw headers and environment JSON`, shut, holding both JSON fields"
+    },
+    {
+      "check": "the policy step explains what each policy costs",
+      "passed": true,
+      "detail": "three sentences, one per policy, rendered next to the select"
+    },
+    {
+      "check": "a local command needs consent that is given, not implied",
+      "passed": true,
+      "detail": "the consent row only exists for stdio and mcpWizardValidate(3) refuses until it is ticked"
+    },
+    {
+      "check": "the consent names the command it is about",
+      "passed": true,
+      "detail": "mcpConsentCommand is re-rendered from the exact command and arguments"
+    },
+    {
+      "check": "the consent says it cannot grant the operator's permission",
+      "passed": true,
+      "detail": "the note names the server-side opt-in and disclaims it, so the screen is not mistaken for a gate"
+    },
+    {
+      "check": "the review answers what, how, what it costs and whether consent was given",
+      "passed": true,
+      "detail": "Alias · Display name · Transport · Target · Credential · Approval policy · Local command consent"
+    },
+    {
+      "check": "the review never reads the typed token back out",
+      "passed": true,
+      "detail": "the presence of a typed token is a boolean; its characters are never interpolated"
+    },
+    {
+      "check": "a stored token is kept when the field is left blank, and shown only as its mask",
+      "passed": true,
+      "detail": "unchanged-token semantics: blank means keep, and the mask the server sent is what is named"
+    },
+    {
+      "check": "saving re-checks every earlier step, so a field edited after passing it cannot slip through",
+      "passed": true,
+      "detail": "the guard runs before the POST, not only on the way to it"
+    },
+    {
+      "check": "saving says it is testing, then tests in the same request",
+      "passed": true,
+      "detail": "button label and disabled state restored in `finally`; the POST is the connection test"
+    },
+    {
+      "check": "the result is visible where the button is, and says what was found or what failed",
+      "passed": true,
+      "detail": "ok / failed / testing carried as data-state on a live region inside the last step"
+    },
+    {
+      "check": "the confirmation names the tool namespace and offers the server list",
+      "passed": true,
+      "detail": "a successful test ends with a way to the list, not a dead end"
+    },
+    {
+      "check": "the typed secret leaves the field after a save",
+      "passed": true,
+      "detail": "the field is emptied on success, so the secret does not stay in the page"
+    },
+    {
+      "check": "every control the old form had is still in the guide",
+      "passed": true,
+      "detail": "20 controls: all present"
+    },
+    {
+      "check": "all three approval policies survive inside the guide",
+      "passed": true,
+      "detail": "auto / inherit / always_ask in the policy select"
+    },
+    {
+      "check": "the six MCP routes are unchanged and none were added",
+      "passed": true,
+      "detail": "6 routes, no additions"
+    },
+    {
+      "check": "consent on the screen does not replace the operator's stdio opt-in",
+      "passed": true,
+      "detail": "the server still refuses to spawn unless the operator set the variable; the page only records consent"
+    },
+    {
+      "check": "the served payload is what masks a secret, not the page",
+      "passed": true,
+      "detail": "app.py masks on read and keeps a blank token as the stored one"
+    },
+    {
+      "check": "a browser walk drives the guide on a screen",
+      "passed": true,
+      "detail": "mcp_wizard_walk.mjs: 38 recorded checks"
+    },
+    {
+      "check": "the walk covers every state the ledger asks for",
+      "passed": true,
+      "detail": "empty · credentials · policy · review · loading · success · error · recovery · keyboard · long"
+    },
+    {
+      "check": "the walk proves the secret never reaches the page, the console or another request",
+      "passed": true,
+      "detail": "the secret is typed into the form, then searched for in the DOM, the console and every request body"
+    },
+    {
+      "check": "captures exist for every viewport and theme, with a before set",
+      "passed": true,
+      "detail": "104 after PNG, 104 before PNG"
+    },
+    {
+      "check": "the walk can photograph the old one-shot form too",
+      "passed": true,
+      "detail": "the same instrument runs against the pre-wizard editor to make the before set"
+    }
+  ],
+  "check_count": 34,
+  "findings": []
+}
