@@ -10,10 +10,16 @@ them. It writes nothing and touches no network.
 
 It answers `initialize`, `tools/list` and `tools/call` for three tools:
 
-* `echo_note`  — succeeds and echoes the note back;
-* `fail_always` — returns `isError: true` with an explanation, so the hub can show a failed call;
+* `echo_note`  — succeeds and echoes the note back, and declares itself read-only;
+* `fail_always` — returns `isError: true` with an explanation, so the hub can show a failed call,
+  and declares itself destructive so the tool browser has a write that cannot be undone;
 * `slow_echo`  — pauses 1.6s first, so the loading state is real;
-* `big_output` — returns ~4,000 characters, so the playground and the activity row have to scroll.
+* `big_output` — returns ~4,000 characters, so the playground and the activity row have to scroll;
+  also read-only.
+
+Two of the four are read-only and two are writes with no annotations beyond that, which is what
+makes the risk column in the tool browser provable: the badge comes from the server's own
+`annotations`, not from the fixture's name.
 """
 
 from __future__ import annotations
@@ -32,11 +38,14 @@ TOOLS = [
             "properties": {"note": {"type": "string"}},
             "required": ["note"],
         },
+        # The only thing that makes a tool read-only is the server saying so.
+        "annotations": {"readOnlyHint": True},
     },
     {
         "name": "fail_always",
         "description": "Always fails, so the hub has a real failed call to display.",
         "inputSchema": {"type": "object", "properties": {}},
+        "annotations": {"destructiveHint": True},
     },
     {
         "name": "slow_echo",
@@ -51,6 +60,7 @@ TOOLS = [
         "name": "big_output",
         "description": "Return a long block of text.",
         "inputSchema": {"type": "object", "properties": {}},
+        "annotations": {"readOnlyHint": True},
     },
 ]
 
